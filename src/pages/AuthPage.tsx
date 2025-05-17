@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../api/client';
-import logoImage from '../assets/logo.svg';
+import logoImage from '../assets/logos/logo.svg';
 import CustomPhoneInput from '../components/ui/PhoneInput';
-import AuthCallModal from '../components/ui/AuthCallModal';
+import AuthCallModal from '../components/ui/Modals/AuthCallModal';
 
 interface AuthPageProps {
   onLoginSuccess: (token: string) => void;
