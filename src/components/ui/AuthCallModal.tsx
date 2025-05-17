@@ -30,17 +30,6 @@ const AuthCallModal: React.FC<AuthCallModalProps> = ({
                     После звонка система автоматически подтвердит вашу авторизацию.
                 </ModalText>
                 
-                {isVerifying && (
-                    <VerificationStatus>
-                        <Loader>
-                            <LoaderCircle />
-                            <LoaderCircle />
-                            <LoaderCircle />
-                        </Loader>
-                        Проверяем статус...
-                    </VerificationStatus>
-                )}
-                
                 {error && (
                     <ErrorText>{error}</ErrorText>
                 )}

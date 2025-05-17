@@ -5,7 +5,11 @@ import logoImage from '../assets/logo.svg';
 import CustomPhoneInput from '../components/ui/PhoneInput';
 import AuthCallModal from '../components/ui/AuthCallModal';
 
-const AuthPage: React.FC = () => {
+interface AuthPageProps {
+  onLoginSuccess: (token: string) => void;
+}
+
+const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     const [userType, setUserType] = useState<'user' | 'client'>('user');
     const [isLoading, setIsLoading] = useState(false);
     const [rawPhone, setRawPhone] = useState('');

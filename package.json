@@ -1,5 +1,5 @@
 {
-  "name": "untitled",
+  "name": "waypay",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,13 +11,22 @@
     "deploy": "rm -rf /var/www/html/* && cp -r dist/* /var/www/html/"
   },
   "dependencies": {
+    "@types/react-redux": "^7.1.34",
+    "axios": "^1.9.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-bootstrap": "^2.10.10",
+    "react-dom": "^19.1.0",
+    "react-phone-number-input": "^3.4.12",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.6.0",
+    "react-toastify": "^11.0.5",
+    "styled-components": "^6.1.18"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
-    "@types/react": "^19.1.2",
+    "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.2",
+    "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",
