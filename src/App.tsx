@@ -5,6 +5,7 @@ import CreditPage from './pages/CreditPage';
 import MainLayout from './components/Layout/MainLayout';
 import { NotFoundContent } from './components/NotFoundContent';
 import './App.css';
+import styled from 'styled-components';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -36,6 +37,7 @@ function App() {
 
   return (
     <BrowserRouter>
+    
       <Routes>
         <Route path="/" element={
           isAuthenticated ? (

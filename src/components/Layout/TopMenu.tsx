@@ -18,7 +18,7 @@ const menuItems = [
 
 const TopMenu = () => {
   const { 
-    collapsed, // Добавляем collapsed из контекста
+    collapsed,
     selectedTopMenuItem, 
     setSelectedTopMenuItem,
     setSelectedSideMenuItem
@@ -51,7 +51,6 @@ const TopMenu = () => {
   );
 };
 
-// Типы для пропсов
 type TopMenuContainerProps = {
   $collapsed: boolean;
 };
@@ -61,20 +60,19 @@ type MenuItemProps = {
   onClick?: () => void;
 };
 
-// Стили с правильными типами
 const TopMenuContainer = styled.div<TopMenuContainerProps>`
-  width: calc(100% - ${({ $collapsed }) => ($collapsed ? '100px' : '450px')});
-  height: 80px;
+  width: calc(100% - ${({ $collapsed }) => ($collapsed ? '70px' : '315px')});
+  height: 56px;
   position: fixed;
-  left: ${({ $collapsed }) => ($collapsed ? '100px' : '450px')};
+  left: ${({ $collapsed }) => ($collapsed ? '70px' : '315px')};
   top: 0;
-  padding: 0 20px;
+  padding: 0 14px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   z-index: 90;
   background-color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 7px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 `;
 
@@ -83,26 +81,26 @@ const MenuItemsWrapper = styled.div`
   justify-content: space-around;
   align-items: center;
   width: 100%;
-  max-width: 1500px;
+  max-width: 1050px;
   margin: 0 auto;
 `;
 
 const Icon = styled.img`
-  width: 24px;
-  height: 24px;
+  width: 17px;
+  height: 17px;
   filter: brightness(0.7);
   transition: filter 0.3s ease;
 `;
 
 const IconWrapper = styled.div`
-  margin-right: 8px;
+  margin-right: 6px;
   display: flex;
   align-items: center;
 `;
 
 const Text = styled.span`
   color: rgba(80, 85, 92, 1);
-  font-size: 25px;
+  font-size: 18px;
   font-weight: 500;
   transition: color 0.3s ease;
 `;
@@ -111,10 +109,10 @@ const MenuItem = styled.div<MenuItemProps>`
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 7px 11px;
+  border-radius: 6px;
   transition: all 0.3s ease;
-  margin-right: 20px;
+  margin-right: 14px;
   background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
 
   &:hover {

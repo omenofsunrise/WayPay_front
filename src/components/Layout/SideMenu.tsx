@@ -74,7 +74,6 @@ const SideMenu = () => {
       {!collapsed && <Logo src={logo} alt="logo" />}
       
       <MenuList $collapsed={collapsed}>
-        {/* Аналитика */}
         <MenuItem 
           onClick={() => handleMenuItemClick('analytics', '/analytics')}
           $collapsed={collapsed}
@@ -86,7 +85,6 @@ const SideMenu = () => {
         
         {!collapsed && <Divider />}
         
-        {/* Договоры */}
         <MenuItem 
           onClick={() => toggleItem('contracts')}
           $collapsed={collapsed}
@@ -114,7 +112,6 @@ const SideMenu = () => {
           </SubMenu>
         )}
         
-        {/* Клиенты */}
         <MenuItem 
           onClick={() => toggleItem('clients')}
           $collapsed={collapsed}
@@ -149,7 +146,6 @@ const SideMenu = () => {
           </SubMenu>
         )}
         
-        {/* Платежи */}
         <MenuItem 
           onClick={() => toggleItem('payments')}
           $collapsed={collapsed}
@@ -177,7 +173,6 @@ const SideMenu = () => {
           </SubMenu>
         )}
         
-        {/* Инвесторы */}
         <MenuItem 
           onClick={() => toggleItem('investors')}
           $collapsed={collapsed}
@@ -205,7 +200,6 @@ const SideMenu = () => {
           </SubMenu>
         )}
         
-        {/* Справочники */}
         <MenuItem 
           onClick={() => toggleItem('references')}
           $collapsed={collapsed}
@@ -233,7 +227,6 @@ const SideMenu = () => {
           </SubMenu>
         )}
         
-        {/* Финансы */}
         <MenuItem 
           onClick={() => toggleItem('finance')}
           $collapsed={collapsed}
@@ -270,7 +263,6 @@ const SideMenu = () => {
         
         {!collapsed && <Divider />}
         
-        {/* Профиль */}
         <MenuItem 
           onClick={() => handleMenuItemClick('profile', '/profile')}
           $collapsed={collapsed}
@@ -286,15 +278,14 @@ const SideMenu = () => {
   );
 };
 
-// Обновленные стили с правильными типами
 const MenuItem = styled.div<MenuItemProps>`
   display: flex;
   align-items: center;
-  padding: ${({ $collapsed }) => ($collapsed ? '22px 16px' : '22px 24px')};
-  margin-bottom: 4px;
+  padding: ${({ $collapsed }) => ($collapsed ? '15px 11px' : '15px 17px')};
+  margin-bottom: 3px;
   cursor: pointer;
-  border-radius: 12px;
-  width: ${({ $collapsed }) => ($collapsed ? '64px' : 'calc(100% - 48px)')};
+  border-radius: 8px;
+  width: ${({ $collapsed }) => ($collapsed ? '45px' : 'calc(100% - 34px)')};
   max-width: 100%;
   box-sizing: border-box;
   transition: all 0.2s ease;
@@ -312,11 +303,11 @@ const MenuItem = styled.div<MenuItemProps>`
 `;
 
 const SubMenuItem = styled.div<{ $selected?: boolean }>`
-  padding: 5px 13px 5px 13px;
-  margin-bottom: 4px;
+  padding: 4px 9px 4px 9px;
+  margin-bottom: 3px;
   cursor: pointer;
-  border-radius: 8px;
-  font-size: 20px;
+  border-radius: 6px;
+  font-size: 14px;
   transition: all 0.2s ease;
   color: #50555c;
   text-align: left;
@@ -330,7 +321,6 @@ const SubMenuItem = styled.div<{ $selected?: boolean }>`
   }
 `;
 
-// Остальные стили остаются без изменений
 const RightBorder = styled.div<CollapsibleProps>`
   position: absolute;
   right: 0;
@@ -343,21 +333,21 @@ const RightBorder = styled.div<CollapsibleProps>`
 `;
 
 const SideMenuContainer = styled.div<CollapsibleProps>`
-  width: ${({ $collapsed }) => ($collapsed ? '100px' : '450px')};
+  width: ${({ $collapsed }) => ($collapsed ? '70px' : '315px')};
   height: 100vh;
   background-color: white;
   color: rgba(80, 85, 92, 1);
   position: fixed;
   left: 0;
   top: 0;
-  padding: 32px 24px;
+  padding: 22px 17px;
   box-sizing: border-box;
   z-index: 100;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   transition: all 0.3s ease;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 1px 0 7px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 `;
 
@@ -369,9 +359,9 @@ const MenuList = styled.div<CollapsibleProps>`
 `;
 
 const ArrowIcon = styled.img<CollapsibleProps>`
-  width: 32px;
-  height: 32px;
-  margin-bottom: 40px;
+  width: 22px;
+  height: 22px;
+  margin-bottom: 28px;
   cursor: pointer;
   transform: ${({ $collapsed }) => ($collapsed ? 'rotate(180deg)' : 'rotate(0)')};
   transition: transform 0.3s ease;
@@ -379,28 +369,28 @@ const ArrowIcon = styled.img<CollapsibleProps>`
 
 const Logo = styled.img`
   width: 85%;
-  max-width: 280px;
+  max-width: 196px;
   align-self: center;
-  margin-bottom: 60px;
+  margin-bottom: 42px;
 `;
 
 const MenuItemText = styled.span`
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 500;
 `;
 
 const Icon = styled.img<CollapsibleProps>`
-  width: 30px;
-  height: 30px;
-  margin-right: ${({ $collapsed }) => ($collapsed ? '0' : '24px')};
+  width: 21px;
+  height: 21px;
+  margin-right: ${({ $collapsed }) => ($collapsed ? '0' : '17px')};
   transition: all 0.2s ease;
   filter: brightness(0.7);
 `;
 
 const SubMenu = styled.div`
-  margin-left: 64px;
+  margin-left: 45px;
   padding-left: 0;
-  width: calc(100% - 64px);
+  width: calc(100% - 45px);
   max-width: 100%;
   box-sizing: border-box;
   position: relative;
@@ -408,19 +398,19 @@ const SubMenu = styled.div`
 
 const SubMenuLine = styled.div`
   position: absolute;
-  left: -5px;
+  left: -4px;
   top: 0;
   height: 100%;
-  width: 2px;
+  width: 1px;
   background-color: rgba(209, 213, 219, 0.8);
-  border-radius: 2px;
+  border-radius: 1px;
 `;
 
 const Divider = styled.div`
   height: 1px;
   width: 100%;
   background-color: rgba(209, 213, 219, 1);
-  margin: 20px 0;
+  margin: 14px 0;
 `;
 
 export default SideMenu;

@@ -44,10 +44,10 @@ const LayoutContainer = styled.div`
 `;
 
 const ContentContainer = styled.div<{ $collapsed: boolean }>`
-  margin-left: ${({ $collapsed }) => ($collapsed ? '100px' : '450px')};
-  margin-top: 80px;
-  width: calc(100% - ${({ $collapsed }) => ($collapsed ? '100px' : '450px')});
-  padding: 20px;
+  margin-left: ${({ $collapsed }) => ($collapsed ? '70px' : '315px')};
+  margin-top: 56px;
+  width: calc(100% - ${({ $collapsed }) => ($collapsed ? '70px' : '315px')});
+  padding: 14px;
   box-sizing: border-box;
   transition: all 0.3s ease;
 `;
