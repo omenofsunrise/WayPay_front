@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 
 interface AuthCallModalProps {
@@ -16,7 +16,21 @@ const AuthCallModal: React.FC<AuthCallModalProps> = ({
     isVerifying,
     error 
 }) => {
+    const [isCopied, setIsCopied] = useState(false);
+    
     if (!isOpen) return null;
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    const handlePhoneClick = () => {
+        if (isMobile) {
+            window.location.href = `tel:${callPhone}`;
+        } else {
+            navigator.clipboard.writeText(callPhone);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
+    };
 
     return (
         <ModalOverlay>
@@ -25,7 +39,14 @@ const AuthCallModal: React.FC<AuthCallModalProps> = ({
                 <ModalText>
                     Для завершения авторизации позвоните на номер:
                 </ModalText>
-                <CallPhoneNumber>{callPhone}</CallPhoneNumber>
+                <CallPhoneNumber 
+                    onClick={handlePhoneClick}
+                    title={isMobile ? "Позвонить" : "Копировать номер"}
+                    $clickable
+                >
+                    {callPhone}
+                    {!isMobile && isCopied && <CopiedText>Скопировано!</CopiedText>}
+                </CallPhoneNumber>
                 <ModalText>
                     После звонка система автоматически подтвердит вашу авторизацию.
                 </ModalText>
@@ -74,55 +95,35 @@ const ModalText = styled.p`
     color: #555;
 `;
 
-const CallPhoneNumber = styled.div`
+const CallPhoneNumber = styled.div<{ $clickable?: boolean }>`
     font-size: 24px;
     font-weight: bold;
     margin: 20px 0;
     color: rgba(0, 125, 136, 1);
-`;
-
-const VerificationStatus = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin: 20px 0;
-    color: #555;
-`;
-
-const Loader = styled.div`
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    height: 24px;
-`;
-
-const LoaderCircle = styled.div`
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(0, 125, 136, 1);
-    animation: bounce 1s infinite ease-in-out;
+    position: relative;
+    cursor: ${props => props.$clickable ? 'pointer' : 'default'};
+    transition: all 0.2s;
     
-    &:nth-child(1) {
-        animation-delay: 0s;
-    }
-    &:nth-child(2) {
-        animation-delay: 0.2s;
-    }
-    &:nth-child(3) {
-        animation-delay: 0.4s;
-    }
-    
-    @keyframes bounce {
-        0%, 100% {
-            transform: translateY(0);
+    ${props => props.$clickable && `
+        &:hover {
+            color: rgba(0, 100, 120, 1);
+            text-decoration: underline;
         }
-        50% {
-            transform: translateY(-6px);
+        &:active {
+            transform: scale(0.98);
         }
-    }
+    `}
+`;
+
+const CopiedText = styled.span`
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    color: #27ae60;
+    font-weight: normal;
+    white-space: nowrap;
 `;
 
 const ErrorText = styled.div`
