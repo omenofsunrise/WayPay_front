@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import AuthPage from './pages/AuthPage';
 import CreditPage from './pages/CreditPage';
 import MainLayout from './components/Layout/MainLayout';
+import { NotFoundContent } from './components/NotFoundContent';
 import './App.css';
 
 function App() {
@@ -62,7 +63,15 @@ function App() {
           )
         } />
 
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        <Route path="*" element={
+          isAuthenticated ? (
+            <MainLayout>
+              <NotFoundContent />
+            </MainLayout>
+          ) : (
+            <Navigate to="/auth" replace />
+          )
+        } />
       </Routes>
     </BrowserRouter>
   );

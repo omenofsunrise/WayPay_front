@@ -6,23 +6,40 @@ import CalendarIcon from '../../assets/ui/TopBar/calendar.svg';
 import TodoIcon from '../../assets/ui/TopBar/to_do.svg';
 import BlogIcon from '../../assets/ui/TopBar/blog.svg';
 import { SideMenuContext } from './SideMenuContext';
+import { useNavigate } from 'react-router-dom';
 
 const menuItems = [
-  { icon: CalculatorIcon, text: 'Калькулятор' },
-  { icon: ChatIcon, text: 'Чат' },
-  { icon: CalendarIcon, text: 'Календарь' },
-  { icon: TodoIcon, text: 'Todo' },
-  { icon: BlogIcon, text: 'Блог' }
+  { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', path: '/calculator' },
+  { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
+  { id: 'calendar', icon: CalendarIcon, text: 'Календарь', path: '/calendar' },
+  { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
+  { id: 'blog', icon: BlogIcon, text: 'Блог', path: '/blog' }
 ];
 
 const TopMenu = () => {
-  const { collapsed } = useContext(SideMenuContext);
+  const { 
+    collapsed, // Добавляем collapsed из контекста
+    selectedTopMenuItem, 
+    setSelectedTopMenuItem,
+    setSelectedSideMenuItem
+  } = useContext(SideMenuContext);
+  const navigate = useNavigate();
+
+  const handleMenuItemClick = (itemId: string, path: string) => {
+    setSelectedTopMenuItem(itemId);
+    setSelectedSideMenuItem(null);
+    navigate(path);
+  };
 
   return (
     <TopMenuContainer $collapsed={collapsed}>
       <MenuItemsWrapper>
-        {menuItems.map((item, index) => (
-          <MenuItem key={index}>
+        {menuItems.map((item) => (
+          <MenuItem 
+            key={item.id}
+            onClick={() => handleMenuItemClick(item.id, item.path)}
+            $selected={selectedTopMenuItem === item.id}
+          >
             <IconWrapper>
               <Icon src={item.icon} alt={item.text} />
             </IconWrapper>
@@ -34,7 +51,18 @@ const TopMenu = () => {
   );
 };
 
-const TopMenuContainer = styled.div<{ $collapsed?: boolean }>`
+// Типы для пропсов
+type TopMenuContainerProps = {
+  $collapsed: boolean;
+};
+
+type MenuItemProps = {
+  $selected?: boolean;
+  onClick?: () => void;
+};
+
+// Стили с правильными типами
+const TopMenuContainer = styled.div<TopMenuContainerProps>`
   width: calc(100% - ${({ $collapsed }) => ($collapsed ? '100px' : '450px')});
   height: 80px;
   position: fixed;
@@ -55,7 +83,7 @@ const MenuItemsWrapper = styled.div`
   justify-content: space-around;
   align-items: center;
   width: 100%;
-  max-width: 800px;
+  max-width: 1500px;
   margin: 0 auto;
 `;
 
@@ -74,12 +102,12 @@ const IconWrapper = styled.div`
 
 const Text = styled.span`
   color: rgba(80, 85, 92, 1);
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 500;
   transition: color 0.3s ease;
 `;
 
-const MenuItem = styled.div`
+const MenuItem = styled.div<MenuItemProps>`
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -87,9 +115,10 @@ const MenuItem = styled.div`
   border-radius: 8px;
   transition: all 0.3s ease;
   margin-right: 20px;
+  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
 
   &:hover {
-    background-color: rgba(209, 213, 219, 0.5);
+    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
     
     ${Icon} {
       filter: brightness(0);

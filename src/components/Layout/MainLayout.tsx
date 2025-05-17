@@ -10,13 +10,22 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [selectedSideMenuItem, setSelectedSideMenuItem] = useState<string | null>(null);
+  const [selectedTopMenuItem, setSelectedTopMenuItem] = useState<string | null>(null);
   
   const toggleCollapsed = () => {
     setCollapsed(!collapsed);
   };
 
   return (
-    <SideMenuContext.Provider value={{ collapsed, toggleCollapsed }}>
+    <SideMenuContext.Provider value={{ 
+      collapsed, 
+      toggleCollapsed,
+      selectedSideMenuItem,
+      setSelectedSideMenuItem,
+      selectedTopMenuItem,
+      setSelectedTopMenuItem
+    }}>
       <LayoutContainer>
         <SideMenu />
         <TopMenu />
