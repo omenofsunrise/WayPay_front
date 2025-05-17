@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import AuthPage from './pages/AuthPage';
 import CreditPage from './pages/CreditPage';
+import MainLayout from './components/Layout/MainLayout';
 import './App.css';
 
 function App() {
@@ -53,7 +54,9 @@ function App() {
 
         <Route path="/credits" element={
           isAuthenticated ? (
-            <CreditPage onLogout={handleLogout} />
+            <MainLayout>
+              <CreditPage onLogout={handleLogout} />
+            </MainLayout>
           ) : (
             <Navigate to="/auth" replace />
           )

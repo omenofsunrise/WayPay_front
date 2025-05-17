@@ -9,7 +9,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const accessToken = localStorage.getItem('accessToken');
   
   if (!accessToken) {
-    // Перенаправляем на страницу авторизации, если токена нет
     return <Navigate to="/auth" replace />;
   }
 

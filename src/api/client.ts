@@ -8,10 +8,8 @@ const apiClient = axios.create({
     },
 });
 
-// Добавляем интерцепторы при необходимости
 apiClient.interceptors.request.use(
     (config) => {
-        // Можно добавить токен авторизации и т.д.
         return config;
     },
     (error) => {
@@ -22,7 +20,6 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Обработка ошибок
         return Promise.reject(error);
     }
 );
