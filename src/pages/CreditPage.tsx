@@ -1,6 +1,8 @@
 import styled from 'styled-components';
+import CustomTitle from '../components/ui/fields/CustomTitle';
 import ContractsTable from '../components/ui/fields/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
+import PageLayout from '../components/ui/fields/PageLayout';
 
 const CreditPage = () => {
   const data = {
@@ -12,10 +14,11 @@ const CreditPage = () => {
   };
 
   return (
-    <div>
+    <PageLayout>
+      <CustomTitle>Договоры</CustomTitle>
       <ContractsTable data={data.items} />
       <Pagination total={data.total} />
-    </div>
+    </PageLayout>
   );
 };
 
