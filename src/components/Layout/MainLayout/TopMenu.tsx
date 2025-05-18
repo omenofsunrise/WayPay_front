@@ -41,9 +41,9 @@ const TopMenu = () => {
             $selected={selectedTopMenuItem === item.id}
           >
             <IconWrapper>
-              <Icon src={item.icon} alt={item.text} />
+              <Icon src={item.icon} alt={item.text} $selected={selectedTopMenuItem === item.id} />
             </IconWrapper>
-            <Text>{item.text}</Text>
+            <Text $selected={selectedTopMenuItem === item.id}>{item.text}</Text>
           </MenuItem>
         ))}
       </MenuItemsWrapper>
@@ -58,6 +58,14 @@ type TopMenuContainerProps = {
 type MenuItemProps = {
   $selected?: boolean;
   onClick?: () => void;
+};
+
+type IconProps = {
+  $selected?: boolean;
+};
+
+type TextProps = {
+  $selected?: boolean;
 };
 
 const TopMenuContainer = styled.div<TopMenuContainerProps>`
@@ -86,10 +94,10 @@ const MenuItemsWrapper = styled.div`
   margin: 0 auto;
 `;
 
-const Icon = styled.img`
+const Icon = styled.img<IconProps>`
   width: 17px;
   height: 17px;
-  filter: brightness(0.7);
+  filter: ${({ $selected }) => $selected ? 'brightness(0)' : 'brightness(0.7)'};
   transition: filter 0.3s ease;
 `;
 
@@ -99,8 +107,8 @@ const IconWrapper = styled.div`
   align-items: center;
 `;
 
-const Text = styled.span`
-  color: rgba(80, 85, 92, 1);
+const Text = styled.span<TextProps>`
+  color: ${({ $selected }) => $selected ? 'rgba(0, 0, 0, 1)' : 'rgba(80, 85, 92, 1)'};
   font-size: 18px;
   font-weight: 500;
   transition: color 0.3s ease;

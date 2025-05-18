@@ -289,7 +289,7 @@ const MenuItem = styled.div<MenuItemProps>`
   max-width: 100%;
   box-sizing: border-box;
   transition: all 0.2s ease;
-  color: #50555c;
+  color: ${({ $selected }) => $selected ? '#000' : '#50555c'};
   background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
 
   &:hover {
@@ -297,7 +297,7 @@ const MenuItem = styled.div<MenuItemProps>`
     color: #000;
     
     img {
-      filter: brightness(0);
+      filter: ${({ $selected }) => $selected ? 'brightness(0)' : 'brightness(0.7)'};
     }
   }
 `;
@@ -309,7 +309,7 @@ const SubMenuItem = styled.div<{ $selected?: boolean }>`
   border-radius: 6px;
   font-size: 14px;
   transition: all 0.2s ease;
-  color: #50555c;
+  color: ${({ $selected }) => $selected ? '#000' : '#50555c'};
   text-align: left;
   font-weight: 500;
   position: relative;
@@ -319,6 +319,14 @@ const SubMenuItem = styled.div<{ $selected?: boolean }>`
     background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
     color: #000;
   }
+`;
+
+const Icon = styled.img<CollapsibleProps & { $selected?: boolean }>`
+  width: 21px;
+  height: 21px;
+  margin-right: ${({ $collapsed }) => ($collapsed ? '0' : '17px')};
+  transition: all 0.2s ease;
+  filter: ${({ $selected }) => $selected ? 'brightness(0)' : 'brightness(0.7)'};
 `;
 
 const RightBorder = styled.div<CollapsibleProps>`
@@ -377,14 +385,6 @@ const Logo = styled.img`
 const MenuItemText = styled.span`
   font-size: 15px;
   font-weight: 500;
-`;
-
-const Icon = styled.img<CollapsibleProps>`
-  width: 21px;
-  height: 21px;
-  margin-right: ${({ $collapsed }) => ($collapsed ? '0' : '17px')};
-  transition: all 0.2s ease;
-  filter: brightness(0.7);
 `;
 
 const SubMenu = styled.div`

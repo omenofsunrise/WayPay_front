@@ -79,6 +79,7 @@ const Container = styled.div`
   position: relative;
   display: inline-block;
   width: 100%;
+  text-align: left;
 `;
 
 const Field = styled.div`
