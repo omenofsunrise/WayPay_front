@@ -37,7 +37,9 @@ const ButtonContainer = styled.button`
   border-radius: 5px;
   cursor: pointer;
   color: inherit;
-  font-size: 14px;
+  font-size: 20px;
+  height: 40px;
+  margin: auto 0 10px 0;
   transition: background-color 0.2s ease;
 
   &:hover {

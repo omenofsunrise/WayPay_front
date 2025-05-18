@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import CustomTitle from '../components/ui/fields/CustomTitle';
+import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
 import CustomInput from '../components/ui/fields/CustomInput';
