@@ -26,6 +26,8 @@ const NotFoundContentWrapper = styled.div`
     justify-content: center;
     height: calc(100vh - 200px);
     text-align: center;
+    background-color: rgba(249, 250, 250, 1);
+    width: 100%;
 `;
 
 const Title = styled.h1`

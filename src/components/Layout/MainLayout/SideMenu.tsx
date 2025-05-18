@@ -335,7 +335,7 @@ const RightBorder = styled.div<CollapsibleProps>`
 const SideMenuContainer = styled.div<CollapsibleProps>`
   width: ${({ $collapsed }) => ($collapsed ? '70px' : '315px')};
   height: 100vh;
-  background-color: white;
+  background-color: rgba(249, 250, 250, 1);
   color: rgba(80, 85, 92, 1);
   position: fixed;
   left: 0;

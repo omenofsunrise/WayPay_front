@@ -41,6 +41,7 @@ const LayoutContainer = styled.div`
   display: flex;
   min-height: 100vh;
   position: relative;
+  background-color: rgba(249, 250, 250, 1);
 `;
 
 const ContentContainer = styled.div<{ $collapsed: boolean }>`

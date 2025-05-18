@@ -71,9 +71,10 @@ const TopMenuContainer = styled.div<TopMenuContainerProps>`
   display: flex;
   align-items: center;
   z-index: 90;
-  background-color: white;
+  background-color: rgba(249, 250, 250, 1);
   box-shadow: 0 1px 7px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(209, 213, 219, 1);
 `;
 
 const MenuItemsWrapper = styled.div`

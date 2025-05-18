@@ -5,7 +5,7 @@ const PageLayout = styled.div`
   flex-direction: column;
   min-height: calc(100vh - 100px);
   width: calc(100vw - 390px);
-  background-color: #f5f5f5;
+  background-color:rgba(249, 250, 250, 1);
   margin: 0;  
 `;
 
