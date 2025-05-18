@@ -2,10 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import AuthPage from './pages/AuthPage';
 import CreditPage from './pages/CreditPage';
-import MainLayout from './components/Layout/MainLayout';
+import MainLayout from './components/Layout/MainLayout/MainLayout';
 import { NotFoundContent } from './components/NotFoundContent';
 import './App.css';
-import styled from 'styled-components';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -37,7 +36,6 @@ function App() {
 
   return (
     <BrowserRouter>
-    
       <Routes>
         <Route path="/" element={
           isAuthenticated ? (
@@ -56,13 +54,9 @@ function App() {
         } />
 
         <Route path="/credits" element={
-          isAuthenticated ? (
             <MainLayout>
-              <CreditPage onLogout={handleLogout} />
+              <CreditPage />
             </MainLayout>
-          ) : (
-            <Navigate to="/auth" replace />
-          )
         } />
 
         <Route path="*" element={

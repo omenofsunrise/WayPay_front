@@ -1,10 +1,10 @@
 import React, { useContext } from 'react';
 import styled from 'styled-components';
-import CalculatorIcon from '../../assets/ui/TopBar/calculator.svg';
-import ChatIcon from '../../assets/ui/TopBar/chat.svg';
-import CalendarIcon from '../../assets/ui/TopBar/calendar.svg';
-import TodoIcon from '../../assets/ui/TopBar/to_do.svg';
-import BlogIcon from '../../assets/ui/TopBar/blog.svg';
+import CalculatorIcon from '../../../assets/ui/TopBar/calculator.svg';
+import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
+import CalendarIcon from '../../../assets/ui/TopBar/calendar.svg';
+import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
+import BlogIcon from '../../../assets/ui/TopBar/blog.svg';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate } from 'react-router-dom';
 
