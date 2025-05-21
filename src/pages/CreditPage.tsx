@@ -11,8 +11,9 @@ import PrintIcon from '../assets/ui/print.svg?react';
 import styled from 'styled-components';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import CreditTypes from '../components/ui/fields/CreditTypes';
+import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
+import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 
-// Тип для данных договора
 interface Contract {
   id: number;
   name: string;
@@ -168,9 +169,12 @@ const CreditPage = () => {
         ]}
       />
 
-      <Pagination 
-        total={totalItems} 
-      />
+      <PaginationLayout>
+        <CountInfoTitle/>
+        <Pagination 
+          total={totalItems} 
+        />
+      </PaginationLayout>
     </PageLayout>
   );
 };

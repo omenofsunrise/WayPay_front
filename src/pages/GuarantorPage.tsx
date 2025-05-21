@@ -1,10 +1,13 @@
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton"
 import ExportButton from "../components/ui/Buttons/ExportButton"
 import CustomInput from "../components/ui/fields/CustomInput"
+import Pagination from "../components/ui/fields/CustomPagination"
 import CustomTable from "../components/ui/fields/CustomTable"
 import FilterField from "../components/ui/Layouts/FilterField"
 import PageLayout from "../components/ui/Layouts/PageLayout"
+import PaginationLayout from "../components/ui/Layouts/PaginationLayout"
 import TitleField from "../components/ui/Layouts/TitleLayout"
+import CountInfoTitle from "../components/ui/Text/CountInfoTitle"
 import CustomTitle from "../components/ui/Text/CustomTitle"
 import { useState } from "react"
 const GuarantorPage = () => {
@@ -49,6 +52,12 @@ const GuarantorPage = () => {
                 ['Демьянов Владимир Архангел', '12.05.2023', '**** ***391', '12.05.2023', '', '8 (965) 952-94-22'],
                 ]}
             />
+            <PaginationLayout>
+                 <CountInfoTitle/>
+                    <Pagination
+                    total={100} 
+                />
+            </PaginationLayout>
         </PageLayout>
     )
 }

@@ -124,6 +124,7 @@ const StyledPagination = styled.div`
   align-items: center;
   gap: 8px;
   margin-top: 20px;
+  margin-left: auto;
 `;
 
 const PageNumber = styled.div<{ active?: boolean }>`
