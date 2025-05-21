@@ -9,7 +9,7 @@ import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';
 import styled from 'styled-components';
-import NewCreditButton from '../components/ui/Buttons/DarkCyanButton';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import CreditTypes from '../components/ui/fields/CreditTypes';
 
 // Тип для данных договора
@@ -135,9 +135,9 @@ const CreditPage = () => {
             setCurrentPage(1);
           }}
         />
-        <NewCreditButton style={{ marginLeft: "auto", width: "15vw"}}> 
+        <DarkCyanButton style={{ marginLeft: "auto", width: "15vw"}}> 
           + Новый договор
-        </NewCreditButton>
+        </DarkCyanButton>
       </SecondRaw>
 
       <CreditTypes />

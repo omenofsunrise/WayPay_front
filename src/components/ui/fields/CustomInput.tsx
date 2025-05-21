@@ -94,10 +94,13 @@ const StyledInput = styled.input`
   width: 100%;
   outline: none;
   transition: border-color 0.2s ease;
-    height: auto; /* Занимает всю высоту родителя */
+  height: auto;
+  min-height: 38px;
   box-sizing: border-box;
   max-width: 500px;
   background-color: white;
+  color: black;
+  padding: 5px;
 
 
   &:hover {

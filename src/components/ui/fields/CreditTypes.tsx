@@ -57,7 +57,7 @@ const CreditButton = styled.button<CreditButtonProps>`
     font-size: 16px;
     font-weight: 500;
     background-color: ${props => props.$isActive ? "rgba(37, 203, 161, 1)" : "transparent"};
-    color: ${props => props.$isActive ? "white" : "black"};
+    color: black;
     border-radius: 5px;
     &:hover {
         background-color: rgba(37, 203, 161, 1);

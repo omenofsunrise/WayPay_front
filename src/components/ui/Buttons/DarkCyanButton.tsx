@@ -6,7 +6,7 @@ interface NewCreditButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElem
   icon?: React.ReactNode;
 }
 
-const NewCreditButton: React.FC<NewCreditButtonProps> = ({
+const DarkCyanButton: React.FC<NewCreditButtonProps> = ({
   children = 'Подтвердить',
   icon,
   ...props
@@ -35,7 +35,8 @@ const ButtonContainer = styled.button`
   height: auto;
   white-space: nowrap; /* Добавлено, чтобы текст не переносился */
   transition: background-color 0.2s ease;
-
+  margin: 0;
+  
   &:hover {
     background-color: rgba(0, 150, 163, 1);;
   }
@@ -51,4 +52,4 @@ const IconWrapper = styled.span`
   align-items: center;
 `;
 
-export default NewCreditButton;
+export default DarkCyanButton;
