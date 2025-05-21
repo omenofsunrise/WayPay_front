@@ -125,7 +125,7 @@ const CreditPage = () => {
         </InputWrapper>
       </FilterField>
 
-      <SecondRaw>
+      <SecondRaw style={{ color: "white" }}>
         <CustomInput 
           style={{ marginRight: "auto", display: "flex"}}
           inputType="fullname"
@@ -193,7 +193,8 @@ const InputWrapper = styled.div`
 const SecondRaw = styled.div`
   display: flex;
   width: 100%;
-  margin: 15px 0 15px 0;
+  margin: 15px 0;
+  background-color: transparent;
 `;
 
 export default CreditPage;

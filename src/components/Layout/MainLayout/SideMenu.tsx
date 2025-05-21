@@ -165,7 +165,7 @@ const SideMenu = () => {
               Ожидаемые
             </SubMenuItem>
             <SubMenuItem 
-              onClick={() => handleSubMenuItemClick('payments-journal', '/payments-journal')}
+              onClick={() => handleSubMenuItemClick('payments-journal', '/payments')}
               $selected={selectedSideMenuItem === 'payments-journal'}
             >
               Журнал

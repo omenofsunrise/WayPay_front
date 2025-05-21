@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom';
 const menuItems = [
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', path: '/calculator' },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
-  { id: 'calendar', icon: CalendarIcon, text: 'Календарь', path: '/calendar' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
   { id: 'blog', icon: BlogIcon, text: 'Блог', path: '/blog' }
 ];

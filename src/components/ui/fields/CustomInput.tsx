@@ -79,7 +79,6 @@ const CustomInput: React.FC<CustomInputProps> = ({
 };
 
 const InputContainer = styled.div`
-  background-color: white;
   position: relative;
   display: inline-block;
   width: 100%;
@@ -101,7 +100,7 @@ const StyledInput = styled.input`
   background-color: white;
   color: black;
   padding: 5px;
-
+  padding-left: 15px;
 
   &:hover {
     border-color: rgba(0, 125, 136, 1);

@@ -6,6 +6,7 @@ const FilterField = styled.div`
     flex-direction: row;
     text-align: left;
     color: black;
+    background-color: rgba(249, 250, 250, 1);
 `;
 
 export default FilterField; 

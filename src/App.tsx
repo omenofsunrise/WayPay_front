@@ -5,7 +5,8 @@ import CreditPage from './pages/CreditPage';
 import MainLayout from './components/Layout/MainLayout/MainLayout';
 import { NotFoundContent } from './components/NotFoundContent';
 import './App.css';
-import GuarantorPage from './pages/GuarantorPage';
+import PaymentPage from './pages/PaymentPage';
+import ProductPage from './pages/ProductPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -60,9 +61,15 @@ function App() {
             </MainLayout>
         } />
 
-        <Route path="guarantors" element={
+        <Route path="payments" element={
             <MainLayout>
-              <GuarantorPage/>
+              <PaymentPage/>
+            </MainLayout>
+        } />
+
+        <Route path="products" element={
+            <MainLayout>
+              <ProductPage/>
             </MainLayout>
         } />
 
