@@ -36,7 +36,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         try {
             const response = await apiClient.post('/Auth/start', {
                 phone: rawPhone,
-                user_Type: userType,
+                userType: userType,
             });
             
             setCheckId(response.data.checkId);

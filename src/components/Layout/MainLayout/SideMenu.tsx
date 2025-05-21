@@ -285,7 +285,8 @@ const MenuItem = styled.div<MenuItemProps>`
   margin-bottom: 3px;
   cursor: pointer;
   border-radius: 8px;
-  width: ${({ $collapsed }) => ($collapsed ? '45px' : '100%')};
+  width: ${({ $collapsed }) => ($collapsed ? '45px' : '100%')};\
+  height: 35px;
   max-width: 100%;
   box-sizing: border-box;
   transition: all 0.2s ease;
