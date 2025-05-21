@@ -79,6 +79,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
 };
 
 const InputContainer = styled.div`
+  background-color: white;
   position: relative;
   display: inline-block;
   width: 100%;
@@ -96,13 +97,15 @@ const StyledInput = styled.input`
     height: auto; /* Занимает всю высоту родителя */
   box-sizing: border-box;
   max-width: 500px;
+  background-color: white;
+
 
   &:hover {
-    border-color: rgba(156, 163, 175, 1);
+    border-color: rgba(0, 125, 136, 1);
   }
 
   &:focus {
-    border-color: rgba(59, 130, 246, 1);
+    border-color: rgba(0, 125, 136, 1);
   }
 
   &::placeholder {

@@ -45,12 +45,13 @@ const LayoutContainer = styled.div`
 `;
 
 const ContentContainer = styled.div<{ $collapsed: boolean }>`
-  margin-left: ${({ $collapsed }) => ($collapsed ? '70px' : '315px')};
+  flex: 1; /* Это заставит контейнер занимать всё доступное пространство */
+  margin-left: ${({ $collapsed }) => ($collapsed ? '45px' : '315px')};
   margin-top: 56px;
-  width: calc(100% - ${({ $collapsed }) => ($collapsed ? '70px' : '315px')});
-  padding: 14px;
   box-sizing: border-box;
   transition: all 0.3s ease;
+  overflow: auto; /* Добавьте, если контент может быть больше экрана */
+  min-height: calc(100vh - 56px); /* Высота минус TopMenu */
 `;
 
 export default MainLayout;

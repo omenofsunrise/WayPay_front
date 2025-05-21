@@ -98,11 +98,11 @@ const Field = styled.div`
   box-sizing: border-box;
 
   &:hover {
-    border-color: rgba(156, 163, 175, 1);
+    border-color: rgba(0, 125, 136, 1);
   }
 
   &:focus-within {
-    border-color: rgba(59, 130, 246, 1);
+    border-color: rgba(0, 125, 136, 1);
   }
 `;
 
