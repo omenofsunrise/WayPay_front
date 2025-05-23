@@ -1,4 +1,3 @@
-// Типы для пагинации
 export interface PaginationParams {
   page?: number;
   pageSize?: number;

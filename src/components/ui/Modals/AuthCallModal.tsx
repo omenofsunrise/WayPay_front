@@ -50,11 +50,7 @@ const AuthCallModal: React.FC<AuthCallModalProps> = ({
                 <ModalText>
                     После звонка система автоматически подтвердит вашу авторизацию.
                 </ModalText>
-                
-                {error && (
-                    <ErrorText>{error}</ErrorText>
-                )}
-                
+                                
                 <ModalButton onClick={onClose}>Закрыть</ModalButton>
             </ModalContent>
         </ModalOverlay>
