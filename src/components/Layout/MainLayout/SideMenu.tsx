@@ -218,12 +218,6 @@ const SideMenu = () => {
             >
               Товары
             </SubMenuItem>
-            <SubMenuItem 
-              onClick={() => handleSubMenuItemClick('guarantors', '/guarantors')}
-              $selected={selectedSideMenuItem === 'guarantors'}
-            >
-              Поручители
-            </SubMenuItem>
           </SubMenu>
         )}
         

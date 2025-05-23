@@ -1,26 +1,41 @@
 import styled from 'styled-components';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ContextMenu from '../../modal/ContextMenu';
 
 interface Column {
   name: string;
   isSortable?: boolean;
 }
 
+interface TableAction {
+  label: string;
+  action: (rowData: any[], rowIndex: number) => void;
+  color?: string;
+}
+
 interface CreditsTableProps {
   columns: Column[];
   data: any[][];
   onRowDoubleClick?: (rowData: any[], rowIndex: number) => void;
+  contextMenuActions?: TableAction[];
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
   columns, 
   data, 
-  onRowDoubleClick 
+  onRowDoubleClick,
+  contextMenuActions = [] 
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: number; direction: 'ascending' | 'descending' } | null>(null);
   const [isSorting, setIsSorting] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    rowIndex: number | null;
+  } | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const handleSort = (columnIndex: number) => {
     if (!columns[columnIndex].isSortable) return;
@@ -48,6 +63,36 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     }
   };
 
+  const handleContextMenu = (event: React.MouseEvent, rowIndex: number) => {
+    event.preventDefault();
+    
+    if (contextMenuActions.length === 0) return;
+    
+    if (tableRef.current) {
+      const rect = tableRef.current.getBoundingClientRect();
+      setContextMenu({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+        rowIndex
+      });
+    }
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu) closeContextMenu();
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [contextMenu]);
+
   const sortedData = [...data];
   if (sortConfig !== null) {
     sortedData.sort((a, b) => {
@@ -66,9 +111,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({
 
   return (
     <TableContainer
+      ref={tableRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
+      onClick={closeContextMenu}
     >
       <StyledTable>
         <TableHeader>
@@ -119,6 +166,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 $isSelected={rowIndex === selectedRow}
                 onClick={() => handleRowClick(rowIndex)}
                 onDoubleClick={() => handleRowDoubleClick(row, rowIndex)}
+                onContextMenu={(e) => handleContextMenu(e, rowIndex)}
                 whileHover={{
                   backgroundColor: rowIndex === selectedRow ? '#007D88' : '#F3F4F6'
                 }}
@@ -139,6 +187,21 @@ const CustomTable: React.FC<CreditsTableProps> = ({
           </AnimatePresence>
         </TableBody>
       </StyledTable>
+
+      <AnimatePresence>
+        {contextMenu && contextMenuActions.length > 0 && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={contextMenuActions.map(action => ({
+              label: action.label,
+              action: () => action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!),
+              color: action.color
+            }))}
+            onClose={closeContextMenu}
+          />
+        )}
+      </AnimatePresence>
     </TableContainer>
   );
 };
@@ -149,6 +212,7 @@ const TableContainer = styled(motion.div)`
   overflow: hidden;
   color: rgba(0, 0, 0, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
 `;
 
 const StyledTable = styled.table`
@@ -223,6 +287,16 @@ const BodyCell = styled.td`
   padding: 16px;
   text-align: center;
   vertical-align: middle;
+`;
+
+const ContextMenuItem = styled(motion.div)<{ $color?: string }>`
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  color: ${({ $color }) => $color || '#333'};
+  &:hover {
+    background-color: #f3f4f6;
+  }
 `;
 
 export default CustomTable;

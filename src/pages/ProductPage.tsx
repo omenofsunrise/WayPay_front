@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from 'react';
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
@@ -9,10 +10,9 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import { useEffect, useState, useCallback } from "react";
-import useProducts from "../api/hooks/useProducts";
 import { exportToExcel } from '../utils/exportUtils';
 import { ProductModal } from "../components/modal/ProductModal";
+import useProducts from "../api/hooks/useProducts";
 
 const ProductPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -29,7 +29,8 @@ const ProductPage = () => {
         data: productsData, 
         getProducts,
         createProduct,
-        updateProduct
+        updateProduct,
+        deleteProduct
     } = useProducts();
     
     const loadProducts = useCallback(async () => {
@@ -84,6 +85,18 @@ const ProductPage = () => {
         setIsModalOpen(true);
     };
 
+    const handleDeleteProduct = async (rowData: any[]) => {
+        const [id] = rowData;
+        if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
+            try {
+                await deleteProduct(Number(id));
+                loadProducts();
+            } catch (err) {
+                console.error('Ошибка при удалении товара:', err);
+            }
+        }
+    };
+
     const handleSubmitProduct = async (productData: { name: string }) => {
         try {
             if (modalMode === 'create') {
@@ -106,6 +119,14 @@ const ProductPage = () => {
         product.id.toString(),
         product.name,
     ]) || [];
+
+    const tableActions = [
+        {
+            label: 'Удалить',
+            action: handleDeleteProduct,
+            color: '#EF4444'
+        }
+    ];
 
     return (
         <PageLayout>
@@ -141,6 +162,7 @@ const ProductPage = () => {
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}
+                        contextMenuActions={tableActions}
                     />
                     
                     <PaginationLayout>

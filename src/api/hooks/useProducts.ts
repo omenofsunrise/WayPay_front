@@ -57,6 +57,21 @@ const useProducts = () => {
     }
   };
 
+  const deleteProduct = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await productService.deleteProduct(id);
+    }
+    catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+    finally {
+      setIsLoading(false);
+    }
+  }
+
   return {
     isLoading,
     error,
@@ -64,6 +79,7 @@ const useProducts = () => {
     getProducts,
     createProduct,
     updateProduct,
+    deleteProduct
   };
 };
 
