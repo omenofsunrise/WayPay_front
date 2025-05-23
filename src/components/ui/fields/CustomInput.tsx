@@ -7,6 +7,8 @@ interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string;
   customPlaceholder?: string;
   inputType?: InputType;
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 const CustomInput: React.FC<CustomInputProps> = ({
@@ -15,6 +17,8 @@ const CustomInput: React.FC<CustomInputProps> = ({
   value,
   inputType = 'text',
   onChange,
+  hasError = false,
+  errorMessage,
   ...props
 }) => {
   const [isFocused, setIsFocused] = React.useState(false);
@@ -68,11 +72,15 @@ const CustomInput: React.FC<CustomInputProps> = ({
         onBlur={() => setIsFocused(false)}
         onChange={handleInputChange}
         inputMode={inputType === 'number' ? 'numeric' : 'text'}
+        hasError={hasError}
       />
       {customPlaceholder && (
         <PlaceholderLabel isVisible={showCustomPlaceholder}>
           {customPlaceholder}
         </PlaceholderLabel>
+      )}
+      {hasError && errorMessage && (
+        <ErrorMessage>{errorMessage}</ErrorMessage>
       )}
     </InputContainer>
   );
@@ -85,9 +93,9 @@ const InputContainer = styled.div`
   margin-right: auto;
 `;
 
-const StyledInput = styled.input`
+const StyledInput = styled.input<{ hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid rgba(209, 213, 219, 1);
+  border: 1px solid ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(209, 213, 219, 1)'};
   border-radius: 5px;
   font-size: 14px;
   width: 100%;
@@ -103,11 +111,11 @@ const StyledInput = styled.input`
   padding-left: 15px;
 
   &:hover {
-    border-color: rgba(0, 125, 136, 1);
+    border-color: ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(0, 125, 136, 1)'};
   }
 
   &:focus {
-    border-color: rgba(0, 125, 136, 1);
+    border-color: ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(0, 125, 136, 1)'};
   }
 
   &::placeholder {
@@ -128,6 +136,13 @@ const PlaceholderLabel = styled.label<{ isVisible: boolean }>`
   opacity: ${({ isVisible }) => (isVisible ? 1 : 0)};
   background-color: white;
   padding: 0 4px;
+`;
+
+const ErrorMessage = styled.span`
+  color: rgba(239, 68, 68, 1);
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
 `;
 
 export default CustomInput;

@@ -40,13 +40,13 @@ const QueuePage = () => {
 
     const handleExport = async () => {
         try {
-            const allProducts = await getQueues({
+            const allQueues = await getQueues({
             name: nameFilter || undefined,
             pageSize: 100
             });
             
-            if (allProducts?.items) {
-            exportToExcel(allProducts.items.map(queue => ({
+            if (allQueues?.items) {
+            exportToExcel(allQueues.items.map(queue => ({
                 'ID': queue.id,
             })), {
                 fileName: 'queue_export',
@@ -59,29 +59,29 @@ const QueuePage = () => {
         }
     };
 
-    const tableData = queueData?.items.map(product => [
-        product.positionInQueue,
-        product.id.toString(),
-        product.id.toString(),
-        product.sum
+    const tableData = queueData?.items.map(queue => [
+        queue.positionInQueue,
+        queue.id.toString(),
+        queue.id.toString(),
+        queue.sum
     ]) || [];
 
     return (
         <PageLayout>
             <TitleField>
-                <CustomTitle>Товары</CustomTitle>
+                <CustomTitle>Очередь</CustomTitle>
                 <ExportButton onClick={handleExport} />
             </TitleField>
             
             <FilterField>
                 <CustomInput 
-                    inputType="text"
-                    placeholder="Название товара"
+                    inputType="fullname"
+                    placeholder="ФИО"
                     value={nameFilter}
                     onChange={(e) => setNameFilter(e.target.value)}
                 />
                 <DarkCyanButton style={{ width: "15vw" }}>
-                    + Новый товар
+                    + Новая очередь
                 </DarkCyanButton>
             </FilterField>
             

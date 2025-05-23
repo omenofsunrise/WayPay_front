@@ -37,12 +37,33 @@ const useProducts = () => {
     }
   };
 
+  const updateProduct = async (id: number, product: Partial<Product>): Promise<Product | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedProduct = await productService.updateProduct(id, product);
+      if (data) {
+        const updatedItems = data.items.map(item => 
+          item.id === id ? { ...item, ...updatedProduct } : item
+        );
+        setData({ ...data, items: updatedItems });
+      }
+      return updatedProduct;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
     data,
     getProducts,
     createProduct,
+    updateProduct,
   };
 };
 

@@ -10,9 +10,14 @@ interface Column {
 interface CreditsTableProps {
   columns: Column[];
   data: any[][];
+  onRowDoubleClick?: (rowData: any[], rowIndex: number) => void;
 }
 
-const CustomTable: React.FC<CreditsTableProps> = ({ columns, data }) => {
+const CustomTable: React.FC<CreditsTableProps> = ({ 
+  columns, 
+  data, 
+  onRowDoubleClick 
+}) => {
   const [sortConfig, setSortConfig] = useState<{ key: number; direction: 'ascending' | 'descending' } | null>(null);
   const [isSorting, setIsSorting] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
@@ -35,6 +40,12 @@ const CustomTable: React.FC<CreditsTableProps> = ({ columns, data }) => {
 
   const handleRowClick = (rowIndex: number) => {
     setSelectedRow(rowIndex === selectedRow ? null : rowIndex);
+  };
+
+  const handleRowDoubleClick = (row: any[], rowIndex: number) => {
+    if (onRowDoubleClick) {
+      onRowDoubleClick(row, rowIndex);
+    }
   };
 
   const sortedData = [...data];
@@ -107,6 +118,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({ columns, data }) => {
                 $isLast={rowIndex === sortedData.length - 1}
                 $isSelected={rowIndex === selectedRow}
                 onClick={() => handleRowClick(rowIndex)}
+                onDoubleClick={() => handleRowDoubleClick(row, rowIndex)}
                 whileHover={{
                   backgroundColor: rowIndex === selectedRow ? '#007D88' : '#F3F4F6'
                 }}

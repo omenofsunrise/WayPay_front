@@ -2,10 +2,10 @@ import apiClient from '../client';
 import type { QueueParams, Queue } from '../types/queue';
 import type { PaginatedResponse } from '../types/common';
 
-class ProductService {
+class QueueService {
   // Получение списка очередей с пагинацией
   async getQueues(params?: QueueParams): Promise<PaginatedResponse<Queue>> {
-    const response = await apiClient.get<PaginatedResponse<Queue>>('/Product', { params });
+    const response = await apiClient.get<PaginatedResponse<Queue>>('/Queue', { params });
     return response.data;
   }
 
@@ -16,14 +16,14 @@ class ProductService {
   }
 
   // Создание очереди
-  async createQueue(product: Omit<Queue, 'id'>): Promise<Queue> {
-    const response = await apiClient.post<Queue>('/Queue', product);
+  async createQueue(queue: Omit<Queue, 'id'>): Promise<Queue> {
+    const response = await apiClient.post<Queue>('/Queue', queue);
     return response.data;
   }
 
   // Обновление очереди
-  async updateQueue(id: number, product: Partial<Queue>): Promise<Queue> {
-    const response = await apiClient.put<Queue>(`/Queue/${id}`, product);
+  async updateQueue(id: number, queue: Partial<Queue>): Promise<Queue> {
+    const response = await apiClient.put<Queue>(`/Queue/${id}`, queue);
     return response.data;
   }
 
@@ -38,4 +38,4 @@ class ProductService {
   }
 }
 
-export default new ProductService();
+export default new QueueService();
