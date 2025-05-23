@@ -9,6 +9,7 @@ import PaymentPage from './pages/PaymentPage';
 import ProductPage from './pages/ProductPage';
 import { authStorage } from './api/utils/auth-storage';
 import QueuePage from './pages/QueuePage';
+import ClientPage from './pages/ClientPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -86,6 +87,12 @@ function App() {
         <Route path="queue" element={
             <MainLayout>
               <QueuePage />
+            </MainLayout>
+        } />
+
+        <Route path="clients" element={
+            <MainLayout>
+              <ClientPage />
             </MainLayout>
         } />
 

@@ -19,16 +19,21 @@ interface CreditsTableProps {
   data: any[][];
   onRowDoubleClick?: (rowData: any[], rowIndex: number) => void;
   contextMenuActions?: TableAction[];
+  onSort?: (columnIndex: number) => void;
+  sortConfig?: {
+    key: number | null;
+    direction: 'asc' | 'desc';
+  };
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
   columns, 
   data, 
   onRowDoubleClick,
-  contextMenuActions = [] 
+  contextMenuActions = [],
+  onSort,
+  sortConfig
 }) => {
-  const [sortConfig, setSortConfig] = useState<{ key: number; direction: 'ascending' | 'descending' } | null>(null);
-  const [isSorting, setIsSorting] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -38,19 +43,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   const tableRef = useRef<HTMLDivElement>(null);
 
   const handleSort = (columnIndex: number) => {
-    if (!columns[columnIndex].isSortable) return;
-    
-    setIsSorting(true);
-    
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig?.key === columnIndex) {
-      direction = sortConfig.direction === 'ascending' ? 'descending' : 'ascending';
-    }
-    
-    setTimeout(() => {
-      setSortConfig({ key: columnIndex, direction });
-      setIsSorting(false);
-    }, 200);
+    if (!columns[columnIndex].isSortable || !onSort) return;
+    onSort(columnIndex);
   };
 
   const handleRowClick = (rowIndex: number) => {
@@ -93,29 +87,12 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     };
   }, [contextMenu]);
 
-  const sortedData = [...data];
-  if (sortConfig !== null) {
-    sortedData.sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-      
-      if (aValue < bValue) {
-        return sortConfig.direction === 'ascending' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'ascending' ? 1 : -1;
-      }
-      return 0;
-    });
-  }
-
   return (
     <TableContainer
       ref={tableRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      onClick={closeContextMenu}
     >
       <StyledTable>
         <TableHeader>
@@ -131,9 +108,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   {column.name}
                   {column.isSortable && (
                     <SortIcon 
-                      $direction={sortConfig?.key === index ? sortConfig.direction : 'ascending'}
+                      $direction={sortConfig?.key === index ? sortConfig.direction : 'asc'}
                       animate={{
-                        rotate: sortConfig?.key === index && sortConfig.direction === 'descending' ? 180 : 0,
+                        rotate: sortConfig?.key === index && sortConfig.direction === 'desc' ? 180 : 0,
                         color: sortConfig?.key === index ? '#007D88' : '#6B7280'
                       }}
                       transition={{ duration: 0.2 }}
@@ -148,9 +125,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
             ))}
           </TableRow>
         </TableHeader>
-        <TableBody $isSorting={isSorting}>
+        <TableBody>
           <AnimatePresence>
-            {sortedData.map((row, rowIndex) => (
+            {data.map((row, rowIndex) => (
               <TableRow 
                 key={`row-${rowIndex}`}
                 initial={{ opacity: 0, y: -10 }}
@@ -162,7 +139,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                $isLast={rowIndex === sortedData.length - 1}
+                $isLast={rowIndex === data.length - 1}
                 $isSelected={rowIndex === selectedRow}
                 onClick={() => handleRowClick(rowIndex)}
                 onDoubleClick={() => handleRowDoubleClick(row, rowIndex)}
@@ -173,13 +150,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
               >
                 {row.map((cell, cellIndex) => (
                   <BodyCell key={cellIndex}>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.05 * cellIndex }}
-                    >
-                      {cell}
-                    </motion.div>
+                    {cell}
                   </BodyCell>
                 ))}
               </TableRow>
@@ -236,10 +207,7 @@ const TableHeader = styled.thead`
   }
 `;
 
-const TableBody = styled.tbody<{ $isSorting?: boolean }>`
-  transition: opacity 0.2s ease;
-  opacity: ${({ $isSorting }) => ($isSorting ? 0.7 : 1)};
-`;
+const TableBody = styled.tbody``;
 
 const TableRow = styled(motion.tr)<{ $isLast?: boolean; $isSelected?: boolean }>`
   position: relative;
@@ -278,7 +246,7 @@ const HeaderContent = styled.div`
   gap: 4px;
 `;
 
-const SortIcon = styled(motion.span)<{ $direction: 'ascending' | 'descending' }>`
+const SortIcon = styled(motion.span)<{ $direction: 'asc' | 'desc' }>`
   display: inline-flex;
   align-items: center;
 `;
@@ -287,16 +255,6 @@ const BodyCell = styled.td`
   padding: 16px;
   text-align: center;
   vertical-align: middle;
-`;
-
-const ContextMenuItem = styled(motion.div)<{ $color?: string }>`
-  padding: 8px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  color: ${({ $color }) => $color || '#333'};
-  &:hover {
-    background-color: #f3f4f6;
-  }
 `;
 
 export default CustomTable;
