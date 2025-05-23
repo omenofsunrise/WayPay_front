@@ -1,25 +1,95 @@
-import axios from 'axios';
+import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
+import { authStorage } from './utils/auth-storage';
+
+const API_BASE_URL = 'https://web.waypay.one:5001/api';
 
 const apiClient = axios.create({
-    baseURL: 'https://web.waypay.one:5001/api',
+    baseURL: API_BASE_URL,
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
+let isRefreshing = false;
+let failedRequestsQueue: Array<{
+    resolve: (token: string) => void;
+    reject: (error: AxiosError) => void;
+}> = [];
+
+const processQueue = (error: AxiosError | null, token: string | null = null) => {
+    failedRequestsQueue.forEach(promise => {
+        if (error) {
+            promise.reject(error);
+        } else {
+            promise.resolve(token!);
+        }
+    });
+    failedRequestsQueue = [];
+};
+
 apiClient.interceptors.request.use(
-    (config) => {
+    (config: InternalAxiosRequestConfig) => {
+        const token = authStorage.getAccessToken();
+        if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
     },
-    (error) => {
+    (error: AxiosError) => {
         return Promise.reject(error);
     }
 );
 
 apiClient.interceptors.response.use(
-    (response) => response,
-    (error) => {
+    (response: AxiosResponse) => response,
+    async (error: AxiosError) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+        
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            if (isRefreshing) {
+                return new Promise((resolve, reject) => {
+                    failedRequestsQueue.push({ resolve, reject });
+                })
+                .then(token => {
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return apiClient(originalRequest);
+                })
+                .catch(err => Promise.reject(err));
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            try {
+                const refreshToken = authStorage.getRefreshToken();
+                if (!refreshToken) {
+                    throw new Error('No refresh token');
+                }
+
+                const response = await axios.post(`${API_BASE_URL}/Auth/refresh`, {
+                    refreshToken
+                });
+
+                const { accessToken, refreshToken: newRefreshToken } = response.data;
+                authStorage.setTokens(accessToken, newRefreshToken);
+
+                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
+                processQueue(null, accessToken);
+                return apiClient(originalRequest);
+            } catch (refreshError) {
+                processQueue(refreshError as AxiosError);
+                authStorage.clear();
+                if (window.location.pathname !== '/auth') {
+                    window.location.href = '/auth';
+                }
+                return Promise.reject(refreshError);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
         return Promise.reject(error);
     }
 );

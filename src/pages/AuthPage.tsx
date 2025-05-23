@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../api/client';
+import { authStorage } from '../api/utils/auth-storage';
 import logoImage from '../assets/logos/logo.svg';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 import AuthCallModal from '../components/ui/Modals/AuthCallModal';
@@ -70,26 +71,26 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         
         setIsVerifying(true);
         try {
-            const response = await apiClient.post('Auth/confirm', {
+            const response = await apiClient.post('/Auth/confirm', {
                 phone: phone,
                 checkId: id,
             });
             
             if (response.data.accessToken && response.data.refreshToken) {
-                localStorage.setItem('accessToken', response.data.accessToken);
-                localStorage.setItem('refreshToken', response.data.refreshToken);
+                authStorage.setTokens(response.data.accessToken, response.data.refreshToken);
+                onLoginSuccess(response.data.accessToken);
+                
+                if (verificationInterval.current) {
+                    window.clearInterval(verificationInterval.current);
+                }
+                setShowCallModal(false);
+                
+                // Редирект через window.location для полной перезагрузки состояния
+                window.location.href = userType === 'user' ? '/credits' : '/client';
             }
-            
-            if (verificationInterval.current) {
-                window.clearInterval(verificationInterval.current);
-            }
-            setShowCallModal(false);
-            window.location.href = userType === 'user' ? '/dashboard' : '/client';
-        } catch (error: any) {
-            if (error.response?.status !== 400) {
-                console.error('Verification error:', error);
-                setVerificationError('Ошибка проверки авторизации');
-            }
+        } catch (error) {
+            console.error('Verification error:', error);
+            setVerificationError('Ошибка проверки авторизации');
         } finally {
             setIsVerifying(false);
         }
@@ -172,6 +173,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         </AuthContainer>
     );
 };
+
 const AuthContainer = styled.div`
     display: flex;
     flex-direction: column;

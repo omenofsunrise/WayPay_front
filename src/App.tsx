@@ -7,28 +7,37 @@ import { NotFoundContent } from './components/NotFoundContent';
 import './App.css';
 import PaymentPage from './pages/PaymentPage';
 import ProductPage from './pages/ProductPage';
+import { authStorage } from './api/utils/auth-storage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    setIsAuthenticated(!!token);
-    setIsLoading(false);
+    const checkAuth = () => {
+      const authenticated = authStorage.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      
+      // Если пользователь авторизован и находится на странице auth - редиректим
+      if (authenticated && window.location.pathname === '/auth') {
+        window.location.href = '/credits';
+      }
+      
+      // Если пользователь не авторизован и не на странице auth - редиректим
+      if (!authenticated && window.location.pathname !== '/auth') {
+        window.location.href = '/auth';
+      }
+    };
+
+    checkAuth();
+    
+    // Слушаем изменения в localStorage для синхронизации вкладок
+    const handleStorageChange = () => checkAuth();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const handleLogin = (token: string) => {
-    localStorage.setItem('accessToken', token);
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    setIsAuthenticated(false);
-  };
-
-  if (isLoading) {
+  if (isAuthenticated === null) {
     return (
       <div className="app-loading">
         <div className="spinner"></div>
@@ -40,25 +49,25 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={
-          isAuthenticated ? (
-            <Navigate to="/credits" replace />
-          ) : (
-            <Navigate to="/auth" replace />
-          )
+          <Navigate to={isAuthenticated ? "/credits" : "/auth"} replace />
         } />
         
         <Route path="/auth" element={
           isAuthenticated ? (
             <Navigate to="/credits" replace />
           ) : (
-            <AuthPage onLoginSuccess={handleLogin} />
+            <AuthPage onLoginSuccess={() => setIsAuthenticated(true)} />
           )
         } />
 
         <Route path="/credits" element={
+          isAuthenticated ? (
             <MainLayout>
               <CreditPage />
             </MainLayout>
+          ) : (
+            <Navigate to="/auth" replace />
+          )
         } />
 
         <Route path="payments" element={
@@ -74,13 +83,9 @@ function App() {
         } />
 
         <Route path="*" element={
-          isAuthenticated ? (
-            <MainLayout>
+             <MainLayout>
               <NotFoundContent />
             </MainLayout>
-          ) : (
-            <Navigate to="/auth" replace />
-          )
         } />
       </Routes>
     </BrowserRouter>

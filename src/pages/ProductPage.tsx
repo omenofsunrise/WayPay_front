@@ -9,55 +9,109 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout"
 import TitleField from "../components/ui/Layouts/TitleLayout"
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle"
 import CustomTitle from "../components/ui/Text/CustomTitle"
-import { useState } from "react"
+import { useEffect, useState, useCallback } from "react"
+import useProducts from "../api/hooks/useProducts"
+import { exportToExcel } from '../utils/exportUtils';
+
 const ProductPage = () => {
-    const [name, setName] = useState('');
+    const [nameFilter, setNameFilter] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 10;
     
+    const { 
+        isLoading, 
+        error, 
+        data: productsData, 
+        getProducts 
+    } = useProducts();
+    
+    const loadProducts = useCallback(async () => {
+        await getProducts({
+            page: currentPage,
+            pageSize,
+            name: nameFilter || undefined
+        });
+    }, [currentPage, nameFilter, getProducts]);
+    
+    useEffect(() => {
+        loadProducts();
+    }, [currentPage, loadProducts]);
+
+    const handleExport = async () => {
+        try {
+            const allProducts = await getProducts({
+            name: nameFilter || undefined,
+            pageSize: 100
+            });
+            
+            if (allProducts?.items) {
+            exportToExcel(allProducts.items.map(product => ({
+                'ID': product.id,
+                'Название': product.name,
+            })), {
+                fileName: 'products_export',
+                sheetName: 'Products',
+                columnWidths: [10, 30]
+            });
+            }
+        } catch (err) {
+            console.error('Ошибка при экспорте:', err);
+        }
+    };
+
+    const tableData = productsData?.items.map(product => [
+        product.id.toString(),
+        product.name
+    ]) || [];
+
     return (
         <PageLayout>
             <TitleField>
                 <CustomTitle>Товары</CustomTitle>
-                <ExportButton onClick={handleExport}></ExportButton>
+                <ExportButton onClick={handleExport} />
             </TitleField>
+            
             <FilterField>
                 <CustomInput 
                     inputType="text"
                     placeholder="Название товара"
-                    value={name}
-                    onChange={(e) => {
-                        setName(e.target.value);
-                    }}
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
                 />
-                <DarkCyanButton style={{ width: "15vw" }}>+ Новый товар</DarkCyanButton>
+                <DarkCyanButton style={{ width: "15vw" }}>
+                    + Новый товар
+                </DarkCyanButton>
             </FilterField>
-            <CustomTable columns={[
-                { name: "ID", isSortable: true },
-                { name: "Название", isSortable: true },
-                ]} 
-                data={[
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ['2', 'Телефон'],
-                ]}
-            />
-            <PaginationLayout>
-                 <CountInfoTitle/>
-                    <Pagination
-                    total={100} 
-                />
-            </PaginationLayout>
+            
+            {isLoading && <div>Загрузка...</div>}
+            {error && <div>Ошибка: {error}</div>}
+            
+            {!isLoading && !error && (
+                <>
+                    <CustomTable 
+                        columns={[
+                            { name: "ID", isSortable: true },
+                            { name: "Название", isSortable: true },
+                        ]} 
+                        data={tableData}
+                    />
+                    
+                    <PaginationLayout>
+                        <CountInfoTitle 
+                            total={productsData?.totalCount || 0} 
+                        />
+                        
+                        <Pagination
+                            total={productsData?.totalCount || 0}
+                            current={currentPage}
+                            onChange={setCurrentPage}
+                            itemsPerPage={pageSize}
+                        />
+                    </PaginationLayout>
+                </>
+            )}
         </PageLayout>
     )
 }
-
-const handleExport = () => {
-    console.log('Экспорт данных');
-};
 
 export default ProductPage;

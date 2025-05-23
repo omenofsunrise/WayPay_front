@@ -11,15 +11,26 @@ const DefaultExportIcon = () => (
 interface ExportButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
   icon?: React.ReactNode;
+  onExport?: () => void;
 }
 
 const ExportButton: React.FC<ExportButtonProps> = ({
   children = 'Экспорт',
   icon = <DefaultExportIcon />,
+  onExport,
   ...props
 }) => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (onExport) {
+      onExport();
+    }
+    if (props.onClick) {
+      props.onClick(e);
+    }
+  };
+
   return (
-    <ButtonContainer {...props}>
+    <ButtonContainer {...props} onClick={handleClick}>
       {icon}
       <span>{children}</span>
     </ButtonContainer>

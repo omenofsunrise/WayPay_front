@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Column {
   name: string;
@@ -53,7 +54,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({ columns, data }) => {
   }
 
   return (
-    <TableContainer>
+    <TableContainer
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       <StyledTable>
         <TableHeader>
           <TableRow>
@@ -67,7 +72,14 @@ const CustomTable: React.FC<CreditsTableProps> = ({ columns, data }) => {
                 <HeaderContent>
                   {column.name}
                   {column.isSortable && (
-                    <SortIcon $direction={sortConfig?.key === index ? sortConfig.direction : 'ascending'}>
+                    <SortIcon 
+                      $direction={sortConfig?.key === index ? sortConfig.direction : 'ascending'}
+                      animate={{
+                        rotate: sortConfig?.key === index && sortConfig.direction === 'descending' ? 180 : 0,
+                        color: sortConfig?.key === index ? '#007D88' : '#6B7280'
+                      }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5.77734 2.92383L5.25 3.45117L3.26953 1.47656L3.26367 12H2.51367L2.51953 1.45898L0.527344 3.45117L0 2.92383L2.88867 0.0351562L5.77734 2.92383ZM10.5059 8.54883L11.0391 9.07617L8.15039 11.9648L5.25586 9.07617L5.78906 8.54883L7.76953 10.5293L7.76367 0H8.51367L8.51953 10.5352L10.5059 8.54883Z" fill="currentColor"/>
                       </svg>
@@ -79,30 +91,52 @@ const CustomTable: React.FC<CreditsTableProps> = ({ columns, data }) => {
           </TableRow>
         </TableHeader>
         <TableBody $isSorting={isSorting}>
-          {sortedData.map((row, rowIndex) => (
-            <TableRow 
-              key={rowIndex} 
-              $isLast={rowIndex === sortedData.length - 1}
-              $isSelected={rowIndex === selectedRow}
-              onClick={() => handleRowClick(rowIndex)}
-            >
-              {row.map((cell, cellIndex) => (
-                <BodyCell key={cellIndex}>{cell}</BodyCell>
-              ))}
-            </TableRow>
-          ))}
+          <AnimatePresence>
+            {sortedData.map((row, rowIndex) => (
+              <TableRow 
+                key={`row-${rowIndex}`}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0,
+                  backgroundColor: rowIndex === selectedRow ? '#007D88' : 'transparent',
+                  color: rowIndex === selectedRow ? 'white' : 'inherit'
+                }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                $isLast={rowIndex === sortedData.length - 1}
+                $isSelected={rowIndex === selectedRow}
+                onClick={() => handleRowClick(rowIndex)}
+                whileHover={{
+                  backgroundColor: rowIndex === selectedRow ? '#007D88' : '#F3F4F6'
+                }}
+              >
+                {row.map((cell, cellIndex) => (
+                  <BodyCell key={cellIndex}>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.05 * cellIndex }}
+                    >
+                      {cell}
+                    </motion.div>
+                  </BodyCell>
+                ))}
+              </TableRow>
+            ))}
+          </AnimatePresence>
         </TableBody>
       </StyledTable>
     </TableContainer>
   );
 };
 
-
-const TableContainer = styled.div`
+const TableContainer = styled(motion.div)`
   border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 20px;
   overflow: hidden;
-  color: rgba(0, 0, 0, 1)
+  color: rgba(0, 0, 0, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
 const StyledTable = styled.table`
@@ -131,16 +165,9 @@ const TableBody = styled.tbody<{ $isSorting?: boolean }>`
   opacity: ${({ $isSorting }) => ($isSorting ? 0.7 : 1)};
 `;
 
-const TableRow = styled.tr<{ $isLast?: boolean; $isSelected?: boolean }>`
+const TableRow = styled(motion.tr)<{ $isLast?: boolean; $isSelected?: boolean }>`
   position: relative;
-  transition: background-color 0.2s ease;
-  background-color: ${({ $isSelected }) => ($isSelected ? 'rgba(0, 125, 136, 1)' : 'transparent')};
-  color: ${({ $isSelected }) => ($isSelected ? 'white' : 'inherit')};
-
-  &:hover {
-    background-color: ${({ $isSelected }) => 
-      $isSelected ? 'rgba(0, 125, 136, 1)' : 'rgba(209, 213, 219, 1)'};
-  }
+  cursor: pointer;
 
   &::after {
     content: "";
@@ -155,17 +182,17 @@ const TableRow = styled.tr<{ $isLast?: boolean; $isSelected?: boolean }>`
 `;
 
 const HeaderCell = styled.th<{ $isSortable?: boolean; $isActive?: boolean }>`
-  padding: 12px 16px;
+  padding: 16px;
   text-align: center;
   font-weight: 500;
-  border-right: none;
   position: relative;
   cursor: ${({ $isSortable }) => ($isSortable ? 'pointer' : 'default')};
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   background-color: rgba(255, 255, 255, 1);
+  color: ${({ $isActive }) => ($isActive ? '#007D88' : 'inherit')};
 
   &:hover {
-    background-color: rgba(255, 255, 255, 1);
+    background-color: ${({ $isSortable }) => ($isSortable ? 'rgba(243, 244, 246, 1)' : 'inherit')};
   }
 `;
 
@@ -175,18 +202,15 @@ const HeaderContent = styled.div`
   gap: 4px;
 `;
 
-const SortIcon = styled.span<{ $direction: 'ascending' | 'descending' }>`
+const SortIcon = styled(motion.span)<{ $direction: 'ascending' | 'descending' }>`
   display: inline-flex;
   align-items: center;
-  transition: transform 0.2s ease, color 0.2s ease;
-  transform: ${({ $direction }) => 
-    $direction === 'descending' ? 'rotate(180deg)' : 'rotate(0deg)'};
 `;
 
 const BodyCell = styled.td`
-  padding: 12px 16px;
-  border-right: none;
-  transition: background-color 0.2s ease;
+  padding: 16px;
+  text-align: center;
+  vertical-align: middle;
 `;
 
 export default CustomTable;

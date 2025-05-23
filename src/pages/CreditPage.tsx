@@ -170,7 +170,6 @@ const CreditPage = () => {
       />
 
       <PaginationLayout>
-        <CountInfoTitle/>
         <Pagination 
           total={totalItems} 
         />

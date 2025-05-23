@@ -1,10 +1,16 @@
 import styled from "styled-components";
 
-const CountInfoTitle = () => {
+interface CountInfoTitleProps {
+    total: number;
+    current?: number;
+}
+
+const CountInfoTitle = ({ total }: CountInfoTitleProps) => {
     return (
-    <div>
-        <p>Всего:</p>
-    </div>
-)};
+        <div>
+            <p>Всего: {total}</p>
+        </div>
+    );
+};
 
 export default CountInfoTitle;
