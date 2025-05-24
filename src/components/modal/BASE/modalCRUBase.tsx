@@ -8,11 +8,13 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   onCancel: () => void;
-  onSave: (e: React.FormEvent) => void;
+  onSave?: (e: React.FormEvent) => void;
   children: ReactNode;
   isSaveDisabled?: boolean;
   isSubmitting?: boolean;
   mode?: ModalMode;
+  hideSaveButton?: boolean;
+  width?: string;
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -24,6 +26,8 @@ const BaseModal: React.FC<ModalProps> = ({
   isSaveDisabled = false,
   isSubmitting = false,
   mode = 'create',
+  hideSaveButton = false,
+  width = '562px',
 }) => {
   const isViewMode = mode === 'view';
 
@@ -34,7 +38,7 @@ const BaseModal: React.FC<ModalProps> = ({
 
   return (
     <ModalBackdrop>
-      <ModalContainer>
+      <ModalContainer width={width}>
         <CloseButton onClick={onClose}>&times;</CloseButton>
         <ModalHeader>
           <ModalTitle>{title}</ModalTitle>
@@ -45,7 +49,7 @@ const BaseModal: React.FC<ModalProps> = ({
 
           <ModalFooter>
             <CancelButton onClick={handleCancel}>Отменить</CancelButton>
-            {!isViewMode && (
+            {!isViewMode && !hideSaveButton && (
               <DarkCyanButton 
                 style={{ width: "136px", borderRadius: "5px" }} 
                 type="submit"
@@ -76,8 +80,8 @@ const ModalBackdrop = styled.div`
   z-index: 1000;
 `;
 
-const ModalContainer = styled.div`
-  width: 562px;
+const ModalContainer = styled.div<{ width: string }>`
+  width: ${props => props.width};
   height: auto;
   background-color: rgba(249, 250, 250, 1);
   border: 1px solid rgba(173, 179, 188, 1);

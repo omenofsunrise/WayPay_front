@@ -35,8 +35,8 @@ const BlacklistPage = () => {
     
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
-        1: 'fullName',
-        3: 'createdAt'
+        1: 'full_Name',
+        2: 'birthdate'
     };
     
     const { 
@@ -127,7 +127,7 @@ const BlacklistPage = () => {
                         style={{ width: "15vw" }}
                         onClick={handleAddToBlacklist}
                     >
-                        + Добавить в чёрный список
+                        + Добавить
                     </DarkCyanButton>
                 </div>
             </FilterField>
@@ -168,6 +168,8 @@ const BlacklistPage = () => {
                 isOpen={isSelectModalOpen}
                 onClose={() => setIsSelectModalOpen(false)}
                 onSubmit={handleClientSelect}
+                hideSaveButton={true}
+                width="900px"
             />
         </PageLayout>
     );

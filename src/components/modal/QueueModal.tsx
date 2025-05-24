@@ -13,7 +13,7 @@ interface QueueWithClient {
   id: number;
   sum: number;
   clientId: number;
-  priority: boolean; // Изменено с number на boolean
+  priority: 1 | 2;
   positionInQueue: number;
   createdAt: Date;
   clientFullName?: string;
@@ -71,12 +71,14 @@ const QueueModal: React.FC<QueueModalProps> = ({
   const [formData, setFormData] = useState<Omit<QueueWithClient, 'id'>>({
     sum: initialData.sum,
     clientId: initialData.clientId,
-    priority: initialData.priority,
+    priority: initialData.priority === 1 ? 1 : 2,
     positionInQueue: initialData.positionInQueue,
     createdAt: initialData.createdAt,
     clientFullName: initialData.clientFullName || '',
     clientPhone: initialData.clientPhone || ''
   });
+
+  const uiPriority = formData.priority === 1;
 
   const [validationErrors, setValidationErrors] = useState({
     sum: false,
@@ -93,7 +95,6 @@ const QueueModal: React.FC<QueueModalProps> = ({
     clientId: false
   });
 
-  // Состояние для модального окна выбора клиента
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   useEffect(() => {
@@ -101,7 +102,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
       setFormData({
         sum: initialData.sum,
         clientId: initialData.clientId,
-        priority: initialData.priority,
+        priority: initialData.priority === 1 ? 1 : 2,
         positionInQueue: initialData.positionInQueue,
         createdAt: initialData.createdAt,
         clientFullName: initialData.clientFullName || '',
@@ -204,7 +205,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
   const handlePriorityChange = (checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      priority: checked
+      priority: checked ? 1 : 2 // true → 1, false → 2
     }));
   };
 
@@ -297,7 +298,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
               <InputLabel>Приоритет:</InputLabel>
               <InputContainer>
                 <ToggleSwitch
-                  checked={formData.priority}
+                  checked={uiPriority}
                   onChange={handlePriorityChange}
                   disabled={mode === 'view'}
                 />

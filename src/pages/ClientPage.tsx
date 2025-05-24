@@ -41,7 +41,7 @@ const ClientPage = () => {
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'fullName',
-        4: 'birthdate'
+        3: 'birthdate'
     };
     
     const { 

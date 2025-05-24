@@ -9,7 +9,7 @@ class BlacklistService {
   }
 
   async addBlacklist(id: number) {
-    const response = await apiClient.post(`/Client/${id}/blacklist`);
+    const response = await apiClient.put(`/Client/${id}/blacklist`);
     return response.data;
 }
 }

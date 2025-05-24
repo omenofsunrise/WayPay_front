@@ -62,7 +62,7 @@ const QueuePage = () => {
 
         if (sortConfig.key !== null) {
             params.sortBy = columnToApiSortMap[sortConfig.key];
-            params.sortDirection = sortConfig.direction;
+            params.descending = sortConfig.direction;
         }
 
         const queues = await getQueues(params);
@@ -256,7 +256,7 @@ const QueuePage = () => {
                     <CustomTable 
                         columns={[
                             { name: "Номер в очереди", isSortable: true },
-                            { name: "ФИО клиента", isSortable: true },
+                            { name: "ФИО клиента" },
                             { name: "Телефон клиента" },
                             { name: "Сумма", isSortable: true },
                         ]} 

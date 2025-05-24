@@ -11,9 +11,17 @@ interface ClientSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (client: { id: number; fullName: string; phone: string }) => void;
+  hideSaveButton?: boolean;
+  width?: string;
 }
 
-const ClientSelectModal = ({ isOpen, onClose, onSubmit }: ClientSelectModalProps) => {
+const ClientSelectModal = ({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  hideSaveButton = true, 
+  width = "800px" 
+}: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
@@ -103,6 +111,8 @@ const ClientSelectModal = ({ isOpen, onClose, onSubmit }: ClientSelectModalProps
       title="Выбор клиента"
       onClose={onClose}
       onCancel={onClose}
+      hideSaveButton={hideSaveButton}
+      width={width}
     >
       <ModalContent>
         <FilterContainer>
