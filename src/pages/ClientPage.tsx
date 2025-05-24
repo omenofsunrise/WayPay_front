@@ -209,7 +209,7 @@ const ClientPage = () => {
                     style={{ width: "15vw" }}
                     onClick={handleCreateClient}
                 >
-                    + Новый клиент
+                    + Добавить
                 </DarkCyanButton>
             </FilterField>
             

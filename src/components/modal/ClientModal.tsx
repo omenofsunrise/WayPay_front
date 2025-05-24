@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import BaseModal, { type ModalMode } from './modalBase';
+import BaseModal, { type ModalMode } from './BASE/modalCRUBase';
 import CustomInput from '../ui/fields/CustomInput';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
 import PhoneModalInput from '../ui/fields/PhoneModalInput';
+import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
 
 interface Client {
   id: number;
@@ -284,61 +285,86 @@ const ClientModal: React.FC<ClientModalProps> = ({
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
           
-          <CustomInput
-            name="fullName"
-            inputType="fullname"
-            placeholder="ФИО клиента"
-            value={formData.fullName}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.fullName && validationErrors.fullName}
-            errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
-          />
+          <InputRow>
+            <InputLabel>ФИО:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="fullName"
+                inputType="fullname"
+                placeholder="ФИО клиента"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.fullName && validationErrors.fullName}
+                errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
+              />
+            </InputContainer>
+          </InputRow>
           
-          <PhoneModalInput
-            name="phone"
-            placeholder="Телефон"
-            value={formData.phone}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.phone && validationErrors.phone}
-            errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
-          />
+          <InputRow>
+            <InputLabel>Телефон:</InputLabel>
+            <InputContainer>
+              <PhoneModalInput
+                name="phone"
+                placeholder="Телефон"
+                value={formData.phone}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.phone && validationErrors.phone}
+                errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
+              />
+            </InputContainer>
+          </InputRow>
           
-          <CustomInput
-            name="birthdate"
-            inputType="date"
-            placeholder="Дата рождения (дд.мм.гггг)"
-            value={formData.birthdate}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.birthdate && validationErrors.birthdate}
-            errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
-          />
+          <InputRow>
+            <InputLabel>Дата рождения:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="birthdate"
+                inputType="date"
+                placeholder="дд.мм.гггг"
+                value={formData.birthdate}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.birthdate && validationErrors.birthdate}
+                errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
+              />
+            </InputContainer>
+          </InputRow>
           
           <ModalInfoTitle>Паспортные данные</ModalInfoTitle>
           
-          <CustomInput
-            name="doc"
-            inputType="doc"
-            placeholder="Документ"
-            value={formData.doc}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.doc && validationErrors.doc}
-            errorMessage={touchedFields.doc ? errorMessages.doc : undefined}
-          />
+          <InputRow>
+            <InputLabel>Паспорт:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="doc"
+                inputType="doc"
+                placeholder="Серия и номер"
+                value={formData.doc}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.doc && validationErrors.doc}
+                errorMessage={touchedFields.doc ? errorMessages.doc : undefined}
+              />
+            </InputContainer>
+          </InputRow>
           
-          <CustomInput
-            name="docIssueDate"
-            inputType="date"
-            placeholder="Дата выдачи (дд.мм.гггг)"
-            value={formData.docIssueDate}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}
-            errorMessage={touchedFields.docIssueDate ? errorMessages.docIssueDate : undefined}
-          />
+          <InputRow>
+            <InputLabel>Дата выдачи:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="docIssueDate"
+                inputType="date"
+                placeholder="дд.мм.гггг"
+                value={formData.docIssueDate}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}
+                errorMessage={touchedFields.docIssueDate ? errorMessages.docIssueDate : undefined}
+              />
+            </InputContainer>
+          </InputRow>
         </div>
       </form>
     </BaseModal>

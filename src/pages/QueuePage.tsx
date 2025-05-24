@@ -15,6 +15,13 @@ import useQueue from "../api/hooks/useQueue";
 import useClients from "../api/hooks/useClient";
 import type { Queue } from '../api/types/queue';
 
+declare module '../api/types/queue' {
+  interface Queue {
+    clientFullName?: string;
+    clientPhone?: string;
+  }
+}
+
 const QueuePage = () => {
     const [nameFilter, setNameFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -204,7 +211,6 @@ const QueuePage = () => {
         queue.clientFullName || queue.clientId.toString(),
         queue.clientPhone || '—',
         queue.sum.toString(),
-        queue.priority.toString()
     ]);
     
     const tableActions = [
@@ -253,7 +259,6 @@ const QueuePage = () => {
                             { name: "ФИО клиента", isSortable: true },
                             { name: "Телефон клиента" },
                             { name: "Сумма", isSortable: true },
-                            { name: "Приоритет" }
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}

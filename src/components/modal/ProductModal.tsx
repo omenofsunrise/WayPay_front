@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import BaseModal, { type ModalMode } from './modalBase';
+import BaseModal, { type ModalMode } from './BASE/modalCRUBase';
 import CustomInput from '../ui/fields/CustomInput';
 
 type ProductModalProps = {

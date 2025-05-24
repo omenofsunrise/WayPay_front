@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import BaseModal, { type ModalMode } from './modalBase';
+import BaseModal, { type ModalMode } from './BASE/modalCRUBase';
 import CustomInput from '../ui/fields/CustomInput';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
 import PhoneModalInput from '../ui/fields/PhoneModalInput';
+import Button from '../ui/Buttons/DarkCyanButton';
+import ClientModal from './ClientModal';
+import ToggleSwitch from '../ui/Toggles/ToggleSwitch';
+import styled from 'styled-components';
+import ClientSelectModal from './ClientSelectModal';
 
 interface QueueWithClient {
   id: number;
   sum: number;
   clientId: number;
-  priority: number;
+  priority: boolean; // Изменено с number на boolean
   positionInQueue: number;
   createdAt: Date;
   clientFullName?: string;
@@ -23,6 +28,30 @@ type QueueModalProps = {
   initialData?: QueueWithClient;
 };
 
+// Стилизованные компоненты
+const InputRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+`;
+
+const InputLabel = styled.span`
+  min-width: 140px;
+  text-align: right;
+  font-size: 14px;
+`;
+
+const InputContainer = styled.div`
+  flex: 1;
+`;
+
+const ClientInfoContainer = styled.div`
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+`;
+
 const QueueModal: React.FC<QueueModalProps> = ({
   mode,
   isOpen,
@@ -32,7 +61,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
     id: 0,
     sum: 0,
     clientId: 0,
-    priority: 0,
+    priority: false,
     positionInQueue: 0,
     createdAt: new Date(),
     clientFullName: '',
@@ -51,21 +80,21 @@ const QueueModal: React.FC<QueueModalProps> = ({
 
   const [validationErrors, setValidationErrors] = useState({
     sum: false,
-    clientId: false,
-    priority: false
+    clientId: false
   });
 
   const [errorMessages, setErrorMessages] = useState({
     sum: '',
-    clientId: '',
-    priority: ''
+    clientId: ''
   });
 
   const [touchedFields, setTouchedFields] = useState({
     sum: false,
-    clientId: false,
-    priority: false
+    clientId: false
   });
+
+  // Состояние для модального окна выбора клиента
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -80,18 +109,15 @@ const QueueModal: React.FC<QueueModalProps> = ({
       });
       setValidationErrors({
         sum: false,
-        clientId: false,
-        priority: false
+        clientId: false
       });
       setErrorMessages({
         sum: '',
-        clientId: '',
-        priority: ''
+        clientId: ''
       });
       setTouchedFields({
         sum: false,
-        clientId: false,
-        priority: false
+        clientId: false
       });
     }
   }, [initialData, isOpen]);
@@ -101,8 +127,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
 
     const newErrorMessages = {
       sum: '',
-      clientId: '',
-      priority: ''
+      clientId: ''
     };
 
     // Sum validation
@@ -115,17 +140,11 @@ const QueueModal: React.FC<QueueModalProps> = ({
       newErrorMessages.clientId = 'Необходимо указать клиента';
     }
 
-    // Priority validation (0-10)
-    if (formData.priority < 0 || formData.priority > 10) {
-      newErrorMessages.priority = 'Приоритет должен быть от 0 до 10';
-    }
-
     setErrorMessages(newErrorMessages);
 
     const errors = {
       sum: !!newErrorMessages.sum,
-      clientId: !!newErrorMessages.clientId,
-      priority: !!newErrorMessages.priority
+      clientId: !!newErrorMessages.clientId
     };
 
     setValidationErrors(errors);
@@ -157,8 +176,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
     // Mark all fields as touched to show errors
     setTouchedFields({
       sum: true,
-      clientId: true,
-      priority: true
+      clientId: true
     });
 
     // Check validity
@@ -175,14 +193,29 @@ const QueueModal: React.FC<QueueModalProps> = ({
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'sum' || name === 'clientId' || name === 'priority' 
-        ? Number(value) 
-        : value
+      [name]: name === 'sum' || name === 'clientId' ? Number(value) : value
     }));
     setTouchedFields(prev => ({
       ...prev,
       [name]: true
     }));
+  };
+
+  const handlePriorityChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      priority: checked
+    }));
+  };
+
+  const handleSelectClient = (client: { id: number; fullName: string; phone: string }) => {
+    setFormData(prev => ({
+      ...prev,
+      clientId: client.id,
+      clientFullName: client.fullName,
+      clientPhone: client.phone
+    }));
+    setIsClientModalOpen(false);
   };
 
   const getTitle = () => {
@@ -197,88 +230,96 @@ const QueueModal: React.FC<QueueModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <BaseModal
-      title={getTitle()}
-      onClose={onClose}
-      onCancel={onClose}
-      onSave={handleSubmit}
-      isSaveDisabled={isSaveDisabled()}
-      mode={mode}
-    >
-      <form onSubmit={handleSubmit}>
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <ModalInfoTitle>Основная информация</ModalInfoTitle>
-          
-          <CustomInput
-            name="sum"
-            inputType="number"
-            placeholder="Сумма"
-            value={formData.sum.toString()}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.sum && validationErrors.sum}
-            errorMessage={touchedFields.sum ? errorMessages.sum : undefined}
-          />
-          
-          <CustomInput
-            name="clientId"
-            inputType="number"
-            placeholder="ID клиента"
-            value={formData.clientId.toString()}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.clientId && validationErrors.clientId}
-            errorMessage={touchedFields.clientId ? errorMessages.clientId : undefined}
-          />
-          
-          {formData.clientFullName && (
-            <CustomInput
-              inputType="text"
-              placeholder="ФИО клиента"
-              value={formData.clientFullName}
-              disabled
-            />
-          )}
-          
-          {formData.clientPhone && (
-            <PhoneModalInput
-                name="clientPhone"
-                value={formData.clientPhone}
-                onChange={() => {}}
-                placeholder="Телефон клиента"
-                disabled={true}
-            />
-          )}
-          
-          <CustomInput
-            name="priority"
-            inputType="number"
-            placeholder="Приоритет (0-10)"
-            value={formData.priority.toString()}
-            onChange={handleInputChange}
-            disabled={mode === 'view'}
-            hasError={touchedFields.priority && validationErrors.priority}
-            errorMessage={touchedFields.priority ? errorMessages.priority : undefined}
-          />
-          
-          <ModalInfoTitle>Информация о записи</ModalInfoTitle>
-          
-          <CustomInput
-            inputType="text"
-            placeholder="Позиция в очереди"
-            value={formData.positionInQueue.toString()}
-            disabled
-          />
-          
-          <CustomInput
-            inputType="text"
-            placeholder="Дата создания"
-            value={formData.createdAt.toLocaleString()}
-            disabled
-          />
-        </div>
-      </form>
-    </BaseModal>
+    <>
+      <BaseModal
+        title={getTitle()}
+        onClose={onClose}
+        onCancel={onClose}
+        onSave={handleSubmit}
+        isSaveDisabled={isSaveDisabled()}
+        mode={mode}
+      >
+        <form onSubmit={handleSubmit}>
+          <div style={{ padding: '20px' }}>
+            <ModalInfoTitle>Основная информация</ModalInfoTitle>
+            
+            <InputRow>
+              <InputLabel>Сумма:</InputLabel>
+              <InputContainer>
+                <CustomInput
+                  name="sum"
+                  inputType="number"
+                  placeholder="Введите сумму"
+                  value={formData.sum.toString()}
+                  onChange={handleInputChange}
+                  disabled={mode === 'view'}
+                  hasError={touchedFields.sum && validationErrors.sum}
+                  errorMessage={touchedFields.sum ? errorMessages.sum : undefined}
+                />
+              </InputContainer>
+            </InputRow>
+            
+            <InputRow>
+              <InputLabel>Клиент:</InputLabel>
+              <InputContainer>
+                {formData.clientId ? (
+                  <ClientInfoContainer>
+                    <div>{formData.clientFullName}</div>
+                    <div>{formData.clientPhone}</div>
+                    {mode !== 'view' && (
+                      <Button 
+                        type="button" 
+                        variant="secondary" 
+                        size="small" 
+                        onClick={() => setIsClientModalOpen(true)}
+                      >
+                        Изменить клиента
+                      </Button>
+                    )}
+                  </ClientInfoContainer>
+                ) : (
+                  <Button 
+                    type="button" 
+                    onClick={() => setIsClientModalOpen(true)}
+                  >
+                    Выбрать клиента
+                  </Button>
+                )}
+                {touchedFields.clientId && validationErrors.clientId && (
+                  <div style={{ color: 'red', fontSize: '12px' }}>
+                    {errorMessages.clientId}
+                  </div>
+                )}
+              </InputContainer>
+            </InputRow>
+            
+            <InputRow>
+              <InputLabel>Приоритет:</InputLabel>
+              <InputContainer>
+                <ToggleSwitch
+                  checked={formData.priority}
+                  onChange={handlePriorityChange}
+                  disabled={mode === 'view'}
+                />
+                <span style={{ marginLeft: '8px' }}>
+                  {formData.priority ? 'Высокий приоритет' : 'Обычный приоритет'}
+                </span>
+              </InputContainer>
+            </InputRow>
+          </div>
+        </form>
+      </BaseModal>
+
+      <ClientSelectModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSubmit={(client) => handleSelectClient({
+          id: client.id,
+          fullName: client.fullName,
+          phone: client.phone
+        })}
+      />
+    </>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react';
 import styled from 'styled-components';
-import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
+import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 
 export type ModalMode = 'create' | 'edit' | 'view';
 
