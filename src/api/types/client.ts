@@ -16,3 +16,17 @@ export interface ClientParams {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }
+
+export interface ClientForm {
+  fullName: string;
+  phone: string;
+  doc: string;
+  birthdate: string; // Для UI - строка в формате "dd.mm.yyyy"
+  docIssueDate: string; // Для UI - строка в формате "dd.mm.yyyy"
+}
+
+export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {
+  id: number;
+  birthdate: Date; // Для API - объект Date
+  docIssueDate: Date; // Для API - объект Date
+}

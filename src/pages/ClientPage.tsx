@@ -13,6 +13,8 @@ import CustomTitle from "../components/ui/Text/CustomTitle";
 import { exportToExcel } from '../utils/exportUtils';
 import ClientModal from "../components/modal/ClientModal";
 import useClients from "../api/hooks/useClient";
+import type { ClientForm } from '../api/types/client';
+import { formatDate } from '../utils/dateFormatter';
 
 interface Client {
   id: number;
@@ -157,17 +159,38 @@ const ClientPage = () => {
         }
     };
 
-    const handleSubmitClient = async (clientData: Omit<Client, 'id'>) => {
+    const handleSubmitClient = async (formData: ClientForm) => {
         try {
+            // Функция преобразования строки в Date
+            const parseDate = (dateStr: string): Date => {
+            const [day, month, year] = dateStr.split('.').map(Number);
+            return new Date(year, month - 1, day);
+            };
+
+            // Подготавливаем данные для API
+            const apiData: Omit<Client, 'id'> = {
+            ...formData,
+            birthdate: parseDate(formData.birthdate),
+            docIssueDate: parseDate(formData.docIssueDate)
+            };
+
             if (modalMode === 'create') {
-                await createClient(clientData);
+            await createClient(apiData);
             } else if (modalMode === 'edit' && selectedClient?.id) {
-                await updateClient(selectedClient.id, clientData);
+            await updateClient(selectedClient.id, apiData);
             }
             loadClients();
         } catch (err) {
             console.error('Ошибка при сохранении клиента:', err);
         }
+    };
+
+    // Вспомогательная функция для преобразования строки в Date
+    const convertStringToDate = (dateStr: string): Date => {
+        if (!dateStr) return new Date(); // или другое значение по умолчанию
+        
+        const [day, month, year] = dateStr.split('.').map(Number);
+        return new Date(year, month - 1, day);
     };
 
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
@@ -181,7 +204,7 @@ const ClientPage = () => {
         client.id.toString(),
         client.fullName,
         client.phone,
-        client.birthdate,
+        formatDate(client.birthdate),
     ]) || [];
 
     const tableActions = [

@@ -18,7 +18,7 @@ type ClientModalProps = {
   mode: ModalMode;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (clientData: Omit<Client, 'id'>) => void;
+  onSubmit: (clientData: ClientForm) => void;
   initialData?: Client;
 };
 

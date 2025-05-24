@@ -63,20 +63,24 @@ apiClient.interceptors.response.use(
 
             try {
                 const refreshToken = authStorage.getRefreshToken();
-                if (!refreshToken) {
-                    throw new Error('No refresh token');
+                const accessToken = authStorage.getAccessToken();
+                
+                if (!refreshToken || !accessToken) {
+                    throw new Error('No tokens available');
                 }
 
+                // Исправленный запрос - отправляем оба токена
                 const response = await axios.post(`${API_BASE_URL}/Auth/refresh`, {
+                    accessToken,
                     refreshToken
                 });
 
-                const { accessToken, refreshToken: newRefreshToken } = response.data;
-                authStorage.setTokens(accessToken, newRefreshToken);
+                const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
+                authStorage.setTokens(newAccessToken, newRefreshToken);
 
-                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
-                processQueue(null, accessToken);
+                processQueue(null, newAccessToken);
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError as AxiosError);
