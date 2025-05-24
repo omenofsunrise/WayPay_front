@@ -8,9 +8,10 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: (e: React.FormEvent) => void;
   children: ReactNode;
   isSaveDisabled?: boolean;
+  isSubmitting?: boolean;
   mode?: ModalMode;
 }
 
@@ -21,9 +22,15 @@ const BaseModal: React.FC<ModalProps> = ({
   onSave,
   children,
   isSaveDisabled = false,
+  isSubmitting = false,
   mode = 'create',
 }) => {
   const isViewMode = mode === 'view';
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onCancel();
+  };
 
   return (
     <ModalBackdrop>
@@ -33,20 +40,22 @@ const BaseModal: React.FC<ModalProps> = ({
           <ModalTitle>{title}</ModalTitle>
         </ModalHeader>
 
-        <ModalContent>{children}</ModalContent>
+        <ModalForm onSubmit={onSave}>
+          <ModalContent>{children}</ModalContent>
 
-        <ModalFooter>
-          <CancelButton onClick={onCancel}>Отменить</CancelButton>
-          {!isViewMode && (
-            <DarkCyanButton 
-              style={{ width: "136px", borderRadius: "5px" }} 
-              onClick={onSave}
-              disabled={isSaveDisabled}
-            >
-              Сохранить
-            </DarkCyanButton>
-          )}
-        </ModalFooter>
+          <ModalFooter>
+            <CancelButton onClick={handleCancel}>Отменить</CancelButton>
+            {!isViewMode && (
+              <DarkCyanButton 
+                style={{ width: "136px", borderRadius: "5px" }} 
+                type="submit"
+                disabled={isSaveDisabled || isSubmitting}
+              >
+                {isSubmitting ? 'Сохранение...' : 'Сохранить'}
+              </DarkCyanButton>
+            )}
+          </ModalFooter>
+        </ModalForm>
       </ModalContainer>
     </ModalBackdrop>
   );
@@ -79,6 +88,12 @@ const ModalContainer = styled.div`
   padding: 24px;
   position: relative;
   margin: 0;
+`;
+
+const ModalForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 `;
 
 const ModalHeader = styled.div`
@@ -116,6 +131,7 @@ const CloseButton = styled.button`
 const ModalContent = styled.div`
   flex: 1;
   overflow-y: auto;
+  margin-bottom: 20px;
 `;
 
 const ModalFooter = styled.div`

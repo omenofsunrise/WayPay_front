@@ -6,6 +6,7 @@ export interface Client {
     phone: string,
     doc: string,
     birthdate: Date,
+    docIssueDate: Date
 }
 
 export interface ClientParams {

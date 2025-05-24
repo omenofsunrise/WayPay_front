@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import React from 'react';
 
-type InputType = 'number' | 'text' | 'fullname';
+type InputType = 'number' | 'text' | 'fullname' | 'doc';
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string;
@@ -56,6 +56,24 @@ const CustomInput: React.FC<CustomInputProps> = ({
         onChange(e);
         break;
 
+      case 'doc':
+        // Remove all non-digit characters
+        newValue = newValue.replace(/\D/g, '');
+        
+        // Format as 4 digits space 6 digits
+        if (newValue.length > 4) {
+          newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
+        }
+        
+        // Limit to 11 characters total (4 digits + space + 6 digits)
+        if (newValue.length > 11) {
+          newValue = newValue.slice(0, 11);
+        }
+        
+        e.target.value = newValue;
+        onChange(e);
+        break;
+
       default:
         onChange(e);
         break;
@@ -71,7 +89,8 @@ const CustomInput: React.FC<CustomInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         onChange={handleInputChange}
-        inputMode={inputType === 'number' ? 'numeric' : 'text'}
+        inputMode={inputType === 'number' || inputType === 'doc' ? 'numeric' : 'text'}
+        maxLength={inputType === 'doc' ? 11 : undefined}
         hasError={hasError}
       />
       {customPlaceholder && (

@@ -4,7 +4,7 @@ import type { PaginatedResponse } from '../types/common';
 
 class ClientService {
   async getClients(params?: ClientParams): Promise<PaginatedResponse<Client>> {
-    const response = await apiClient.get<PaginatedResponse<Client>>('/Client/paged', { params });
+    const response = await apiClient.get<PaginatedResponse<Client>>('/Client', { params });
     return response.data;
   }
 

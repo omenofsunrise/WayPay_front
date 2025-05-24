@@ -11,7 +11,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import { exportToExcel } from '../utils/exportUtils';
-import { ClientModal } from "../components/modal/ClientModal";
+import ClientModal from "../components/modal/ClientModal";
 import useClients from "../api/hooks/useClient";
 
 interface Client {
@@ -20,6 +20,7 @@ interface Client {
   phone: string;
   doc: string;
   birthdate: Date;
+  docIssueDate: Date;
 }
 
 const ClientPage = () => {
@@ -90,7 +91,6 @@ const ClientPage = () => {
                 direction: 'asc'
             };
         });
-        setCurrentPage(1);
     };
 
     const handleExport = async () => {
@@ -127,7 +127,8 @@ const ClientPage = () => {
             fullName: '',
             phone: '',
             doc: '',
-            birthdate: new Date()
+            birthdate: new Date(),
+            docIssueDate: null
         });
         setIsModalOpen(true);
     };
@@ -180,7 +181,6 @@ const ClientPage = () => {
         client.id.toString(),
         client.fullName,
         client.phone,
-        client.doc,
         client.birthdate,
     ]) || [];
 
@@ -201,7 +201,7 @@ const ClientPage = () => {
             
             <FilterField>
                 <CustomInput 
-                    inputType="text"
+                    inputType="fullname"
                     placeholder="ФИО клиента"
                     value={nameFilter}
                     onChange={(e) => handleFilterChange(e.target.value)}
@@ -224,7 +224,6 @@ const ClientPage = () => {
                             { name: "ID", isSortable: true },
                             { name: "ФИО", isSortable: true },
                             { name: "Телефон" },
-                            { name: "Документ" },
                             { name: "Дата рождения", isSortable: true },
                         ]} 
                         data={tableData}
@@ -259,7 +258,8 @@ const ClientPage = () => {
                     fullName: '',
                     phone: '',
                     doc: '',
-                    birthdate: new Date()
+                    birthdate: null,
+                    docIssueDate: null
                 }}
             />
         </PageLayout>
