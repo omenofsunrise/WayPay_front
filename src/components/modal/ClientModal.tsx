@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import BaseModal, { type ModalMode } from './modalBase';
 import CustomInput from '../ui/fields/CustomInput';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
-import DateModalInput from '../ui/fields/DateModalInput';
 import PhoneModalInput from '../ui/fields/PhoneModalInput';
 
 interface Client {
@@ -10,8 +9,8 @@ interface Client {
   fullName: string;
   phone: string;
   doc: string;
-  birthdate: Date;
-  docIssueDate: Date;
+  birthdate: string; // Changed from Date to string
+  docIssueDate: string; // Changed from Date to string
 }
 
 type ClientModalProps = {
@@ -20,6 +19,45 @@ type ClientModalProps = {
   onClose: () => void;
   onSubmit: (clientData: Omit<Client, 'id'>) => void;
   initialData?: Client;
+};
+
+const validateDate = (dateStr: string, minAge: number, maxAge: number): { isValid: boolean; error?: string; date?: Date } => {
+  if (!dateStr) {
+    return { isValid: false, error: 'Поле обязательно для заполнения' };
+  }
+
+  // Check format dd.mm.yyyy
+  const dateRegex = /^\d{2}\.\d{2}\.\d{4}$/;
+  if (!dateRegex.test(dateStr)) {
+    return { isValid: false, error: 'Формат даты: дд.мм.гггг' };
+  }
+
+  const [day, month, year] = dateStr.split('.').map(Number);
+  
+  // Basic date validation
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return { isValid: false, error: 'Некорректная дата' };
+  }
+
+  const today = new Date();
+  const age = today.getFullYear() - year - 
+    (today.getMonth() < month - 1 || 
+     (today.getMonth() === month - 1 && today.getDate() < day) ? 1 : 0);
+
+  if (age < minAge) {
+    return { isValid: false, error: `Возраст должен быть не менее ${minAge} лет` };
+  }
+
+  if (age > maxAge) {
+    return { isValid: false, error: `Возраст должен быть не более ${maxAge} лет` };
+  }
+
+  return { isValid: true, date };
 };
 
 const ClientModal: React.FC<ClientModalProps> = ({
@@ -32,8 +70,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     fullName: '',
     phone: '',
     doc: '',
-    birthdate: new Date(),
-    docIssueDate: new Date()
+    birthdate: '',
+    docIssueDate: ''
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Client, 'id'>>({
@@ -68,7 +106,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
     docIssueDate: false
   });
 
-  // Сбрасываем форму при изменении initialData
   useEffect(() => {
     if (isOpen) {
       setFormData({
@@ -102,7 +139,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     }
   }, [initialData, isOpen]);
 
-  // Валидация при изменении данных
+  // Validation on data change
   useEffect(() => {
     if (mode === 'view') return;
 
@@ -114,14 +151,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
       docIssueDate: ''
     };
 
-    // Валидация ФИО (минимум 2 слова)
+    // Full name validation (at least 2 words)
     if (formData.fullName.trim().split(/\s+/).length < 2) {
       newErrorMessages.fullName = 'Укажите фамилию и имя (минимум 2 слова)';
     } else if (formData.fullName.trim().length === 0) {
       newErrorMessages.fullName = 'Поле обязательно для заполнения';
     }
 
-    // Валидация телефона (пример: 8 (123) 456-78-90)
+    // Phone validation (example: 8 (123) 456-78-90)
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
     if (!phoneRegex.test(formData.phone.trim())) {
       newErrorMessages.phone = 'Введите телефон в формате: 8 (123) 456-78-90';
@@ -129,20 +166,13 @@ const ClientModal: React.FC<ClientModalProps> = ({
       newErrorMessages.phone = 'Поле обязательно для заполнения';
     }
 
-    // Валидация даты рождения (18-100 лет)
-    const today = new Date();
-    const minDate = new Date();
-    minDate.setFullYear(today.getFullYear() - 100);
-    const maxDate = new Date();
-    maxDate.setFullYear(today.getFullYear() - 18);
-    
-    if (!(formData.birthdate instanceof Date) || isNaN(formData.birthdate.getTime())) {
-      newErrorMessages.birthdate = 'Укажите корректную дату';
-    } else if (formData.birthdate < minDate || formData.birthdate > maxDate) {
-      newErrorMessages.birthdate = 'Возраст должен быть от 18 до 100 лет';
+    // Birthdate validation (18-100 years)
+    const birthdateValidation = validateDate(formData.birthdate, 18, 100);
+    if (!birthdateValidation.isValid) {
+      newErrorMessages.birthdate = birthdateValidation.error || '';
     }
 
-    // Валидация документа (серия и номер: 4 цифры, пробел, 6 цифр)
+    // Document validation (series and number: 4 digits, space, 6 digits)
     const docRegex = /^\d{4}\s\d{6}$/;
     if (!docRegex.test(formData.doc.trim())) {
       newErrorMessages.doc = 'Введите документ в формате: 1234 567890';
@@ -150,16 +180,15 @@ const ClientModal: React.FC<ClientModalProps> = ({
       newErrorMessages.doc = 'Поле обязательно для заполнения';
     }
 
-    // Валидация даты выдачи (не старше 90 лет и не в будущем)
-    const minDocIssueDate = new Date();
-    minDocIssueDate.setFullYear(today.getFullYear() - 90);
-    
-    if (!(formData.docIssueDate instanceof Date) || isNaN(formData.docIssueDate.getTime())) {
-      newErrorMessages.docIssueDate = 'Укажите корректную дату';
-    } else if (formData.docIssueDate < minDocIssueDate) {
-      newErrorMessages.docIssueDate = 'Дата выдачи не может быть старше 90 лет';
-    } else if (formData.docIssueDate > today) {
-      newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+    // Document issue date validation (not older than 90 years and not in the future)
+    const docIssueValidation = validateDate(formData.docIssueDate, 0, 90);
+    if (!docIssueValidation.isValid) {
+      newErrorMessages.docIssueDate = docIssueValidation.error || '';
+    } else if (docIssueValidation.date) {
+      const today = new Date();
+      if (docIssueValidation.date > today) {
+        newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+      }
     }
 
     setErrorMessages(newErrorMessages);
@@ -175,22 +204,21 @@ const ClientModal: React.FC<ClientModalProps> = ({
     setValidationErrors(errors);
   }, [formData, mode]);
 
-  // Проверка, можно ли разблокировать кнопку сохранения
   const isSaveDisabled = () => {
     if (mode === 'view') return true;
 
-    // Проверяем, есть ли ошибки валидации
+    // Check for validation errors
     const hasErrors = Object.values(validationErrors).some(Boolean);
     if (hasErrors) return true;
 
-    // Для режима редактирования проверяем, были ли изменения
+    // For edit mode, check if there are changes
     if (mode === 'edit') {
       const isChanged = (
         formData.fullName !== initialData.fullName ||
         formData.phone !== initialData.phone ||
         formData.doc !== initialData.doc ||
-        formData.birthdate.getTime() !== initialData.birthdate.getTime() ||
-        formData.docIssueDate.getTime() !== initialData.docIssueDate.getTime()
+        formData.birthdate !== initialData.birthdate ||
+        formData.docIssueDate !== initialData.docIssueDate
       );
       return !isChanged;
     }
@@ -201,7 +229,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Помечаем все поля как "тронутые" для показа ошибок
+    // Mark all fields as touched to show errors
     setTouchedFields({
       fullName: true,
       phone: true,
@@ -210,7 +238,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
       docIssueDate: true
     });
 
-    // Проверяем валидность
+    // Check validity
     const isValid = !Object.values(validationErrors).some(Boolean);
     if (!isValid) {
       return;
@@ -225,33 +253,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
     setFormData(prev => ({
       ...prev,
       [name]: value
-    }));
-    setTouchedFields(prev => ({
-      ...prev,
-      [name]: true
-    }));
-  };
-
-  const handleDateChange = (name: string, value: string) => {
-    let date: Date;
-    
-    if (value && typeof value === 'string') {
-      try {
-        const [year, month, day] = value.split('-');
-        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        if (isNaN(date.getTime())) {
-          date = new Date(NaN);
-        }
-      } catch {
-        date = new Date(NaN);
-      }
-    } else {
-      date = new Date(NaN);
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: date
     }));
     setTouchedFields(prev => ({
       ...prev,
@@ -294,20 +295,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
             errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
           />
           
-          <DateModalInput
-            name="birthdate"
-            placeholder="Дата рождения"
-            value={
-              formData.birthdate instanceof Date && !isNaN(formData.birthdate.getTime()) 
-                ? formData.birthdate.toISOString() 
-                : ''
-            }
-            onChange={(e) => handleDateChange('birthdate', e.target.value)}
-            disabled={mode === 'view'}
-            hasError={touchedFields.birthdate && validationErrors.birthdate}
-            errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
-          />
-          
           <PhoneModalInput
             name="phone"
             placeholder="Телефон"
@@ -316,6 +303,17 @@ const ClientModal: React.FC<ClientModalProps> = ({
             disabled={mode === 'view'}
             hasError={touchedFields.phone && validationErrors.phone}
             errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
+          />
+          
+          <CustomInput
+            name="birthdate"
+            inputType="date"
+            placeholder="Дата рождения (дд.мм.гггг)"
+            value={formData.birthdate}
+            onChange={handleInputChange}
+            disabled={mode === 'view'}
+            hasError={touchedFields.birthdate && validationErrors.birthdate}
+            errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
           />
           
           <ModalInfoTitle>Паспортные данные</ModalInfoTitle>
@@ -331,15 +329,12 @@ const ClientModal: React.FC<ClientModalProps> = ({
             errorMessage={touchedFields.doc ? errorMessages.doc : undefined}
           />
           
-          <DateModalInput
+          <CustomInput
             name="docIssueDate"
-            placeholder="Дата выдачи"
-            value={
-              formData.docIssueDate instanceof Date && !isNaN(formData.docIssueDate.getTime()) 
-                ? formData.docIssueDate.toISOString() 
-                : ''
-            }
-            onChange={(e) => handleDateChange('docIssueDate', e.target.value)}
+            inputType="date"
+            placeholder="Дата выдачи (дд.мм.гггг)"
+            value={formData.docIssueDate}
+            onChange={handleInputChange}
             disabled={mode === 'view'}
             hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}
             errorMessage={touchedFields.docIssueDate ? errorMessages.docIssueDate : undefined}

@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import React from 'react';
 
-type InputType = 'number' | 'text' | 'fullname' | 'doc';
+type InputType = 'number' | 'text' | 'fullname' | 'doc' | 'date';
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string;
@@ -57,17 +57,37 @@ const CustomInput: React.FC<CustomInputProps> = ({
         break;
 
       case 'doc':
-        // Remove all non-digit characters
         newValue = newValue.replace(/\D/g, '');
-        
-        // Format as 4 digits space 6 digits
         if (newValue.length > 4) {
           newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
         }
-        
-        // Limit to 11 characters total (4 digits + space + 6 digits)
         if (newValue.length > 11) {
           newValue = newValue.slice(0, 11);
+        }
+        e.target.value = newValue;
+        onChange(e);
+        break;
+
+      case 'date':
+        // Remove all non-digit characters
+        newValue = newValue.replace(/\D/g, '');
+        
+        // Format as dd.mm.yyyy
+        if (newValue.length > 4) {
+          newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
+        } else if (newValue.length > 2) {
+          newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
+        }
+        
+        // Limit to 10 characters (dd.mm.yyyy)
+        if (newValue.length > 10) {
+          newValue = newValue.slice(0, 10);
+        }
+        
+        // Handle backspace/delete
+        const isDeleting = (value as string)?.length > newValue.length;
+        if (isDeleting && [3, 6].includes(newValue.length)) {
+          newValue = newValue.slice(0, newValue.length - 1);
         }
         
         e.target.value = newValue;
@@ -89,8 +109,8 @@ const CustomInput: React.FC<CustomInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         onChange={handleInputChange}
-        inputMode={inputType === 'number' || inputType === 'doc' ? 'numeric' : 'text'}
-        maxLength={inputType === 'doc' ? 11 : undefined}
+        inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' ? 'numeric' : 'text'}
+        maxLength={inputType === 'doc' ? 11 : inputType === 'date' ? 10 : undefined}
         hasError={hasError}
       />
       {customPlaceholder && (
@@ -104,6 +124,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
     </InputContainer>
   );
 };
+
 
 const InputContainer = styled.div`
   position: relative;

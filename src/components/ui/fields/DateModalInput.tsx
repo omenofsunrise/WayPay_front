@@ -43,100 +43,88 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     
-    // Если пользователь стер все (пустая строка), передаем пустое значение
-    if (input === '') {
-        setDisplayValue('');
-        onChange?.({ 
-        ...e, 
-        target: { 
-            ...e.target, 
-            value: '' 
-        } 
-        } as React.ChangeEvent<HTMLInputElement>);
-        return;
-    }
-
-    // Получаем только цифры из ввода
-    const digits = input.replace(/\D/g, '');
+    // Разрешаем только цифры и точки
+    const cleanedValue = input.replace(/[^\d.]/g, '');
     
+    // Разбиваем на части по точкам
+    const parts = cleanedValue.split('.').filter(part => part !== '');
+    
+    // Форматируем ввод
     let formattedValue = '';
-    let day = '';
-    let month = '';
-    let year = '';
-
-    // Разбиваем цифры на компоненты даты
-    if (digits.length > 0) {
-        day = digits.substring(0, 2);
-        if (digits.length > 2) {
-        month = digits.substring(2, 4);
-        if (digits.length > 4) {
-            year = digits.substring(4, 8);
-        }
-        }
-    }
-
-    // Собираем отформатированную строку с учетом удаления символов
-    if (day) {
-        formattedValue = day;
-        if (month) {
+    if (parts.length > 0) {
+      // Ограничиваем день двумя цифрами
+      const day = parts[0].slice(0, 2);
+      formattedValue = day;
+      
+      if (parts.length > 1 || (parts[0].length > 2 && parts.length === 1)) {
+        // Ограничиваем месяц двумя цифрами
+        const monthPart = parts.length > 1 ? parts[1] : parts[0].slice(2);
+        const month = monthPart.slice(0, 2);
         formattedValue += `.${month}`;
-        if (year) {
-            formattedValue += `.${year}`;
-        }
-        }
-    }
-
-    setDisplayValue(formattedValue);
-
-    // Если введена полная дата (дд.мм.гггг), преобразуем в ISO строку
-    if (digits.length === 8) {
-        const dayNum = parseInt(day, 10);
-        const monthNum = parseInt(month, 10) - 1;
-        const yearNum = parseInt(year, 10);
         
-        const date = new Date(yearNum, monthNum, dayNum);
-        if (!isNaN(date.getTime())) {
-        const isoDate = date.toISOString().split('T')[0];
-        onChange?.({ 
-            ...e, 
-            target: { 
-            ...e.target, 
-            value: isoDate 
-            } 
-        } as React.ChangeEvent<HTMLInputElement>);
-        return;
+        if (parts.length > 2 || (monthPart.length > 2 && parts.length === 2) || 
+            (parts.length === 1 && parts[0].length > 4)) {
+          // Ограничиваем год четырьмя цифрами
+          const yearPart = parts.length > 2 ? parts[2] : 
+                         parts.length === 2 ? parts[1].slice(2) : 
+                         parts[0].slice(4);
+          const year = yearPart.slice(0, 4);
+          formattedValue += `.${year}`;
         }
+      }
     }
+    
+    setDisplayValue(formattedValue);
+    
+    // Если введена полная дата (дд.мм.гггг), преобразуем в ISO строку
+    if (formattedValue.length === 10) {
+      const [day, month, year] = formattedValue.split('.');
+      const dayNum = parseInt(day, 10);
+      const monthNum = parseInt(month, 10) - 1;
+      const yearNum = parseInt(year, 10);
+      
+      const date = new Date(yearNum, monthNum, dayNum);
+      if (!isNaN(date.getTime())) {
+        const isoDate = date.toISOString().split('T')[0];
+        onChange?.({
+            ...e,
+            target: {
+                ...e.target,
+                value: formattedValue
+          }
+        });
+        return;
+      }
+    }
+    
+    onChange?.({
+      ...e,
+      target: {
+        ...e.target,
+        value: formattedValue
+      }
+    });
+  };
 
-    // Для неполных дат передаем текущее значение цифр
-    onChange?.({ 
-        ...e, 
-        target: { 
-        ...e.target, 
-        value: digits 
-        } 
-    } as React.ChangeEvent<HTMLInputElement>);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // Разрешаем: backspace, delete, tab, escape, enter, стрелки
     if ([8, 9, 27, 13, 46].includes(e.keyCode) || 
         (e.keyCode >= 37 && e.keyCode <= 40)) {
-        return;
+      return;
     }
 
-    // Разрешаем только цифры
-    if (!/[0-9]/.test(e.key)) {
-        e.preventDefault();
+    // Разрешаем только цифры и точки
+    if (!/[0-9.]/.test(e.key)) {
+      e.preventDefault();
     }
-    };
+  };
 
   const handleBlur = () => {
     setIsFocused(false);
     
-    if (displayValue.length === 10) { // дд.мм.гггг
+    if (displayValue.length === 10) {
       const [day, month, year] = displayValue.split('.');
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
       if (!isNaN(date.getTime())) {
         const isoDate = date.toISOString().split('T')[0];
         onChange?.({
@@ -158,6 +146,7 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={handleBlur}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
         inputMode="numeric"
         hasError={hasError}
         maxLength={10}
@@ -173,7 +162,8 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
     </InputContainer>
   );
 };
-// Стили оставляем как в оригинале
+
+// Стили остаются без изменений
 const InputContainer = styled.div`
   position: relative;
   display: inline-block;

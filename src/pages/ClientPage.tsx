@@ -196,7 +196,6 @@ const ClientPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>Клиенты</CustomTitle>
-                <ExportButton onClick={handleExport} />
             </TitleField>
             
             <FilterField>
