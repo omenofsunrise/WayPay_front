@@ -161,7 +161,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     // Phone validation (example: 8 (123) 456-78-90)
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
     if (!phoneRegex.test(formData.phone.trim())) {
-      newErrorMessages.phone = 'Введите телефон в формате: 8 (123) 456-78-90';
+      newErrorMessages.phone = 'Введите телефон';
     } else if (formData.phone.trim().length === 0) {
       newErrorMessages.phone = 'Поле обязательно для заполнения';
     }
@@ -175,7 +175,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     // Document validation (series and number: 4 digits, space, 6 digits)
     const docRegex = /^\d{4}\s\d{6}$/;
     if (!docRegex.test(formData.doc.trim())) {
-      newErrorMessages.doc = 'Введите документ в формате: 1234 567890';
+      newErrorMessages.doc = 'Введите документ';
     } else if (formData.doc.trim().length === 0) {
       newErrorMessages.doc = 'Поле обязательно для заполнения';
     }
@@ -321,7 +321,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
           <CustomInput
             name="doc"
             inputType="doc"
-            placeholder="Документ (формат: 1234 567890)"
+            placeholder="Документ"
             value={formData.doc}
             onChange={handleInputChange}
             disabled={mode === 'view'}

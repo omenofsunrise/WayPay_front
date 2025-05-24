@@ -6,7 +6,9 @@ export interface Queue {
     clientId: number,
     createdAt: Date,
     priority: number,
-    positionInQueue: number
+    positionInQueue: number,
+    clientFullName?: string;
+    clientPhone?: string;
 }
 
 export interface QueueParams extends PaginationParams {

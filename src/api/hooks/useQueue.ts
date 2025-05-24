@@ -37,12 +37,40 @@ const useQueue = () => {
     }
   };
 
+  const closeQueue = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await queueService.closeQueue(id);
+    }
+    catch (err) {
+      setError(err instanceof Error ? err.message : 'Error')
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const deleteQueue = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await queueService.deleteQueue(id);
+    }
+    catch (err) {
+      setError(err instanceof Error ? err.message : 'Error')
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return {
     isLoading,
     error,
     data,
     getQueues,
     createQueue,
+    closeQueue,
+    deleteQueue
   };
 };
 

@@ -127,7 +127,7 @@ const ClientPage = () => {
             fullName: '',
             phone: '',
             doc: '',
-            birthdate: new Date(),
+            birthdate: null,
             docIssueDate: null
         });
         setIsModalOpen(true);

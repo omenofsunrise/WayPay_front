@@ -7,7 +7,7 @@ const ModalInfoTitle = styled.h1`
     color: black;
     font-weight: 400;
     color: rgba(0, 125, 136, 1);
-    margin-left: 15px; 
+    margin-right: 15px; 
 `;
 
 export default ModalInfoTitle; 

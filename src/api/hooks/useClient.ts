@@ -7,6 +7,7 @@ const useClient = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<Client> | null>(null);
+  const [currentClient, setCurrentClient] = useState<Client | null>(null);
 
   const getClients = useCallback(async (params?: ClientParams): Promise<PaginatedResponse<Client> | null> => {
     setIsLoading(true);
@@ -14,6 +15,21 @@ const useClient = () => {
     try {
       const result = await clientService.getClients(params);
       setData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getClientById = useCallback(async (id: number): Promise<Client | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await clientService.getClientById(id);
+      setCurrentClient(result);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -76,10 +92,12 @@ const useClient = () => {
     isLoading,
     error,
     data,
+    currentClient,
     getClients,
     createClient,
     updateClient,
-    deleteClient
+    deleteClient,
+    getClientById
   };
 };
 
