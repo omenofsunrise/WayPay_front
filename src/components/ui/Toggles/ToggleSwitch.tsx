@@ -12,7 +12,8 @@ const SwitchContainer = styled.label`
   display: inline-block;
   width: 50px;
   height: 24px;
-  background-color: rgba(0, 125, 136, 1);
+  background-color: white;
+  border: 4px solid rgba(0, 125, 136, 1);
   border-radius: 35px;
 `;
 
@@ -34,7 +35,7 @@ const Slider = styled.span<{ checked: boolean; disabled?: boolean }>`
     width: 16px;
     left: 4px;
     bottom: 4px;
-    background-color: white;
+    background-color: rgba(0, 125, 136, 1);
     transition: .4s;
     border-radius: 50%;
     transform: ${({ checked }) => 

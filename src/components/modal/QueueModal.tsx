@@ -8,6 +8,7 @@ import ClientModal from './ClientModal';
 import ToggleSwitch from '../ui/Toggles/ToggleSwitch';
 import styled from 'styled-components';
 import ClientSelectModal from './ClientSelectModal';
+import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
 
 interface QueueWithClient {
   id: number;
@@ -28,28 +29,73 @@ type QueueModalProps = {
   initialData?: QueueWithClient;
 };
 
-// Стилизованные компоненты
-const InputRow = styled.div`
+const ClientInputWrapper = styled.div`
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
 `;
 
-const InputLabel = styled.span`
-  min-width: 140px;
-  text-align: right;
+const ClientInput = styled.input`
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   font-size: 14px;
-`;
-
-const InputContainer = styled.div`
-  flex: 1;
+  background-color: ${props => props.disabled ? '#f5f5f5' : 'white'};
+  color: #333;
+  pointer-events: none;
 `;
 
 const ClientInfoContainer = styled.div`
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+`;
+
+const ClientName = styled.span`
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+`;
+
+const ClientPhone = styled.span`
+  font-size: 13px;
+  color: #666;
+`;
+
+const ClientSelectButton = styled.button`
+  position: absolute;
+  right: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const ClearClientButton = styled.button`
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  color: #999;
+  font-size: 30px;
+  
+  &:hover {
+    color: #666;
+  }
 `;
 
 const QueueModal: React.FC<QueueModalProps> = ({
@@ -61,7 +107,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
     id: 0,
     sum: 0,
     clientId: 0,
-    priority: false,
+    priority: 2,
     positionInQueue: 0,
     createdAt: new Date(),
     clientFullName: '',
@@ -71,12 +117,14 @@ const QueueModal: React.FC<QueueModalProps> = ({
   const [formData, setFormData] = useState<Omit<QueueWithClient, 'id'>>({
     sum: initialData.sum,
     clientId: initialData.clientId,
-    priority: initialData.priority === 1 ? 1 : 2,
+    priority: initialData.priority,
     positionInQueue: initialData.positionInQueue,
     createdAt: initialData.createdAt,
     clientFullName: initialData.clientFullName || '',
     clientPhone: initialData.clientPhone || ''
   });
+
+  const [displaySum, setDisplaySum] = useState<string>(initialData.sum.toString());
 
   const uiPriority = formData.priority === 1;
 
@@ -102,12 +150,13 @@ const QueueModal: React.FC<QueueModalProps> = ({
       setFormData({
         sum: initialData.sum,
         clientId: initialData.clientId,
-        priority: initialData.priority === 1 ? 1 : 2,
+        priority: initialData.priority,
         positionInQueue: initialData.positionInQueue,
         createdAt: initialData.createdAt,
         clientFullName: initialData.clientFullName || '',
         clientPhone: initialData.clientPhone || ''
       });
+      setDisplaySum(initialData.sum.toString());
       setValidationErrors({
         sum: false,
         clientId: false
@@ -131,7 +180,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
       clientId: ''
     };
 
-    // Sum validation
+    // Sum validation - используем formData.sum, который уже числовой
     if (formData.sum <= 0) {
       newErrorMessages.sum = 'Сумма должна быть больше 0';
     }
@@ -192,10 +241,24 @@ const QueueModal: React.FC<QueueModalProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'sum' || name === 'clientId' ? Number(value) : value
-    }));
+    
+    if (name === 'sum') {
+      // Обновляем displaySum для отображения в input
+      setDisplaySum(value);
+      
+      // Преобразуем форматированное значение обратно в число для formData
+      const numericValue = parseInt(value.replace(/[^\d]/g, ''), 10) || 0;
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: name === 'clientId' ? Number(value) : value
+      }));
+    }
+    
     setTouchedFields(prev => ({
       ...prev,
       [name]: true
@@ -205,7 +268,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
   const handlePriorityChange = (checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      priority: checked ? 1 : 2 // true → 1, false → 2
+      priority: checked ? 1 : 2
     }));
   };
 
@@ -217,6 +280,15 @@ const QueueModal: React.FC<QueueModalProps> = ({
       clientPhone: client.phone
     }));
     setIsClientModalOpen(false);
+  };
+
+  const handleClearClient = () => {
+    setFormData(prev => ({
+      ...prev,
+      clientId: 0,
+      clientFullName: '',
+      clientPhone: ''
+    }));
   };
 
   const getTitle = () => {
@@ -241,8 +313,52 @@ const QueueModal: React.FC<QueueModalProps> = ({
         mode={mode}
       >
         <form onSubmit={handleSubmit}>
-          <div style={{ padding: '20px' }}>
-            <ModalInfoTitle>Основная информация</ModalInfoTitle>
+          <div style={{ padding: '20px', marginRight: "40px" }}>           
+            <InputRow>
+              <InputLabel>Клиент:</InputLabel>
+              <InputContainer>
+                {mode === 'view' ? (
+                  <ClientInfoContainer>
+                    <ClientName>{formData.clientFullName || 'Не указан'}</ClientName>
+                    {formData.clientPhone && (
+                      <ClientPhone>{formData.clientPhone}</ClientPhone>
+                    )}
+                  </ClientInfoContainer>
+                ) : (
+                  <ClientInputWrapper>
+                    <ClientInput
+                      type="text"
+                      value={formData.clientFullName || ''}
+                      placeholder="Выберите клиента"
+                      readOnly
+                    />
+                    {formData.clientId > 0 && (
+                      <ClearClientButton 
+                        type="button" 
+                        onClick={handleClearClient}
+                      >
+                        ×
+                      </ClearClientButton>
+                    )}
+                  </ClientInputWrapper>
+                )}
+                {touchedFields.clientId && validationErrors.clientId && (
+                  <div style={{ color: 'red', fontSize: '12px' }}>
+                    {errorMessages.clientId}
+                  </div>
+                )}
+              </InputContainer>
+              {mode !== 'view' && (
+                <ClientSelectButton 
+                  type="button" 
+                  onClick={() => setIsClientModalOpen(true)}
+                >
+                  <svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.915 0C1.31175 0 0 1.31175 0 2.915C0 4.51825 1.31175 5.83 2.915 5.83C4.51825 5.83 5.83 4.51825 5.83 2.915C5.83 1.31175 4.51825 0 2.915 0ZM23.32 0C21.7167 0 20.405 1.31175 20.405 2.915C20.405 4.51825 21.7167 5.83 23.32 5.83C24.9233 5.83 26.235 4.51825 26.235 2.915C26.235 1.31175 24.9233 0 23.32 0ZM13.1175 0C11.5142 0 10.2025 1.31175 10.2025 2.915C10.2025 4.51825 11.5142 5.83 13.1175 5.83C14.7207 5.83 16.0325 4.51825 16.0325 2.915C16.0325 1.31175 14.7207 0 13.1175 0Z" fill="#50555C"/>
+                  </svg>
+                </ClientSelectButton>
+              )}
+            </InputRow>
             
             <InputRow>
               <InputLabel>Сумма:</InputLabel>
@@ -251,7 +367,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
                   name="sum"
                   inputType="rubles"
                   placeholder="Введите сумму"
-                  value={formData.sum.toString()}
+                  value={displaySum}
                   onChange={handleInputChange}
                   disabled={mode === 'view'}
                   hasError={touchedFields.sum && validationErrors.sum}
@@ -261,48 +377,17 @@ const QueueModal: React.FC<QueueModalProps> = ({
             </InputRow>
             
             <InputRow>
-              <InputLabel>Клиент:</InputLabel>
               <InputContainer>
-                {formData.clientId ? (
-                  <ClientInfoContainer>
-                    <div>{formData.clientFullName}</div>
-                    <div>{formData.clientPhone}</div>
-                    {mode !== 'view' && (
-                      <Button 
-                        type="button" 
-                        onClick={() => setIsClientModalOpen(true)}
-                      >
-                        Изменить клиента
-                      </Button>
-                    )}
-                  </ClientInfoContainer>
-                ) : (
-                  <Button 
-                    type="button" 
-                    onClick={() => setIsClientModalOpen(true)}
-                  >
-                    Выбрать клиента
-                  </Button>
-                )}
-                {touchedFields.clientId && validationErrors.clientId && (
-                  <div style={{ color: 'red', fontSize: '12px' }}>
-                    {errorMessages.clientId}
-                  </div>
-                )}
-              </InputContainer>
-            </InputRow>
-            
-            <InputRow>
-              <InputLabel>Приоритет:</InputLabel>
-              <InputContainer>
-                <ToggleSwitch
-                  checked={uiPriority}
-                  onChange={handlePriorityChange}
-                  disabled={mode === 'view'}
-                />
-                <span style={{ marginLeft: '8px' }}>
-                  {formData.priority ? 'Высокий приоритет' : 'Обычный приоритет'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <ToggleSwitch
+                    checked={uiPriority}
+                    onChange={handlePriorityChange}
+                    disabled={mode === 'view'}
+                  />
+                  <span style={{ marginLeft: '8px' }}>
+                    {formData.priority === 1 ? 'Высокий приоритет' : 'Обычный приоритет'}
+                  </span>
+                </div>
               </InputContainer>
             </InputRow>
           </div>

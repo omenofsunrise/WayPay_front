@@ -235,7 +235,7 @@ const QueuePage = () => {
             
             <FilterField>
                 <CustomInput 
-                    inputType="rubles"
+                    inputType="fullname"
                     placeholder="ФИО клиента"
                     value={nameFilter}
                     onChange={(e) => handleFilterChange(e.target.value)}
