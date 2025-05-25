@@ -7,4 +7,6 @@ export interface Product {
 
 export interface ProductParams extends PaginationParams {
   name?: string;
+  sortBy?: string;
+  descending?: boolean;
 }

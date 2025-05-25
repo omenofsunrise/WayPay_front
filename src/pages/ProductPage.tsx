@@ -17,11 +17,20 @@ import useProducts from "../api/hooks/useProducts";
 const ProductPage = () => {
     const [nameFilter, setNameFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [sortConfig, setSortConfig] = useState<{
+        key: number | null;
+        direction: 'asc' | 'desc';
+    }>({ key: null, direction: 'asc' });
     const pageSize = 10;
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedProduct, setSelectedProduct] = useState<{ id?: number, name: string } | null>(null);
+    
+    const columnToApiSortMap: Record<number, string> = {
+        0: 'id',
+        1: 'name'
+    };
     
     const { 
         isLoading, 
@@ -34,34 +43,49 @@ const ProductPage = () => {
     } = useProducts();
     
     const loadProducts = useCallback(async () => {
-        await getProducts({
+        const params: any = {
             page: currentPage,
             pageSize,
             name: nameFilter || undefined
-        });
-    }, [currentPage, nameFilter, getProducts]);
+        };
+
+        if (sortConfig.key !== null) {
+            params.sortBy = columnToApiSortMap[sortConfig.key];
+            params.sortDirection = sortConfig.direction;
+        }
+
+        await getProducts(params);
+    }, [currentPage, nameFilter, sortConfig, getProducts]);
     
     useEffect(() => {
         loadProducts();
-    }, [currentPage, loadProducts]);
+    }, [currentPage, nameFilter, sortConfig, loadProducts]);
+
+    const handleFilterChange = (value: string) => {
+        setNameFilter(value);
+        setCurrentPage(1);
+    };
+
+    const handleSort = (columnIndex: number) => {
+        if (!columnToApiSortMap[columnIndex]) return;
+        
+        setSortConfig(prev => {
+            if (prev.key === columnIndex) {
+                return {
+                    key: columnIndex,
+                    direction: prev.direction === 'asc' ? 'desc' : 'asc'
+                };
+            }
+            return {
+                key: columnIndex,
+                direction: 'asc'
+            };
+        });
+    };
 
     const handleExport = async () => {
         try {
-            const allProducts = await getProducts({
-                name: nameFilter || undefined,
-                pageSize: 100
-            });
             
-            if (allProducts?.items) {
-                exportToExcel(allProducts.items.map(product => ({
-                    'ID': product.id,
-                    'Название': product.name,
-                })), {
-                    fileName: 'products_export',
-                    sheetName: 'Products',
-                    columnWidths: [10, 30]
-                });
-            }
         } catch (err) {
             console.error('Ошибка при экспорте:', err);
         }
@@ -140,7 +164,7 @@ const ProductPage = () => {
                     inputType="text"
                     placeholder="Название товара"
                     value={nameFilter}
-                    onChange={(e) => setNameFilter(e.target.value)}
+                    onChange={(e) => handleFilterChange(e.target.value)}
                 />
                 <DarkCyanButton 
                     style={{ width: "15vw" }}
@@ -163,6 +187,8 @@ const ProductPage = () => {
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}
                         contextMenuActions={tableActions}
+                        onSort={handleSort}
+                        sortConfig={sortConfig}
                     />
                     
                     <PaginationLayout>
