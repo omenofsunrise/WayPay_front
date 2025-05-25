@@ -340,7 +340,7 @@ const SideMenu = () => {
 const MenuItem = styled.div<MenuItemProps>`
   display: flex;
   align-items: center;
-  padding: ${({ $collapsed }) => ($collapsed ? '15px 11px' : '15px 17px')};
+  padding: ${({ $collapsed }) => ($collapsed ? '15px 0' : '15px 17px')};
   margin-bottom: 3px;
   cursor: pointer;
   border-radius: 8px;
@@ -351,7 +351,8 @@ const MenuItem = styled.div<MenuItemProps>`
   transition: all 0.2s ease;
   color: ${({ $selected }) => $selected ? '#000' : '#50555c'};
   background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
-
+  justify-content: ${({ $collapsed }) => ($collapsed ? 'center' : 'flex-start')};
+  
   &:hover {
     background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
     color: #000;
