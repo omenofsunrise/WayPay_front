@@ -113,7 +113,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     }
   );
 
-  const { updateClientDoc, updateClientDocIssueDate } = useClient();
+  const { updateClientDoc, updateClientDocIssueDate, checkClientExists  } = useClient();
   
   const [validationErrors, setValidationErrors] = useState({
     fullName: false,
@@ -122,6 +122,34 @@ const ClientModal: React.FC<ClientModalProps> = ({
     doc: false,
     docIssueDate: false
   });
+  
+  const validatePhone = async (phone: string) => {
+    const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
+    
+    if (!phoneRegex.test(phone.trim())) {
+      return 'Введите корректный телефон';
+    }
+    
+    if (phone.trim().length === 0) {
+      return 'Поле обязательно для заполнения';
+    }
+
+    // Check if phone is fully entered (11 digits)
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length === 11) {
+      try {
+        const exists = await checkClientExists(phone);
+        if (exists && (mode === 'create' || (mode === 'edit' && phone !== initialData.phone))) {
+          return 'Клиент с таким номером телефона уже есть';
+        }
+      } catch (error) {
+        console.error('Error checking phone:', error);
+        return 'Ошибка проверки номера телефона';
+      }
+    }
+
+    return '';
+  };
 
   const [errorMessages, setErrorMessages] = useState({
     fullName: '',
@@ -192,62 +220,64 @@ const ClientModal: React.FC<ClientModalProps> = ({
   useEffect(() => {
     if (mode === 'view') return;
 
-    const newErrorMessages = {
-      fullName: '',
-      phone: '',
-      birthdate: '',
-      doc: '',
-      docIssueDate: ''
-    };
+    const validateForm = async () => {
+      const newErrorMessages = {
+        fullName: '',
+        phone: '',
+        birthdate: '',
+        doc: '',
+        docIssueDate: ''
+      };
 
-    if (formData.fullName.trim().split(/\s+/).length < 2) {
-      newErrorMessages.fullName = 'Укажите фио полностью';
-    } else if (formData.fullName.trim().length === 0) {
-      newErrorMessages.fullName = 'Поле обязательно для заполнения';
-    }
-
-    const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
-    if (!phoneRegex.test(formData.phone.trim())) {
-      newErrorMessages.phone = 'Введите телефон';
-    } else if (formData.phone.trim().length === 0) {
-      newErrorMessages.phone = 'Поле обязательно для заполнения';
-    }
-
-    const birthdateValidation = validateDate(formData.birthdate, 18, 100, true);
-    if (!birthdateValidation.isValid) {
-      newErrorMessages.birthdate = birthdateValidation.error || '';
-    }
-
-    if (mode === 'create' || isEditingPassport) {
-      const docRegex = /^\d{4}\s\d{6}$/;
-      if (!docRegex.test(formData.doc.trim())) {
-        newErrorMessages.doc = 'Введите документ';
-      } else if (formData.doc.trim().length === 0) {
-        newErrorMessages.doc = 'Поле обязательно для заполнения';
+      // Full name validation (unchanged)
+      if (formData.fullName.trim().split(/\s+/).length < 2) {
+        newErrorMessages.fullName = 'Укажите фио полностью';
+      } else if (formData.fullName.trim().length === 0) {
+        newErrorMessages.fullName = 'Поле обязательно для заполнения';
       }
 
-      const docIssueValidation = validateDate(formData.docIssueDate, 0, 90, false);
-      if (!docIssueValidation.isValid && docIssueValidation.error) {
-        newErrorMessages.docIssueDate = docIssueValidation.error;
-      } else if (docIssueValidation.date) {
-        const today = new Date();
-        if (docIssueValidation.date > today) {
-          newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+      // Phone validation (updated)
+      newErrorMessages.phone = await validatePhone(formData.phone);
+
+      // Rest of the validations (unchanged)
+      const birthdateValidation = validateDate(formData.birthdate, 18, 100, true);
+      if (!birthdateValidation.isValid) {
+        newErrorMessages.birthdate = birthdateValidation.error || '';
+      }
+
+      if (mode === 'create' || isEditingPassport) {
+        const docRegex = /^\d{4}\s\d{6}$/;
+        if (!docRegex.test(formData.doc.trim())) {
+          newErrorMessages.doc = 'Введите документ';
+        } else if (formData.doc.trim().length === 0) {
+          newErrorMessages.doc = 'Поле обязательно для заполнения';
+        }
+
+        const docIssueValidation = validateDate(formData.docIssueDate, 0, 90, false);
+        if (!docIssueValidation.isValid && docIssueValidation.error) {
+          newErrorMessages.docIssueDate = docIssueValidation.error;
+        } else if (docIssueValidation.date) {
+          const today = new Date();
+          if (docIssueValidation.date > today) {
+            newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+          }
         }
       }
-    }
 
-    setErrorMessages(newErrorMessages);
+      setErrorMessages(newErrorMessages);
 
-    const errors = {
-      fullName: !!newErrorMessages.fullName,
-      phone: !!newErrorMessages.phone,
-      birthdate: !!newErrorMessages.birthdate,
-      doc: !!newErrorMessages.doc,
-      docIssueDate: !!newErrorMessages.docIssueDate
+      const errors = {
+        fullName: !!newErrorMessages.fullName,
+        phone: !!newErrorMessages.phone,
+        birthdate: !!newErrorMessages.birthdate,
+        doc: !!newErrorMessages.doc,
+        docIssueDate: !!newErrorMessages.docIssueDate
+      };
+
+      setValidationErrors(errors);
     };
 
-    setValidationErrors(errors);
+    validateForm();
   }, [formData, mode, isEditingPassport]);
 
   const isSaveDisabled = () => {
