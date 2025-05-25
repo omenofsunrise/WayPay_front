@@ -10,9 +10,11 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import { exportToExcel } from '../utils/exportUtils';
 import { ProductModal } from "../components/modal/ProductModal";
 import useProducts from "../api/hooks/useProducts";
+import useExport from '../api/hooks/useExport';
+import type { Product, ProductParams } from '../api/types/product';
+import productService from '../api/services/productService';
 
 const ProductPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -32,6 +34,8 @@ const ProductPage = () => {
         1: 'name'
     };
     
+    const { exportData, isExporting, exportProgress } = useExport<Product>();
+
     const { 
         isLoading, 
         error, 
@@ -85,9 +89,29 @@ const ProductPage = () => {
 
     const handleExport = async () => {
         try {
-            
-        } catch (err) {
-            console.error('Ошибка при экспорте:', err);
+            await exportData({
+            fetchData: async (page, pageSize) => {
+                const params: ProductParams = {
+                page,
+                pageSize,
+                name: nameFilter || undefined,
+                sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+                sortDirection: sortConfig.direction
+                };
+                
+                const result = await productService.getProducts(params);
+                return result.items;
+            },
+            fileName: 'products_export',
+            transformData: (products) => {
+                return products.map(product => ({
+                ID: product.id,
+                'Название': product.name
+                }));
+            }
+            });
+        } catch (error) {
+            console.error('Export failed:', error);
         }
     };
 
@@ -156,7 +180,11 @@ const ProductPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>Товары</CustomTitle>
-                <ExportButton onClick={handleExport} />
+                <ExportButton 
+                    onClick={handleExport}
+                    isExporting={isExporting}
+                    exportProgress={exportProgress}
+                />
             </TitleField>
             
             <FilterField>

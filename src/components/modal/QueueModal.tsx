@@ -9,6 +9,7 @@ import ToggleSwitch from '../ui/Toggles/ToggleSwitch';
 import styled from 'styled-components';
 import ClientSelectModal from './ClientSelectModal';
 import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
+import { formatPrice } from '../../utils/formatPrice';
 
 interface QueueWithClient {
   id: number;
@@ -367,7 +368,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
                   name="sum"
                   inputType="rubles"
                   placeholder="Введите сумму"
-                  value={displaySum}
+                  value={formatPrice(displaySum)}
                   onChange={handleInputChange}
                   disabled={mode === 'view'}
                   hasError={touchedFields.sum && validationErrors.sum}

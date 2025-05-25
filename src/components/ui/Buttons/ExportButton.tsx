@@ -11,18 +11,26 @@ const DefaultExportIcon = () => (
 interface ExportButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
   icon?: React.ReactNode;
-  onExport?: () => void;
+  onExport?: () => Promise<void>;
+  isExporting?: boolean;
+  exportProgress?: number;
 }
 
 const ExportButton: React.FC<ExportButtonProps> = ({
   children = 'Экспорт',
   icon = <DefaultExportIcon />,
   onExport,
+  isExporting = false,
+  exportProgress = 0,
   ...props
 }) => {
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (onExport) {
-      onExport();
+      try {
+        await onExport();
+      } catch (error) {
+        console.error('Export error:', error);
+      }
     }
     if (props.onClick) {
       props.onClick(e);
@@ -30,9 +38,22 @@ const ExportButton: React.FC<ExportButtonProps> = ({
   };
 
   return (
-    <ButtonContainer {...props} onClick={handleClick}>
-      {icon}
-      <span>{children}</span>
+    <ButtonContainer 
+      {...props} 
+      onClick={handleClick}
+      disabled={isExporting || props.disabled}
+    >
+      {isExporting ? (
+        <ProgressContainer>
+          <span>Экспорт... {exportProgress}%</span>
+          <ProgressBar progress={exportProgress} />
+        </ProgressContainer>
+      ) : (
+        <>
+          {icon}
+          <span>{children}</span>
+        </>
+      )}
     </ButtonContainer>
   );
 };
@@ -52,6 +73,8 @@ const ButtonContainer = styled.button`
   height: 40px;
   margin: auto 0 10px 0;
   transition: background-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     background-color: rgba(209, 213, 219, 1);
@@ -60,6 +83,37 @@ const ButtonContainer = styled.button`
   &:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.5);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+`;
+
+const ProgressContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+`;
+
+const ProgressBar = styled.div<{ progress: number }>`
+  height: 2px;
+  width: 100%;
+  background-color: #e0e0e0;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: ${({ progress }) => progress}%;
+    background-color: #000;
+    transition: width 0.3s ease;
   }
 `;
 

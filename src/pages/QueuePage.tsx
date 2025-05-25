@@ -14,6 +14,9 @@ import QueueModal from "../components/modal/QueueModal";
 import useQueue from "../api/hooks/useQueue";
 import useClients from "../api/hooks/useClient";
 import type { Queue } from '../api/types/queue';
+import { formatPrice } from '../utils/formatPrice';
+import useExport from '../api/hooks/useExport';
+import type { Client } from '../api/types/client';
 
 declare module '../api/types/queue' {
   interface Queue {
@@ -31,7 +34,7 @@ const QueuePage = () => {
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
     const [queues, setQueues] = useState<Queue[]>([]);
-
+    const { exportData, isExporting, exportProgress } = useExport<Queue, Client>();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null);
@@ -115,9 +118,36 @@ const QueuePage = () => {
 
     const handleExport = async () => {
         try {
-            
-        } catch (err) {
-            console.error('Ошибка при экспорте:', err);
+        await exportData({
+            fetchData: async (page, pageSize) => {
+            const params = {
+                page,
+                pageSize,
+                name: nameFilter || undefined,
+                sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+                sortDirection: sortConfig.direction
+            };
+            return await getQueues(params);
+            },
+            fetchAdditionalData: async (queue) => {
+            try {
+                return await getClientById(queue.clientId);
+            } catch (err) {
+                console.error('Ошибка при загрузке клиента:', err);
+                return undefined;
+            }
+            },
+            fileName: 'queues_export',
+            transformData: (queue, client) => ({
+            'Номер в очереди': queue.positionInQueue,
+            'ФИО клиента': client?.fullName || queue.clientId.toString(),
+            'Телефон клиента': client?.phone || '—',
+            'Сумма': formatPrice(queue.sum.toString()),
+            }),
+            pageSize: 50
+        });
+        } catch (error) {
+        console.error('Ошибка при экспорте:', error);
         }
     };
 
@@ -214,7 +244,7 @@ const QueuePage = () => {
         queue.positionInQueue.toString(),
         queue.clientFullName || queue.clientId.toString(),
         queue.clientPhone || '—',
-        queue.sum.toString(),
+        formatPrice(queue.sum.toString()),
     ]);
     
     const tableActions = [
@@ -234,7 +264,11 @@ const QueuePage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>Очередь</CustomTitle>
-                <ExportButton onClick={handleExport} />
+                <ExportButton 
+                    onClick={handleExport}
+                    isExporting={isExporting}
+                    exportProgress={exportProgress}
+                />
             </TitleField>
             
             <FilterField>
