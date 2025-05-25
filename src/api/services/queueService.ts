@@ -28,7 +28,7 @@ class QueueService {
   }
 
   async closeQueue(id: number): Promise<void> {
-    await apiClient.post(`/Queue/${id}`);
+    await apiClient.post(`/Queue/close/${id}`);
   }
 }
 

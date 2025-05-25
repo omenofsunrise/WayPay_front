@@ -165,10 +165,12 @@ const QueuePage = () => {
     };
 
     const handleDeleteQueue = async (rowData: any[]) => {
-        const [position, id] = rowData;
+        const rowIndex = tableData.indexOf(rowData);
+        const queue = queues[rowIndex];
+        
         if (window.confirm('Вы уверены, что хотите удалить эту запись из очереди?')) {
             try {
-                await deleteQueue(Number(id));
+                await deleteQueue(queue.id);
                 loadQueues();
             } catch (err) {
                 console.error('Ошибка при удалении очереди:', err);
@@ -177,10 +179,12 @@ const QueuePage = () => {
     };
 
     const handleCloseQueue = async (rowData: any[]) => {
-        const [position, id] = rowData;
+        const rowIndex = tableData.indexOf(rowData);
+        const queue = queues[rowIndex];
+        
         if (window.confirm('Вы уверены, что хотите закрыть эту запись в очереди?')) {
             try {
-                await closeQueue(Number(id));
+                await closeQueue(queue.id);
                 loadQueues();
             } catch (err) {
                 console.error('Ошибка при закрытии очереди:', err);
