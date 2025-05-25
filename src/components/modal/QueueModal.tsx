@@ -249,7 +249,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
               <InputContainer>
                 <CustomInput
                   name="sum"
-                  inputType="number"
+                  inputType="rubles"
                   placeholder="Введите сумму"
                   value={formData.sum.toString()}
                   onChange={handleInputChange}
@@ -270,8 +270,6 @@ const QueueModal: React.FC<QueueModalProps> = ({
                     {mode !== 'view' && (
                       <Button 
                         type="button" 
-                        variant="secondary" 
-                        size="small" 
                         onClick={() => setIsClientModalOpen(true)}
                       >
                         Изменить клиента

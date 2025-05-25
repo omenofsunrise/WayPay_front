@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import React from 'react';
 
-type InputType = 'number' | 'text' | 'fullname' | 'doc' | 'date';
+type InputType = 'number' | 'text' | 'fullname' | 'doc' | 'date' | 'rubles';
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string;
@@ -30,11 +30,42 @@ const CustomInput: React.FC<CustomInputProps> = ({
     let newValue = e.target.value;
 
     switch (inputType) {
-      case 'number':
-        if (/^\d*$/.test(newValue)) {
-          onChange(e);
-        }
-        break;
+        case 'number':
+            if (/^\d*$/.test(newValue)) {
+                onChange?.(e);
+            }
+            break;
+        case 'rubles':
+          const cursorPosition = e.target.selectionStart;
+          
+          let numericValue = newValue.replace(/[^\d]/g, '');
+          
+          if (numericValue === '') {
+            e.target.value = '';
+            onChange(e);
+            break;
+          }
+          
+          const numberValue = parseInt(numericValue, 10);
+          if (!isNaN(numberValue)) {
+            let formattedValue = numberValue.toLocaleString('ru-RU');
+            
+              formattedValue += '₽';
+            
+            e.target.value = formattedValue;
+            onChange(e);
+            
+            setTimeout(() => {
+              if (cursorPosition === (value?.toString().length || 0)) {
+                e.target.setSelectionRange(formattedValue.length, formattedValue.length);
+              } 
+              else if (cursorPosition !== null) {
+                const newPosition = Math.min(cursorPosition, formattedValue.length);
+                e.target.setSelectionRange(newPosition, newPosition);
+              }
+            }, 0);
+          }
+          break;
 
       case 'fullname':
         newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\s]/g, '');
@@ -108,7 +139,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         onChange={handleInputChange}
-        inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' ? 'numeric' : 'text'}
+        inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' || inputType === 'rubles' ? 'numeric' : 'text'}
         maxLength={inputType === 'doc' ? 11 : inputType === 'date' ? 10 : undefined}
         hasError={hasError}
       />
@@ -123,7 +154,6 @@ const CustomInput: React.FC<CustomInputProps> = ({
     </InputContainer>
   );
 };
-
 
 const InputContainer = styled.div`
   position: relative;
