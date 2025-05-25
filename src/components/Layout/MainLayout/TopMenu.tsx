@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import styled from 'styled-components';
 import CalculatorIcon from '../../../assets/ui/TopBar/calculator.svg';
 import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
@@ -6,7 +6,7 @@ import CalendarIcon from '../../../assets/ui/TopBar/calendar.svg';
 import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
 import BlogIcon from '../../../assets/ui/TopBar/blog.svg';
 import { SideMenuContext } from './SideMenuContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const menuItems = [
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', path: '/calculator' },
@@ -14,6 +14,13 @@ const menuItems = [
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
   { id: 'blog', icon: BlogIcon, text: 'Блог', path: '/blog' }
 ];
+
+const pathToMenuItemMap: Record<string, string> = {
+  '/calculator': 'calculator',
+  '/chat': 'chat',
+  '/todo': 'todo',
+  '/blog': 'blog'
+};
 
 const TopMenu = () => {
   const { 
@@ -23,6 +30,18 @@ const TopMenu = () => {
     setSelectedSideMenuItem
   } = useContext(SideMenuContext);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Определяем выбранный элемент меню на основе текущего пути
+    const currentPath = location.pathname;
+    const menuItemId = pathToMenuItemMap[currentPath];
+    
+    if (menuItemId) {
+      setSelectedTopMenuItem(menuItemId);
+      setSelectedSideMenuItem(null);
+    }
+  }, [location.pathname, setSelectedTopMenuItem, setSelectedSideMenuItem]);
 
   const handleMenuItemClick = (itemId: string, path: string) => {
     setSelectedTopMenuItem(itemId);

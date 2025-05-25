@@ -9,9 +9,9 @@ import investorsIcon from '../../../assets/ui/MenuItems/investors.svg';
 import referencesIcon from '../../../assets/ui/MenuItems/catalogs.svg';
 import financeIcon from '../../../assets/ui/MenuItems/finance.svg';
 import profileIcon from '../../../assets/ui/MenuItems/profile.svg';
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { SideMenuContext } from './SideMenuContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -20,6 +20,24 @@ type CollapsibleProps = {
 type MenuItemProps = CollapsibleProps & {
   $selected?: boolean;
   onClick?: () => void;
+};
+
+const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string, string> }> = {
+  '/analytics': { mainItem: 'analytics' },
+  '/credits': { mainItem: 'contracts', subItems: { '/credits': 'contracts' } },
+  '/contracts-control': { mainItem: 'contracts', subItems: { '/contracts-control': 'contracts-control' } },
+  '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
+  '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
+  '/queue': { mainItem: 'clients', subItems: { '/queue': 'queue' } },
+  '/pending-payments': { mainItem: 'payments', subItems: { '/pending-payments': 'pending-payments' } },
+  '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
+  '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
+  '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
+  '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
+  '/budget': { mainItem: 'finance', subItems: { '/budget': 'budget' } },
+  '/income': { mainItem: 'finance', subItems: { '/income': 'income' } },
+  '/expenses': { mainItem: 'finance', subItems: { '/expenses': 'expenses' } },
+  '/profile': { mainItem: 'profile' }
 };
 
 const SideMenu = () => {
@@ -32,6 +50,24 @@ const SideMenu = () => {
   } = useContext(SideMenuContext);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Определяем выбранный элемент меню на основе текущего пути
+    const currentPath = location.pathname;
+    const menuItem = menuItemsMap[currentPath];
+    
+    if (menuItem) {
+      setSelectedSideMenuItem(menuItem.mainItem);
+      if (menuItem.subItems) {
+        setExpandedItem(menuItem.mainItem);
+        const subItemKey = Object.keys(menuItem.subItems).find(key => currentPath.startsWith(key));
+        if (subItemKey) {
+          setSelectedSideMenuItem(menuItem.subItems[subItemKey]);
+        }
+      }
+    }
+  }, [location.pathname, setSelectedSideMenuItem]);
 
   const toggleItem = (item: string) => {
     if (collapsed) {
@@ -79,7 +115,7 @@ const SideMenu = () => {
           $collapsed={collapsed}
           $selected={selectedSideMenuItem === 'analytics'}
         >
-          <Icon src={analyticsIcon} $collapsed={collapsed} />
+          <Icon src={analyticsIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'analytics'} />
           {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
         </MenuItem>
         
@@ -91,7 +127,11 @@ const SideMenu = () => {
           $selected={selectedSideMenuItem === 'contracts' || 
                     selectedSideMenuItem === 'contracts-control'}
         >
-          <Icon src={contractsIcon} $collapsed={collapsed} />
+          <Icon 
+            src={contractsIcon} 
+            $collapsed={collapsed} 
+            $selected={selectedSideMenuItem === 'contracts' || selectedSideMenuItem === 'contracts-control'} 
+          />
           {!collapsed && <MenuItemText>Договоры</MenuItemText>}
         </MenuItem>
         {!collapsed && expandedItem === 'contracts' && (
@@ -119,7 +159,13 @@ const SideMenu = () => {
                     selectedSideMenuItem === 'blacklist' ||
                     selectedSideMenuItem === 'queue'}
         >
-          <Icon src={clientsIcon} $collapsed={collapsed} />
+          <Icon 
+            src={clientsIcon} 
+            $collapsed={collapsed} 
+            $selected={selectedSideMenuItem === 'clients' || 
+                      selectedSideMenuItem === 'blacklist' ||
+                      selectedSideMenuItem === 'queue'} 
+          />
           {!collapsed && <MenuItemText>Клиенты</MenuItemText>}
         </MenuItem>
         {!collapsed && expandedItem === 'clients' && (
@@ -152,7 +198,12 @@ const SideMenu = () => {
           $selected={selectedSideMenuItem === 'pending-payments' || 
                     selectedSideMenuItem === 'payments-journal'}
         >
-          <Icon src={paymentsIcon} $collapsed={collapsed} />
+          <Icon 
+            src={paymentsIcon} 
+            $collapsed={collapsed} 
+            $selected={selectedSideMenuItem === 'pending-payments' || 
+                      selectedSideMenuItem === 'payments-journal'} 
+          />
           {!collapsed && <MenuItemText>Платежи</MenuItemText>}
         </MenuItem>
         {!collapsed && expandedItem === 'payments' && (
@@ -179,7 +230,12 @@ const SideMenu = () => {
           $selected={selectedSideMenuItem === 'investors' || 
                     selectedSideMenuItem === 'investors-report'}
         >
-          <Icon src={investorsIcon} $collapsed={collapsed} />
+          <Icon 
+            src={investorsIcon} 
+            $collapsed={collapsed} 
+            $selected={selectedSideMenuItem === 'investors' || 
+                      selectedSideMenuItem === 'investors-report'} 
+          />
           {!collapsed && <MenuItemText>Инвесторы</MenuItemText>}
         </MenuItem>
         {!collapsed && expandedItem === 'investors' && (
@@ -203,10 +259,13 @@ const SideMenu = () => {
         <MenuItem 
           onClick={() => toggleItem('references')}
           $collapsed={collapsed}
-          $selected={selectedSideMenuItem === 'products' || 
-                    selectedSideMenuItem === 'guarantors'}
+          $selected={selectedSideMenuItem === 'products'}
         >
-          <Icon src={referencesIcon} $collapsed={collapsed} />
+          <Icon 
+            src={referencesIcon} 
+            $collapsed={collapsed} 
+            $selected={selectedSideMenuItem === 'products'} 
+          />
           {!collapsed && <MenuItemText>Справочники</MenuItemText>}
         </MenuItem>
         {!collapsed && expandedItem === 'references' && (
@@ -228,7 +287,13 @@ const SideMenu = () => {
                     selectedSideMenuItem === 'income' ||
                     selectedSideMenuItem === 'expenses'}
         >
-          <Icon src={financeIcon} $collapsed={collapsed} />
+          <Icon 
+            src={financeIcon} 
+            $collapsed={collapsed} 
+            $selected={selectedSideMenuItem === 'budget' || 
+                      selectedSideMenuItem === 'income' ||
+                      selectedSideMenuItem === 'expenses'} 
+          />
           {!collapsed && <MenuItemText>Финансы</MenuItemText>}
         </MenuItem>
         {!collapsed && expandedItem === 'finance' && (
@@ -262,7 +327,7 @@ const SideMenu = () => {
           $collapsed={collapsed}
           $selected={selectedSideMenuItem === 'profile'}
         >
-          <Icon src={profileIcon} $collapsed={collapsed} />
+          <Icon src={profileIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'profile'} />
           {!collapsed && <MenuItemText>Профиль</MenuItemText>}
         </MenuItem>
       </MenuList>

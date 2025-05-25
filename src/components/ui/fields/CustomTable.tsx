@@ -64,9 +64,31 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     
     if (tableRef.current) {
       const rect = tableRef.current.getBoundingClientRect();
+      const menuWidth = 200; // Предполагаемая ширина меню
+      const menuItemHeight = 40; // Высота одного пункта меню
+      const menuHeight = contextMenuActions.length * menuItemHeight;
+      
+      // Рассчитываем позицию относительно таблицы
+      let x = event.clientX - rect.left;
+      let y = event.clientY - rect.top;
+      
+      // Проверяем, чтобы меню не выходило за правую границу таблицы
+      if (x + menuWidth > rect.width) {
+        x = rect.width - menuWidth;
+      }
+      
+      // Проверяем, чтобы меню не выходило за нижнюю границу таблицы
+      if (y + menuHeight > rect.height) {
+        y = rect.height - menuHeight;
+      }
+      
+      // Убедимся, что координаты не отрицательные
+      x = Math.max(0, x);
+      y = Math.max(0, y);
+
       setContextMenu({
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
+        x,
+        y,
         rowIndex
       });
     }
@@ -75,7 +97,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   const closeContextMenu = () => {
     setContextMenu(null);
   };
-
+  
   useEffect(() => {
     const handleClickOutside = () => {
       if (contextMenu) closeContextMenu();
@@ -161,16 +183,30 @@ const CustomTable: React.FC<CreditsTableProps> = ({
 
       <AnimatePresence>
         {contextMenu && contextMenuActions.length > 0 && (
-          <ContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            items={contextMenuActions.map(action => ({
-              label: action.label,
-              action: () => action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!),
-              color: action.color
-            }))}
-            onClose={closeContextMenu}
-          />
+          <ContextMenuWrapper
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: 'absolute',
+              left: contextMenu.x,
+              top: contextMenu.y,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ContextMenu
+              items={contextMenuActions.map(action => ({
+                label: action.label,
+                action: () => {
+                  action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
+                  closeContextMenu();
+                },
+                color: action.color
+              }))}
+              onClose={closeContextMenu}
+            />
+          </ContextMenuWrapper>
         )}
       </AnimatePresence>
     </TableContainer>
@@ -190,6 +226,11 @@ const StyledTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   background-color: rgba(255, 255, 255, 1);
+`;
+
+const ContextMenuWrapper = styled(motion.div)`
+  z-index: 1000;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
 const TableHeader = styled.thead`
