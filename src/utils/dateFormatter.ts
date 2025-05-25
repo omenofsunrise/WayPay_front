@@ -1,10 +1,9 @@
-// utils/dateFormatter.ts
 export const formatDate = (dateString: string | Date): string => {
   if (!dateString) return '';
   
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
   
-  if (isNaN(date.getTime())) return ''; // Проверка на валидность даты
+  if (isNaN(date.getTime())) return '';
   
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');

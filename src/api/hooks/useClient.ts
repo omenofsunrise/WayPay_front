@@ -73,6 +73,48 @@ const useClient = () => {
     }
   };
 
+  const updateClientDoc = async (id: number, doc: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await clientService.updateClientDoc(id, doc);
+      if (currentClient && currentClient.id === id) {
+        setCurrentClient({ ...currentClient, doc });
+      }
+      if (data) {
+        const updatedItems = data.items.map(item => 
+          item.id === id ? { ...item, doc } : item
+        );
+        setData({ ...data, items: updatedItems });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateClientDocIssueDate = async (id: number, docIssueDate: Date): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await clientService.updateClientDocIssueDate(id, docIssueDate);
+      if (currentClient && currentClient.id === id) {
+        setCurrentClient({ ...currentClient, docIssueDate });
+      }
+      if (data) {
+        const updatedItems = data.items.map(item => 
+          item.id === id ? { ...item, docIssueDate } : item
+        );
+        setData({ ...data, items: updatedItems });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const deleteClient = async (id: number) => {
     setIsLoading(true);
     setError(null);
@@ -97,7 +139,9 @@ const useClient = () => {
     createClient,
     updateClient,
     deleteClient,
-    getClientById
+    getClientById,
+    updateClientDoc,
+    updateClientDocIssueDate
   };
 };
 

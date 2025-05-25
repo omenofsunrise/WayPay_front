@@ -4,30 +4,40 @@ import CustomInput from '../ui/fields/CustomInput';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
 import PhoneModalInput from '../ui/fields/PhoneModalInput';
 import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
+import type { ClientForm } from '../../api/types/client';
+import Button from '../ui/Buttons/DarkCyanButton';
+import useClient from '../../api/hooks/useClient';
 
 interface Client {
   id: number;
   fullName: string;
   phone: string;
   doc: string;
-  birthdate: string; // Changed from Date to string
-  docIssueDate: string; // Changed from Date to string
+  birthdate: string;
+  docIssueDate: string;
 }
 
 type ClientModalProps = {
   mode: ModalMode;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (clientData: ClientForm) => void;
+  onSubmit: (clientData: Omit<ClientForm, 'doc' | 'docIssueDate'>) => void;
   initialData?: Client;
 };
 
-const validateDate = (dateStr: string, minAge: number, maxAge: number): { isValid: boolean; error?: string; date?: Date } => {
+const emptyClient: Omit<Client, 'id'> = {
+  fullName: '',
+  phone: '',
+  doc: '',
+  birthdate: '',
+  docIssueDate: ''
+};
+
+const validateDate = (dateStr: string, minAge: number, maxAge: number, isRequired: boolean): { isValid: boolean; error?: string; date?: Date } => {
   if (!dateStr) {
-    return { isValid: false, error: 'Поле обязательно для заполнения' };
+    return { isValid: !isRequired, error: isRequired ? 'Поле обязательно для заполнения' : undefined };
   }
 
-  // Check format dd.mm.yyyy
   const dateRegex = /^\d{2}\.\d{2}\.\d{4}$/;
   if (!dateRegex.test(dateStr)) {
     return { isValid: false, error: 'Формат даты: дд.мм.гггг' };
@@ -35,7 +45,6 @@ const validateDate = (dateStr: string, minAge: number, maxAge: number): { isVali
 
   const [day, month, year] = dateStr.split('.').map(Number);
   
-  // Basic date validation
   const date = new Date(year, month - 1, day);
   if (
     date.getFullYear() !== year ||
@@ -61,6 +70,25 @@ const validateDate = (dateStr: string, minAge: number, maxAge: number): { isVali
   return { isValid: true, date };
 };
 
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(dateString)) {
+    return dateString;
+  }
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString;
+  }
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}.${month}.${year}`;
+};
+
 const ClientModal: React.FC<ClientModalProps> = ({
   mode,
   isOpen,
@@ -75,14 +103,18 @@ const ClientModal: React.FC<ClientModalProps> = ({
     docIssueDate: ''
   },
 }) => {
-  const [formData, setFormData] = useState<Omit<Client, 'id'>>({
-    fullName: initialData.fullName,
-    phone: initialData.phone,
-    doc: initialData.doc,
-    birthdate: initialData.birthdate,
-    docIssueDate: initialData.docIssueDate
-  });
+  const [formData, setFormData] = useState<Omit<Client, 'id'>>(
+    mode === 'create' ? emptyClient : {
+      fullName: initialData?.fullName || '',
+      phone: initialData?.phone || '',
+      doc: initialData?.doc || '',
+      birthdate: initialData?.birthdate || '',
+      docIssueDate: initialData?.docIssueDate || ''
+    }
+  );
 
+  const { updateClientDoc, updateClientDocIssueDate } = useClient();
+  
   const [validationErrors, setValidationErrors] = useState({
     fullName: false,
     phone: false,
@@ -107,15 +139,28 @@ const ClientModal: React.FC<ClientModalProps> = ({
     docIssueDate: false
   });
 
+  const [isEditingPassport, setIsEditingPassport] = useState(false);
+  const [passportEditData, setPassportEditData] = useState({
+    doc: initialData?.doc || '',
+    docIssueDate: initialData?.docIssueDate || ''
+  });
+
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        fullName: initialData.fullName,
-        phone: initialData.phone,
-        doc: initialData.doc,
-        birthdate: initialData.birthdate,
-        docIssueDate: initialData.docIssueDate
+      setFormData(
+        mode === 'create' ? emptyClient : {
+          fullName: initialData?.fullName || '',
+          phone: initialData?.phone || '',
+          doc: initialData?.doc || '',
+          birthdate: initialData?.birthdate ? formatDate(initialData.birthdate) : '',
+          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate) : ''
+        }
+      );
+      setPassportEditData({
+        doc: initialData?.doc || '',
+        docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate) : ''
       });
+      setIsEditingPassport(false);
       setValidationErrors({
         fullName: false,
         phone: false,
@@ -138,9 +183,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
         docIssueDate: false
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, mode]);
 
-  // Validation on data change
   useEffect(() => {
     if (mode === 'view') return;
 
@@ -152,14 +196,12 @@ const ClientModal: React.FC<ClientModalProps> = ({
       docIssueDate: ''
     };
 
-    // Full name validation (at least 2 words)
     if (formData.fullName.trim().split(/\s+/).length < 2) {
-      newErrorMessages.fullName = 'Укажите фамилию и имя (минимум 2 слова)';
+      newErrorMessages.fullName = 'Укажите фио полностью';
     } else if (formData.fullName.trim().length === 0) {
       newErrorMessages.fullName = 'Поле обязательно для заполнения';
     }
 
-    // Phone validation (example: 8 (123) 456-78-90)
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
     if (!phoneRegex.test(formData.phone.trim())) {
       newErrorMessages.phone = 'Введите телефон';
@@ -167,28 +209,27 @@ const ClientModal: React.FC<ClientModalProps> = ({
       newErrorMessages.phone = 'Поле обязательно для заполнения';
     }
 
-    // Birthdate validation (18-100 years)
-    const birthdateValidation = validateDate(formData.birthdate, 18, 100);
+    const birthdateValidation = validateDate(formData.birthdate, 18, 100, true);
     if (!birthdateValidation.isValid) {
       newErrorMessages.birthdate = birthdateValidation.error || '';
     }
 
-    // Document validation (series and number: 4 digits, space, 6 digits)
-    const docRegex = /^\d{4}\s\d{6}$/;
-    if (!docRegex.test(formData.doc.trim())) {
-      newErrorMessages.doc = 'Введите документ';
-    } else if (formData.doc.trim().length === 0) {
-      newErrorMessages.doc = 'Поле обязательно для заполнения';
-    }
+    if (mode === 'create' || isEditingPassport) {
+      const docRegex = /^\d{4}\s\d{6}$/;
+      if (!docRegex.test(formData.doc.trim())) {
+        newErrorMessages.doc = 'Введите документ';
+      } else if (formData.doc.trim().length === 0) {
+        newErrorMessages.doc = 'Поле обязательно для заполнения';
+      }
 
-    // Document issue date validation (not older than 90 years and not in the future)
-    const docIssueValidation = validateDate(formData.docIssueDate, 0, 90);
-    if (!docIssueValidation.isValid) {
-      newErrorMessages.docIssueDate = docIssueValidation.error || '';
-    } else if (docIssueValidation.date) {
-      const today = new Date();
-      if (docIssueValidation.date > today) {
-        newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+      const docIssueValidation = validateDate(formData.docIssueDate, 0, 90, false);
+      if (!docIssueValidation.isValid && docIssueValidation.error) {
+        newErrorMessages.docIssueDate = docIssueValidation.error;
+      } else if (docIssueValidation.date) {
+        const today = new Date();
+        if (docIssueValidation.date > today) {
+          newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+        }
       }
     }
 
@@ -203,23 +244,23 @@ const ClientModal: React.FC<ClientModalProps> = ({
     };
 
     setValidationErrors(errors);
-  }, [formData, mode]);
+  }, [formData, mode, isEditingPassport]);
 
   const isSaveDisabled = () => {
     if (mode === 'view') return true;
 
-    // Check for validation errors
     const hasErrors = Object.values(validationErrors).some(Boolean);
     if (hasErrors) return true;
 
-    // For edit mode, check if there are changes
     if (mode === 'edit') {
       const isChanged = (
         formData.fullName !== initialData.fullName ||
         formData.phone !== initialData.phone ||
-        formData.doc !== initialData.doc ||
         formData.birthdate !== initialData.birthdate ||
-        formData.docIssueDate !== initialData.docIssueDate
+        (isEditingPassport && (
+          formData.doc !== initialData.doc ||
+          formData.docIssueDate !== initialData.docIssueDate
+        ))
       );
       return !isChanged;
     }
@@ -230,7 +271,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Mark all fields as touched to show errors
     setTouchedFields({
       fullName: true,
       phone: true,
@@ -239,13 +279,19 @@ const ClientModal: React.FC<ClientModalProps> = ({
       docIssueDate: true
     });
 
-    // Check validity
     const isValid = !Object.values(validationErrors).some(Boolean);
     if (!isValid) {
       return;
     }
 
-    onSubmit(formData);
+    // Submit only the basic client data (excluding doc fields)
+    const submitData = {
+      fullName: formData.fullName,
+      phone: formData.phone,
+      birthdate: formData.birthdate
+    };
+
+    onSubmit(submitData);
     onClose();
   };
 
@@ -259,6 +305,99 @@ const ClientModal: React.FC<ClientModalProps> = ({
       ...prev,
       [name]: true
     }));
+  };
+
+  const handlePassportEditStart = () => {
+    setIsEditingPassport(true);
+    setFormData(prev => ({
+      ...prev,
+      doc: '',
+      docIssueDate: ''
+    }));
+  };
+
+  const handlePassportEditCancel = () => {
+    setIsEditingPassport(false);
+    setFormData(prev => ({
+      ...prev,
+      doc: passportEditData.doc,
+      docIssueDate: passportEditData.docIssueDate
+    }));
+    setValidationErrors(prev => ({
+      ...prev,
+      doc: false,
+      docIssueDate: false
+    }));
+    setErrorMessages(prev => ({
+      ...prev,
+      doc: '',
+      docIssueDate: ''
+    }));
+  };
+
+  const handlePassportSave = async () => {
+    const docRegex = /^\d{4}\s\d{6}$/;
+    const docIssueValidation = validateDate(formData.docIssueDate, 0, 90, false);
+    
+    const newErrorMessages = {
+      doc: '',
+      docIssueDate: ''
+    };
+
+    if (!docRegex.test(formData.doc.trim())) {
+      newErrorMessages.doc = 'Введите документ';
+    }
+
+    if (!docIssueValidation.isValid && docIssueValidation.error) {
+      newErrorMessages.docIssueDate = docIssueValidation.error;
+    } else if (docIssueValidation.date) {
+      const today = new Date();
+      if (docIssueValidation.date > today) {
+        newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+      }
+    }
+
+    if (newErrorMessages.doc || newErrorMessages.docIssueDate) {
+      setErrorMessages(prev => ({
+        ...prev,
+        ...newErrorMessages
+      }));
+      setValidationErrors(prev => ({
+        ...prev,
+        doc: !!newErrorMessages.doc,
+        docIssueDate: !!newErrorMessages.docIssueDate
+      }));
+      return;
+    }
+
+    try {
+      if (initialData.id) {
+        await updateClientDoc(initialData.id, formData.doc);
+        
+        if (formData.docIssueDate) {
+          await updateClientDocIssueDate(initialData.id, new Date(formData.docIssueDate));
+        }
+        
+        setPassportEditData({
+          doc: formData.doc,
+          docIssueDate: formData.docIssueDate
+        });
+        setIsEditingPassport(false);
+        
+        setFormData(prev => ({
+          ...prev,
+          doc: formData.doc,
+          docIssueDate: formData.docIssueDate
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update passport:', error);
+      setErrorMessages(prev => ({
+        ...prev,
+        doc: 'Ошибка при сохранении паспорта',
+        docIssueDate: 'Ошибка при сохранении паспорта'
+      }));
+    }
   };
 
   const getTitle = () => {
@@ -337,32 +476,63 @@ const ClientModal: React.FC<ClientModalProps> = ({
           <InputRow>
             <InputLabel>Паспорт:</InputLabel>
             <InputContainer>
-              <CustomInput
-                name="doc"
-                inputType="doc"
-                placeholder="Серия и номер"
-                value={formData.doc}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.doc && validationErrors.doc}
-                errorMessage={touchedFields.doc ? errorMessages.doc : undefined}
-              />
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <CustomInput
+                  name="doc"
+                  inputType="doc"
+                  placeholder="Серия и номер"
+                  value={formData.doc}
+                  onChange={handleInputChange}
+                  disabled={mode === 'view' || (mode === 'edit' && !isEditingPassport)}
+                  hasError={touchedFields.doc && validationErrors.doc}
+                  errorMessage={touchedFields.doc ? errorMessages.doc : undefined}
+                  style={{ flex: 1 }}
+                />
+                {mode === 'edit' && !isEditingPassport && (
+                  <Button
+                    type="button"
+                    onClick={handlePassportEditStart}
+                  >
+                    Изменить
+                  </Button>
+                )}
+              </div>
             </InputContainer>
           </InputRow>
           
           <InputRow>
             <InputLabel>Дата выдачи:</InputLabel>
             <InputContainer>
-              <CustomInput
-                name="docIssueDate"
-                inputType="date"
-                placeholder="дд.мм.гггг"
-                value={formData.docIssueDate}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}
-                errorMessage={touchedFields.docIssueDate ? errorMessages.docIssueDate : undefined}
-              />
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <CustomInput
+                  name="docIssueDate"
+                  inputType="date"
+                  placeholder="дд.мм.гггг"
+                  value={formData.docIssueDate}
+                  onChange={handleInputChange}
+                  disabled={mode === 'view' || (mode === 'edit' && !isEditingPassport)}
+                  hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}
+                  errorMessage={touchedFields.docIssueDate ? errorMessages.docIssueDate : undefined}
+                  style={{ flex: 1 }}
+                />
+                {mode === 'edit' && isEditingPassport && (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={handlePassportSave}
+                      disabled={!!validationErrors.doc || !!validationErrors.docIssueDate}
+                    >
+                      Сохранить
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handlePassportEditCancel}
+                    >
+                      Отмена
+                    </Button>
+                  </>
+                )}
+              </div>
             </InputContainer>
           </InputRow>
         </div>

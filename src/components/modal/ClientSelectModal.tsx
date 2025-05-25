@@ -6,6 +6,7 @@ import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import useClients from '../../api/hooks/useClient';
 import Pagination from '../ui/fields/CustomPagination';
 import styled from 'styled-components';
+import { formatDate } from '../../utils/dateFormatter';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ const ClientSelectModal = ({
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
-  const pageSize = 5;
+  const pageSize = 8;
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
@@ -101,7 +102,7 @@ const ClientSelectModal = ({
     client.id.toString(),
     client.fullName,
     client.phone,
-    client.birthdate,
+    formatDate(client.birthdate),
   ]) || [];
 
   if (!isOpen) return null;
@@ -117,6 +118,7 @@ const ClientSelectModal = ({
       <ModalContent>
         <FilterContainer>
           <CustomInput 
+          style={{ maxWidth: '900px' }}
             inputType="fullname"
             placeholder="Поиск по ФИО"
             value={nameFilter}

@@ -26,6 +26,14 @@ class ClientService {
   async deleteClient(id: number): Promise<void> {
     await apiClient.delete(`/Client/${id}`);
   }
+
+  async updateClientDoc(id: number, doc: string): Promise<void> {
+    await apiClient.put(`/Client/${id}/doc`, { doc });
+  }
+
+  async updateClientDocIssueDate(id: number, docIssueDate: Date): Promise<void> {
+    await apiClient.put(`/Client/${id}/doc-issue-date`, { docIssueDate });
+  }
 }
 
 export default new ClientService();

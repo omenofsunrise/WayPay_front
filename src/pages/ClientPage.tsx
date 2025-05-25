@@ -159,19 +159,17 @@ const ClientPage = () => {
         }
     };
 
-    const handleSubmitClient = async (formData: ClientForm) => {
+    const handleSubmitClient = async (formData: Omit<ClientForm, 'doc' | 'docIssueDate'>) => {
         try {
-            // Функция преобразования строки в Date
             const parseDate = (dateStr: string): Date => {
             const [day, month, year] = dateStr.split('.').map(Number);
             return new Date(year, month - 1, day);
             };
 
-            // Подготавливаем данные для API
-            const apiData: Omit<Client, 'id'> = {
+            // Prepare data without doc fields
+            const apiData = {
             ...formData,
-            birthdate: parseDate(formData.birthdate),
-            docIssueDate: parseDate(formData.docIssueDate)
+            birthdate: parseDate(formData.birthdate)
             };
 
             if (modalMode === 'create') {
@@ -184,6 +182,7 @@ const ClientPage = () => {
             console.error('Ошибка при сохранении клиента:', err);
         }
     };
+
 
     // Вспомогательная функция для преобразования строки в Date
     const convertStringToDate = (dateStr: string): Date => {
