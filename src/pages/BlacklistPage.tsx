@@ -139,10 +139,10 @@ const BlacklistPage = () => {
                 <>
                     <CustomTable 
                         columns={[
-                            { name: "ID", isSortable: true },
-                            { name: "ФИО", isSortable: true },
-                            { name: "Дата рождения", isSortable: true },
-                            { name: "Телефон" },
+                            { name: "ID", isSortable: true, align: "left" },
+                            { name: "ФИО", isSortable: true, align: "left" },
+                            { name: "Дата рождения", isSortable: true, align: "left" },
+                            { name: "Телефон", align: "left" },
                         ]} 
                         data={tableData}
                         onSort={handleSort}

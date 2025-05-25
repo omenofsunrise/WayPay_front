@@ -15,6 +15,7 @@ const SwitchContainer = styled.label`
   background-color: white;
   border: 4px solid rgba(0, 125, 136, 1);
   border-radius: 35px;
+  color: black;
 `;
 
 const Slider = styled.span<{ checked: boolean; disabled?: boolean }>`
@@ -27,6 +28,7 @@ const Slider = styled.span<{ checked: boolean; disabled?: boolean }>`
   transition: .4s;
   border-radius: 24px;
   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
+  color: black;
 
   &:before {
     position: absolute;
@@ -46,6 +48,7 @@ const Slider = styled.span<{ checked: boolean; disabled?: boolean }>`
 const HiddenCheckbox = styled.input.attrs({ type: 'checkbox' })`
   opacity: 0;
   width: 0;
+  color: black;
   height: 0;
 `;
 

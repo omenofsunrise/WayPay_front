@@ -3,9 +3,12 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContextMenu from '../../modal/ContextMenu';
 
+type Alignment = 'left' | 'center' | 'right';
+
 interface Column {
   name: string;
   isSortable?: boolean;
+  align?: Alignment;
 }
 
 interface TableAction {
@@ -20,10 +23,12 @@ interface CreditsTableProps {
   onRowDoubleClick?: (rowData: any[], rowIndex: number) => void;
   contextMenuActions?: TableAction[];
   onSort?: (columnIndex: number) => void;
+  onRowClick?: (rowData: any[], rowIndex: number) => void;
   sortConfig?: {
     key: number | null;
     direction: 'asc' | 'desc';
   };
+  selectedRow?: number;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -32,9 +37,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   onRowDoubleClick,
   contextMenuActions = [],
   onSort,
-  sortConfig
+  sortConfig,
+  onRowClick,
+  selectedRow: externalSelectedRow
 }) => {
-  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -42,13 +49,21 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   } | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
+  const selectedRow = externalSelectedRow !== undefined ? externalSelectedRow : internalSelectedRow;
+
   const handleSort = (columnIndex: number) => {
     if (!columns[columnIndex].isSortable || !onSort) return;
     onSort(columnIndex);
   };
 
   const handleRowClick = (rowIndex: number) => {
-    setSelectedRow(rowIndex === selectedRow ? null : rowIndex);
+    const newSelectedRow = rowIndex === selectedRow ? null : rowIndex;
+    if (externalSelectedRow === undefined) {
+      setInternalSelectedRow(newSelectedRow);
+    }
+    if (onRowClick) {
+      onRowClick(data[rowIndex], rowIndex);
+    }
   };
 
   const handleRowDoubleClick = (row: any[], rowIndex: number) => {
@@ -64,25 +79,21 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     
     if (tableRef.current) {
       const rect = tableRef.current.getBoundingClientRect();
-      const menuWidth = 200; // Предполагаемая ширина меню
-      const menuItemHeight = 40; // Высота одного пункта меню
+      const menuWidth = 200;
+      const menuItemHeight = 40;
       const menuHeight = contextMenuActions.length * menuItemHeight;
       
-      // Рассчитываем позицию относительно таблицы
       let x = event.clientX - rect.left;
       let y = event.clientY - rect.top;
       
-      // Проверяем, чтобы меню не выходило за правую границу таблицы
       if (x + menuWidth > rect.width) {
         x = rect.width - menuWidth;
       }
       
-      // Проверяем, чтобы меню не выходило за нижнюю границу таблицы
       if (y + menuHeight > rect.height) {
         y = rect.height - menuHeight;
       }
       
-      // Убедимся, что координаты не отрицательные
       x = Math.max(0, x);
       y = Math.max(0, y);
 
@@ -125,8 +136,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 $isSortable={column.isSortable}
                 $isActive={sortConfig?.key === index}
                 onClick={() => handleSort(index)}
+                $align={column.align || 'center'} // Передаем выравнивание
               >
-                <HeaderContent>
+                <HeaderContent $align={column.align || 'center'}> {/* Передаем выравнивание */}
                   {column.name}
                   {column.isSortable && (
                     <SortIcon 
@@ -171,7 +183,10 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 }}
               >
                 {row.map((cell, cellIndex) => (
-                  <BodyCell key={cellIndex}>
+                  <BodyCell 
+                    key={cellIndex}
+                    $align={columns[cellIndex]?.align || 'center'} // Передаем выравнивание из конфига колонки
+                  >
                     {cell}
                   </BodyCell>
                 ))}
@@ -218,7 +233,6 @@ const TableContainer = styled(motion.div)`
   border-radius: 20px;
   overflow: hidden;
   color: rgba(0, 0, 0, 1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: relative;
 `;
 
@@ -230,7 +244,6 @@ const StyledTable = styled.table`
 
 const ContextMenuWrapper = styled(motion.div)`
   z-index: 1000;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
 const TableHeader = styled.thead`
@@ -266,9 +279,13 @@ const TableRow = styled(motion.tr)<{ $isLast?: boolean; $isSelected?: boolean }>
   }
 `;
 
-const HeaderCell = styled.th<{ $isSortable?: boolean; $isActive?: boolean }>`
+const HeaderCell = styled.th<{ 
+  $isSortable?: boolean; 
+  $isActive?: boolean;
+  $align?: Alignment;
+}>`
   padding: 16px;
-  text-align: center;
+  text-align: ${({ $align }) => $align};
   font-weight: 500;
   position: relative;
   cursor: ${({ $isSortable }) => ($isSortable ? 'pointer' : 'default')};
@@ -281,10 +298,14 @@ const HeaderCell = styled.th<{ $isSortable?: boolean; $isActive?: boolean }>`
   }
 `;
 
-const HeaderContent = styled.div`
+const HeaderContent = styled.div<{ $align?: Alignment }>`
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  justify-content: ${({ $align }) => 
+    $align === 'right' ? 'flex-end' : 
+    $align === 'center' ? 'center' : 'flex-start'};
+  width: 100%;
 `;
 
 const SortIcon = styled(motion.span)<{ $direction: 'asc' | 'desc' }>`
@@ -292,9 +313,9 @@ const SortIcon = styled(motion.span)<{ $direction: 'asc' | 'desc' }>`
   align-items: center;
 `;
 
-const BodyCell = styled.td`
+const BodyCell = styled.td<{ $align?: Alignment }>`
   padding: 16px;
-  text-align: center;
+  text-align: ${({ $align }) => $align};
   vertical-align: middle;
 `;
 

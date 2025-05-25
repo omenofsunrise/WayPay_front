@@ -53,7 +53,6 @@ const SideMenu = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Определяем выбранный элемент меню на основе текущего пути
     const currentPath = location.pathname;
     const menuItem = menuItemsMap[currentPath];
     
@@ -132,7 +131,25 @@ const SideMenu = () => {
             $collapsed={collapsed} 
             $selected={selectedSideMenuItem === 'contracts' || selectedSideMenuItem === 'contracts-control'} 
           />
-          {!collapsed && <MenuItemText>Договоры</MenuItemText>}
+          {!collapsed && (
+            <>
+              <MenuItemText>Договоры</MenuItemText>
+              <ExpandArrow 
+                width="14" 
+                height="8" 
+                viewBox="0 0 14 8" 
+                fill="none" 
+                $expanded={expandedItem === 'contracts'}
+              >
+                <path 
+                  d="M1 1.32422L7 7.32422L13 1.32422" 
+                  stroke="#50555C" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </ExpandArrow>
+            </>
+          )}
         </MenuItem>
         {!collapsed && expandedItem === 'contracts' && (
           <SubMenu>
@@ -166,7 +183,25 @@ const SideMenu = () => {
                       selectedSideMenuItem === 'blacklist' ||
                       selectedSideMenuItem === 'queue'} 
           />
-          {!collapsed && <MenuItemText>Клиенты</MenuItemText>}
+          {!collapsed && (
+            <>
+              <MenuItemText>Клиенты</MenuItemText>
+              <ExpandArrow 
+                width="14" 
+                height="8" 
+                viewBox="0 0 14 8" 
+                fill="none" 
+                $expanded={expandedItem === 'clients'}
+              >
+                <path 
+                  d="M1 1.32422L7 7.32422L13 1.32422" 
+                  stroke="#50555C" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </ExpandArrow>
+            </>
+          )}
         </MenuItem>
         {!collapsed && expandedItem === 'clients' && (
           <SubMenu>
@@ -204,7 +239,25 @@ const SideMenu = () => {
             $selected={selectedSideMenuItem === 'pending-payments' || 
                       selectedSideMenuItem === 'payments-journal'} 
           />
-          {!collapsed && <MenuItemText>Платежи</MenuItemText>}
+          {!collapsed && (
+            <>
+              <MenuItemText>Платежи</MenuItemText>
+              <ExpandArrow 
+                width="14" 
+                height="8" 
+                viewBox="0 0 14 8" 
+                fill="none" 
+                $expanded={expandedItem === 'payments'}
+              >
+                <path 
+                  d="M1 1.32422L7 7.32422L13 1.32422" 
+                  stroke="#50555C" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </ExpandArrow>
+            </>
+          )}
         </MenuItem>
         {!collapsed && expandedItem === 'payments' && (
           <SubMenu>
@@ -236,7 +289,25 @@ const SideMenu = () => {
             $selected={selectedSideMenuItem === 'investors' || 
                       selectedSideMenuItem === 'investors-report'} 
           />
-          {!collapsed && <MenuItemText>Инвесторы</MenuItemText>}
+          {!collapsed && (
+            <>
+              <MenuItemText>Инвесторы</MenuItemText>
+              <ExpandArrow 
+                width="14" 
+                height="8" 
+                viewBox="0 0 14 8" 
+                fill="none" 
+                $expanded={expandedItem === 'investors'}
+              >
+                <path 
+                  d="M1 1.32422L7 7.32422L13 1.32422" 
+                  stroke="#50555C" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </ExpandArrow>
+            </>
+          )}
         </MenuItem>
         {!collapsed && expandedItem === 'investors' && (
           <SubMenu>
@@ -266,7 +337,25 @@ const SideMenu = () => {
             $collapsed={collapsed} 
             $selected={selectedSideMenuItem === 'products'} 
           />
-          {!collapsed && <MenuItemText>Справочники</MenuItemText>}
+          {!collapsed && (
+            <>
+              <MenuItemText>Справочники</MenuItemText>
+              <ExpandArrow 
+                width="14" 
+                height="8" 
+                viewBox="0 0 14 8" 
+                fill="none" 
+                $expanded={expandedItem === 'references'}
+              >
+                <path 
+                  d="M1 1.32422L7 7.32422L13 1.32422" 
+                  stroke="#50555C" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </ExpandArrow>
+            </>
+          )}
         </MenuItem>
         {!collapsed && expandedItem === 'references' && (
           <SubMenu>
@@ -294,7 +383,25 @@ const SideMenu = () => {
                       selectedSideMenuItem === 'income' ||
                       selectedSideMenuItem === 'expenses'} 
           />
-          {!collapsed && <MenuItemText>Финансы</MenuItemText>}
+          {!collapsed && (
+            <>
+              <MenuItemText>Финансы</MenuItemText>
+              <ExpandArrow 
+                width="14" 
+                height="8" 
+                viewBox="0 0 14 8" 
+                fill="none" 
+                $expanded={expandedItem === 'finance'}
+              >
+                <path 
+                  d="M1 1.32422L7 7.32422L13 1.32422" 
+                  stroke="#50555C" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </ExpandArrow>
+            </>
+          )}
         </MenuItem>
         {!collapsed && expandedItem === 'finance' && (
           <SubMenu>
@@ -472,6 +579,12 @@ const Divider = styled.div`
   width: 100%;
   background-color: rgba(209, 213, 219, 1);
   margin: 14px 0;
+`;
+
+const ExpandArrow = styled.svg<{ $expanded: boolean }>`
+  margin-left: auto;
+  transition: transform 0.2s ease;
+  transform: ${({ $expanded }) => ($expanded ? 'rotate(180deg)' : 'rotate(0)')};
 `;
 
 export default SideMenu;

@@ -240,10 +240,10 @@ const ClientPage = () => {
                 <>
                     <CustomTable 
                         columns={[
-                            { name: "ID", isSortable: true },
-                            { name: "ФИО", isSortable: true },
-                            { name: "Телефон" },
-                            { name: "Дата рождения", isSortable: true },
+                            { name: "ID", isSortable: true, align: "left" },
+                            { name: "ФИО", isSortable: true, align: "left" },
+                            { name: "Телефон", align: "left" },
+                            { name: "Дата рождения", isSortable: true, align: "right" },
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}

@@ -379,7 +379,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
             
             <InputRow>
               <InputContainer>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', color: "black" }}>
                   <ToggleSwitch
                     checked={uiPriority}
                     onChange={handlePriorityChange}

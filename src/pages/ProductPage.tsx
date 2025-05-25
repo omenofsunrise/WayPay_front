@@ -90,25 +90,26 @@ const ProductPage = () => {
     const handleExport = async () => {
         try {
             await exportData({
-            fetchData: async (page, pageSize) => {
-                const params: ProductParams = {
-                page,
-                pageSize,
-                name: nameFilter || undefined,
-                sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-                sortDirection: sortConfig.direction
-                };
-                
-                const result = await productService.getProducts(params);
-                return result.items;
-            },
-            fileName: 'products_export',
-            transformData: (products) => {
-                return products.map(product => ({
-                ID: product.id,
-                'Название': product.name
-                }));
-            }
+                fetchData: async (page, pageSize) => {
+                    const params: ProductParams = {
+                        page,
+                        pageSize,
+                        name: nameFilter || undefined,
+                        sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+                        sortDirection: sortConfig.direction
+                    };
+                    
+                    const result = await productService.getProducts(params);
+                    return {
+                        items: Array.isArray(result.items) ? result.items : [],
+                        totalCount: result.totalCount || 0
+                    };
+                },
+                fileName: 'products_export',
+                transformData: (product) => ({
+                    ID: product.id,
+                    'Название': product.name
+                })
             });
         } catch (error) {
             console.error('Export failed:', error);

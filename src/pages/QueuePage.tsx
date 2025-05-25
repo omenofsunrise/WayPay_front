@@ -293,10 +293,10 @@ const QueuePage = () => {
                 <>
                     <CustomTable 
                         columns={[
-                            { name: "Номер в очереди", isSortable: true },
-                            { name: "ФИО клиента" },
-                            { name: "Телефон клиента" },
-                            { name: "Сумма", isSortable: true },
+                            { name: "Номер в очереди", isSortable: true, align: "left" },
+                            { name: "ФИО клиента", align: "left" },
+                            { name: "Телефон клиента", align: "left" },
+                            { name: "Сумма", isSortable: true, align: "right" },
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}

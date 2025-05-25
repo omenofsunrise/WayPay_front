@@ -10,6 +10,7 @@ export const InputRow = styled.div`
 export const InputLabel = styled.span`
   text-align: right;
   font-size: 14px;
+  color: black;
 `;
 
 export const InputContainer = styled.div`

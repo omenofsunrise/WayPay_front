@@ -12,7 +12,6 @@ interface ClientSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (client: { id: number; fullName: string; phone: string }) => void;
-  hideSaveButton?: boolean;
   width?: string;
 }
 
@@ -20,7 +19,6 @@ const ClientSelectModal = ({
   isOpen, 
   onClose, 
   onSubmit, 
-  hideSaveButton = true, 
   width = "800px" 
 }: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
@@ -29,6 +27,12 @@ const ClientSelectModal = ({
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
+  const [selectedClient, setSelectedClient] = useState<{
+    id: number;
+    fullName: string;
+    phone: string;
+  } | null>(null);
+  
   const pageSize = 8;
   
   const columnToApiSortMap: Record<number, string> = {
@@ -62,6 +66,7 @@ const ClientSelectModal = ({
   useEffect(() => {
     if (isOpen) {
       loadClients();
+      setSelectedClient(null);
     }
   }, [isOpen, currentPage, nameFilter, sortConfig, loadClients]);
 
@@ -87,14 +92,22 @@ const ClientSelectModal = ({
     });
   };
 
-  const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
+  const handleRowClick = (rowData: any[], rowIndex: number) => {
     const client = clientsData?.items[rowIndex];
     if (client) {
-      onSubmit({
+      setSelectedClient({
         id: client.id,
         fullName: client.fullName,
         phone: client.phone
       });
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedClient) {
+      onSubmit(selectedClient);
+      onClose();
     }
   };
 
@@ -112,13 +125,15 @@ const ClientSelectModal = ({
       title="Выбор клиента"
       onClose={onClose}
       onCancel={onClose}
-      hideSaveButton={hideSaveButton}
+      onSave={handleSubmit}
+      isSaveDisabled={!selectedClient}
+      saveButtonText="Выбрать"
       width={width}
     >
       <ModalContent>
         <FilterContainer>
           <CustomInput 
-          style={{ maxWidth: '900px' }}
+            style={{ maxWidth: '900px' }}
             inputType="fullname"
             placeholder="Поиск по ФИО"
             value={nameFilter}
@@ -134,15 +149,16 @@ const ClientSelectModal = ({
             <TableContainer>
               <CustomTable 
                 columns={[
-                  { name: "ID", isSortable: true },
-                  { name: "ФИО", isSortable: true },
-                  { name: "Телефон" },
-                  { name: "Дата рождения", isSortable: true },
+                  { name: "ID", isSortable: true, align: "left" },
+                  { name: "ФИО", isSortable: true, align: "left" },
+                  { name: "Телефон", align: "left" },
+                  { name: "Дата рождения", isSortable: true, align: "right" },
                 ]} 
                 data={tableData}
-                onRowDoubleClick={handleRowDoubleClick}
+                onRowClick={handleRowClick}
                 onSort={handleSort}
                 sortConfig={sortConfig}
+                selectedRow={selectedClient ? tableData.findIndex(row => row[0] === selectedClient.id.toString()) : -1}
               />
             </TableContainer>
             
@@ -161,6 +177,7 @@ const ClientSelectModal = ({
   );
 };
 
+// Стили остаются теми же
 const ModalContent = styled.div`
   padding: 20px;
 `;
@@ -176,6 +193,7 @@ const TableContainer = styled.div`
 const PaginationContainer = styled.div`
   display: flex;
   justify-content: center;
+  margin-bottom: 20px;
 `;
 
 const LoadingMessage = styled.div`

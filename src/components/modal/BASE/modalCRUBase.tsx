@@ -15,6 +15,7 @@ interface ModalProps {
   mode?: ModalMode;
   hideSaveButton?: boolean;
   width?: string;
+  saveButtonText?: string;
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -28,6 +29,7 @@ const BaseModal: React.FC<ModalProps> = ({
   mode = 'create',
   hideSaveButton = false,
   width = '562px',
+  saveButtonText = "Сохранить"
 }) => {
   const isViewMode = mode === 'view';
 
@@ -51,11 +53,11 @@ const BaseModal: React.FC<ModalProps> = ({
             <CancelButton onClick={handleCancel}>Отменить</CancelButton>
             {!isViewMode && !hideSaveButton && (
               <DarkCyanButton 
-                style={{ width: "136px", borderRadius: "5px" }} 
+                style={{ minWidth: "136px", padding: "10p 20px", borderRadius: "10px", fontSize: "16px" }}
                 type="submit"
                 disabled={isSaveDisabled || isSubmitting}
               >
-                {isSubmitting ? 'Сохранение...' : 'Сохранить'}
+                {isSubmitting ? 'Сохранение...' : saveButtonText || 'Сохранить'}
               </DarkCyanButton>
             )}
           </ModalFooter>
@@ -149,10 +151,11 @@ const CancelButton = styled.button`
   padding: 10px 20px;
   background-color: rgba(209, 213, 219, 1);
   border: none;
-  border-radius: 5px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 16px;
   width: 136px;
+  color: black;
 
   &:hover {
     background-color: rgba(209, 213, 219, 0.8);
