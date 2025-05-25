@@ -34,6 +34,13 @@ class ClientService {
   async updateClientDocIssueDate(id: number, docIssueDate: Date): Promise<void> {
     await apiClient.put(`/Client/${id}/doc-issue-date`, { docIssueDate });
   }
+
+  async checkClientExists(phone: string): Promise<boolean> {
+    const response = await apiClient.get<ClientExistsResponse>('/Client/exists', { 
+      params: { phone } 
+    });
+    return response.data.exists;
+  }
 }
 
 export default new ClientService();

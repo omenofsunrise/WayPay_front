@@ -130,6 +130,20 @@ const useClient = () => {
     }
   }
 
+  const checkClientExists = useCallback(async (phone: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const exists = await clientService.checkClientExists(phone);
+      return exists;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -141,7 +155,8 @@ const useClient = () => {
     deleteClient,
     getClientById,
     updateClientDoc,
-    updateClientDocIssueDate
+    updateClientDocIssueDate,
+    checkClientExists,
   };
 };
 

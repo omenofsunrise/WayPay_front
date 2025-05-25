@@ -21,7 +21,7 @@ type ClientModalProps = {
   mode: ModalMode;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (clientData: Omit<ClientForm, 'doc' | 'docIssueDate'>) => void;
+  onSubmit: (clientData: Omit<ClientForm, 'doc' | 'docIssueDate'>) => Promise<boolean>;
   initialData?: Client;
 };
 
@@ -145,6 +145,9 @@ const ClientModal: React.FC<ClientModalProps> = ({
     docIssueDate: initialData?.docIssueDate || ''
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       setFormData(
@@ -182,6 +185,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         doc: false,
         docIssueDate: false
       });
+      setApiError('');
     }
   }, [initialData, isOpen, mode]);
 
@@ -268,7 +272,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     return false;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     setTouchedFields({
@@ -284,15 +288,38 @@ const ClientModal: React.FC<ClientModalProps> = ({
       return;
     }
 
-    // Submit only the basic client data (excluding doc fields)
-    const submitData = {
-      fullName: formData.fullName,
-      phone: formData.phone,
-      birthdate: formData.birthdate
-    };
+    setIsSubmitting(true);
+    setApiError('');
 
-    onSubmit(submitData);
-    onClose();
+    try {
+      const submitData = mode === 'create' 
+        ? {
+            fullName: formData.fullName,
+            phone: formData.phone,
+            birthdate: formData.birthdate,
+            doc: formData.doc,
+            docIssueDate: formData.docIssueDate
+          }
+        : {
+            fullName: formData.fullName,
+            phone: formData.phone,
+            birthdate: formData.birthdate
+          };
+
+      const success = await onSubmit(submitData);
+      
+      if (success) {
+        // Закрываем только при успешном сохранении
+        onClose();
+      } else {
+        // Ошибка уже установлена в onSubmit
+        setIsSubmitting(false);
+      }
+    } catch (error: any) {
+      console.error('Ошибка при сохранении клиента:', error);
+      setApiError(error.message || 'Произошла ошибка при сохранении клиента');
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -370,6 +397,9 @@ const ClientModal: React.FC<ClientModalProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
+    setApiError('');
+
     try {
       if (initialData.id) {
         await updateClientDoc(initialData.id, formData.doc);
@@ -392,11 +422,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
       }
     } catch (error) {
       console.error('Failed to update passport:', error);
+      setApiError('Ошибка при сохранении паспортных данных');
       setErrorMessages(prev => ({
         ...prev,
-        doc: 'Ошибка при сохранении паспорта',
-        docIssueDate: 'Ошибка при сохранении паспорта'
+        doc: 'Ошибка при сохранении',
+        docIssueDate: 'Ошибка при сохранении'
       }));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -417,11 +450,18 @@ const ClientModal: React.FC<ClientModalProps> = ({
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
-      isSaveDisabled={isSaveDisabled()}
+      isSaveDisabled={isSaveDisabled() || isSubmitting}
+      isSubmitting={isSubmitting}
       mode={mode}
     >
       <form onSubmit={handleSubmit}>
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          {apiError && (
+            <div style={{ color: 'red', marginBottom: '15px' }}>
+              {apiError}
+            </div>
+          )}
+          
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
           
           <InputRow>

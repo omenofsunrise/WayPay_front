@@ -159,17 +159,22 @@ const ClientPage = () => {
         }
     };
 
-    const handleSubmitClient = async (formData: Omit<ClientForm, 'doc' | 'docIssueDate'>) => {
+    const handleSubmitClient = async (
+        clientData: Omit<ClientForm, 'doc' | 'docIssueDate'> | ClientForm
+        ): Promise<boolean> => {
         try {
-            const parseDate = (dateStr: string): Date => {
+            const parseDate = (dateStr: string): Date | null => {
+            if (!dateStr) return null;
             const [day, month, year] = dateStr.split('.').map(Number);
             return new Date(year, month - 1, day);
             };
 
-            // Prepare data without doc fields
             const apiData = {
-            ...formData,
-            birthdate: parseDate(formData.birthdate)
+            fullName: clientData.fullName,
+            phone: clientData.phone,
+            birthdate: parseDate(clientData.birthdate),
+            doc: (clientData as ClientForm).doc || undefined,
+            docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined
             };
 
             if (modalMode === 'create') {
@@ -177,20 +182,13 @@ const ClientPage = () => {
             } else if (modalMode === 'edit' && selectedClient?.id) {
             await updateClient(selectedClient.id, apiData);
             }
+            
             loadClients();
-        } catch (err) {
-            console.error('Ошибка при сохранении клиента:', err);
+            return true;
+        } catch (error: any) {            
+            return false;
         }
-    };
-
-
-    // Вспомогательная функция для преобразования строки в Date
-    const convertStringToDate = (dateStr: string): Date => {
-        if (!dateStr) return new Date(); // или другое значение по умолчанию
-        
-        const [day, month, year] = dateStr.split('.').map(Number);
-        return new Date(year, month - 1, day);
-    };
+        };
 
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
         const client = clientsData?.items[rowIndex];
@@ -236,7 +234,7 @@ const ClientPage = () => {
             </FilterField>
             
             {isLoading && <div>Загрузка...</div>}
-            {error && <div>Ошибка: {error}</div>}
+            {error && <div>{error}</div>}
             
             {!isLoading && !error && (
                 <>

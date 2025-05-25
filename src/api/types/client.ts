@@ -30,3 +30,7 @@ export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {
   birthdate: Date; // Для API - объект Date
   docIssueDate: Date; // Для API - объект Date
 }
+
+export interface ClientExistsResponse {
+  exists: boolean;
+}
