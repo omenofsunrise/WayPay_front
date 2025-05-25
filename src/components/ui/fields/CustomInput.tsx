@@ -52,6 +52,9 @@ const CustomInput: React.FC<CustomInputProps> = ({
             e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
           newValue += ' ';
         }
+        if (newValue.length > 100) {
+          newValue = newValue.slice(0, 100);
+        }
         e.target.value = newValue;
         onChange(e);
         break;
@@ -69,22 +72,18 @@ const CustomInput: React.FC<CustomInputProps> = ({
         break;
 
       case 'date':
-        // Remove all non-digit characters
         newValue = newValue.replace(/\D/g, '');
         
-        // Format as dd.mm.yyyy
         if (newValue.length > 4) {
           newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
         } else if (newValue.length > 2) {
           newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
         }
         
-        // Limit to 10 characters (dd.mm.yyyy)
         if (newValue.length > 10) {
           newValue = newValue.slice(0, 10);
         }
         
-        // Handle backspace/delete
         const isDeleting = (value as string)?.length > newValue.length;
         if (isDeleting && [3, 6].includes(newValue.length)) {
           newValue = newValue.slice(0, newValue.length - 1);
