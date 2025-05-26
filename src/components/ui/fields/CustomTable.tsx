@@ -136,9 +136,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 $isSortable={column.isSortable}
                 $isActive={sortConfig?.key === index}
                 onClick={() => handleSort(index)}
-                $align={column.align || 'center'} // Передаем выравнивание
+                $align={column.align || 'center'}
+                $isFirst={index === 0}
+                $isLast={index === columns.length - 1}
               >
-                <HeaderContent $align={column.align || 'center'}> {/* Передаем выравнивание */}
+                <HeaderContent $align={column.align || 'center'}>
                   {column.name}
                   {column.isSortable && (
                     <SortIcon 
@@ -185,7 +187,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 {row.map((cell, cellIndex) => (
                   <BodyCell 
                     key={cellIndex}
-                    $align={columns[cellIndex]?.align || 'center'} // Передаем выравнивание из конфига колонки
+                    $align={columns[cellIndex]?.align || 'center'}
+                    $isFirst={cellIndex === 0}
+                    $isLast={cellIndex === row.length - 1}
                   >
                     {cell}
                   </BodyCell>
@@ -283,8 +287,12 @@ const HeaderCell = styled.th<{
   $isSortable?: boolean; 
   $isActive?: boolean;
   $align?: Alignment;
+  $isFirst?: boolean;
+  $isLast?: boolean;
 }>`
   padding: 16px;
+  padding-left: ${({ $isFirst }) => ($isFirst ? '50px' : '16px')};
+  padding-right: ${({ $isLast }) => ($isLast ? '50px' : '16px')};
   text-align: ${({ $align }) => $align};
   font-weight: 500;
   position: relative;
@@ -313,8 +321,10 @@ const SortIcon = styled(motion.span)<{ $direction: 'asc' | 'desc' }>`
   align-items: center;
 `;
 
-const BodyCell = styled.td<{ $align?: Alignment }>`
+const BodyCell = styled.td<{ $align?: Alignment; $isFirst?: boolean; $isLast?: boolean }>`
   padding: 16px;
+  padding-left: ${({ $isFirst }) => ($isFirst ? '50px' : '16px')};
+  padding-right: ${({ $isLast }) => ($isLast ? '50px' : '16px')};
   text-align: ${({ $align }) => $align};
   vertical-align: middle;
 `;

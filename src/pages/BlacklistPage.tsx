@@ -13,6 +13,7 @@ import CustomTitle from "../components/ui/Text/CustomTitle";
 import { exportToExcel } from '../utils/exportUtils';
 import ClientSelectModal from "../components/modal/ClientSelectModal";
 import useBlacklist from "../api/hooks/useBlacklist";
+import { formatDate } from '../utils/dateFormatter';
 
 interface BlacklistItem {
   id: number;
@@ -105,7 +106,7 @@ const BlacklistPage = () => {
     const tableData = blacklistData?.items?.map(item => [
         item.id.toString(),
         item.fullName,
-        item.birthdate,
+        formatDate(item.birthdate),
         item.phone,
     ]) || [];
 

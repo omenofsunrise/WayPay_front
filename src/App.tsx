@@ -11,6 +11,7 @@ import { authStorage } from './api/utils/auth-storage';
 import QueuePage from './pages/QueuePage';
 import ClientPage from './pages/ClientPage';
 import BlacklistPage from './pages/BlacklistPage';
+import InvestorPage from './pages/InvestorPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -100,6 +101,12 @@ function App() {
         <Route path="blacklist" element={
             <MainLayout>
               <BlacklistPage />
+            </MainLayout>
+        } />
+
+        <Route path="investors" element={
+            <MainLayout>
+              <InvestorPage />
             </MainLayout>
         } />
 

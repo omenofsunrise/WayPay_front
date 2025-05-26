@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { Client, ClientParams } from '../types/client';
+import type { Client, ClientExistsResponse, ClientParams } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 
 class ClientService {

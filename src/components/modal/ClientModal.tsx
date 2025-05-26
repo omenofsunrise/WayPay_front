@@ -134,7 +134,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
       return 'Поле обязательно для заполнения';
     }
 
-    // Check if phone is fully entered (11 digits)
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length === 11) {
       try {
@@ -229,17 +228,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
         docIssueDate: ''
       };
 
-      // Full name validation (unchanged)
       if (formData.fullName.trim().split(/\s+/).length < 2) {
         newErrorMessages.fullName = 'Укажите фио полностью';
       } else if (formData.fullName.trim().length === 0) {
         newErrorMessages.fullName = 'Поле обязательно для заполнения';
       }
 
-      // Phone validation (updated)
       newErrorMessages.phone = await validatePhone(formData.phone);
 
-      // Rest of the validations (unchanged)
       const birthdateValidation = validateDate(formData.birthdate, 18, 100, true);
       if (!birthdateValidation.isValid) {
         newErrorMessages.birthdate = birthdateValidation.error || '';
@@ -339,10 +335,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
       const success = await onSubmit(submitData);
       
       if (success) {
-        // Закрываем только при успешном сохранении
         onClose();
       } else {
-        // Ошибка уже установлена в onSubmit
         setIsSubmitting(false);
       }
     } catch (error: any) {
