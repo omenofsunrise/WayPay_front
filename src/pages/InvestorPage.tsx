@@ -158,6 +158,24 @@ const InvestorPage = () => {
 
     const handleDeleteInvestor = async (rowData: any[]) => {
         const [id] = rowData;
+        
+        if (isNaN(Number(id))) {
+            console.error('Неверный ID инвестора');
+            return;
+        }
+
+        const investorToDelete = investorsData?.items.find(i => i.id === Number(id));
+        
+        if (!investorToDelete) {
+            console.error('Инвестор не найден');
+            return;
+        }
+        
+        if (investorToDelete.isCompany) {
+            alert('Нельзя удалить свою компанию из инвесторов');
+            return;
+        }
+        
         if (window.confirm('Вы уверены, что хотите удалить этого инвестора?')) {
             try {
                 await deleteInvestor(Number(id));
@@ -189,6 +207,7 @@ const InvestorPage = () => {
     };
 
     const tableData = investorsData?.items.map(investor => [
+        investor.id.toString(),
         investor.nickname,
         investor.fullName,
         investor.phoneNumber,
@@ -232,6 +251,7 @@ const InvestorPage = () => {
                 <>
                     <CustomTable 
                         columns={[
+                            { name: "id", isHidden: true },
                             { name: "Никнейм" },
                             { name: "ФИО (видно только админам)", isSortable: true },
                             { name: "Телефон" },

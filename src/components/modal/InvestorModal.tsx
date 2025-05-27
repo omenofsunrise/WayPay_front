@@ -368,7 +368,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <InputRow>
             <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
-            <InputContainer $maxWidth="440px">
+            <InputContainer >
               <CustomInput
                 name="nickname"
                 inputType="text"
@@ -384,7 +384,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <InputRow>
             <InputLabel>{formData.isCompany ? 'Владелец:' : 'ФИО:'}</InputLabel>
-            <InputContainer $maxWidth="440px">
+            <InputContainer>
               <CustomInput
                 name="fullName"
                 inputType="text"
@@ -400,7 +400,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
-            <InputContainer $maxWidth="440px">
+            <InputContainer>
               <PhoneModalInput
                 name="phoneNumber"
                 placeholder="Телефон"
@@ -417,7 +417,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <InputRow>
             <InputLabel>Доля инвестора (%):</InputLabel>
-            <InputContainer $maxWidth="370px">
+            <InputContainer >
               <CustomInput
                 name="investorPie"
                 inputType="number"
@@ -433,7 +433,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <InputRow>
             <InputLabel>Инвестиция:</InputLabel>
-            <InputContainer $maxWidth="370px">
+            <InputContainer>
               <CustomInput
                 name="investmentAmount"
                 inputType="rubles"

@@ -72,6 +72,26 @@ const useInvestor = () => {
     }
   }
 
+  const addInvestment = async (id: number, amount: number): Promise<Investor | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedInvestor = await investorService.addInvestment(id, amount);
+      if (data) {
+        const updatedItems = data.items.map(item => 
+          item.id === id ? updatedInvestor : item
+        );
+        setData({ ...data, items: updatedItems });
+      }
+      return updatedInvestor;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -79,7 +99,8 @@ const useInvestor = () => {
     getInvestors,
     createInvestor,
     updateInvestor,
-    deleteInvestor
+    deleteInvestor,
+    addInvestment
   };
 };
 

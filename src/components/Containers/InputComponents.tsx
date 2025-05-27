@@ -12,13 +12,14 @@ export const InputRow = styled.div`
 `;
 
 export const InputLabel = styled.span`
-  text-align: right;
+  text-align: left;
   font-size: 14px;
   color: black;
+  max-width: 90px;
 `;
 
-export const InputContainer = styled.div<InputContainerProps>`
+export const InputContainer = styled.div`
   margin-left: auto;
   flex: 1;
-  max-width: ${props => props.$maxWidth || '405px'};
+  max-width: 425px;
 `;

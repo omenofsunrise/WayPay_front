@@ -9,6 +9,7 @@ interface Column {
   name: string;
   isSortable?: boolean;
   align?: Alignment;
+  isHidden?: boolean;
 }
 
 interface TableAction {
@@ -131,6 +132,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         <TableHeader>
           <TableRow>
             {columns.map((column, index) => (
+              !column.isHidden && (
               <HeaderCell 
                 key={index} 
                 $isSortable={column.isSortable}
@@ -158,6 +160,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   )}
                 </HeaderContent>
               </HeaderCell>
+              )
             ))}
           </TableRow>
         </TableHeader>
@@ -185,6 +188,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 }}
               >
                 {row.map((cell, cellIndex) => (
+                  !columns[cellIndex]?.isHidden && (
                   <BodyCell 
                     key={cellIndex}
                     $align={columns[cellIndex]?.align || 'center'}
@@ -193,6 +197,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   >
                     {cell}
                   </BodyCell>
+                  )
                 ))}
               </TableRow>
             ))}

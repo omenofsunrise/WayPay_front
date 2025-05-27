@@ -26,6 +26,11 @@ class ProductService {
   async deleteInvestor(id: number): Promise<void> {
     await apiClient.delete(`/Investor/${id}`);
   }
+
+  async addInvestment(id: number, amount: number): Promise<Investor> {
+    const response = await apiClient.put<Investor>(`/api/Investor/${id}/add-investment`, { amount });
+    return response.data;
+  }
 }
 
 export default new ProductService();
