@@ -28,7 +28,7 @@ class ProductService {
   }
 
   async addInvestment(id: number, amount: number): Promise<Investor> {
-    const response = await apiClient.put<Investor>(`/api/Investor/${id}/add-investment`, { amount });
+    const response = await apiClient.put<Investor>(`Investor/${id}/add-investment`, { amount });
     return response.data;
   }
 }

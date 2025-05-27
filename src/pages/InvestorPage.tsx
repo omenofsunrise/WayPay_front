@@ -15,7 +15,9 @@ import useExport from '../api/hooks/useExport';
 import type { Investor, InvestorParams } from '../api/types/investor';
 import investorService from '../api/services/investorService';
 import useInvestor from '../api/hooks/useInvestor';
-import { formatMoney } from '../utils/formatPrice';
+import { formatMoney, parseMoney } from '../utils/formatPrice';
+import BaseModal from '../components/modal/BASE/modalCRUBase';
+import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -50,9 +52,38 @@ const InvestorPage = () => {
         getInvestors,
         createInvestor,
         updateInvestor,
-        deleteInvestor
+        deleteInvestor,
+        addInvestment
     } = useInvestor();
     
+    const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
+    const [investmentAmount, setInvestmentAmount] = useState('');
+
+    const handleAddInvestment = (rowData: any[]) => {
+        const [id] = rowData;
+        setSelectedInvestor(investorsData?.items.find(i => i.id === Number(id)) || null);
+        setIsInvestmentModalOpen(true);
+    };
+
+    const handleSubmitInvestment = async (e: React.FormEvent) => {
+        e.preventDefault(); 
+        if (!selectedInvestor) return;
+        
+        try {
+            const amount = parseMoney(investmentAmount);
+            if (isNaN(amount) || amount <= 0) {
+                alert('Пожалуйста, введите корректную сумму инвестиции');
+                return;
+            }
+
+            await addInvestment(selectedInvestor.id, amount);
+            setIsInvestmentModalOpen(false);
+        } catch (err) {
+            console.error('Ошибка при добавлении инвестиции:', err);
+            alert('Произошла ошибка при добавлении инвестиции');
+        }
+    };
+
     const loadInvestors = useCallback(async () => {
         const params: InvestorParams = {
             page: currentPage,
@@ -218,6 +249,11 @@ const InvestorPage = () => {
 
     const tableActions = [
         {
+            label: 'Добавить инвестицию',
+            action: handleAddInvestment,
+            color: '#10B981'
+        },
+        {
             label: 'Удалить',
             action: handleDeleteInvestor,
             color: '#EF4444'
@@ -297,6 +333,32 @@ const InvestorPage = () => {
                     isCompany: false
                 }}
             />
+
+            {isInvestmentModalOpen && selectedInvestor && (
+                <BaseModal
+                    title={`Добавить инвестицию для ${selectedInvestor.nickname}`}
+                    onClose={() => setIsInvestmentModalOpen(false)}
+                    onCancel={() => setIsInvestmentModalOpen(false)}
+                    onSave={handleSubmitInvestment}
+                    isSaveDisabled={!investmentAmount || isNaN(parseFloat(investmentAmount)) || parseFloat(investmentAmount) <= 0}
+                    mode="edit"
+                >
+                    <form onSubmit={handleSubmitInvestment} style={{ padding: '20px' }}>
+                        <InputRow>
+                            <InputLabel>Сумма инвестиции:</InputLabel>
+                            <InputContainer>
+                                <CustomInput
+                                    name="investmentAmount"
+                                    inputType="rubles"
+                                    placeholder="Сумма"
+                                    value={investmentAmount}
+                                    onChange={(e) => setInvestmentAmount(e.target.value)}
+                                />
+                            </InputContainer>
+                        </InputRow>
+                    </form>
+                </BaseModal>
+            )}
         </PageLayout>
     );
 };

@@ -181,26 +181,29 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
       newErrorMessages.phoneNumber = await validatePhone(formData.phoneNumber);
 
-      newErrorMessages.investorPie = validateNumber(
-        formData.investorPie, 
-        'Доля инвестора', 
-        0, 
-        100
-      );
+      // Финансовые поля проверяем только при создании
+      if (mode === 'create') {
+        newErrorMessages.investorPie = validateNumber(
+          formData.investorPie, 
+          'Доля инвестора', 
+          0, 
+          100
+        );
 
-      newErrorMessages.investmentAmount = validateNumber(
-        formData.investmentAmount, 
-        'Сумма инвестиций', 
-        0, 
-        1000000000
-      );
+        newErrorMessages.investmentAmount = validateNumber(
+          formData.investmentAmount, 
+          'Сумма инвестиций', 
+          0, 
+          1000000000
+        );
 
-      newErrorMessages.balance = validateNumber(
-        formData.balance, 
-        'Баланс', 
-        -1000000, 
-        1000000000
-      );
+        newErrorMessages.balance = validateNumber(
+          formData.balance, 
+          'Баланс', 
+          -1000000, 
+          1000000000
+        );
+      }
 
       setErrorMessages(newErrorMessages);
 
@@ -230,9 +233,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
         formData.nickname !== initialData.nickname ||
         formData.fullName !== initialData.fullName ||
         formData.phoneNumber !== initialData.phoneNumber ||
-        formData.investorPie !== initialData.investorPie ||
-        formData.investmentAmount !== initialData.investmentAmount ||
-        formData.balance !== initialData.balance ||
         formData.isCompany !== initialData.isCompany
       );
       return !isChanged;
@@ -254,31 +254,26 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     });
 
     const isValid = !Object.values(validationErrors).some(Boolean);
-    if (!isValid) {
-      return;
-    }
+    if (!isValid) return;
 
     setIsSubmitting(true);
     setApiError('');
 
     try {
       const submitData = {
-        nickname: formData.nickname,
-        fullName: formData.fullName,
-        phoneNumber: formData.phoneNumber,
-        investorPie: formData.investorPie,
-        investmentAmount: parseMoney(formData.investmentAmount.toString()),
-        balance: formData.balance,
-        isCompany: formData.isCompany
+        ...formData,
+        // При редактировании сохраняем оригинальные финансовые значения
+        ...(mode === 'edit' ? {
+          investorPie: initialData.investorPie,
+          investmentAmount: initialData.investmentAmount,
+          balance: initialData.balance
+        } : {})
       };
 
-      const success = await onSubmit(submitData);
+      await onSubmit(submitData);
       
-      if (success) {
-        onClose();
-      } else {
-        setIsSubmitting(false);
-      }
+      setIsSubmitting(false);
+      onClose();
     } catch (error: any) {
       console.error('Ошибка при сохранении инвестора:', error);
       setApiError(error.message || 'Произошла ошибка при сохранении инвестора');
@@ -316,6 +311,11 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Разрешаем изменение финансовых полей только при создании
+    if (mode !== 'create' && ['investorPie', 'investmentAmount', 'balance'].includes(name)) {
+      return;
+    }
+    
     const numValue = parseFloat(value) || 0;
     setFormData(prev => ({
       ...prev,
@@ -414,7 +414,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           </InputRow>
           
           <ModalInfoTitle>Финансовая информация</ModalInfoTitle>
-          
+        
           <InputRow>
             <InputLabel>Доля инвестора (%):</InputLabel>
             <InputContainer >
@@ -424,27 +424,29 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
                 placeholder="0-100"
                 value={formData.investorPie.toString()}
                 onChange={handleNumberChange}
-                disabled={mode === 'view'}
+                disabled={mode !== 'create'} // Отключаем для редактирования и просмотра
                 hasError={touchedFields.investorPie && validationErrors.investorPie}
                 errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
               />
             </InputContainer>
           </InputRow>
-          
-          <InputRow>
-            <InputLabel>Инвестиция:</InputLabel>
-            <InputContainer>
-              <CustomInput
-                name="investmentAmount"
-                inputType="rubles"
-                placeholder="Сумма"
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.investmentAmount && validationErrors.investmentAmount}
-                errorMessage={touchedFields.investmentAmount ? errorMessages.investmentAmount : undefined}
-              />
-            </InputContainer>
-          </InputRow>
+
+          {mode === 'create' && (
+            <InputRow>
+              <InputLabel>Инвестиция:</InputLabel>
+              <InputContainer>
+                <CustomInput
+                  name="investmentAmount"
+                  inputType="rubles"
+                  placeholder="Сумма"
+                  onChange={handleInputChange}
+                  hasError={touchedFields.investmentAmount && validationErrors.investmentAmount}
+                  errorMessage={touchedFields.investmentAmount ? errorMessages.investmentAmount : undefined}
+                />
+              </InputContainer>
+            </InputRow>
+          )}
+
         </div>
       </form>
     </BaseModal>

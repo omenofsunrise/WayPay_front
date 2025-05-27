@@ -13,6 +13,7 @@ import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import CreditTypes from '../components/ui/fields/CreditTypes';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
+import { useNavigate } from 'react-router-dom';
 
 interface Contract {
   id: number;
@@ -46,6 +47,8 @@ const CreditPage = () => {
     console.log('Выбранная дата:', newDate);
   };
 
+  const navigate = useNavigate();
+  
   const filteredData = mockData.filter(contract => {
     const matchesNumber = contractNumber 
       ? contract.number.includes(contractNumber)
@@ -136,7 +139,10 @@ const CreditPage = () => {
             setCurrentPage(1);
           }}
         />
-        <DarkCyanButton style={{ marginLeft: "auto", width: "15vw"}}> 
+        <DarkCyanButton 
+          style={{ marginLeft: "auto", width: "15vw"}}
+          onClick={() => navigate('/new-credit')}
+        >
           + Новый договор
         </DarkCyanButton>
       </SecondRaw>

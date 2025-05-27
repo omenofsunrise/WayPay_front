@@ -12,6 +12,7 @@ import QueuePage from './pages/QueuePage';
 import ClientPage from './pages/ClientPage';
 import BlacklistPage from './pages/BlacklistPage';
 import InvestorPage from './pages/InvestorPage';
+import NewCreditPage from './pages/NewCreditPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -107,6 +108,12 @@ function App() {
         <Route path="investors" element={
             <MainLayout>
               <InvestorPage />
+            </MainLayout>
+        } />
+
+        <Route path="new-credit" element={
+            <MainLayout>
+              <NewCreditPage />
             </MainLayout>
         } />
 

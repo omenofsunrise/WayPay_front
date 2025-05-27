@@ -38,7 +38,7 @@ const ButtonContainer = styled.button`
   margin: 0;
   
   &:hover {
-    background-color: rgba(0, 150, 163, 1);;
+    background-color: rgba(0, 150, 163, 1);
   }
 
   &:focus {
