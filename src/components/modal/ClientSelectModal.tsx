@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import BaseModal from './BASE/modalCRUBase';
 import CustomInput from '../ui/fields/CustomInput';
-import CustomTable from '../ui/fields/CustomTable';
+import CustomTable from '../ui/tables/CustomTable';
 import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import useClients from '../../api/hooks/useClient';
 import Pagination from '../ui/fields/CustomPagination';
@@ -33,7 +33,7 @@ const ClientSelectModal = ({
     phone: string;
   } | null>(null);
   
-  const pageSize = 8;
+  const pageSize = 5;
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
@@ -193,7 +193,7 @@ const TableContainer = styled.div`
 const PaginationContainer = styled.div`
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 `;
 
 const LoadingMessage = styled.div`

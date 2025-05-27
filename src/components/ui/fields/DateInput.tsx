@@ -61,7 +61,7 @@ const DateInput: React.FC<DateInputProps> = ({
           <Prefix>{prefix}</Prefix>
         )}
         <DateText isEmpty={!value}>{formatDisplayDate()}</DateText>
-        <CalendarIcon className="ml-2" />
+        <CalendarIcon className="ml-2" style={{ fontSize: "20px" }}/>
       </Field>
 
       <HiddenInput

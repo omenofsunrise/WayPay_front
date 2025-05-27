@@ -10,35 +10,95 @@ import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
 import DateInput from '../components/ui/fields/DateInput';
 import EntitySelectContainer from '../components/ui/Layouts/EntitySelectContainer';
 import ClientSelectModal from '../components/modal/ClientSelectModal';
+import InvestorSelectModal from '../components/modal/InvestorSelectModal';
+import view from '../assets/ui/credits/newCredit/view.svg';
+import CustomTable from '../components/ui/tables/CustomTable';
+import ProductsTable from '../components/ui/tables/ProductTable';
 
 interface Client {
   id: number;
-  name: string;
+  fullName: string;
   phone?: string;
+}
+
+interface Investor {
+  id: number;
+  nickname: string;
+  fullName: string;
+  phoneNumber: string;
+  investorPie: number;
+  investmentAmount: number;
+  balance: number;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  markup: number;
+  totalPrice: number;
 }
 
 const NewCreditPage = () => {
   const navigate = useNavigate();
   const [contractDate, setContractDate] = useState<string | null>(null);
-  const [buyer, setBuyer] = useState<Client | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
   const [guarantor, setGuarantor] = useState<Client | null>(null);
-  const [investor, setInvestor] = useState<Client | null>(null);
-  const [modalType, setModalType] = useState<'buyer' | 'guarantor' | null>(null);
+  const [investor, setInvestor] = useState<Investor | null>(null);
+  const [modalType, setModalType] = useState<'client' | 'guarantor' | 'investor' | null>(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([
+    { id: 1, name: 'Ноутбук ASUS X543', price: 45000, quantity: 1, markup: 10, totalPrice: 49500 },
+    { id: 2, name: 'Мышь беспроводная', price: 1500, quantity: 2, markup: 15, totalPrice: 3450 },
+    { id: 3, name: 'Клавиатура механическая', price: 3500, quantity: 1, markup: 5, totalPrice: 3675 },
+    { id: 4, name: 'Монитор 24"', price: 18000, quantity: 1, markup: 8, totalPrice: 19440 },
+    { id: 5, name: 'Коврик для мыши', price: 500, quantity: 1, markup: 0, totalPrice: 500 },
+    { id: 6, name: 'Наушники беспроводные', price: 6000, quantity: 1, markup: 12, totalPrice: 6720 },
+  ]);
 
   const handleSelectClient = (client: Client) => {
-    if (modalType === 'buyer') {
-      setBuyer(client);
+    if (modalType === 'client') {
+      setClient(client);
     } else if (modalType === 'guarantor') {
       setGuarantor(client);
     }
     setIsClientModalOpen(false);
   };
 
-  const openClientModal = (type: 'buyer' | 'guarantor') => {
+  const handleSelectInvestor = (selectedInvestor: Investor) => {
+    setInvestor(selectedInvestor);
+    setIsInvestorModalOpen(false);
+  };
+
+  const openClientModal = (type: 'client' | 'guarantor') => {
     setModalType(type);
     setIsClientModalOpen(true);
   };
+
+  const openInvestorModal = () => {
+    setModalType('investor');
+    setIsInvestorModalOpen(true);
+  };
+
+  const tableColumns = [
+    { name: '№', align: 'center' },
+    { name: 'Название', align: 'left' },
+    { name: 'Стоимость', align: 'right' },
+    { name: 'Количество', align: 'center' },
+    { name: 'Надбавка', align: 'right' },
+    { name: 'Цена', align: 'right' },
+  ];
+
+  const tableData = products.map(product => [
+    product.id,
+    product.name,
+    `${product.price.toLocaleString()} ₽`,
+    product.quantity,
+    `${product.markup}%`,
+    `${product.totalPrice.toLocaleString()} ₽`,
+  ]);
 
   return (
     <PageLayout>
@@ -52,65 +112,78 @@ const NewCreditPage = () => {
         <FormRow>
           <FieldGroup>
             <Label>Дата</Label>
-            <DateInput 
-              value={contractDate} 
-              onChange={(date) => setContractDate(date)}
-              style={{ width: '248px' }}
-            />
+            <DateInputWrapper>
+              <DateInput 
+                value={contractDate} 
+                onChange={(date) => setContractDate(date)}
+              />
+            </DateInputWrapper>
           </FieldGroup>
-          
+        
           <FieldGroup>
             <Label>Инвестор</Label>
-            <EntitySelectContainer
-              mode="create"
-              primaryValue={investor?.name || ''}
-              secondaryValue={investor?.phone}
-              placeholder="Выберите инвестора"
-              onSelect={() => {/* Реализовать выбор инвестора */}}
-              onClear={() => setInvestor(null)}
-              style={{ width: '465px' }}
-            />
+            <EntitySelectWrapper>
+              <EntitySelectContainer
+                mode="create"
+                primaryValue={investor?.fullName || investor?.nickname || ''}
+                secondaryValue={investor?.phoneNumber}
+                placeholder="Выберите инвестора"
+                onSelect={openInvestorModal}
+                onClear={() => setInvestor(null)}
+              />
+              <ViewButton/>
+            </EntitySelectWrapper>
           </FieldGroup>
         </FormRow>
 
+        <ModalInfoTitle>Сведения о покупателе</ModalInfoTitle>
         <FormRow>
           <FieldGroup>
             <Label>Покупатель</Label>
-            <EntitySelectContainer
-              mode="create"
-              primaryValue={buyer?.name || ''}
-              secondaryValue={buyer?.phone}
-              placeholder="Выберите покупателя"
-              onSelect={() => openClientModal('buyer')}
-              onClear={() => setBuyer(null)}
-              style={{ width: '465px' }}
-            />
+            <EntitySelectWrapper>
+              <EntitySelectContainer
+                mode="create"
+                primaryValue={client?.fullName || ''}
+                secondaryValue={client?.phone}
+                placeholder="Выберите покупателя"
+                onSelect={() => openClientModal('client')}
+                onClear={() => setClient(null)}
+              />
+              <ViewButton/>
+            </EntitySelectWrapper>
           </FieldGroup>
 
           <FieldGroup>
             <Label>Поручитель</Label>
-            <EntitySelectContainer
-              mode="create"
-              primaryValue={guarantor?.name || ''}
-              secondaryValue={guarantor?.phone}
-              placeholder="Выберите поручителя"
-              onSelect={() => openClientModal('guarantor')}
-              onClear={() => setGuarantor(null)}
-              style={{ width: '465px' }}
-            />
+            <EntitySelectWrapper>
+              <EntitySelectContainer
+                mode="create"
+                primaryValue={guarantor?.fullName || ''}
+                secondaryValue={guarantor?.phone}
+                placeholder="Выберите поручителя"
+                onSelect={() => openClientModal('guarantor')}
+                onClear={() => setGuarantor(null)}
+              />
+              <ViewButton/>
+            </EntitySelectWrapper>
           </FieldGroup>
         </FormRow>
+
+        <ModalInfoTitle>Список товаров</ModalInfoTitle>
+        <ProductsTableWrapper>
+          <ProductsTable />
+        </ProductsTableWrapper>
       </ContentWrapper>
-    
+
       <ButtonWrapper>
         <GrayButton onClick={() => navigate(-1)}>
           Отменить
         </GrayButton>
         <DarkCyanButton 
-          style={{ marginLeft: '10px' }}
-          disabled={!buyer || !contractDate}
+          style={{ marginRight: 'auto' }}
+          disabled={!client || !contractDate || !investor}
         >
-          Сохранить
+          Создать договор
         </DarkCyanButton>
       </ButtonWrapper>
 
@@ -118,18 +191,33 @@ const NewCreditPage = () => {
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
         onSubmit={handleSelectClient}
-        title={modalType === 'buyer' ? 'Выбор покупателя' : 'Выбор поручителя'}
+        title={modalType === 'client' ? 'Выбор покупателя' : 'Выбор поручителя'}
+      />
+
+      <InvestorSelectModal
+        isOpen={isInvestorModalOpen}
+        onClose={() => setIsInvestorModalOpen(false)}
+        onSubmit={handleSelectInvestor}
       />
     </PageLayout>
   );
 };
 
 const ContentWrapper = styled.div`
-  padding: 20px;
-  background: #fff;
-  border-radius: 8px;
-  margin-top: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+`;
+
+const ProductsTableWrapper = styled.div`
+  margin-top: 16px;
+`;
+
+const EntitySelectWrapper = styled.div`
+  width: 465px;
+  display: flex;
+`;
+
+const DateInputWrapper = styled.div`
+  width: 248px;
 `;
 
 const FormRow = styled.div`
@@ -148,12 +236,30 @@ const Label = styled.label`
   color: #333;
   margin-bottom: 8px;
   font-weight: 500;
+  text-align: left;
 `;
 
 const ButtonWrapper = styled.div`
   margin-top: 30px;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: row;
 `;
+
+const ViewButton = () => {
+  return (
+    <img 
+      src={view} 
+      alt="View" 
+      style={{ 
+        padding: "0", 
+        marginLeft: "10px",
+        cursor: "pointer",
+        transition: "filter 0.2s ease",
+      }}
+      onMouseOver={(e) => e.currentTarget.style.filter = "brightness(0) invert(0)"}
+      onMouseOut={(e) => e.currentTarget.style.filter = "brightness(0) invert(0.3)"}
+    />
+  );
+};
 
 export default NewCreditPage;

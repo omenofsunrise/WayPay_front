@@ -30,6 +30,7 @@ interface CreditsTableProps {
     direction: 'asc' | 'desc';
   };
   selectedRow?: number;
+  fixedHeight?: string; // New prop for fixed height
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -40,7 +41,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   onSort,
   sortConfig,
   onRowClick,
-  selectedRow: externalSelectedRow
+  selectedRow: externalSelectedRow,
+  fixedHeight // New prop
 }) => {
   const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -127,8 +129,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
+      $fixedHeight={fixedHeight}
     >
-      <StyledTable>
+      <StyledTable $fixedHeight={fixedHeight}>
         <TableHeader>
           <TableRow>
             {columns.map((column, index) => (
@@ -164,7 +167,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
             ))}
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody $fixedHeight={fixedHeight}>
           <AnimatePresence>
             {data.map((row, rowIndex) => (
               <TableRow 
@@ -237,18 +240,20 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   );
 };
 
-const TableContainer = styled(motion.div)`
+const TableContainer = styled(motion.div)<{ $fixedHeight?: string }>`
   border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 20px;
   overflow: hidden;
   color: rgba(0, 0, 0, 1);
   position: relative;
+  ${({ $fixedHeight }) => $fixedHeight && `height: ${$fixedHeight};`}
 `;
 
-const StyledTable = styled.table`
+const StyledTable = styled.table<{ $fixedHeight?: string }>`
   width: 100%;
   border-collapse: collapse;
   background-color: rgba(255, 255, 255, 1);
+  ${({ $fixedHeight }) => $fixedHeight && `display: block;`}
 `;
 
 const ContextMenuWrapper = styled(motion.div)`
@@ -270,7 +275,13 @@ const TableHeader = styled.thead`
   }
 `;
 
-const TableBody = styled.tbody``;
+const TableBody = styled.tbody<{ $fixedHeight?: string }>`
+  ${({ $fixedHeight }) => $fixedHeight && `
+    display: block;
+    overflow-y: auto;
+    max-height: calc(${$fixedHeight} - 57px); // Subtract header height
+  `}
+`;
 
 const TableRow = styled(motion.tr)<{ $isLast?: boolean; $isSelected?: boolean }>`
   position: relative;

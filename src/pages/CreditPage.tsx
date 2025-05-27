@@ -4,7 +4,7 @@ import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
 import CustomInput from '../components/ui/fields/CustomInput';
 import DateInput from '../components/ui/fields/DateInput';
-import CustomTable from '../components/ui/fields/CustomTable';
+import CustomTable from '../components/ui/tables/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';

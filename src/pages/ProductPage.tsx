@@ -3,7 +3,7 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable from "../components/ui/fields/CustomTable";
+import CustomTable from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";

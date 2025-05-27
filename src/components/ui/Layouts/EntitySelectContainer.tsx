@@ -53,6 +53,7 @@ const EntitySelectContainer: React.FC<EntitySelectContainerProps> = ({
           </ClearButton>
         )}
       </Wrapper>
+
       {!disabled && (
         <SelectButton 
           type="button" 
@@ -75,6 +76,7 @@ const Container = styled.div`
   display: flex;
   align-items: center;
   width: 100%;
+  flex-direction: row;
 `;
 
 const Wrapper = styled.div`
@@ -117,8 +119,6 @@ const SecondaryText = styled.span`
 `;
 
 const SelectButton = styled.button`
-  position: absolute;
-  right: 40px;
   background: none;
   border: none;
   cursor: pointer;
@@ -126,7 +126,8 @@ const SelectButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  
+  margin-left: 10px;
+
   &:hover {
     opacity: 0.8;
   }
