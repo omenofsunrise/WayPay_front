@@ -40,6 +40,11 @@ interface Product {
   totalPrice: number;
 }
 
+interface ProductsTableProps {
+  products: Product[];
+  onProductsChange: (products: Product[]) => void;
+}
+
 const NewCreditPage = () => {
   const navigate = useNavigate();
   const [contractDate, setContractDate] = useState<string | null>(null);
@@ -49,14 +54,7 @@ const NewCreditPage = () => {
   const [modalType, setModalType] = useState<'client' | 'guarantor' | 'investor' | null>(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>([
-    { id: 1, name: 'Ноутбук ASUS X543', price: 45000, quantity: 1, markup: 10, totalPrice: 49500 },
-    { id: 2, name: 'Мышь беспроводная', price: 1500, quantity: 2, markup: 15, totalPrice: 3450 },
-    { id: 3, name: 'Клавиатура механическая', price: 3500, quantity: 1, markup: 5, totalPrice: 3675 },
-    { id: 4, name: 'Монитор 24"', price: 18000, quantity: 1, markup: 8, totalPrice: 19440 },
-    { id: 5, name: 'Коврик для мыши', price: 500, quantity: 1, markup: 0, totalPrice: 500 },
-    { id: 6, name: 'Наушники беспроводные', price: 6000, quantity: 1, markup: 12, totalPrice: 6720 },
-  ]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const handleSelectClient = (client: Client) => {
     if (modalType === 'client') {
@@ -171,7 +169,10 @@ const NewCreditPage = () => {
 
         <ModalInfoTitle>Список товаров</ModalInfoTitle>
         <ProductsTableWrapper>
-          <ProductsTable />
+          <ProductsTable 
+            products={products} 
+            onProductsChange={setProducts}
+          />
         </ProductsTableWrapper>
       </ContentWrapper>
 

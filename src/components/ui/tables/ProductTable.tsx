@@ -1,27 +1,33 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import useProducts from '../../../api/hooks/useProducts';
 
-interface ProductRow {
+interface Product {
   id: number;
-  number: number;
   name: string;
-  price: string;
-  quantity: string;
-  markup: string;
-  total: string;
-  isNew?: boolean;
+  price: number;
+  quantity: number;
+  markup: number;
+  totalPrice: number;
 }
 
-const ProductsTable = () => {
+interface ProductsTableProps {
+  products: Product[];
+  onProductsChange: (products: Product[]) => void;
+}
+
+const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
   const { data: productsData, getProducts } = useProducts();
-  const [rows, setRows] = useState<ProductRow[]>([
-    { id: 1, number: 1, name: '', price: '', quantity: '', markup: '', total: '', isNew: true }
-  ]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (products.length === 0) {
+      addNewRow();
+    }
+  }, []);
 
   useEffect(() => {
     getProducts({ name: searchTerm });
@@ -38,93 +44,69 @@ const ProductsTable = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Add new row when current is filled
-  useEffect(() => {
-    const lastRow = rows[rows.length - 1];
-    if (lastRow && !lastRow.isNew && rows.every(row => !row.isNew)) {
-      addNewRow();
-    }
-  }, [rows]);
-
-  // Calculate total price when price, quantity or markup changes
-  useEffect(() => {
-    const updatedRows = rows.map(row => {
-      const price = parseFloat(row.price) || 0;
-      const quantity = parseInt(row.quantity) || 0;
-      const markup = parseFloat(row.markup) || 0;
-      
-      const total = price * quantity * (1 + markup / 100);
-      
-      return {
-        ...row,
-        total: total.toFixed(2)
-      };
-    });
-    
-    setRows(updatedRows);
-  }, [rows]);
-
   const addNewRow = () => {
-    const newRow: ProductRow = {
+    const newProduct: Product = {
       id: Date.now(),
-      number: rows.length + 1,
       name: '',
-      price: '',
-      quantity: '',
-      markup: '',
-      total: '',
-      isNew: true
+      price: 0,
+      quantity: 1,
+      markup: 0,
+      totalPrice: 0
     };
-    setRows([...rows, newRow]);
+    onProductsChange([...products, newProduct]);
   };
 
-  const handleInputChange = (rowId: number, field: keyof ProductRow, value: string) => {
-    setRows(rows.map(row => {
-      if (row.id === rowId) {
-        return { ...row, [field]: value, isNew: false };
-      }
-      return row;
-    }));
-  };
-
-  const handleProductSelect = (rowId: number, productName: string) => {
-    setRows(rows.map(row => {
-      if (row.id === rowId) {
-        return { 
-          ...row, 
-          name: productName,
-          isNew: false
+  const handleInputChange = (id: number, field: keyof Product, value: string) => {
+    const updatedProducts = products.map(product => {
+      if (product.id === id) {
+        const updatedProduct = {
+          ...product,
+          [field]: field === 'name' ? value : Number(value) || 0
         };
+        
+        if (['price', 'quantity', 'markup'].includes(field)) {
+          updatedProduct.totalPrice = updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100);
+        }
+        
+        return updatedProduct;
       }
-      return row;
-    }));
-    setActiveDropdown(null);
-  };
+      return product;
+    });
 
-  const handleKeyDown = (e: React.KeyboardEvent, rowId: number) => {
-    if (e.key === 'Enter') {
-      const currentIndex = rows.findIndex(row => row.id === rowId);
-      if (currentIndex === rows.length - 1) {
+    onProductsChange(updatedProducts);
+
+    const editedProduct = updatedProducts.find(p => p.id === id);
+    if (editedProduct && id === products[products.length - 1].id) {
+      const isNotEmpty = editedProduct.name.trim() !== '' || 
+                        editedProduct.price > 0 || 
+                        editedProduct.quantity > 1 || 
+                        editedProduct.markup > 0;
+      
+      if (isNotEmpty) {
         addNewRow();
       }
     }
   };
 
-  // Handle numeric input manually to remove arrow controls
-  const handleNumericInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
-                        '.', ',', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+  const handleProductSelect = (id: number, productName: string) => {
+    const updatedProducts = products.map(product => {
+      if (product.id === id) {
+        return { ...product, name: productName };
+      }
+      return product;
+    });
     
-    if (!allowedKeys.includes(e.key) && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-    }
-    
-    // Replace comma with dot for decimal separator
-    if (e.key === ',') {
-      e.preventDefault();
-      const target = e.target as HTMLInputElement;
-      const value = target.value + '.';
-      target.value = value;
+    onProductsChange(updatedProducts);
+    setActiveDropdown(null);
+    setSearchTerm('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, id: number) => {
+    if (e.key === 'Enter') {
+      const currentIndex = products.findIndex(product => product.id === id);
+      if (currentIndex === products.length - 1) {
+        addNewRow();
+      }
     }
   };
 
@@ -145,30 +127,30 @@ const ProductsTable = () => {
         </TableHeader>
         <TableBody>
           <AnimatePresence>
-            {rows.map((row) => (
+            {products.map((product, index) => (
               <TableRow 
-                key={row.id}
+                key={product.id}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.2 }}
               >
-                <BodyCell>{row.number}</BodyCell>
+                <BodyCell>{index + 1}</BodyCell>
                 <BodyCell>
                   <NameCellContainer>
                     <NameInput
                       type="text"
-                      value={row.name}
+                      value={product.name}
                       onChange={(e) => {
-                        handleInputChange(row.id, 'name', e.target.value);
+                        handleInputChange(product.id, 'name', e.target.value);
                         setSearchTerm(e.target.value);
                       }}
-                      onFocus={() => setActiveDropdown(row.id)}
-                      onKeyDown={(e) => handleKeyDown(e, row.id)}
+                      onFocus={() => setActiveDropdown(product.id)}
+                      onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="Введите название"
                     />
                     <AnimatePresence>
-                      {activeDropdown === row.id && (
+                      {activeDropdown === product.id && (
                         <DropdownMenu
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -176,15 +158,15 @@ const ProductsTable = () => {
                           transition={{ duration: 0.2 }}
                           ref={dropdownRef}
                         >
-                          {filteredProducts.map((product) => (
+                          {filteredProducts.map((item) => (
                             <DropdownItem
-                              key={product.id}
+                              key={item.id}
                               onClick={() => handleProductSelect(
-                                row.id, 
-                                product.name
+                                product.id, 
+                                item.name
                               )}
                             >
-                              {product.name}
+                              {item.name}
                             </DropdownItem>
                           ))}
                           {filteredProducts.length === 0 && (
@@ -197,44 +179,36 @@ const ProductsTable = () => {
                 </BodyCell>
                 <BodyCell>
                   <NumberInput
-                    type="text"
-                    inputMode="decimal"
-                    value={row.price}
-                    onChange={(e) => handleInputChange(row.id, 'price', e.target.value)}
-                    onKeyDown={(e) => {
-                      handleNumericInput(e);
-                      handleKeyDown(e, row.id);
-                    }}
+                    type="number"
+                    value={product.price || ''}
+                    onChange={(e) => handleInputChange(product.id, 'price', e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, product.id)}
                     placeholder="0.00"
+                    min="0"
+                    step="0.01"
                   />
                 </BodyCell>
                 <BodyCell>
                   <NumberInput
-                    type="text"
-                    inputMode="numeric"
-                    value={row.quantity}
-                    onChange={(e) => handleInputChange(row.id, 'quantity', e.target.value)}
-                    onKeyDown={(e) => {
-                      handleNumericInput(e);
-                      handleKeyDown(e, row.id);
-                    }}
+                    type="number"
+                    value={product.quantity || ''}
+                    onChange={(e) => handleInputChange(product.id, 'quantity', e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, product.id)}
                     placeholder="1"
+                    min="1"
                   />
                 </BodyCell>
                 <BodyCell>
                   <NumberInput
-                    type="text"
-                    inputMode="decimal"
-                    value={row.markup}
-                    onChange={(e) => handleInputChange(row.id, 'markup', e.target.value)}
-                    onKeyDown={(e) => {
-                      handleNumericInput(e);
-                      handleKeyDown(e, row.id);
-                    }}
+                    type="number"
+                    value={product.markup || ''}
+                    onChange={(e) => handleInputChange(product.id, 'markup', e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, product.id)}
                     placeholder="0"
+                    min="0"
                   />
                 </BodyCell>
-                <BodyCell>{parseFloat(row.total || '0').toLocaleString('ru-RU')} ₽</BodyCell>
+                <BodyCell>{product.totalPrice.toLocaleString('ru-RU')} ₽</BodyCell>
               </TableRow>
             ))}
           </AnimatePresence>
@@ -281,6 +255,9 @@ const BodyCell = styled.td`
   padding: 12px 16px;
   vertical-align: middle;
   position: relative;
+  background-color: white;
+  border: none;
+  color: black;
 `;
 
 const NameCellContainer = styled.div`
@@ -290,9 +267,10 @@ const NameCellContainer = styled.div`
 const NameInput = styled.input`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
   font-size: 14px;
+  background-color: white;
+  border: none;
+  color: black;
 
   &:focus {
     outline: none;
@@ -303,9 +281,10 @@ const NameInput = styled.input`
 const NumberInput = styled.input`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
   font-size: 14px;
+  background-color: white;
+  border: none;
+  color: black;
 
   /* Hide number input arrows */
   -moz-appearance: textfield;
@@ -339,7 +318,7 @@ const DropdownItem = styled.div`
   padding: 8px 12px;
   cursor: pointer;
   font-size: 14px;
-
+  color: black;
   &:hover {
     background-color: #ebf8ff;
   }

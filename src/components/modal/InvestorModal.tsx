@@ -262,7 +262,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     try {
       const submitData = {
         ...formData,
-        // При редактировании сохраняем оригинальные финансовые значения
         ...(mode === 'edit' ? {
           investorPie: initialData.investorPie,
           investmentAmount: initialData.investmentAmount,
