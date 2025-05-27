@@ -9,7 +9,7 @@ import ToggleSwitch from '../ui/Toggles/ToggleSwitch';
 import styled from 'styled-components';
 import ClientSelectModal from './ClientSelectModal';
 import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
-import { formatPrice } from '../../utils/formatPrice';
+import { formatMoney } from '../../utils/formatPrice';
 
 interface QueueWithClient {
   id: number;
@@ -181,12 +181,10 @@ const QueueModal: React.FC<QueueModalProps> = ({
       clientId: ''
     };
 
-    // Sum validation - используем formData.sum, который уже числовой
     if (formData.sum <= 0) {
       newErrorMessages.sum = 'Сумма должна быть больше 0';
     }
 
-    // Client ID validation
     if (formData.clientId <= 0) {
       newErrorMessages.clientId = 'Необходимо указать клиента';
     }
@@ -204,11 +202,9 @@ const QueueModal: React.FC<QueueModalProps> = ({
   const isSaveDisabled = () => {
     if (mode === 'view') return true;
 
-    // Check for validation errors
     const hasErrors = Object.values(validationErrors).some(Boolean);
     if (hasErrors) return true;
 
-    // For edit mode, check if there are changes
     if (mode === 'edit') {
       const isChanged = (
         formData.sum !== initialData.sum ||
@@ -224,13 +220,11 @@ const QueueModal: React.FC<QueueModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Mark all fields as touched to show errors
     setTouchedFields({
       sum: true,
       clientId: true
     });
 
-    // Check validity
     const isValid = !Object.values(validationErrors).some(Boolean);
     if (!isValid) {
       return;
@@ -244,10 +238,8 @@ const QueueModal: React.FC<QueueModalProps> = ({
     const { name, value } = e.target;
     
     if (name === 'sum') {
-      // Обновляем displaySum для отображения в input
       setDisplaySum(value);
       
-      // Преобразуем форматированное значение обратно в число для formData
       const numericValue = parseInt(value.replace(/[^\d]/g, ''), 10) || 0;
       setFormData(prev => ({
         ...prev,
@@ -314,7 +306,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
         mode={mode}
       >
         <form onSubmit={handleSubmit}>
-          <div style={{ padding: '20px', marginRight: "40px" }}>           
+          <div style={{ padding: '20px', marginRight: "40px" }}>         
             <InputRow>
               <InputLabel>Клиент:</InputLabel>
               <InputContainer>
@@ -368,7 +360,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
                   name="sum"
                   inputType="rubles"
                   placeholder="Введите сумму"
-                  value={formatPrice(displaySum)}
+                  value={formatMoney(displaySum)}
                   onChange={handleInputChange}
                   disabled={mode === 'view'}
                   hasError={touchedFields.sum && validationErrors.sum}

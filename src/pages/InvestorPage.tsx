@@ -15,6 +15,7 @@ import useExport from '../api/hooks/useExport';
 import type { Investor, InvestorParams } from '../api/types/investor';
 import investorService from '../api/services/investorService';
 import useInvestor from '../api/hooks/useInvestor';
+import { formatMoney } from '../utils/formatPrice';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -191,9 +192,9 @@ const InvestorPage = () => {
         investor.nickname,
         investor.fullName,
         investor.phoneNumber,
-        investor.investorPie.toString(),
-        investor.investmentAmount.toString(),
-        investor.balance.toString(),
+        investor.investorPie.toString() + "%",
+        formatMoney(investor.investmentAmount.toString()),
+        formatMoney(investor.balance.toString()),
     ]) || [];
 
     const tableActions = [

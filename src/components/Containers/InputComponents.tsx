@@ -1,5 +1,9 @@
 import styled from 'styled-components';
 
+interface InputContainerProps {
+  $maxWidth?: string;
+}
+
 export const InputRow = styled.div`
   display: flex;
   align-items: center;
@@ -13,8 +17,8 @@ export const InputLabel = styled.span`
   color: black;
 `;
 
-export const InputContainer = styled.div`
+export const InputContainer = styled.div<InputContainerProps>`
   margin-left: auto;
   flex: 1;
-  max-width: 405px;
+  max-width: ${props => props.$maxWidth || '405px'};
 `;

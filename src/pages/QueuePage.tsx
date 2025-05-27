@@ -14,7 +14,7 @@ import QueueModal from "../components/modal/QueueModal";
 import useQueue from "../api/hooks/useQueue";
 import useClients from "../api/hooks/useClient";
 import type { Queue } from '../api/types/queue';
-import { formatPrice } from '../utils/formatPrice';
+import { formatMoney } from '../utils/formatPrice';
 import useExport from '../api/hooks/useExport';
 import type { Client } from '../api/types/client';
 
@@ -142,7 +142,7 @@ const QueuePage = () => {
             'Номер в очереди': queue.positionInQueue,
             'ФИО клиента': client?.fullName || queue.clientId.toString(),
             'Телефон клиента': client?.phone || '—',
-            'Сумма': formatPrice(queue.sum.toString()),
+            'Сумма': formatMoney(queue.sum.toString()),
             }),
             pageSize: 50
         });
@@ -244,7 +244,7 @@ const QueuePage = () => {
         queue.positionInQueue.toString(),
         queue.clientFullName || queue.clientId.toString(),
         queue.clientPhone || '—',
-        formatPrice(queue.sum.toString()),
+        formatMoney(queue.sum.toString()),
     ]);
     
     const tableActions = [

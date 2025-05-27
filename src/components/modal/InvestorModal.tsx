@@ -7,6 +7,7 @@ import { InputContainer, InputLabel, InputRow } from '../Containers/InputCompone
 import Button from '../ui/Buttons/DarkCyanButton';
 import type { Investor } from '../../api/types/investor';
 import useInvestor from '../../api/hooks/useInvestor';
+import { formatMoney, parseMoney } from '../../utils/formatPrice';
 
 type InvestorModalProps = {
   mode: ModalMode;
@@ -53,7 +54,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       isCompany: initialData?.isCompany || false
     }
   );
-  
+  const [displaySum, setDisplaySum] = useState<string>(initialData.investmentAmount.toString());
   const [validationErrors, setValidationErrors] = useState({
     nickname: false,
     fullName: false,
@@ -83,7 +84,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   const validateNumber = (value: number, fieldName: string, min: number, max: number) => {
     if (isNaN(value)) {
-      return 'Введите число';
+      return '';
     }
     if (value < min) {
       return `${fieldName} не может быть меньше ${min}`;
@@ -128,6 +129,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           isCompany: initialData?.isCompany || false
         }
       );
+      setDisplaySum(initialData.investmentAmount.toString());
       setValidationErrors({
         nickname: false,
         fullName: false,
@@ -265,7 +267,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
         fullName: formData.fullName,
         phoneNumber: formData.phoneNumber,
         investorPie: formData.investorPie,
-        investmentAmount: formData.investmentAmount,
+        investmentAmount: parseMoney(formData.investmentAmount.toString()),
         balance: formData.balance,
         isCompany: formData.isCompany
       };
@@ -286,6 +288,22 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    if (name === 'sum') {
+      setDisplaySum(value);
+      
+      const numericValue = parseInt(value.replace(/[^\d]/g, ''), 10) || 0;
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: name === 'clientId' ? Number(value) : value
+      }));
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -350,7 +368,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <InputRow>
             <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
-            <InputContainer>
+            <InputContainer $maxWidth="440px">
               <CustomInput
                 name="nickname"
                 inputType="text"
@@ -365,12 +383,12 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           </InputRow>
           
           <InputRow>
-            <InputLabel>{formData.isCompany ? 'Владелец:' : 'Полное имя:'}</InputLabel>
-            <InputContainer>
+            <InputLabel>{formData.isCompany ? 'Владелец:' : 'ФИО:'}</InputLabel>
+            <InputContainer $maxWidth="440px">
               <CustomInput
                 name="fullName"
                 inputType="text"
-                placeholder={formData.isCompany ? "Имя" : "Полное имя"}
+                placeholder= "ФИО"
                 value={formData.fullName}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
@@ -382,7 +400,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
-            <InputContainer>
+            <InputContainer $maxWidth="440px">
               <PhoneModalInput
                 name="phoneNumber"
                 placeholder="Телефон"
@@ -395,29 +413,11 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputContainer>
           </InputRow>
           
-          {mode !== 'view' && (
-            <InputRow>
-              <InputLabel>Компания:</InputLabel>
-              <InputContainer>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input
-                    type="checkbox"
-                    name="isCompany"
-                    checked={formData.isCompany}
-                    onChange={handleCheckboxChange}
-                    disabled={mode === 'view'}
-                  />
-                  <span>Это компания</span>
-                </label>
-              </InputContainer>
-            </InputRow>
-          )}
-          
           <ModalInfoTitle>Финансовая информация</ModalInfoTitle>
           
           <InputRow>
             <InputLabel>Доля инвестора (%):</InputLabel>
-            <InputContainer>
+            <InputContainer $maxWidth="370px">
               <CustomInput
                 name="investorPie"
                 inputType="number"
@@ -432,33 +432,16 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           </InputRow>
           
           <InputRow>
-            <InputLabel>Сумма инвестиций:</InputLabel>
-            <InputContainer>
+            <InputLabel>Инвестиция:</InputLabel>
+            <InputContainer $maxWidth="370px">
               <CustomInput
                 name="investmentAmount"
-                inputType="number"
+                inputType="rubles"
                 placeholder="Сумма"
-                value={formData.investmentAmount.toString()}
-                onChange={handleNumberChange}
+                onChange={handleInputChange}
                 disabled={mode === 'view'}
                 hasError={touchedFields.investmentAmount && validationErrors.investmentAmount}
                 errorMessage={touchedFields.investmentAmount ? errorMessages.investmentAmount : undefined}
-              />
-            </InputContainer>
-          </InputRow>
-          
-          <InputRow>
-            <InputLabel>Баланс:</InputLabel>
-            <InputContainer>
-              <CustomInput
-                name="balance"
-                inputType="number"
-                placeholder="Баланс"
-                value={formData.balance.toString()}
-                onChange={handleNumberChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.balance && validationErrors.balance}
-                errorMessage={touchedFields.balance ? errorMessages.balance : undefined}
               />
             </InputContainer>
           </InputRow>
