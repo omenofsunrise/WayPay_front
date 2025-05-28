@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import useProducts from '../../../api/hooks/useProducts';
 import Portal from '../../../utils/Portal';
+import CustomInput from '../fields/CustomInput';
+import { parseMoney } from '../../../utils/formatPrice';
 
 interface Product {
   id: number;
@@ -16,9 +18,10 @@ interface Product {
 interface ProductsTableProps {
   products: Product[];
   onProductsChange: (products: Product[]) => void;
+  onTotalSumChange?: (sum: number) => void;
 }
 
-const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
+const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: ProductsTableProps) => {
   const { data: productsData, getProducts } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
@@ -59,6 +62,14 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
     }
   };
 
+  const totalSum = products.reduce((sum, product) => sum + product.totalPrice, 0);
+
+  useEffect(() => {
+    if (onTotalSumChange) {
+      onTotalSumChange(totalSum);
+    }
+  }, [totalSum, onTotalSumChange]);
+
   const addNewRow = () => {
     const newProduct: Product = {
       id: Date.now(),
@@ -71,12 +82,16 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
     onProductsChange([...products, newProduct]);
   };
 
-  const handleInputChange = (id: number, field: keyof Product, value: string) => {
+  const handleInputChange = (id: number, field: keyof Product, value: string | number) => {
     const updatedProducts = products.map(product => {
       if (product.id === id) {
+        const numericValue = typeof value === 'string' && field === 'price' 
+          ? parseMoney(value)
+          : Number(value) || 0;
+          
         const updatedProduct = {
           ...product,
-          [field]: field === 'name' ? value : Number(value) || 0
+          [field]: field === 'name' ? value : numericValue
         };
         
         if (['price', 'quantity', 'markup'].includes(field)) {
@@ -125,6 +140,11 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
     }
   };
 
+  const handleDeleteRow = (id: number) => {
+    const updatedProducts = products.filter(product => product.id !== id);
+    onProductsChange(updatedProducts);
+  };
+
   const filteredProducts = productsData?.items || [];
 
   return (
@@ -138,6 +158,7 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
             <HeaderCell>Количество</HeaderCell>
             <HeaderCell>Надбавка</HeaderCell>
             <HeaderCell>Цена</HeaderCell>
+            <HeaderCell></HeaderCell>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -146,7 +167,11 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
               <TableRow 
                 key={product.id}
                 initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0,
+                  transitionEnd: { borderBottom: '1px solid #edf2f7' }
+                }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.2 }}
               >
@@ -209,37 +234,57 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
                   </NameCellContainer>
                 </BodyCell>
                 <BodyCell>
-                  <NumberInput
-                    type="number"
+                  <CustomInput
+                    inputType="rubles"
                     value={product.price || ''}
                     onChange={(e) => handleInputChange(product.id, 'price', e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, product.id)}
-                    placeholder="0.00"
+                    placeholder="0"
                     min="0"
                     step="0.01"
+                    style={{ border: 'none', padding: '0' }}
                   />
                 </BodyCell>
                 <BodyCell>
-                  <NumberInput
-                    type="number"
+                  <CustomInput
+                    inputType="number"
                     value={product.quantity || ''}
                     onChange={(e) => handleInputChange(product.id, 'quantity', e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, product.id)}
                     placeholder="1"
                     min="1"
+                    style={{ border: 'none', padding: '0' }}
                   />
                 </BodyCell>
                 <BodyCell>
-                  <NumberInput
-                    type="number"
+                  <CustomInput
+                    inputType="number"
                     value={product.markup || ''}
                     onChange={(e) => handleInputChange(product.id, 'markup', e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, product.id)}
                     placeholder="0"
                     min="0"
+                    style={{ border: 'none', padding: '0' }}
                   />
                 </BodyCell>
                 <BodyCell>{product.totalPrice.toLocaleString('ru-RU')} ₽</BodyCell>
+                <BodyCell>
+                  {index !== products.length - 1 && (
+                    <DeleteButton 
+                      onClick={() => handleDeleteRow(product.id)}
+                      width="18"
+                      height="19"
+                      viewBox="0 0 18 19"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path 
+                        d="M1.97284 16.8889C1.97284 18.05 3.01977 19 4.29937 19H13.6055C14.8851 19 15.932 18.05 15.932 16.8889V4.22222H1.97284V16.8889ZM17.0953 1.05556H13.0239L11.8606 0H6.04426L4.881 1.05556H0.80957V3.16667H17.0953V1.05556Z" 
+                        fill="#50555C"
+                      />
+                    </DeleteButton>
+                  )}
+                </BodyCell>
               </TableRow>
             ))}
           </AnimatePresence>
@@ -253,42 +298,68 @@ const TableContainer = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   margin-top: 16px;
-  height: 250px;
+  height: 180px;
   overflow: auto;
   position: relative;
+  background-color: white;
 `;
 
 const StyledTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   background-color: white;
+  box-sizing: border-box;
+  
+  th, td {
+    box-sizing: border-box;
+    position: relative;
+    border-right: 1px solid #e2e8f0; /* Добавляем вертикальные линии для всех ячеек */
+  }
+
+  /* Убираем границу у последней ячейки в строке */
+  th:last-child,
+  td:last-child {
+    border-right: none;
+  }
+
+  /* Убираем нижнюю границу у последней строки */
+  tbody tr:last-child {
+    border-bottom: none;
+  }
 `;
 
 const TableHeader = styled.thead`
   background-color: #f7fafc;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
+  th {
+    border-bottom: 1px solid #e2e8f0;
+  }
 `;
 
-const TableBody = styled.tbody``;
-
-const TableRow = styled(motion.tr)`
-  &:not(:last-child) {
+const TableBody = styled.tbody`
+  tr {
     border-bottom: 1px solid #edf2f7;
   }
+`;
+
+const TableRow = styled(motion.tr)`
+  background-color: white;
 `;
 
 const HeaderCell = styled.th`
   padding: 12px 16px;
   text-align: left;
   font-weight: 500;
-  color: #4a5568;
 `;
 
 const BodyCell = styled.td`
-  padding: 12px 16px;
+  padding: 2px 16px;
   vertical-align: middle;
   position: relative;
   background-color: white;
-  border: none;
   color: black;
 `;
 
@@ -297,34 +368,10 @@ const NameCellContainer = styled.div`
 `;
 
 const NameInput = styled.input`
-  width: 100%;
   padding: 8px 12px;
   font-size: 14px;
   background-color: white;
   border: none;
-  color: black;
-
-  &:focus {
-    outline: none;
-    border-color: #3182ce;
-  }
-`;
-
-const NumberInput = styled.input`
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 14px;
-  background-color: white;
-  border: none;
-  color: black;
-
-  /* Hide number input arrows */
-  -moz-appearance: textfield;
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
 
   &:focus {
     outline: none;
@@ -357,6 +404,26 @@ const DropdownEmpty = styled.div`
   padding: 8px 12px;
   font-size: 14px;
   color: #718096;
+`;
+
+const DeleteButton = styled.svg`
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+const TotalSumContainer = styled.div`
+  padding: 12px 16px;
+  text-align: right;
+  font-weight: 500;
+  background-color: #f7fafc;
+  border-top: 1px solid #e2e8f0;
+  position: sticky;
+  bottom: 0;
 `;
 
 export default ProductsTable;

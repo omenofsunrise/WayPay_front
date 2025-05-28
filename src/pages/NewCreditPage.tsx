@@ -14,6 +14,7 @@ import InvestorSelectModal from '../components/modal/InvestorSelectModal';
 import view from '../assets/ui/credits/newCredit/view.svg';
 import CustomTable from '../components/ui/tables/CustomTable';
 import ProductsTable from '../components/ui/tables/ProductTable';
+import PaymentScheduleTable, { type PaymentScheduleItem } from '../components/ui/tables/PaymentScheduleTable';
 
 interface Client {
   id: number;
@@ -55,6 +56,48 @@ const NewCreditPage = () => {
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [totalSum, setTotalSum] = useState(0);
+  const [initialPaymentPercent, setInitialPaymentPercent] = useState<string>('');
+  const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
+  const [months, setMonths] = useState<string>('');
+  const [paymentDue, setPaymentDue] = useState<string>('');
+  const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([
+    {
+      id: 1,
+      date: '01.01.2023',
+      remainingAmount: 100000,
+      requiredPayment: 20000,
+      note: 'Первый платёж'
+    },
+    {
+      id: 2,
+      date: '01.02.2023',
+      remainingAmount: 80000,
+      requiredPayment: 20000,
+      note: 'Второй платёж'
+    },
+    {
+      id: 3,
+      date: '01.03.2023',
+      remainingAmount: 80000,
+      requiredPayment: 20000,
+      note: 'Третий платёж'
+    },
+    {
+      id: 4,
+      date: '01.04.2023',
+      remainingAmount: 80000,
+      requiredPayment: 20000,
+      note: ''
+    },
+    {
+      id: 5,
+      date: '01.05.2023',
+      remainingAmount: 80000,
+      requiredPayment: 20000,
+      note: ''
+    }
+  ]);
 
   const handleSelectClient = (client: Client) => {
     if (modalType === 'client') {
@@ -80,27 +123,9 @@ const NewCreditPage = () => {
     setIsInvestorModalOpen(true);
   };
 
-  const tableColumns = [
-    { name: '№', align: 'center' },
-    { name: 'Название', align: 'left' },
-    { name: 'Стоимость', align: 'right' },
-    { name: 'Количество', align: 'center' },
-    { name: 'Надбавка', align: 'right' },
-    { name: 'Цена', align: 'right' },
-  ];
-
-  const tableData = products.map(product => [
-    product.id,
-    product.name,
-    `${product.price.toLocaleString()} ₽`,
-    product.quantity,
-    `${product.markup}%`,
-    `${product.totalPrice.toLocaleString()} ₽`,
-  ]);
-
   return (
     <PageLayout>
-      <TitleField>
+      <TitleField style={{ marginTop: "0" }}>
         <CustomTitle>Новый договор</CustomTitle>
       </TitleField>
 
@@ -172,21 +197,72 @@ const NewCreditPage = () => {
           <ProductsTable 
             products={products} 
             onProductsChange={setProducts}
+            onTotalSumChange={setTotalSum}
           />
         </ProductsTableWrapper>
-      </ContentWrapper>
+        <TotalSumContainer>
+          Итого товаров на сумму: {totalSum.toLocaleString('ru-RU')} ₽
+        </TotalSumContainer>
 
-      <ButtonWrapper>
-        <GrayButton onClick={() => navigate(-1)}>
-          Отменить
-        </GrayButton>
-        <DarkCyanButton 
-          style={{ marginRight: 'auto' }}
-          disabled={!client || !contractDate || !investor}
-        >
-          Создать договор
-        </DarkCyanButton>
-      </ButtonWrapper>
+        <ModalInfoTitle>График выплат</ModalInfoTitle>
+      <PaymentScheduleContainer>
+        <PaymentScheduleInputs>
+          <InputGroup>
+            <InputLabel>Первоначальный взнос</InputLabel>
+            <InputRow>
+              <InputField 
+                type="text" 
+                placeholder="%" 
+                value={initialPaymentPercent}
+                onChange={(e) => setInitialPaymentPercent(e.target.value)}
+              />
+              <InputField 
+                type="text" 
+                placeholder="Сумма" 
+                value={initialPaymentAmount}
+                onChange={(e) => setInitialPaymentAmount(e.target.value)}
+              />
+            </InputRow>
+          </InputGroup>
+          <InputGroup>
+            <InputRow style={{ marginBottom: '8px' }}>
+              <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
+              <InputLabel1 style={{ flex: 1 }}>Уплата до</InputLabel1>
+            </InputRow>
+            <InputRow>
+              <InputField 
+                type="text" 
+                placeholder="Месяцев" 
+                value={months}
+                onChange={(e) => setMonths(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <InputField 
+                type="text" 
+                placeholder="Уплата до" 
+                value={paymentDue}
+                onChange={(e) => setPaymentDue(e.target.value)}
+                style={{ flex: 1 }}
+              />
+            </InputRow>
+          </InputGroup>
+          <InputGroup>
+            <ButtonWrapper>
+              <GrayButton onClick={() => navigate(-1)}>
+                Отменить
+              </GrayButton>
+              <DarkCyanButton 
+                style={{ marginRight: 'auto' }}
+                disabled={!client || !contractDate || !investor}
+              >
+                Создать договор
+              </DarkCyanButton>
+            </ButtonWrapper>
+          </InputGroup>
+        </PaymentScheduleInputs>
+        <PaymentScheduleTable data={paymentSchedule} />
+      </PaymentScheduleContainer>
+      </ContentWrapper>
 
       <ClientSelectModal
         isOpen={isClientModalOpen}
@@ -246,6 +322,13 @@ const ButtonWrapper = styled.div`
   flex-direction: row;
 `;
 
+const TotalSumContainer = styled.div`
+  text-align: left;
+  font-weight: 500;
+  color: black;
+  margin-top: 10px;
+`;
+
 const ViewButton = () => {
   return (
     <img 
@@ -262,5 +345,65 @@ const ViewButton = () => {
     />
   );
 };
+
+const PaymentScheduleContainer = styled.div`
+  display: flex;
+  gap: 20px;
+`;
+
+const PaymentScheduleInputs = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 300px;
+`;
+
+const InputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const InputLabel = styled.label`
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  margin-right: auto;
+  text-align: left;
+  margin-bottom: 0;
+  padding-bottom: 0;
+`;
+
+const InputLabel1 = styled.label`
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  margin-right: auto;
+  text-align: left;
+  margin-left: 100px;
+  margin-bottom: 0;
+  padding-bottom: 0;
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-bottom: 0;
+  padding-bottom: 0;
+`;
+
+const InputField = styled.input`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  flex: 1;
+  margin-top: 0;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
 
 export default NewCreditPage;
