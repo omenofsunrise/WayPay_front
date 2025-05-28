@@ -126,7 +126,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
     clientPhone: initialData.clientPhone || ''
   });
 
-  const [displaySum, setDisplaySum] = useState<string>(initialData.sum.toString());
+  const [displaySum, setDisplaySum] = useState<string>(initialData.sum?.toString() || '0');
 
   const uiPriority = formData.priority === 1;
 

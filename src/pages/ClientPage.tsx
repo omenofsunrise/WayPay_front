@@ -95,33 +95,6 @@ const ClientPage = () => {
         });
     };
 
-    const handleExport = async () => {
-        try {
-            const allClients = await getClients({
-                FullName: nameFilter || undefined,
-                sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-                sortDirection: sortConfig.direction,
-                pageSize: 10000
-            });
-            
-            if (allClients?.items) {
-                exportToExcel(allClients.items.map(client => ({
-                    'ID': client.id,
-                    'ФИО': client.fullName,
-                    'Телефон': client.phone,
-                    'Документ': client.doc,
-                    'Дата рождения': client.birthdate,
-                })), {
-                    fileName: 'clients_export',
-                    sheetName: 'Clients',
-                    columnWidths: [10, 30, 15, 20, 15]
-                });
-            }
-        } catch (err) {
-            console.error('Ошибка при экспорте:', err);
-        }
-    };
-
     const handleCreateClient = () => {
         setModalMode('create');
         setSelectedClient({

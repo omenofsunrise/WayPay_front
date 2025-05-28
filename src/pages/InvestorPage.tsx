@@ -225,8 +225,10 @@ const InvestorPage = () => {
                 await updateInvestor(selectedInvestor.id, investorData);
             }
             loadInvestors();
+            return true;
         } catch (err) {
             console.error('Ошибка при сохранении инвестора:', err);
+            return false;
         }
     };
 

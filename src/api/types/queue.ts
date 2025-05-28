@@ -5,7 +5,7 @@ export interface Queue {
     sum: number,
     clientId: number,
     createdAt: Date,
-    priority: number,
+    priority: 1 | 2,
     positionInQueue: number,
 }
 

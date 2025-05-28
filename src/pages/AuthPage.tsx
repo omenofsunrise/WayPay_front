@@ -85,7 +85,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 }
                 setShowCallModal(false);
                 
-                // Редирект через window.location для полной перезагрузки состояния
                 window.location.href = userType === 'user' ? '/credits' : '/client';
             }
         } catch (error) {
@@ -215,7 +214,7 @@ const Logo = styled.div`
 `;
 
 const LogoImage = styled.img`
-    height: 100px; /* Регулируйте по необходимости */
+    height: 100px;
     width: auto;
 
     @media (max-width: 480px) {

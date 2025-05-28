@@ -54,7 +54,6 @@ const PaymentPage = () => {
                 ]}
             />
             <PaginationLayout>
-                 <CountInfoTitle/>
                     <Pagination
                     total={100} 
                 />

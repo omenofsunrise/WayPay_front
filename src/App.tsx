@@ -22,12 +22,10 @@ function App() {
       const authenticated = authStorage.isAuthenticated();
       setIsAuthenticated(authenticated);
       
-      // Если пользователь авторизован и находится на странице auth - редиректим
       if (authenticated && window.location.pathname === '/auth') {
         window.location.href = '/credits';
       }
       
-      // Если пользователь не авторизован и не на странице auth - редиректим
       if (!authenticated && window.location.pathname !== '/auth') {
         window.location.href = '/auth';
       }
@@ -35,7 +33,6 @@ function App() {
 
     checkAuth();
     
-    // Слушаем изменения в localStorage для синхронизации вкладок
     const handleStorageChange = () => checkAuth();
     window.addEventListener('storage', handleStorageChange);
     

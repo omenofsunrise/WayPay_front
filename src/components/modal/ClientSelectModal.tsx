@@ -13,13 +13,15 @@ interface ClientSelectModalProps {
   onClose: () => void;
   onSubmit: (client: { id: number; fullName: string; phone: string }) => void;
   width?: string;
+  title?: string;
 }
 
 const ClientSelectModal = ({ 
   isOpen, 
   onClose, 
   onSubmit, 
-  width = "800px" 
+  width = "800px",
+  title,
 }: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -122,7 +124,7 @@ const ClientSelectModal = ({
 
   return (
     <BaseModal
-      title="Выбор клиента"
+      title={title || "Выбор клиента"}
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
@@ -177,7 +179,6 @@ const ClientSelectModal = ({
   );
 };
 
-// Стили остаются теми же
 const ModalContent = styled.div`
   padding: 20px;
 `;

@@ -169,7 +169,6 @@ const BlacklistPage = () => {
                 isOpen={isSelectModalOpen}
                 onClose={() => setIsSelectModalOpen(false)}
                 onSubmit={handleClientSelect}
-                hideSaveButton={true}
                 width="900px"
             />
         </PageLayout>

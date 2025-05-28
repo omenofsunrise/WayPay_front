@@ -157,7 +157,7 @@ const QueuePage = () => {
             id: 0,
             sum: 0,
             clientId: 0,
-            priority: 0,
+            priority: 2,
             positionInQueue: 0,
             createdAt: new Date()
         });
@@ -325,15 +325,9 @@ const QueuePage = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleSubmitQueue}
-                initialData={selectedQueue || {
-                    id: 0,
-                    sum: 0,
-                    clientId: 0,
-                    priority: 0,
-                    positionInQueue: 0,
-                    createdAt: new Date(),
-                    clientFullName: '',
-                    clientPhone: ''
+                initialData={{
+                    ...selectedQueue!,
+                    priority: selectedQueue?.priority === 1 ? 1 : 2 as 1 | 2
                 }}
             />
         </PageLayout>
