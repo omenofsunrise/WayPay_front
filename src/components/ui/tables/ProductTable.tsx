@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import useProducts from '../../../api/hooks/useProducts';
+import Portal from '../../../utils/Portal';
 
 interface Product {
   id: number;
@@ -22,6 +23,8 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
 
   useEffect(() => {
     if (products.length === 0) {
@@ -43,6 +46,18 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const updateMenuPosition = (id: number) => {
+    const index = products.findIndex(p => p.id === id);
+    if (index !== -1 && inputRefs.current[index]) {
+      const rect = inputRefs.current[index]!.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  };
 
   const addNewRow = () => {
     const newProduct: Product = {
@@ -139,40 +154,56 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
                 <BodyCell>
                   <NameCellContainer>
                     <NameInput
+                      ref={(el: HTMLInputElement | null) => {
+                        if (el) {
+                          inputRefs.current[index] = el;
+                        }
+                      }}
                       type="text"
                       value={product.name}
                       onChange={(e) => {
                         handleInputChange(product.id, 'name', e.target.value);
                         setSearchTerm(e.target.value);
                       }}
-                      onFocus={() => setActiveDropdown(product.id)}
+                      onFocus={() => {
+                        setActiveDropdown(product.id);
+                        updateMenuPosition(product.id);
+                      }}
                       onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="Введите название"
                     />
                     <AnimatePresence>
-                      {activeDropdown === product.id && (
+                     {activeDropdown === product.id && (
+                      <Portal>
                         <DropdownMenu
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
                           transition={{ duration: 0.2 }}
                           ref={dropdownRef}
+                          style={{
+                            position: 'absolute',
+                            top: `${menuPosition.top}px`,
+                            left: `${menuPosition.left}px`,
+                            width: `${menuPosition.width}px`
+                          }}
                         >
-                          {filteredProducts.map((item) => (
-                            <DropdownItem
-                              key={item.id}
-                              onClick={() => handleProductSelect(
-                                product.id, 
-                                item.name
-                              )}
-                            >
-                              {item.name}
-                            </DropdownItem>
-                          ))}
-                          {filteredProducts.length === 0 && (
-                            <DropdownEmpty>Товары не найдены</DropdownEmpty>
-                          )}
-                        </DropdownMenu>
+                            {filteredProducts.map((item) => (
+                              <DropdownItem
+                                key={item.id}
+                                onClick={() => handleProductSelect(
+                                  product.id, 
+                                  item.name
+                                )}
+                              >
+                                {item.name}
+                              </DropdownItem>
+                            ))}
+                            {filteredProducts.length === 0 && (
+                              <DropdownEmpty>Товары не найдены</DropdownEmpty>
+                            )}
+                          </DropdownMenu>
+                        </Portal>
                       )}
                     </AnimatePresence>
                   </NameCellContainer>
@@ -221,9 +252,10 @@ const ProductsTable = ({ products, onProductsChange }: ProductsTableProps) => {
 const TableContainer = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  overflow: hidden;
   margin-top: 16px;
-  height: 600px;
+  height: 250px;
+  overflow: auto;
+  position: relative;
 `;
 
 const StyledTable = styled.table`
@@ -261,7 +293,7 @@ const BodyCell = styled.td`
 `;
 
 const NameCellContainer = styled.div`
-  position: relative;
+  position: static;
 `;
 
 const NameInput = styled.input`
@@ -302,14 +334,11 @@ const NumberInput = styled.input`
 
 const DropdownMenu = styled(motion.div)`
   position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
   background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  z-index: 1000;
   max-height: 300px;
   overflow-y: auto;
 `;
