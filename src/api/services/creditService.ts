@@ -11,6 +11,10 @@ class CreditService {
   async toggleCredit(id: number) {
     await apiClient.put(`/Credit/${id}/toggle-favourite`);
   }
+
+  async deleteCredit(id: number): Promise<void> {
+    await apiClient.delete(`/Credit/${id}`);
+  }
 }
 
 export default new CreditService();

@@ -458,7 +458,7 @@ const InputLabel1 = styled.label`
   font-weight: 500;
   margin-right: auto;
   text-align: left;
-  margin-left: 100px;
+  margin-left: 0;
   margin-bottom: 0;
   padding-bottom: 0;
 `;

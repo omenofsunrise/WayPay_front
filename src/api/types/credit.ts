@@ -11,7 +11,7 @@ export interface Credit {
     termMonths: number;
     clientFullName: string;
     clientPhone: string;
-    investorFullName: string;
+    investorNickname: string;
 }
 
 export interface CreditParams extends PaginationParams {
@@ -21,5 +21,7 @@ export interface CreditParams extends PaginationParams {
     dateFrom?: Date;
     dateTo?: Date;
     investorNickname?: string;
-    clientFullname?: string; 
+    clientFullname?: string;
+    isFavourite?: boolean;
+    isActive?: boolean;
 }

@@ -25,6 +25,7 @@ interface EmptyStarIconProps {
 }
 
 const CreditPage = () => {
+  const [id, setId] = useState('');
   const [contractNumber, setContractNumber] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +39,7 @@ const CreditPage = () => {
   }>({ key: null, direction: 'asc' });
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const itemsPerPage = 10;
-  
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'creditDate',
@@ -55,20 +56,21 @@ const CreditPage = () => {
   const navigate = useNavigate();
 
   const loadCredits = useCallback(async () => {
-    const params = {
-      page: currentPage,
-      pageSize: itemsPerPage,
-      creditId: contractNumber ? Number(contractNumber) : undefined,
-      clientFullname: clientFullName || undefined,
-      investorNickname: investorName || undefined,
-      dateFrom: fromDate ? new Date(fromDate) : undefined,
-      dateTo: toDate ? new Date(toDate) : undefined,
-      sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-      sortDirection: sortConfig.direction
-    };
+      const params = {
+          page: currentPage,
+          pageSize: itemsPerPage,
+          creditId: id ? Number(id) : undefined,
+          clientFullname: clientFullName || undefined,
+          investorNickname: investorName || undefined,
+          dateFrom: fromDate ? new Date(fromDate) : undefined,
+          dateTo: toDate ? new Date(toDate) : undefined,
+          sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+          sortDirection: sortConfig.direction,
+          ...filters
+      };
 
-    await getCredits(params);
-  }, [currentPage, contractNumber, clientFullName, investorName, fromDate, toDate, sortConfig]);
+      await getCredits(params);
+  }, [currentPage, clientFullName, investorName, fromDate, toDate, sortConfig, filters]);
 
   useEffect(() => {
     loadCredits();
@@ -89,6 +91,11 @@ const CreditPage = () => {
         direction: 'asc'
       };
     });
+  };
+
+  const handleTabChange = (newFilters: { isFavourite?: boolean; isActive?: boolean }) => {
+      setFilters(newFilters);
+      setCurrentPage(1);
   };
 
   const handleExport = async () => {
@@ -262,7 +269,7 @@ const CreditPage = () => {
         </DarkCyanButton>
       </SecondRaw>
 
-      <CreditTypes />
+      <CreditTypes onTabChange={handleTabChange} />
 
       {isLoading && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}

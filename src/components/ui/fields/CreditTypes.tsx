@@ -9,7 +9,11 @@ interface CreditButtonProps {
     $isActive: boolean;
 }
 
-const CreditTypes = () => {
+interface CreditTypesProps {
+    onTabChange: (params: { isFavourite?: boolean; isActive?: boolean; haveDebt?: boolean; }) => void;
+}
+
+const CreditTypes = ({ onTabChange }: CreditTypesProps) => {
     const [activeTab, setActiveTab] = useState("Все договоры");
 
     const tabs = [
@@ -19,13 +23,32 @@ const CreditTypes = () => {
         { name: "В архиве", icon: <ArchiveIcon /> }
     ];
 
+    const handleTabClick = (tabName: string) => {
+        setActiveTab(tabName);
+        
+        switch (tabName) {
+            case "Важные":
+                onTabChange({ isFavourite: true });
+                break;
+            case "В архиве":
+                onTabChange({ isActive: false });
+                break;
+            case "Должники":
+                onTabChange({ haveDebt: false});
+                break;
+            default:
+                onTabChange({});
+                break;
+        }
+    };
+
     return (
         <CreditTypesContainer>
             {tabs.map((tab) => (
                 <CreditButton 
                     key={tab.name}
                     $isActive={activeTab === tab.name}
-                    onClick={() => setActiveTab(tab.name)}
+                    onClick={() => handleTabClick(tab.name)}
                 >
                     {tab.icon}
                     <span>{tab.name}</span>

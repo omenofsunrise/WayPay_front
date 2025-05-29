@@ -40,12 +40,28 @@ const useCredit = () => {
     }
   }, []);
 
+  const deleteCredit = async (id: number) => {
+      setIsLoading(true);
+      setError(null);
+  
+      try {
+        await creditService.deleteCredit(id);
+      }
+      catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
+      finally {
+        setIsLoading(false);
+      }
+    }
+
   return {
     isLoading,
     error,
     data,
     getCredits,
     toggleFavourite,
+    deleteCredit
   };
 };
 
