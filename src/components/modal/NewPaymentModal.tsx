@@ -1,191 +1,349 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import styled from 'styled-components';
-import CustomButton from '../ui/Buttons/DarkCyanButton';
-import CustomInput from '../ui/fields/CustomInput';
-import DateInput from '../ui/fields/DateInput';
-import { Modal } from 'react-bootstrap';
-
-export interface PaymentData {
-  creditId: number;
-  paymentDate: string;
-  principalAmount: number;
-  totalAmount: number;
-  paymentMethod: string;
-}
 
 interface NewPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (paymentData: PaymentData) => void;
-  creditData: {
-    id: number;
-    investor: string;
-    clientFullName: string;
-    address: string;
-    phone: string;
-    remainingAmount: number;
-  };
+  onSave: (paymentData: PaymentData) => void;
+  creditId?: number;
+  investorName?: string;
+  clientName?: string;
+  address?: string;
+  phone?: string;
+  debtAmount?: number;
 }
 
-const paymentMethods = [
-  { value: 'cash', label: 'Наличные' },
-  { value: 'bank_transfer', label: 'Банковский перевод' },
-  { value: 'card', label: 'Карта' },
-  { value: 'other', label: 'Другое' },
-];
+export interface PaymentData {
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  comment?: string;
+}
 
-const NewPaymentModal = ({ isOpen, onClose, onSubmit, creditData }: NewPaymentModalProps) => {
+const NewPaymentModal = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  creditId, 
+  investorName, 
+  clientName, 
+  address, 
+  phone,
+  debtAmount
+}: NewPaymentModalProps) => {
+  const [amount, setAmount] = useState<string>('');
   const [paymentDate, setPaymentDate] = useState<string>('');
-  const [principalAmount, setPrincipalAmount] = useState<string>('');
-  const [totalAmount, setTotalAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
-  const [remainingAmount, setRemainingAmount] = useState<number>(creditData.remainingAmount);
+  const [comment, setComment] = useState<string>('');
 
-  useEffect(() => {
-    if (creditData) {
-      setRemainingAmount(creditData.remainingAmount);
-    }
-  }, [creditData]);
+  if (!isOpen) return null;
 
-  const handlePrincipalAmountChange = (value: string) => {
-    setPrincipalAmount(value);
-    const principal = parseFloat(value) || 0;
-    setTotalAmount(principal.toFixed(2));
-  };
-
-  const handleSubmit = () => {
+  const handleSave = () => {
+    if (!amount || !paymentDate) return;
+    
     const paymentData: PaymentData = {
-      creditId: creditData.id,
+      amount: Number(amount),
       paymentDate,
-      principalAmount: parseFloat(principalAmount) || 0,
-      totalAmount: parseFloat(totalAmount) || 0,
       paymentMethod,
+      comment: comment || undefined
     };
     
-    onSubmit(paymentData);
+    onSave(paymentData);
+    resetForm();
     onClose();
   };
 
-  const calculateRemaining = () => {
-    const principal = parseFloat(principalAmount) || 0;
-    return (remainingAmount - principal).toFixed(2);
+  const resetForm = () => {
+    setAmount('');
+    setPaymentDate('');
+    setPaymentMethod('cash');
+    setComment('');
   };
 
+  const remainingDebt = debtAmount !== undefined && amount 
+    ? debtAmount - Number(amount) 
+    : debtAmount;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Добавление платежа">
-      <FormContainer>
-        <FormRow>
-          <FormField>
-            <Label>№ Договора</Label>
-            <ReadOnlyValue>{creditData.id}</ReadOnlyValue>
-          </FormField>
-          <FormField>
-            <Label>Инвестор</Label>
-            <ReadOnlyValue>{creditData.investor}</ReadOnlyValue>
-          </FormField>
-        </FormRow>
+    <ModalOverlay>
+      <ModalContainer>
+        <ModalHeader>
+          <h3>Новый платёж</h3>
+          <CloseButton onClick={onClose}>&times;</CloseButton>
+        </ModalHeader>
+        
+        <ModalBody>
+          <SectionTitle>Сведения о договоре</SectionTitle>
+          <InfoGrid>
+            <InfoRow>
+              <span>№ договора:</span>
+              <strong>{creditId || 'Не указан'}</strong>
+            </InfoRow>
+            
+            <InfoRow>
+              <span>Инвестор:</span>
+              <strong>{investorName || 'Не указан'}</strong>
+            </InfoRow>
+            
+            <InfoRow>
+              <span>Клиент:</span>
+              <strong>{clientName || 'Не указан'}</strong>
+            </InfoRow>
+            
+            <InfoRow>
+              <span>Адрес:</span>
+              <strong>{address || 'Не указан'}</strong>
+            </InfoRow>
+            
+            <InfoRow>
+              <span>Телефон:</span>
+              <strong>{phone || 'Не указан'}</strong>
+            </InfoRow>
+          </InfoGrid>
 
-        <FormRow>
-          <FormField>
-            <Label>Клиент</Label>
-            <ReadOnlyValue>{creditData.clientFullName}</ReadOnlyValue>
-          </FormField>
-          <FormField>
-            <Label>Телефон</Label>
-            <ReadOnlyValue>{creditData.phone}</ReadOnlyValue>
-          </FormField>
-        </FormRow>
-
-        <FormRow>
-          <FormField>
-            <Label>Адрес</Label>
-            <ReadOnlyValue>{creditData.address}</ReadOnlyValue>
-          </FormField>
-        </FormRow>
-
-        <FormRow>
-          <FormField>
-            <Label>Дата платежа</Label>
-            <CustomInput
-              value={paymentDate}
-              placeholder="Выберите дату"
-            />
-          </FormField>
-          <FormField>
-            <Label>Способ оплаты</Label>
-            <CustomInput
-              value={paymentMethod}
-              placeholder="Выберите способ"
-            />
-          </FormField>
-        </FormRow>
-
-        <FormRow>
-          <FormField>
-            <Label>Основной долг</Label>
-            <CustomInput
-              inputType="number"
-              value={principalAmount}
-              placeholder="Введите сумму"
-            />
-          </FormField>
-          <FormField>
-            <Label>Итого</Label>
-            <ReadOnlyValue>{totalAmount} ₽</ReadOnlyValue>
-          </FormField>
-        </FormRow>
-
-        <FormRow>
-          <FormField>
-            <Label>Остаток долга</Label>
-            <ReadOnlyValue>{calculateRemaining()} ₽</ReadOnlyValue>
-          </FormField>
-        </FormRow>
-
-        <ButtonContainer>
-          <CustomButton onClick={onClose} style={{ marginRight: '10px', backgroundColor: '#6B7280' }}>
-            Отмена
-          </CustomButton>
-          <CustomButton onClick={handleSubmit} disabled={!paymentDate || !principalAmount}>
-            Сохранить
-          </CustomButton>
-        </ButtonContainer>
-      </FormContainer>
-    </Modal>
+          <SectionTitle>Платёж</SectionTitle>
+          <InputGrid>
+            <InputRow>
+              <label>Дата платежа:</label>
+              <input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                required
+              />
+            </InputRow>
+            
+            <InputRow>
+              <label>Основной долг:</label>
+              <strong>{debtAmount !== undefined ? debtAmount.toFixed(2) : 'Не указан'}</strong>
+            </InputRow>
+            
+            <InputRow>
+              <label>Сумма платежа:</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </InputRow>
+            
+            <InputRow>
+              <label>Итого:</label>
+              <strong>{amount ? Number(amount).toFixed(2) : '0.00'}</strong>
+            </InputRow>
+            
+            <InputRow>
+              <label>Остаток долга:</label>
+              <strong>
+                {remainingDebt !== undefined ? remainingDebt.toFixed(2) : 'Не указан'}
+              </strong>
+            </InputRow>
+            
+            <InputRow>
+              <label>Способ оплаты:</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="cash">Наличные</option>
+                <option value="bank">Банковский перевод</option>
+                <option value="card">Карта</option>
+                <option value="other">Другое</option>
+              </select>
+            </InputRow>
+          </InputGrid>
+        </ModalBody>
+        
+        <ModalFooter>
+          <CancelButton onClick={onClose}>Отмена</CancelButton>
+          <SaveButton 
+            onClick={handleSave}
+            disabled={!amount || !paymentDate}
+          >
+            Сохранить платёж
+          </SaveButton>
+        </ModalFooter>
+      </ModalContainer>
+    </ModalOverlay>
   );
 };
 
-const FormContainer = styled.div`
-  padding: 20px;
-`;
-
-const FormRow = styled.div`
+// Стили для модального окна
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  gap: 20px;
-  margin-bottom: 15px;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 `;
 
-const FormField = styled.div`
-  flex: 1;
+const ModalContainer = styled.div`
+  background: white;
+  border-radius: 8px;
+  width: 1000px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 `;
 
-const Label = styled.div`
-  font-size: 14px;
-  color: #4B5563;
-  margin-bottom: 5px;
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+  
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+  }
 `;
 
-const ReadOnlyValue = styled.div`
-  padding: 10px;
-  background-color: #F3F4F6;
-  border-radius: 4px;
-  color: #111827;
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  
+  &:hover {
+    color: #333;
+  }
 `;
 
-const ButtonContainer = styled.div`
+const ModalBody = styled.div`
+  padding: 16px 24px;
+`;
+
+const SectionTitle = styled.h4`
+  margin: 20px 0 16px;
+  color: #008b8b;
+  font-size: 1.1rem;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #eee;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const InfoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+`;
+
+const InputGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+`;
+
+const InfoRow = styled.div`
+  display: flex;
+  
+  span {
+    margin-right: 8px;
+    color: #666;
+    min-width: 100px;
+  }
+  
+  strong {
+    font-weight: 500;
+    color: #333;
+  }
+`;
+
+interface InputRowProps {
+  fullWidth?: boolean;
+}
+
+const InputRow = styled.div<InputRowProps>`
+  grid-column: ${props => props.fullWidth ? '1 / -1' : 'auto'};
+  
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #555;
+  }
+  
+  input, select, textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    
+    &:focus {
+      outline: none;
+      border-color: #008b8b;
+    }
+  }
+  
+  textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+  
+  strong {
+    display: inline-block;
+    padding: 8px 0;
+    font-weight: 500;
+  }
+`;
+
+const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
-  margin-top: 25px;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #eee;
+  background: #f9f9f9;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+`;
+
+const CancelButton = styled.button`
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #333;
+  font-weight: 500;
+  
+  &:hover {
+    background: #e9e9e9;
+  }
+`;
+
+const SaveButton = styled.button`
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #008b8b;
+  color: white;
+  border: none;
+  font-weight: 500;
+  
+  &:hover {
+    background: #007a7a;
+  }
+  
+  &:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+  }
 `;
 
 export default NewPaymentModal;

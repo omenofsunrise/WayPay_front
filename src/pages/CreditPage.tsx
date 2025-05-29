@@ -19,9 +19,20 @@ import type { Credit } from '../api/types/credit';
 import useExport from '../api/hooks/useExport';
 import creditService from '../api/services/creditService';
 import { formatDate } from '../utils/dateFormatter';
+import type { PaymentData } from '../components/modal/NewPaymentModal';
+import NewPaymentModal from '../components/modal/NewPaymentModal';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
+}
+
+interface Credit {
+  id: number;
+  creditDate: Date;
+  clientFullName: string;
+  clientPhone: string;
+  totalAmount: number;
+  isFavourite: boolean;
 }
 
 const CreditPage = () => {
@@ -40,6 +51,8 @@ const CreditPage = () => {
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const itemsPerPage = 10;
   const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'creditDate',
@@ -97,6 +110,55 @@ const CreditPage = () => {
       setFilters(newFilters);
       setCurrentPage(1);
   };
+
+  const handleDeleteCredit = async (rowData: any[]) => {
+    const [_, id] = rowData;
+    if (window.confirm('Вы уверены, что хотите удалить этот кредит?')) {
+      try {
+        await creditService.deleteCredit(Number(id));
+        loadCredits();
+      } catch (err) {
+        console.error('Ошибка при удалении кредита:', err);
+      }
+    }
+  };
+
+  const handleOpenPaymentModal = (rowData: any[]) => {
+    const [_, id, __, clientFullName] = rowData;
+    const credit = creditsData?.items.find(c => c.id === Number(id));
+    if (credit) {
+      setSelectedCredit(credit);
+      setIsPaymentModalOpen(true);
+    }
+  };
+
+  const handleSavePayment = async (paymentData: PaymentData) => {
+    try {
+      if (!selectedCredit) return;
+      
+      // Реализуйте вызов API для сохранения платежа
+      // await creditService.addPayment(selectedCredit.id, paymentData);
+      console.log('Сохранение платежа:', paymentData);
+      
+      // Обновляем данные после сохранения
+      await loadCredits();
+    } catch (error) {
+      console.error('Ошибка при сохранении платежа:', error);
+    }
+  };
+
+  const tableActions = [
+    {
+      label: 'Добавить платёж',
+      action: handleOpenPaymentModal,
+      color: '#008b8b'
+    },
+    {
+      label: 'Удалить',
+      action: handleDeleteCredit,
+      color: '#EF4444'
+    }
+  ];
 
   const handleExport = async () => {
     try {
@@ -293,6 +355,7 @@ const CreditPage = () => {
             sortConfig={sortConfig}
             onRowDoubleClick={handleRowDoubleClick}
             selectedRow={selectedRow}
+            contextMenuActions={tableActions}
           />
 
           <PaginationLayout>
@@ -309,6 +372,15 @@ const CreditPage = () => {
           </PaginationLayout>
         </>
       )}
+
+      <NewPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSave={handleSavePayment}
+        creditId={selectedCredit?.id}
+        clientName={selectedCredit?.clientFullName}
+      />
+
     </PageLayout>
   );
 };
