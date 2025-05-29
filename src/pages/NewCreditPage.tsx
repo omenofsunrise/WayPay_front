@@ -16,11 +16,17 @@ import CustomTable from '../components/ui/tables/CustomTable';
 import ProductsTable from '../components/ui/tables/ProductTable';
 import PaymentScheduleTable, { type PaymentScheduleItem } from '../components/ui/tables/PaymentScheduleTable';
 import CustomInput from '../components/ui/fields/CustomInput';
+import ClientModal from '../components/modal/ClientModal';
+import InvestorModal from '../components/modal/InvestorModal';
+import useClient from '../api/hooks/useClient';
 
 interface Client {
   id: number;
   fullName: string;
   phone?: string;
+  doc?: string;
+  birthdate?: string;
+  docIssueDate?: string;
 }
 
 interface Investor {
@@ -42,9 +48,8 @@ interface Product {
   totalPrice: number;
 }
 
-interface ProductsTableProps {
-  products: Product[];
-  onProductsChange: (products: Product[]) => void;
+interface ViewButtonProps {
+  onClick?: () => void;
 }
 
 const NewCreditPage = () => {
@@ -62,6 +67,9 @@ const NewCreditPage = () => {
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
   const [months, setMonths] = useState<string>('');
   const [paymentDue, setPaymentDue] = useState<string>('');
+  const [isViewClientModalOpen, setIsViewClientModalOpen] = useState(false);
+  const [isViewGuarantorModalOpen, setIsViewGuarantorModalOpen] = useState(false);
+  const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([
     {
       id: 1,
@@ -99,6 +107,7 @@ const NewCreditPage = () => {
       note: ''
     }
   ]);
+  const { getClientById } = useClient();
 
   const handleSelectClient = (client: Client) => {
     if (modalType === 'client') {
@@ -107,6 +116,26 @@ const NewCreditPage = () => {
       setGuarantor(client);
     }
     setIsClientModalOpen(false);
+  };
+
+  const handleViewClient = async () => {
+    if (client) {
+      const fullClientData = await getClientById(client.id);
+      if (fullClientData) {
+        setClient(fullClientData);
+        setIsViewClientModalOpen(true);
+      }
+    }
+  };
+
+  const handleViewGuarantor = async () => {
+    if (guarantor) {
+      const fullGuarantorData = await getClientById(guarantor.id);
+      if (fullGuarantorData) {
+        setGuarantor(fullGuarantorData);
+        setIsViewGuarantorModalOpen(true);
+      }
+    }
   };
 
   const handleSelectInvestor = (selectedInvestor: Investor) => {
@@ -155,7 +184,7 @@ const NewCreditPage = () => {
                 onSelect={openInvestorModal}
                 onClear={() => setInvestor(null)}
               />
-              <ViewButton/>
+              <ViewButton onClick={() => investor && setIsViewInvestorModalOpen(true)} />
             </EntitySelectWrapper>
           </FieldGroup>
         </FormRow>
@@ -173,7 +202,7 @@ const NewCreditPage = () => {
                 onSelect={() => openClientModal('client')}
                 onClear={() => setClient(null)}
               />
-              <ViewButton/>
+              <ViewButton onClick={handleViewClient} />
             </EntitySelectWrapper>
           </FieldGroup>
 
@@ -188,7 +217,7 @@ const NewCreditPage = () => {
                 onSelect={() => openClientModal('guarantor')}
                 onClear={() => setGuarantor(null)}
               />
-              <ViewButton/>
+              <ViewButton onClick={handleViewGuarantor} />
             </EntitySelectWrapper>
           </FieldGroup>
         </FormRow>
@@ -277,6 +306,53 @@ const NewCreditPage = () => {
         onClose={() => setIsInvestorModalOpen(false)}
         onSubmit={handleSelectInvestor}
       />
+
+      <ClientModal
+        mode="view"
+        isOpen={isViewClientModalOpen}
+        onClose={() => setIsViewClientModalOpen(false)}
+        onSubmit={async () => false}
+        initialData={client ? {
+          id: client.id,
+          fullName: client.fullName,
+          phone: client.phone || '',
+          doc: client.doc || '',
+          birthdate: client.birthdate || '',
+          docIssueDate: client.docIssueDate || ''
+        } : undefined}
+      />
+
+      <ClientModal
+        mode="view"
+        isOpen={isViewGuarantorModalOpen}
+        onClose={() => setIsViewGuarantorModalOpen(false)}
+        onSubmit={async () => false}
+        initialData={client ? {
+          id: client.id,
+          fullName: client.fullName,
+          phone: client.phone || '',
+          doc: client.doc || '',
+          birthdate: client.birthdate || '',
+          docIssueDate: client.docIssueDate || ''
+        } : undefined}
+      />
+
+      <InvestorModal
+        mode="view"
+        isOpen={isViewInvestorModalOpen}
+        onClose={() => setIsViewInvestorModalOpen(false)}
+        onSubmit={async () => false} // Не используется в режиме просмотра
+        initialData={investor ? {
+          id: investor.id,
+          nickname: investor.nickname,
+          fullName: investor.fullName,
+          phoneNumber: investor.phoneNumber,
+          investorPie: investor.investorPie,
+          investmentAmount: investor.investmentAmount,
+          balance: investor.balance,
+          isCompany: false // Добавьте реальное значение, если оно есть
+        } : undefined}
+      />
     </PageLayout>
   );
 };
@@ -330,7 +406,7 @@ const TotalSumContainer = styled.div`
   margin-top: 10px;
 `;
 
-const ViewButton = () => {
+const ViewButton = ({ onClick }: ViewButtonProps) => {
   return (
     <img 
       src={view} 
@@ -343,6 +419,7 @@ const ViewButton = () => {
       }}
       onMouseOver={(e) => e.currentTarget.style.filter = "brightness(0) invert(0)"}
       onMouseOut={(e) => e.currentTarget.style.filter = "brightness(0) invert(0.3)"}
+      onClick={onClick}
     />
   );
 };

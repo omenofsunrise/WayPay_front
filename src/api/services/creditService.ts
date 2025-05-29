@@ -7,6 +7,10 @@ class CreditService {
     const response = await apiClient.get<PaginatedResponse<Credit>>('/Credit', { params });
     return response.data;
   }
+
+  async toggleCredit(id: number) {
+    await apiClient.put(`/Credit/${id}/toggle-favourite`);
+  }
 }
 
 export default new CreditService();

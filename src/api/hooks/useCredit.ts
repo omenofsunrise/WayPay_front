@@ -23,11 +23,29 @@ const useCredit = () => {
     }
   }, []);
 
+  const toggleFavourite = useCallback(async (id: number) => {
+    try {
+      await creditService.toggleCredit(id);
+      setData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          items: prev.items.map(credit => 
+            credit.id === id ? { ...credit, isFavourite: !credit.isFavourite } : credit
+          )
+        };
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle favorite');
+    }
+  }, []);
+
   return {
     isLoading,
     error,
     data,
     getCredits,
+    toggleFavourite,
   };
 };
 

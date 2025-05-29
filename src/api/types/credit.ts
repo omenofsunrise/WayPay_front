@@ -10,7 +10,7 @@ export interface Credit {
     investorId: number;
     termMonths: number;
     clientFullName: string;
-    phone: string;
+    clientPhone: string;
     investorFullName: string;
 }
 
@@ -20,6 +20,6 @@ export interface CreditParams extends PaginationParams {
     sortDirection?: 'asc' | 'desc';
     dateFrom?: Date;
     dateTo?: Date;
-    investorNick?: string;
+    investorNickname?: string;
     clientFullname?: string; 
 }

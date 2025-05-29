@@ -459,9 +459,9 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const getTitle = () => {
     switch (mode) {
-      case 'create': return 'Создание клиента';
-      case 'edit': return 'Редактирование клиента';
-      case 'view': return 'Просмотр клиента';
+      case 'create': return 'Создание';
+      case 'edit': return 'Редактирование';
+      case 'view': return 'Просмотр';
       default: return 'Клиент';
     }
   };

@@ -20,6 +20,10 @@ import useExport from '../api/hooks/useExport';
 import creditService from '../api/services/creditService';
 import { formatDate } from '../utils/dateFormatter';
 
+interface EmptyStarIconProps {
+  isSelected?: boolean;
+}
+
 const CreditPage = () => {
   const [contractNumber, setContractNumber] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,7 +36,7 @@ const CreditPage = () => {
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
-  
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const itemsPerPage = 10;
   
   const columnToApiSortMap: Record<number, string> = {
@@ -47,7 +51,7 @@ const CreditPage = () => {
   };
 
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits } = useCredit();
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
   const navigate = useNavigate();
 
   const loadCredits = useCallback(async () => {
@@ -56,7 +60,7 @@ const CreditPage = () => {
       pageSize: itemsPerPage,
       creditId: contractNumber ? Number(contractNumber) : undefined,
       clientFullname: clientFullName || undefined,
-      investorNick: investorName || undefined,
+      investorNickname: investorName || undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
       dateTo: toDate ? new Date(toDate) : undefined,
       sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
@@ -96,7 +100,7 @@ const CreditPage = () => {
             pageSize,
             creditId: contractNumber ? Number(contractNumber) : undefined,
             clientFullname: clientFullName || undefined,
-            investorNick: investorName || undefined,
+            investorNickname: investorName || undefined,
             dateFrom: fromDate ? new Date(fromDate) : undefined,
             dateTo: toDate ? new Date(toDate) : undefined,
             sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
@@ -114,7 +118,7 @@ const CreditPage = () => {
           'ID': credit.id,
           'Дата договора': credit.creditDate.toLocaleDateString(),
           'ФИО покупателя': credit.clientFullName,
-          'Телефон': credit.phone || 'Нет данных',
+          'Телефон': credit.clientPhone || 'Нет данных',
           'Начислено': `${credit.totalAmount} ₽`,
           'Уплачено': ` ₽`,
           'Остаток': ` ₽`,
@@ -131,14 +135,39 @@ const CreditPage = () => {
   };
 
   const formatCreditData = (credits: Credit[] | undefined) => {
-    if (!credits) return [];
-    
-    return credits.map(credit => [
-      credit.isFavourite ? '★' : '',
+  if (!credits) return [];
+  
+  return credits.map(credit => [
+      credit.isFavourite ? (
+        <StarIcon 
+          key={`star-${credit.id}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavourite(credit.id);
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.74804 1.33325L9.81738 5.81859L14.7227 6.40059L11.096 9.75392L12.0587 14.5993L7.74804 12.1866L3.43738 14.5999L4.40004 9.75459L0.773376 6.39992L5.67938 5.81792L7.74804 1.33325Z" fill="#50555C" stroke="#50555C" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+        </StarIcon>
+      ) : (
+        <EmptyStarIcon 
+          key={`star-${credit.id}`}
+          isSelected={selectedRow === credit.id}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavourite(credit.id);
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.74804 1.33325L9.81738 5.81859L14.7227 6.40059L11.096 9.75392L12.0587 14.5993L7.74804 12.1866L3.43738 14.5999L4.40004 9.75459L0.773376 6.39992L5.67938 5.81792L7.74804 1.33325Z" stroke="#50555C" stroke-linejoin="round"/>
+          </svg>
+        </EmptyStarIcon>
+      ),
       credit.id.toString(),
       formatDate(credit.creditDate),
       credit.clientFullName,
-      credit.phone || 'Нет данных',
+      credit.clientPhone || 'Нет данных',
       `${credit.totalAmount} ₽`,
       ` ₽`,
       ` ₽`,
@@ -148,7 +177,6 @@ const CreditPage = () => {
 
   const handleRowDoubleClick = (rowData: any[]) => {
     const [_, id] = rowData;
-    navigate(`/credits/${id}`);
   };
 
   return (
@@ -257,6 +285,7 @@ const CreditPage = () => {
             onSort={handleSort}
             sortConfig={sortConfig}
             onRowDoubleClick={handleRowDoubleClick}
+            selectedRow={selectedRow}
           />
 
           <PaginationLayout>
@@ -293,6 +322,42 @@ const SecondRaw = styled.div`
   width: 100%;
   margin: 15px 0;
   background-color: transparent;
+`;
+
+const StarIcon = styled.div`
+  cursor: pointer;
+  color: gold;
+  font-size: 1.2rem;
+  user-select: none;
+  width: 24px;  
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+const EmptyStarIcon = styled.div<EmptyStarIconProps>`
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+    path {
+      stroke: ${props => props.isSelected ? 'white' : '#50555C'};
+      ${props => props.isSelected && 'fill: white;'}
+    }
+  }
 `;
 
 export default CreditPage;
