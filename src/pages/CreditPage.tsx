@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
@@ -14,66 +14,141 @@ import CreditTypes from '../components/ui/fields/CreditTypes';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import { useNavigate } from 'react-router-dom';
-
-interface Contract {
-  id: number;
-  name: string;
-  number: string;
-  date: string;
-  amount: number;
-  status: 'active' | 'closed' | 'pending';
-}
+import useCredit from '../api/hooks/useCredit';
+import type { Credit } from '../api/types/credit';
+import useExport from '../api/hooks/useExport';
+import creditService from '../api/services/creditService';
+import { formatDate } from '../utils/dateFormatter';
 
 const CreditPage = () => {
   const [contractNumber, setContractNumber] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [investorName, setInvestorName] = useState('');
+  const [clientFullName, setClientFullName] = useState('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [sortConfig, setSortConfig] = useState<{
+    key: number | null;
+    direction: 'asc' | 'desc';
+  }>({ key: null, direction: 'asc' });
+  
   const itemsPerPage = 10;
-
-  const mockData: Contract[] = Array.from({ length: 100 }, (_, i) => ({
-    id: i + 1,
-    name: `Договор ${i + 1}`,
-    number: `Д-${String(i + 1).padStart(4, '0')}`,
-    date: new Date(2023, i % 12, (i % 28) + 1).toLocaleDateString(),
-    amount: 10000 + (i * 500),
-    status: ['active', 'closed', 'pending'][i % 3] as 'active' | 'closed' | 'pending',
-  }));
-
-  const handleFromDateChange = (newDate: string) => {
-    setFromDate(newDate);
-    console.log('Выбранная дата:', newDate);
+  
+  const columnToApiSortMap: Record<number, string> = {
+    1: 'id',
+    2: 'creditDate',
+    3: 'clientFullName',
+    4: 'phone',
+    5: 'totalAmount',
+    6: 'paidAmount',
+    7: 'remainingAmount',
+    8: 'debtAmount'
   };
 
+  const { exportData, isExporting, exportProgress } = useExport<Credit>();
+  const { isLoading, error, data: creditsData, getCredits } = useCredit();
   const navigate = useNavigate();
-  
-  const filteredData = mockData.filter(contract => {
-    const matchesNumber = contractNumber 
-      ? contract.number.includes(contractNumber)
-      : true;
-    
-    const matchesSearch = searchQuery 
-      ? contract.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        contract.number.toLowerCase().includes(searchQuery.toLowerCase())
-      : true;
-    
-    return matchesNumber && matchesSearch;
-  });
 
-  const totalItems = filteredData.length;
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const loadCredits = useCallback(async () => {
+    const params = {
+      page: currentPage,
+      pageSize: itemsPerPage,
+      creditId: contractNumber ? Number(contractNumber) : undefined,
+      clientFullname: clientFullName || undefined,
+      investorNick: investorName || undefined,
+      dateFrom: fromDate ? new Date(fromDate) : undefined,
+      dateTo: toDate ? new Date(toDate) : undefined,
+      sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+      sortDirection: sortConfig.direction
+    };
+
+    await getCredits(params);
+  }, [currentPage, contractNumber, clientFullName, investorName, fromDate, toDate, sortConfig]);
+
+  useEffect(() => {
+    loadCredits();
+  }, [loadCredits]);
+
+  const handleSort = (columnIndex: number) => {
+    if (!columnToApiSortMap[columnIndex]) return;
+    
+    setSortConfig(prev => {
+      if (prev.key === columnIndex) {
+        return {
+          key: columnIndex,
+          direction: prev.direction === 'asc' ? 'desc' : 'asc'
+        };
+      }
+      return {
+        key: columnIndex,
+        direction: 'asc'
+      };
+    });
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportData({
+        fetchData: async (page, pageSize) => {
+          const params = {
+            page,
+            pageSize,
+            creditId: contractNumber ? Number(contractNumber) : undefined,
+            clientFullname: clientFullName || undefined,
+            investorNick: investorName || undefined,
+            dateFrom: fromDate ? new Date(fromDate) : undefined,
+            dateTo: toDate ? new Date(toDate) : undefined,
+            sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+            sortDirection: sortConfig.direction
+          };
+          
+          const result = await creditService.getCredits(params);
+          return {
+            items: Array.isArray(result.items) ? result.items : [],
+            totalCount: result.totalCount || 0
+          };
+        },
+        fileName: 'credits_export',
+        transformData: (credit) => ({
+          'ID': credit.id,
+          'Дата договора': credit.creditDate.toLocaleDateString(),
+          'ФИО покупателя': credit.clientFullName,
+          'Телефон': credit.phone || 'Нет данных',
+          'Начислено': `${credit.totalAmount} ₽`,
+          'Уплачено': ` ₽`,
+          'Остаток': ` ₽`,
+          'Долг': ` ₽`
+        })
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
 
   const handlePrint = () => {
-    console.log('Печать данных', paginatedData);
+    console.log('Печать данных', creditsData?.items);
   };
 
-  const handleExport = () => {
-    console.log('Экспорт данных', paginatedData);
+  const formatCreditData = (credits: Credit[] | undefined) => {
+    if (!credits) return [];
+    
+    return credits.map(credit => [
+      credit.isFavourite ? '★' : '',
+      credit.id.toString(),
+      formatDate(credit.creditDate),
+      credit.clientFullName,
+      credit.phone || 'Нет данных',
+      `${credit.totalAmount} ₽`,
+      ` ₽`,
+      ` ₽`,
+      ` ₽`
+    ]);
+  };
+
+  const handleRowDoubleClick = (rowData: any[]) => {
+    const [_, id] = rowData;
+    navigate(`/credits/${id}`);
   };
 
   return (
@@ -83,7 +158,13 @@ const CreditPage = () => {
           <ExportButton icon={<PrintIcon />} onClick={handlePrint}>
             Печать
           </ExportButton>
-          <ExportButton onClick={handleExport}>Экспорт</ExportButton>
+          <ExportButton 
+            onClick={handleExport}
+            isExporting={isExporting}
+            exportProgress={exportProgress}
+          >
+            Экспорт
+          </ExportButton>
       </TitleField>
 
       <FilterField>
@@ -103,7 +184,10 @@ const CreditPage = () => {
           <DateInput 
             prefix="от:"
             value={fromDate}
-            onChange={(date) => setFromDate(date)}
+            onChange={(date) => {
+              setFromDate(date);
+              setCurrentPage(1);
+            }}
           />
         </InputWrapper>
         
@@ -111,7 +195,10 @@ const CreditPage = () => {
           <DateInput 
             prefix="до:"
             value={toDate}
-            onChange={(date) => setToDate(date)}
+            onChange={(date) => {
+              setToDate(date);
+              setCurrentPage(1);
+            }}
           />
         </InputWrapper>
         
@@ -133,9 +220,9 @@ const CreditPage = () => {
           style={{ marginRight: "auto", display: "flex"}}
           inputType="fullname"
           placeholder="ФИО"
-          value={investorName}
+          value={clientFullName}
           onChange={(e) => {
-            setInvestorName(e.target.value);
+            setClientFullName(e.target.value);
             setCurrentPage(1);
           }}
         />
@@ -149,35 +236,43 @@ const CreditPage = () => {
 
       <CreditTypes />
 
-      <CustomTable 
-        columns={[
-          { name: "" },
-          { name: "№", isSortable: true },
-          { name: "Дата договора", isSortable: true },
-          { name: "ФИО покупателя", isSortable: true },
-          { name: "Телефон", isSortable: true },
-          { name: "Начислено", isSortable: true },
-          { name: "Уплачено", isSortable: true },
-          { name: "Остаток", isSortable: true },
-          { name: "Долг", isSortable: true },
-        ]} 
-        data={[
-          ['★', '1', '12.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-          ['★', '2', '15.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-          ['★', '1', '12.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-          ['★', '2', '15.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-          ['★', '1', '12.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-          ['★', '2', '15.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-          ['★', '1', '12.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-          ['★', '2', '15.05.2023', 'Демьянов Владимир Архангел', '8 (961) 508-33-33', '10 000 ₽', '10 000 ₽', '10 000 ₽', '10 000 ₽'],
-        ]}
-      />
+      {isLoading && <div>Загрузка...</div>}
+      {error && <div>Ошибка: {error}</div>}
+      
+      {!isLoading && !error && (
+        <>
+          <CustomTable 
+            columns={[
+              { name: "" },
+              { name: "№", isSortable: true },
+              { name: "Дата договора", isSortable: true },
+              { name: "ФИО покупателя", isSortable: true },
+              { name: "Телефон", isSortable: true },
+              { name: "Начислено", isSortable: true },
+              { name: "Уплачено", isSortable: true },
+              { name: "Остаток", isSortable: true },
+              { name: "Долг", isSortable: true },
+            ]} 
+            data={formatCreditData(creditsData?.items)}
+            onSort={handleSort}
+            sortConfig={sortConfig}
+            onRowDoubleClick={handleRowDoubleClick}
+          />
 
-      <PaginationLayout>
-        <Pagination 
-          total={totalItems} 
-        />
-      </PaginationLayout>
+          <PaginationLayout>
+            <CountInfoTitle 
+              total={creditsData?.totalCount || 0} 
+            />
+            
+            <Pagination
+              total={creditsData?.totalCount || 0}
+              current={currentPage}
+              onChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+            />
+          </PaginationLayout>
+        </>
+      )}
     </PageLayout>
   );
 };

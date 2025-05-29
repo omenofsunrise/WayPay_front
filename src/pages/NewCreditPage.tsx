@@ -15,6 +15,7 @@ import view from '../assets/ui/credits/newCredit/view.svg';
 import CustomTable from '../components/ui/tables/CustomTable';
 import ProductsTable from '../components/ui/tables/ProductTable';
 import PaymentScheduleTable, { type PaymentScheduleItem } from '../components/ui/tables/PaymentScheduleTable';
+import CustomInput from '../components/ui/fields/CustomInput';
 
 interface Client {
   id: number;
@@ -210,14 +211,14 @@ const NewCreditPage = () => {
           <InputGroup>
             <InputLabel>Первоначальный взнос</InputLabel>
             <InputRow>
-              <InputField 
-                type="text" 
+              <CustomInput 
+                inputType="number" 
                 placeholder="%" 
                 value={initialPaymentPercent}
                 onChange={(e) => setInitialPaymentPercent(e.target.value)}
               />
-              <InputField 
-                type="text" 
+              <CustomInput 
+                inputType="rubles"
                 placeholder="Сумма" 
                 value={initialPaymentAmount}
                 onChange={(e) => setInitialPaymentAmount(e.target.value)}
@@ -230,15 +231,15 @@ const NewCreditPage = () => {
               <InputLabel1 style={{ flex: 1 }}>Уплата до</InputLabel1>
             </InputRow>
             <InputRow>
-              <InputField 
-                type="text" 
+              <CustomInput 
+                inputType="number"
                 placeholder="Месяцев" 
                 value={months}
                 onChange={(e) => setMonths(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <InputField 
-                type="text" 
+              <CustomInput 
+                inputType="number" 
                 placeholder="Уплата до" 
                 value={paymentDue}
                 onChange={(e) => setPaymentDue(e.target.value)}

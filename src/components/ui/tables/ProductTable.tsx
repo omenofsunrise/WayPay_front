@@ -302,6 +302,7 @@ const TableContainer = styled.div`
   overflow: auto;
   position: relative;
   background-color: white;
+  color: black;
 `;
 
 const StyledTable = styled.table`
@@ -313,10 +314,9 @@ const StyledTable = styled.table`
   th, td {
     box-sizing: border-box;
     position: relative;
-    border-right: 1px solid #e2e8f0; /* Добавляем вертикальные линии для всех ячеек */
+    border-right: 1px solid #e2e8f0;
   }
 
-  /* Убираем границу у последней ячейки в строке */
   th:last-child,
   td:last-child {
     border-right: none;
@@ -372,7 +372,8 @@ const NameInput = styled.input`
   font-size: 14px;
   background-color: white;
   border: none;
-
+  color: black;
+  
   &:focus {
     outline: none;
     border-color: #3182ce;
