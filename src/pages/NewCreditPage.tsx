@@ -19,6 +19,7 @@ import ClientModal from '../components/modal/ClientModal';
 import InvestorModal from '../components/modal/InvestorModal';
 import useClient from '../api/hooks/useClient';
 import CustomSelect from '../components/ui/fields/CustomSelect';
+import useSchedule from '../api/hooks/useSchedule';
 
 interface Client {
   id: number;
@@ -66,49 +67,55 @@ const NewCreditPage = () => {
   const [initialPaymentPercent, setInitialPaymentPercent] = useState<string>('');
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
   const [months, setMonths] = useState<string>('');
-  const [paymentDue, setPaymentDue] = useState<string>('');
+  const [paymentDue, setPaymentDue] = useState<string>('1');
   const [isViewClientModalOpen, setIsViewClientModalOpen] = useState(false);
   const [isViewGuarantorModalOpen, setIsViewGuarantorModalOpen] = useState(false);
   const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
-  
-  const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([
-    {
-      id: 1,
-      date: '01.01.2023',
-      remainingAmount: 100000,
-      requiredPayment: 20000,
-      note: 'Первый платёж'
-    },
-    {
-      id: 2,
-      date: '01.02.2023',
-      remainingAmount: 80000,
-      requiredPayment: 20000,
-      note: 'Второй платёж'
-    },
-    {
-      id: 3,
-      date: '01.03.2023',
-      remainingAmount: 80000,
-      requiredPayment: 20000,
-      note: 'Третий платёж'
-    },
-    {
-      id: 4,
-      date: '01.04.2023',
-      remainingAmount: 80000,
-      requiredPayment: 20000,
-      note: ''
-    },
-    {
-      id: 5,
-      date: '01.05.2023',
-      remainingAmount: 80000,
-      requiredPayment: 20000,
-      note: ''
-    }
-  ]);
+  const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
+  const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
   const { getClientById } = useClient();
+
+  const generateSchedulePreview = useCallback(async () => {
+    if (!contractDate || !months || !paymentDue || totalSum <= 0) return;
+
+    try {
+      const previewParams = {
+        creditDate: new Date(contractDate),
+        termMonths: parseInt(months),
+        paymentDay: parseInt(paymentDue),
+        totalAmount: totalSum
+      };
+
+      await getPreview(previewParams);
+    } catch (error) {
+      console.error('Failed to generate schedule preview:', error);
+    }
+  }, [contractDate, months, paymentDue, totalSum, getPreview]);
+
+  useEffect(() => {
+    if (previewData) {
+      const formattedSchedule = previewData.map((item, index) => {
+        const remainingAmount = totalSum - previewData
+          .slice(0, index)
+          .reduce((sum, payment) => sum + payment.paymentAmount, 0);
+          
+        return {
+          id: index + 1,
+          date: new Date(item.paymentDate).toLocaleDateString('ru-RU'),
+          remainingAmount: Math.max(0, remainingAmount),
+          requiredPayment: item.paymentAmount,
+          note: index === 0 ? 'Первый платёж' : ''
+        };
+      });
+      setPaymentSchedule(formattedSchedule);
+    }
+  }, [previewData, totalSum]);
+
+  useEffect(() => {
+    if (contractDate && months && paymentDue && totalSum > 0) {
+      generateSchedulePreview();
+    }
+  }, [contractDate, months, paymentDue, totalSum, generateSchedulePreview]);
 
   const formatAmount = useCallback((value: number): string => {
     return value.toLocaleString('ru-RU') + '₽';
@@ -118,11 +125,9 @@ const NewCreditPage = () => {
     return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
   }, []);
 
-  // Обработка изменения процента
   const handlePercentChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Разрешаем только цифры и пустую строку
     if (value === '' || /^\d*$/.test(value)) {
       setInitialPaymentPercent(value);
       
@@ -138,27 +143,21 @@ const NewCreditPage = () => {
     }
   }, [totalSum, formatAmount]);
 
-  // Обработка изменения суммы
   const handleAmountChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
-    // Если поле очищено
     if (inputValue === '₽' || inputValue === '') {
       setInitialPaymentAmount('');
       setInitialPaymentPercent('');
       return;
     }
     
-    // Парсим числовое значение
     const numericValue = parseAmount(inputValue);
     
-    // Форматируем с разделителями тысяч
     const formattedValue = formatAmount(numericValue);
     
-    // Устанавливаем отформатированное значение
     setInitialPaymentAmount(formattedValue);
     
-    // Рассчитываем процент только если есть общая сумма
     if (totalSum > 0 && numericValue > 0) {
       const percent = Math.round((numericValue / totalSum) * 100);
       setInitialPaymentPercent(percent.toString());
@@ -167,7 +166,6 @@ const NewCreditPage = () => {
     }
   }, [totalSum, parseAmount, formatAmount]);
 
-  // Сбрасываем значения при изменении общей суммы
   useEffect(() => {
     if (totalSum === 0) {
       setInitialPaymentAmount('');
@@ -332,14 +330,18 @@ const NewCreditPage = () => {
                   inputType="number"
                   placeholder="Месяцев" 
                   value={months}
-                  onChange={(e) => setMonths(e.target.value)}
+                  onChange={(e) => setMonths(e.target.value.replace(/[^0-9]/g, ''))}
                   style={{ flex: 1 }}
+                  min="1"
+                  max="60"
                 />
                 <CustomSelect
                   options={Array.from({ length: 31 }, (_, i) => ({
                     value: String(i + 1),
                     label: String(i + 1)
                   }))}
+                  onChange={(e) => setPaymentDue(e.target.value)}
+                  value={paymentDue}
                 />
               </InputRow>
             </InputGroup>
@@ -350,14 +352,14 @@ const NewCreditPage = () => {
                 </GrayButton>
                 <DarkCyanButton 
                   style={{ marginRight: 'auto' }}
-                  disabled={!client || !contractDate || !investor}
+                  disabled={!client || !contractDate || !investor || isScheduleLoading}
                 >
-                  Создать договор
+                  {isScheduleLoading ? 'Загрузка...' : 'Создать договор'}
                 </DarkCyanButton>
               </ButtonWrapper>
             </InputGroup>
           </PaymentScheduleInputs>
-          <PaymentScheduleTable data={paymentSchedule} />
+          <PaymentScheduleTable data={paymentSchedule} isLoading={isScheduleLoading} />
         </PaymentScheduleContainer>
       </ContentWrapper>
 
@@ -394,13 +396,13 @@ const NewCreditPage = () => {
         isOpen={isViewGuarantorModalOpen}
         onClose={() => setIsViewGuarantorModalOpen(false)}
         onSubmit={async () => false}
-        initialData={client ? {
-          id: client.id,
-          fullName: client.fullName,
-          phone: client.phone || '',
-          doc: client.doc || '',
-          birthdate: client.birthdate || '',
-          docIssueDate: client.docIssueDate || ''
+        initialData={guarantor ? {
+          id: guarantor.id,
+          fullName: guarantor.fullName,
+          phone: guarantor.phone || '',
+          doc: guarantor.doc || '',
+          birthdate: guarantor.birthdate || '',
+          docIssueDate: guarantor.docIssueDate || ''
         } : undefined}
       />
 
