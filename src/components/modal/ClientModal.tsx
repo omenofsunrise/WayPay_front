@@ -11,10 +11,10 @@ import useClient from '../../api/hooks/useClient';
 interface Client {
   id: number;
   fullName: string;
-  phone: string;
-  doc: string;
-  birthdate: string;
-  docIssueDate: string;
+  phone?: string;
+  doc?: string;
+  birthdate?: string | Date;
+  docIssueDate?: string | Date;
 }
 
 type ClientModalProps = {
@@ -29,7 +29,7 @@ const emptyClient: Omit<Client, 'id'> = {
   fullName: '',
   phone: '',
   doc: '',
-  birthdate: '',
+  birthdate: null,
   docIssueDate: ''
 };
 

@@ -13,6 +13,7 @@ export interface PaymentScheduleItem {
 interface PaymentScheduleTableProps {
   data: PaymentScheduleItem[];
   onDataChange?: (data: PaymentScheduleItem[]) => void;
+  isLoading?: boolean;
 }
 
 const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps) => {
