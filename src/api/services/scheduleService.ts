@@ -26,7 +26,7 @@ class ScheduleService {
 
     async getPreview(params: SchedulePreviewParams): Promise<ScheduleItem[]> {
         const response = await apiClient.post<ScheduleItem[]>(
-            '/Schedule/schedule/preview',
+            '/Schedule/preview',
             params
         );
         return response.data;

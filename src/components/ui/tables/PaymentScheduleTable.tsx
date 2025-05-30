@@ -7,7 +7,7 @@ export interface PaymentScheduleItem {
   date: string;
   remainingAmount: number;
   requiredPayment: number;
-  note: string;
+  comment: string;
 }
 
 interface PaymentScheduleTableProps {
@@ -26,7 +26,7 @@ const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps)
           <tr>
             <HeaderCell>Дата</HeaderCell>
             <HeaderCell>Остаток</HeaderCell>
-            <HeaderCell>Обязательный платёж</HeaderCell>
+            <HeaderCell>Платёж</HeaderCell>
             <HeaderCell>Примечание</HeaderCell>
           </tr>
         </TableHeader>
@@ -41,7 +41,7 @@ const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps)
               <BodyCell>{item.date}</BodyCell>
               <BodyCell>{item.remainingAmount.toLocaleString('ru-RU')} ₽</BodyCell>
               <BodyCell>{item.requiredPayment.toLocaleString('ru-RU')} ₽</BodyCell>
-              <BodyCell>{item.note}</BodyCell>
+              <BodyCell>{item.comment}</BodyCell>
             </StyledTableRow>
           ))}
         </TableBody>

@@ -20,6 +20,8 @@ import InvestorModal from '../components/modal/InvestorModal';
 import useClient from '../api/hooks/useClient';
 import CustomSelect from '../components/ui/fields/CustomSelect';
 import useSchedule from '../api/hooks/useSchedule';
+import useCredit from '../api/hooks/useCredit';
+import type { CreateCreditRequest } from '../api/types/credit';
 
 interface Client {
   id: number;
@@ -74,28 +76,81 @@ const NewCreditPage = () => {
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
   const { getClientById } = useClient();
+  const { createCredit, isLoading: isCreditLoading } = useCredit();
+  
+  const formatAmount = useCallback((value: number): string => {
+    return value.toLocaleString('ru-RU') + '₽';
+  }, []);
+
+  const parseAmount = useCallback((formatted: string): number => {
+    return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
+  }, []);
+
+  const handleCreateCredit = useCallback(async () => {
+  if (!client || !contractDate || !investor) return;
+
+  const creditData: CreateCreditRequest = {
+    clientId: client.id,
+    investorId: investor.id,
+    creditDate: new Date(contractDate),
+    firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
+    termMonths: parseInt(months),
+    paymentDay: parseInt(paymentDue),
+    products: products
+      .filter(product => product.name.trim() !== '' && product.price > 0)
+      .map(product => ({
+        name: product.name,
+        price: product.price,
+        surcharge: product.markup
+      })),
+    ...(guarantor && { guarantorId: guarantor.id })
+  };
+
+  const createdCredit = await createCredit(creditData);
+    if (createdCredit) {
+      navigate('/credits');
+    }
+  }, [
+    client,
+    contractDate,
+    investor,
+    guarantor,
+    initialPaymentAmount,
+    months,
+    paymentDue,
+    products,
+    parseAmount,
+    createCredit,
+    navigate
+  ]);
 
   const generateSchedulePreview = useCallback(async () => {
     if (!contractDate || !months || !paymentDue || totalSum <= 0) return;
 
     try {
+      const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
+      const creditAmount = totalSum - initialPayment;
+
       const previewParams = {
         creditDate: new Date(contractDate),
         termMonths: parseInt(months),
         paymentDay: parseInt(paymentDue),
-        totalAmount: totalSum
+        totalAmount: creditAmount
       };
 
       await getPreview(previewParams);
     } catch (error) {
       console.error('Failed to generate schedule preview:', error);
     }
-  }, [contractDate, months, paymentDue, totalSum, getPreview]);
+  }, [contractDate, months, paymentDue, totalSum, initialPaymentAmount, parseAmount, getPreview]);
 
   useEffect(() => {
     if (previewData) {
+      const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
+      const creditAmount = totalSum - initialPayment;
+      
       const formattedSchedule = previewData.map((item, index) => {
-        const remainingAmount = totalSum - previewData
+        const remainingAmount = creditAmount - previewData
           .slice(0, index)
           .reduce((sum, payment) => sum + payment.paymentAmount, 0);
           
@@ -104,26 +159,29 @@ const NewCreditPage = () => {
           date: new Date(item.paymentDate).toLocaleDateString('ru-RU'),
           remainingAmount: Math.max(0, remainingAmount),
           requiredPayment: item.paymentAmount,
-          note: index === 0 ? 'Первый платёж' : ''
+          comment: item.comment
         };
       });
+      
+      if (initialPayment > 0) {
+        formattedSchedule.unshift({
+          id: 0,
+          date: new Date(contractDate!).toLocaleDateString('ru-RU'),
+          remainingAmount: totalSum,
+          requiredPayment: initialPayment,
+          comment: 'Первоначальный взнос'
+        });
+      }
+      
       setPaymentSchedule(formattedSchedule);
     }
-  }, [previewData, totalSum]);
+  }, [previewData, totalSum, initialPaymentAmount, contractDate, parseAmount]);
 
   useEffect(() => {
     if (contractDate && months && paymentDue && totalSum > 0) {
       generateSchedulePreview();
     }
   }, [contractDate, months, paymentDue, totalSum, generateSchedulePreview]);
-
-  const formatAmount = useCallback((value: number): string => {
-    return value.toLocaleString('ru-RU') + '₽';
-  }, []);
-
-  const parseAmount = useCallback((formatted: string): number => {
-    return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
-  }, []);
 
   const handlePercentChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -352,9 +410,10 @@ const NewCreditPage = () => {
                 </GrayButton>
                 <DarkCyanButton 
                   style={{ marginRight: 'auto' }}
-                  disabled={!client || !contractDate || !investor || isScheduleLoading}
+                  disabled={!client || !contractDate || !investor || isScheduleLoading || isCreditLoading}
+                  onClick={handleCreateCredit}
                 >
-                  {isScheduleLoading ? 'Загрузка...' : 'Создать договор'}
+                  {isScheduleLoading || isCreditLoading ? 'Загрузка...' : 'Создать договор'}
                 </DarkCyanButton>
               </ButtonWrapper>
             </InputGroup>

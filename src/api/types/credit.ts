@@ -14,6 +14,21 @@ export interface Credit {
     investorNickname: string;
 }
 
+export interface CreateCreditRequest {
+    clientId: number;
+    guarantorId?: number;
+    investorId: number;
+    creditDate: Date;
+    firstPayment: number;
+    termMonths: number;
+    paymentDay: number;
+    products: Array<{
+        name: string;
+        price: number;
+        surcharge: number;
+    }>;
+}
+
 export interface CreditParams extends PaginationParams {
     creditId?: number;
     sortBy?: string;

@@ -182,13 +182,13 @@ const ClientModal: React.FC<ClientModalProps> = ({
           fullName: initialData?.fullName || '',
           phone: initialData?.phone || '',
           doc: initialData?.doc || '',
-          birthdate: initialData?.birthdate ? formatDate(initialData.birthdate) : '',
-          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate) : ''
+          birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
+          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : ''
         }
       );
       setPassportEditData({
         doc: initialData?.doc || '',
-        docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate) : ''
+        docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : ''
       });
       setIsEditingPassport(false);
       setValidationErrors({
@@ -236,7 +236,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
       newErrorMessages.phone = await validatePhone(formData.phone);
 
-      const birthdateValidation = validateDate(formData.birthdate, 18, 100, true);
+      const birthdateValidation = validateDate(formData.birthdate.toString(), 18, 100, true);
       if (!birthdateValidation.isValid) {
         newErrorMessages.birthdate = birthdateValidation.error || '';
       }
@@ -249,7 +249,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
           newErrorMessages.doc = 'Поле обязательно для заполнения';
         }
 
-        const docIssueValidation = validateDate(formData.docIssueDate, 0, 90, false);
+        const docIssueValidation = validateDate(formData.docIssueDate.toString(), 0, 90, false);
         if (!docIssueValidation.isValid && docIssueValidation.error) {
           newErrorMessages.docIssueDate = docIssueValidation.error;
         } else if (docIssueValidation.date) {
@@ -388,7 +388,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const handlePassportSave = async () => {
     const docRegex = /^\d{4}\s\d{6}$/;
-    const docIssueValidation = validateDate(formData.docIssueDate, 0, 90, false);
+    const docIssueValidation = validateDate(formData.docIssueDate.toString(), 0, 90, false);
     
     const newErrorMessages = {
       doc: '',
@@ -526,7 +526,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 name="birthdate"
                 inputType="date"
                 placeholder="дд.мм.гггг"
-                value={formData.birthdate}
+                value={formData.birthdate.toString()}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
                 hasError={touchedFields.birthdate && validationErrors.birthdate}
@@ -572,7 +572,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   name="docIssueDate"
                   inputType="date"
                   placeholder="дд.мм.гггг"
-                  value={formData.docIssueDate}
+                  value={formData.docIssueDate.toString()}
                   onChange={handleInputChange}
                   disabled={mode === 'view' || (mode === 'edit' && !isEditingPassport)}
                   hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}

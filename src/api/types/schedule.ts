@@ -3,6 +3,7 @@ import type { PaginationParams } from './common';
 export interface ScheduleItem {
     paymentDate: Date;
     paymentAmount: number;
+    comment: string;
 }
 
 export interface SchedulePreviewParams {
