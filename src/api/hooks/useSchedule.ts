@@ -15,6 +15,23 @@ const useSchedule = () => {
     const [scheduleDetails, setScheduleDetails] = useState<ScheduleDetails | null>(null);
     const [previewData, setPreviewData] = useState<ScheduleItem[] | null>(null);
 
+    const getList = useCallback(async (
+        params?: ScheduleParams
+    ): Promise<PaginatedResponse<ScheduleDetails> | null> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const result = await scheduleService.getList(params);
+            setScheduleData(result);
+            return result;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     const getByCreditId = useCallback(async (
         creditId: number, 
         params?: Omit<ScheduleParams, 'creditId'>
@@ -71,6 +88,7 @@ const useSchedule = () => {
         scheduleData,
         scheduleDetails,
         previewData,
+        getList,
         getByCreditId,
         getById,
         getPreview,

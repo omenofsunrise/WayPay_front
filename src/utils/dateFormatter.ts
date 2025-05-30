@@ -11,3 +11,8 @@ export const formatDate = (dateString: string | Date): string => {
   
   return `${day}-${month}-${year}`;
 };
+
+export function parseDateInput(dateString: string): Date {
+    // Assuming the input is in YYYY-MM-DD format (HTML date input default)
+    return new Date(dateString);
+}

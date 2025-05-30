@@ -29,7 +29,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
   '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
   '/queue': { mainItem: 'clients', subItems: { '/queue': 'queue' } },
-  '/pending-payments': { mainItem: 'payments', subItems: { '/pending-payments': 'pending-payments' } },
+  '/pending-payments': { mainItem: 'payments', subItems: { '/schedules': 'pending-payments' } },
   '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
   '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
@@ -263,7 +263,7 @@ const SideMenu = () => {
           <SubMenu>
             <SubMenuLine />
             <SubMenuItem 
-              onClick={() => handleSubMenuItemClick('pending-payments', '/pending-payments')}
+              onClick={() => handleSubMenuItemClick('pending-payments', '/schedules')}
               $selected={selectedSideMenuItem === 'pending-payments'}
             >
               Ожидаемые

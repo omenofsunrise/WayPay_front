@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { Investor, InvestorParams } from '../types/investor';
+import type { AutoSelectInvestorResponse, Investor, InvestorParams } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
 
 class ProductService {
@@ -29,6 +29,14 @@ class ProductService {
 
   async addInvestment(id: number, amount: number): Promise<Investor> {
     const response = await apiClient.put<Investor>(`Investor/${id}/add-investment`, { amount });
+    return response.data;
+  }
+
+  async autoSelectInvestor(totalProductAmount: number): Promise<AutoSelectInvestorResponse> {
+    const response = await apiClient.post<AutoSelectInvestorResponse>(
+      '/Investor/auto-select',
+      { totalProductAmount }
+    );
     return response.data;
   }
 }

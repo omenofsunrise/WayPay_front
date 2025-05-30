@@ -15,13 +15,23 @@ export interface SchedulePreviewParams {
 
 export interface ScheduleParams extends PaginationParams {
     creditId?: number;
+    clientName?: string;
+    investorNickname?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    sortBy?: string;
+    sortDirection?: 'asc' | 'desc';
 }
 
 export interface ScheduleDetails {
     id: number;
     creditId: number;
+    rest: number;
     paymentDate: Date;
     paymentAmount: number;
-    isPaid: boolean;
+    clientName: string;
+    comment: string;
+    notified: boolean;
+    isPaid?: boolean;
     paidDate?: Date;
 }

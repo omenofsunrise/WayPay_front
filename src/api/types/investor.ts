@@ -16,3 +16,13 @@ export interface InvestorParams extends PaginationParams {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }
+
+export interface AutoSelectInvestorRequest {
+  totalProductAmount: number;
+}
+
+export interface AutoSelectInvestorResponse {
+  id: number;
+  nickname: string;
+  balance: number;
+}

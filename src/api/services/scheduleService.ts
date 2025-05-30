@@ -8,6 +8,14 @@ import type {
 import type { PaginatedResponse } from '../types/common';
 
 class ScheduleService {
+    async getList(params?: ScheduleParams): Promise<PaginatedResponse<ScheduleDetails>> {
+        const response = await apiClient.get<PaginatedResponse<ScheduleDetails>>(
+            '/Schedule',
+            { params }
+        );
+        return response.data;
+    }
+
     async getByCreditId(
         creditId: number, 
         params?: Omit<ScheduleParams, 'creditId'>
