@@ -389,7 +389,10 @@ const NewCreditPage = () => {
         <PaymentScheduleContainer>
           <PaymentScheduleInputs>
             <InputGroup>
-              <InputLabel>Первоначальный взнос</InputLabel>
+              <InputRow>
+                <InputLabel style={{ flex: 1 }}>Первоначальный взнос, %</InputLabel>
+                <InputLabel1 style={{ flex: 1 }}>Сумма</InputLabel1>
+              </InputRow>
               <InputRow>
                 <CustomInput 
                   inputType="number" 
@@ -408,7 +411,7 @@ const NewCreditPage = () => {
               </InputRow>
             </InputGroup>
             <InputGroup>
-              <InputRow style={{ marginBottom: '8px' }}>
+              <InputRow>
                 <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
                 <InputLabel1 style={{ flex: 1 }}>Уплата до</InputLabel1>
               </InputRow>
@@ -626,6 +629,7 @@ const InputRow = styled.div`
   gap: 10px;
   margin-bottom: 0;
   padding-bottom: 0;
+  width: 440px;
 `;
 
 const AutoSelectButton = styled.button`

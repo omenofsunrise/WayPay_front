@@ -214,24 +214,31 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
                             position: 'absolute',
                             top: `${menuPosition.top}px`,
                             left: `${menuPosition.left}px`,
-                            width: `${menuPosition.width}px`
+                            width: `${menuPosition.width}px`,
+                            maxHeight: '300px'
                           }}
                         >
-                            {filteredProducts.map((item) => (
-                              <DropdownItem
-                                key={item.id}
-                                onClick={() => handleProductSelect(
-                                  product.id, 
-                                  item.name
-                                )}
-                              >
-                                {item.name}
-                              </DropdownItem>
-                            ))}
-                            {filteredProducts.length === 0 && (
-                              <DropdownEmpty>Товары не найдены</DropdownEmpty>
+                          <DropdownContent>
+                            {filteredProducts.length > 0 ? (
+                              filteredProducts.map((item) => (
+                                <DropdownItem
+                                  key={item.id}
+                                  onClick={() => handleProductSelect(product.id, item.name)}
+                                >
+                                  {item.name}
+                                </DropdownItem>
+                              ))
+                            ) : (
+                              <DropdownItem>Товары не найдены</DropdownItem>
                             )}
-                          </DropdownMenu>
+                          </DropdownContent>
+                          
+                          <DropdownFooter>
+                            <ShowAllLink onClick={() => console.log('Показать все')}>
+                              Показать все
+                            </ShowAllLink>
+                          </DropdownFooter>
+                        </DropdownMenu>
                         </Portal>
                       )}
                     </AnimatePresence>
@@ -392,7 +399,13 @@ const DropdownMenu = styled(motion.div)`
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   max-height: 300px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const DropdownContent = styled.div`
   overflow-y: auto;
+  flex-grow: 1;
 `;
 
 const DropdownItem = styled.div`
@@ -405,10 +418,33 @@ const DropdownItem = styled.div`
   }
 `;
 
+const DropdownFooter = styled.div`
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(209, 213, 219, 1);
+`;
+
+const Divider = styled.div`
+  height: 1px;
+  background-color: rgba(209, 213, 219, 1);
+  margin: 2px 0;
+`;
+
 const DropdownEmpty = styled.div`
   padding: 8px 12px;
   font-size: 14px;
   color: #718096;
+`;
+
+const ShowAllLink = styled.div`
+  font-size: 15px;
+  color: rgba(0, 125, 136, 1);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 2px;
 `;
 
 const DeleteButton = styled.svg`
