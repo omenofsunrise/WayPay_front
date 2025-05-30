@@ -53,7 +53,7 @@ const TableContainer = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   margin-top: 16px;
-  height: 180px;
+  height: 220px;
   overflow: auto;
   position: relative;
   background-color: white;

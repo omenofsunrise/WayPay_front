@@ -26,15 +26,6 @@ interface EmptyStarIconProps {
   isSelected?: boolean;
 }
 
-interface Credit {
-  id: number;
-  creditDate: Date;
-  clientFullName: string;
-  clientPhone: string;
-  totalAmount: number;
-  isFavourite: boolean;
-}
-
 const CreditPage = () => {
   const [id, setId] = useState('');
   const [contractNumber, setContractNumber] = useState('');

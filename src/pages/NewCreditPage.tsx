@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { useState } from 'react';
+import { useEffect, useState, type ChangeEvent, useCallback } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import PageLayout from '../components/ui/Layouts/PageLayout';
@@ -12,13 +12,13 @@ import EntitySelectContainer from '../components/ui/Layouts/EntitySelectContaine
 import ClientSelectModal from '../components/modal/ClientSelectModal';
 import InvestorSelectModal from '../components/modal/InvestorSelectModal';
 import view from '../assets/ui/credits/newCredit/view.svg';
-import CustomTable from '../components/ui/tables/CustomTable';
 import ProductsTable from '../components/ui/tables/ProductTable';
 import PaymentScheduleTable, { type PaymentScheduleItem } from '../components/ui/tables/PaymentScheduleTable';
 import CustomInput from '../components/ui/fields/CustomInput';
 import ClientModal from '../components/modal/ClientModal';
 import InvestorModal from '../components/modal/InvestorModal';
 import useClient from '../api/hooks/useClient';
+import CustomSelect from '../components/ui/fields/CustomSelect';
 
 interface Client {
   id: number;
@@ -70,6 +70,7 @@ const NewCreditPage = () => {
   const [isViewClientModalOpen, setIsViewClientModalOpen] = useState(false);
   const [isViewGuarantorModalOpen, setIsViewGuarantorModalOpen] = useState(false);
   const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
+  
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([
     {
       id: 1,
@@ -108,6 +109,71 @@ const NewCreditPage = () => {
     }
   ]);
   const { getClientById } = useClient();
+
+  const formatAmount = useCallback((value: number): string => {
+    return value.toLocaleString('ru-RU') + '₽';
+  }, []);
+
+  const parseAmount = useCallback((formatted: string): number => {
+    return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
+  }, []);
+
+  // Обработка изменения процента
+  const handlePercentChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // Разрешаем только цифры и пустую строку
+    if (value === '' || /^\d*$/.test(value)) {
+      setInitialPaymentPercent(value);
+      
+      if (value === '') {
+        setInitialPaymentAmount('');
+      } else if (totalSum > 0) {
+        const percent = parseInt(value);
+        if (!isNaN(percent)) {
+          const amount = Math.round(totalSum * percent / 100);
+          setInitialPaymentAmount(formatAmount(amount));
+        }
+      }
+    }
+  }, [totalSum, formatAmount]);
+
+  // Обработка изменения суммы
+  const handleAmountChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    
+    // Если поле очищено
+    if (inputValue === '₽' || inputValue === '') {
+      setInitialPaymentAmount('');
+      setInitialPaymentPercent('');
+      return;
+    }
+    
+    // Парсим числовое значение
+    const numericValue = parseAmount(inputValue);
+    
+    // Форматируем с разделителями тысяч
+    const formattedValue = formatAmount(numericValue);
+    
+    // Устанавливаем отформатированное значение
+    setInitialPaymentAmount(formattedValue);
+    
+    // Рассчитываем процент только если есть общая сумма
+    if (totalSum > 0 && numericValue > 0) {
+      const percent = Math.round((numericValue / totalSum) * 100);
+      setInitialPaymentPercent(percent.toString());
+    } else {
+      setInitialPaymentPercent('');
+    }
+  }, [totalSum, parseAmount, formatAmount]);
+
+  // Сбрасываем значения при изменении общей суммы
+  useEffect(() => {
+    if (totalSum === 0) {
+      setInitialPaymentAmount('');
+      setInitialPaymentPercent('');
+    }
+  }, [totalSum]);
 
   const handleSelectClient = (client: Client) => {
     if (modalType === 'client') {
@@ -235,63 +301,64 @@ const NewCreditPage = () => {
         </TotalSumContainer>
 
         <ModalInfoTitle>График выплат</ModalInfoTitle>
-      <PaymentScheduleContainer>
-        <PaymentScheduleInputs>
-          <InputGroup>
-            <InputLabel>Первоначальный взнос</InputLabel>
-            <InputRow>
-              <CustomInput 
-                inputType="number" 
-                placeholder="%" 
-                value={initialPaymentPercent}
-                onChange={(e) => setInitialPaymentPercent(e.target.value)}
-              />
-              <CustomInput 
-                inputType="rubles"
-                placeholder="Сумма" 
-                value={initialPaymentAmount}
-                onChange={(e) => setInitialPaymentAmount(e.target.value)}
-              />
-            </InputRow>
-          </InputGroup>
-          <InputGroup>
-            <InputRow style={{ marginBottom: '8px' }}>
-              <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
-              <InputLabel1 style={{ flex: 1 }}>Уплата до</InputLabel1>
-            </InputRow>
-            <InputRow>
-              <CustomInput 
-                inputType="number"
-                placeholder="Месяцев" 
-                value={months}
-                onChange={(e) => setMonths(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <CustomInput 
-                inputType="number" 
-                placeholder="Уплата до" 
-                value={paymentDue}
-                onChange={(e) => setPaymentDue(e.target.value)}
-                style={{ flex: 1 }}
-              />
-            </InputRow>
-          </InputGroup>
-          <InputGroup>
-            <ButtonWrapper>
-              <GrayButton onClick={() => navigate(-1)}>
-                Отменить
-              </GrayButton>
-              <DarkCyanButton 
-                style={{ marginRight: 'auto' }}
-                disabled={!client || !contractDate || !investor}
-              >
-                Создать договор
-              </DarkCyanButton>
-            </ButtonWrapper>
-          </InputGroup>
-        </PaymentScheduleInputs>
-        <PaymentScheduleTable data={paymentSchedule} />
-      </PaymentScheduleContainer>
+        <PaymentScheduleContainer>
+          <PaymentScheduleInputs>
+            <InputGroup>
+              <InputLabel>Первоначальный взнос</InputLabel>
+              <InputRow>
+                <CustomInput 
+                  inputType="number" 
+                  placeholder="%" 
+                  value={initialPaymentPercent}
+                  onChange={handlePercentChange}
+                  max={100}
+                />
+                <CustomInput 
+                  inputType="rubles"
+                  placeholder="Сумма" 
+                  value={initialPaymentAmount}
+                  onChange={handleAmountChange}
+                  disabled={totalSum <= 0}
+                />
+              </InputRow>
+            </InputGroup>
+            <InputGroup>
+              <InputRow style={{ marginBottom: '8px' }}>
+                <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
+                <InputLabel1 style={{ flex: 1 }}>Уплата до</InputLabel1>
+              </InputRow>
+              <InputRow>
+                <CustomInput 
+                  inputType="number"
+                  placeholder="Месяцев" 
+                  value={months}
+                  onChange={(e) => setMonths(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <CustomSelect
+                  options={Array.from({ length: 31 }, (_, i) => ({
+                    value: String(i + 1),
+                    label: String(i + 1)
+                  }))}
+                />
+              </InputRow>
+            </InputGroup>
+            <InputGroup>
+              <ButtonWrapper>
+                <GrayButton onClick={() => navigate(-1)}>
+                  Отменить
+                </GrayButton>
+                <DarkCyanButton 
+                  style={{ marginRight: 'auto' }}
+                  disabled={!client || !contractDate || !investor}
+                >
+                  Создать договор
+                </DarkCyanButton>
+              </ButtonWrapper>
+            </InputGroup>
+          </PaymentScheduleInputs>
+          <PaymentScheduleTable data={paymentSchedule} />
+        </PaymentScheduleContainer>
       </ContentWrapper>
 
       <ClientSelectModal
@@ -341,7 +408,7 @@ const NewCreditPage = () => {
         mode="view"
         isOpen={isViewInvestorModalOpen}
         onClose={() => setIsViewInvestorModalOpen(false)}
-        onSubmit={async () => false} // Не используется в режиме просмотра
+        onSubmit={async () => false}
         initialData={investor ? {
           id: investor.id,
           nickname: investor.nickname,
@@ -350,7 +417,7 @@ const NewCreditPage = () => {
           investorPie: investor.investorPie,
           investmentAmount: investor.investmentAmount,
           balance: investor.balance,
-          isCompany: false // Добавьте реальное значение, если оно есть
+          isCompany: false
         } : undefined}
       />
     </PageLayout>

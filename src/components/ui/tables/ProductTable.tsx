@@ -95,7 +95,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
         };
         
         if (['price', 'quantity', 'markup'].includes(field)) {
-          updatedProduct.totalPrice = updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100);
+          updatedProduct.totalPrice = roundTo50(updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100));
         }
         
         return updatedProduct;
@@ -116,6 +116,10 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
         addNewRow();
       }
     }
+  };
+
+  const roundTo50 = (value: number): number => {
+    return Math.round(value / 50) * 50;
   };
 
   const handleProductSelect = (id: number, productName: string) => {
