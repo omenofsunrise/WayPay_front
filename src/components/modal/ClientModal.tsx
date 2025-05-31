@@ -15,6 +15,7 @@ interface Client {
   doc?: string;
   birthdate?: string | Date;
   docIssueDate?: string | Date;
+  docIssueYear: number
 }
 
 type ClientModalProps = {
@@ -30,7 +31,8 @@ const emptyClient: Omit<Client, 'id'> = {
   phone: '',
   doc: '',
   birthdate: null,
-  docIssueDate: ''
+  docIssueDate: '',
+  docIssueYear: 0
 };
 
 const validateDate = (dateStr: string, minAge: number, maxAge: number, isRequired: boolean): { isValid: boolean; error?: string; date?: Date } => {
@@ -100,7 +102,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     phone: '',
     doc: '',
     birthdate: '',
-    docIssueDate: ''
+    docIssueDate: '',
+    docIssueYear: 0
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Client, 'id'>>(
@@ -109,7 +112,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
       phone: initialData?.phone || '',
       doc: initialData?.doc || '',
       birthdate: initialData?.birthdate || '',
-      docIssueDate: initialData?.docIssueDate || ''
+      docIssueDate: initialData?.docIssueDate || '',
+      docIssueYear: initialData?.docIssueYear || 0
     }
   );
 
@@ -183,7 +187,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
           phone: initialData?.phone || '',
           doc: initialData?.doc || '',
           birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
-          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : ''
+          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : '',
+          docIssueYear: initialData?.docIssueYear ? initialData.docIssueYear : 0
         }
       );
       setPassportEditData({
@@ -325,7 +330,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     const submitData = {
       fullName: formData.fullName,
       phone: formData.phone,
-      birthdate: formattedBirthdate
+      birthdate: formattedBirthdate,
+      docIssueYear: formData.docIssueYear
     };
 
     const success = await onSubmit(submitData);
@@ -568,7 +574,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   name="docIssueDate"
                   inputType="date"
                   placeholder="дд.мм.гггг"
-                  value={formData.docIssueDate.toString()}
+                  value={formData.docIssueYear}
                   onChange={handleInputChange}
                   disabled={mode === 'view' || (mode === 'edit' && !isEditingPassport)}
                   hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}

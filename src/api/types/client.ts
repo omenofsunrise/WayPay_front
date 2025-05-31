@@ -6,7 +6,8 @@ export interface Client {
     phone: string,
     doc: string,
     birthdate: Date,
-    docIssueDate: Date
+    docIssueDate: Date,
+    docIssueYear: number
 }
 
 export interface ClientParams {
@@ -23,6 +24,7 @@ export interface ClientForm {
   doc: string;
   birthdate: string; // Для UI - строка в формате "dd.mm.yyyy"
   docIssueDate: string; // Для UI - строка в формате "dd.mm.yyyy"
+  docIssueYear: number
 }
 
 export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {

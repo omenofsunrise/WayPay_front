@@ -32,6 +32,7 @@ interface Client {
   doc?: string;
   birthdate?: string | Date;
   docIssueDate?: string | Date;
+  docIssueYear?: number; 
 }
 
 interface Investor {
@@ -479,7 +480,8 @@ const NewCreditPage = () => {
           phone: client.phone || '',
           doc: client.doc || '',
           birthdate: client.birthdate instanceof Date ? client.birthdate.toISOString() : client.birthdate,
-          docIssueDate: client.docIssueDate instanceof Date ? client.docIssueDate.toISOString() : client.docIssueDate
+          docIssueDate: client.docIssueDate instanceof Date ? client.docIssueDate.toISOString() : client.docIssueDate,
+          docIssueYear: client.docIssueYear
         } : undefined}
       />
 
@@ -494,7 +496,8 @@ const NewCreditPage = () => {
           phone: guarantor.phone || '',
           doc: guarantor.doc || '',
           birthdate: guarantor.birthdate instanceof Date ? guarantor.birthdate.toISOString() : guarantor.birthdate,
-          docIssueDate: guarantor.docIssueDate instanceof Date ? guarantor.docIssueDate.toISOString() : guarantor.docIssueDate
+          docIssueDate: guarantor.docIssueDate instanceof Date ? guarantor.docIssueDate.toISOString() : guarantor.docIssueDate,
+          docIssueYear: guarantor.docIssueYear
         } : undefined}
       />
 
