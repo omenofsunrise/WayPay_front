@@ -42,7 +42,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   sortConfig,
   onRowClick,
   selectedRow: externalSelectedRow,
-  fixedHeight // New prop
+  fixedHeight
 }) => {
   const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{

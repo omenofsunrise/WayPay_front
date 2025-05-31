@@ -20,7 +20,7 @@ const ClientSelectModal = ({
   isOpen, 
   onClose, 
   onSubmit, 
-  width = "800px",
+  width = "832px",
   title,
 }: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
@@ -135,7 +135,7 @@ const ClientSelectModal = ({
       <ModalContent>
         <FilterContainer>
           <CustomInput 
-            style={{ maxWidth: '900px' }}
+          style={{ maxWidth: "none" }}
             inputType="fullname"
             placeholder="Поиск по ФИО"
             value={nameFilter}
