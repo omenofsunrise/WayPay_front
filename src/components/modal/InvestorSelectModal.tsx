@@ -49,11 +49,8 @@ const InvestorSelectModal = ({
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
-    1: 'nickname',
-    2: 'fullName',
-    3: 'phoneNumber',
-    5: 'investmentAmount',
-    6: 'balance'
+    3: 'pie',
+    4: 'balance'
   };
   
   const { 
@@ -67,7 +64,7 @@ const InvestorSelectModal = ({
     const params: any = {
       page: currentPage,
       pageSize,
-      name: nameFilter || undefined
+      search: nameFilter || undefined
     };
 
     if (sortConfig.key !== null) {
@@ -133,10 +130,8 @@ const InvestorSelectModal = ({
   const tableData = investorsData?.items?.map(investor => [
     investor.id.toString(),
     investor.nickname,
-    investor.fullName,
     investor.phoneNumber,
     investor.investorPie.toString() + "%",
-    formatMoney(investor.investmentAmount.toString()),
     formatMoney(investor.balance.toString()),
   ]) || [];
 
@@ -155,9 +150,9 @@ const InvestorSelectModal = ({
       <ModalContent>
         <FilterContainer>
           <CustomInput 
-            style={{ maxWidth: '900px' }}
+            style={{ maxWidth: "none" }}
             inputType="fullname"
-            placeholder="Поиск по никнейму или ФИО"
+            placeholder="Поиск по никнейму"
             value={nameFilter}
             onChange={(e) => handleFilterChange(e.target.value)}
           />
@@ -172,11 +167,9 @@ const InvestorSelectModal = ({
               <CustomTable 
                 columns={[
                   { name: "ID", isSortable: true, align: "left" },
-                  { name: "Никнейм", isSortable: true, align: "left" },
-                  { name: "ФИО", isSortable: true, align: "left" },
+                  { name: "Никнейм", align: "left" },
                   { name: "Телефон", align: "left" },
-                  { name: "Доля", align: "left" },
-                  { name: "Инвестиции", isSortable: true, align: "right" },
+                  { name: "Доля", align: "left", isSortable: true },
                   { name: "Касса", isSortable: true, align: "right" },
                 ]} 
                 data={tableData}

@@ -381,22 +381,24 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputContainer>
           </InputRow>
           
-          <InputRow>
-            <InputLabel>{formData.isCompany ? 'Владелец:' : 'ФИО:'}</InputLabel>
-            <InputContainer>
-              <CustomInput
-                name="fullName"
-                inputType="text"
-                placeholder= "ФИО"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.fullName && validationErrors.fullName}
-                errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
-              />
-            </InputContainer>
-          </InputRow>
-          
+          {mode !== 'view' && (
+            <InputRow>
+              <InputLabel>{formData.isCompany ? 'Владелец:' : 'ФИО:'}</InputLabel>
+              <InputContainer>
+                <CustomInput
+                  name="fullName"
+                  inputType="text"
+                  placeholder= "ФИО"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  disabled={true}
+                  hasError={touchedFields.fullName && validationErrors.fullName}
+                  errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
+                />
+              </InputContainer>
+            </InputRow>
+          )}
+
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
             <InputContainer>
@@ -423,7 +425,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
                 placeholder="0-100"
                 value={formData.investorPie.toString()}
                 onChange={handleNumberChange}
-                disabled={mode !== 'create'} // Отключаем для редактирования и просмотра
+                disabled={mode !== 'create'}
                 hasError={touchedFields.investorPie && validationErrors.investorPie}
                 errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
               />
@@ -441,6 +443,20 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
                   onChange={handleInputChange}
                   hasError={touchedFields.investmentAmount && validationErrors.investmentAmount}
                   errorMessage={touchedFields.investmentAmount ? errorMessages.investmentAmount : undefined}
+                />
+              </InputContainer>
+            </InputRow>
+          )}
+
+          {mode === 'view' && (
+            <InputRow>
+              <InputLabel>Баланс (касса):</InputLabel>
+              <InputContainer>
+                <CustomInput
+                  name="balance"
+                  inputType="rubles"
+                  value={formatMoney(formData.balance.toString())}
+                  disabled={true}
                 />
               </InputContainer>
             </InputRow>

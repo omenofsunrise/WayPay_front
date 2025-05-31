@@ -382,16 +382,6 @@ const CreditPage = () => {
         id={viewingCreditId || 0}
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        creditData={
-          viewingCreditId
-            ? {
-                creditDate: formatDate(creditsData?.items.find(c => c.id === viewingCreditId)?.creditDate),
-                investorName: creditsData?.items.find(c => c.id === viewingCreditId)?.investorNickname,
-                clientName: creditsData?.items.find(c => c.id === viewingCreditId)?.clientFullName,
-                clientPhone: creditsData?.items.find(c => c.id === viewingCreditId)?.clientPhone,
-              }
-            : undefined
-        }
       />
     </PageLayout>
   );
