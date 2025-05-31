@@ -49,7 +49,7 @@ const InvestorSelectModal = ({
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
-    3: 'pie',
+    3: 'investor_pie',
     4: 'balance'
   };
   
