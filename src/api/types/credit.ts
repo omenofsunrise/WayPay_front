@@ -12,6 +12,8 @@ export interface Credit {
     clientFullName: string;
     clientPhone: string;
     investorNickname: string;
+    guarantorId: number;
+    firstPayment: number;
 }
 
 export interface CreateCreditRequest {

@@ -1,4 +1,3 @@
-// hooks/useCredit.ts
 import { useState, useCallback } from 'react';
 import creditService from '../services/creditService';
 import type { Credit, CreditParams, CreateCreditRequest } from '../types/credit';

@@ -9,27 +9,62 @@ import AddButtonImage from '../../assets/ui/buttons/AddButton.svg';
 import CustomTable from '../ui/tables/CustomTable';
 import useNotes from '../../api/hooks/useNote';
 import { formatDate } from '../../utils/dateFormatter';
+import useCredit from '../../api/hooks/useCredit';
+import useClient from '../../api/hooks/useClient';
+import type { Credit } from '../../api/types/credit';
+import type { Client } from '../../api/types/client';
+import { formatMoney } from '../../utils/formatPrice';
 
 interface ViewCreditModalProps {
-  id: string | number;
+  id: number;
   isOpen: boolean;
   onClose: () => void;
+  creditData?: {
+    creditDate: string;
+    investorName: string;
+    clientName: string;
+    clientPhone: string;
+  };
 }
 
 const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   id,
   isOpen,
-  onClose,
+  onClose
 }) => {
-  const { notes, isLoading, error, getNotes, createNote, deleteNote } = useNotes();
+  const { notes, isLoading: isNotesLoading, error: notesError, getNotes, createNote, deleteNote } = useNotes();
+  const { getCredits, isLoading: isCreditLoading, error: creditError } = useCredit();
+  const { getClientById } = useClient();
+  const [creditData, setCreditData] = useState<Credit | null>(null);
+  const [guarantorData, setGuarantorData] = useState<Client | null>(null);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && id) {
+      const fetchData = async () => {
+        try {
+          // Fetch credit data
+          const creditResult = await getCredits({ creditId: id, pageSize: 1 });
+          if (creditResult?.items?.length) {
+            const credit = creditResult.items[0];
+            setCreditData(credit);
+            
+            // Fetch guarantor data if exists
+            if (credit.guarantorId) {
+              const guarantor = await getClientById(credit.guarantorId);
+              setGuarantorData(guarantor);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        }
+      };
+
+      fetchData();
       getNotes(Number(id));
     }
-  }, [isOpen, id, getNotes]);
+  }, [isOpen, id, getNotes, getCredits, getClientById]);
 
   const notesColumns = [
     { name: 'Дата' },
@@ -86,71 +121,89 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalWrapper>
             <CloseButton onClick={onClose}>&times;</CloseButton>
-            <TitleField style={{ marginTop: "0" }}>
-              <CustomTitle>Договор №{id}</CustomTitle>
+            <TitleField>
+              <CustomTitle style={{ marginTop: 0 }}>Договор №{id}</CustomTitle>
             </TitleField>
             <HorizontalContainer>
-                <VerticalContainer>
-                    <ModalInfoTitle>Общая информация</ModalInfoTitle>
-                    <HorizontalContainer>
-                        <InputContainer style={{ maxWidth: "189px", paddingRight: "20px"}}>
-                            <InputTitle>Дата</InputTitle>
-                            <CustomInput />
-                        </InputContainer>
-                        <InputContainer style={{ width: "260px"}}>
-                            <InputTitle>Инвестор</InputTitle>
-                            <CustomInput />
-                        </InputContainer>
-                        <ViewButtonContainer>
-                            <ViewButton />
-                        </ViewButtonContainer>
-                    </HorizontalContainer>
-                    <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
-                    <HorizontalContainer>
-                        <InputContainer style={{ width: "260px"}}>
-                            <InputTitle>Покупатель</InputTitle>
-                            <CustomInput />
-                        </InputContainer>
-                        <ViewButtonContainer>
-                            <ViewButton />
-                        </ViewButtonContainer>
-                        <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
-                            <InputTitle>Первоначальный взнос, руб</InputTitle>
-                            <CustomInput />
-                        </InputContainer>
-                    </HorizontalContainer>
-                    <HorizontalContainer style={{ marginTop: "10px"}}>
-                        <InputContainer style={{ width: "260px"}}>
-                            <InputTitle>Поручитель</InputTitle>
-                            <CustomInput />
-                        </InputContainer>
-                        <ViewButtonContainer>
-                            <ViewButton />
-                        </ViewButtonContainer>
-                        <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
-                            <InputTitle>Срок, месяцев</InputTitle>
-                            <CustomInput />
-                        </InputContainer>
-                    </HorizontalContainer>
-                </VerticalContainer>
-                <VerticalContainer style={{ marginLeft: "30px", width: "562px" }}>
-                    <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
-                        <ModalInfoTitle>Заметки</ModalInfoTitle>
-                        <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
-                    </HorizontalContainer>
-                    <TableContainer style={{ width: "562px", maxHeight: "260px" }}>
-                      {isLoading ? (
-                        <LoadingText>Загрузка заметок...</LoadingText>
-                      ) : error ? (
-                        <ErrorText>{error}</ErrorText>
-                      ) : (
-                        <Table 
-                          columns={notesColumns} 
-                          data={formatNotesData()}
-                        />
-                      )}
-                    </TableContainer>
-                </VerticalContainer>
+              <VerticalContainer>
+                <ModalInfoTitle>Общая информация</ModalInfoTitle>
+                <HorizontalContainer>
+                  <InputContainer style={{ maxWidth: "189px", paddingRight: "20px"}}>
+                    <InputTitle>Дата</InputTitle>
+                    <CustomInput 
+                      value={creditData ? formatDate(creditData.creditDate) : ''}
+                      readOnly
+                    />
+                  </InputContainer>
+                  <InputContainer style={{ width: "260px"}}>
+                    <InputTitle>Инвестор</InputTitle>
+                    <CustomInput 
+                      value={creditData?.investorNickname || ''}
+                      readOnly
+                    />
+                  </InputContainer>
+                  <ViewButtonContainer>
+                    <ViewButton />
+                  </ViewButtonContainer>
+                </HorizontalContainer>
+                <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
+                <HorizontalContainer>
+                  <InputContainer style={{ width: "260px"}}>
+                    <InputTitle>Покупатель</InputTitle>
+                    <CustomInput 
+                      value={creditData?.clientFullName || ''}
+                      readOnly
+                    />
+                  </InputContainer>
+                  <ViewButtonContainer>
+                    <ViewButton />
+                  </ViewButtonContainer>
+                  <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
+                    <InputTitle>Первоначальный взнос, руб</InputTitle>
+                    <CustomInput 
+                      value={creditData ? `${formatMoney(creditData.firstPayment.toString())}` : ''}
+                      readOnly
+                    />
+                  </InputContainer>
+                </HorizontalContainer>
+                <HorizontalContainer style={{ marginTop: "10px"}}>
+                  <InputContainer style={{ width: "260px"}}>
+                    <InputTitle>Поручитель</InputTitle>
+                    <CustomInput 
+                      value={guarantorData?.fullName || 'Без поручителя'}
+                      readOnly
+                    />
+                  </InputContainer>
+                  <ViewButtonContainer>
+                    <ViewButton />
+                  </ViewButtonContainer>
+                  <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
+                    <InputTitle>Срок, месяцев</InputTitle>
+                    <CustomInput 
+                      value={creditData?.termMonths?.toString() || ''}
+                      readOnly
+                    />
+                  </InputContainer>
+                </HorizontalContainer>
+              </VerticalContainer>
+              <VerticalContainer style={{ marginLeft: "30px", width: "562px" }}>
+                <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
+                  <ModalInfoTitle>Заметки</ModalInfoTitle>
+                  <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
+                </HorizontalContainer>
+                <TableContainer style={{ width: "562px", maxHeight: "260px" }}>
+                  {isNotesLoading ? (
+                    <LoadingText>Загрузка заметок...</LoadingText>
+                  ) : notesError ? (
+                    <ErrorText>{notesError}</ErrorText>
+                  ) : (
+                    <Table 
+                      columns={notesColumns} 
+                      data={formatNotesData()}
+                    />
+                  )}
+                </TableContainer>
+              </VerticalContainer>
             </HorizontalContainer>
           </ModalWrapper>
         </ModalContent>
@@ -213,7 +266,7 @@ const ModalContent = styled.div`
   background: white;
   padding: 24px;
   border-radius: 8px;
-  width: 1232px;
+  width: auto;
   overflow-y: auto;
 `;
 

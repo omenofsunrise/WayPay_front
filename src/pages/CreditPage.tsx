@@ -22,6 +22,7 @@ import { formatDate } from '../utils/dateFormatter';
 import type { PaymentData } from '../components/modal/NewPaymentModal';
 import NewPaymentModal from '../components/modal/NewPaymentModal';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
+import { formatMoney } from '../utils/formatPrice';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -182,7 +183,7 @@ const CreditPage = () => {
           'Дата договора': credit.creditDate.toLocaleDateString(),
           'ФИО покупателя': credit.clientFullName,
           'Телефон': credit.clientPhone || 'Нет данных',
-          'Начислено': `${credit.totalAmount} ₽`,
+          'Начислено': `${formatMoney(credit.totalAmount.toString())}`,
           'Уплачено': ` ₽`,
           'Остаток': ` ₽`,
           'Долг': ` ₽`
@@ -231,7 +232,7 @@ const CreditPage = () => {
       formatDate(credit.creditDate),
       credit.clientFullName,
       credit.clientPhone || 'Нет данных',
-      `${credit.totalAmount} ₽`,
+      `${formatMoney(credit.totalAmount.toString())}`,
       ` ₽`,
       ` ₽`,
       ` ₽`
@@ -381,9 +382,17 @@ const CreditPage = () => {
         id={viewingCreditId || 0}
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-      >
-        {viewingCreditId}
-      </ViewCreditModal>
+        creditData={
+          viewingCreditId
+            ? {
+                creditDate: formatDate(creditsData?.items.find(c => c.id === viewingCreditId)?.creditDate),
+                investorName: creditsData?.items.find(c => c.id === viewingCreditId)?.investorNickname,
+                clientName: creditsData?.items.find(c => c.id === viewingCreditId)?.clientFullName,
+                clientPhone: creditsData?.items.find(c => c.id === viewingCreditId)?.clientPhone,
+              }
+            : undefined
+        }
+      />
     </PageLayout>
   );
 };
