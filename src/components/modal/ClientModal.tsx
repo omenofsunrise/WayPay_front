@@ -299,52 +299,48 @@ const ClientModal: React.FC<ClientModalProps> = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  setTouchedFields({
+    fullName: true,
+    phone: true,
+    birthdate: true,
+    doc: true,
+    docIssueDate: true
+  });
+
+  const isValid = !Object.values(validationErrors).some(Boolean);
+  if (!isValid) {
+    return;
+  }
+
+  setIsSubmitting(true);
+  setApiError('');
+
+  try {
+    const formattedBirthdate = typeof formData.birthdate === 'string' 
+      ? formData.birthdate 
+      : formatDate(formData.birthdate.toString());
+
+    const submitData = {
+      fullName: formData.fullName,
+      phone: formData.phone,
+      birthdate: formattedBirthdate
+    };
+
+    const success = await onSubmit(submitData);
     
-    setTouchedFields({
-      fullName: true,
-      phone: true,
-      birthdate: true,
-      doc: true,
-      docIssueDate: true
-    });
-
-    const isValid = !Object.values(validationErrors).some(Boolean);
-    if (!isValid) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setApiError('');
-
-    try {
-      const submitData = mode === 'create' 
-        ? {
-            fullName: formData.fullName,
-            phone: formData.phone,
-            birthdate: formData.birthdate,
-            doc: formData.doc,
-            docIssueDate: formData.docIssueDate
-          }
-        : {
-            fullName: formData.fullName,
-            phone: formData.phone,
-            birthdate: formData.birthdate
-          };
-
-      const success = await onSubmit(submitData);
-      
-      if (success) {
-        onClose();
-      } else {
-        setIsSubmitting(false);
-      }
-    } catch (error: any) {
-      console.error('Ошибка при сохранении клиента:', error);
-      setApiError(error.message || 'Произошла ошибка при сохранении клиента');
+    if (success) {
+      onClose();
+    } else {
       setIsSubmitting(false);
     }
-  };
+  } catch (error: any) {
+    console.error('Ошибка при сохранении клиента:', error);
+    setApiError(error.message || 'Произошла ошибка при сохранении клиента');
+    setIsSubmitting(false);
+  }
+};
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
