@@ -21,6 +21,7 @@ import creditService from '../api/services/creditService';
 import { formatDate } from '../utils/dateFormatter';
 import type { PaymentData } from '../components/modal/NewPaymentModal';
 import NewPaymentModal from '../components/modal/NewPaymentModal';
+import ViewCreditModal from '../components/modal/ViewCreditModal';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -44,6 +45,8 @@ const CreditPage = () => {
   const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'creditDate',
@@ -195,9 +198,9 @@ const CreditPage = () => {
   };
 
   const formatCreditData = (credits: Credit[] | undefined) => {
-  if (!credits) return [];
-  
-  return credits.map(credit => [
+    if (!credits) return [];
+    
+    return credits.map(credit => [
       credit.isFavourite ? (
         <StarIcon 
           key={`star-${credit.id}`}
@@ -237,6 +240,8 @@ const CreditPage = () => {
 
   const handleRowDoubleClick = (rowData: any[]) => {
     const [_, id] = rowData;
+    setViewingCreditId(Number(id));
+    setIsViewModalOpen(true);
   };
 
   return (
@@ -372,6 +377,13 @@ const CreditPage = () => {
         clientName={selectedCredit?.clientFullName}
       />
 
+      <ViewCreditModal
+        id={viewingCreditId || 0}
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+      >
+        {viewingCreditId}
+      </ViewCreditModal>
     </PageLayout>
   );
 };

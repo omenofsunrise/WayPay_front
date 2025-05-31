@@ -333,7 +333,6 @@ const StyledTable = styled.table`
     border-right: none;
   }
 
-  /* Убираем нижнюю границу у последней строки */
   tbody tr:last-child {
     border-bottom: none;
   }

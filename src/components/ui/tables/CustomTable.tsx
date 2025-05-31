@@ -240,20 +240,35 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   );
 };
 
-const TableContainer = styled(motion.div)<{ $fixedHeight?: string }>`
-  border: 1px solid rgba(209, 213, 219, 1);
-  border-radius: 20px;
-  overflow: hidden;
-  color: rgba(0, 0, 0, 1);
+const TableContainer = styled.div`
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: auto;
   position: relative;
-  ${({ $fixedHeight }) => $fixedHeight && `height: ${$fixedHeight};`}
+  background-color: white;
+  color: black;
 `;
 
-const StyledTable = styled.table<{ $fixedHeight?: string }>`
+const StyledTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background-color: rgba(255, 255, 255, 1);
-  ${({ $fixedHeight }) => $fixedHeight && `display: block;`}
+  background-color: white;
+  box-sizing: border-box;
+  
+  th, td {
+    box-sizing: border-box;
+    position: relative;
+    border-right: 0.5px solid rgba(209, 213, 219, 1);
+  }
+
+  th:last-child,
+  td:last-child {
+    border-right: none;
+  }
+
+  tbody tr:last-child {
+    border-bottom: none;
+  }
 `;
 
 const ContextMenuWrapper = styled(motion.div)`
@@ -263,16 +278,6 @@ const ContextMenuWrapper = styled(motion.div)`
 const TableHeader = styled.thead`
   text-align: center;
   position: relative;
-
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 1%;
-    width: 98%;
-    height: 1px;
-    background: rgba(209, 213, 219, 1);
-  }
 `;
 
 const TableBody = styled.tbody<{ $fixedHeight?: string }>`
