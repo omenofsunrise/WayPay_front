@@ -150,6 +150,18 @@ const NewCreditPage = () => {
     }
   };
 
+  const handleContractDateChange = useCallback((date: string | null) => {
+    setContractDate(date);
+    
+    if (date) {
+      const contractDateObj = new Date(date);
+      const nextDay = new Date(contractDateObj);
+      nextDay.setDate(nextDay.getDate() + 1);
+      
+      setPaymentDue(nextDay.getDate().toString());
+    }
+  }, []);
+
   const generateSchedulePreview = useCallback(async () => {
     if (!contractDate || !months || !paymentDue || totalSum <= 0) return;
 
@@ -316,7 +328,7 @@ const NewCreditPage = () => {
             <DateInputWrapper>
               <DateInput 
                 value={contractDate} 
-                onChange={(date) => setContractDate(date)}
+                onChange={handleContractDateChange}
               />
             </DateInputWrapper>
           </FieldGroup>

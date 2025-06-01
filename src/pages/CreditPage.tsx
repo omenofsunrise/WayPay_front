@@ -19,7 +19,7 @@ import type { Credit } from '../api/types/credit';
 import useExport from '../api/hooks/useExport';
 import creditService from '../api/services/creditService';
 import { formatDate } from '../utils/dateFormatter';
-import type { PaymentData } from '../components/modal/NewPaymentModal';
+import type { NewPaymentModalProps } from '../components/modal/NewPaymentModal';
 import NewPaymentModal from '../components/modal/NewPaymentModal';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { formatMoney } from '../utils/formatPrice';
@@ -127,13 +127,13 @@ const CreditPage = () => {
     }
   };
 
-  const handleSavePayment = async (paymentData: PaymentData) => {
+  const handleSavePayment = async () => {
     try {
       if (!selectedCredit) return;
       
       // Реализуйте вызов API для сохранения платежа
       // await creditService.addPayment(selectedCredit.id, paymentData);
-      console.log('Сохранение платежа:', paymentData);
+      console.log('Сохранение платежа:', );
       
       // Обновляем данные после сохранения
       await loadCredits();
@@ -373,9 +373,12 @@ const CreditPage = () => {
       <NewPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        onSave={handleSavePayment}
+        onSubmit={handleSavePayment}
         creditId={selectedCredit?.id}
         clientName={selectedCredit?.clientFullName}
+        investorName={selectedCredit?.investorNickname}
+        clientPhone={selectedCredit?.clientPhone}
+        currentDebt= {1000}
       />
 
       <ViewCreditModal
