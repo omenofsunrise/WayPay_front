@@ -232,10 +232,10 @@ const CreditPage = () => {
       formatDate(credit.creditDate),
       credit.clientFullName,
       credit.clientPhone || 'Нет данных',
-      `${formatMoney(credit.totalAmount.toString())}`,
-      ` ₽`,
-      ` ₽`,
-      ` ₽`
+      `${formatMoney(credit.accured?.toString() || '')}`,
+      `${formatMoney(credit.payed.toString())}`,
+      `${formatMoney(credit.rest.toString())}`,
+      ``,
     ]);
   };
 

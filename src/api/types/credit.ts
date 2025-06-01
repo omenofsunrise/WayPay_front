@@ -14,6 +14,9 @@ export interface Credit {
     investorNickname: string;
     guarantorId: number;
     firstPayment: number;
+    accured: number;
+    payed: number;
+    rest: number;
 }
 
 export interface CreateCreditRequest {
