@@ -19,7 +19,7 @@ export interface NewPaymentModalProps {
   onSubmit: (paymentData: {
     paymentDate: string;
     principalAmount: number;
-    paymentMethod: string;
+    paymentMethod: 'cash' | 'card';
   }) => void;
 }
 
@@ -33,7 +33,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   onClose,
   onSubmit
 }) => {
-  const [paymentDate, setPaymentDate] = useState<string | null>(null);
+  const [paymentDate, setPaymentDate] = useState<string>('');
   const [principalAmount, setPrincipalAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>();
   const [totalAmount, setTotalAmount] = useState<number>(0);
@@ -73,12 +73,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       principalAmount: totalAmount,
       paymentMethod
     });
-    
-    setPaymentDate(null);
-    setPrincipalAmount('');
-    setPaymentMethod(null);
-    setTotalAmount(0);
-    setRemainingDebt(currentDebt);
   };
 
   const handleCashChange = (checked: boolean) => {

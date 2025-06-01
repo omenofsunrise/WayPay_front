@@ -16,3 +16,10 @@ export interface PaymentParams extends PaginationParams {
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
 }
+
+export interface CreatePaymentRequest {
+    creditId: number;
+    paymentAmount: number;
+    datePayment: string;
+    type: 'cash' | 'card';
+}

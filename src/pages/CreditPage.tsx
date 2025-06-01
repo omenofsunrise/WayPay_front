@@ -23,6 +23,7 @@ import type { NewPaymentModalProps } from '../components/modal/NewPaymentModal';
 import NewPaymentModal from '../components/modal/NewPaymentModal';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { formatMoney } from '../utils/formatPrice';
+import usePayment from '../api/hooks/usePayment';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -48,6 +49,7 @@ const CreditPage = () => {
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
+  const { createPayment } = usePayment();
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'creditDate',
@@ -127,16 +129,25 @@ const CreditPage = () => {
     }
   };
 
-  const handleSavePayment = async () => {
+  const handleSavePayment = async (paymentData: {
+    paymentDate: string;
+    principalAmount: number;
+    paymentMethod: 'cash' | 'card';
+  }) => {
     try {
       if (!selectedCredit) return;
       
-      // Реализуйте вызов API для сохранения платежа
-      // await creditService.addPayment(selectedCredit.id, paymentData);
-      console.log('Сохранение платежа:', );
+      const paymentRequest = {
+        creditId: selectedCredit.id,
+        paymentAmount: paymentData.principalAmount,
+        datePayment: paymentData.paymentDate,
+        type: paymentData.paymentMethod
+      };
       
-      // Обновляем данные после сохранения
+      await createPayment(paymentRequest);
+      
       await loadCredits();
+      setIsPaymentModalOpen(false);
     } catch (error) {
       console.error('Ошибка при сохранении платежа:', error);
     }
@@ -374,11 +385,11 @@ const CreditPage = () => {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onSubmit={handleSavePayment}
-        creditId={selectedCredit?.id}
-        clientName={selectedCredit?.clientFullName}
-        investorName={selectedCredit?.investorNickname}
-        clientPhone={selectedCredit?.clientPhone}
-        currentDebt= {1000}
+        creditId={selectedCredit?.id || 0}
+        clientName={selectedCredit?.clientFullName || ''}
+        investorName={selectedCredit?.investorNickname || ''}
+        clientPhone={selectedCredit?.clientPhone || ''}
+        currentDebt={selectedCredit?.rest || 0}
       />
 
       <ViewCreditModal
