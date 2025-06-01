@@ -31,7 +31,7 @@ const SchedulePage = () => {
         0: 'id',
         1: 'date',
         2: 'payment',
-        3: 'creditId'
+        3: 'date'
     };
     
     const { exportData, isExporting, exportProgress } = useExport<ScheduleDetails>();

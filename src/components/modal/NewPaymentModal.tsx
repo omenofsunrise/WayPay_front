@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import CustomTitle from '../ui/Text/CustomTitle';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
@@ -14,6 +14,7 @@ export interface NewPaymentModalProps {
   clientName: string;
   clientPhone: string;
   currentDebt: number;
+  currentMonthDebt: number;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (paymentData: {
@@ -29,6 +30,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   investorName,
   clientPhone,
   currentDebt,
+  currentMonthDebt,
   isOpen,
   onClose,
   onSubmit
@@ -38,6 +40,12 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>();
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [remainingDebt, setRemainingDebt] = useState<number>(currentDebt);
+  const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
+
+  useEffect(() => {
+    setIsDebtPaid(currentDebt <= 0);
+    setRemainingDebt(currentDebt - totalAmount);
+  }, [currentDebt, totalAmount]);
 
   const formatMoney = (value: number): string => {
     return value.toLocaleString('ru-RU') + '₽';
@@ -53,20 +61,20 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     if (inputValue === '₽' || inputValue === '') {
       setPrincipalAmount('');
       setTotalAmount(0);
-      setRemainingDebt(currentDebt);
       return;
     }
     
     const numericValue = parseAmount(inputValue);
-    const formattedValue = formatMoney(numericValue);
+    // Prevent entering amount greater than remaining debt
+    const validatedValue = Math.min(numericValue, currentDebt);
+    const formattedValue = formatMoney(validatedValue);
     
     setPrincipalAmount(formattedValue);
-    setTotalAmount(numericValue);
-    setRemainingDebt(currentDebt - numericValue);
+    setTotalAmount(validatedValue);
   };
 
   const handleSubmit = () => {
-    if (!paymentDate || totalAmount <= 0 || !paymentMethod) return;
+    if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid) return;
     
     onSubmit({
       paymentDate,
@@ -95,118 +103,132 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>
           </TitleField>
           
-          <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
-          
-          <FormRow>
-            <InputGroup>
-              <InputLabel>№ договора</InputLabel>
-              <CustomInput 
-                value={creditId.toString()}
-                readOnly
-              />
-            </InputGroup>
-            
-            <InputGroup>
-              <InputLabel>Инвестор</InputLabel>
-              <CustomInput 
-                value={investorName}
-                readOnly
-              />
-            </InputGroup>
-          </FormRow>
-          
-          <FormRow>
-            <InputGroup>
-              <InputLabel>Клиент</InputLabel>
-              <CustomInput 
-                value={clientName}
-                readOnly
-              />
-            </InputGroup>
-            
-            <InputGroup>
-              <InputLabel>Телефон</InputLabel>
-              <CustomInput 
-                value={clientPhone}
-                readOnly
-              />
-            </InputGroup>
-          </FormRow>
-          
-          <ModalInfoTitle style={{ marginTop: '30px' }}>Сведения о платеже</ModalInfoTitle>
-          
-          <FormRow>
-            <InputGroup>
-              <InputLabel>Дата платежа</InputLabel>
-              <DateInput 
-                value={paymentDate} 
-                onChange={setPaymentDate}
-              />
-            </InputGroup>
-            
-            <InputGroup>
-              <InputLabel>Основной долг</InputLabel>
-              <CustomInput 
-                inputType="rubles"
-                placeholder="Сумма"
-                value={principalAmount}
-                onChange={handleAmountChange}
-                max={currentDebt}
-              />
-            </InputGroup>
-          </FormRow>
-          
-          <FormRow>
-            <InputGroup>
-              <InputLabel>Итого</InputLabel>
-              <CustomInput 
-                value={formatMoney(totalAmount)}
-                readOnly
-              />
-            </InputGroup>
-            
-            <InputGroup>
-              <InputLabel>Остаток долга</InputLabel>
-              <CustomInput 
-                value={formatMoney(remainingDebt)}
-                readOnly
-              />
-            </InputGroup>
-          </FormRow>
-          
-          <FormRow>
-            <InputGroup>
-              <InputLabel>Способ оплаты</InputLabel>
-              <PaymentMethodContainer>
-                <CheckboxWrapper>
-                  <Checkbox 
-                    checked={paymentMethod === 'cash'} 
-                    onChange={handleCashChange} 
+          {isDebtPaid ? (
+            <DebtPaidMessage>
+              <h3>Договор полностью погашен</h3>
+              <p>По данному договору нет задолженности. Новые платежи не принимаются.</p>
+            </DebtPaidMessage>
+          ) : (
+            <>
+              <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
+              
+              <FormRow>
+                <InputGroup>
+                  <InputLabel>№ договора</InputLabel>
+                  <CustomInput 
+                    value={creditId.toString()}
+                    readOnly
                   />
-                  <PaymentMethodLabel>Наличные</PaymentMethodLabel>
-                </CheckboxWrapper>
+                </InputGroup>
                 
-                <CheckboxWrapper>
-                  <Checkbox 
-                    checked={paymentMethod === 'card'} 
-                    onChange={handleCardChange} 
+                <InputGroup>
+                  <InputLabel>Инвестор</InputLabel>
+                  <CustomInput 
+                    value={investorName}
+                    readOnly
                   />
-                  <PaymentMethodLabel>Карта</PaymentMethodLabel>
-                </CheckboxWrapper>
-              </PaymentMethodContainer>
-            </InputGroup>
-          </FormRow>
+                </InputGroup>
+              </FormRow>
+              
+              <FormRow>
+                <InputGroup>
+                  <InputLabel>Клиент</InputLabel>
+                  <CustomInput 
+                    value={clientName}
+                    readOnly
+                  />
+                </InputGroup>
+                
+                <InputGroup>
+                  <InputLabel>Телефон</InputLabel>
+                  <CustomInput 
+                    value={clientPhone}
+                    readOnly
+                  />
+                </InputGroup>
+              </FormRow>
+              
+              <ModalInfoTitle style={{ marginTop: '30px' }}>Сведения о платеже</ModalInfoTitle>
+              
+              <FormRow>
+                <InputGroup>
+                  <InputLabel>Дата платежа</InputLabel>
+                  <DateInput 
+                    value={paymentDate} 
+                    onChange={setPaymentDate}
+                  />
+                </InputGroup>
+                
+                <InputGroup>
+                  <InputLabel>Сумма платежа</InputLabel>
+                  <CustomInput 
+                    inputType="rubles"
+                    placeholder="Сумма"
+                    value={principalAmount}
+                    onChange={handleAmountChange}
+                    max={currentDebt}
+                  />
+                  {totalAmount > currentDebt && (
+                    <ErrorText>Сумма платежа не может превышать остаток долга</ErrorText>
+                  )}
+                </InputGroup>
+              </FormRow>
+              
+              <FormRow>
+                <InputGroup>
+                  <InputLabel>Текущая задолженность</InputLabel>
+                  <CustomInput 
+                    value={formatMoney(currentMonthDebt)}
+                    readOnly
+                  />
+                </InputGroup>
+                
+                <InputGroup>
+                  <InputLabel>Остаток всего долга</InputLabel>
+                  <CustomInput 
+                    value={formatMoney(Math.max(0, remainingDebt))}
+                    readOnly
+                  />
+                </InputGroup>
+              </FormRow>
+              
+              <FormRow>
+                <InputGroup>
+                  <InputLabel>Способ оплаты</InputLabel>
+                  <PaymentMethodContainer>
+                    <CheckboxWrapper>
+                      <Checkbox 
+                        checked={paymentMethod === 'cash'} 
+                        onChange={handleCashChange} 
+                      />
+                      <PaymentMethodLabel>Наличные</PaymentMethodLabel>
+                    </CheckboxWrapper>
+                    
+                    <CheckboxWrapper>
+                      <Checkbox 
+                        checked={paymentMethod === 'card'} 
+                        onChange={handleCardChange} 
+                      />
+                      <PaymentMethodLabel>Карта</PaymentMethodLabel>
+                    </CheckboxWrapper>
+                  </PaymentMethodContainer>
+                </InputGroup>
+              </FormRow>
+            </>
+          )}
           
           <ButtonContainer>
             <GrayButton onClick={onClose}>
               Отменить
             </GrayButton>
-            <DarkCyanButton 
-              onClick={handleSubmit}
-              disabled={!paymentDate || totalAmount <= 0}
-            >
-              Создать платёж
-            </DarkCyanButton>
+            {!isDebtPaid && (
+              <DarkCyanButton 
+                onClick={handleSubmit}
+                disabled={!paymentDate || totalAmount <= 0 || !paymentMethod || totalAmount > currentDebt}
+              >
+                Создать платёж
+              </DarkCyanButton>
+            )}
           </ButtonContainer>
         </ModalWrapper>
       </ModalContent>
@@ -296,6 +318,30 @@ const PaymentMethodLabel = styled.span`
   font-size: 14px;
   color: #333;
   user-select: none;
+`;
+
+const DebtPaidMessage = styled.div`
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  
+  h3 {
+    color: #28a745;
+    margin-bottom: 10px;
+  }
+  
+  p {
+    color: #6c757d;
+    margin: 0;
+  }
+`;
+
+const ErrorText = styled.span`
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 5px;
 `;
 
 export default NewPaymentModal;

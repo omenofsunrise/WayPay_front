@@ -10,7 +10,7 @@ interface CreditButtonProps {
 }
 
 interface CreditTypesProps {
-    onTabChange: (params: { isFavourite?: boolean; isActive?: boolean; haveDebt?: boolean; }) => void;
+    onTabChange: (params: { isFavourite?: boolean; isActive?: boolean; debt?: boolean; }) => void;
 }
 
 const CreditTypes = ({ onTabChange }: CreditTypesProps) => {
@@ -34,7 +34,7 @@ const CreditTypes = ({ onTabChange }: CreditTypesProps) => {
                 onTabChange({ isActive: false });
                 break;
             case "Должники":
-                onTabChange({ haveDebt: false});
+                onTabChange({ debt: true});
                 break;
             default:
                 onTabChange({});

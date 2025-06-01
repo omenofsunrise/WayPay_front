@@ -17,6 +17,8 @@ export interface Credit {
     accured: number;
     payed: number;
     rest: number;
+    currentMonthDebt: number;
+    debt: number;
 }
 
 export interface CreateCreditRequest {

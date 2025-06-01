@@ -69,7 +69,7 @@ const CreditPage = () => {
       const params = {
           page: currentPage,
           pageSize: itemsPerPage,
-          creditId: id ? Number(id) : undefined,
+          creditId: contractNumber ? Number(contractNumber) : undefined,
           clientFullname: clientFullName || undefined,
           investorNickname: investorName || undefined,
           dateFrom: fromDate ? new Date(fromDate) : undefined,
@@ -246,7 +246,8 @@ const CreditPage = () => {
       `${formatMoney(credit.accured?.toString() || '')}`,
       `${formatMoney(credit.payed.toString())}`,
       `${formatMoney(credit.rest.toString())}`,
-      ``,
+      `${formatMoney(credit.debt.toString())}`,
+      credit.isActive
     ]);
   };
 
@@ -357,6 +358,7 @@ const CreditPage = () => {
               { name: "Уплачено", isSortable: true },
               { name: "Остаток", isSortable: true },
               { name: "Долг", isSortable: true },
+              { name: "isActive", isHidden: true }
             ]} 
             data={formatCreditData(creditsData?.items)}
             onSort={handleSort}
@@ -390,6 +392,7 @@ const CreditPage = () => {
         investorName={selectedCredit?.investorNickname || ''}
         clientPhone={selectedCredit?.clientPhone || ''}
         currentDebt={selectedCredit?.rest || 0}
+        currentMonthDebt={selectedCredit?.currentMonthDebt || 0}
       />
 
       <ViewCreditModal

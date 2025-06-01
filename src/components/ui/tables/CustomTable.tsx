@@ -30,7 +30,7 @@ interface CreditsTableProps {
     direction: 'asc' | 'desc';
   };
   selectedRow?: number;
-  fixedHeight?: string; // New prop for fixed height
+  fixedHeight?: string;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -123,6 +123,18 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     };
   }, [contextMenu]);
 
+  // Check if a row has debt (column index 8)
+  const hasDebt = (row: any[]) => {
+    // Assuming debt is in column 8 and is a string like "100 ₽"
+    const debtCell = row[8];
+    if (typeof debtCell === 'string') {
+      // Extract the numeric value from the string (e.g., "100 ₽" -> 100)
+      const debtValue = parseFloat(debtCell.replace(/[^\d.]/g, ''));
+      return debtValue > 0;
+    }
+    return false;
+  };
+
   return (
     <TableContainer
       ref={tableRef}
@@ -169,41 +181,48 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         </TableHeader>
         <TableBody $fixedHeight={fixedHeight}>
           <AnimatePresence>
-            {data.map((row, rowIndex) => (
-              <TableRow 
-                key={`row-${rowIndex}`}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ 
-                  opacity: 1, 
-                  y: 0,
-                  backgroundColor: rowIndex === selectedRow ? '#007D88' : 'transparent',
-                  color: rowIndex === selectedRow ? 'white' : 'inherit'
-                }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                $isLast={rowIndex === data.length - 1}
-                $isSelected={rowIndex === selectedRow}
-                onClick={() => handleRowClick(rowIndex)}
-                onDoubleClick={() => handleRowDoubleClick(row, rowIndex)}
-                onContextMenu={(e) => handleContextMenu(e, rowIndex)}
-                whileHover={{
-                  backgroundColor: rowIndex === selectedRow ? '#007D88' : '#F3F4F6'
-                }}
-              >
-                {row.map((cell, cellIndex) => (
-                  !columns[cellIndex]?.isHidden && (
-                  <BodyCell 
-                    key={cellIndex}
-                    $align={columns[cellIndex]?.align || 'center'}
-                    $isFirst={cellIndex === 0}
-                    $isLast={cellIndex === row.length - 1}
-                  >
-                    {cell}
-                  </BodyCell>
-                  )
-                ))}
-              </TableRow>
-            ))}
+            {data.map((row, rowIndex) => {
+              const isDebtRow = hasDebt(row);
+              return (
+                <TableRow 
+                  key={`row-${rowIndex}`}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: 0,
+                    backgroundColor: rowIndex === selectedRow ? '#007D88' : 
+                                    isDebtRow ? 'rgba(232, 216, 216, 1)' : 
+                                    row[row.length - 1] === false ? 'rgba(81, 213, 180, 1)' : 'transparent',
+                    color: rowIndex === selectedRow ? 'white' : 'inherit'
+                  }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  $isLast={rowIndex === data.length - 1}
+                  $isSelected={rowIndex === selectedRow}
+                  onClick={() => handleRowClick(rowIndex)}
+                  onDoubleClick={() => handleRowDoubleClick(row, rowIndex)}
+                  onContextMenu={(e) => handleContextMenu(e, rowIndex)}
+                  whileHover={{
+                    backgroundColor: rowIndex === selectedRow ? '#007D88' : 
+                                    isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
+                                    row[row.length - 1] === false ? 'rgba(81, 213, 180, 0.8)' : '#F3F4F6'
+                  }}
+                >
+                  {row.map((cell, cellIndex) => (
+                    !columns[cellIndex]?.isHidden && (
+                    <BodyCell 
+                      key={cellIndex}
+                      $align={columns[cellIndex]?.align || 'center'}
+                      $isFirst={cellIndex === 0}
+                      $isLast={cellIndex === row.length - 1}
+                    >
+                      {cell}
+                    </BodyCell>
+                    )
+                  ))}
+                </TableRow>
+              );
+            })}
           </AnimatePresence>
         </TableBody>
       </StyledTable>
