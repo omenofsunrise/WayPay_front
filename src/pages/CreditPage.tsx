@@ -30,9 +30,7 @@ interface EmptyStarIconProps {
 }
 
 const CreditPage = () => {
-  const [id, setId] = useState('');
   const [contractNumber, setContractNumber] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [investorName, setInvestorName] = useState('');
   const [clientFullName, setClientFullName] = useState('');
@@ -66,7 +64,7 @@ const CreditPage = () => {
   const navigate = useNavigate();
 
   const loadCredits = useCallback(async () => {
-      const params = {
+    const params = {
           page: currentPage,
           pageSize: itemsPerPage,
           creditId: contractNumber ? Number(contractNumber) : undefined,
@@ -282,6 +280,7 @@ const CreditPage = () => {
             onChange={(e) => {
               setContractNumber(e.target.value);
               setCurrentPage(1);
+              loadCredits();
             }}
           />
         </InputWrapper>
