@@ -25,7 +25,7 @@ type MenuItemProps = CollapsibleProps & {
 const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string, string> }> = {
   '/analytics': { mainItem: 'analytics' },
   '/credits': { mainItem: 'contracts', subItems: { '/credits': 'contracts' } },
-  '/contracts-control': { mainItem: 'contracts', subItems: { '/contracts-control': 'contracts-control' } },
+  '/credit-control': { mainItem: 'contracts', subItems: { '/credit-control': 'contracts-control' } },
   '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
   '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
   '/queue': { mainItem: 'clients', subItems: { '/queue': 'queue' } },
@@ -161,7 +161,7 @@ const SideMenu = () => {
               Договоры
             </SubMenuItem>
             <SubMenuItem 
-              onClick={() => handleSubMenuItemClick('contracts-control', '/contracts-control')}
+              onClick={() => handleSubMenuItemClick('contracts-control', '/credit-control')}
               $selected={selectedSideMenuItem === 'contracts-control'}
             >
               Контроль договоров

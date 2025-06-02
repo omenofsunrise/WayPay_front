@@ -50,13 +50,12 @@ const CreditPage = () => {
   const { createPayment } = usePayment();
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
-    2: 'creditDate',
-    3: 'clientFullName',
-    4: 'phone',
-    5: 'totalAmount',
-    6: 'paidAmount',
-    7: 'remainingAmount',
-    8: 'debtAmount'
+    2: 'date',
+    3: 'client',
+    5: 'accured',
+    6: 'payed',
+    7: 'rest',
+    8: 'debt'
   };
 
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
@@ -257,41 +256,22 @@ const CreditPage = () => {
     ]);
 
     if (credits.length > 0) {
-      const totals = calculateTotals(credits);
       const totalsRow = [
         '',
         '',
         '',
         '',
-        'Итого:',
-        `${formatMoney(totals.totalAccured.toString())}`,
-        `${formatMoney(totals.totalPayed.toString())}`,
-        `${formatMoney(totals.totalRest.toString())}`,
-        `${formatMoney(totals.totalDebt.toString())}`,
+        'Итого',
+        `${formatMoney(creditsData.totalAccured.toString())}`,
+        `${formatMoney(creditsData.totalPayed.toString())}`,
+        `${formatMoney(creditsData.totalRest.toString())}`,
+        `${formatMoney(creditsData.totalDebt.toString())}`,
         ''
       ];
       formattedData.push(totalsRow);
     }
 
     return formattedData;
-  };
-
-  const calculateTotals = (credits: Credit[] | undefined) => {
-    if (!credits || credits.length === 0) {
-      return {
-        totalAccured: 0,
-        totalPayed: 0,
-        totalRest: 0,
-        totalDebt: 0
-      };
-    }
-
-    return {
-      totalAccured: credits.reduce((sum, credit) => sum + (credit.accured || 0), 0),
-      totalPayed: credits.reduce((sum, credit) => sum + (credit.payed || 0), 0),
-      totalRest: credits.reduce((sum, credit) => sum + (credit.rest || 0), 0),
-      totalDebt: credits.reduce((sum, credit) => sum + (credit.debt || 0), 0)
-    };
   };
 
   const handleRowDoubleClick = (rowData: any[]) => {
@@ -396,7 +376,7 @@ const CreditPage = () => {
               { name: "№", isSortable: true },
               { name: "Дата договора", isSortable: true },
               { name: "ФИО покупателя", isSortable: true },
-              { name: "Телефон", isSortable: true },
+              { name: "Телефон" },
               { name: "Начислено", isSortable: true },
               { name: "Уплачено", isSortable: true },
               { name: "Остаток", isSortable: true },

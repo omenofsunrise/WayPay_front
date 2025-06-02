@@ -1,14 +1,13 @@
 import { useState, useCallback } from 'react';
 import creditService from '../services/creditService';
-import type { Credit, CreditParams, CreateCreditRequest } from '../types/credit';
-import type { PaginatedResponse } from '../types/common';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse } from '../types/credit';
 
 const useCredit = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<PaginatedResponse<Credit> | null>(null);
+  const [data, setData] = useState<CreditResponse | null>(null);
 
-  const getCredits = useCallback(async (params?: CreditParams): Promise<PaginatedResponse<Credit> | null> => {
+  const getCredits = useCallback(async (params?: CreditParams): Promise<CreditResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {

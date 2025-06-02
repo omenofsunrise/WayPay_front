@@ -1,10 +1,9 @@
 import apiClient from '../client';
-import type { Credit, CreditParams, CreateCreditRequest } from '../types/credit';
-import type { PaginatedResponse } from '../types/common';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse } from '../types/credit';
 
 class CreditService {
-  async getCredits(params?: CreditParams): Promise<PaginatedResponse<Credit>> {
-    const response = await apiClient.get<PaginatedResponse<Credit>>('/Credit', { params });
+  async getCredits(params?: CreditParams): Promise<CreditResponse> {
+    const response = await apiClient.get<CreditResponse>('/Credit', { params });
     return response.data;
   }
 

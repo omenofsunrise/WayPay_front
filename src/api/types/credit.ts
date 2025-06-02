@@ -1,4 +1,4 @@
-import type { PaginationParams } from './common';
+import type { PaginationParams, PaginatedResponse } from './common';
 
 export interface Credit {
     id: number;
@@ -19,6 +19,8 @@ export interface Credit {
     rest: number;
     currentMonthDebt: number;
     debt: number;
+    incomeRubles: number;
+    incomePercents: number;
 }
 
 export interface CreateCreditRequest {
@@ -46,4 +48,12 @@ export interface CreditParams extends PaginationParams {
     clientFullname?: string;
     isFavourite?: boolean;
     isActive?: boolean;
+}
+
+export interface CreditResponse extends PaginatedResponse<Credit> {
+    totalAccured: number;
+    totalDebt: number;
+    totalPayed: number;
+    totalRest: number;
+    totalIncomeRubles: number;
 }

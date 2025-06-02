@@ -14,6 +14,7 @@ import BlacklistPage from './pages/BlacklistPage';
 import InvestorPage from './pages/InvestorPage';
 import NewCreditPage from './pages/NewCreditPage';
 import SchedulePage from './pages/SchedulePage';
+import CreditControlPage from './pages/CreditControlPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -118,6 +119,12 @@ function App() {
         <Route path="schedules" element={
             <MainLayout> 
               <SchedulePage />
+            </MainLayout>
+        } />
+
+        <Route path="credit-control" element={
+            <MainLayout>
+              <CreditControlPage />
             </MainLayout>
         } />
 
