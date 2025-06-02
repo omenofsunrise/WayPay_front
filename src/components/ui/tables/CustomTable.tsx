@@ -31,6 +31,7 @@ interface CreditsTableProps {
   };
   selectedRow?: number;
   fixedHeight?: string;
+  hasTotalsRow?: boolean;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -42,7 +43,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   sortConfig,
   onRowClick,
   selectedRow: externalSelectedRow,
-  fixedHeight
+  fixedHeight,
+  hasTotalsRow
 }) => {
   const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -123,12 +125,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     };
   }, [contextMenu]);
 
-  // Check if a row has debt (column index 8)
   const hasDebt = (row: any[]) => {
-    // Assuming debt is in column 8 and is a string like "100 ₽"
     const debtCell = row[8];
     if (typeof debtCell === 'string') {
-      // Extract the numeric value from the string (e.g., "100 ₽" -> 100)
       const debtValue = parseFloat(debtCell.replace(/[^\d.]/g, ''));
       return debtValue > 0;
     }
@@ -138,12 +137,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   return (
     <TableContainer
       ref={tableRef}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      $fixedHeight={fixedHeight}
     >
-      <StyledTable $fixedHeight={fixedHeight}>
+      <StyledTable>
         <TableHeader>
           <TableRow>
             {columns.map((column, index) => (
@@ -182,7 +177,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         <TableBody $fixedHeight={fixedHeight}>
           <AnimatePresence>
             {data.map((row, rowIndex) => {
-              const isDebtRow = hasDebt(row);
+              const isTotalsRow = hasTotalsRow && rowIndex === data.length - 1;
+              const isDebtRow = !isTotalsRow && hasDebt(row);
               return (
                 <TableRow 
                   key={`row-${rowIndex}`}
@@ -190,20 +186,23 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   animate={{ 
                     opacity: 1, 
                     y: 0,
-                    backgroundColor: rowIndex === selectedRow ? '#007D88' : 
+                    backgroundColor: isTotalsRow ? 'white' : 
+                                    rowIndex === selectedRow ? '#007D88' : 
                                     isDebtRow ? 'rgba(232, 216, 216, 1)' : 
                                     row[row.length - 1] === false ? 'rgba(81, 213, 180, 1)' : 'transparent',
-                    color: rowIndex === selectedRow ? 'white' : 'inherit'
+                    color: rowIndex === selectedRow ? 'white' : isTotalsRow ? 'black' : 'inherit'
                   }}
                   exit={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   $isLast={rowIndex === data.length - 1}
                   $isSelected={rowIndex === selectedRow}
-                  onClick={() => handleRowClick(rowIndex)}
-                  onDoubleClick={() => handleRowDoubleClick(row, rowIndex)}
-                  onContextMenu={(e) => handleContextMenu(e, rowIndex)}
+                  $isTotalsRow={isTotalsRow}
+                  onClick={() => !isTotalsRow && handleRowClick(rowIndex)}
+                  onDoubleClick={() => !isTotalsRow && handleRowDoubleClick(row, rowIndex)}
+                  onContextMenu={(e) => !isTotalsRow && handleContextMenu(e, rowIndex)}
                   whileHover={{
-                    backgroundColor: rowIndex === selectedRow ? '#007D88' : 
+                    backgroundColor: isTotalsRow ? 'white' : 
+                                    rowIndex === selectedRow ? '#007D88' : 
                                     isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
                                     row[row.length - 1] === false ? 'rgba(81, 213, 180, 0.8)' : '#F3F4F6'
                   }}
@@ -215,6 +214,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                       $align={columns[cellIndex]?.align || 'center'}
                       $isFirst={cellIndex === 0}
                       $isLast={cellIndex === row.length - 1}
+                      $isTotalsCell={isTotalsRow}
+                      $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
                     >
                       {cell}
                     </BodyCell>
@@ -250,8 +251,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 },
                 color: action.color
               }))}
-              onClose={closeContextMenu}
-            />
+              onClose={closeContextMenu} x={0} y={0}            />
           </ContextMenuWrapper>
         )}
       </AnimatePresence>
@@ -307,9 +307,14 @@ const TableBody = styled.tbody<{ $fixedHeight?: string }>`
   `}
 `;
 
-const TableRow = styled(motion.tr)<{ $isLast?: boolean; $isSelected?: boolean }>`
+const TableRow = styled(motion.tr)<{ 
+  $isLast?: boolean; 
+  $isSelected?: boolean;
+  $isTotalsRow?: boolean;
+}>`
   position: relative;
-  cursor: pointer;
+  cursor: ${({ $isTotalsRow }) => ($isTotalsRow ? 'default' : 'pointer')};
+  font-weight: ${({ $isTotalsRow }) => ($isTotalsRow ? 'bold' : 'normal')};
 
   &::after {
     content: "";
@@ -319,7 +324,7 @@ const TableRow = styled(motion.tr)<{ $isLast?: boolean; $isSelected?: boolean }>
     width: 98%;
     height: 1px;
     background: rgba(209, 213, 219, 1);
-    display: ${({ $isLast }) => ($isLast ? 'none' : 'block')};
+    display: ${({ $isLast, $isTotalsRow }) => ($isLast || $isTotalsRow ? 'none' : 'block')};
   }
 `;
 
@@ -361,12 +366,30 @@ const SortIcon = styled(motion.span)<{ $direction: 'asc' | 'desc' }>`
   align-items: center;
 `;
 
-const BodyCell = styled.td<{ $align?: Alignment; $isFirst?: boolean; $isLast?: boolean }>`
+const BodyCell = styled.td<{ 
+  $align?: Alignment; 
+  $isFirst?: boolean; 
+  $isLast?: boolean;
+  $isTotalsCell?: boolean;
+  $isBeforeTotals?: boolean;
+}>`
   padding: 16px;
   padding-left: ${({ $isFirst }) => ($isFirst ? '50px' : '16px')};
   padding-right: ${({ $isLast }) => ($isLast ? '50px' : '16px')};
   text-align: ${({ $align }) => $align};
   vertical-align: middle;
+  border-right: ${({ $isBeforeTotals, $isTotalsCell }) => 
+    ($isBeforeTotals || $isTotalsCell) ? 'none' : '0.5px solid rgba(209, 213, 219, 1)'};
+`;
+
+const TotalsRow = styled.tr`
+  background-color: #f5f5f5;
+  font-weight: bold;
+  
+  td {
+    padding: 12px 16px;
+    border-top: 2px solid #ddd;
+  }
 `;
 
 export default CustomTable;

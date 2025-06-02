@@ -78,7 +78,7 @@ const CreditPage = () => {
       };
 
       await getCredits(params);
-  }, [currentPage, clientFullName, investorName, fromDate, toDate, sortConfig, filters]);
+  }, [currentPage, clientFullName, investorName, fromDate, toDate, sortConfig, filters, contractNumber]);
 
   useEffect(() => {
     loadCredits();
@@ -177,7 +177,8 @@ const CreditPage = () => {
             dateFrom: fromDate ? new Date(fromDate) : undefined,
             dateTo: toDate ? new Date(toDate) : undefined,
             sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-            sortDirection: sortConfig.direction
+            sortDirection: sortConfig.direction,
+            ...filters
           };
           
           const result = await creditService.getCredits(params);
@@ -187,19 +188,26 @@ const CreditPage = () => {
           };
         },
         fileName: 'credits_export',
-        transformData: (credit) => ({
-          'ID': credit.id,
-          'Дата договора': credit.creditDate.toLocaleDateString(),
-          'ФИО покупателя': credit.clientFullName,
-          'Телефон': credit.clientPhone || 'Нет данных',
-          'Начислено': `${formatMoney(credit.totalAmount.toString())}`,
-          'Уплачено': ` ₽`,
-          'Остаток': ` ₽`,
-          'Долг': ` ₽`
-        })
+        transformData: (credit) => {
+          const creditDate = typeof credit.creditDate === 'string' 
+            ? new Date(credit.creditDate) 
+            : credit.creditDate;
+            
+          return {
+            'ID': credit.id,
+            'Дата договора': creditDate ? creditDate.toLocaleDateString() : 'Нет данных',
+            'ФИО покупателя': credit.clientFullName,
+            'Телефон': credit.clientPhone || 'Нет данных',
+            'Начислено': formatMoney(credit.totalAmount?.toString() || '0'),
+            'Уплачено': formatMoney(credit.payed?.toString() || '0'),
+            'Остаток': formatMoney(credit.rest?.toString() || '0'),
+            'Долг': formatMoney(credit.debt?.toString() || '0')
+          };
+        }
       });
     } catch (error) {
       console.error('Export failed:', error);
+      alert('Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.');
     }
   };
 
@@ -210,7 +218,7 @@ const CreditPage = () => {
   const formatCreditData = (credits: Credit[] | undefined) => {
     if (!credits) return [];
     
-    return credits.map(credit => [
+    const formattedData = credits.map(credit => [
       credit.isFavourite ? (
         <StarIcon 
           key={`star-${credit.id}`}
@@ -247,6 +255,43 @@ const CreditPage = () => {
       `${formatMoney(credit.debt.toString())}`,
       credit.isActive
     ]);
+
+    if (credits.length > 0) {
+      const totals = calculateTotals(credits);
+      const totalsRow = [
+        '',
+        '',
+        '',
+        '',
+        'Итого:',
+        `${formatMoney(totals.totalAccured.toString())}`,
+        `${formatMoney(totals.totalPayed.toString())}`,
+        `${formatMoney(totals.totalRest.toString())}`,
+        `${formatMoney(totals.totalDebt.toString())}`,
+        ''
+      ];
+      formattedData.push(totalsRow);
+    }
+
+    return formattedData;
+  };
+
+  const calculateTotals = (credits: Credit[] | undefined) => {
+    if (!credits || credits.length === 0) {
+      return {
+        totalAccured: 0,
+        totalPayed: 0,
+        totalRest: 0,
+        totalDebt: 0
+      };
+    }
+
+    return {
+      totalAccured: credits.reduce((sum, credit) => sum + (credit.accured || 0), 0),
+      totalPayed: credits.reduce((sum, credit) => sum + (credit.payed || 0), 0),
+      totalRest: credits.reduce((sum, credit) => sum + (credit.rest || 0), 0),
+      totalDebt: credits.reduce((sum, credit) => sum + (credit.debt || 0), 0)
+    };
   };
 
   const handleRowDoubleClick = (rowData: any[]) => {
@@ -280,7 +325,6 @@ const CreditPage = () => {
             onChange={(e) => {
               setContractNumber(e.target.value);
               setCurrentPage(1);
-              loadCredits();
             }}
           />
         </InputWrapper>
@@ -365,6 +409,7 @@ const CreditPage = () => {
             onRowDoubleClick={handleRowDoubleClick}
             selectedRow={selectedRow}
             contextMenuActions={tableActions}
+            hasTotalsRow={true}
           />
 
           <PaginationLayout>
