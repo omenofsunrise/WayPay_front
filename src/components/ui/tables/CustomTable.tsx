@@ -197,7 +197,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                     backgroundColor: isTotalsRow ? 'white' : 
                                     rowIndex === selectedRow ? '#007D88' : 
                                     isDebtRow ? 'rgba(232, 216, 216, 1)' : 
-                                    row[row.length - 1] === false ? 'rgba(81, 213, 180, 1)' : 'transparent',
+                                    row[row.length - 1] === false ? 'rgba(81, 213, 180, 1)' : 'white',
                     color: rowIndex === selectedRow ? 'white' : isTotalsRow ? 'black' : 'inherit'
                   }}
                   exit={{ opacity: 0, y: 10 }}

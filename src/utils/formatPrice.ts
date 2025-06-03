@@ -8,6 +8,7 @@ export function formatMoney(
   priceString: string,
   currencySymbol: string = '₽'
 ): string {
+  if (!priceString) return '0₽';
   const numericString = priceString.replace(/[^\d-]/g, '');
 
   const number = parseInt(numericString, 10);
@@ -26,6 +27,7 @@ export function formatMoney(
 }
 
 export function parseMoney(priceString: string): number {
+  if (!priceString) return 0;
   const numericString = priceString.replace(/\D/g, '');
   
   return parseInt(numericString, 10);

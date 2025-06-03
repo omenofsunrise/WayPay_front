@@ -66,9 +66,9 @@ const InvestorPage = () => {
     };
 
     const handleSubmitInvestment = async (e: React.FormEvent) => {
-        e.preventDefault(); 
+        e.preventDefault();
         if (!selectedInvestor) return;
-        
+
         try {
             const amount = parseMoney(investmentAmount);
             if (isNaN(amount) || amount <= 0) {
@@ -78,6 +78,9 @@ const InvestorPage = () => {
 
             await addInvestment(selectedInvestor.id, amount);
             setIsInvestmentModalOpen(false);
+            setInvestmentAmount('');
+            setSelectedInvestor(null); // Добавьте эту строку
+            await loadInvestors(); // Убедитесь, что loadInvestors вызывается после обновления состояния
         } catch (err) {
             console.error('Ошибка при добавлении инвестиции:', err);
             alert('Произошла ошибка при добавлении инвестиции');
@@ -239,15 +242,30 @@ const InvestorPage = () => {
         }
     };
 
-    const tableData = investorsData?.items.map(investor => [
-        investor.id.toString(),
-        investor.nickname,
-        investor.fullName,
-        investor.phoneNumber,
-        investor.investorPie.toString() + "%",
-        formatMoney(investor.investmentAmount.toString()),
-        formatMoney(investor.balance.toString()),
-    ]) || [];
+    const tableData = investorsData?.items?.map(investor => {
+        // Проверяем, существует ли investor и его свойства
+        if (!investor || investor.id === undefined || investor.id === null) {
+            return [
+                '', // id
+                '', // nickname
+                '', // fullName
+                '', // phoneNumber
+                '0%', // investorPie
+                formatMoney('0'), // investmentAmount
+                formatMoney('0'), // balance
+            ];
+        }
+
+        return [
+            investor.id.toString(),
+            investor.nickname || '',
+            investor.fullName || '',
+            investor.phoneNumber || '',
+            `${investor.investorPie || 0}%`,
+            formatMoney((investor.investmentAmount || 0).toString()),
+            formatMoney((investor.balance || 0).toString()),
+        ];
+    }) ?? [];
 
     const tableActions = [
         {
@@ -285,7 +303,7 @@ const InvestorPage = () => {
             {isLoading && <div>Загрузка...</div>}
             {error && <div>Ошибка: {error}</div>}
             
-            {!isLoading && !error && (
+            {!isLoading && !error && investorsData && (
                 <>
                     <CustomTable 
                         columns={[

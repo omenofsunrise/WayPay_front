@@ -41,8 +41,8 @@ const SchedulePage = () => {
     
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditid',
-        1: 'clientname',
-        2: 'payment',
+        1: 'client',
+        2: 'amount',
         3: 'date'
     };
     
