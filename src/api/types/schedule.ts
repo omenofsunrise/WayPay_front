@@ -34,4 +34,5 @@ export interface ScheduleDetails {
     notified: boolean;
     isPaid?: boolean;
     paidDate?: Date;
+    clientPhone: string;
 }

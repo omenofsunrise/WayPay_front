@@ -32,6 +32,10 @@ class ScheduleService {
         return response.data;
     }
 
+    async noticeNotified(id: number) {
+        await apiClient.put(`/Schedule/${id}`);
+    }
+
     async getPreview(params: SchedulePreviewParams): Promise<ScheduleItem[]> {
         const response = await apiClient.post<ScheduleItem[]>(
             '/Schedule/preview',
