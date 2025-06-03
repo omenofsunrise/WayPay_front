@@ -52,7 +52,8 @@ const SchedulePage = () => {
         isLoading, 
         error, 
         scheduleData, 
-        getList
+        getList,
+        markAsNotified
     } = useSchedule();
     
     const loadSchedules = useCallback(async () => {
@@ -159,16 +160,28 @@ const SchedulePage = () => {
         return digits;
     }
 
-    const sendWhatsAppMessage = (phone: string, amount: string, date: string) => {
-        const cleanedPhone = formatPhoneNumber(phone);
-        
-        const message = `Напоминание о платеже:\nСумма: ${amount}\nДата: ${date}`;
-        
-        const encodedMessage = encodeURIComponent(message);
-        
-        const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
-        
-        window.open(whatsappUrl, '_blank');
+    const sendWhatsAppMessage = async (scheduleId: number, phone: string, amount: string, date: string) => {
+        try {
+            const cleanedPhone = formatPhoneNumber(phone);
+            const message = `Напоминание о платеже:\nСумма: ${amount}\nДата: ${date}`;
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
+            
+            // Открываем WhatsApp в новом окне
+            window.open(whatsappUrl, '_blank');
+            
+            // Отмечаем уведомление как отправленное через WhatsApp
+            const success = await markAsNotified(scheduleId);
+            
+            if (success) {
+                // Обновляем данные, чтобы отразить изменения в UI
+                await loadSchedules();
+            } else {
+                console.error('Не удалось отметить уведомление');
+            }
+        } catch (error) {
+            console.error('Ошибка при отправке WhatsApp:', error);
+        }
     };
 
     const tableData = scheduleData?.items.map(schedule => [
@@ -177,10 +190,9 @@ const SchedulePage = () => {
         schedule.paymentAmount.toString(),
         formatDate(schedule.paymentDate),
         schedule.notified ? (
-            <CheckIcon />
-        ) : (
             <button 
                 onClick={() => sendWhatsAppMessage(
+                    schedule.id,
                     schedule.clientPhone,
                     schedule.paymentAmount.toString(),
                     formatDate(schedule.paymentDate)
@@ -189,9 +201,25 @@ const SchedulePage = () => {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center'
+                    padding: '0'
+                }}
+            >
+                <CheckIcon />
+            </button>
+            
+        ) : (
+            <button 
+                onClick={() => sendWhatsAppMessage(
+                    schedule.id,
+                    schedule.clientPhone,
+                    schedule.paymentAmount.toString(),
+                    formatDate(schedule.paymentDate)
+                )}
+                style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0'
                 }}
             >
                 <WhatsAppIcon />

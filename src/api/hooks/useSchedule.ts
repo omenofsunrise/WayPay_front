@@ -82,6 +82,20 @@ const useSchedule = () => {
         }
     }, []);
 
+    const markAsNotified = useCallback(async (id: number): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await scheduleService.markAsNotified(id);
+            return true;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to mark schedule as notified');
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     return {
         isLoading,
         error,
@@ -92,6 +106,7 @@ const useSchedule = () => {
         getByCreditId,
         getById,
         getPreview,
+        markAsNotified
     };
 };
 

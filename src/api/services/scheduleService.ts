@@ -32,7 +32,7 @@ class ScheduleService {
         return response.data;
     }
 
-    async noticeNotified(id: number) {
+    async markAsNotified(id: number): Promise<void> {
         await apiClient.put(`/Schedule/${id}`);
     }
 
