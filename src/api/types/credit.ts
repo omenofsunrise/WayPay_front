@@ -44,6 +44,10 @@ export interface CreditParams extends PaginationParams {
     sortDirection?: 'asc' | 'desc';
     dateFrom?: Date;
     dateTo?: Date;
+    rublesIncomeFrom?: number;
+    rublesIncomeTo?: number;
+    percentsIncomeFrom?: number;
+    percentsIncomeTo?: number;
     investorNickname?: string;
     clientFullname?: string;
     isFavourite?: boolean;

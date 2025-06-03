@@ -8,8 +8,6 @@ import CustomTable from '../components/ui/tables/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';
-import styled from 'styled-components';
-import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import CreditTypes from '../components/ui/fields/CreditTypes';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
@@ -19,11 +17,11 @@ import type { Credit } from '../api/types/credit';
 import useExport from '../api/hooks/useExport';
 import creditService from '../api/services/creditService';
 import { formatDate } from '../utils/dateFormatter';
-import type { NewPaymentModalProps } from '../components/modal/NewPaymentModal';
 import NewPaymentModal from '../components/modal/NewPaymentModal';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { formatMoney } from '../utils/formatPrice';
 import usePayment from '../api/hooks/usePayment';
+import styled from 'styled-components';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -36,6 +34,10 @@ const CreditControlPage = () => {
   const [clientFullName, setClientFullName] = useState('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [rublesIncomeFrom, setRublesIncomeFrom] = useState<string>('');
+  const [rublesIncomeTo, setRublesIncomeTo] = useState<string>('');
+  const [percentsIncomeFrom, setPercentsIncomeFrom] = useState<string>('');
+  const [percentsIncomeTo, setPercentsIncomeTo] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
@@ -63,20 +65,37 @@ const CreditControlPage = () => {
 
   const loadCredits = useCallback(async () => {
     const params = {
-          page: currentPage,
-          pageSize: itemsPerPage,
-          creditId: contractNumber ? Number(contractNumber) : undefined,
-          clientFullname: clientFullName || undefined,
-          investorNickname: investorName || undefined,
-          dateFrom: fromDate ? new Date(fromDate) : undefined,
-          dateTo: toDate ? new Date(toDate) : undefined,
-          sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-          sortDirection: sortConfig.direction,
-          ...filters
-      };
+      page: currentPage,
+      pageSize: itemsPerPage,
+      creditId: contractNumber ? Number(contractNumber) : undefined,
+      clientFullname: clientFullName || undefined,
+      investorNickname: investorName || undefined,
+      dateFrom: fromDate ? new Date(fromDate) : undefined,
+      dateTo: toDate ? new Date(toDate) : undefined,
+      rublesIncomeFrom: rublesIncomeFrom && !isNaN(Number(rublesIncomeFrom))
+        ? Number(rublesIncomeFrom)
+        : undefined,
+      rublesIncomeTo: rublesIncomeTo && !isNaN(Number(rublesIncomeTo))
+        ? Number(rublesIncomeTo)
+        : undefined,
+      percentsIncomeFrom: percentsIncomeFrom && !isNaN(Number(percentsIncomeFrom))
+        ? Number(percentsIncomeFrom)
+        : undefined,
+      percentsIncomeTo: percentsIncomeTo && !isNaN(Number(percentsIncomeTo))
+        ? Number(percentsIncomeTo)
+        : undefined,
+      sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+      sortDirection: sortConfig.direction,
+      ...filters
+    };
 
-      await getCredits(params);
-  }, [currentPage, clientFullName, investorName, fromDate, toDate, sortConfig, filters, contractNumber]);
+    console.log('Параметры запроса:', params); 
+    await getCredits(params);
+  }, [
+    currentPage, contractNumber, clientFullName, investorName, 
+    fromDate, toDate, rublesIncomeFrom, rublesIncomeTo, 
+    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters
+  ]);
 
   useEffect(() => {
     loadCredits();
@@ -100,8 +119,8 @@ const CreditControlPage = () => {
   };
 
   const handleTabChange = (newFilters: { isFavourite?: boolean; isActive?: boolean }) => {
-      setFilters(newFilters);
-      setCurrentPage(1);
+    setFilters(newFilters);
+    setCurrentPage(1);
   };
 
   const handleDeleteCredit = async (rowData: any[]) => {
@@ -174,6 +193,10 @@ const CreditControlPage = () => {
             investorNickname: investorName || undefined,
             dateFrom: fromDate ? new Date(fromDate) : undefined,
             dateTo: toDate ? new Date(toDate) : undefined,
+            rublesIncomeFrom: rublesIncomeFrom ? Number(rublesIncomeFrom) : undefined,
+            rublesIncomeTo: rublesIncomeTo ? Number(rublesIncomeTo) : undefined,
+            percentsIncomeFrom: percentsIncomeFrom ? Number(percentsIncomeFrom) : undefined,
+            percentsIncomeTo: percentsIncomeTo ? Number(percentsIncomeTo) : undefined,
             sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
             sortDirection: sortConfig.direction,
             ...filters
@@ -341,9 +364,9 @@ const CreditControlPage = () => {
         </InputWrapper>
       </FilterField>
 
-      <SecondRaw style={{ color: "white" }}>
+      <SecondRaw>
         <CustomInput 
-          style={{ marginRight: "auto", display: "flex"}}
+          style={{ display: "flex"}}
           inputType="fullname"
           placeholder="ФИО"
           value={clientFullName}
@@ -352,12 +375,52 @@ const CreditControlPage = () => {
             setCurrentPage(1);
           }}
         />
-        <DarkCyanButton 
-          style={{ marginLeft: "auto", width: "15vw"}}
-          onClick={() => navigate('/new-credit')}
-        >
-          + Новый договор
-        </DarkCyanButton>
+        <IncomeContainer>
+          <InputTitl style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitl>
+          <CustomInput 
+            style={{ maxWidth: "80px" }}
+            inputType="number"
+            placeholder="От"
+            value={rublesIncomeFrom}
+            onChange={(e) => {
+              setRublesIncomeFrom(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          <InputTitl style={{ margin: '0 16px 0 16px' }}>-</InputTitl>
+          <CustomInput 
+            style={{ maxWidth: "80px" }}
+            inputType="number"
+            placeholder="До"
+            value={rublesIncomeTo}
+            onChange={(e) => {
+              setRublesIncomeTo(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          <InputTitl style={{ margin: '0 16px 0 16px' }}>Доход, %</InputTitl>
+          <CustomInput 
+            style={{ maxWidth: "80px" }}
+            inputType="number"
+            placeholder="От"
+            value={percentsIncomeFrom}
+            onChange={(e) => {
+              setPercentsIncomeFrom(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          <InputTitl style={{ margin: '0 16px 0 16px' }}>-</InputTitl>
+          <CustomInput 
+            style={{ maxWidth: "80px" }}
+            inputType="number"
+            placeholder="До"
+            value={percentsIncomeTo}
+            onChange={(e) => {
+              setPercentsIncomeTo(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </IncomeContainer>
       </SecondRaw>
 
       <CreditTypes onTabChange={handleTabChange} />
@@ -437,9 +500,10 @@ const InputWrapper = styled.div`
 
 const SecondRaw = styled.div`
   display: flex;
-  width: 100%;
+  width: auto;
   margin: 15px 0;
-  background-color: transparent;
+  gap: 16px;
+  align-items: left;
 `;
 
 const StarIcon = styled.div`
@@ -476,6 +540,20 @@ const EmptyStarIcon = styled.div<EmptyStarIconProps>`
       ${props => props.isSelected && 'fill: white;'}
     }
   }
+`;
+
+const InputTitl = styled.p`
+  color: black;
+  width: 153px;
+  text-align: center;
+`;
+
+const IncomeContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  max-width: 600px;
+  align-items: center;
+  flex-grow: 1;
 `;
 
 export default CreditControlPage;
