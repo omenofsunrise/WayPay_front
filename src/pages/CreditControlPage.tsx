@@ -22,6 +22,7 @@ import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { formatMoney } from '../utils/formatPrice';
 import usePayment from '../api/hooks/usePayment';
 import styled from 'styled-components';
+import { Container } from 'react-bootstrap';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -273,7 +274,8 @@ const CreditControlPage = () => {
       `${formatMoney(credit.accured?.toString() || '')}`,
       `${formatMoney(credit.incomeRubles.toString())}`,
       `${credit.incomePercents.toString() + '%'}`,
-      credit.isActive
+      credit.isActive,
+      credit.debt > 0
     ]);
 
     if (credits.length > 0) {
@@ -286,7 +288,8 @@ const CreditControlPage = () => {
         `${formatMoney(creditsData.totalAccured.toString())}`,
         `${formatMoney(creditsData.totalIncomeRubles.toString())}`,
         ``,
-        ''
+        '',
+        false // Для строки итогов
       ];
       formattedData.push(totalsRow);
     }
@@ -376,7 +379,7 @@ const CreditControlPage = () => {
           }}
         />
         <IncomeContainer>
-          <InputTitl style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitl>
+          <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitle>
           <CustomInput 
             style={{ maxWidth: "80px" }}
             inputType="number"
@@ -387,7 +390,7 @@ const CreditControlPage = () => {
               setCurrentPage(1);
             }}
           />
-          <InputTitl style={{ margin: '0 16px 0 16px' }}>-</InputTitl>
+          <InputTitle style={{ margin: '0' }}>-</InputTitle>
           <CustomInput 
             style={{ maxWidth: "80px" }}
             inputType="number"
@@ -398,7 +401,8 @@ const CreditControlPage = () => {
               setCurrentPage(1);
             }}
           />
-          <InputTitl style={{ margin: '0 16px 0 16px' }}>Доход, %</InputTitl>
+          <Container style={{ margin: "20px"}}/>
+          <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, %</InputTitle>
           <CustomInput 
             style={{ maxWidth: "80px" }}
             inputType="number"
@@ -409,7 +413,7 @@ const CreditControlPage = () => {
               setCurrentPage(1);
             }}
           />
-          <InputTitl style={{ margin: '0 16px 0 16px' }}>-</InputTitl>
+          <InputTitle style={{ margin: '0' }}>-</InputTitle>
           <CustomInput 
             style={{ maxWidth: "80px" }}
             inputType="number"
@@ -440,7 +444,8 @@ const CreditControlPage = () => {
               { name: "Начислено", isSortable: true },
               { name: "Доход, руб", isSortable: true },
               { name: "Доход, %", isSortable: true },
-              { name: "isActive", isHidden: true }
+              { name: "isActive", isHidden: true },
+              { name: "hasDebt", isHidden: true } 
             ]} 
             data={formatCreditData(creditsData?.items)}
             onSort={handleSort}
@@ -449,6 +454,7 @@ const CreditControlPage = () => {
             selectedRow={selectedRow}
             contextMenuActions={tableActions}
             hasTotalsRow={true}
+            debtChecker={(row) => row[row.length - 1] === true}
           />
 
           <PaginationLayout>
@@ -542,10 +548,11 @@ const EmptyStarIcon = styled.div<EmptyStarIconProps>`
   }
 `;
 
-const InputTitl = styled.p`
+const InputTitle = styled.p`
   color: black;
   width: 153px;
   text-align: center;
+  white-space: nowrap;
 `;
 
 const IncomeContainer = styled.div`

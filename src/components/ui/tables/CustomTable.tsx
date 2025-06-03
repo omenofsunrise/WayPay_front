@@ -32,6 +32,7 @@ interface CreditsTableProps {
   selectedRow?: number;
   fixedHeight?: string;
   hasTotalsRow?: boolean;
+  debtChecker?: (rowData: any[]) => boolean;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -44,7 +45,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   onRowClick,
   selectedRow: externalSelectedRow,
   fixedHeight,
-  hasTotalsRow
+  hasTotalsRow,
+  debtChecker,
 }) => {
   const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -60,6 +62,17 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     if (!columns[columnIndex].isSortable || !onSort) return;
     onSort(columnIndex);
   };
+
+  const defaultDebtChecker = (row: any[]) => {
+    const debtCell = row[8];
+    if (typeof debtCell === 'string') {
+      const debtValue = parseFloat(debtCell.replace(/[^\d.]/g, ''));
+      return debtValue > 0;
+    }
+    return false;
+  };
+
+  const checkDebt = debtChecker || defaultDebtChecker;
 
   const handleRowClick = (rowIndex: number) => {
     const newSelectedRow = rowIndex === selectedRow ? null : rowIndex;
@@ -126,12 +139,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   }, [contextMenu]);
 
   const hasDebt = (row: any[]) => {
-    const debtCell = row[8];
-    if (typeof debtCell === 'string') {
-      const debtValue = parseFloat(debtCell.replace(/[^\d.]/g, ''));
-      return debtValue > 0;
-    }
-    return false;
+    return row[row.length - 1] === true;
   };
 
   return (
@@ -178,7 +186,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
           <AnimatePresence>
             {data.map((row, rowIndex) => {
               const isTotalsRow = hasTotalsRow && rowIndex === data.length - 1;
-              const isDebtRow = !isTotalsRow && hasDebt(row);
+              const isDebtRow = !isTotalsRow && checkDebt(row);
               return (
                 <TableRow 
                   key={`row-${rowIndex}`}
