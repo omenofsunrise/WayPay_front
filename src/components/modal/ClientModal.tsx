@@ -30,7 +30,7 @@ const emptyClient: Omit<Client, 'id'> = {
   fullName: '',
   phone: '',
   doc: '',
-  birthdate: null,
+  birthdate: '',
   docIssueDate: '',
   docIssueYear: 0
 };
@@ -72,7 +72,7 @@ const validateDate = (dateStr: string, minAge: number, maxAge: number, isRequire
   return { isValid: true, date };
 };
 
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '';
   
   if (/^\d{2}\.\d{2}\.\d{4}$/.test(dateString)) {
@@ -81,7 +81,7 @@ const formatDate = (dateString: string): string => {
   
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
-    return dateString;
+    return '';
   }
   
   const day = String(date.getDate()).padStart(2, '0');
@@ -101,8 +101,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     fullName: '',
     phone: '',
     doc: '',
-    birthdate: '',
-    docIssueDate: '',
+    birthdate: null,
+    docIssueDate: null,
     docIssueYear: 0
   },
 }) => {
@@ -111,8 +111,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       doc: initialData?.doc || '',
-      birthdate: initialData?.birthdate || '',
-      docIssueDate: initialData?.docIssueDate || '',
+      birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
+      docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : '',
       docIssueYear: initialData?.docIssueYear || 0
     }
   );
@@ -241,7 +241,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
       newErrorMessages.phone = await validatePhone(formData.phone);
 
-      const birthdateValidation = validateDate(formData.birthdate.toString(), 18, 100, true);
+      const birthdateValidation = validateDate(formData.birthdate.toString() || '', 18, 100, true);
       if (!birthdateValidation.isValid) {
         newErrorMessages.birthdate = birthdateValidation.error || '';
       }
@@ -528,7 +528,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 name="birthdate"
                 inputType="date"
                 placeholder="дд.мм.гггг"
-                value={formData.birthdate.toString()}
+                value={formData.birthdate.toString() || ''}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
                 hasError={touchedFields.birthdate && validationErrors.birthdate}

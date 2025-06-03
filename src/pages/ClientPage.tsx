@@ -21,10 +21,10 @@ interface Client {
   fullName: string;
   phone: string;
   doc: string;
-  birthdate: Date;
-  docIssueDate: Date;
+  birthdate: Date | null;
+  docIssueDate: Date | null;
+  docIssueYear: number;
 }
-
 const ClientPage = () => {
     const [nameFilter, setNameFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -103,19 +103,14 @@ const ClientPage = () => {
             phone: '',
             doc: '',
             birthdate: null,
-            docIssueDate: null
+            docIssueDate: null,
+            docIssueYear: 0
         });
         setIsModalOpen(true);
     };
 
     const handleEditClient = (client: Client) => {
         setModalMode('edit');
-        setSelectedClient(client);
-        setIsModalOpen(true);
-    };
-
-    const handleViewClient = (client: Client) => {
-        setModalMode('view');
         setSelectedClient(client);
         setIsModalOpen(true);
     };
@@ -134,26 +129,27 @@ const ClientPage = () => {
 
     const handleSubmitClient = async (
         clientData: Omit<ClientForm, 'doc' | 'docIssueDate'> | ClientForm
-        ): Promise<boolean> => {
+    ): Promise<boolean> => {
         try {
             const parseDate = (dateStr: string): Date | null => {
-            if (!dateStr) return null;
-            const [day, month, year] = dateStr.split('.').map(Number);
-            return new Date(year, month - 1, day);
+                if (!dateStr) return null;
+                const [day, month, year] = dateStr.split('.').map(Number);
+                return new Date(year, month - 1, day);
             };
 
             const apiData = {
-            fullName: clientData.fullName,
-            phone: clientData.phone,
-            birthdate: parseDate(clientData.birthdate),
-            doc: (clientData as ClientForm).doc || undefined,
-            docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined
+                fullName: clientData.fullName,
+                phone: clientData.phone,
+                birthdate: parseDate(clientData.birthdate),
+                doc: (clientData as ClientForm).doc || undefined,
+                docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined,
+                docIssueYear: (clientData as ClientForm).docIssueYear || 0
             };
 
             if (modalMode === 'create') {
-            await createClient(apiData);
+                await createClient(apiData);
             } else if (modalMode === 'edit' && selectedClient?.id) {
-            await updateClient(selectedClient.id, apiData);
+                await updateClient(selectedClient.id, apiData);
             }
             
             loadClients();
@@ -161,7 +157,7 @@ const ClientPage = () => {
         } catch (error: any) {            
             return false;
         }
-        };
+    };
 
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
         const client = clientsData?.items[rowIndex];
@@ -251,7 +247,8 @@ const ClientPage = () => {
                     phone: '',
                     doc: '',
                     birthdate: null,
-                    docIssueDate: null
+                    docIssueDate: null,
+                    docIssueYear: 0
                 }}
             />
         </PageLayout>
