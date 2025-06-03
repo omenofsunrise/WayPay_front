@@ -274,8 +274,8 @@ const CreditControlPage = () => {
       `${formatMoney(credit.accured?.toString() || '')}`,
       `${formatMoney(credit.incomeRubles.toString())}`,
       `${credit.incomePercents.toString() + '%'}`,
+      credit.debt > 0,
       credit.isActive,
-      credit.debt > 0
     ]);
 
     if (credits.length > 0) {
@@ -289,7 +289,7 @@ const CreditControlPage = () => {
         `${formatMoney(creditsData.totalIncomeRubles.toString())}`,
         ``,
         '',
-        false // Для строки итогов
+        false
       ];
       formattedData.push(totalsRow);
     }
@@ -454,7 +454,7 @@ const CreditControlPage = () => {
             selectedRow={selectedRow}
             contextMenuActions={tableActions}
             hasTotalsRow={true}
-            debtChecker={(row) => row[row.length - 1] === true}
+            debtChecker={(row) => row[row.length - 2] === true}
           />
 
           <PaginationLayout>
