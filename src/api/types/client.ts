@@ -1,13 +1,13 @@
 import type { PaginationParams } from "./common";
 
 export interface Client {
-    id: number;
-    fullName: string;
-    phone: string;
-    doc: string;
-    birthdate: Date | null;
-    docIssueDate: Date | null;
-    docIssueYear: number;
+  id: number;
+  fullName: string;
+  phone: string;
+  doc: string;
+  birthdate: Date | null;
+  docIssueDate: Date | null;
+  docIssueYear: number;
 }
 
 export interface ClientParams extends PaginationParams {
@@ -20,9 +20,8 @@ export interface ClientForm {
   fullName: string;
   phone: string;
   doc: string;
-  birthdate: string; // For UI - string in format "dd.mm.yyyy"
-  docIssueDate: string; // For UI - string in format "dd.mm.yyyy"
-  docIssueYear: number;
+  birthdate: string; // формат "dd.mm.yyyy"
+  docIssueDate: string; // формат "dd.mm.yyyy"
 }
 
 export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {

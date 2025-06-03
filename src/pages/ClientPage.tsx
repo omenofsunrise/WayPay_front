@@ -143,7 +143,7 @@ const ClientPage = () => {
                 birthdate: parseDate(clientData.birthdate),
                 doc: (clientData as ClientForm).doc || undefined,
                 docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined,
-                docIssueYear: (clientData as ClientForm).docIssueYear || 0
+                docIssueYear: (clientData as ClientForm).docIssueDate || 0
             };
 
             if (modalMode === 'create') {

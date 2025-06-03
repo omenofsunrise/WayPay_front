@@ -187,8 +187,9 @@ const ClientModal: React.FC<ClientModalProps> = ({
           phone: initialData?.phone || '',
           doc: initialData?.doc || '',
           birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
-          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : '',
-          docIssueYear: initialData?.docIssueYear ? initialData.docIssueYear : 0
+          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : 
+                    initialData?.docIssueYear ? `01.01.${initialData.docIssueYear}` : '',
+          docIssueYear: initialData?.docIssueYear || 0
         }
       );
       setPassportEditData({
@@ -304,49 +305,49 @@ const ClientModal: React.FC<ClientModalProps> = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  setTouchedFields({
-    fullName: true,
-    phone: true,
-    birthdate: true,
-    doc: true,
-    docIssueDate: true
-  });
-
-  const isValid = !Object.values(validationErrors).some(Boolean);
-  if (!isValid) {
-    return;
-  }
-
-  setIsSubmitting(true);
-  setApiError('');
-
-  try {
-    const formattedBirthdate = typeof formData.birthdate === 'string' 
-      ? formData.birthdate 
-      : formatDate(formData.birthdate.toString());
-
-    const submitData = {
-      fullName: formData.fullName,
-      phone: formData.phone,
-      birthdate: formattedBirthdate,
-      docIssueYear: formData.docIssueYear
-    };
-
-    const success = await onSubmit(submitData);
+    e.preventDefault();
     
-    if (success) {
-      onClose();
-    } else {
+    setTouchedFields({
+      fullName: true,
+      phone: true,
+      birthdate: true,
+      doc: true,
+      docIssueDate: true
+    });
+
+    const isValid = !Object.values(validationErrors).some(Boolean);
+    if (!isValid) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setApiError('');
+
+    try {
+      const formattedBirthdate = typeof formData.birthdate === 'string' 
+        ? formData.birthdate 
+        : formatDate(formData.birthdate.toString());
+
+      const submitData = {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        birthdate: formattedBirthdate,
+        docIssueDate: formData.docIssueDate,
+        doc: formData.doc
+      };
+
+      const success = await onSubmit(submitData);
+      
+      if (success) {
+        onClose();
+      }
+      setIsSubmitting(false);
+    } catch (error: any) {
+      console.error('Ошибка при сохранении клиента:', error);
+      setApiError(error.message || 'Произошла ошибка при сохранении клиента');
       setIsSubmitting(false);
     }
-  } catch (error: any) {
-    console.error('Ошибка при сохранении клиента:', error);
-    setApiError(error.message || 'Произошла ошибка при сохранении клиента');
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -574,7 +575,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   name="docIssueDate"
                   inputType="date"
                   placeholder="дд.мм.гггг"
-                  value={formData.docIssueYear}
+                  value={formData.docIssueDate.toString()}
                   onChange={handleInputChange}
                   disabled={mode === 'view' || (mode === 'edit' && !isEditingPassport)}
                   hasError={touchedFields.docIssueDate && validationErrors.docIssueDate}
