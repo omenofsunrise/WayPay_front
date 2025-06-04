@@ -8,6 +8,8 @@ export interface Client {
   birthdate: Date | null;
   docIssueDate: Date | null;
   docIssueYear: number;
+  creditIds: number[];
+  creditRestTerms: number[];
 }
 
 export interface ClientParams extends PaginationParams {

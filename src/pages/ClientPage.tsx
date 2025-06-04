@@ -171,6 +171,11 @@ const ClientPage = () => {
         client.fullName,
         client.phone,
         formatDate(client.birthdate),
+        {
+            value: client.creditIds || '-',
+            color: client.creditIds?.length > 0 ? '#EF4444' : '#10B981'
+        },
+        client.creditRestTerms || '-'
     ]) || [];
 
     const tableActions = [
@@ -213,6 +218,8 @@ const ClientPage = () => {
                             { name: "ФИО", isSortable: true, align: "left" },
                             { name: "Телефон", align: "left" },
                             { name: "Дата рождения", isSortable: true, align: "right" },
+                            { name: "№ договоров" },
+                            { name: "Остатки мес." }
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}

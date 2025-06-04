@@ -218,17 +218,18 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   {row.map((cell, cellIndex) => (
                     !columns[cellIndex]?.isHidden && (
                     <BodyCell 
-                      key={cellIndex}
-                      $align={columns[cellIndex]?.align || 'center'}
-                      $isFirst={cellIndex === 0}
-                      $isLast={cellIndex === row.length - 1}
-                      $isTotalsCell={isTotalsRow}
-                      $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
+                        key={cellIndex}
+                        $align={columns[cellIndex]?.align || 'center'}
+                        $isFirst={cellIndex === 0}
+                        $isLast={cellIndex === row.length - 1}
+                        $isTotalsCell={isTotalsRow}
+                        $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
+                        $cellColor={typeof cell === 'object' ? cell.color : undefined}
                     >
-                      {cell}
+                        {typeof cell === 'object' ? cell.value : cell}
                     </BodyCell>
                     )
-                  ))}
+                ))}
                 </TableRow>
               );
             })}
@@ -380,6 +381,7 @@ const BodyCell = styled.td<{
   $isLast?: boolean;
   $isTotalsCell?: boolean;
   $isBeforeTotals?: boolean;
+  $cellColor?: string;
 }>`
   padding: 16px;
   padding-left: ${({ $isFirst }) => ($isFirst ? '50px' : '16px')};
@@ -388,6 +390,7 @@ const BodyCell = styled.td<{
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) => 
     ($isBeforeTotals || $isTotalsCell) ? 'none' : '0.5px solid rgba(209, 213, 219, 1)'};
+  background-color: ${({ $cellColor }) => $cellColor || 'inherit'};
 `;
 
 const TotalsRow = styled.tr`
