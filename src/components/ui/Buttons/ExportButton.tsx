@@ -68,8 +68,8 @@ const ButtonContainer = styled.button`
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  color: rgba(80, 85, 92, 1);
-  font-size: 18px;
+  color: inherit;
+  font-size: 20px;
   height: 40px;
   margin: auto 0 10px 0;
   transition: background-color 0.2s ease;
@@ -78,7 +78,6 @@ const ButtonContainer = styled.button`
 
   &:hover {
     background-color: rgba(209, 213, 219, 1);
-    color: black;
   }
 
   &:focus {
