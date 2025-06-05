@@ -3,7 +3,6 @@ import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
 import CustomInput from '../components/ui/fields/CustomInput';
-import DateInput from '../components/ui/fields/DateInput';
 import CustomTable from '../components/ui/tables/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
@@ -23,6 +22,7 @@ import { formatMoney } from '../utils/formatPrice';
 import usePayment from '../api/hooks/usePayment';
 import styled from 'styled-components';
 import { Container } from 'react-bootstrap';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -331,7 +331,7 @@ const CreditControlPage = () => {
         </InputWrapper>
         
         <InputWrapper>
-          <DateInput 
+          <CustomCalendar 
             prefix="от:"
             value={fromDate}
             onChange={(date) => {
@@ -342,7 +342,7 @@ const CreditControlPage = () => {
         </InputWrapper>
         
         <InputWrapper>
-          <DateInput 
+          <CustomCalendar 
             prefix="до:"
             value={toDate}
             onChange={(date) => {

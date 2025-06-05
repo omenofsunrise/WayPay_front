@@ -24,6 +24,7 @@ import useCredit from '../api/hooks/useCredit';
 import type { CreateCreditRequest } from '../api/types/credit';
 import useInvestor from '../api/hooks/useInvestor';
 import ViewButton from '../components/ui/Buttons/ViewButton';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
 
 interface Client {
   id: number;
@@ -327,7 +328,7 @@ const NewCreditPage = () => {
           <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
             <Label>Дата</Label>
             <DateInputWrapper>
-              <DateInput 
+              <CustomCalendar 
                 value={contractDate} 
                 onChange={handleContractDateChange}
               />

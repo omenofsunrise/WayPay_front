@@ -7,6 +7,7 @@ import DateInput from '../ui/fields/DateInput';
 import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import GrayButton from '../ui/Buttons/GrayButton';
 import Checkbox from '../ui/CheckBoxes/Checkbox';
+import CustomCalendar from '../ui/fields/CustomCalendar';
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -65,7 +66,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     }
     
     const numericValue = parseAmount(inputValue);
-    // Prevent entering amount greater than remaining debt
     const validatedValue = Math.min(numericValue, currentDebt);
     const formattedValue = formatMoney(validatedValue);
     
@@ -166,7 +166,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
               <FormRow>
                 <InputGroup>
                   <InputLabel>Дата платежа</InputLabel>
-                  <DateInput 
+                  <CustomCalendar 
                     value={paymentDate} 
                     onChange={setPaymentDate}
                   />

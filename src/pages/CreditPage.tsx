@@ -23,6 +23,7 @@ import NewPaymentModal from '../components/modal/NewPaymentModal';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { formatMoney } from '../utils/formatPrice';
 import usePayment from '../api/hooks/usePayment';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -307,7 +308,7 @@ const CreditPage = () => {
         </InputWrapper>
         
         <InputWrapper>
-          <DateInput 
+          <CustomCalendar 
             prefix="от:"
             value={fromDate}
             onChange={(date) => {
@@ -318,7 +319,7 @@ const CreditPage = () => {
         </InputWrapper>
         
         <InputWrapper>
-          <DateInput 
+          <CustomCalendar 
             prefix="до:"
             value={toDate}
             onChange={(date) => {

@@ -3,7 +3,6 @@ import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
 import CustomTable, { type RowStyle } from "../components/ui/tables/CustomTable";
-import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
@@ -14,6 +13,8 @@ import useExport from '../api/hooks/useExport';
 import type { ScheduleDetails, ScheduleParams } from '../api/types/schedule';
 import scheduleService from '../api/services/scheduleService';
 import { formatDate, parseDateInput } from '../utils/dateFormatter';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import styled from 'styled-components';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -68,10 +69,10 @@ const SchedulePage = () => {
             paymentDate.setHours(0, 0, 0, 0);
 
             if (paymentDate < today) {
-            styles[index] = {
-                backgroundColor: '#FFEBEE',
-                color: 'black',        
-            };
+                styles[index] = {
+                    backgroundColor: '#FFEBEE',
+                    color: 'black',        
+                };
             }
         });
 
@@ -189,14 +190,11 @@ const SchedulePage = () => {
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
             
-            // Открываем WhatsApp в новом окне
             window.open(whatsappUrl, '_blank');
             
-            // Отмечаем уведомление как отправленное через WhatsApp
             const success = await markAsNotified(scheduleId);
             
             if (success) {
-                // Обновляем данные, чтобы отразить изменения в UI
                 await loadSchedules();
             } else {
                 console.error('Не удалось отметить уведомление');
@@ -262,32 +260,40 @@ const SchedulePage = () => {
                 />
             </TitleField>
             
-            <FilterField style={{ gap: "20px"}}>
-                <CustomInput
-                    inputType="text"
-                    placeholder="Клиент"
-                    value={clientNameFilter}
-                    onChange={(e) => handleClientNameFilterChange(e.target.value)}
-                />
-                <CustomInput 
-                    inputType="text"
-                    placeholder="Инвестор"
-                    value={investorFilter}
-                    onChange={(e) => handleInvestorFilterChange(e.target.value)}
-                />
-                <CustomInput 
-                    inputType="date"
-                    placeholder="Дата от"
-                    value={dateFromFilter}
-                    onChange={(e) => handleDateFromFilterChange(e.target.value)}
-                />
-                <CustomInput 
-                    inputType="date"
-                    placeholder="Дата до"
-                    value={dateToFilter}
-                    onChange={(e) => handleDateToFilterChange(e.target.value)}
-                />
-            </FilterField>
+            <FilterContainer>
+                <FilterField>
+                    <InputWrapper>
+                        <CustomInput
+                            inputType="text"
+                            placeholder="Клиент"
+                            value={clientNameFilter}
+                            onChange={(e) => handleClientNameFilterChange(e.target.value)}
+                        />
+                    </InputWrapper>
+                    <InputWrapper>
+                        <CustomInput 
+                            inputType="text"
+                            placeholder="Инвестор"
+                            value={investorFilter}
+                            onChange={(e) => handleInvestorFilterChange(e.target.value)}
+                        />
+                    </InputWrapper>
+                    <DateInputWrapper>
+                        <CustomCalendar 
+                            prefix="От"
+                            value={dateFromFilter}
+                            onChange={handleDateFromFilterChange}
+                        />
+                    </DateInputWrapper>
+                    <DateInputWrapper>
+                        <CustomCalendar
+                            prefix="До"
+                            value={dateToFilter}
+                            onChange={handleDateToFilterChange}
+                        />
+                    </DateInputWrapper>
+                </FilterField>
+            </FilterContainer>
             
             {isLoading && <div>Загрузка...</div>}
             {error && <div>Ошибка: {error}</div>}
@@ -325,5 +331,25 @@ const SchedulePage = () => {
         </PageLayout>
     );
 };
+
+const FilterContainer = styled.div`
+  margin-bottom: 20px;
+`;
+
+const FilterField = styled.div`
+  display: flex;
+  gap: 16px;
+  width: 100%;
+`;
+
+const InputWrapper = styled.div`
+  flex: 1;
+  min-width: 200px;
+`;
+
+const DateInputWrapper = styled.div`
+  flex: 1;
+  min-width: 180px;
+`;
 
 export default SchedulePage;
