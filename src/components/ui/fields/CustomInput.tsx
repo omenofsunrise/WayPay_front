@@ -37,8 +37,9 @@ const CustomInput: React.FC<CustomInputProps> = ({
             break;
         case 'rubles':
           const cursorPosition = e.target.selectionStart;
+          const originalValue = e.target.value;
           
-          let numericValue = newValue.replace(/[^\d]/g, '');
+          let numericValue = originalValue.replace(/[^\d]/g, '');
           
           if (numericValue === '') {
             e.target.value = '';
@@ -49,113 +50,132 @@ const CustomInput: React.FC<CustomInputProps> = ({
           const numberValue = parseInt(numericValue, 10);
           if (!isNaN(numberValue)) {
             let formattedValue = numberValue.toLocaleString('ru-RU');
+            formattedValue += ' ₽';
             
-              formattedValue += '₽';
+            const digitsBeforeCursor = countDigitsBeforePosition(originalValue, cursorPosition || 0);
+            const newCursorPosition = findCursorPositionInFormattedValue(formattedValue, digitsBeforeCursor);
             
             e.target.value = formattedValue;
             onChange(e);
             
             setTimeout(() => {
-              if (cursorPosition === (value?.toString().length || 0)) {
-                e.target.setSelectionRange(formattedValue.length, formattedValue.length);
-              } 
-              else if (cursorPosition !== null) {
-                const newPosition = Math.min(cursorPosition, formattedValue.length);
-                e.target.setSelectionRange(newPosition, newPosition);
-              }
+              e.target.setSelectionRange(newCursorPosition, newCursorPosition);
             }, 0);
           }
           break;
 
-      case 'fullname':
-        newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\-\s]/g, '');
-        newValue = newValue.replace(/\s{2,}/g, ' ');
-        
-        newValue = newValue.replace(/- /g, '-');
-        newValue = newValue.replace(/ -/g, ' ');
-        
-        let words = newValue.split(' ').filter(word => word.length > 0);
-        words = words.slice(0, 3);
-        
-        newValue = words
-          .map(word => {
-            if (word.startsWith('-')) {
-              word = word.substring(1);
+          case 'fullname':
+            newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\-\s]/g, '');
+            newValue = newValue.replace(/\s{2,}/g, ' ');
+            
+            newValue = newValue.replace(/- /g, '-');
+            newValue = newValue.replace(/ -/g, ' ');
+            
+            let words = newValue.split(' ').filter(word => word.length > 0);
+            words = words.slice(0, 3);
+            
+            newValue = words
+              .map(word => {
+                if (word.startsWith('-')) {
+                  word = word.substring(1);
+                }
+                
+                const hyphenCount = (word.match(/-/g) || []).length;
+                if (hyphenCount > 1) {
+                  const parts = word.split('-');
+                  word = parts[0] + '-' + parts.slice(1).join('');
+                }
+                
+                if (word.includes('-')) {
+                  return word.split('-')
+                    .map((part, index) => {
+                      if (part.length === 0) return '';
+                      return index > 0 
+                        ? part[0].toUpperCase() + part.slice(1).toLowerCase() 
+                        : part[0].toUpperCase() + part.slice(1).toLowerCase();
+                    })
+                    .join('-');
+                }
+                return word.length > 0 
+                  ? word[0].toUpperCase() + word.slice(1).toLowerCase() 
+                  : '';
+              })
+              .join(' ');
+              
+            if (newValue.length > 0 && newValue[newValue.length - 1] !== ' ' && 
+                e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
+              newValue += ' ';
             }
             
-            const hyphenCount = (word.match(/-/g) || []).length;
-            if (hyphenCount > 1) {
-              const parts = word.split('-');
-              word = parts[0] + '-' + parts.slice(1).join('');
+            if (newValue.length > 100) {
+              newValue = newValue.slice(0, 100);
             }
             
-            if (word.includes('-')) {
-              return word.split('-')
-                .map((part, index) => {
-                  if (part.length === 0) return '';
-                  return index > 0 
-                    ? part[0].toUpperCase() + part.slice(1).toLowerCase() 
-                    : part[0].toUpperCase() + part.slice(1).toLowerCase();
-                })
-                .join('-');
+            e.target.value = newValue;
+            onChange(e);
+            break;
+
+          case 'doc':
+            newValue = newValue.replace(/\D/g, '');
+            if (newValue.length > 4) {
+              newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
             }
-            return word.length > 0 
-              ? word[0].toUpperCase() + word.slice(1).toLowerCase() 
-              : '';
-          })
-          .join(' ');
-          
-        if (newValue.length > 0 && newValue[newValue.length - 1] !== ' ' && 
-            e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
-          newValue += ' ';
-        }
-        
-        if (newValue.length > 100) {
-          newValue = newValue.slice(0, 100);
-        }
-        
-        e.target.value = newValue;
-        onChange(e);
-        break;
+            if (newValue.length > 11) {
+              newValue = newValue.slice(0, 11);
+            }
+            e.target.value = newValue;
+            onChange(e);
+            break;
 
-      case 'doc':
-        newValue = newValue.replace(/\D/g, '');
-        if (newValue.length > 4) {
-          newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
-        }
-        if (newValue.length > 11) {
-          newValue = newValue.slice(0, 11);
-        }
-        e.target.value = newValue;
-        onChange(e);
-        break;
+          case 'date':
+            newValue = newValue.replace(/\D/g, '');
+            
+            if (newValue.length > 4) {
+              newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
+            } else if (newValue.length > 2) {
+              newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
+            }
+            
+            if (newValue.length > 10) {
+              newValue = newValue.slice(0, 10);
+            }
+            
+            const isDeleting = (value as string)?.length > newValue.length;
+            if (isDeleting && [3, 6].includes(newValue.length)) {
+              newValue = newValue.slice(0, newValue.length - 1);
+            }
+            
+            e.target.value = newValue;
+            onChange(e);
+            break;
 
-      case 'date':
-        newValue = newValue.replace(/\D/g, '');
-        
-        if (newValue.length > 4) {
-          newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
-        } else if (newValue.length > 2) {
-          newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
-        }
-        
-        if (newValue.length > 10) {
-          newValue = newValue.slice(0, 10);
-        }
-        
-        const isDeleting = (value as string)?.length > newValue.length;
-        if (isDeleting && [3, 6].includes(newValue.length)) {
-          newValue = newValue.slice(0, newValue.length - 1);
-        }
-        
-        e.target.value = newValue;
-        onChange(e);
-        break;
-
-      default:
-        onChange(e);
-        break;
+          default:
+            onChange(e);
+            break;
     }
+  };
+
+  const countDigitsBeforePosition = (str: string, position: number): number => {
+  let count = 0;
+  for (let i = 0; i < Math.min(position, str.length); i++) {
+    if (/\d/.test(str[i])) {
+      count++;
+    }
+  }
+  return count;
+};
+
+  const findCursorPositionInFormattedValue = (formattedValue: string, digitsBeforeCursor: number): number => {
+    let digitsPassed = 0;
+    for (let i = 0; i < formattedValue.length; i++) {
+      if (digitsPassed >= digitsBeforeCursor) {
+        return i;
+      }
+      if (/\d/.test(formattedValue[i])) {
+        digitsPassed++;
+      }
+    }
+    return formattedValue.length;
   };
 
   return (

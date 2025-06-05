@@ -469,6 +469,8 @@ const NewCreditPage = () => {
             <PaymentScheduleTable data={paymentSchedule} isLoading={isScheduleLoading} />
           </PaymentScheduleTableWrapper>
         </PaymentScheduleContainer>
+        <CustomInput 
+        inputType="rubles"/>
       </ContentWrapper>
 
       <ClientSelectModal
