@@ -10,7 +10,7 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import QueueModal from "../components/modal/QueueModal";
+import QueueModal from "../components/modal/CrudInherited/QueueModal";
 import useQueue from "../api/hooks/useQueue";
 import useClients from "../api/hooks/useClient";
 import type { Queue } from '../api/types/queue';

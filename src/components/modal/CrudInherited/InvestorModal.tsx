@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import BaseModal, { type ModalMode } from './BASE/modalCRUBase';
-import CustomInput from '../ui/fields/CustomInput';
-import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
-import PhoneModalInput from '../ui/fields/PhoneModalInput';
-import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
-import Button from '../ui/Buttons/DarkCyanButton';
-import type { Investor } from '../../api/types/investor';
-import useInvestor from '../../api/hooks/useInvestor';
-import { formatMoney, parseMoney } from '../../utils/formatPrice';
+import BaseModal, { type ModalMode } from '../BASE/modalCRUBase';
+import CustomInput from '../../ui/fields/CustomInput';
+import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
+import PhoneModalInput from '../../ui/fields/PhoneModalInput';
+import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
+import Button from '../../ui/Buttons/DarkCyanButton';
+import type { Investor } from '../../../api/types/investor';
+import useInvestor from '../../../api/hooks/useInvestor';
+import { formatMoney, parseMoney } from '../../../utils/formatPrice';
 
 type InvestorModalProps = {
   mode: ModalMode;

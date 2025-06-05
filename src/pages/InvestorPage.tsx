@@ -10,7 +10,7 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import InvestorModal from '../components/modal/InvestorModal';
+import InvestorModal from '../components/modal/CrudInherited/InvestorModal';
 import useExport from '../api/hooks/useExport';
 import type { Investor, InvestorParams } from '../api/types/investor';
 import investorService from '../api/services/investorService';

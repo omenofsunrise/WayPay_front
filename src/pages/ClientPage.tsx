@@ -11,7 +11,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import { exportToExcel } from '../utils/exportUtils';
-import ClientModal from "../components/modal/ClientModal";
+import ClientModal from "../components/modal/CrudInherited/ClientModal";
 import useClients from "../api/hooks/useClient";
 import type { ClientForm } from '../api/types/client';
 import { formatDate } from '../utils/dateFormatter';

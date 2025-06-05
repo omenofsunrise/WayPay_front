@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import BaseModal, { type ModalMode } from './BASE/modalCRUBase';
-import CustomInput from '../ui/fields/CustomInput';
-import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
-import PhoneModalInput from '../ui/fields/PhoneModalInput';
-import Button from '../ui/Buttons/DarkCyanButton';
+import BaseModal, { type ModalMode } from '../BASE/modalCRUBase';
+import CustomInput from '../../ui/fields/CustomInput';
+import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
+import PhoneModalInput from '../../ui/fields/PhoneModalInput';
+import Button from '../../ui/Buttons/DarkCyanButton';
 import ClientModal from './ClientModal';
-import ToggleSwitch from '../ui/Toggles/ToggleSwitch';
+import ToggleSwitch from '../../ui/Toggles/ToggleSwitch';
 import styled from 'styled-components';
 import ClientSelectModal from './ClientSelectModal';
-import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
-import { formatMoney } from '../../utils/formatPrice';
-import EntitySelectContainer from '../ui/Layouts/EntitySelectContainer';
+import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
+import { formatMoney } from '../../../utils/formatPrice';
+import EntitySelectContainer from '../../ui/Layouts/EntitySelectContainer';
 
 interface QueueWithClient {
   id: number;

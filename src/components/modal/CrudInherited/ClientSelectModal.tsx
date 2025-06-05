@@ -1,57 +1,60 @@
 import { useState, useCallback, useEffect } from 'react';
-import BaseModal from './BASE/modalCRUBase';
-import CustomInput from '../ui/fields/CustomInput';
-import CustomTable from '../ui/tables/CustomTable';
-import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
-import useProducts from '../../api/hooks/useProducts';
-import Pagination from '../ui/fields/CustomPagination';
+import BaseModal from '../BASE/modalCRUBase';
+import CustomInput from '../../ui/fields/CustomInput';
+import CustomTable from '../../ui/tables/CustomTable';
+import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
+import useClients from '../../../api/hooks/useClient';
+import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
+import { formatDate } from '../../../utils/dateFormatter';
 
-interface ProductSelectModalProps {
+interface ClientSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (product: { id: number; name: string }) => void;
+  onSubmit: (client: { id: number; fullName: string; phone: string }) => void;
   width?: string;
   title?: string;
 }
 
-const ProductSelectModal = ({ 
+const ClientSelectModal = ({ 
   isOpen, 
   onClose, 
   onSubmit, 
   width = "832px",
   title,
-}: ProductSelectModalProps) => {
+}: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
-  const [selectedProduct, setSelectedProduct] = useState<{
+  const [selectedClient, setSelectedClient] = useState<{
     id: number;
-    name: string;
+    fullName: string;
+    phone: string;
   } | null>(null);
   
   const pageSize = 5;
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
-    1: 'name'
+    1: 'fullName',
+    3: 'birthdate'
   };
   
   const { 
     isLoading, 
     error, 
-    data: productsData, 
-    getProducts
-  } = useProducts();
+    data: clientsData, 
+    getClients
+  } = useClients();
   
-  const loadProducts = useCallback(async () => {
+  const loadClients = useCallback(async () => {
     const params: any = {
       page: currentPage,
       pageSize,
-      name: nameFilter || undefined
+      FullName: nameFilter || undefined
     };
 
     if (sortConfig.key !== null) {
@@ -59,15 +62,15 @@ const ProductSelectModal = ({
       params.sortDirection = sortConfig.direction;
     }
 
-    await getProducts(params);
-  }, [currentPage, nameFilter, sortConfig, getProducts]);
+    await getClients(params);
+  }, [currentPage, nameFilter, sortConfig, getClients]);
   
   useEffect(() => {
     if (isOpen) {
-      loadProducts();
-      setSelectedProduct(null);
+      loadClients();
+      setSelectedClient(null);
     }
-  }, [isOpen, currentPage, nameFilter, sortConfig, loadProducts]);
+  }, [isOpen, currentPage, nameFilter, sortConfig, loadClients]);
 
   const handleFilterChange = (value: string) => {
     setNameFilter(value);
@@ -92,52 +95,55 @@ const ProductSelectModal = ({
   };
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
-    const product = productsData?.items[rowIndex];
-    if (product) {
-      setSelectedProduct({
-        id: product.id,
-        name: product.name
+    const client = clientsData?.items[rowIndex];
+    if (client) {
+      setSelectedClient({
+        id: client.id,
+        fullName: client.fullName,
+        phone: client.phone
       });
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedProduct) {
-      onSubmit(selectedProduct);
+    if (selectedClient) {
+      onSubmit(selectedClient);
       onClose();
     }
   };
 
-  const tableData = productsData?.items?.map(product => [
-    product.id.toString(),
-    product.name,
+  const tableData = clientsData?.items?.map(client => [
+    client.id.toString(),
+    client.fullName,
+    client.phone,
+    formatDate(client.birthdate),
   ]) || [];
 
   if (!isOpen) return null;
 
   return (
     <BaseModal
-      title={title || "Выбор товара"}
+      title={title || "Выбор клиента"}
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
-      isSaveDisabled={!selectedProduct}
+      isSaveDisabled={!selectedClient}
       saveButtonText="Выбрать"
       width={width}
     >
       <ModalContent>
         <FilterContainer>
           <CustomInput 
-            style={{ maxWidth: "none" }}
-            inputType="text"
-            placeholder="Поиск по названию"
+          style={{ maxWidth: "none" }}
+            inputType="fullname"
+            placeholder="Поиск по ФИО"
             value={nameFilter}
             onChange={(e) => handleFilterChange(e.target.value)}
           />
         </FilterContainer>
         
-        {isLoading && <LoadingMessage>Загрузка товаров...</LoadingMessage>}
+        {isLoading && <LoadingMessage>Загрузка клиентов...</LoadingMessage>}
         {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
         
         {!isLoading && !error && (
@@ -146,19 +152,21 @@ const ProductSelectModal = ({
               <CustomTable 
                 columns={[
                   { name: "ID", isSortable: true, align: "left" },
-                  { name: "Название", isSortable: true, align: "left" },
+                  { name: "ФИО", isSortable: true, align: "left" },
+                  { name: "Телефон", align: "left" },
+                  { name: "Дата рождения", isSortable: true, align: "right" },
                 ]} 
                 data={tableData}
                 onRowClick={handleRowClick}
                 onSort={handleSort}
                 sortConfig={sortConfig}
-                selectedRow={selectedProduct ? tableData.findIndex(row => row[0] === selectedProduct.id.toString()) : -1}
+                selectedRow={selectedClient ? tableData.findIndex(row => row[0] === selectedClient.id.toString()) : -1}
               />
             </TableContainer>
             
             <PaginationContainer>
               <Pagination
-                total={productsData?.totalCount || 0}
+                total={clientsData?.totalCount || 0}
                 current={currentPage}
                 onChange={setCurrentPage}
                 itemsPerPage={pageSize}
@@ -201,4 +209,4 @@ const ErrorMessage = styled.div`
   color: #ff0000;
 `;
 
-export default ProductSelectModal;
+export default ClientSelectModal;

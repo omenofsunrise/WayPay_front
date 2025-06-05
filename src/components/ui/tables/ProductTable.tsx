@@ -5,7 +5,7 @@ import useProducts from '../../../api/hooks/useProducts';
 import Portal from '../../../utils/Portal';
 import CustomInput from '../fields/CustomInput';
 import { parseMoney } from '../../../utils/formatPrice';
-import ProductSelectModal from '../../modal/ProductSelectModal';
+import ProductSelectModal from '../../modal/CrudInherited/ProductSelectModal';
 
 interface Product {
   id: number;

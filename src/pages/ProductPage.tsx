@@ -10,7 +10,7 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import { ProductModal } from "../components/modal/ProductModal";
+import { ProductModal } from "../components/modal/CrudInherited/ProductModal";
 import useProducts from "../api/hooks/useProducts";
 import useExport from '../api/hooks/useExport';
 import type { Product, ProductParams } from '../api/types/product';

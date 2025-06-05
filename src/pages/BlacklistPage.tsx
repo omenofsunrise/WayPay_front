@@ -11,7 +11,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import { exportToExcel } from '../utils/exportUtils';
-import ClientSelectModal from "../components/modal/ClientSelectModal";
+import ClientSelectModal from "../components/modal/CrudInherited/ClientSelectModal";
 import useBlacklist from "../api/hooks/useBlacklist";
 import { formatDate } from '../utils/dateFormatter';
 

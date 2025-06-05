@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import BaseModal from './BASE/modalCRUBase';
-import CustomInput from '../ui/fields/CustomInput';
-import CustomTable from '../ui/tables/CustomTable';
-import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
-import useInvestor from '../../api/hooks/useInvestor';
-import Pagination from '../ui/fields/CustomPagination';
+import BaseModal from '../BASE/modalCRUBase';
+import CustomInput from '../../ui/fields/CustomInput';
+import CustomTable from '../../ui/tables/CustomTable';
+import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
+import useInvestor from '../../../api/hooks/useInvestor';
+import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
-import { formatMoney } from '../../utils/formatPrice';
+import { formatMoney } from '../../../utils/formatPrice';
 
 interface InvestorSelectModalProps {
   isOpen: boolean;

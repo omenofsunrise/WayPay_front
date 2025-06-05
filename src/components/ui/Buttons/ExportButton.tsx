@@ -69,15 +69,17 @@ const ButtonContainer = styled.button`
   border-radius: 5px;
   cursor: pointer;
   color: inherit;
-  font-size: 20px;
+  font-size: 18px;
   height: 40px;
   margin: auto 0 10px 0;
   transition: background-color 0.2s ease;
   position: relative;
   overflow: hidden;
+  color: rgba(80, 85, 92, 1);
 
   &:hover {
     background-color: rgba(209, 213, 219, 1);
+    color: black;
   }
 
   &:focus {

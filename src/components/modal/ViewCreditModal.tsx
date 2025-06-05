@@ -14,8 +14,8 @@ import useClient from '../../api/hooks/useClient';
 import type { Credit } from '../../api/types/credit';
 import type { Client } from '../../api/types/client';
 import { formatMoney } from '../../utils/formatPrice';
-import ClientModal from './ClientModal';
-import InvestorModal from './InvestorModal';
+import ClientModal from './CrudInherited/ClientModal';
+import InvestorModal from './CrudInherited/InvestorModal';
 import useInvestor from '../../api/hooks/useInvestor';
 import type { Payment, PaymentByCreditParams, PaymentParams } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
@@ -161,6 +161,19 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   };
 
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+  
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [onClose]);
+    
   const handleOpenGuarantorModal = () => {
     if (guarantorData) {
       setIsGuarantorModalOpen(true);

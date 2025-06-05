@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 
@@ -32,15 +32,35 @@ const BaseModal: React.FC<ModalProps> = ({
   saveButtonText = "Сохранить"
 }) => {
   const isViewMode = mode === 'view';
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const handleCancel = (e: React.MouseEvent) => {
     e.preventDefault();
     onCancel();
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <ModalBackdrop>
-      <ModalContainer width={width}>
+    <ModalBackdrop onClick={handleBackdropClick}>
+      <ModalContainer width={width} ref={modalRef}>
         <CloseButton onClick={onClose}>&times;</CloseButton>
         <ModalHeader>
           <ModalTitle>{title}</ModalTitle>

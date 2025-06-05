@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import BaseModal, { type ModalMode } from './BASE/modalCRUBase';
-import CustomInput from '../ui/fields/CustomInput';
-import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
-import PhoneModalInput from '../ui/fields/PhoneModalInput';
-import { InputContainer, InputLabel, InputRow } from '../Containers/InputComponents';
-import type { ClientForm } from '../../api/types/client';
-import Button from '../ui/Buttons/DarkCyanButton';
-import useClient from '../../api/hooks/useClient';
+import BaseModal, { type ModalMode } from '../BASE/modalCRUBase';
+import CustomInput from '../../ui/fields/CustomInput';
+import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
+import PhoneModalInput from '../../ui/fields/PhoneModalInput';
+import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
+import type { ClientForm } from '../../../api/types/client';
+import Button from '../../ui/Buttons/DarkCyanButton';
+import useClient from '../../../api/hooks/useClient';
 
 interface Client {
   id: number;
@@ -529,6 +529,22 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 name="birthdate"
                 inputType="date"
                 placeholder="дд.мм.гггг"
+                value={formData.birthdate.toString() || ''}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.birthdate && validationErrors.birthdate}
+                errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
+              />
+            </InputContainer>
+          </InputRow>
+
+          <InputRow>
+            <InputLabel>Адрес регистрации:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="regAdress"
+                inputType="text"
+                placeholder="г. Грозный"
                 value={formData.birthdate.toString() || ''}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
