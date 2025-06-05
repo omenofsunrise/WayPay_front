@@ -460,11 +460,13 @@ const NoteInput = styled.textarea`
   height: 150px;
   padding: 12px;
   margin: 15px 0;
-  border: 1px solid #e2e8f0;
+  border: 3px solid #e2e8f0;
   border-radius: 4px;
   resize: none;
   font-family: inherit;
   font-size: 14px;
+  background: white;
+  color: black;
 
   &:focus {
     outline: none;
@@ -483,6 +485,7 @@ const CancelButton = styled.button`
   border-radius: 10px;
   cursor: pointer;
   margin-right: auto;
+  color: black;
 
   &:hover {
     background: #e6e6e6;
