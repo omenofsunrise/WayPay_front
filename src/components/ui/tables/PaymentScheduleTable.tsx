@@ -59,7 +59,6 @@ const TableContainer = styled.div`
   position: relative;
   background-color: white;
   margin-left: auto;
-  max-width: 1100px;
 `;
 
 const StyledTable = styled.table`

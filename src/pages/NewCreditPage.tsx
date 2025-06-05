@@ -33,6 +33,7 @@ interface Client {
   birthdate?: string | Date;
   docIssueDate?: string | Date;
   docIssueYear?: number; 
+  registrationAddress?: string;
 }
 
 interface Investor {
@@ -91,26 +92,26 @@ const NewCreditPage = () => {
   }, []);
 
   const handleCreateCredit = useCallback(async () => {
-  if (!client || !contractDate || !investor) return;
+    if (!client || !contractDate || !investor) return;
 
-  const creditData: CreateCreditRequest = {
-    clientId: client.id,
-    investorId: investor.id,
-    creditDate: new Date(contractDate),
-    firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
-    termMonths: parseInt(months),
-    paymentDay: parseInt(paymentDue),
-    products: products
-      .filter(product => product.name.trim() !== '' && product.price > 0)
-      .map(product => ({
-        name: product.name,
-        price: product.price,
-        surcharge: product.markup
-      })),
-    ...(guarantor && { guarantorId: guarantor.id })
-  };
+    const creditData: CreateCreditRequest = {
+      clientId: client.id,
+      investorId: investor.id,
+      creditDate: new Date(contractDate),
+      firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
+      termMonths: parseInt(months),
+      paymentDay: parseInt(paymentDue),
+      products: products
+        .filter(product => product.name.trim() !== '' && product.price > 0)
+        .map(product => ({
+          name: product.name,
+          price: product.price,
+          surcharge: product.markup
+        })),
+      ...(guarantor && { guarantorId: guarantor.id })
+    };
 
-  const createdCredit = await createCredit(creditData);
+    const createdCredit = await createCredit(creditData);
     if (createdCredit) {
       navigate('/credits');
     }
@@ -323,7 +324,7 @@ const NewCreditPage = () => {
         <ModalInfoTitle>Основная информация</ModalInfoTitle>
         
         <FormRow>
-          <FieldGroup>
+          <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
             <Label>Дата</Label>
             <DateInputWrapper>
               <DateInput 
@@ -333,7 +334,7 @@ const NewCreditPage = () => {
             </DateInputWrapper>
           </FieldGroup>
         
-          <FieldGroup>
+          <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
             <Label>Инвестор</Label>
             <EntitySelectWrapper>
               <EntitySelectContainer
@@ -356,7 +357,7 @@ const NewCreditPage = () => {
 
         <ModalInfoTitle>Сведения о покупателе</ModalInfoTitle>
         <FormRow>
-          <FieldGroup>
+          <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
             <Label>Покупатель</Label>
             <EntitySelectWrapper>
               <EntitySelectContainer
@@ -371,7 +372,7 @@ const NewCreditPage = () => {
             </EntitySelectWrapper>
           </FieldGroup>
 
-          <FieldGroup>
+          <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
             <Label>Поручитель</Label>
             <EntitySelectWrapper>
               <EntitySelectContainer
@@ -464,7 +465,9 @@ const NewCreditPage = () => {
               </ButtonWrapper>
             </InputGroup>
           </PaymentScheduleInputs>
-          <PaymentScheduleTable data={paymentSchedule} isLoading={isScheduleLoading} />
+          <PaymentScheduleTableWrapper>
+            <PaymentScheduleTable data={paymentSchedule} isLoading={isScheduleLoading} />
+          </PaymentScheduleTableWrapper>
         </PaymentScheduleContainer>
       </ContentWrapper>
 
@@ -493,7 +496,8 @@ const NewCreditPage = () => {
           doc: client.doc || '',
           birthdate: client.birthdate instanceof Date ? client.birthdate.toISOString() : client.birthdate,
           docIssueDate: client.docIssueDate instanceof Date ? client.docIssueDate.toISOString() : client.docIssueDate,
-          docIssueYear: client.docIssueYear
+          docIssueYear: client.docIssueYear,
+          registrationAddress: client.registrationAddress
         } : undefined}
       />
 
@@ -509,7 +513,8 @@ const NewCreditPage = () => {
           doc: guarantor.doc || '',
           birthdate: guarantor.birthdate instanceof Date ? guarantor.birthdate.toISOString() : guarantor.birthdate,
           docIssueDate: guarantor.docIssueDate instanceof Date ? guarantor.docIssueDate.toISOString() : guarantor.docIssueDate,
-          docIssueYear: guarantor.docIssueYear
+          docIssueYear: guarantor.docIssueYear,
+          registrationAddress: guarantor.registrationAddress
         } : undefined}
       />
 
@@ -539,27 +544,37 @@ const ContentWrapper = styled.div`
 
 const ProductsTableWrapper = styled.div`
   margin-top: 16px;
+  overflow-x: auto;
 `;
 
 const EntitySelectWrapper = styled.div`
-  width: 465px;
+  width: 100%;
+  max-width: 465px;
   display: flex;
   align-items: center;
+  gap: 8px;
 `;
 
 const DateInputWrapper = styled.div`
-  width: 248px;
+  width: 100%;
+  max-width: 248px;
 `;
 
 const FormRow = styled.div`
   display: flex;
+  flex-direction: column;
   gap: 20px;
   margin-bottom: 20px;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
 `;
 
 const FieldGroup = styled.div`
   display: flex;
   flex-direction: column;
+  min-width: 0;
 `;
 
 const Label = styled.label`
@@ -573,7 +588,13 @@ const Label = styled.label`
 const ButtonWrapper = styled.div`
   margin-top: 30px;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  gap: 12px;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    align-items: center;
+  }
 `;
 
 const TotalSumContainer = styled.div`
@@ -581,18 +602,39 @@ const TotalSumContainer = styled.div`
   font-weight: 500;
   color: black;
   margin-top: 10px;
+  font-size: 14px;
+
+  @media (min-width: 576px) {
+    font-size: 16px;
+  }
 `;
 
 const PaymentScheduleContainer = styled.div`
   display: flex;
+  flex-direction: column;
   gap: 20px;
+
+  @media (min-width: 992px) {
+    flex-direction: row;
+  }
 `;
 
 const PaymentScheduleInputs = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: 300px;
+  width: 100%;
+
+  @media (min-width: 992px) {
+    width: 300px;
+    min-width: 300px;
+  }
+`;
+
+const PaymentScheduleTableWrapper = styled.div`
+  flex: 1;
+  overflow-x: auto;
+  width: 100%;
 `;
 
 const InputGroup = styled.div`
@@ -624,10 +666,17 @@ const InputLabel1 = styled.label`
 
 const InputRow = styled.div`
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-bottom: 0;
   padding-bottom: 0;
-  width: 440px;
+  width: 100%;
+
+  @media (min-width: 576px) {
+    flex-direction: row;
+    width: 100%;
+    max-width: 440px;
+  }
 `;
 
 const AutoSelectButton = styled.button`
@@ -642,6 +691,7 @@ const AutoSelectButton = styled.button`
   opacity: ${props => props.disabled ? 0.5 : 1};
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   outline: none;
+  
   &:hover:not(:disabled) {
     opacity: 0.8;
   }
