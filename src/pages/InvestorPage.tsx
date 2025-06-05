@@ -308,12 +308,12 @@ const InvestorPage = () => {
                     <CustomTable 
                         columns={[
                             { name: "id", isHidden: true },
-                            { name: "Никнейм" },
-                            { name: "ФИО (видно только админам)", isSortable: true },
-                            { name: "Телефон" },
-                            { name: "Доля инвестора", isSortable: true },
-                            { name: "Инвестиция", isSortable: true },
-                            { name: "Касса", isSortable: true },
+                            { name: "Никнейм", align: "left" },
+                            { name: "ФИО (видно только админам)", isSortable: true, align: "left" },
+                            { name: "Телефон", align: "left" },
+                            { name: "Доля инвестора", isSortable: true, align: "right" },
+                            { name: "Инвестиция", isSortable: true, align: "right" },
+                            { name: "Касса", isSortable: true, align: "right" },
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}

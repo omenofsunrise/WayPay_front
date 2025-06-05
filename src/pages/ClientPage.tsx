@@ -246,8 +246,8 @@ const ClientPage = () => {
                             { name: "ФИО", isSortable: true, align: "left" },
                             { name: "Телефон", align: "left" },
                             { name: "Дата рождения", isSortable: true, align: "right" },
-                            { name: "№ договоров" },
-                            { name: "Остатки мес." }
+                            { name: "№ договоров", align: "right" },
+                            { name: "Остатки мес.", align: "right" }
                         ]} 
                         rowStyles={rowStyles}
                         data={tableData}

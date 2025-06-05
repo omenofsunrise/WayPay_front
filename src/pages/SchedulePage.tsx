@@ -297,10 +297,10 @@ const SchedulePage = () => {
                     <CustomTable 
                         columns={[
                             { name: "Договор №", isSortable: true },
-                            { name: "ФИО", isSortable: true },
-                            { name: "Платёж", isSortable: true },
-                            { name: "Дата платежа", isSortable: true },
-                            { name: "Уведомлён"},
+                            { name: "ФИО", isSortable: true, align: "left" },
+                            { name: "Платёж", isSortable: true, align: "right" },
+                            { name: "Дата платежа", isSortable: true, align: "right" },
+                            { name: "Уведомлён", align: "center" },
                         ]} 
                         data={tableData}
                         onSort={handleSort}

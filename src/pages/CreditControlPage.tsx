@@ -43,7 +43,6 @@ const CreditControlPage = () => {
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
-  const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const itemsPerPage = 10;
   const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -56,8 +55,8 @@ const CreditControlPage = () => {
     2: 'date',
     3: 'client',
     5: 'accured',
-    6: 'income_rubles',
-    7: 'income_percents',
+    6: 'income_percents',
+    7: 'income_rubles',
   };
 
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
@@ -256,7 +255,6 @@ const CreditControlPage = () => {
       ) : (
         <EmptyStarIcon 
           key={`star-${credit.id}`}
-          isSelected={selectedRow === credit.id}
           onClick={(e) => {
             e.stopPropagation();
             toggleFavourite(credit.id);
@@ -272,8 +270,8 @@ const CreditControlPage = () => {
       credit.clientFullName,
       credit.clientPhone || 'Нет данных',
       `${formatMoney(credit.accured?.toString() || '')}`,
-      `${formatMoney(credit.incomeRubles.toString())}`,
       `${credit.incomePercents.toString() + '%'}`,
+      `${formatMoney(credit.incomeRubles.toString())}`,
       credit.debt > 0,
       credit.isActive,
     ]);
@@ -286,8 +284,8 @@ const CreditControlPage = () => {
         '',
         'Итого',
         `${formatMoney(creditsData.totalAccured.toString())}`,
-        `${formatMoney(creditsData.totalIncomeRubles.toString())}`,
         ``,
+        `${formatMoney(creditsData.totalIncomeRubles.toString())}`,
         '',
         false
       ];
@@ -438,12 +436,12 @@ const CreditControlPage = () => {
             columns={[
               { name: "" },
               { name: "№", isSortable: true },
-              { name: "Дата договора", isSortable: true },
-              { name: "ФИО покупателя", isSortable: true },
-              { name: "Телефон" },
-              { name: "Начислено", isSortable: true },
-              { name: "Доход, руб", isSortable: true },
-              { name: "Доход, %", isSortable: true },
+              { name: "Дата договора", isSortable: true, align: "right" },
+              { name: "ФИО покупателя", isSortable: true, align: "left" },
+              { name: "Телефон", align: "left" },
+              { name: "Начислено", isSortable: true, align: "right" },
+              { name: "Доход, %", isSortable: true, align: "right" },
+              { name: "Доход, руб", isSortable: true, align: "right" },
               { name: "isActive", isHidden: true },
               { name: "hasDebt", isHidden: true } 
             ]} 
@@ -451,7 +449,6 @@ const CreditControlPage = () => {
             onSort={handleSort}
             sortConfig={sortConfig}
             onRowDoubleClick={handleRowDoubleClick}
-            selectedRow={selectedRow}
             contextMenuActions={tableActions}
             hasTotalsRow={true}
             debtChecker={(row) => row[row.length - 2] === true}
@@ -542,8 +539,7 @@ const EmptyStarIcon = styled.div<EmptyStarIconProps>`
     width: 100%;
     height: 100%;
     path {
-      stroke: ${props => props.isSelected ? 'white' : '#50555C'};
-      ${props => props.isSelected && 'fill: white;'}
+      stroke: #50555C;
     }
   }
 `;

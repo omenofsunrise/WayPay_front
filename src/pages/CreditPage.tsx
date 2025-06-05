@@ -19,7 +19,6 @@ import type { Credit } from '../api/types/credit';
 import useExport from '../api/hooks/useExport';
 import creditService from '../api/services/creditService';
 import { formatDate } from '../utils/dateFormatter';
-import type { NewPaymentModalProps } from '../components/modal/NewPaymentModal';
 import NewPaymentModal from '../components/modal/NewPaymentModal';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { formatMoney } from '../utils/formatPrice';
@@ -40,7 +39,6 @@ const CreditPage = () => {
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
-  const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const itemsPerPage = 10;
   const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -233,7 +231,6 @@ const CreditPage = () => {
       ) : (
         <EmptyStarIcon 
           key={`star-${credit.id}`}
-          isSelected={selectedRow === credit.id}
           onClick={(e) => {
             e.stopPropagation();
             toggleFavourite(credit.id);
@@ -374,20 +371,19 @@ const CreditPage = () => {
             columns={[
               { name: "" },
               { name: "№", isSortable: true },
-              { name: "Дата договора", isSortable: true },
-              { name: "ФИО покупателя", isSortable: true },
-              { name: "Телефон" },
-              { name: "Начислено", isSortable: true },
-              { name: "Уплачено", isSortable: true },
-              { name: "Остаток", isSortable: true },
-              { name: "Долг", isSortable: true },
-              { name: "isActive", isHidden: true }
+              { name: "Дата договора", isSortable: true, align: "right" },
+              { name: "ФИО покупателя", isSortable: true, align: "left" },
+              { name: "Телефон", align: "left" },
+              { name: "Начислено", isSortable: true, align: "right" },
+              { name: "Уплачено", isSortable: true, align: "right" },
+              { name: "Остаток", isSortable: true, align: "right" },
+              { name: "Долг", isSortable: true, align: "right" },
+              { name: "isActive", isHidden: true, align: "right" }
             ]} 
             data={formatCreditData(creditsData?.items)}
             onSort={handleSort}
             sortConfig={sortConfig}
             onRowDoubleClick={handleRowDoubleClick}
-            selectedRow={selectedRow}
             contextMenuActions={tableActions}
             hasTotalsRow={true}
           />
@@ -476,8 +472,7 @@ const EmptyStarIcon = styled.div<EmptyStarIconProps>`
     width: 100%;
     height: 100%;
     path {
-      stroke: ${props => props.isSelected ? 'white' : '#50555C'};
-      ${props => props.isSelected && 'fill: white;'}
+      stroke: #50555C;
     }
   }
 `;

@@ -293,7 +293,7 @@ const QueuePage = () => {
                 <>
                     <CustomTable 
                         columns={[
-                            { name: "Номер в очереди", isSortable: true, align: "left" },
+                            { name: "Номер в очереди", isSortable: true, align: "center" },
                             { name: "ФИО клиента", align: "left" },
                             { name: "Телефон клиента", align: "left" },
                             { name: "Сумма", isSortable: true, align: "right" },

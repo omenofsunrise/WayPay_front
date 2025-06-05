@@ -146,10 +146,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     };
   }, [contextMenu]);
 
-  const hasDebt = (row: any[]) => {
-    return row[row.length - 1] === true;
-  };
-
   // Function to get row style with fallbacks
   const getRowStyle = (rowIndex: number, isTotalsRow: boolean, isDebtRow: boolean): RowStyle => {
     if (isTotalsRow) {
@@ -162,7 +158,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     // For selected row, override background and text color unless custom style specifies them
     if (rowIndex === selectedRow) {
       return {
-        backgroundColor: customStyle.backgroundColor || '#007D88',
+        backgroundColor: customStyle.backgroundColor || '#007D88', // Дефолтный цвет выбранной строки
         color: customStyle.color || 'white',
         fontWeight: customStyle.fontWeight || 'normal'
       };

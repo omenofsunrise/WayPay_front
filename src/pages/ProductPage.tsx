@@ -211,7 +211,7 @@ const ProductPage = () => {
                     <CustomTable 
                         columns={[
                             { name: "ID", isSortable: true },
-                            { name: "Название", isSortable: true },
+                            { name: "Название", isSortable: true, align: "left" },
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}

@@ -158,13 +158,13 @@ const PaymentPage = () => {
                 <>
                     <CustomTable 
                         columns={[
-                            { name: "Договор №", isSortable: true },
-                            { name: "ФИО", isSortable: true },
-                            { name: "Платёж", isSortable: true },
-                            { name: "Дата платежа", isSortable: true },
-                            { name: "Тип платежа" },
-                            { name: "Платёж принял" },
-                            { name: "Подтверждён" },                
+                            { name: "Договор №", isSortable: true, align: "center" },
+                            { name: "ФИО", isSortable: true, align: "left" },
+                            { name: "Платёж", isSortable: true, align: "right" },
+                            { name: "Дата платежа", isSortable: true, align: "right" },
+                            { name: "Тип платежа", align: "left" },
+                            { name: "Платёж принял", align: "left" },
+                            { name: "Подтверждён", align: "center" },                
                         ]} 
                         data={formatPaymentsData(paymentsData?.items)}
                         onSort={handleSort}

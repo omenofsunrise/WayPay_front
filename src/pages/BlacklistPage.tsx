@@ -143,9 +143,9 @@ const BlacklistPage = () => {
                         columns={[
                             { name: "ID", isSortable: true, align: "left" },
                             { name: "ФИО", isSortable: true, align: "left" },
-                            { name: "Дата рождения", isSortable: true, align: "left" },
+                            { name: "Дата рождения", isSortable: true, align: "right" },
                             { name: "Телефон", align: "left" },
-                            { name: "Всего просрочка" }
+                            { name: "Всего просрочка", align: "right" }
                         ]} 
                         data={tableData}
                         onSort={handleSort}
