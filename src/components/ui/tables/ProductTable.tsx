@@ -86,40 +86,47 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
   };
 
   const handleInputChange = (id: number, field: keyof Product, value: string | number) => {
-    const updatedProducts = products.map(product => {
-      if (product.id === id) {
-        const numericValue = typeof value === 'string' && field === 'price' 
-          ? parseMoney(value)
-          : Number(value) || 0;
-          
-        const updatedProduct = {
-          ...product,
-          [field]: field === 'name' ? value : numericValue
-        };
-        
-        if (['price', 'quantity', 'markup'].includes(field)) {
-          updatedProduct.totalPrice = roundTo50(updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100));
-        }
-        
-        return updatedProduct;
-      }
-      return product;
-    });
-
-    onProductsChange(updatedProducts);
-
-    const editedProduct = updatedProducts.find(p => p.id === id);
-    if (editedProduct && id === products[products.length - 1].id) {
-      const isNotEmpty = editedProduct.name.trim() !== '' || 
-                        editedProduct.price > 0 || 
-                        editedProduct.quantity > 1 || 
-                        editedProduct.markup > 0;
+  const updatedProducts = products.map(product => {
+    if (product.id === id) {
+      let numericValue: number;
       
-      if (isNotEmpty) {
-        addNewRow();
+      if (field === 'price') {
+        // Для цены используем parseMoney если значение строка
+        numericValue = typeof value === 'string' ? parseMoney(value) : Number(value) || 0;
+      } else {
+        // Для остальных полей просто преобразуем в число
+        numericValue = Number(value) || 0;
       }
+      
+      const updatedProduct = {
+        ...product,
+        [field]: field === 'name' ? value : numericValue
+      };
+      
+      if (['price', 'quantity', 'markup'].includes(field)) {
+        updatedProduct.totalPrice = roundTo50(updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100));
+      }
+      
+      return updatedProduct;
     }
-  };
+    return product;
+  });
+
+  onProductsChange(updatedProducts);
+
+  // Добавляем новую строку если редактируется последняя и она не пустая
+  const editedProduct = updatedProducts.find(p => p.id === id);
+  if (editedProduct && id === products[products.length - 1].id) {
+    const isNotEmpty = editedProduct.name.trim() !== '' || 
+                      editedProduct.price > 0 || 
+                      editedProduct.quantity > 1 || 
+                      editedProduct.markup > 0;
+    
+    if (isNotEmpty) {
+      addNewRow();
+    }
+  }
+};
 
   const roundTo50 = (value: number): number => {
     return Math.round(value / 50) * 50;
@@ -261,18 +268,17 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
                       </AnimatePresence>
                     </NameCellContainer>
                   </BodyCell>
-                  <BodyCell>
-                    <CustomInput
-                      inputType="rubles"
-                      value={product.price || ''}
-                      onChange={(e) => handleInputChange(product.id, 'price', e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, product.id)}
-                      placeholder="0"
-                      min="0"
-                      step="0.01"
-                      style={{ border: 'none', padding: '0' }}
-                    />
-                  </BodyCell>
+          <BodyCell>
+  <CustomInput
+    inputType="rubles"
+    value={product.price ? `${product.price.toLocaleString('ru-RU')} ₽` : ''}
+    onChange={(e) => handleInputChange(product.id, 'price', e.target.value)}
+    onKeyDown={(e) => handleKeyDown(e, product.id)}
+    placeholder="0"
+    min="0"
+    style={{ border: 'none', padding: '0' }}
+  />
+</BodyCell>
                   <BodyCell>
                     <CustomInput
                       inputType="number"
