@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import TitleField from '../ui/Layouts/TitleLayout';
 import CustomTitle from '../ui/Text/CustomTitle';
@@ -17,6 +17,8 @@ import { formatMoney } from '../../utils/formatPrice';
 import ClientModal from './ClientModal';
 import InvestorModal from './InvestorModal';
 import useInvestor from '../../api/hooks/useInvestor';
+import type { Payment, PaymentParams } from '../../api/types/payment';
+import usePayment from '../../api/hooks/usePayment';
 
 interface ViewCreditModalProps {
   id: number;
@@ -36,7 +38,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [guarantorData, setGuarantorData] = useState<Client | null>(null);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { 
+        isLoading, 
+        error, 
+        data: paymentsData, 
+        getPayments
+    } = usePayment();
   
   const { getInvestorById } = useInvestor();
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -44,12 +51,25 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [currentClient, setCurrentClient] = useState<Client | null>(null);
   const [currentInvestor, setCurrentInvestor] = useState<any>(null);
-
+  
+  const loadPayments = useCallback(async () => {
+          const params: PaymentParams = {
+              page: 1,
+              pageSize: 100,
+              clientFullname: undefined
+          };
+    
+          await getPayments(params);
+      }, [getPayments]);
+      
+      useEffect(() => {
+          loadPayments();
+      }, [loadPayments]);
+      
   useEffect(() => {
     if (isOpen && id) {
       const fetchData = async () => {
         try {
-          setIsLoading(true);
           setCreditData(null);
           setCurrentClient(null);
           setGuarantorData(null);
@@ -78,7 +98,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         } catch (error) {
           console.error('Error fetching data:', error);
         } finally {
-          setIsLoading(false);
         }
       };
 
@@ -152,6 +171,20 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   };
 
+  const formatPaymentsData = (payments: Payment[] | undefined) => {
+        if (!payments) return [];
+
+        return payments.map(payment => [
+            payment.creditId?.toString() || '',
+            payment.clientFullName || '',
+            formatMoney(payment.paymentAmount?.toString() || '0'),
+            payment.paymentDate ? formatDate(payment.paymentDate) : '',
+            payment.type === 'cash' ? 'Наличными' : 'Картой',
+            payment.investorNickname || '',
+            payment.accepted ? 'Да' : 'Нет'
+        ]);
+    };
+      
   if (!isOpen) return null;
 
   return (
@@ -166,88 +199,100 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
             
             {isLoading ? (
               <LoadingText>Загрузка данных...</LoadingText>
-            ) : (
-              <HorizontalContainer>
-                <VerticalContainer>
-                  <ModalInfoTitle>Общая информация</ModalInfoTitle>
-                  <HorizontalContainer>
-                    <InputContainer style={{ maxWidth: "189px", paddingRight: "20px"}}>
-                      <InputTitle>Дата</InputTitle>
-                      <CustomInput 
-                        value={creditData ? formatDate(creditData.creditDate) : ''}
-                        readOnly
-                      />
-                    </InputContainer>
-                    <InputContainer style={{ width: "260px"}}>
-                      <InputTitle>Инвестор</InputTitle>
-                      <CustomInput 
-                        value={creditData?.investorNickname || ''}
-                        readOnly
-                      />
-                    </InputContainer>
-                    <ViewButtonContainer>
-                      <ViewButton onClick={handleOpenInvestorModal} />
-                    </ViewButtonContainer>
-                  </HorizontalContainer>
-                  <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
-                  <HorizontalContainer>
-                    <InputContainer style={{ width: "260px"}}>
-                      <InputTitle>Покупатель</InputTitle>
-                      <CustomInput 
-                        value={creditData?.clientFullName || ''}
-                        readOnly
-                      />
-                    </InputContainer>
-                    <ViewButtonContainer>
-                      <ViewButton onClick={handleOpenClientModal} />
-                    </ViewButtonContainer>
-                    <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
-                      <InputTitle>Первоначальный взнос, руб</InputTitle>
-                      <CustomInput 
-                        value={creditData ? `${formatMoney(creditData.firstPayment.toString())}` : ''}
-                        readOnly
-                      />
-                    </InputContainer>
-                  </HorizontalContainer>
-                  <HorizontalContainer style={{ marginTop: "10px"}}>
-                    <InputContainer style={{ width: "260px"}}>
-                      <InputTitle>Поручитель</InputTitle>
-                      <CustomInput 
-                        value={guarantorData?.fullName || 'Без поручителя'}
-                        readOnly
-                      />
-                    </InputContainer>
-                    <ViewButtonContainer>
-                      {guarantorData && <ViewButton onClick={handleOpenGuarantorModal} />}
-                    </ViewButtonContainer>
-                    <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
-                      <InputTitle>Срок, месяцев</InputTitle>
-                      <CustomInput 
-                        value={creditData?.termMonths?.toString() || ''}
-                        readOnly
-                      />
-                    </InputContainer>
-                  </HorizontalContainer>
-                </VerticalContainer>
-                <VerticalContainer style={{ marginLeft: "30px", width: "562px" }}>
-                  <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
-                    <ModalInfoTitle>Заметки</ModalInfoTitle>
-                    <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
-                  </HorizontalContainer>
-                  <TableContainer style={{ width: "562px", maxHeight: "260px" }}>
-                    {isNotesLoading ? (
-                      <LoadingText>Загрузка заметок...</LoadingText>
-                    ) : notesError ? (
-                      <ErrorText>{notesError}</ErrorText>
-                    ) : (
-                      <Table 
-                        columns={notesColumns} 
-                        data={formatNotesData()}
-                      />
-                    )}
-                  </TableContainer>
-                </VerticalContainer>
-              </HorizontalContainer>
+            ) : ( <div>
+                <HorizontalContainer style={{ marginBottom: '30px' }}>
+                  <VerticalContainer>
+                    <ModalInfoTitle>Общая информация</ModalInfoTitle>
+                    <HorizontalContainer>
+                      <InputContainer style={{ maxWidth: "189px", paddingRight: "20px"}}>
+                        <InputTitle>Дата</InputTitle>
+                        <CustomInput 
+                          value={creditData ? formatDate(creditData.creditDate) : ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                      <InputContainer style={{ width: "260px"}}>
+                        <InputTitle>Инвестор</InputTitle>
+                        <CustomInput 
+                          value={creditData?.investorNickname || ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                      <ViewButtonContainer>
+                        <ViewButton onClick={handleOpenInvestorModal} />
+                      </ViewButtonContainer>
+                    </HorizontalContainer>
+                    <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
+                    <HorizontalContainer>
+                      <InputContainer style={{ width: "260px"}}>
+                        <InputTitle>Покупатель</InputTitle>
+                        <CustomInput 
+                          value={creditData?.clientFullName || ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                      <ViewButtonContainer>
+                        <ViewButton onClick={handleOpenClientModal} />
+                      </ViewButtonContainer>
+                      <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
+                        <InputTitle>Первоначальный взнос, руб</InputTitle>
+                        <CustomInput 
+                          value={creditData ? `${formatMoney(creditData.firstPayment.toString())}` : ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                    </HorizontalContainer>
+                    <HorizontalContainer style={{ marginTop: "10px"}}>
+                      <InputContainer style={{ width: "260px"}}>
+                        <InputTitle>Поручитель</InputTitle>
+                        <CustomInput 
+                          value={guarantorData?.fullName || 'Без поручителя'}
+                          readOnly
+                        />
+                      </InputContainer>
+                      <ViewButtonContainer>
+                        {guarantorData && <ViewButton onClick={handleOpenGuarantorModal} />}
+                      </ViewButtonContainer>
+                      <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
+                        <InputTitle>Срок, месяцев</InputTitle>
+                        <CustomInput 
+                          value={creditData?.termMonths?.toString() || ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                    </HorizontalContainer>
+                  </VerticalContainer>
+                  <VerticalContainer style={{ marginLeft: "30px", width: "562px" }}>
+                    <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
+                      <ModalInfoTitle>Заметки</ModalInfoTitle>
+                      <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
+                    </HorizontalContainer>
+                    <TableContainer style={{ width: "562px", maxHeight: "260px" }}>
+                      {isNotesLoading ? (
+                        <LoadingText>Загрузка заметок...</LoadingText>
+                      ) : notesError ? (
+                        <ErrorText>{notesError}</ErrorText>
+                      ) : (
+                        <Table 
+                          columns={notesColumns} 
+                          data={formatNotesData()}
+                        />
+                      )}
+                    </TableContainer>
+                  </VerticalContainer>
+                </HorizontalContainer>
+                <CustomTable                         columns={[
+                            { name: "Договор №" },
+                            { name: "ФИО" },
+                            { name: "Платёж" },
+                            { name: "Дата платежа" },
+                            { name: "Тип платежа" },
+                            { name: "Платёж принял" },
+                            { name: "Подтверждён" },                
+                        ]} 
+                        data={formatPaymentsData(paymentsData?.items)}
+                    />
+              </div>
             )}
           </ModalWrapper>
         </ModalContent>
@@ -263,7 +308,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         />
       )}
 
-      {/* Guarantor Modal */}
       {guarantorData && (
         <ClientModal
           mode="view"

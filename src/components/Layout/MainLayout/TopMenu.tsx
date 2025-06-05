@@ -5,10 +5,12 @@ import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
 import CalendarIcon from '../../../assets/ui/TopBar/calendar.svg';
 import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
 import BlogIcon from '../../../assets/ui/TopBar/blog.svg';
+import newCreditIcon from '../../../assets/ui/TopBar/newCredit.svg';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const menuItems = [
+  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit'},
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', path: '/calculator' },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
@@ -16,6 +18,7 @@ const menuItems = [
 ];
 
 const pathToMenuItemMap: Record<string, string> = {
+  '/new-credit': 'newCredit',
   '/calculator': 'calculator',
   '/chat': 'chat',
   '/todo': 'todo',
@@ -33,7 +36,6 @@ const TopMenu = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Определяем выбранный элемент меню на основе текущего пути
     const currentPath = location.pathname;
     const menuItemId = pathToMenuItemMap[currentPath];
     

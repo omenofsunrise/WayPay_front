@@ -12,6 +12,14 @@ interface Column {
   isHidden?: boolean;
 }
 
+interface TableRowProps {
+  $isLast?: boolean; 
+  $isSelected?: boolean;
+  $isTotalsRow?: boolean;
+  $isDebtRow?: boolean;
+  $isSuccessRow?: boolean;
+}
+
 interface TableAction {
   label: string;
   action: (rowData: any[], rowIndex: number) => void;
@@ -205,6 +213,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   $isLast={rowIndex === data.length - 1}
                   $isSelected={rowIndex === selectedRow}
                   $isTotalsRow={isTotalsRow}
+                  $isDebtRow={isDebtRow}
+                  $isSuccessRow={row[row.length - 1] === false}
                   onClick={() => !isTotalsRow && handleRowClick(rowIndex)}
                   onDoubleClick={() => !isTotalsRow && handleRowDoubleClick(row, rowIndex)}
                   onContextMenu={(e) => !isTotalsRow && handleContextMenu(e, rowIndex)}
@@ -224,12 +234,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                         $isLast={cellIndex === row.length - 1}
                         $isTotalsCell={isTotalsRow}
                         $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
-                        $cellColor={typeof cell === 'object' ? cell.color : undefined}
                     >
                         {typeof cell === 'object' ? cell.value : cell}
                     </BodyCell>
                     )
-                ))}
+                  ))}
                 </TableRow>
               );
             })}
@@ -316,14 +325,25 @@ const TableBody = styled.tbody<{ $fixedHeight?: string }>`
   `}
 `;
 
-const TableRow = styled(motion.tr)<{ 
-  $isLast?: boolean; 
-  $isSelected?: boolean;
-  $isTotalsRow?: boolean;
-}>`
+const TableRow = styled(motion.tr)<TableRowProps>`
   position: relative;
   cursor: ${({ $isTotalsRow }) => ($isTotalsRow ? 'default' : 'pointer')};
   font-weight: ${({ $isTotalsRow }) => ($isTotalsRow ? 'bold' : 'normal')};
+  background-color: ${({ $isSelected, $isDebtRow, $isSuccessRow }) => 
+    $isSelected ? '#007D88' :
+    $isDebtRow ? 'rgba(232, 216, 216, 1)' :
+    $isSuccessRow ? 'rgba(81, 213, 180, 1)' :
+    'white'};
+  color: ${({ $isSelected }) => ($isSelected ? 'white' : 'inherit')};
+
+  &:hover {
+    background-color: ${({ $isSelected, $isDebtRow, $isSuccessRow, $isTotalsRow }) => 
+      $isTotalsRow ? 'white' :
+      $isSelected ? '#007D88' :
+      $isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
+      $isSuccessRow ? 'rgba(81, 213, 180, 0.8)' :
+      '#F3F4F6'};
+  }
 
   &::after {
     content: "";
@@ -390,7 +410,6 @@ const BodyCell = styled.td<{
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) => 
     ($isBeforeTotals || $isTotalsCell) ? 'none' : '0.5px solid rgba(209, 213, 219, 1)'};
-  background-color: ${({ $cellColor }) => $cellColor || 'inherit'};
 `;
 
 const TotalsRow = styled.tr`
