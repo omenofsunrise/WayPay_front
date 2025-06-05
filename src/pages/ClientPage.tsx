@@ -33,7 +33,7 @@ const ClientPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    
+    const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -181,21 +181,21 @@ const ClientPage = () => {
         if (Array.isArray(contracts) && contracts.length === 0) {
             styles[index] = {
                 backgroundColor: '#C8E6C9',
-                color: '#1B5E20',          
+                color: 'black',          
                 fontWeight: 'normal'
             };
         }
         else if (contracts === '-') {
             styles[index] = {
                 backgroundColor: '#C8E6C9',
-                color: '#1B5E20',
+                color: 'black',
                 fontWeight: 'normal'
             };
         }
         else {
             styles[index] = {
                 backgroundColor: '#FFEBEE',
-                color: '#D32F2F',
+                color: 'black',
                 fontWeight: 'normal'
             };
         }
@@ -250,6 +250,7 @@ const ClientPage = () => {
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}
                         contextMenuActions={tableActions}
+                        selectedRow={selectedRow}
                         onSort={handleSort}
                         sortConfig={sortConfig}
                     />

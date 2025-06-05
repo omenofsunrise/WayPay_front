@@ -17,7 +17,7 @@ import { formatMoney } from '../../utils/formatPrice';
 import ClientModal from './ClientModal';
 import InvestorModal from './InvestorModal';
 import useInvestor from '../../api/hooks/useInvestor';
-import type { Payment, PaymentParams } from '../../api/types/payment';
+import type { Payment, PaymentByCreditParams, PaymentParams } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
 
 interface ViewCreditModalProps {
@@ -39,11 +39,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const { 
-        isLoading, 
-        error, 
-        data: paymentsData, 
-        getPayments
-    } = usePayment();
+      isLoading: isPaymentsLoading, 
+      error: paymentsError, 
+      data: paymentsData, 
+      getPaymentsByCreditId
+  } = usePayment();
+
   
   const { getInvestorById } = useInvestor();
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -53,19 +54,20 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [currentInvestor, setCurrentInvestor] = useState<any>(null);
   
   const loadPayments = useCallback(async () => {
-          const params: PaymentParams = {
+      if (id) {
+          const params: PaymentByCreditParams = {
+              creditId: id,
               page: 1,
-              pageSize: 100,
-              clientFullname: undefined
+              pageSize: 100
           };
-    
-          await getPayments(params);
-      }, [getPayments]);
-      
-      useEffect(() => {
-          loadPayments();
-      }, [loadPayments]);
-      
+          await getPaymentsByCreditId(params);
+      }
+  }, [getPaymentsByCreditId, id]);
+
+  useEffect(() => {
+      loadPayments();
+  }, [loadPayments]);
+
   useEffect(() => {
     if (isOpen && id) {
       const fetchData = async () => {
@@ -197,9 +199,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               <CustomTitle style={{ marginTop: 0 }}>Договор №{id}</CustomTitle>
             </TitleField>
             
-            {isLoading ? (
-              <LoadingText>Загрузка данных...</LoadingText>
-            ) : ( <div>
+             <div>
                 <HorizontalContainer style={{ marginBottom: '30px' }}>
                   <VerticalContainer>
                     <ModalInfoTitle>Общая информация</ModalInfoTitle>
@@ -293,7 +293,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                         data={formatPaymentsData(paymentsData?.items)}
                     />
               </div>
-            )}
           </ModalWrapper>
         </ModalContent>
       </ModalOverlay>
@@ -388,6 +387,7 @@ const ModalContent = styled.div`
   border-radius: 8px;
   width: auto;
   overflow-y: auto;
+  max-height: 90vh;
 `;
 
 const InputTitle = styled.h5`

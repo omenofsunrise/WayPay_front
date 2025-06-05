@@ -108,6 +108,7 @@ const BlacklistPage = () => {
         item.fullName,
         formatDate(item.birthdate),
         item.phone,
+        item.debt
     ]) || [];
 
     return (
@@ -144,6 +145,7 @@ const BlacklistPage = () => {
                             { name: "ФИО", isSortable: true, align: "left" },
                             { name: "Дата рождения", isSortable: true, align: "left" },
                             { name: "Телефон", align: "left" },
+                            { name: "Всего просрочка" }
                         ]} 
                         data={tableData}
                         onSort={handleSort}

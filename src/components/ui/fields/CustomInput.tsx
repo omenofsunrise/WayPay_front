@@ -68,24 +68,52 @@ const CustomInput: React.FC<CustomInputProps> = ({
           break;
 
       case 'fullname':
-        newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\s]/g, '');
+        newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\-\s]/g, '');
         newValue = newValue.replace(/\s{2,}/g, ' ');
+        
+        newValue = newValue.replace(/- /g, '-');
+        newValue = newValue.replace(/ -/g, ' ');
+        
         let words = newValue.split(' ').filter(word => word.length > 0);
         words = words.slice(0, 3);
+        
         newValue = words
-          .map(word => 
-            word.length > 0 
+          .map(word => {
+            if (word.startsWith('-')) {
+              word = word.substring(1);
+            }
+            
+            const hyphenCount = (word.match(/-/g) || []).length;
+            if (hyphenCount > 1) {
+              const parts = word.split('-');
+              word = parts[0] + '-' + parts.slice(1).join('');
+            }
+            
+            if (word.includes('-')) {
+              return word.split('-')
+                .map((part, index) => {
+                  if (part.length === 0) return '';
+                  return index > 0 
+                    ? part[0].toUpperCase() + part.slice(1).toLowerCase() 
+                    : part[0].toUpperCase() + part.slice(1).toLowerCase();
+                })
+                .join('-');
+            }
+            return word.length > 0 
               ? word[0].toUpperCase() + word.slice(1).toLowerCase() 
-              : ''
-          )
+              : '';
+          })
           .join(' ');
+          
         if (newValue.length > 0 && newValue[newValue.length - 1] !== ' ' && 
             e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
           newValue += ' ';
         }
+        
         if (newValue.length > 100) {
           newValue = newValue.slice(0, 100);
         }
+        
         e.target.value = newValue;
         onChange(e);
         break;

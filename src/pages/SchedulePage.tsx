@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable from "../components/ui/tables/CustomTable";
+import CustomTable, { type RowStyle } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
@@ -56,6 +56,28 @@ const SchedulePage = () => {
         markAsNotified
     } = useSchedule();
     
+    const getRowStyles = (tableData: any[][], scheduleData?: { items: ScheduleDetails[] }): Record<number, RowStyle> => {
+        const styles: Record<number, RowStyle> = {};
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (!scheduleData?.items) return styles;
+
+        scheduleData.items.forEach((schedule, index) => {
+            const paymentDate = new Date(schedule.paymentDate);
+            paymentDate.setHours(0, 0, 0, 0);
+
+            if (paymentDate < today) {
+            styles[index] = {
+                backgroundColor: '#FFEBEE',
+                color: 'black',        
+            };
+            }
+        });
+
+        return styles;
+    };
+
     const loadSchedules = useCallback(async () => {
         const params: ScheduleParams = {
             page: currentPage,
@@ -183,7 +205,7 @@ const SchedulePage = () => {
             console.error('Ошибка при отправке WhatsApp:', error);
         }
     };
-
+    
     const tableData = scheduleData?.items.map(schedule => [
         schedule.creditId.toString(),
         schedule.clientName,
@@ -226,6 +248,8 @@ const SchedulePage = () => {
             </button>
         )
     ]) || [];
+
+    const rowStyles = getRowStyles(tableData, scheduleData);
 
     return (
         <PageLayout>
@@ -281,6 +305,7 @@ const SchedulePage = () => {
                         data={tableData}
                         onSort={handleSort}
                         sortConfig={sortConfig}
+                        rowStyles={rowStyles}
                     />
                     
                     <PaginationLayout>

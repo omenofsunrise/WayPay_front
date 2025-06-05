@@ -17,6 +17,10 @@ export interface PaymentParams extends PaginationParams {
     sortDirection?: 'asc' | 'desc';
 }
 
+export interface PaymentByCreditParams extends PaginationParams {
+    creditId: number;
+}
+
 export interface CreatePaymentRequest {
     creditId: number;
     paymentAmount: number;
