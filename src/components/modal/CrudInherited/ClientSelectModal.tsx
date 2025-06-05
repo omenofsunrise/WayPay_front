@@ -7,6 +7,7 @@ import useClients from '../../../api/hooks/useClient';
 import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
 import { formatDate } from '../../../utils/dateFormatter';
+import ClientModal from './ClientModal';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ const ClientSelectModal = ({
     fullName: string;
     phone: string;
   } | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // State for create modal
   
   const pageSize = 5;
   
@@ -47,7 +49,8 @@ const ClientSelectModal = ({
     isLoading, 
     error, 
     data: clientsData, 
-    getClients
+    getClients,
+    createClient
   } = useClients();
   
   const loadClients = useCallback(async () => {
@@ -113,6 +116,31 @@ const ClientSelectModal = ({
     }
   };
 
+  const handleCreateClient = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleSubmitNewClient = async (clientData: any): Promise<boolean> => {
+    try {
+      await createClient({
+        fullName: clientData.fullName,
+        phone: clientData.phone,
+        birthdate: clientData.birthdate ? new Date(clientData.birthdate) : null,
+        doc: clientData.doc || undefined,
+        docIssueDate: clientData.docIssueDate ? new Date(clientData.docIssueDate) : undefined,
+        docIssueYear: clientData.docIssueYear || 0,
+        registrationAddress: clientData.registrationAddress || ''
+      });
+      
+      loadClients();
+      setIsCreateModalOpen(false);
+      return true;
+    } catch (error) {
+      console.error('Error creating client:', error);
+      return false;
+    }
+  };
+
   const tableData = clientsData?.items?.map(client => [
     client.id.toString(),
     client.fullName,
@@ -123,59 +151,85 @@ const ClientSelectModal = ({
   if (!isOpen) return null;
 
   return (
-    <BaseModal
-      title={title || "Выбор клиента"}
-      onClose={onClose}
-      onCancel={onClose}
-      onSave={handleSubmit}
-      isSaveDisabled={!selectedClient}
-      saveButtonText="Выбрать"
-      width={width}
-    >
-      <ModalContent>
-        <FilterContainer>
-          <CustomInput 
-          style={{ maxWidth: "none" }}
-            inputType="fullname"
-            placeholder="Поиск по ФИО"
-            value={nameFilter}
-            onChange={(e) => handleFilterChange(e.target.value)}
-          />
-        </FilterContainer>
-        
-        {isLoading && <LoadingMessage>Загрузка клиентов...</LoadingMessage>}
-        {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
-        
-        {!isLoading && !error && (
-          <>
-            <TableContainer>
-              <CustomTable 
-                columns={[
-                  { name: "ID", isSortable: true, align: "left" },
-                  { name: "ФИО", isSortable: true, align: "left" },
-                  { name: "Телефон", align: "left" },
-                  { name: "Дата рождения", isSortable: true, align: "right" },
-                ]} 
-                data={tableData}
-                onRowClick={handleRowClick}
-                onSort={handleSort}
-                sortConfig={sortConfig}
-                selectedRow={selectedClient ? tableData.findIndex(row => row[0] === selectedClient.id.toString()) : -1}
-              />
-            </TableContainer>
-            
-            <PaginationContainer>
-              <Pagination
-                total={clientsData?.totalCount || 0}
-                current={currentPage}
-                onChange={setCurrentPage}
-                itemsPerPage={pageSize}
-              />
-            </PaginationContainer>
-          </>
-        )}
-      </ModalContent>
-    </BaseModal>
+    <>
+      <BaseModal
+        title={title || "Выбор клиента"}
+        onClose={onClose}
+        onCancel={onClose}
+        onSave={handleSubmit}
+        isSaveDisabled={!selectedClient}
+        saveButtonText="Выбрать"
+        width={width}
+      >
+        <ModalContent>
+          <FilterContainer>
+            <CustomInput 
+              style={{ maxWidth: "none" }}
+              inputType="fullname"
+              placeholder="Поиск по ФИО"
+              value={nameFilter}
+              onChange={(e) => handleFilterChange(e.target.value)}
+            />
+            <DarkCyanButton 
+              style={{ marginLeft: '16px', width: "auto" }}
+              onClick={handleCreateClient}
+            >
+              + Добавить
+            </DarkCyanButton>
+          </FilterContainer>
+          
+          {isLoading && <LoadingMessage>Загрузка клиентов...</LoadingMessage>}
+          {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
+          
+          {!isLoading && !error && (
+            <>
+              <TableContainer>
+                <CustomTable 
+                  columns={[
+                    { name: "ID", isSortable: true, align: "left" },
+                    { name: "ФИО", isSortable: true, align: "left" },
+                    { name: "Телефон", align: "left" },
+                    { name: "Дата рождения", isSortable: true, align: "right" },
+                  ]} 
+                  data={tableData}
+                  onRowClick={handleRowClick}
+                  onSort={handleSort}
+                  sortConfig={sortConfig}
+                  selectedRow={selectedClient ? tableData.findIndex(row => row[0] === selectedClient.id.toString()) : -1}
+                />
+              </TableContainer>
+              
+              <PaginationContainer>
+                <Pagination
+                  total={clientsData?.totalCount || 0}
+                  current={currentPage}
+                  onChange={setCurrentPage}
+                  itemsPerPage={pageSize}
+                />
+              </PaginationContainer>
+            </>
+          )}
+        </ModalContent>
+      </BaseModal>
+
+      {/* Client creation modal */}
+      <ClientModal
+        mode="create"
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleSubmitNewClient}
+        initialData={{
+          id: 0,
+          fullName: '',
+          phone: '',
+          doc: '',
+          birthdate: null,
+          docIssueDate: null,
+          docIssueYear: 0,
+          registrationAddress: ''
+        }}
+      />
+    </>
   );
 };
 
@@ -185,6 +239,8 @@ const ModalContent = styled.div`
 
 const FilterContainer = styled.div`
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
 `;
 
 const TableContainer = styled.div`

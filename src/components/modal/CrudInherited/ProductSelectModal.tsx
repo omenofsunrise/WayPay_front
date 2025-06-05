@@ -6,6 +6,7 @@ import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 import useProducts from '../../../api/hooks/useProducts';
 import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
+import { ProductModal } from './ProductModal';
 
 interface ProductSelectModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ const ProductSelectModal = ({
     name: string;
   } | null>(null);
   
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
   const pageSize = 5;
   
   const columnToApiSortMap: Record<number, string> = {
@@ -44,7 +47,8 @@ const ProductSelectModal = ({
     isLoading, 
     error, 
     data: productsData, 
-    getProducts
+    getProducts,
+    createProduct
   } = useProducts();
   
   const loadProducts = useCallback(async () => {
@@ -109,6 +113,20 @@ const ProductSelectModal = ({
     }
   };
 
+  const handleCreateProduct = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleSubmitNewProduct = async (productData: { name: string }) => {
+    try {
+      await createProduct(productData);
+      loadProducts();
+      setIsCreateModalOpen(false);
+    } catch (err) {
+      console.error('Ошибка при создании товара:', err);
+    }
+  };
+
   const tableData = productsData?.items?.map(product => [
     product.id.toString(),
     product.name,
@@ -117,57 +135,75 @@ const ProductSelectModal = ({
   if (!isOpen) return null;
 
   return (
-    <BaseModal
-      title={title || "Выбор товара"}
-      onClose={onClose}
-      onCancel={onClose}
-      onSave={handleSubmit}
-      isSaveDisabled={!selectedProduct}
-      saveButtonText="Выбрать"
-      width={width}
-    >
-      <ModalContent>
-        <FilterContainer>
-          <CustomInput 
-            style={{ maxWidth: "none" }}
-            inputType="text"
-            placeholder="Поиск по названию"
-            value={nameFilter}
-            onChange={(e) => handleFilterChange(e.target.value)}
-          />
-        </FilterContainer>
-        
-        {isLoading && <LoadingMessage>Загрузка товаров...</LoadingMessage>}
-        {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
-        
-        {!isLoading && !error && (
-          <>
-            <TableContainer>
-              <CustomTable 
-                columns={[
-                  { name: "ID", isSortable: true, align: "left" },
-                  { name: "Название", isSortable: true, align: "left" },
-                ]} 
-                data={tableData}
-                onRowClick={handleRowClick}
-                onSort={handleSort}
-                sortConfig={sortConfig}
-                selectedRow={selectedProduct ? tableData.findIndex(row => row[0] === selectedProduct.id.toString()) : -1}
+    <>
+      <BaseModal
+        title={title || "Выбор товара"}
+        onClose={onClose}
+        onCancel={onClose}
+        onSave={handleSubmit}
+        isSaveDisabled={!selectedProduct}
+        saveButtonText="Выбрать"
+        width={width}
+      >
+        <ModalContent>
+          <FilterContainer>
+            <InputsRow>
+              <CustomInput 
+                style={{ maxWidth: "none", flexGrow: 1 }}
+                inputType="text"
+                placeholder="Поиск по названию"
+                value={nameFilter}
+                onChange={(e) => handleFilterChange(e.target.value)}
               />
-            </TableContainer>
-            
-            <PaginationContainer>
-              <Pagination
-                total={productsData?.totalCount || 0}
-                current={currentPage}
-                onChange={setCurrentPage}
-                itemsPerPage={pageSize}
-              />
-            </PaginationContainer>
-          </>
-        )}
-      </ModalContent>
-    </BaseModal>
+              <DarkCyanButton 
+                style={{ width: "200px", marginLeft: "16px" }}
+                onClick={handleCreateProduct}
+              >
+                + Новый товар
+              </DarkCyanButton>
+            </InputsRow>
+          </FilterContainer>
+          
+          {isLoading && <LoadingMessage>Загрузка товаров...</LoadingMessage>}
+          {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
+          
+          {!isLoading && !error && (
+            <>
+              <TableContainer>
+                <CustomTable 
+                  columns={[
+                    { name: "ID", isSortable: true, align: "left" },
+                    { name: "Название", isSortable: true, align: "left" },
+                  ]} 
+                  data={tableData}
+                  onRowClick={handleRowClick}
+                  onSort={handleSort}
+                  sortConfig={sortConfig}
+                  selectedRow={selectedProduct ? tableData.findIndex(row => row[0] === selectedProduct.id.toString()) : -1}
+                />
+              </TableContainer>
+              
+              <PaginationContainer>
+                <Pagination
+                  total={productsData?.totalCount || 0}
+                  current={currentPage}
+                  onChange={setCurrentPage}
+                  itemsPerPage={pageSize}
+                />
+              </PaginationContainer>
+            </>
+          )}
+        </ModalContent>
+      </BaseModal>
+
+      <ProductModal
+        mode="create"
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleSubmitNewProduct}
+        initialData={{ name: '' }}
+      />
+    </>
   );
 };
 
@@ -177,6 +213,12 @@ const ModalContent = styled.div`
 
 const FilterContainer = styled.div`
   margin-bottom: 16px;
+`;
+
+const InputsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
 `;
 
 const TableContainer = styled.div`
