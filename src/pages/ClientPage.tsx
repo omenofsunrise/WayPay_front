@@ -3,7 +3,7 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable from "../components/ui/tables/CustomTable";
+import CustomTable, { type RowStyle } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
@@ -171,12 +171,37 @@ const ClientPage = () => {
         client.fullName,
         client.phone,
         formatDate(client.birthdate),
-        {
-            value: client.creditIds || '-',
-            color: client.creditIds?.length > 0 ? '#EF4444' : '#10B981'
-        },
+        client.creditIds || '-',
         client.creditRestTerms || '-'
     ]) || [];
+
+    const rowStyles = tableData.reduce((styles, rowData, index) => {
+        const contracts = rowData[4];
+        
+        if (Array.isArray(contracts) && contracts.length === 0) {
+            styles[index] = {
+                backgroundColor: '#C8E6C9',
+                color: '#1B5E20',          
+                fontWeight: 'normal'
+            };
+        }
+        else if (contracts === '-') {
+            styles[index] = {
+                backgroundColor: '#C8E6C9',
+                color: '#1B5E20',
+                fontWeight: 'normal'
+            };
+        }
+        else {
+            styles[index] = {
+                backgroundColor: '#FFEBEE',
+                color: '#D32F2F',
+                fontWeight: 'normal'
+            };
+        }
+        
+        return styles;
+    }, {} as Record<number, RowStyle>);
 
     const tableActions = [
         {
@@ -221,6 +246,7 @@ const ClientPage = () => {
                             { name: "№ договоров" },
                             { name: "Остатки мес." }
                         ]} 
+                        rowStyles={rowStyles}
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}
                         contextMenuActions={tableActions}

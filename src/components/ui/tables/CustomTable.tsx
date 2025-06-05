@@ -12,18 +12,16 @@ interface Column {
   isHidden?: boolean;
 }
 
-interface TableRowProps {
-  $isLast?: boolean; 
-  $isSelected?: boolean;
-  $isTotalsRow?: boolean;
-  $isDebtRow?: boolean;
-  $isSuccessRow?: boolean;
-}
-
 interface TableAction {
   label: string;
   action: (rowData: any[], rowIndex: number) => void;
   color?: string;
+}
+
+export interface RowStyle {
+  backgroundColor?: string;
+  color?: string;
+  fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | number | 'initial' | 'inherit';
 }
 
 interface CreditsTableProps {
@@ -41,6 +39,7 @@ interface CreditsTableProps {
   fixedHeight?: string;
   hasTotalsRow?: boolean;
   debtChecker?: (rowData: any[]) => boolean;
+  rowStyles?: { [rowIndex: number]: RowStyle }; // New prop for custom row styles
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -55,6 +54,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   fixedHeight,
   hasTotalsRow,
   debtChecker,
+  rowStyles = {}, // Default to empty object
 }) => {
   const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -150,6 +150,41 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     return row[row.length - 1] === true;
   };
 
+  // Function to get row style with fallbacks
+  const getRowStyle = (rowIndex: number, isTotalsRow: boolean, isDebtRow: boolean): RowStyle => {
+    if (isTotalsRow) {
+      return { backgroundColor: 'white', color: 'black', fontWeight: 'bold' };
+    }
+    
+    // Apply custom row style if defined
+    const customStyle = rowStyles[rowIndex] || {};
+    
+    // For selected row, override background and text color unless custom style specifies them
+    if (rowIndex === selectedRow) {
+      return {
+        backgroundColor: customStyle.backgroundColor || '#007D88',
+        color: customStyle.color || 'white',
+        fontWeight: customStyle.fontWeight || 'normal'
+      };
+    }
+    
+    // For debt rows, apply custom style or default
+    if (isDebtRow) {
+      return {
+        backgroundColor: customStyle.backgroundColor || 'rgba(232, 216, 216, 1)',
+        color: customStyle.color || 'inherit',
+        fontWeight: customStyle.fontWeight || 'normal'
+      };
+    }
+    
+    // For other rows, apply custom style or default
+    return {
+      backgroundColor: customStyle.backgroundColor || 'white',
+      color: customStyle.color || 'inherit',
+      fontWeight: customStyle.fontWeight || 'normal'
+    };
+  };
+
   return (
     <TableContainer
       ref={tableRef}
@@ -195,6 +230,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
             {data.map((row, rowIndex) => {
               const isTotalsRow = hasTotalsRow && rowIndex === data.length - 1;
               const isDebtRow = !isTotalsRow && checkDebt(row);
+              const rowStyle = getRowStyle(rowIndex, isTotalsRow, isDebtRow);
+
               return (
                 <TableRow 
                   key={`row-${rowIndex}`}
@@ -202,19 +239,15 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   animate={{ 
                     opacity: 1, 
                     y: 0,
-                    backgroundColor: isTotalsRow ? 'white' : 
-                                    rowIndex === selectedRow ? '#007D88' : 
-                                    isDebtRow ? 'rgba(232, 216, 216, 1)' : 
-                                    row[row.length - 1] === false ? 'rgba(81, 213, 180, 1)' : 'white',
-                    color: rowIndex === selectedRow ? 'white' : isTotalsRow ? 'black' : 'inherit'
+                    backgroundColor: rowStyle.backgroundColor || 'white',
+                    color: rowStyle.color || 'inherit',
+                    fontWeight: rowStyle.fontWeight || 'normal'
                   }}
                   exit={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   $isLast={rowIndex === data.length - 1}
                   $isSelected={rowIndex === selectedRow}
                   $isTotalsRow={isTotalsRow}
-                  $isDebtRow={isDebtRow}
-                  $isSuccessRow={row[row.length - 1] === false}
                   onClick={() => !isTotalsRow && handleRowClick(rowIndex)}
                   onDoubleClick={() => !isTotalsRow && handleRowDoubleClick(row, rowIndex)}
                   onContextMenu={(e) => !isTotalsRow && handleContextMenu(e, rowIndex)}
@@ -228,14 +261,14 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   {row.map((cell, cellIndex) => (
                     !columns[cellIndex]?.isHidden && (
                     <BodyCell 
-                        key={cellIndex}
-                        $align={columns[cellIndex]?.align || 'center'}
-                        $isFirst={cellIndex === 0}
-                        $isLast={cellIndex === row.length - 1}
-                        $isTotalsCell={isTotalsRow}
-                        $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
+                      key={cellIndex}
+                      $align={columns[cellIndex]?.align || 'center'}
+                      $isFirst={cellIndex === 0}
+                      $isLast={cellIndex === row.length - 1}
+                      $isTotalsCell={isTotalsRow}
+                      $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
                     >
-                        {typeof cell === 'object' ? cell.value : cell}
+                      {cell}
                     </BodyCell>
                     )
                   ))}
@@ -325,25 +358,14 @@ const TableBody = styled.tbody<{ $fixedHeight?: string }>`
   `}
 `;
 
-const TableRow = styled(motion.tr)<TableRowProps>`
+const TableRow = styled(motion.tr)<{ 
+  $isLast?: boolean; 
+  $isSelected?: boolean;
+  $isTotalsRow?: boolean;
+}>`
   position: relative;
   cursor: ${({ $isTotalsRow }) => ($isTotalsRow ? 'default' : 'pointer')};
   font-weight: ${({ $isTotalsRow }) => ($isTotalsRow ? 'bold' : 'normal')};
-  background-color: ${({ $isSelected, $isDebtRow, $isSuccessRow }) => 
-    $isSelected ? '#007D88' :
-    $isDebtRow ? 'rgba(232, 216, 216, 1)' :
-    $isSuccessRow ? 'rgba(81, 213, 180, 1)' :
-    'white'};
-  color: ${({ $isSelected }) => ($isSelected ? 'white' : 'inherit')};
-
-  &:hover {
-    background-color: ${({ $isSelected, $isDebtRow, $isSuccessRow, $isTotalsRow }) => 
-      $isTotalsRow ? 'white' :
-      $isSelected ? '#007D88' :
-      $isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
-      $isSuccessRow ? 'rgba(81, 213, 180, 0.8)' :
-      '#F3F4F6'};
-  }
 
   &::after {
     content: "";
@@ -401,7 +423,6 @@ const BodyCell = styled.td<{
   $isLast?: boolean;
   $isTotalsCell?: boolean;
   $isBeforeTotals?: boolean;
-  $cellColor?: string;
 }>`
   padding: 16px;
   padding-left: ${({ $isFirst }) => ($isFirst ? '50px' : '16px')};
