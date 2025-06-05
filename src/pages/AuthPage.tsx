@@ -4,7 +4,7 @@ import apiClient from '../api/client';
 import { authStorage } from '../api/utils/auth-storage';
 import logoImage from '../assets/logos/logo.svg';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
-import AuthCallModal from '../components/ui/Modals/AuthCallModal';
+import AuthCallModal from '../components/modal/AuthCallModal';
 
 interface AuthPageProps {
   onLoginSuccess: (token: string) => void;

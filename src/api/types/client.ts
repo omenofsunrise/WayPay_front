@@ -10,6 +10,7 @@ export interface Client {
   docIssueYear: number;
   creditIds: number[];
   creditRestTerms: number[];
+  registrationAddress: string;
 }
 
 export interface ClientParams extends PaginationParams {
@@ -24,6 +25,7 @@ export interface ClientForm {
   doc: string;
   birthdate: string; // формат "dd.mm.yyyy"
   docIssueDate: string; // формат "dd.mm.yyyy"
+  registrationAddress: string;
 }
 
 export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {

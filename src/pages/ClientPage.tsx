@@ -24,6 +24,7 @@ interface Client {
   birthdate: Date | null;
   docIssueDate: Date | null;
   docIssueYear: number;
+  regAddress: string | null;
 }
 const ClientPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -104,7 +105,8 @@ const ClientPage = () => {
             doc: '',
             birthdate: null,
             docIssueDate: null,
-            docIssueYear: 0
+            docIssueYear: 0,
+            regAddress: '',
         });
         setIsModalOpen(true);
     };
@@ -143,7 +145,8 @@ const ClientPage = () => {
                 birthdate: parseDate(clientData.birthdate),
                 doc: (clientData as ClientForm).doc || undefined,
                 docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined,
-                docIssueYear: (clientData as ClientForm).docIssueDate || 0
+                docIssueYear: (clientData as ClientForm).docIssueDate || 0,
+                registrationAddress: clientData.registrationAddress
             };
 
             if (modalMode === 'create') {
@@ -282,7 +285,8 @@ const ClientPage = () => {
                     doc: '',
                     birthdate: null,
                     docIssueDate: null,
-                    docIssueYear: 0
+                    docIssueYear: 0,
+                    registrationAddress: ''
                 }}
             />
         </PageLayout>

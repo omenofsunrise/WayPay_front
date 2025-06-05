@@ -15,7 +15,8 @@ interface Client {
   doc?: string;
   birthdate?: string | Date;
   docIssueDate?: string | Date;
-  docIssueYear: number
+  docIssueYear: number;
+  registrationAddress: string;
 }
 
 type ClientModalProps = {
@@ -32,7 +33,8 @@ const emptyClient: Omit<Client, 'id'> = {
   doc: '',
   birthdate: '',
   docIssueDate: '',
-  docIssueYear: 0
+  docIssueYear: 0,
+  registrationAddress: ''
 };
 
 const validateDate = (dateStr: string, minAge: number, maxAge: number, isRequired: boolean): { isValid: boolean; error?: string; date?: Date } => {
@@ -103,7 +105,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     doc: '',
     birthdate: null,
     docIssueDate: null,
-    docIssueYear: 0
+    docIssueYear: 0,
+    registrationAddress: ''
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Client, 'id'>>(
@@ -113,7 +116,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
       doc: initialData?.doc || '',
       birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
       docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : '',
-      docIssueYear: initialData?.docIssueYear || 0
+      docIssueYear: initialData?.docIssueYear || 0,
+      registrationAddress: initialData?.registrationAddress || ''
     }
   );
 
@@ -124,7 +128,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     phone: false,
     birthdate: false,
     doc: false,
-    docIssueDate: false
+    docIssueDate: false,
+    registrationAddress: false
   });
   
   const validatePhone = async (phone: string) => {
@@ -159,7 +164,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     phone: '',
     birthdate: '',
     doc: '',
-    docIssueDate: ''
+    docIssueDate: '',
+    registrationAddress: ''
   });
 
   const [touchedFields, setTouchedFields] = useState({
@@ -167,7 +173,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     phone: false,
     birthdate: false,
     doc: false,
-    docIssueDate: false
+    docIssueDate: false,
+    registrationAddress: false
   });
 
   const [isEditingPassport, setIsEditingPassport] = useState(false);
@@ -189,7 +196,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
           birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
           docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : 
                     initialData?.docIssueYear ? `01.01.${initialData.docIssueYear}` : '',
-          docIssueYear: initialData?.docIssueYear || 0
+          docIssueYear: initialData?.docIssueYear || 0,
+          registrationAddress: initialData?.registrationAddress || '',
         }
       );
       setPassportEditData({
@@ -202,21 +210,24 @@ const ClientModal: React.FC<ClientModalProps> = ({
         phone: false,
         birthdate: false,
         doc: false,
-        docIssueDate: false
+        docIssueDate: false,
+        registrationAddress: false,
       });
       setErrorMessages({
         fullName: '',
         phone: '',
         birthdate: '',
         doc: '',
-        docIssueDate: ''
+        docIssueDate: '',
+        registrationAddress: ''
       });
       setTouchedFields({
         fullName: false,
         phone: false,
         birthdate: false,
         doc: false,
-        docIssueDate: false
+        docIssueDate: false,
+        registrationAddress: false
       });
       setApiError('');
     }
@@ -231,7 +242,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
         phone: '',
         birthdate: '',
         doc: '',
-        docIssueDate: ''
+        docIssueDate: '',
+        registrationAddress: ''
       };
 
       if (formData.fullName.trim().split(/\s+/).length < 2) {
@@ -241,7 +253,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
       }
 
       newErrorMessages.phone = await validatePhone(formData.phone);
-
+      
       const birthdateValidation = validateDate(formData.birthdate.toString() || '', 18, 100, true);
       if (!birthdateValidation.isValid) {
         newErrorMessages.birthdate = birthdateValidation.error || '';
@@ -273,7 +285,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
         phone: !!newErrorMessages.phone,
         birthdate: !!newErrorMessages.birthdate,
         doc: !!newErrorMessages.doc,
-        docIssueDate: !!newErrorMessages.docIssueDate
+        docIssueDate: !!newErrorMessages.docIssueDate,
+        registrationAddress: !!newErrorMessages.registrationAddress
       };
 
       setValidationErrors(errors);
@@ -312,7 +325,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
       phone: true,
       birthdate: true,
       doc: true,
-      docIssueDate: true
+      docIssueDate: true,
+      registrationAddress: true
     });
 
     const isValid = !Object.values(validationErrors).some(Boolean);
@@ -333,7 +347,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
         phone: formData.phone,
         birthdate: formattedBirthdate,
         docIssueDate: formData.docIssueDate,
-        doc: formData.doc
+        doc: formData.doc,
+        registrationAddress: formData.registrationAddress
       };
 
       const success = await onSubmit(submitData);
@@ -542,14 +557,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
             <InputLabel>Адрес регистрации:</InputLabel>
             <InputContainer>
               <CustomInput
-                name="regAdress"
+                name="registrationAddress"
                 inputType="text"
-                placeholder="г. Грозный"
-                value={formData.birthdate.toString() || ''}
+                placeholder="г. Грозный, ул. Примерная, д. 1, кв. 1"
+                value={formData.registrationAddress}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
-                hasError={touchedFields.birthdate && validationErrors.birthdate}
-                errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
+                hasError={touchedFields.registrationAddress && validationErrors.registrationAddress}
+                errorMessage={touchedFields.registrationAddress ? errorMessages.registrationAddress : undefined}
               />
             </InputContainer>
           </InputRow>
