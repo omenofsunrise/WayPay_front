@@ -53,10 +53,9 @@ const CreditControlPage = () => {
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'date',
-    3: 'client',
-    5: 'accured',
-    6: 'income_percents',
-    7: 'income_rubles',
+    4: 'accured',
+    5: 'income_percents',
+    6: 'income_rubles',
   };
 
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
@@ -267,8 +266,7 @@ const CreditControlPage = () => {
       ),
       credit.id.toString(),
       formatDate(credit.creditDate),
-      credit.clientFullName,
-      credit.clientPhone || 'Нет данных',
+      credit.employeeName,
       `${formatMoney(credit.accured?.toString() || '')}`,
       `${credit.incomePercents.toString() + '%'}`,
       `${formatMoney(credit.incomeRubles.toString())}`,
@@ -278,7 +276,6 @@ const CreditControlPage = () => {
 
     if (credits.length > 0) {
       const totalsRow = [
-        '',
         '',
         '',
         '',
@@ -437,8 +434,7 @@ const CreditControlPage = () => {
               { name: "" },
               { name: "№", isSortable: true },
               { name: "Дата договора", isSortable: true, align: "right" },
-              { name: "ФИО покупателя", isSortable: true, align: "left" },
-              { name: "Телефон", align: "left" },
+              { name: "ФИО сотрудника", align: "left" },
               { name: "Начислено", isSortable: true, align: "right" },
               { name: "Доход, %", isSortable: true, align: "right" },
               { name: "Доход, руб", isSortable: true, align: "right" },

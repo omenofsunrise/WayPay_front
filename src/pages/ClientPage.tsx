@@ -174,8 +174,12 @@ const ClientPage = () => {
         client.fullName,
         client.phone,
         formatDate(client.birthdate),
-        client.creditIds || '-',
-        client.creditRestTerms || '-'
+        Array.isArray(client.creditIds) && client.creditIds.length > 0 
+            ? client.creditIds.join(', ') 
+            : '-',
+        Array.isArray(client.creditRestTerms) && client.creditRestTerms.length > 0
+            ? client.creditRestTerms.join(', ')
+            : '-'
     ]) || [];
 
     const rowStyles = tableData.reduce((styles, rowData, index) => {

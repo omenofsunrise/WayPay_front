@@ -21,6 +21,7 @@ export interface Credit {
     debt: number;
     incomeRubles: number;
     incomePercents: number;
+    employeeName: string;
 }
 
 export interface CreateCreditRequest {
