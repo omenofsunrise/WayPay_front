@@ -4,11 +4,12 @@ import CustomTitle from '../components/ui/Text/CustomTitle';
 import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
 import UserContainer from '../components/Profile/UserContainer';
 import ColumnChart from '../components/Dashboards/ColumnChart';
+import ScatterPlot from '../components/Dashboards/ScatterPlot';
 
 const EmployeeProfile = () => {
     const chartData = [
         {
-            label: 'Июн',
+            label: 'Июнь',
             total: 105000,
             bars: [
                 { name: 'Неподтверждённые, руб', value: 50000, color: 'rgba(209, 213, 219, 1)' },
@@ -16,7 +17,7 @@ const EmployeeProfile = () => {
             ]
         },
         {
-            label: 'Июл',
+            label: 'Июль',
             total: 95000,
             bars: [
                 { name: 'Неподтверждённые, руб', value: 35000, color: 'rgba(209, 213, 219, 1)' },
@@ -118,11 +119,37 @@ const EmployeeProfile = () => {
                 height={220}
                 title="Платежей принял" 
                 data={chartData} 
-                maxValue={140000} 
+                maxValue={130000} 
                 step={20000} 
             />
         </ChartWrapper>
       </ProfileContent>
+        <ScatterPlot
+            title="Количество договоров"
+            data={[
+                { x: 1, y: 20, color: 'rgba(0, 125, 136, 1)', name: 'Июнь', value: 15000 },
+                { x: 2, y: 40, color: 'rgba(0, 125, 136, 1)', name: 'Июль', value: 25000 },
+                { x: 3, y: 35, color: 'rgba(0, 125, 136, 1)', name: 'Август', value: 22000 },
+                { x: 4, y: 50, color: 'rgba(0, 125, 136, 1)', name: 'Сентябрь', value: 32000 },
+                { x: 5, y: 45, color: 'rgba(0, 125, 136, 1)', name: 'Октябрь', value: 28000 },
+                { x: 6, y: 60, color: 'rgba(0, 125, 136, 1)', name: 'Ноябрь', value: 40000 },
+                { x: 7, y: 55, color: 'rgba(0, 125, 136, 1)', name: 'Декабрь', value: 38000 },
+                { x: 8, y: 70, color: 'rgba(0, 125, 136, 1)', name: 'Январь', value: 45000 },
+                { x: 9, y: 65, color: 'rgba(0, 125, 136, 1)', name: 'Февраль', value: 42000 },
+                { x: 10, y: 80, color: 'rgba(0, 125, 136, 1)', name: 'Март', value: 52000 },
+                { x: 11, y: 75, color: 'rgba(0, 125, 136, 1)', name: 'Апрель', value: 48000 },
+                { x: 12, y: 20, color: 'rgba(0, 125, 136, 1)', name: 'Май', value: 60000 }
+            ]}
+            xAxisLabel=""
+            yAxisLabel=""
+            maxX={12}
+            maxY={100}
+            xStep={1}
+            yStep={20}
+            height={200}
+            showLegend={false}
+            xAxisCustomLabels={['Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май']}
+        />
     </PageLayout>
   );
 };
@@ -130,8 +157,7 @@ const EmployeeProfile = () => {
 const ProfileContent = styled.div`
   display: flex;
   gap: 15px;
-  margin-top: 20px;
-
+  margin: 20px 0 20px 0;
   @media (max-width: 1200px) {
     flex-direction: column;
   }
