@@ -72,7 +72,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
     : [];
 
   const calculateXPosition = (x: number) => {
-    return (x / maxX) * 100;
+    return ((x - 1) / (maxX - 1)) * 100;
   };
 
   const calculateYPosition = (y: number) => {
@@ -82,7 +82,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   useEffect(() => {
     if (hoveredPoint && plotAreaRef.current) {
       const plotRect = plotAreaRef.current.getBoundingClientRect();
-      const x = (hoveredPoint.x / maxX) * plotRect.width;
+      const x = calculateXPosition(hoveredPoint.x) / 100 * plotRect.width;
       const y = (1 - hoveredPoint.y / maxY) * plotRect.height;
       
       setTooltipPosition({
@@ -185,29 +185,28 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
         >
           <TooltipContent>
             {hoveredPoint.name && <TooltipTitle>{hoveredPoint.name}</TooltipTitle>}
-            {hoveredPoint.label && hoveredPoint.name !== hoveredPoint.label && (
-              <TooltipTitle>{hoveredPoint.label}</TooltipTitle>
-            )}
-            <TooltipItem>X: {hoveredPoint.x.toLocaleString()}</TooltipItem>
-            <TooltipItem>Y: {hoveredPoint.y.toLocaleString()}</TooltipItem>
-            {hoveredPoint.value !== undefined && (
-              <TooltipItem>Value: {hoveredPoint.value.toLocaleString()} ₽</TooltipItem>
-            )}
+            <TooltipItem>{hoveredPoint.y} договоров</TooltipItem>
           </TooltipContent>
           <TooltipArrow />
         </TooltipWrapper>
       )}
 
       <XAxis>
-        {xLabels.map((label, index) => (
-          <XAxisLabel key={index} style={{ 
-            left: `${(index / (xLabels.length - 1)) * 100}%`,
-            transform: 'translateX(-50%)',
-            position: 'absolute'
-          }}>
-            {label}
-          </XAxisLabel>
-        ))}
+        {xLabels.map((label, index) => {
+          const position = (index / (xLabels.length - 0.8)) * 100;
+          return (
+            <XAxisLabel 
+              key={index} 
+              style={{ 
+                left: `${position}%`,
+                transform: 'translateX(+50%)',
+                position: 'absolute'
+              }}
+            >
+              {label}
+            </XAxisLabel>
+          );
+        })}
         {xAxisLabel && <AxisTitle>{xAxisLabel}</AxisTitle>}
       </XAxis>
     </ChartContainer>
@@ -343,6 +342,7 @@ const XAxisLabel = styled.span`
   font-size: 12px;
   color: #6B7280;
   text-align: center;
+  
 `;
 
 const TooltipWrapper = styled.div`

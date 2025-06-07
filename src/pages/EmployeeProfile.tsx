@@ -138,7 +138,7 @@ const EmployeeProfile = () => {
                 { x: 9, y: 65, color: 'rgba(0, 125, 136, 1)', name: 'Февраль', value: 42000 },
                 { x: 10, y: 80, color: 'rgba(0, 125, 136, 1)', name: 'Март', value: 52000 },
                 { x: 11, y: 75, color: 'rgba(0, 125, 136, 1)', name: 'Апрель', value: 48000 },
-                { x: 12, y: 20, color: 'rgba(0, 125, 136, 1)', name: 'Май', value: 60000 }
+                { x: 12, y: 90, color: 'rgba(0, 125, 136, 1)', name: 'Май', value: 60000 }
             ]}
             xAxisLabel=""
             yAxisLabel=""
