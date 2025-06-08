@@ -5,6 +5,8 @@ import CustomSelect from '../../ui/fields/CustomSelect';
 import Avatar from '../../Profile/Avatar';
 import { ModalTitle } from 'react-bootstrap';
 import styled from 'styled-components';
+import { BASE_URL } from '../../../api/client';
+import { generateAvatar, getInitials } from '../../../utils/avatarUtils';
 
 type EmployeeModalProps = {
   mode: ModalMode;
@@ -15,14 +17,14 @@ type EmployeeModalProps = {
     address: string;
     role: string;
     phone: string;
-    minPremium: number;
+    minSurcharge: number;
   }) => void;
   initialData?: {
     fio: string;
     address: string;
     role: string;
     phone: string;
-    minPremium: number;
+    minSurcharge: number;
     avatar?: string;
   };
 };
@@ -43,7 +45,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     address: '',
     role: 'employee',
     phone: '',
-    minPremium: 0,
+    minSurcharge: 0,
     avatar: undefined,
   },
 }) => {
@@ -52,7 +54,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     address: initialData.address,
     role: initialData.role,
     phone: initialData.phone,
-    minPremium: initialData.minPremium,
+    minSurcharge: initialData.minSurcharge,
   });
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [validationErrors, setValidationErrors] = useState({
@@ -66,7 +68,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
       address: initialData.address,
       role: initialData.role,
       phone: initialData.phone,
-      minPremium: initialData.minPremium,
+      minSurcharge: initialData.minSurcharge,
     });
     setValidationErrors({
       fio: false,
@@ -84,7 +86,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
       formData.address !== initialData.address ||
       formData.role !== initialData.role ||
       formData.phone !== initialData.phone ||
-      formData.minPremium !== initialData.minPremium;
+      formData.minSurcharge !== initialData.minSurcharge;
 
     if (mode === 'create') {
       setIsSaveDisabled(!isFormValid);
@@ -110,7 +112,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
       address: formData.address.trim(),
       role: formData.role,
       phone: formData.phone.trim(),
-      minPremium: Number(formData.minPremium),
+      minSurcharge: Number(formData.minSurcharge),
     });
     onClose();
   };
@@ -130,7 +132,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Math.max(0, Number(e.target.value));
-    setFormData(prev => ({ ...prev, minPremium: value }));
+    setFormData(prev => ({ ...prev, minSurcharge: value }));
   };
   
   const getTitle = () => {
@@ -149,6 +151,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   if (!isOpen) return null;
 
+  const avatarSrc = initialData.avatar
+          ? BASE_URL + initialData.avatar 
+          : generateAvatar(getInitials(initialData.fio), 100);
+
   return (
     <BaseModal
       title={getTitle()}
@@ -163,7 +169,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
         <div style={{ display: 'flex', gap: '20px', width: "100%" }}>
           <div style={{ flexShrink: 0, padding: "40px 0" }}>
             <Avatar 
-              src={initialData.avatar} 
+              src={avatarSrc} 
               size={220} 
               name={formData.fio} 
               disabled={mode === 'view'}
@@ -223,10 +229,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 <FieldContainer>
                   <Title>Мин. надбавка%</Title>
                   <CustomInput
-                    name="minPremium"
+                    name="minSurcharge"
                     inputType="number"
                     placeholder="Минимальная надбавка"
-                    value={formData.minPremium.toString()}
+                    value={formData.minSurcharge.toString()}
                     onChange={handleNumberChange}
                     disabled={mode === 'view'}
                     min={0}

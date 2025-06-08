@@ -1,17 +1,14 @@
 import styled from "styled-components";
 import { useState } from "react";
 import { EmployeeModal } from "../modal/CrudInherited/EmployeeModal";
+import { useEmployee } from "../../api/hooks/useEmployee";
+import type { Employee } from "../../api/types/employee";
+import { BASE_URL } from "../../api/client";
+import { getInitials, generateAvatar } from "../../utils/avatarUtils";
 
 const UserContainer = () => {
+    const { authInfo, loading, error } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [employeeData, setEmployeeData] = useState({
-        fio: "Иван Иванов",
-        address: "ул. Красноармейская, 200",
-        role: "admin",
-        phone: "+7 (898) 872-39-90",
-        minPremium: 20,
-        avatar: "https://lets-digit.ru/Resourses/avatars/kirill_chernov.jpg"
-    });
 
     const handleEditClick = () => {
         setIsModalOpen(true);
@@ -22,15 +19,27 @@ const UserContainer = () => {
         address: string;
         role: string;
         phone: string;
-        minPremium: number;
+        minSurcharge: number;
     }) => {
-        setEmployeeData(prev => ({
-            ...prev,
-            ...updatedData
-        }));
+        // In a real app, you would call an API to update the employee here
+        // and then refresh the data using the refresh function from useEmployee
         setIsModalOpen(false);
     };
 
+    if (loading) {
+        return <Container>Loading...</Container>;
+    }
+
+    if (error || !authInfo) {
+        return <Container>Error: {error || "Employee data not available"}</Container>;
+    }
+
+    const employeeData = authInfo.employee;
+
+    const avatarSrc = employeeData.photoPath 
+        ? BASE_URL + employeeData.photoPath 
+        : generateAvatar(getInitials(employeeData.fio), 100);
+        
     return (
         <>
             <Container>
@@ -40,12 +49,15 @@ const UserContainer = () => {
                     </svg>
                 </EditIcon>
                 <ProfileImage 
-                    src={employeeData.avatar} 
-                    alt="Employee Photo" 
+                    src={avatarSrc} 
+                    alt={employeeData.fio} 
+                    onError={(e) => {
+                        e.currentTarget.src = generateAvatar(getInitials(employeeData.fio), 100);
+                    }}
                 />
                 <ProfileName>{employeeData.fio}</ProfileName>
                 <ProfileInfo>
-                    {employeeData.role === "admin" ? "Администратор" : 
+                    {employeeData.role === "админ" ? "Администратор" : 
                      employeeData.role === "manager" ? "Менеджер" : "Сотрудник"}
                 </ProfileInfo>
                 
@@ -66,7 +78,7 @@ const UserContainer = () => {
                         <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M18.9963 6.37894C18.9149 6.29693 18.8181 6.23183 18.7115 6.18741C18.6049 6.14299 18.4905 6.12012 18.375 6.12012C18.2595 6.12012 18.1451 6.14299 18.0385 6.18741C17.9319 6.23183 17.8351 6.29693 17.7538 6.37894L12.25 11.8914L8.49626 8.12894C8.41492 8.04693 8.31814 7.98183 8.21151 7.93741C8.10489 7.89299 7.99052 7.87012 7.87501 7.87012C7.7595 7.87012 7.64513 7.89299 7.5385 7.93741C7.43188 7.98183 7.3351 8.04693 7.25376 8.12894L2.00376 13.3789C1.92175 13.4603 1.85665 13.5571 1.81223 13.6637C1.76781 13.7703 1.74493 13.8847 1.74493 14.0002C1.74493 14.1157 1.76781 14.2301 1.81223 14.3367C1.85665 14.4433 1.92175 14.5401 2.00376 14.6214C2.0851 14.7035 2.18188 14.7685 2.2885 14.813C2.39513 14.8574 2.5095 14.8803 2.62501 14.8803C2.74052 14.8803 2.85489 14.8574 2.96151 14.813C3.06814 14.7685 3.16492 14.7035 3.24626 14.6214L7.87501 9.98394L11.6288 13.7464C11.7101 13.8285 11.8069 13.8935 11.9135 13.938C12.0201 13.9824 12.1345 14.0053 12.25 14.0053C12.3655 14.0053 12.4799 13.9824 12.5865 13.938C12.6931 13.8935 12.7899 13.8285 12.8713 13.7464L18.9963 7.62144C19.0783 7.5401 19.1434 7.44332 19.1878 7.3367C19.2322 7.23007 19.2551 7.1157 19.2551 7.00019C19.2551 6.88468 19.2322 6.77031 19.1878 6.66369C19.1434 6.55706 19.0783 6.46028 18.9963 6.37894Z" fill="#50555C"/>
                         </svg>
-                        Мин. надбавка {employeeData.minPremium}%
+                        Мин. надбавка {employeeData.minSurcharge}%
                     </ContactItem>
                 </ContactInfo>
             </Container>
@@ -82,7 +94,6 @@ const UserContainer = () => {
     );
 }
 
-// Стили остаются без изменений
 const Container = styled.div`
     background-color: white;
     border-radius: 10px;

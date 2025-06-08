@@ -5,6 +5,8 @@ export interface Employee {
   phone: string;
   role: string;
   permissions: string[] | null;
+  minSurcharge: number,
+  photoPath: string,
 }
 
 export interface AuthInfoResponse {

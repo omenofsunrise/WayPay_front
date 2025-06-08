@@ -1,7 +1,8 @@
 import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { authStorage } from './utils/auth-storage';
 
-const API_BASE_URL = 'https://web.waypay.one:5001/api';
+export const BASE_URL = 'https://web.waypay.one:5001/';
+export const API_BASE_URL = 'https://web.waypay.one:5001/api';
 
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
