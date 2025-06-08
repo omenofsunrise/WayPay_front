@@ -16,6 +16,7 @@ interface ModalProps {
   hideSaveButton?: boolean;
   width?: string;
   saveButtonText?: string;
+  customLayout?: React.ReactNode;
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -29,7 +30,8 @@ const BaseModal: React.FC<ModalProps> = ({
   mode = 'create',
   hideSaveButton = false,
   width = '562px',
-  saveButtonText = "Сохранить"
+  saveButtonText = "Сохранить",
+  customLayout
 }) => {
   const isViewMode = mode === 'view';
   const modalRef = useRef<HTMLDivElement>(null);
@@ -65,7 +67,9 @@ const BaseModal: React.FC<ModalProps> = ({
         <ModalHeader>
           <ModalTitle>{title}</ModalTitle>
         </ModalHeader>
-
+        <div className="modal-body">
+          {customLayout}
+        </div>
         <ModalForm onSubmit={onSave}>
           <ModalContent>{children}</ModalContent>
 

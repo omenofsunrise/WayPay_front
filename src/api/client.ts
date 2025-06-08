@@ -69,7 +69,6 @@ apiClient.interceptors.response.use(
                     throw new Error('No tokens available');
                 }
 
-                // Исправленный запрос - отправляем оба токена
                 const response = await axios.post(`${API_BASE_URL}/Auth/refresh`, {
                     accessToken,
                     refreshToken

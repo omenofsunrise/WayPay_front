@@ -381,7 +381,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputContainer>
           </InputRow>
           
-          {mode !== 'view' && (
             <InputRow>
               <InputLabel>{formData.isCompany ? 'Владелец:' : 'ФИО:'}</InputLabel>
               <InputContainer>
@@ -391,13 +390,12 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
                   placeholder= "ФИО"
                   value={formData.fullName}
                   onChange={handleInputChange}
-                  disabled={true}
+                  disabled={mode === 'view'}
                   hasError={touchedFields.fullName && validationErrors.fullName}
                   errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
                 />
               </InputContainer>
             </InputRow>
-          )}
 
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
