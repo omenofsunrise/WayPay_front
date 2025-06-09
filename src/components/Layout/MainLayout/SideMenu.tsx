@@ -35,8 +35,6 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
   '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
   '/budget': { mainItem: 'finance', subItems: { '/budget': 'budget' } },
-  '/income': { mainItem: 'finance', subItems: { '/income': 'income' } },
-  '/expenses': { mainItem: 'finance', subItems: { '/expenses': 'expenses' } },
   '/profile': { mainItem: 'profile' }
 };
 
@@ -372,16 +370,12 @@ const SideMenu = () => {
         <MenuItem 
           onClick={() => toggleItem('finance')}
           $collapsed={collapsed}
-          $selected={selectedSideMenuItem === 'budget' || 
-                    selectedSideMenuItem === 'income' ||
-                    selectedSideMenuItem === 'expenses'}
+          $selected={selectedSideMenuItem === 'budget' } 
         >
           <Icon 
             src={financeIcon} 
             $collapsed={collapsed} 
-            $selected={selectedSideMenuItem === 'budget' || 
-                      selectedSideMenuItem === 'income' ||
-                      selectedSideMenuItem === 'expenses'} 
+            $selected={selectedSideMenuItem === 'budget' } 
           />
           {!collapsed && (
             <>
@@ -411,18 +405,6 @@ const SideMenu = () => {
               $selected={selectedSideMenuItem === 'budget'}
             >
               Бюджет
-            </SubMenuItem>
-            <SubMenuItem 
-              onClick={() => handleSubMenuItemClick('income', '/income')}
-              $selected={selectedSideMenuItem === 'income'}
-            >
-              Доходы
-            </SubMenuItem>
-            <SubMenuItem 
-              onClick={() => handleSubMenuItemClick('expenses', '/expenses')}
-              $selected={selectedSideMenuItem === 'expenses'}
-            >
-              Расходы
             </SubMenuItem>
           </SubMenu>
         )}

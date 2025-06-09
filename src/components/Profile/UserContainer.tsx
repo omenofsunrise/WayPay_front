@@ -1,13 +1,20 @@
+// Updated UserContainer.tsx
 import styled from "styled-components";
-import { useState } from "react";
-import { EmployeeModal } from "../modal/CrudInherited/EmployeeModal";
+import { useState, useRef } from "react";
+import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
 import { BASE_URL } from "../../api/client";
 import { getInitials, generateAvatar } from "../../utils/avatarUtils";
 
 const UserContainer = () => {
-    const { authInfo, loading, error, updateEmployee } = useEmployee();
+    const { authInfo, loading, error, updateEmployee, updateEmployeePhoto } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+    const [isViewingPhoto, setIsViewingPhoto] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const avatarRef = useRef<HTMLImageElement>(null);
+    const hoverTimeoutRef = useRef<number | null>(null);
 
     const handleEditClick = () => {
         setIsModalOpen(true);
@@ -22,7 +29,7 @@ const UserContainer = () => {
     }) => {
         try {
             await updateEmployee({
-                id: authInfo?.employee.id || 0, // Make sure to include the employee ID
+                id: authInfo?.employee.id || 0,
                 fullName: updatedData.fio,
                 address: updatedData.address,
                 phone: updatedData.phone,
@@ -30,6 +37,61 @@ const UserContainer = () => {
             setIsModalOpen(false);
         } catch (err) {
             console.error("Failed to update employee:", err);
+        }
+    };
+
+    const handleAvatarMouseEnter = (e: React.MouseEvent) => {
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+        }
+        
+        const rect = avatarRef.current?.getBoundingClientRect();
+        if (rect) {
+            setContextMenuPosition({
+                x: e.clientX,
+                y: e.clientY + 10
+            });
+            setIsContextMenuOpen(true);
+        }
+    };
+
+    const handleAvatarMouseLeave = () => {
+        hoverTimeoutRef.current = window.setTimeout(() => {
+            setIsContextMenuOpen(false);
+        }, 100);
+    };
+
+    const handleContextMenuMouseEnter = () => {
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+            hoverTimeoutRef.current = null;
+        }
+    };
+
+    const handleContextMenuMouseLeave = () => {
+        setIsContextMenuOpen(false);
+    };
+
+    const handleContextMenuAction = (action: 'view' | 'change' | 'remove') => {
+        setIsContextMenuOpen(false);
+        
+        if (action === 'view') {
+            setIsViewingPhoto(true);
+        } else if (action === 'change' && fileInputRef.current) {
+            fileInputRef.current.click();
+        } else if (action === 'remove' && authInfo?.employee.id) {
+            // Implement photo removal logic here
+            // You'll need to add a removeEmployeePhoto function to your useEmployee hook
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0 && authInfo?.employee.id) {
+            try {
+                await updateEmployeePhoto(authInfo.employee.id, e.target.files[0]);
+            } catch (err) {
+                console.error("Failed to update photo:", err);
+            }
         }
     };
 
@@ -43,7 +105,7 @@ const UserContainer = () => {
 
     const employee = authInfo.employee;
     const avatarSrc = employee.photoPath 
-        ? BASE_URL + employee.photoPath 
+        ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
         : generateAvatar(getInitials(employee.fullName), 100);
         
     return (
@@ -54,13 +116,48 @@ const UserContainer = () => {
                         <path d="M3 17.2498V20.9998H6.75L17.81 9.93984L14.06 6.18984L3 17.2498ZM21.41 6.33984L17.66 2.58984L15.13 5.12984L18.88 8.87984L21.41 6.33984Z" fill="#50555C"/>
                     </svg>
                 </EditIcon>
+                
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                />
+                
                 <ProfileImage 
+                    ref={avatarRef}
                     src={avatarSrc} 
                     alt={employee.fullName} 
+                    onMouseEnter={handleAvatarMouseEnter}
+                    onMouseLeave={handleAvatarMouseLeave}
                     onError={(e) => {
                         e.currentTarget.src = generateAvatar(getInitials(employee.fullName), 100);
                     }}
                 />
+                
+                {isContextMenuOpen && (
+                    <ContextMenu 
+                        style={{
+                            left: `${contextMenuPosition.x}px`,
+                            top: `${contextMenuPosition.y}px`,
+                            position: 'fixed'
+                        }}
+                        onMouseEnter={handleContextMenuMouseEnter}
+                        onMouseLeave={handleContextMenuMouseLeave}
+                    >
+                        <ContextMenuItem onClick={() => handleContextMenuAction('view')}>
+                            Просмотреть фото
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => handleContextMenuAction('change')}>
+                            Изменить фото
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => handleContextMenuAction('remove')}>
+                            Удалить фото
+                        </ContextMenuItem>
+                    </ContextMenu>
+                )}
+                
                 <ProfileName>{employee.fullName}</ProfileName>
                 <ProfileInfo>
                     {employee.role === "admin" ? "Администратор" : 
@@ -100,9 +197,24 @@ const UserContainer = () => {
                     role: employee.role,
                     phone: employee.phone,
                     minSurcharge: employee.minSurcharge,
-                    avatar: employee.photoPath
+                    avatar: employee.photoPath,
+                    id: employee.id
                 }}
             />
+
+            {isViewingPhoto && (
+                <PhotoModal onClick={() => setIsViewingPhoto(false)}>
+                    <PhotoModalContent>
+                        <img 
+                            src={avatarSrc} 
+                            alt={employee.fullName}
+                            onError={(e) => {
+                                e.currentTarget.src = generateAvatar(getInitials(employee.fullName), 100);
+                            }}
+                        />
+                    </PhotoModalContent>
+                </PhotoModal>
+            )}
         </>
     );
 }
@@ -135,6 +247,11 @@ const ProfileImage = styled.img`
   object-fit: cover;
   margin: 0 auto;
   display: block;
+  cursor: pointer;
+  
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const ProfileName = styled.h2`
@@ -166,6 +283,50 @@ const ContactItem = styled.div`
     
     svg {
         flex-shrink: 0;
+    }
+`;
+
+const ContextMenu = styled.div`
+    position: fixed;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    min-width: 150px;
+`;
+
+const ContextMenuItem = styled.div`
+    padding: 8px 16px;
+    cursor: pointer;
+    
+    &:hover {
+        background-color: #f5f5f5;
+    }
+`;
+
+const PhotoModal = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    cursor: pointer;
+`;
+
+const PhotoModalContent = styled.div`
+    max-width: 90%;
+    max-height: 90%;
+    
+    img {
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 8px;
     }
 `;
 

@@ -37,7 +37,7 @@ const roleOptions = [
   { value: 'employee', label: 'Сотрудник' },
 ];
 
-export const EmployeeModal: React.FC<EmployeeModalProps> = ({
+const EmployeeModal: React.FC<EmployeeModalProps> = ({
   mode,
   isOpen,
   onClose,
@@ -51,13 +51,13 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     avatar: undefined,
   },
 }) => {
-  const { updateEmployeePhoto } = useEmployee();
+  const { updateEmployeePhoto, refresh } = useEmployee();
   const [formData, setFormData] = useState({
-    fio: initialData.fio,
-    address: initialData.address,
-    role: initialData.role,
-    phone: initialData.phone,
-    minSurcharge: initialData.minSurcharge,
+    fio: initialData.fio || '',
+    address: initialData.address || '',
+    role: initialData.role || 'employee',
+    phone: initialData.phone || '',
+    minSurcharge: initialData.minSurcharge || 0,
   });
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [validationErrors, setValidationErrors] = useState({
@@ -67,8 +67,8 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string>(
     initialData.avatar
-      ? BASE_URL + initialData.avatar 
-      : generateAvatar(getInitials(initialData.fio), 100)
+      ? `${BASE_URL}${initialData.avatar}?${Date.now()}`
+      : generateAvatar(getInitials(initialData.fio || ''), 100)
   );
 
   const handlePhotoChange = async (file: File) => {
@@ -77,7 +77,12 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     try {
       setIsSubmitting(true);
       const updatedEmployee = await updateEmployeePhoto(initialData.id, file);
-      setAvatarSrc(updatedEmployee.photoPath ? BASE_URL + updatedEmployee.photoPath : generateAvatar(getInitials(formData.fio), 100));
+      
+      if (updatedEmployee.photoPath) {
+        const newAvatarUrl = `${BASE_URL}${updatedEmployee.photoPath}?${Date.now()}`;
+        setAvatarSrc(newAvatarUrl);
+        refresh(); // Refresh employee data
+      }
     } catch (error) {
       console.error("Error updating photo:", error);
     } finally {
@@ -87,21 +92,22 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   useEffect(() => {
     setFormData({
-      fio: initialData.fio,
-      address: initialData.address,
-      role: initialData.role,
-      phone: initialData.phone,
-      minSurcharge: initialData.minSurcharge,
+      fio: initialData.fio || '',
+      address: initialData.address || '',
+      role: initialData.role || 'employee',
+      phone: initialData.phone || '',
+      minSurcharge: initialData.minSurcharge || 0,
     });
     setValidationErrors({
       fio: false,
       phone: false,
     });
-    setAvatarSrc(
-      initialData.avatar
-        ? BASE_URL + initialData.avatar 
-        : generateAvatar(getInitials(initialData.fio), 100)
-    );
+    
+    if (initialData.avatar) {
+      setAvatarSrc(`${BASE_URL}${initialData.avatar}?${Date.now()}`);
+    } else if (initialData.fio) {
+      setAvatarSrc(generateAvatar(getInitials(initialData.fio || ''), 100));
+    }
   }, [initialData]);
 
   useEffect(() => {
@@ -301,3 +307,5 @@ const FieldContainer = styled.div`
   flex: 1;
   min-width: 0;
 `;
+
+export default EmployeeModal;

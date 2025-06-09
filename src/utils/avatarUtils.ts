@@ -43,7 +43,7 @@ export const generateAvatar = (initials: string, size = 100): string => {
   // Текст
   ctx.fillStyle = "#ffffff";
   const fontSize = size / 2;
-  ctx.font = `bold ${fontSize}px "Manrope", Arial, sans-serif`; // Изменено здесь
+  ctx.font = `bold ${fontSize}px "Manrope", Arial, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   
