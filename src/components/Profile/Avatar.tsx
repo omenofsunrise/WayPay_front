@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import styled from 'styled-components';
 
 type AvatarProps = {
@@ -8,6 +8,7 @@ type AvatarProps = {
   disabled?: boolean;
   onClick?: () => void;
   showCameraIndicator?: boolean;
+  onPhotoChange?: (file: File) => void;
 };
 
 const Avatar: React.FC<AvatarProps> = ({
@@ -17,7 +18,10 @@ const Avatar: React.FC<AvatarProps> = ({
   disabled = false,
   onClick,
   showCameraIndicator = false,
+  onPhotoChange,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const getInitials = () => {
     if (!name) return '';
     const parts = name.split(' ');
@@ -26,12 +30,34 @@ const Avatar: React.FC<AvatarProps> = ({
       : name[0];
   };
 
+  const handleAvatarClick = () => {
+    if (disabled) return;
+    
+    if (onPhotoChange) {
+      fileInputRef.current?.click();
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!onPhotoChange || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    onPhotoChange(file);
+    // Clear the input to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <ContentWrapper size={size}>
       <AvatarContainer 
         size={size} 
-        onClick={!disabled ? onClick : undefined}
+        onClick={handleAvatarClick}
         title={name}
+        $clickable={!!(onClick || onPhotoChange) && !disabled}
       >
         {src ? (
           <AvatarImage src={src} alt={name} />
@@ -44,6 +70,14 @@ const Avatar: React.FC<AvatarProps> = ({
           <CameraIcon />
         </StatusIndicator>
       )}
+      {onPhotoChange && (
+        <HiddenFileInput
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+        />
+      )}
     </ContentWrapper>
   );
 };
@@ -54,7 +88,7 @@ const ContentWrapper = styled.div<{ size: number }>`
   height: ${props => props.size}px;
 `;
 
-const AvatarContainer = styled.div<{ size: number }>`
+const AvatarContainer = styled.div<{ size: number; $clickable: boolean }>`
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -63,7 +97,12 @@ const AvatarContainer = styled.div<{ size: number }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: ${props => props.onClick ? 'pointer' : 'default'};
+  cursor: ${props => props.$clickable ? 'pointer' : 'default'};
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: ${props => props.$clickable ? 0.9 : 1};
+  }
 `;
 
 const AvatarImage = styled.img`
@@ -91,6 +130,10 @@ const StatusIndicator = styled.div<{ size: number }>`
   align-items: center;
   justify-content: center;
   transform: translate(25%, 25%);
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
 `;
 
 const CameraIcon = () => (

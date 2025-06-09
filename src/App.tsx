@@ -15,7 +15,7 @@ import InvestorPage from './pages/InvestorPage';
 import NewCreditPage from './pages/NewCreditPage';
 import SchedulePage from './pages/SchedulePage';
 import CreditControlPage from './pages/CreditControlPage';
-import EmployeeProfile from './pages/EmployeeProfile';
+import EmployeeProfile from './pages/EmployeeProfilePage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);

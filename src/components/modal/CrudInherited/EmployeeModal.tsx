@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import BaseModal, { type ModalMode } from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
 import CustomSelect from '../../ui/fields/CustomSelect';
@@ -7,6 +7,7 @@ import { ModalTitle } from 'react-bootstrap';
 import styled from 'styled-components';
 import { BASE_URL } from '../../../api/client';
 import { generateAvatar, getInitials } from '../../../utils/avatarUtils';
+import { useEmployee } from '../../../api/hooks/useEmployee';
 
 type EmployeeModalProps = {
   mode: ModalMode;
@@ -18,8 +19,9 @@ type EmployeeModalProps = {
     role: string;
     phone: string;
     minSurcharge: number;
-  }) => void;
+  }) => Promise<void>;
   initialData?: {
+    id?: number;
     fio: string;
     address: string;
     role: string;
@@ -31,7 +33,7 @@ type EmployeeModalProps = {
 
 const roleOptions = [
   { value: 'admin', label: 'Администратор' },
-  { value: 'counter', label: 'Бухгалтер' },
+  { value: 'manager', label: 'Менеджер' },
   { value: 'employee', label: 'Сотрудник' },
 ];
 
@@ -49,6 +51,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     avatar: undefined,
   },
 }) => {
+  const { updateEmployeePhoto } = useEmployee();
   const [formData, setFormData] = useState({
     fio: initialData.fio,
     address: initialData.address,
@@ -61,6 +64,26 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     fio: false,
     phone: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarSrc, setAvatarSrc] = useState<string>(
+    initialData.avatar
+      ? BASE_URL + initialData.avatar 
+      : generateAvatar(getInitials(initialData.fio), 100)
+  );
+
+  const handlePhotoChange = async (file: File) => {
+    if (!initialData.id) return;
+    
+    try {
+      setIsSubmitting(true);
+      const updatedEmployee = await updateEmployeePhoto(initialData.id, file);
+      setAvatarSrc(updatedEmployee.photoPath ? BASE_URL + updatedEmployee.photoPath : generateAvatar(getInitials(formData.fio), 100));
+    } catch (error) {
+      console.error("Error updating photo:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     setFormData({
@@ -74,6 +97,11 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
       fio: false,
       phone: false,
     });
+    setAvatarSrc(
+      initialData.avatar
+        ? BASE_URL + initialData.avatar 
+        : generateAvatar(getInitials(initialData.fio), 100)
+    );
   }, [initialData]);
 
   useEffect(() => {
@@ -95,7 +123,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     }
   }, [formData, initialData, mode]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const isFioValid = formData.fio.trim().length > 0;
     const isPhoneValid = /^[\d\s()+-\s]+$/.test(formData.phone);
 
@@ -107,14 +135,21 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
       return;
     }
     
-    onSubmit({
-      fio: formData.fio.trim(),
-      address: formData.address.trim(),
-      role: formData.role,
-      phone: formData.phone.trim(),
-      minSurcharge: Number(formData.minSurcharge),
-    });
-    onClose();
+    try {
+      setIsSubmitting(true);
+      await onSubmit({
+        fio: formData.fio.trim(),
+        address: formData.address.trim(),
+        role: formData.role,
+        phone: formData.phone.trim(),
+        minSurcharge: Number(formData.minSurcharge),
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,8 +161,8 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     }
   };
 
-  const handleSelectChange = (value: string) => {
-    setFormData(prev => ({ ...prev, role: value }));
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({ ...prev, role: e.target.value }));
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,10 +186,6 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   if (!isOpen) return null;
 
-  const avatarSrc = initialData.avatar
-          ? BASE_URL + initialData.avatar 
-          : generateAvatar(getInitials(initialData.fio), 100);
-
   return (
     <BaseModal
       title={getTitle()}
@@ -162,6 +193,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
       onCancel={onClose}
       onSave={handleSubmit}
       isSaveDisabled={mode !== 'view' && isSaveDisabled}
+      isSubmitting={isSubmitting}
       children={<div></div>}
       width={"750px"}
       mode={mode}
@@ -173,7 +205,8 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
               size={220} 
               name={formData.fio} 
               disabled={mode === 'view'}
-              showCameraIndicator={true} 
+              showCameraIndicator={mode !== 'view'} 
+              onPhotoChange={mode !== 'view' ? handlePhotoChange : undefined}
             />
           </div>
           <div style={{ flexGrow: 1, padding: '20px 20px 20px 0' }}>
@@ -209,6 +242,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                     disabled={mode === 'view'}
                     placeholder="Выберите роль"
                     value={formData.role}
+                    onChange={handleSelectChange}
                   />
                 </FieldContainer>
                 
@@ -216,7 +250,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                   <Title>Телефон</Title>
                   <CustomInput
                     name="phone"
-                    inputType="number"
+                    inputType="text"
                     placeholder="Телефон"
                     value={formData.phone}
                     onChange={handleInputChange}

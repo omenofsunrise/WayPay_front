@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { EmployeeService } from '../services/employeeService';
-import type { AuthInfoResponse } from '../types/employee';
+import type { AuthInfoResponse, Employee } from '../types/employee';
 import { authStorage } from '../utils/auth-storage';
 
 export function useEmployee() {
@@ -26,6 +26,55 @@ export function useEmployee() {
     }
   }, []);
 
+  const updateEmployee = useCallback(async (employeeData: {
+    id: number;
+    fullName: string;
+    address?: string;
+    phone: string;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const updatedEmployee = await EmployeeService.updateEmployee(employeeData);
+      setAuthInfo(prev => prev ? {
+        ...prev,
+        employee: {
+          ...prev.employee,
+          ...updatedEmployee,
+          fullName: updatedEmployee.fullName,
+        }
+      } : null);
+      return updatedEmployee;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateEmployeePhoto = useCallback(async (id: number, photoFile: File) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const updatedEmployee = await EmployeeService.updateEmployeePhoto(id, photoFile);
+      setAuthInfo(prev => prev ? {
+        ...prev,
+        employee: {
+          ...prev.employee,
+          ...updatedEmployee,
+          photoPath: updatedEmployee.photoPath,
+        }
+      } : null);
+      return updatedEmployee;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -34,6 +83,8 @@ export function useEmployee() {
     authInfo,
     loading,
     error,
-    refresh: fetchAuthInfo
+    refresh: fetchAuthInfo,
+    updateEmployee,
+    updateEmployeePhoto,
   };
 }
