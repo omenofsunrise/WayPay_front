@@ -302,6 +302,7 @@ const Container = styled.div`
   display: inline-block;
   width: 100%;
   text-align: left;
+  color: black;
 `;
 
 const Field = styled.div`
@@ -318,6 +319,7 @@ const Field = styled.div`
   height: auto;
   max-height: 38px;
   box-sizing: border-box;
+  color: black;
 
   &:hover {
     border-color: rgba(0, 125, 136, 1);
@@ -349,6 +351,7 @@ const CalendarPopup = styled.div`
   padding: 16px;
   z-index: 1000;
   width: 280px;
+  color: black;
 `;
 
 const CalendarHeader = styled.div`
@@ -356,11 +359,13 @@ const CalendarHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  color: black;
 `;
 
 const MonthYearContainer = styled.div`
   display: flex;
   gap: 8px;
+  color: black;
 `;
 
 const SelectButton = styled.button`
@@ -375,7 +380,8 @@ const SelectButton = styled.button`
   justify-content: space-between;
   min-width: 80px;
   transition: all 0.2s ease;
-
+  color: black;
+  
   &:hover {
     background-color: rgba(232, 216, 216, 0.2);
   }

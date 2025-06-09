@@ -81,7 +81,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       if (updatedEmployee.photoPath) {
         const newAvatarUrl = `${BASE_URL}${updatedEmployee.photoPath}?${Date.now()}`;
         setAvatarSrc(newAvatarUrl);
-        refresh(); // Refresh employee data
+        await refresh();
       }
     } catch (error) {
       console.error("Error updating photo:", error);

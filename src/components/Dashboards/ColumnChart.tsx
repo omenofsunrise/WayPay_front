@@ -26,8 +26,11 @@ interface ColumnChartProps {
 const ColumnChart: React.FC<ColumnChartProps> = ({ title, data, maxValue, step, height = 300 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  const calculatedMaxValue = maxValue || Math.max(...data.map(item => item.total), ...data.flatMap(item => item.bars.map(bar => bar.value)));
+  const adjustedMaxValue = Math.ceil(calculatedMaxValue / step) * step;
+  
   const yAxisValues = [];
-  for (let i = 0; i <= maxValue; i += step) {
+  for (let i = 0; i <= adjustedMaxValue; i += step) {
     yAxisValues.push(i);
   }
 
@@ -59,11 +62,10 @@ const ColumnChart: React.FC<ColumnChartProps> = ({ title, data, maxValue, step, 
             </YAxis>
 
             <BarsContainer>
-                {/* Add horizontal dashed lines for each Y-axis value */}
                 {yAxisValues.map((value, index) => (
                   <HorizontalLine 
                     key={`line-${index}`}
-                    position={(value / maxValue) * 100}
+                    position={(value / adjustedMaxValue) * 100}
                   />
                 ))}
                 
@@ -81,8 +83,8 @@ const ColumnChart: React.FC<ColumnChartProps> = ({ title, data, maxValue, step, 
                     return (
                         <StackedBar 
                         key={barIndex}
-                        height={(bar.value / maxValue) * 100}
-                        offset={(nextValuesSum / maxValue) * 100}
+                        height={(bar.value / adjustedMaxValue) * 100}
+                        offset={(nextValuesSum / adjustedMaxValue) * 100}
                         color={bar.color}
                         isHovered={hoveredIndex !== null && hoveredIndex !== index}
                         />
@@ -218,8 +220,8 @@ const BarGroup = styled.div`
 const StackedBar = styled.div<{ height: number; offset: number; color: string; isHovered: boolean }>`
   position: absolute;
   width: 100%;
-  height: calc(${props => props.height}% - ${props => props.offset > 0 ? '-10px' : '0px'});
-  bottom: calc(${props => props.offset}% + ${props => props.offset > 0 ? '-10px' : '0px'});
+  height: ${props => props.height}%;
+  bottom: ${props => props.offset}%;
   background-color: ${props => props.isHovered ? `color-mix(in srgb, ${props.color} 40%, #E5E7EB)` : props.color};
   border-radius: ${props => props.offset === 0 ? '5px' : '5px'};
   transition: background-color 0.2s ease;

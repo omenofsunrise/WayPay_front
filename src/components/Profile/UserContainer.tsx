@@ -1,6 +1,6 @@
 // Updated UserContainer.tsx
 import styled from "styled-components";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
 import { BASE_URL } from "../../api/client";
@@ -18,6 +18,34 @@ const UserContainer = () => {
 
     const handleEditClick = () => {
         setIsModalOpen(true);
+    };
+
+    useEffect(() => {
+        if (authInfo?.employee) {
+                const employee = authInfo.employee;
+                const newAvatarSrc = employee.photoPath 
+                ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
+                : generateAvatar(getInitials(employee.fullName), 100);
+                
+                if (avatarRef.current) {
+                avatarRef.current.src = newAvatarSrc;
+                }
+            }
+    }, [authInfo]);
+
+    const handleModalClose = async () => {
+        setIsModalOpen(false);
+        if (authInfo?.employee) {
+            await refresh();
+            const employee = authInfo.employee;
+            const newAvatarSrc = employee.photoPath 
+            ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
+            : generateAvatar(getInitials(employee.fullName), 100);
+            
+            if (avatarRef.current) {
+            avatarRef.current.src = newAvatarSrc;
+            }
+        }
     };
 
     const handleModalSubmit = async (updatedData: {
@@ -160,7 +188,7 @@ const UserContainer = () => {
                 
                 <ProfileName>{employee.fullName}</ProfileName>
                 <ProfileInfo>
-                    {employee.role === "admin" ? "Администратор" : 
+                    {employee.role === "админ" ? "Администратор" : 
                      employee.role === "manager" ? "Менеджер" : "Сотрудник"}
                 </ProfileInfo>
                 
@@ -189,7 +217,7 @@ const UserContainer = () => {
             <EmployeeModal
                 mode="edit"
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={handleModalClose}
                 onSubmit={handleModalSubmit}
                 initialData={{
                     fio: employee.fullName,
@@ -294,6 +322,7 @@ const ContextMenu = styled.div`
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     min-width: 150px;
+    color: black;
 `;
 
 const ContextMenuItem = styled.div`
@@ -331,3 +360,7 @@ const PhotoModalContent = styled.div`
 `;
 
 export default UserContainer;
+
+function refresh() {
+    throw new Error("Function not implemented.");
+}

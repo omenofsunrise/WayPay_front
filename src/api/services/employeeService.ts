@@ -1,6 +1,5 @@
-// employeeService.ts
 import apiClient from '../client';
-import type { AuthInfoResponse, Employee } from '../types/employee';
+import type { AuthInfoResponse, CreditStats, Employee } from '../types/employee';
 
 export class EmployeeService {
   static async getAuthInfo(): Promise<AuthInfoResponse> {
@@ -49,6 +48,15 @@ export class EmployeeService {
           'Content-Type': 'multipart/form-data',
         },
       });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getCreditsStats(months: number = 12): Promise<CreditStats[]> {
+    try {
+      const response = await apiClient.get(`/Employee/credits-stats?months=${months}`);
       return response.data;
     } catch (error) {
       throw error;

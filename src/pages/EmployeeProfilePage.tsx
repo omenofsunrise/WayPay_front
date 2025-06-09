@@ -8,8 +8,92 @@ import ScatterPlot from '../components/Dashboards/ScatterPlot';
 import ResultsContainer from '../components/Profile/ResultsContainer';
 import creditsAmountSvg from '../assets/ui/analitic/creditsAmount.svg';
 import paymentsSvg from '../assets/ui/analitic/payments.svg';
+import { useEmployee } from '../api/hooks/useEmployee';
+import { useEffect, useMemo } from 'react';
 
 const EmployeeProfile = () => {
+    const { creditsStats, fetchCreditsStats } = useEmployee();
+    
+    useEffect(() => {
+        fetchCreditsStats(12);
+    }, [fetchCreditsStats]);
+
+    const scatterPlotData = useMemo(() => 
+        creditsStats.map((stat, index) => ({
+            x: index + 1,
+            y: stat.count,
+            color: 'rgba(0, 125, 136, 1)',
+            name: getMonthName(stat.month),
+            value: stat.count
+        })), 
+        [creditsStats]
+    );
+
+    const { currentMonthCount, percentageChange } = useMemo(() => {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        
+        const currentMonthStat = creditsStats.find(
+            stat => stat.month === currentMonth && stat.year === currentYear
+        );
+        
+        let prevMonth = currentMonth - 1;
+        let prevYear = currentYear;
+        if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear--;
+        }
+        
+        const prevMonthStat = creditsStats.find(
+            stat => stat.month === prevMonth && stat.year === prevYear
+        );
+
+        const currentCount = currentMonthStat?.count || 0;
+        const prevCount = prevMonthStat?.count || 0;
+        
+        let change = 0;
+        let hasChange = false;
+        
+        if (prevCount > 0 && currentCount > 0) {
+            change = ((currentCount - prevCount) / prevCount) * 100;
+            hasChange = true;
+        } else if (prevCount === 0 && currentCount > 0) {
+            change = 100;
+            hasChange = true;
+        } else if (currentCount === 0 && prevCount > 0) {
+            change = -100;
+            hasChange = true;
+        }
+
+        return {
+            currentMonthCount: currentCount,
+            percentageChange: {
+                value: Math.round(change),
+                hasChange,
+                isPositive: change > 0,
+                isNeutral: change === 0
+            }
+        };
+    }, [creditsStats]);
+
+    
+    function getMonthName(month: number): string {
+        const months = [
+            'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        ];
+        return months[month - 1] || '';
+    }
+
+    function getShortMonthName(month: number): string {
+        const months = [
+            'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
+            'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'
+        ];
+        return months[month - 1] || '';
+    }
+    
     const chartData = [
         {
             label: 'Июнь',
@@ -87,8 +171,8 @@ const EmployeeProfile = () => {
             label: 'Мар',
             total: 130000,
             bars: [
-                { name: 'Неподтверждённые, руб', value: 50000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 80000, color: 'rgba(0, 125, 136, 1)' },
+                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
+                { name: 'Подтверждённые, руб', value: 90000, color: 'rgba(0, 125, 136, 1)' },
             ]
         },
         {
@@ -122,7 +206,7 @@ const EmployeeProfile = () => {
                         height={220}
                         title="Платежей принял" 
                         data={chartData} 
-                        maxValue={130000} 
+                        maxValue={140000} 
                         step={20000} 
                     />
                 </ChartWrapper>
@@ -131,29 +215,16 @@ const EmployeeProfile = () => {
                 <ScatterPlotWrapper>
                     <ScatterPlot
                         title="Количество договоров"
-                        data={[
-                            { x: 1, y: 20, color: 'rgba(0, 125, 136, 1)', name: 'Июнь', value: 15000 },
-                            { x: 2, y: 40, color: 'rgba(0, 125, 136, 1)', name: 'Июль', value: 25000 },
-                            { x: 3, y: 35, color: 'rgba(0, 125, 136, 1)', name: 'Август', value: 22000 },
-                            { x: 4, y: 50, color: 'rgba(0, 125, 136, 1)', name: 'Сентябрь', value: 32000 },
-                            { x: 5, y: 45, color: 'rgba(0, 125, 136, 1)', name: 'Октябрь', value: 28000 },
-                            { x: 6, y: 60, color: 'rgba(0, 125, 136, 1)', name: 'Ноябрь', value: 40000 },
-                            { x: 7, y: 55, color: 'rgba(0, 125, 136, 1)', name: 'Декабрь', value: 38000 },
-                            { x: 8, y: 70, color: 'rgba(0, 125, 136, 1)', name: 'Январь', value: 45000 },
-                            { x: 9, y: 65, color: 'rgba(0, 125, 136, 1)', name: 'Февраль', value: 42000 },
-                            { x: 10, y: 80, color: 'rgba(0, 125, 136, 1)', name: 'Март', value: 52000 },
-                            { x: 11, y: 75, color: 'rgba(0, 125, 136, 1)', name: 'Апрель', value: 48000 },
-                            { x: 12, y: 90, color: 'rgba(0, 125, 136, 1)', name: 'Май', value: 60000 }
-                        ]}
+                        data={scatterPlotData}
                         xAxisLabel=""
                         yAxisLabel=""
                         maxX={12}
-                        maxY={100}
+                        maxY={Math.max(...scatterPlotData.map(d => d.y), 10)}
                         xStep={1}
-                        yStep={20}
+                        yStep={Math.ceil(Math.max(...scatterPlotData.map(d => d.y), 10) / 5)}
                         height={220}
                         showLegend={false}
-                        xAxisCustomLabels={['Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май']}
+                        xAxisCustomLabels={creditsStats.map(stat => getShortMonthName(stat.month))}
                     />
                 </ScatterPlotWrapper>
                 
@@ -161,14 +232,14 @@ const EmployeeProfile = () => {
                     <ResultsContainer
                         icon={<img src={creditsAmountSvg} alt="Кредиты" />}
                         title="Кол-во договоров в этом месяце"
-                        value="200"
-                        percentageChange={5}
+                        value={currentMonthCount.toString()}
+                        percentageChange={percentageChange}
                     />
                     <ResultsContainer
                         icon={<img src={paymentsSvg} alt="Платежи" />}
                         title="Платежи в этом месяце"
                         value="540 000 ₽"
-                        percentageChange={-3}
+                        percentageChange={{ value: -3, hasChange: true, isPositive: false }}
                     />
                 </ResultsWrapper>
             </BottomSection>
