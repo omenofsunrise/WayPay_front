@@ -1,4 +1,5 @@
 import apiClient from '../client';
+import type { ClientExistsResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse } from '../types/employee';
 
@@ -21,6 +22,38 @@ class EmployeeService {
     }
   }
   
+  static async createEmployee(employeeData: {
+    fullName: string;
+    phone: string;
+    address?: string;
+    minSurcharge?: number;
+    role?: string;
+  }): Promise<Employee> {
+    try {
+      const formData = new FormData();
+      formData.append('FullName', employeeData.fullName);
+      formData.append('Phone', employeeData.phone);
+      if (employeeData.address) {
+        formData.append('Address', employeeData.address);
+      }
+      if (employeeData.minSurcharge !== undefined) {
+        formData.append('MinSurcharge', employeeData.minSurcharge.toString());
+      }
+      if (employeeData.role) {
+        formData.append('Role', employeeData.role);
+      }
+
+      const response = await apiClient.post('/Employee', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   static async updateEmployee(employeeData: {
     id: number;
     fullName: string;
@@ -80,6 +113,21 @@ class EmployeeService {
     } catch (error) {
       throw error;
     }
+  }
+
+  static async deleteEmployee(id: number): Promise<void> {
+    try {
+      await apiClient.delete(`/Employee/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async checkEmployeeExists(phone: string): Promise<boolean> {
+    const response = await apiClient.get<ClientExistsResponse>('/Employee/exists', { 
+      params: { phone } 
+    });
+    return response.data.exists;
   }
 }
 

@@ -32,6 +32,8 @@ const EmployeePage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+    const [localEmployees, setLocalEmployees] = useState<Employee[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
     
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -58,7 +60,8 @@ const EmployeePage = () => {
         employeesError, 
         fetchEmployees,
         updateEmployee,
-        updateEmployeePhoto
+        createEmployee,
+        deleteEmployee
     } = useEmployee();
     
     const loadEmployees = useCallback(async () => {
@@ -74,7 +77,11 @@ const EmployeePage = () => {
             params.sortDirection = sortConfig.direction;
         }
 
-        await fetchEmployees(params);
+        const result = await fetchEmployees(params);
+        if (result) {
+            setLocalEmployees(result.items);
+            setTotalCount(result.totalCount);
+        }
     }, [currentPage, nameFilter, roleFilter, sortConfig, fetchEmployees]);
     
     useEffect(() => {
@@ -108,40 +115,6 @@ const EmployeePage = () => {
         });
     };
 
-    const handleExport = async () => {
-        try {
-            await exportData({
-                fetchData: async (page, pageSize) => {
-                    const params: EmployeeFilterRequest = {
-                        page,
-                        pageSize,
-                        fullName: nameFilter || undefined,
-                        role: roleFilter as any,
-                        sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-                        sortDirection: sortConfig.direction
-                    };
-                    
-                    const result = await employeeService.getEmployees(params);
-                    return {
-                        items: Array.isArray(result.items) ? result.items : [],
-                        totalCount: result.totalCount || 0
-                    };
-                },
-                fileName: 'employees_export',
-                transformData: (employee) => ({
-                    ID: employee.id,
-                    'ФИО': employee.fullName,
-                    'Телефон': employee.phone,
-                    'Адрес': employee.address || '-',
-                    'Роль': employee.role,
-                    'Минимальная надбавка': employee.minSurcharge
-                })
-            });
-        } catch (error) {
-            console.error('Export failed:', error);
-        }
-    };
-
     const handleCreateEmployee = () => {
         setModalMode('create');
         setSelectedEmployee(defaultEmployee);
@@ -164,39 +137,78 @@ const EmployeePage = () => {
         const [id] = rowData;
         if (window.confirm('Вы уверены, что хотите удалить этого сотрудника?')) {
             try {
-                // Здесь нужно добавить метод deleteEmployee в хук useEmployee
-                // await deleteEmployee(Number(id));
-                loadEmployees();
+                setLocalEmployees(prev => prev.filter(e => e.id !== Number(id)));
+                setTotalCount(prev => prev - 1);
+                
+                await deleteEmployee(Number(id));
+                
+                await loadEmployees();
             } catch (err) {
                 console.error('Ошибка при удалении сотрудника:', err);
+                loadEmployees();
             }
         }
     };
 
     const handleSubmitEmployee = async (employeeData: Partial<Employee>) => {
         try {
-            if (modalMode === 'edit' && selectedEmployee?.id) {
+            if (modalMode === 'create') {
+                const newEmployee = {
+                    ...defaultEmployee,
+                    ...employeeData,
+                    id: Math.max(0, ...localEmployees.map(e => e.id)) + 1,
+                    photoPath: ''
+                };
+                
+                setLocalEmployees(prev => [...prev, newEmployee]);
+                setTotalCount(prev => prev + 1);
+                
+                const createdEmployee = await createEmployee({
+                    fullName: employeeData.fullName || '',
+                    phone: employeeData.phone || '',
+                    address: employeeData.address,
+                    minSurcharge: employeeData.minSurcharge || 0,
+                    role: employeeData.role || 'сотрудник'
+                });
+                
+                setLocalEmployees(prev => 
+                    prev.map(e => 
+                        e.id === newEmployee.id ? createdEmployee : e
+                    )
+                );
+            } else if (modalMode === 'edit' && selectedEmployee?.id) {
+                setLocalEmployees(prev => 
+                    prev.map(e => 
+                        e.id === selectedEmployee.id 
+                            ? { ...e, ...employeeData } 
+                            : e
+                    )
+                );
+                
                 await updateEmployee({
                     id: selectedEmployee.id,
                     fullName: employeeData.fullName || '',
                     address: employeeData.address,
-                    phone: employeeData.phone || ''
+                    phone: employeeData.phone || '',
                 });
             }
-            loadEmployees();
+            
+            setIsModalOpen(false);
         } catch (err) {
             console.error('Ошибка при сохранении сотрудника:', err);
+            loadEmployees();
+            throw err;
         }
     };
 
     const handleRowDoubleClick = (rowData: any[]) => {
-        const employee = employees?.items.find(e => e.id === Number(rowData[0]));
+        const employee = localEmployees.find(e => e.id === Number(rowData[0]));
         if (employee) {
             handleEditEmployee(employee);
         }
     };
 
-    const tableData = employees?.items.map(employee => [
+    const tableData = localEmployees.map(employee => [
         employee.id.toString(),
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Avatar 
@@ -209,7 +221,7 @@ const EmployeePage = () => {
         employee.minSurcharge.toString(),
         employee.phone,
         employee.address || '-',
-    ]) || [];
+    ]);
 
     const tableActions = [
         {
@@ -224,18 +236,12 @@ const EmployeePage = () => {
         { value: 'админ', label: 'Администратор' },
         { value: 'бухгалтер', label: 'Бухгалтер' },
         { value: 'сотрудник', label: 'Сотрудник' },
-        { value: 'суперадмин', label: 'Супер администратор' }
     ];
 
     return (
         <PageLayout>
             <TitleField style={{marginTop: 0 }}>
                 <CustomTitle style={{marginTop: 0 }}>Сотрудники</CustomTitle>
-                {/* <ExportButton 
-                    onClick={handleExport}
-                    isExporting={isExporting}
-                    exportProgress={exportProgress}
-                /> */}
             </TitleField>
             
             <FilterField>
@@ -281,11 +287,11 @@ const EmployeePage = () => {
                     
                     <PaginationLayout>
                         <CountInfoTitle 
-                            total={employees?.totalCount || 0} 
+                            total={totalCount} 
                         />
                         
                         <Pagination
-                            total={employees?.totalCount || 0}
+                            total={totalCount}
                             current={currentPage}
                             onChange={setCurrentPage}
                             itemsPerPage={pageSize}

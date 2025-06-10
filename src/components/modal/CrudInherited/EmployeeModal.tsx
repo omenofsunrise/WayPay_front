@@ -8,6 +8,7 @@ import styled from 'styled-components';
 import { BASE_URL } from '../../../api/client';
 import { generateAvatar, getInitials } from '../../../utils/avatarUtils';
 import { useEmployee } from '../../../api/hooks/useEmployee';
+import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 
 type EmployeeModalProps = {
   mode: ModalMode;
@@ -32,9 +33,9 @@ type EmployeeModalProps = {
 };
 
 const roleOptions = [
-  { value: 'admin', label: 'Администратор' },
-  { value: 'manager', label: 'Менеджер' },
-  { value: 'employee', label: 'Сотрудник' },
+  { value: 'админ', label: 'Администратор' },
+  { value: 'сотрудник', label: 'Сотрудник' },
+  { value: 'бухгалтер', label: 'Бухгалтер' },
 ];
 
 const EmployeeModal: React.FC<EmployeeModalProps> = ({
@@ -51,7 +52,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     avatar: undefined,
   },
 }) => {
-  const { updateEmployeePhoto, refresh } = useEmployee();
+  const { updateEmployeePhoto, refresh, checkEmployeeExists } = useEmployee();
   const [formData, setFormData] = useState({
     fullName: initialData?.fullName || '',
     address: initialData?.address || '',
@@ -59,17 +60,52 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     phone: initialData?.phone || '',
     minSurcharge: initialData?.minSurcharge || 0,
   });
-  const [isSaveDisabled, setIsSaveDisabled] = useState(true);
+  
   const [validationErrors, setValidationErrors] = useState({
     fullName: false,
     phone: false,
   });
+  
+  const [errorMessages, setErrorMessages] = useState({
+    fullName: '',
+    phone: '',
+  });
+  
+  const [touchedFields, setTouchedFields] = useState({
+    fullName: false,
+    phone: false,
+  });
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string>(
     initialData.avatar
       ? `${BASE_URL}${initialData.avatar}?${Date.now()}`
       : generateAvatar(getInitials(initialData.fullName || ''), 100)
   );
+
+  const validatePhone = async (phone: string) => {
+    const phoneRegex = /^8\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$/;
+    
+    if (!phoneRegex.test(phone.trim())) {
+      return 'Введите телефон в формате 8 (XXX) XXX-XX-XX';
+    }
+    
+    if (phone.trim().length === 0) {
+      return 'Поле обязательно для заполнения';
+    }
+
+    try {
+      const exists = await checkEmployeeExists(phone);
+      if (exists && (mode === 'create' || (mode === 'edit' && phone !== initialData.phone))) {
+        return 'Сотрудник с таким номером телефона уже есть';
+      }
+    } catch (error) {
+      console.error('Error checking phone:', error);
+      return 'Ошибка проверки номера телефона';
+    }
+
+    return '';
+  };
 
   const handlePhotoChange = async (file: File) => {
     if (!initialData.id) return;
@@ -102,6 +138,14 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       fullName: false,
       phone: false,
     });
+    setErrorMessages({
+      fullName: '',
+      phone: '',
+    });
+    setTouchedFields({
+      fullName: false,
+      phone: false,
+    });
     
     if (initialData.avatar) {
       setAvatarSrc(`${BASE_URL}${initialData.avatar}?${Date.now()}`);
@@ -111,36 +155,68 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   }, [initialData]);
 
   useEffect(() => {
-    const isFullNameValid = formData.fullName.trim().length > 0;
-    const isPhoneValid = /^[\d\s()+-\s]+$/.test(formData.phone);
-    
-    const isFormValid = isFullNameValid && isPhoneValid;
-    const isFormChanged = 
-      formData.fullName !== initialData.fullName ||
-      formData.address !== initialData.address ||
-      formData.role !== initialData.role ||
-      formData.phone !== initialData.phone ||
-      formData.minSurcharge !== initialData.minSurcharge;
+    if (mode === 'view') return;
 
-    if (mode === 'create') {
-      setIsSaveDisabled(!isFormValid);
-    } else if (mode === 'edit') {
-      setIsSaveDisabled(!isFormValid || !isFormChanged);
+    const validateForm = async () => {
+      const newErrorMessages = {
+        fullName: '',
+        phone: '',
+      };
+
+      if (formData.fullName.trim().split(/\s+/).length < 2) {
+        newErrorMessages.fullName = 'Укажите ФИО полностью';
+      } else if (formData.fullName.trim().length === 0) {
+        newErrorMessages.fullName = 'Поле обязательно для заполнения';
+      }
+
+      newErrorMessages.phone = await validatePhone(formData.phone);
+
+      setErrorMessages(newErrorMessages);
+
+      const errors = {
+        fullName: !!newErrorMessages.fullName,
+        phone: !!newErrorMessages.phone,
+      };
+
+      setValidationErrors(errors);
+    };
+
+    validateForm();
+  }, [formData, mode]);
+
+  const isSaveDisabled = () => {
+    if (mode === 'view') return true;
+
+    const hasErrors = Object.values(validationErrors).some(Boolean);
+    if (hasErrors) return true;
+
+    if (mode === 'edit') {
+      const isChanged = (
+        formData.fullName !== initialData.fullName ||
+        formData.address !== initialData.address ||
+        formData.role !== initialData.role ||
+        formData.phone !== initialData.phone ||
+        formData.minSurcharge !== initialData.minSurcharge
+      );
+      return !isChanged;
     }
-  }, [formData, initialData, mode]);
 
-  const handleSubmit = async () => {
-    const isFullNameValid = formData.fullName.trim().length > 0;
-    const isPhoneValid = /^[\d\s()+-\s]+$/.test(formData.phone);
+    return false;
+  };
 
-    if (!isFullNameValid || !isPhoneValid) {
-      setValidationErrors({
-        fullName: !isFullNameValid,
-        phone: !isPhoneValid,
-      });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    setTouchedFields({
+      fullName: true,
+      phone: true,
+    });
+
+    const isValid = !Object.values(validationErrors).some(Boolean);
+    if (!isValid) {
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
       await onSubmit({
@@ -161,10 +237,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    if (validationErrors[name as keyof typeof validationErrors] && value.trim().length > 0) {
-      setValidationErrors(prev => ({ ...prev, [name]: false }));
-    }
+    setTouchedFields(prev => ({ ...prev, [name]: true }));
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -198,7 +271,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
-      isSaveDisabled={mode !== 'view' && isSaveDisabled}
+      isSaveDisabled={isSaveDisabled() || isSubmitting}
       isSubmitting={isSubmitting}
       children={<div></div>}
       width={"750px"}
@@ -211,8 +284,8 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
               size={220} 
               name={formData.fullName} 
               disabled={mode === 'view'}
-              showCameraIndicator={mode !== 'view'} 
-              onPhotoChange={mode !== 'view' ? handlePhotoChange : undefined}
+              showCameraIndicator={mode === 'edit'} 
+              onPhotoChange={mode === 'edit' ? handlePhotoChange : undefined}
             />
           </div>
           <div style={{ flexGrow: 1, padding: '20px 20px 20px 0' }}>
@@ -221,13 +294,13 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <CustomInput
                 style={{ marginTop: "0" }}
                 name="fullName"
-                inputType="text"
+                inputType="fullname"
                 placeholder="ФИО сотрудника"
                 value={formData.fullName}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
-                hasError={validationErrors.fullName}
-                errorMessage={validationErrors.fullName ? "Поле не может быть пустым" : undefined}
+                hasError={touchedFields.fullName && validationErrors.fullName}
+                errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
               />
               
               <Title>Адрес</Title>
@@ -254,15 +327,14 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 
                 <FieldContainer>
                   <Title>Телефон</Title>
-                  <CustomInput
+                  <PhoneModalInput
                     name="phone"
-                    inputType="text"
-                    placeholder="Телефон"
+                    placeholder="8 (XXX) XXX-XX-XX"
                     value={formData.phone}
                     onChange={handleInputChange}
                     disabled={mode === 'view'}
-                    hasError={validationErrors.phone}
-                    errorMessage={validationErrors.phone ? "Некорректный формат телефона" : undefined}
+                    hasError={touchedFields.phone && validationErrors.phone}
+                    errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
                   />
                 </FieldContainer>
                 

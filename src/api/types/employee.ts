@@ -35,3 +35,7 @@ export interface PaymentStatsResponse {
   notAssumed: number;
   total: number;
 }
+
+export interface EmployeeExistsResponse {
+  exists: boolean;
+}

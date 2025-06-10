@@ -130,6 +130,59 @@ export function useEmployee() {
     }
   }, []);
 
+  const createEmployee = useCallback(async (employeeData: {
+    fullName: string;
+    phone: string;
+    address?: string;
+    minSurcharge?: number;
+    role?: string;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const newEmployee = await EmployeeService.createEmployee(employeeData);
+      return newEmployee;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteEmployee = useCallback(async (id: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await EmployeeService.deleteEmployee(id);
+      if (employees) {
+        await fetchEmployees({
+          page: employees.page,
+          pageSize: employees.pageSize,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [employees, fetchEmployees]);
+
+  const checkEmployeeExists = useCallback(async (phone: string): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const exists = await EmployeeService.checkEmployeeExists(phone);
+        return exists;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -145,6 +198,7 @@ export function useEmployee() {
     statsError,
     paymentsStatsError, 
     refresh: fetchAuthInfo,
+    createEmployee, 
     updateEmployee,
     updateEmployeePhoto,
     fetchCreditsStats,
@@ -153,5 +207,7 @@ export function useEmployee() {
     employeesLoading,
     employeesError,
     fetchEmployees,
+    deleteEmployee,
+    checkEmployeeExists
   };
 }
