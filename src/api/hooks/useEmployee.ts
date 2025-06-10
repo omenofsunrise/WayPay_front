@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { EmployeeService } from '../services/employeeService';
-import type { AuthInfoResponse, CreditStats, Employee } from '../types/employee';
+import type { AuthInfoResponse, CreditStats, Employee, PaymentStatsResponse } from '../types/employee';
 import { authStorage } from '../utils/auth-storage';
 
 export function useEmployee() {
@@ -10,6 +10,9 @@ export function useEmployee() {
   const [creditsStats, setCreditsStats] = useState<CreditStats[]>([]);
   const [statsLoading, setStatsLoading] = useState<boolean>(false);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [paymentsStats, setPaymentsStats] = useState<PaymentStatsResponse[]>([]);
+  const [paymentsStatsLoading, setPaymentsStatsLoading] = useState<boolean>(false);
+  const [paymentsStatsError, setPaymentsStatsError] = useState<string | null>(null);
   
   const fetchAuthInfo = useCallback(async () => {
     if (!authStorage.getAccessToken()) {
@@ -41,6 +44,21 @@ export function useEmployee() {
       throw err;
     } finally {
       setStatsLoading(false);
+    }
+  }, []);
+
+  const fetchPaymentsStats = useCallback(async (months: number = 12) => {
+    try {
+      setPaymentsStatsLoading(true);
+      setPaymentsStatsError(null);
+      const stats = await EmployeeService.getPaymentsStats(months);
+      setPaymentsStats(stats);
+      return stats;
+    } catch (err) {
+      setPaymentsStatsError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setPaymentsStatsLoading(false);
     }
   }, []);
 
@@ -102,11 +120,15 @@ export function useEmployee() {
     loading,
     error,
     creditsStats,
+    paymentsStats,
     statsLoading,
+    paymentsStatsLoading,
     statsError,
+    paymentsStatsError, 
     refresh: fetchAuthInfo,
     updateEmployee,
     updateEmployeePhoto,
     fetchCreditsStats,
+    fetchPaymentsStats, 
   };
 }

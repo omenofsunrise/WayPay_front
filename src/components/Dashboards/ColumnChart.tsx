@@ -58,60 +58,67 @@ const ColumnChart: React.FC<ColumnChartProps> = ({ title, data, maxValue, step, 
                 ))}
             </YAxis>
 
-            <BarsContainer>
-                {/* Add horizontal dashed lines for each Y-axis value */}
-                {yAxisValues.map((value, index) => (
-                  <HorizontalLine 
-                    key={`line-${index}`}
-                    position={(value / maxValue) * 100}
-                  />
-                ))}
-                
-                {data.map((item, index) => (
-                <BarGroup 
-                    key={index}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onMouseLeave={() => setHoveredIndex(null)}
-                >
-                    {item.bars.map((bar, barIndex) => {
-                    const nextValuesSum = item.bars
-                        .slice(barIndex + 1)
-                        .reduce((sum, b) => sum + b.value, 0);
-                    
-                    return (
-                        <StackedBar 
-                        key={barIndex}
-                        height={(bar.value / maxValue) * 100}
-                        offset={(nextValuesSum / maxValue) * 100}
-                        color={bar.color}
-                        isHovered={hoveredIndex !== null && hoveredIndex !== index}
+            <ChartBarsWrapper>
+                <BarsContainer>
+                    {/* Горизонтальные линии */}
+                    {yAxisValues.map((value, index) => {
+                      const positionPercentage = (value / maxValue) * 100;
+                      return (
+                        <HorizontalLine 
+                          key={`line-${index}`}
+                          position={100 - positionPercentage}
                         />
-                    );
+                      );
                     })}
                     
-                    {hoveredIndex === index && (
-                    <Tooltip>
-                        <TooltipContent>
-                        <TooltipTitle>Всего: {item.total.toLocaleString()} ₽</TooltipTitle>
-                        {item.bars.map((bar, barIndex) => (
-                            <TooltipItem key={barIndex}>
-                            {bar.name}: {bar.value.toLocaleString()} ₽
-                            </TooltipItem>
-                        ))}
-                        </TooltipContent>
-                        <TooltipArrow />
-                    </Tooltip>
-                    )}
-                </BarGroup>
-                ))}
-            </BarsContainer>
-        </ChartContent>
+                    {data.map((item, index) => (
+                    <BarGroup 
+                        key={index}
+                        onMouseEnter={() => setHoveredIndex(index)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                    >
+                        {item.bars.map((bar, barIndex) => {
+                        const nextValuesSum = item.bars
+                            .slice(barIndex + 1)
+                            .reduce((sum, b) => sum + b.value, 0);
+                        
+                        return (
+                            <StackedBar 
+                            key={barIndex}
+                            height={(bar.value / maxValue) * 100}
+                            offset={(nextValuesSum / maxValue) * 100}
+                            color={bar.color}
+                            isHovered={hoveredIndex !== null && hoveredIndex !== index}
+                            />
+                        );
+                        })}
+                        
+                        {hoveredIndex === index && (
+                        <Tooltip>
+                            <TooltipContent>
+                            <TooltipTitle>Всего: {item.total.toLocaleString()} ₽</TooltipTitle>
+                            {item.bars.map((bar, barIndex) => (
+                                <TooltipItem key={barIndex}>
+                                {bar.name}: {bar.value.toLocaleString()} ₽
+                                </TooltipItem>
+                            ))}
+                            </TooltipContent>
+                            <TooltipArrow />
+                        </Tooltip>
+                        )}
+                    </BarGroup>
+                    ))}
+                </BarsContainer>
 
-        <XAxis>
-        {data.map((item, index) => (
-            <XAxisLabel key={index}>{item.label}</XAxisLabel>
-        ))}
-        </XAxis>
+                <XAxis>
+                    {data.map((item, index) => (
+                    <XAxisLabel key={index} style={{ flex: 1, textAlign: 'center' }}>
+                        {item.label}
+                    </XAxisLabel>
+                    ))}
+                </XAxis>
+            </ChartBarsWrapper>
+        </ChartContent>
     </ChartContainer>
   );
 };
@@ -175,6 +182,13 @@ const YAxisLabel = styled.span`
   color: #6B7280;
 `;
 
+const ChartBarsWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  position: relative;
+`;
+
 const BarsContainer = styled.div`
     display: flex;
     flex-grow: 1;
@@ -189,7 +203,7 @@ const BarsContainer = styled.div`
 
 const HorizontalLine = styled.div<{ position: number }>`
   position: absolute;
-  top: ${props => 100 - props.position}%;
+  top: ${props => props.position}%;
   left: 0;
   right: 0;
   height: 1px;
@@ -227,15 +241,16 @@ const StackedBar = styled.div<{ height: number; offset: number; color: string; i
 
 const XAxis = styled.div`
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
+  padding: 0 20px;
   margin-top: 10px;
 `;
 
 const XAxisLabel = styled.span`
   font-size: 12px;
   color: #6B7280;
+  flex: 1;
   text-align: center;
-  flex-grow: 1;
 `;
 
 const Tooltip = styled.div`

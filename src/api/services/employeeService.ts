@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { AuthInfoResponse, CreditStats, Employee } from '../types/employee';
+import type { AuthInfoResponse, CreditStats, Employee, PaymentStatsResponse } from '../types/employee';
 
 export class EmployeeService {
   static async getAuthInfo(): Promise<AuthInfoResponse> {
@@ -57,6 +57,15 @@ export class EmployeeService {
   static async getCreditsStats(months: number = 12): Promise<CreditStats[]> {
     try {
       const response = await apiClient.get(`/Employee/credits-stats?months=${months}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getPaymentsStats(months: number = 12): Promise<PaymentStatsResponse[]> {
+    try {
+      const response = await apiClient.get(`/Employee/payments-stats?months=${months}`);
       return response.data;
     } catch (error) {
       throw error;

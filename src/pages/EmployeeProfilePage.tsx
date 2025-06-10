@@ -10,13 +10,20 @@ import creditsAmountSvg from '../assets/ui/analitic/creditsAmount.svg';
 import paymentsSvg from '../assets/ui/analitic/payments.svg';
 import { useEmployee } from '../api/hooks/useEmployee';
 import { useEffect, useMemo } from 'react';
+import CreditTypes from '../components/ui/fields/CreditTypes';
 
 const EmployeeProfile = () => {
-    const { creditsStats, fetchCreditsStats } = useEmployee();
+    const { 
+        creditsStats, 
+        paymentsStats,
+        fetchCreditsStats, 
+        fetchPaymentsStats 
+    } = useEmployee();
     
     useEffect(() => {
         fetchCreditsStats(12);
-    }, [fetchCreditsStats]);
+        fetchPaymentsStats(12);
+    }, [fetchCreditsStats, fetchPaymentsStats]);
 
     const scatterPlotData = useMemo(() => 
         creditsStats.map((stat, index) => ({
@@ -29,7 +36,26 @@ const EmployeeProfile = () => {
         [creditsStats]
     );
 
-    const { currentMonthCount, percentageChange } = useMemo(() => {
+    const paymentsChartData = useMemo(() => 
+        paymentsStats.map(stat => ({
+            label: getShortMonthName(stat.month),
+            total: stat.total,
+            bars: [
+                { 
+                    name: 'Неподтверждённые, руб', 
+                    value: stat.notAssumed, 
+                    color: 'rgba(209, 213, 219, 1)' 
+                },
+                { 
+                    name: 'Подтверждённые, руб', 
+                    value: stat.assumed, 
+                    color: 'rgba(0, 125, 136, 1)' 
+                },
+            ]
+        })),
+    [paymentsStats]);
+
+    const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {
         const now = new Date();
         const currentMonth = now.getMonth() + 1;
         const currentYear = now.getFullYear();
@@ -77,7 +103,54 @@ const EmployeeProfile = () => {
         };
     }, [creditsStats]);
 
-    
+    const { currentMonthPayments, paymentsPercentageChange } = useMemo(() => {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        
+        const currentMonthStat = paymentsStats.find(
+            stat => stat.month === currentMonth && stat.year === currentYear
+        );
+        
+        let prevMonth = currentMonth - 1;
+        let prevYear = currentYear;
+        if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear--;
+        }
+        
+        const prevMonthStat = paymentsStats.find(
+            stat => stat.month === prevMonth && stat.year === prevYear
+        );
+
+        const currentTotal = currentMonthStat?.total || 0;
+        const prevTotal = prevMonthStat?.total || 0;
+        
+        let change = 0;
+        let hasChange = false;
+        
+        if (prevTotal > 0 && currentTotal > 0) {
+            change = ((currentTotal - prevTotal) / prevTotal) * 100;
+            hasChange = true;
+        } else if (prevTotal === 0 && currentTotal > 0) {
+            change = 100;
+            hasChange = true;
+        } else if (currentTotal === 0 && prevTotal > 0) {
+            change = -100;
+            hasChange = true;
+        }
+
+        return {
+            currentMonthPayments: currentTotal,
+            paymentsPercentageChange: {
+                value: Math.round(change),
+                hasChange,
+                isPositive: change > 0,
+                isNeutral: change === 0
+            }
+        };
+    }, [paymentsStats]);
+
     function getMonthName(month: number): string {
         const months = [
             'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -93,108 +166,19 @@ const EmployeeProfile = () => {
         ];
         return months[month - 1] || '';
     }
-    
-    const chartData = [
-        {
-            label: 'Июнь',
-            total: 105000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 50000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 55000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Июль',
-            total: 95000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 35000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 60000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Авг',
-            total: 85000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 45000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Сен',
-            total: 120000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 80000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Окт',
-            total: 110000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 70000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Ноя',
-            total: 95000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 55000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Дек',
-            total: 125000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 85000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Янв',
-            total: 115000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 65000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 50000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Фев',
-            total: 90000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 30000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 60000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Мар',
-            total: 130000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 90000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Апр',
-            total: 75000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 30000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 45000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        },
-        {
-            label: 'Май',
-            total: 110000,
-            bars: [
-                { name: 'Неподтверждённые, руб', value: 40000, color: 'rgba(209, 213, 219, 1)' },
-                { name: 'Подтверждённые, руб', value: 70000, color: 'rgba(0, 125, 136, 1)' },
-            ]
-        }
-    ];
+
+    function formatPaymentAmount(amount: number): string {
+        return new Intl.NumberFormat('ru-RU', { 
+            style: 'decimal',
+            maximumFractionDigits: 0 
+        }).format(amount) + ' ₽';
+    }
 
     return (
         <PageLayout>
+            <CreditTypes onTabChange={function (params: { isFavourite?: boolean; isActive?: boolean; debt?: boolean; }): void {
+                throw new Error('Function not implemented.');
+            } } />
             <CustomTitle>Профиль</CustomTitle>
             <ModalInfoTitle style={{marginBottom: "0" }}>Личные данные и статистика</ModalInfoTitle>
             
@@ -204,10 +188,10 @@ const EmployeeProfile = () => {
                 <ChartWrapper>
                     <ColumnChart 
                         height={220}
-                        title="Платежей принял" 
-                        data={chartData} 
-                        maxValue={140000} 
-                        step={20000} 
+                        title="Статистика платежей" 
+                        data={paymentsChartData} 
+                        maxValue={Math.max(...paymentsChartData.map(d => d.total), 100000)} 
+                        step={Math.ceil(Math.max(...paymentsChartData.map(d => d.total), 100000) / 5)} 
                     />
                 </ChartWrapper>
             </ProfileContent>
@@ -233,13 +217,13 @@ const EmployeeProfile = () => {
                         icon={<img src={creditsAmountSvg} alt="Кредиты" />}
                         title="Кол-во договоров в этом месяце"
                         value={currentMonthCount.toString()}
-                        percentageChange={percentageChange}
+                        percentageChange={creditsPercentageChange}
                     />
                     <ResultsContainer
                         icon={<img src={paymentsSvg} alt="Платежи" />}
                         title="Платежи в этом месяце"
-                        value="540 000 ₽"
-                        percentageChange={{ value: -3, hasChange: true, isPositive: false }}
+                        value={formatPaymentAmount(currentMonthPayments)}
+                        percentageChange={paymentsPercentageChange}
                     />
                 </ResultsWrapper>
             </BottomSection>

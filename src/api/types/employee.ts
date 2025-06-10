@@ -19,3 +19,11 @@ export interface CreditStats {
   month: number;
   count: number;
 }
+
+export interface PaymentStatsResponse {
+  year: number;
+  month: number;
+  assumed: number;
+  notAssumed: number;
+  total: number;
+}
