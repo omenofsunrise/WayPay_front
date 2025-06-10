@@ -115,6 +115,33 @@ class EmployeeService {
     }
   }
 
+  static async getEmployeeById(id: number): Promise<Employee> {
+    try {
+      const response = await apiClient.get(`/Employee/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getEmployeeCreditsStats(id: number, months: number = 12): Promise<CreditStats[]> {
+    try {
+      const response = await apiClient.get(`/Employee/credits-stats/${id}?months=${months}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getEmployeePaymentsStats(id: number, months: number = 12): Promise<PaymentStatsResponse[]> {
+    try {
+      const response = await apiClient.get(`/Employee/payments-stats/${id}?months=${months}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
   static async deleteEmployee(id: number): Promise<void> {
     try {
       await apiClient.delete(`/Employee/${id}`);

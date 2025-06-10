@@ -19,7 +19,11 @@ import CustomSelect from '../../components/ui/fields/CustomSelect';
 import Avatar from '../../components/Profile/Avatar';
 import { BASE_URL } from '../../api/client';
 
-const EmployeePage = () => {
+interface EmployeePageProps {
+    onViewEmployee: (id: number) => void;
+}
+
+const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     const [nameFilter, setNameFilter] = useState('');
     const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
     const [currentPage, setCurrentPage] = useState(1);
@@ -202,10 +206,8 @@ const EmployeePage = () => {
     };
 
     const handleRowDoubleClick = (rowData: any[]) => {
-        const employee = localEmployees.find(e => e.id === Number(rowData[0]));
-        if (employee) {
-            handleEditEmployee(employee);
-        }
+        const employeeId = Number(rowData[0]);
+        onViewEmployee(employeeId);
     };
 
     const tableData = localEmployees.map(employee => [

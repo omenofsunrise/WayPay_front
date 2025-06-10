@@ -9,31 +9,53 @@ import ResultsContainer from '../../components/Profile/ResultsContainer';
 import creditsAmountSvg from '../../assets/ui/analitic/creditsAmount.svg';
 import paymentsSvg from '../../assets/ui/analitic/payments.svg';
 import { useEmployee } from '../../api/hooks/useEmployee';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CreditTypes from '../../components/ui/fields/CreditTypes';
+import type { Employee } from '../../api/types/employee';
 
-const EmployeeProfilePage = () => {
+interface EmployeeProfilePageProps {
+    employeeId?: number;
+}
+
+const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     const { 
+        authInfo,
         creditsStats, 
         paymentsStats,
+        employeeCreditsStats,
+        employeePaymentsStats,
         fetchCreditsStats, 
-        fetchPaymentsStats 
+        fetchPaymentsStats,
+        fetchEmployeeById,
+        fetchEmployeeCreditsStats,
+        fetchEmployeePaymentsStats
     } = useEmployee();
     
     useEffect(() => {
-        fetchCreditsStats(12);
-        fetchPaymentsStats(12);
-    }, [fetchCreditsStats, fetchPaymentsStats]);
+            if (employeeId) {
+                fetchEmployeeById(employeeId).then(setEmployee);
+                fetchEmployeeCreditsStats(employeeId, 12);
+                fetchEmployeePaymentsStats(employeeId, 12);
+            } else {
+                fetchCreditsStats(12);
+                fetchPaymentsStats(12);
+            }
+    }, [employeeId, /* остальные зависимости */]);
 
+    const statsToUse = employeeId ? employeeCreditsStats : creditsStats;
+    const paymentsToUse = employeeId ? employeePaymentsStats : paymentsStats;
+
+    const [employee, setEmployee] = useState<Employee | null>(null);
+    
     const scatterPlotData = useMemo(() => 
-        creditsStats.map((stat, index) => ({
+        statsToUse.map((stat, index) => ({
             x: index + 1,
             y: stat.count,
             color: 'rgba(0, 125, 136, 1)',
             name: getMonthName(stat.month),
             value: stat.count
         })), 
-        [creditsStats]
+        [statsToUse]
     );
 
     const paymentsChartData = useMemo(() => 
@@ -176,11 +198,15 @@ const EmployeeProfilePage = () => {
 
     return (
         <PageLayout>
-            <CustomTitle style={{margin: "0"}}>Профиль</CustomTitle>
-            <ModalInfoTitle style={{marginBottom: "0" }}>Личные данные и статистика</ModalInfoTitle>
+            <CustomTitle style={{margin: "0"}}>
+                {employeeId ? `Профиль сотрудника` : `Мой профиль`}
+            </CustomTitle>
+            <ModalInfoTitle style={{marginBottom: "0" }}>
+                {employeeId ? 'Данные и статистика сотрудника' : 'Личные данные и статистика'}
+            </ModalInfoTitle>
             
             <ProfileContent>
-                <UserContainer />
+                <UserContainer employee={employeeId ? employee : authInfo?.employee} />
                 
                 <ChartWrapper>
                     <ColumnChart 

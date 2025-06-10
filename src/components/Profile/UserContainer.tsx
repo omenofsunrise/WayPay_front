@@ -1,4 +1,3 @@
-// Updated UserContainer.tsx
 import styled from "styled-components";
 import { useState, useRef, useEffect } from "react";
 import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
@@ -108,8 +107,6 @@ const UserContainer = () => {
         } else if (action === 'change' && fileInputRef.current) {
             fileInputRef.current.click();
         } else if (action === 'remove' && authInfo?.employee.id) {
-            // Implement photo removal logic here
-            // You'll need to add a removeEmployeePhoto function to your useEmployee hook
         }
     };
 

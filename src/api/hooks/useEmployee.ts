@@ -17,7 +17,14 @@ export function useEmployee() {
   const [employees, setEmployees] = useState<PaginatedResponse<Employee> | null>(null);
   const [employeesLoading, setEmployeesLoading] = useState<boolean>(false);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
-  
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [employeeLoading, setEmployeeLoading] = useState<boolean>(false);
+  const [employeeError, setEmployeeError] = useState<string | null>(null);
+  const [employeeCreditsStats, setEmployeeCreditsStats] = useState<CreditStats[]>([]);
+  const [employeePaymentsStats, setEmployeePaymentsStats] = useState<PaymentStatsResponse[]>([]);
+  const [employeeStatsLoading, setEmployeeStatsLoading] = useState<boolean>(false);
+  const [employeeStatsError, setEmployeeStatsError] = useState<string | null>(null);
+
   const fetchAuthInfo = useCallback(async () => {
     if (!authStorage.getAccessToken()) {
       setError('No access token available');
@@ -78,6 +85,51 @@ export function useEmployee() {
       throw err;
     } finally {
       setPaymentsStatsLoading(false);
+    }
+  }, []);
+
+  const fetchEmployeeById = useCallback(async (id: number) => {
+    try {
+      setEmployeeLoading(true);
+      setEmployeeError(null);
+      const data = await EmployeeService.getEmployeeById(id);
+      setEmployee(data);
+      return data;
+    } catch (err) {
+      setEmployeeError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setEmployeeLoading(false);
+    }
+  }, []);
+
+  const fetchEmployeeCreditsStats = useCallback(async (id: number, months: number = 12) => {
+    try {
+      setEmployeeStatsLoading(true);
+      setEmployeeStatsError(null);
+      const stats = await EmployeeService.getEmployeeCreditsStats(id, months);
+      setEmployeeCreditsStats(stats);
+      return stats;
+    } catch (err) {
+      setEmployeeStatsError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setEmployeeStatsLoading(false);
+    }
+  }, []);
+
+  const fetchEmployeePaymentsStats = useCallback(async (id: number, months: number = 12) => {
+    try {
+      setEmployeeStatsLoading(true);
+      setEmployeeStatsError(null);
+      const stats = await EmployeeService.getEmployeePaymentsStats(id, months);
+      setEmployeePaymentsStats(stats);
+      return stats;
+    } catch (err) {
+      setEmployeeStatsError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setEmployeeStatsLoading(false);
     }
   }, []);
 
@@ -208,6 +260,16 @@ export function useEmployee() {
     employeesError,
     fetchEmployees,
     deleteEmployee,
-    checkEmployeeExists
+    checkEmployeeExists,
+    employee,
+    employeeLoading,
+    employeeError,
+    employeeCreditsStats,
+    employeePaymentsStats,
+    employeeStatsLoading,
+    employeeStatsError,
+    fetchEmployeeById,
+    fetchEmployeeCreditsStats,
+    fetchEmployeePaymentsStats,
   };
 }
