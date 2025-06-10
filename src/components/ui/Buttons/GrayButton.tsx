@@ -4,22 +4,24 @@ import React from 'react';
 interface GrayButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
   icon?: React.ReactNode;
+  width?: number | string;
 }
 
 const GrayButton: React.FC<GrayButtonProps> = ({
   children = 'Подтвердить',
   icon,
+  width,
   ...props
 }) => {
   return (
-    <ButtonContainer {...props}>
+    <ButtonContainer {...props} $width={width}>
       {icon && <IconWrapper>{icon}</IconWrapper>}
       <span>{children}</span>
     </ButtonContainer>
   );
 };
 
-const ButtonContainer = styled.button`
+const ButtonContainer = styled.button<{ $width?: number | string }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -33,10 +35,15 @@ const ButtonContainer = styled.button`
   font-size: 15px;
   font-weight: 400;
   height: auto;
-  white-space: nowrap; /* Добавлено, чтобы текст не переносился */
+  white-space: nowrap;
   transition: background-color 0.2s ease;
   margin: 0;
   margin-right: auto;
+  
+  width: ${({ $width }) => 
+    $width ? 
+      (typeof $width === 'number' ? `${$width}px` : $width) : 
+      'auto'};
   
   &:hover {
     background-color: rgba(209, 233, 239, 1);

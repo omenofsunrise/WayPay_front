@@ -229,13 +229,13 @@ const EmployeePage = () => {
 
     return (
         <PageLayout>
-            <TitleField>
-                <CustomTitle>Сотрудники</CustomTitle>
-                <ExportButton 
+            <TitleField style={{marginTop: 0 }}>
+                <CustomTitle style={{marginTop: 0 }}>Сотрудники</CustomTitle>
+                {/* <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
                     exportProgress={exportProgress}
-                />
+                /> */}
             </TitleField>
             
             <FilterField>

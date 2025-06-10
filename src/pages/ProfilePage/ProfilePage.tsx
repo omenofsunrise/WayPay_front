@@ -1,6 +1,7 @@
 import ProfileTabs from '../../components/Profile/ProfileTabs';
 import PageLayout from '../../components/ui/Layouts/PageLayout';
 import CustomTitle from '../../components/ui/Text/CustomTitle';
+import CompanyPage from './CompanyPage';
 import EmployeePage from './EmployeePage';
 import EmployeeProfilePage from './EmployeeProfilePage';
 import { useState } from 'react';
@@ -15,7 +16,7 @@ const ProfilePage = () => {
             case "Список пользователей":
                 return <EmployeePage />;
             case "Данные компании":
-                return <div/>;
+                return <CompanyPage />;
             default:
                 return <EmployeeProfilePage />;
         }
