@@ -220,7 +220,7 @@ const UserContainer = () => {
                 onClose={handleModalClose}
                 onSubmit={handleModalSubmit}
                 initialData={{
-                    fio: employee.fullName,
+                    fullName: employee.fullName,
                     address: employee.address || '',
                     role: employee.role,
                     phone: employee.phone,

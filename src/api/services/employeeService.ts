@@ -1,7 +1,8 @@
 import apiClient from '../client';
-import type { AuthInfoResponse, CreditStats, Employee, PaymentStatsResponse } from '../types/employee';
+import type { PaginatedResponse } from '../types/common';
+import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse } from '../types/employee';
 
-export class EmployeeService {
+class EmployeeService {
   static async getAuthInfo(): Promise<AuthInfoResponse> {
     try {
       const response = await apiClient.get('/Auth/info');
@@ -11,6 +12,15 @@ export class EmployeeService {
     }
   }
 
+  static async getEmployees(filter: EmployeeFilterRequest): Promise<PaginatedResponse<Employee>> {
+    try {
+      const response = await apiClient.get('/Employee', { params: filter });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
   static async updateEmployee(employeeData: {
     id: number;
     fullName: string;
@@ -72,3 +82,5 @@ export class EmployeeService {
     }
   }
 }
+
+export default EmployeeService;

@@ -15,7 +15,8 @@ import InvestorPage from './pages/InvestorPage';
 import NewCreditPage from './pages/NewCreditPage';
 import SchedulePage from './pages/SchedulePage';
 import CreditControlPage from './pages/CreditControlPage';
-import EmployeeProfile from './pages/EmployeeProfilePage';
+import EmployeeProfilePage from './pages/ProfilePage/EmployeeProfilePage';
+import ProfilePage from './pages/ProfilePage/ProfilePage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -131,7 +132,7 @@ function App() {
 
         <Route path="profile" element={
             <MainLayout>
-              <EmployeeProfile />
+              <ProfilePage />
             </MainLayout>
         } />
         <Route path="*" element={

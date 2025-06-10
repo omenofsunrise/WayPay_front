@@ -14,7 +14,7 @@ type EmployeeModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (employeeData: {
-    fio: string;
+    fullName: string;
     address: string;
     role: string;
     phone: string;
@@ -22,7 +22,7 @@ type EmployeeModalProps = {
   }) => Promise<void>;
   initialData?: {
     id?: number;
-    fio: string;
+    fullName: string;
     address: string;
     role: string;
     phone: string;
@@ -43,7 +43,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   onClose,
   onSubmit,
   initialData = {
-    fio: '',
+    fullName: '',
     address: '',
     role: 'employee',
     phone: '',
@@ -53,22 +53,22 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
 }) => {
   const { updateEmployeePhoto, refresh } = useEmployee();
   const [formData, setFormData] = useState({
-    fio: initialData.fio || '',
-    address: initialData.address || '',
-    role: initialData.role || 'employee',
-    phone: initialData.phone || '',
-    minSurcharge: initialData.minSurcharge || 0,
+    fullName: initialData?.fullName || '',
+    address: initialData?.address || '',
+    role: initialData?.role || 'сотрудник',
+    phone: initialData?.phone || '',
+    minSurcharge: initialData?.minSurcharge || 0,
   });
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [validationErrors, setValidationErrors] = useState({
-    fio: false,
+    fullName: false,
     phone: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string>(
     initialData.avatar
       ? `${BASE_URL}${initialData.avatar}?${Date.now()}`
-      : generateAvatar(getInitials(initialData.fio || ''), 100)
+      : generateAvatar(getInitials(initialData.fullName || ''), 100)
   );
 
   const handlePhotoChange = async (file: File) => {
@@ -92,31 +92,31 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   useEffect(() => {
     setFormData({
-      fio: initialData.fio || '',
+      fullName: initialData.fullName || '',
       address: initialData.address || '',
       role: initialData.role || 'employee',
       phone: initialData.phone || '',
       minSurcharge: initialData.minSurcharge || 0,
     });
     setValidationErrors({
-      fio: false,
+      fullName: false,
       phone: false,
     });
     
     if (initialData.avatar) {
       setAvatarSrc(`${BASE_URL}${initialData.avatar}?${Date.now()}`);
-    } else if (initialData.fio) {
-      setAvatarSrc(generateAvatar(getInitials(initialData.fio || ''), 100));
+    } else if (initialData.fullName) {
+      setAvatarSrc(generateAvatar(getInitials(initialData.fullName || ''), 100));
     }
   }, [initialData]);
 
   useEffect(() => {
-    const isFioValid = formData.fio.trim().length > 0;
+    const isFullNameValid = formData.fullName.trim().length > 0;
     const isPhoneValid = /^[\d\s()+-\s]+$/.test(formData.phone);
     
-    const isFormValid = isFioValid && isPhoneValid;
+    const isFormValid = isFullNameValid && isPhoneValid;
     const isFormChanged = 
-      formData.fio !== initialData.fio ||
+      formData.fullName !== initialData.fullName ||
       formData.address !== initialData.address ||
       formData.role !== initialData.role ||
       formData.phone !== initialData.phone ||
@@ -130,12 +130,12 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   }, [formData, initialData, mode]);
 
   const handleSubmit = async () => {
-    const isFioValid = formData.fio.trim().length > 0;
+    const isFullNameValid = formData.fullName.trim().length > 0;
     const isPhoneValid = /^[\d\s()+-\s]+$/.test(formData.phone);
 
-    if (!isFioValid || !isPhoneValid) {
+    if (!isFullNameValid || !isPhoneValid) {
       setValidationErrors({
-        fio: !isFioValid,
+        fullName: !isFullNameValid,
         phone: !isPhoneValid,
       });
       return;
@@ -144,7 +144,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     try {
       setIsSubmitting(true);
       await onSubmit({
-        fio: formData.fio.trim(),
+        fullName: formData.fullName.trim(),
         address: formData.address.trim(),
         role: formData.role,
         phone: formData.phone.trim(),
@@ -209,7 +209,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
             <Avatar 
               src={avatarSrc} 
               size={220} 
-              name={formData.fio} 
+              name={formData.fullName} 
               disabled={mode === 'view'}
               showCameraIndicator={mode !== 'view'} 
               onPhotoChange={mode !== 'view' ? handlePhotoChange : undefined}
@@ -220,14 +220,14 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
               <Title>ФИО</Title>
               <CustomInput
                 style={{ marginTop: "0" }}
-                name="fio"
+                name="fullName"
                 inputType="text"
                 placeholder="ФИО сотрудника"
-                value={formData.fio}
+                value={formData.fullName}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
-                hasError={validationErrors.fio}
-                errorMessage={validationErrors.fio ? "Поле не может быть пустым" : undefined}
+                hasError={validationErrors.fullName}
+                errorMessage={validationErrors.fullName ? "Поле не может быть пустым" : undefined}
               />
               
               <Title>Адрес</Title>

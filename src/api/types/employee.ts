@@ -1,3 +1,5 @@
+import type { PaginationParams } from './common';
+
 export interface Employee {
   id: number;
   fullName: string;
@@ -5,8 +7,14 @@ export interface Employee {
   phone: string;
   role: string;
   permissions: string[] | null;
-  minSurcharge: number,
-  photoPath: string,
+  minSurcharge: number;
+  photoPath: string;
+}
+
+export interface EmployeeFilterRequest extends PaginationParams{
+  fullName?: string;
+  role?: string;
+  sortBy?: string;
 }
 
 export interface AuthInfoResponse {

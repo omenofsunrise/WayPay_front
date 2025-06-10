@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { EmployeeService } from '../services/employeeService';
-import type { AuthInfoResponse, CreditStats, Employee, PaymentStatsResponse } from '../types/employee';
+import EmployeeService from '../services/employeeService';
+import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse } from '../types/employee';
 import { authStorage } from '../utils/auth-storage';
+import type { PaginatedResponse } from '../types/common';
 
 export function useEmployee() {
   const [authInfo, setAuthInfo] = useState<AuthInfoResponse | null>(null);
@@ -13,6 +14,9 @@ export function useEmployee() {
   const [paymentsStats, setPaymentsStats] = useState<PaymentStatsResponse[]>([]);
   const [paymentsStatsLoading, setPaymentsStatsLoading] = useState<boolean>(false);
   const [paymentsStatsError, setPaymentsStatsError] = useState<string | null>(null);
+  const [employees, setEmployees] = useState<PaginatedResponse<Employee> | null>(null);
+  const [employeesLoading, setEmployeesLoading] = useState<boolean>(false);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
   
   const fetchAuthInfo = useCallback(async () => {
     if (!authStorage.getAccessToken()) {
@@ -29,6 +33,21 @@ export function useEmployee() {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchEmployees = useCallback(async (filter: EmployeeFilterRequest) => {
+    try {
+      setEmployeesLoading(true);
+      setEmployeesError(null);
+      const data = await EmployeeService.getEmployees(filter);
+      setEmployees(data);
+      return data;
+    } catch (err) {
+      setEmployeesError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setEmployeesLoading(false);
     }
   }, []);
 
@@ -130,5 +149,9 @@ export function useEmployee() {
     updateEmployeePhoto,
     fetchCreditsStats,
     fetchPaymentsStats, 
+    employees,
+    employeesLoading,
+    employeesError,
+    fetchEmployees,
   };
 }

@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import styled from 'styled-components';
+import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 
 type AvatarProps = {
   src?: string;
@@ -22,13 +23,11 @@ const Avatar: React.FC<AvatarProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const getInitials = () => {
-    if (!name) return '';
-    const parts = name.split(' ');
-    return parts.length > 0 
-      ? `${parts[0][0]}${parts.length > 1 ? parts[1][0] : ''}`
-      : name[0];
-  };
+  const generatedAvatar = useMemo(() => {
+    if (src) return null;
+    const initials = getInitials(name);
+    return generateAvatar(initials, size);
+  }, [name, size, src]);
 
   const handleAvatarClick = () => {
     if (disabled) return;
@@ -45,7 +44,6 @@ const Avatar: React.FC<AvatarProps> = ({
     
     const file = e.target.files[0];
     onPhotoChange(file);
-    // Clear the input to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -61,8 +59,10 @@ const Avatar: React.FC<AvatarProps> = ({
       >
         {src ? (
           <AvatarImage src={src} alt={name} />
+        ) : generatedAvatar ? (
+          <AvatarImage src={generatedAvatar} alt={name} />
         ) : (
-          <AvatarInitials>{getInitials()}</AvatarInitials>
+          <AvatarInitials>{getInitials(name)}</AvatarInitials>
         )}
       </AvatarContainer>
       {showCameraIndicator && (
@@ -93,7 +93,6 @@ const AvatarContainer = styled.div<{ size: number; $clickable: boolean }>`
   height: 100%;
   border-radius: 50%;
   overflow: hidden;
-  background-color: #f0f0f0;
   display: flex;
   align-items: center;
   justify-content: center;

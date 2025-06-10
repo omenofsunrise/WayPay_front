@@ -1,18 +1,18 @@
 import styled from 'styled-components';
-import PageLayout from '../components/ui/Layouts/PageLayout';
-import CustomTitle from '../components/ui/Text/CustomTitle';
-import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
-import UserContainer from '../components/Profile/UserContainer';
-import ColumnChart from '../components/Dashboards/ColumnChart';
-import ScatterPlot from '../components/Dashboards/ScatterPlot';
-import ResultsContainer from '../components/Profile/ResultsContainer';
-import creditsAmountSvg from '../assets/ui/analitic/creditsAmount.svg';
-import paymentsSvg from '../assets/ui/analitic/payments.svg';
-import { useEmployee } from '../api/hooks/useEmployee';
+import PageLayout from '../../components/ui/Layouts/PageLayout';
+import CustomTitle from '../../components/ui/Text/CustomTitle';
+import ModalInfoTitle from '../../components/ui/Text/ModalInfoTitle';
+import UserContainer from '../../components/Profile/UserContainer';
+import ColumnChart from '../../components/Dashboards/ColumnChart';
+import ScatterPlot from '../../components/Dashboards/ScatterPlot';
+import ResultsContainer from '../../components/Profile/ResultsContainer';
+import creditsAmountSvg from '../../assets/ui/analitic/creditsAmount.svg';
+import paymentsSvg from '../../assets/ui/analitic/payments.svg';
+import { useEmployee } from '../../api/hooks/useEmployee';
 import { useEffect, useMemo } from 'react';
-import CreditTypes from '../components/ui/fields/CreditTypes';
+import CreditTypes from '../../components/ui/fields/CreditTypes';
 
-const EmployeeProfile = () => {
+const EmployeeProfilePage = () => {
     const { 
         creditsStats, 
         paymentsStats,
@@ -176,10 +176,7 @@ const EmployeeProfile = () => {
 
     return (
         <PageLayout>
-            <CreditTypes onTabChange={function (params: { isFavourite?: boolean; isActive?: boolean; debt?: boolean; }): void {
-                throw new Error('Function not implemented.');
-            } } />
-            <CustomTitle>Профиль</CustomTitle>
+            <CustomTitle style={{margin: "0"}}>Профиль</CustomTitle>
             <ModalInfoTitle style={{marginBottom: "0" }}>Личные данные и статистика</ModalInfoTitle>
             
             <ProfileContent>
@@ -270,4 +267,4 @@ const ResultsWrapper = styled.div`
     }
 `;
 
-export default EmployeeProfile;
+export default EmployeeProfilePage;
