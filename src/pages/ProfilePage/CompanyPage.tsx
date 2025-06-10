@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
@@ -5,8 +6,76 @@ import ModalInfoTitle from "../../components/ui/Text/ModalInfoTitle";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import GrayButton from "../../components/ui/Buttons/GrayButton";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
+import useCompany from "../../api/hooks/useCompany";
+import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
 
 const CompanyPage = () => {
+    const { company, isLoading, error, getCompany, updateCompany } = useCompany();
+    const [formData, setFormData] = useState({
+        name: "",
+        chief: "",
+        city: "",
+        officeAddress: "",
+        bank: "",
+        phone: ""
+    });
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    useEffect(() => {
+        getCompany();
+    }, [getCompany]);
+
+    useEffect(() => {
+        if (company) {
+            setFormData({
+                name: company.name || "",
+                chief: company.chief || "",
+                city: company.city || "",
+                officeAddress: company.officeAddress || "",
+                bank: company.bank || "",
+                phone: company.phone || ""
+            });
+        }
+    }, [company]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleReset = () => {
+        if (company) {
+            setFormData({
+                name: company.name || "",
+                chief: company.chief || "",
+                city: company.city || "",
+                officeAddress: company.officeAddress || "",
+                bank: company.bank || "",
+                phone: company.phone || ""
+            });
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            await updateCompany(formData);
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 3000);
+        } catch (err) {
+        }
+    };
+
+    if (isLoading && !company) {
+        return <PageLayout>Loading...</PageLayout>;
+    }
+
+    if (error) {
+        return <PageLayout>Error: {error}</PageLayout>;
+    }
+
     return (
         <PageLayout>
             <CustomTitle style={{ marginTop: 0 }}>Данные о компании</CustomTitle>
@@ -14,21 +83,38 @@ const CompanyPage = () => {
             <InputContainer>
                 <InputGroup>
                     <Label>Название организации</Label>
-                    <StyledInput />
+                    <StyledInput 
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                    />
                 </InputGroup>
                 <InputGroup>
                     <Label>В лице</Label>
-                    <StyledInput />
+                    <StyledInput 
+                        name="chief"
+                        inputType="fullname"
+                        value={formData.chief}
+                        onChange={handleInputChange}
+                    />
                 </InputGroup>
             </InputContainer>
             <InputContainer>
                 <InputGroup>
                     <Label>Населённый пункт</Label>
-                    <StyledInput />
+                    <StyledInput 
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                    />
                 </InputGroup>
                 <InputGroup>
                     <Label>Адрес офиса</Label>
-                    <StyledInput />
+                    <StyledInput 
+                        name="officeAddress"
+                        value={formData.officeAddress}
+                        onChange={handleInputChange}
+                    />
                 </InputGroup>
             </InputContainer>
             
@@ -36,11 +122,19 @@ const CompanyPage = () => {
                 <HalfContainer>
                     <InputGroup>
                         <Label>Банковские данные</Label>
-                        <StyledInput />
+                        <StyledInput 
+                            name="bank"
+                            value={formData.bank}
+                            onChange={handleInputChange}
+                        />
                     </InputGroup>
                     <InputGroup>
                         <Label>Телефон</Label>
-                        <StyledInput />
+                        <PhoneModalInput 
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                        />
                     </InputGroup>
                 </HalfContainer>
                 
@@ -48,8 +142,12 @@ const CompanyPage = () => {
                     <GrayButton 
                         children={"Сбросить"}
                         width={"120px"}
+                        onClick={handleReset}
                     />
-                    <DarkCyanButton />
+                    <DarkCyanButton 
+                        onClick={handleSave}
+                        disabled={isLoading}
+                    />
                 </ButtonsContainer>
             </ThirdRowContainer>
             
@@ -58,9 +156,28 @@ const CompanyPage = () => {
                     *Все данные компании используются только для автоматического оформления договора займа и не передаются третьим лицам.
                 </Disclaimer>
             </FooterContainer>
+
+            <Toast show={showSuccess}>
+                Данные компании успешно сохранены!
+            </Toast>
         </PageLayout>
     );
 };
+
+const Toast = styled.div<{ show: boolean }>`
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 125, 136, 1);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  opacity: ${props => props.show ? 1 : 0};
+  transition: opacity 0.3s ease-in-out;
+  z-index: 1000;
+`;
 
 const InputContainer = styled.div`
     display: flex;

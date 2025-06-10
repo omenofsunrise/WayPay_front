@@ -181,7 +181,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
       newErrorMessages.phoneNumber = await validatePhone(formData.phoneNumber);
 
-      // Финансовые поля проверяем только при создании
       if (mode === 'create') {
         newErrorMessages.investorPie = validateNumber(
           formData.investorPie, 
@@ -310,7 +309,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Разрешаем изменение финансовых полей только при создании
     if (mode !== 'create' && ['investorPie', 'investmentAmount', 'balance'].includes(name)) {
       return;
     }
@@ -386,7 +384,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
               <InputContainer>
                 <CustomInput
                   name="fullName"
-                  inputType="text"
+                  inputType="fullname"
                   placeholder= "ФИО"
                   value={formData.fullName}
                   onChange={handleInputChange}
