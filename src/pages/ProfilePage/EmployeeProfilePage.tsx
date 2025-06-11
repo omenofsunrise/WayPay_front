@@ -48,7 +48,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                 fetchPaymentsStats(12);
             }
     }, [employeeId, /* остальные зависимости */]);
-
+    
     const statsToUse = employeeId ? employeeCreditsStats : creditsStats;
     const paymentsToUse = employeeId ? employeePaymentsStats : paymentsStats;
 
@@ -213,7 +213,10 @@ const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo
             </ModalInfoTitle>
             
             <ProfileContent>
-                <UserContainer employee={employeeId ? employee : authInfo?.employee} />
+                <UserContainer 
+                    employee={employeeId ? employee : authInfo?.employee} 
+                    isCurrentUser={!employeeId}
+                />
                 
                 <ChartWrapper>
                     <ColumnChart 

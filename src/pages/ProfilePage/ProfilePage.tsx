@@ -1,3 +1,4 @@
+import styled from 'styled-components';
 import ProfileTabs from '../../components/Profile/ProfileTabs';
 import PageLayout from '../../components/ui/Layouts/PageLayout';
 import CustomTitle from '../../components/ui/Text/CustomTitle';
@@ -5,7 +6,7 @@ import CompanyPage from './CompanyPage';
 import EmployeePage from './EmployeePage';
 import EmployeeProfilePage from './EmployeeProfilePage';
 import { useEffect, useState } from 'react';
-import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
+import BackButtonComponent from '../../components/ui/Buttons/BackButton';
 
 const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -47,9 +48,9 @@ const ProfilePage = () => {
         if (viewingEmployeeId) {
             return (
                 <>
-                    <DarkCyanButton onClick={handleBackToList} style={{ marginBottom: '20px' }}>
+                    <BackButtonComponent onClick={handleBackToList}>
                         К списку пользователей
-                    </DarkCyanButton>
+                    </BackButtonComponent>
                     <EmployeeProfilePage employeeId={viewingEmployeeId} />
                 </>
             );

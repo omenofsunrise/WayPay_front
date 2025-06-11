@@ -156,6 +156,11 @@ class EmployeeService {
     });
     return response.data.exists;
   }
+
+  static async deletePhoto() {
+    await apiClient.delete('/Employee/photo');
+    return;
+  }
 }
 
 export default EmployeeService;

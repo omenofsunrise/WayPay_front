@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 
@@ -22,12 +22,12 @@ const Avatar: React.FC<AvatarProps> = ({
   onPhotoChange,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageError, setImageError] = useState(false);
 
   const generatedAvatar = useMemo(() => {
-    if (src) return null;
     const initials = getInitials(name);
     return generateAvatar(initials, size);
-  }, [name, size, src]);
+  }, [name, size]);
 
   const handleAvatarClick = () => {
     if (disabled) return;
@@ -49,6 +49,12 @@ const Avatar: React.FC<AvatarProps> = ({
     }
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const shouldShowGeneratedAvatar = !src || imageError;
+
   return (
     <ContentWrapper size={size}>
       <AvatarContainer 
@@ -57,12 +63,14 @@ const Avatar: React.FC<AvatarProps> = ({
         title={name}
         $clickable={!!(onClick || onPhotoChange) && !disabled}
       >
-        {src ? (
-          <AvatarImage src={src} alt={name} />
-        ) : generatedAvatar ? (
+        {shouldShowGeneratedAvatar ? (
           <AvatarImage src={generatedAvatar} alt={name} />
         ) : (
-          <AvatarInitials>{getInitials(name)}</AvatarInitials>
+          <AvatarImage 
+            src={src} 
+            alt={name} 
+            onError={handleImageError}
+          />
         )}
       </AvatarContainer>
       {showCameraIndicator && (
@@ -98,6 +106,7 @@ const AvatarContainer = styled.div<{ size: number; $clickable: boolean }>`
   justify-content: center;
   cursor: ${props => props.$clickable ? 'pointer' : 'default'};
   transition: opacity 0.2s;
+  background-color: #f0f0f0;
 
   &:hover {
     opacity: ${props => props.$clickable ? 0.9 : 1};
@@ -108,12 +117,6 @@ const AvatarImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
-`;
-
-const AvatarInitials = styled.div`
-  font-size: 24px;
-  font-weight: bold;
-  color: #555;
 `;
 
 const StatusIndicator = styled.div<{ size: number }>`

@@ -236,6 +236,20 @@ export function useEmployee() {
       }
     }, []);
 
+    const deletePhoto = useCallback(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await EmployeeService.deletePhoto();
+        return;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -272,5 +286,6 @@ export function useEmployee() {
     fetchEmployeeById,
     fetchEmployeeCreditsStats,
     fetchEmployeePaymentsStats,
+    deletePhoto
   };
 }

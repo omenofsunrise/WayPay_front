@@ -12,17 +12,26 @@ interface UserContainerProps {
 }
 
 const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserContainerProps) => {
-    const { authInfo, loading, error, updateEmployee, updateEmployeePhoto, refresh } = useEmployee();
+    const { authInfo, loading, error, updateEmployee, updateEmployeePhoto, refresh, deletePhoto } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const [isViewingPhoto, setIsViewingPhoto] = useState(false);
+    const [isDefaultAvatar, setIsDefaultAvatar] = useState(true); // Новое состояние для отслеживания типа аватара
     const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarRef = useRef<HTMLImageElement>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
     const employee = propEmployee;
-    console.log(employee);
     
+    useEffect(() => {
+        // При изменении employee проверяем, является ли аватар дефолтным
+        if (employee?.photoPath) {
+            setIsDefaultAvatar(false);
+        } else {
+            setIsDefaultAvatar(true);
+        }
+    }, [employee?.photoPath]);
+
     const handleEditClick = () => {
         if (!isCurrentUser) return;
         setIsModalOpen(true);
@@ -95,11 +104,14 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     const handleContextMenuAction = (action: 'view' | 'change' | 'remove') => {
         setIsContextMenuOpen(false);
         
-        if (action === 'view') {
+        if (action === 'view' && !isDefaultAvatar) {
             setIsViewingPhoto(true);
         } else if (action === 'change' && fileInputRef.current) {
             fileInputRef.current.click();
         } else if (action === 'remove' && employee?.id && isCurrentUser) {
+            deletePhoto().then(() => {
+                setIsDefaultAvatar(true);
+            });
         }
     };
 
@@ -110,6 +122,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
             try {
                 let result = await updateEmployeePhoto(employee.id, e.target.files[0]);
                 employee.photoPath = result.photoPath;
+                setIsDefaultAvatar(false); // После загрузки фото устанавливаем флаг пользовательского аватара
             } catch (err) {
                 console.error("Failed to update photo:", err);
             } finally {
@@ -163,10 +176,12 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                     alt={employee.fullName} 
                     onMouseEnter={isCurrentUser ? handleAvatarMouseEnter : undefined}
                     onMouseLeave={isCurrentUser ? handleAvatarMouseLeave : undefined}
-                    onClick={isCurrentUser ? undefined : () => setIsViewingPhoto(true)}
+                    onClick={isCurrentUser ? undefined : (!isDefaultAvatar ? () => setIsViewingPhoto(true) : undefined)}
                     onError={(e) => {
                         e.currentTarget.src = generateAvatar(getInitials(employee.fullName), 100);
+                        setIsDefaultAvatar(true); // При ошибке загрузки устанавливаем дефолтный аватар
                     }}
+                    data-is-default={isDefaultAvatar} // Добавляем data-атрибут для стилизации
                 />
                 
                 {isContextMenuOpen && isCurrentUser && (
@@ -179,15 +194,19 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                         onMouseEnter={handleContextMenuMouseEnter}
                         onMouseLeave={handleContextMenuMouseLeave}
                     >
-                        <ContextMenuItem onClick={() => handleContextMenuAction('view')}>
-                            Просмотреть фото
-                        </ContextMenuItem>
+                        {!isDefaultAvatar && (
+                            <ContextMenuItem onClick={() => handleContextMenuAction('view')}>
+                                Просмотреть фото
+                            </ContextMenuItem>
+                        )}
                         <ContextMenuItem onClick={() => handleContextMenuAction('change')}>
-                            Изменить фото
+                            {isDefaultAvatar ? "Добавить фото" : "Изменить фото"} 
                         </ContextMenuItem>
-                        <ContextMenuItem onClick={() => handleContextMenuAction('remove')}>
-                            Удалить фото
-                        </ContextMenuItem>
+                        {!isDefaultAvatar && ( // Показываем кнопку удаления только для пользовательских аватаров
+                            <ContextMenuItem onClick={() => handleContextMenuAction('remove')}>
+                                Удалить фото
+                            </ContextMenuItem>
+                        )}
                     </ContextMenu>
                 )}
                 
@@ -232,7 +251,8 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                         phone: employee.phone,
                         minSurcharge: employee.minSurcharge,
                         avatar: employee.photoPath,
-                        id: employee.id
+                        id: employee.id,
+                        isDefaultAvatar: isDefaultAvatar
                     }}
                 />
             )}
@@ -253,6 +273,20 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         </>
     );
 }
+
+const DefaultAvatarLabel = styled.div`
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin: 0 auto;
+    width: fit-content;
+`;
 
 const Container = styled.div`
     background-color: white;
