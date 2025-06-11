@@ -10,7 +10,6 @@ import creditsAmountSvg from '../../assets/ui/analitic/creditsAmount.svg';
 import paymentsSvg from '../../assets/ui/analitic/payments.svg';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import { useEffect, useMemo, useState } from 'react';
-import CreditTypes from '../../components/ui/fields/CreditTypes';
 import type { Employee } from '../../api/types/employee';
 
 interface EmployeeProfilePageProps {
@@ -31,6 +30,14 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         fetchEmployeePaymentsStats
     } = useEmployee();
     
+    useEffect(() => {
+        if (employeeId) {
+            localStorage.setItem('viewingEmployeeId', employeeId.toString());
+        } else {
+            localStorage.removeItem('viewingEmployeeId');
+        }
+    }, [employeeId]);
+
     useEffect(() => {
             if (employeeId) {
                 fetchEmployeeById(employeeId).then(setEmployee);
@@ -75,7 +82,7 @@ const paymentsChartData = useMemo(() =>
             },
         ]
     })),
-[paymentsToUse]); // Используем paymentsToUse вместо paymentsStats
+[paymentsToUse]);
 
 const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {
     const now = new Date();

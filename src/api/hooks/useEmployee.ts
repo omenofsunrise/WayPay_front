@@ -36,6 +36,7 @@ export function useEmployee() {
       setError(null);
       const data = await EmployeeService.getAuthInfo();
       setAuthInfo(data);
+      return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

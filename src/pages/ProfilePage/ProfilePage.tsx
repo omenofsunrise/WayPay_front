@@ -4,19 +4,43 @@ import CustomTitle from '../../components/ui/Text/CustomTitle';
 import CompanyPage from './CompanyPage';
 import EmployeePage from './EmployeePage';
 import EmployeeProfilePage from './EmployeeProfilePage';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
 
 const ProfilePage = () => {
-    const [activeTab, setActiveTab] = useState("Мой профиль");
-    const [viewingEmployeeId, setViewingEmployeeId] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState<string>(() => {
+        const savedEmployeeId = localStorage.getItem('viewingEmployeeId');
+        if (savedEmployeeId) {
+            return "Список пользователей";
+        }
+        return localStorage.getItem('profileActiveTab') || "Мой профиль";
+    });
+
+    const [viewingEmployeeId, setViewingEmployeeId] = useState<number | null>(() => {
+        const saved = localStorage.getItem('viewingEmployeeId');
+        return saved ? parseInt(saved) : null;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('profileActiveTab', activeTab);
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (viewingEmployeeId) {
+            localStorage.setItem('viewingEmployeeId', viewingEmployeeId.toString());
+        } else {
+            localStorage.removeItem('viewingEmployeeId');
+        }
+    }, [viewingEmployeeId]);
 
     const handleViewEmployee = (id: number) => {
         setViewingEmployeeId(id);
+        setActiveTab("Список пользователей");
     };
 
     const handleBackToList = () => {
         setViewingEmployeeId(null);
+        setActiveTab("Список пользователей");
     };
 
     const renderTabContent = () => {
@@ -45,7 +69,12 @@ const ProfilePage = () => {
 
     return (
         <PageLayout>
-            {!viewingEmployeeId && <ProfileTabs onTabChange={setActiveTab} />}
+            {!viewingEmployeeId && (
+                <ProfileTabs 
+                    activeTab={activeTab} 
+                    onTabChange={setActiveTab} 
+                />
+            )}
             {renderTabContent()}
         </PageLayout>
     );

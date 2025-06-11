@@ -216,7 +216,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     if (!isValid) {
       return;
     }
-
+    
     try {
       setIsSubmitting(true);
       await onSubmit({

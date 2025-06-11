@@ -1,27 +1,20 @@
 import styled from "styled-components";
-import { useState } from "react";
 
 interface ProfileTabButtonProps {
     $isActive: boolean;
 }
 
 interface ProfileTabsProps {
+    activeTab: string;
     onTabChange: (tabName: string) => void;
 }
 
-const ProfileTabs = ({ onTabChange }: ProfileTabsProps) => {
-    const [activeTab, setActiveTab] = useState("Мой профиль");
-
+const ProfileTabs = ({ activeTab, onTabChange }: ProfileTabsProps) => {
     const tabs = [
         { name: "Мой профиль" },
         { name: "Список пользователей" },
         { name: "Данные компании" }
     ];
-
-    const handleTabClick = (tabName: string) => {
-        setActiveTab(tabName);
-        onTabChange(tabName);
-    };
 
     return (
         <ProfileTabsContainer>
@@ -29,7 +22,7 @@ const ProfileTabs = ({ onTabChange }: ProfileTabsProps) => {
                 <ProfileTabButton 
                     key={tab.name}
                     $isActive={activeTab === tab.name}
-                    onClick={() => handleTabClick(tab.name)}
+                    onClick={() => onTabChange(tab.name)}
                 >
                     <span>{tab.name}</span>
                 </ProfileTabButton>

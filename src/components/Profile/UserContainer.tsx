@@ -12,7 +12,7 @@ interface UserContainerProps {
 }
 
 const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserContainerProps) => {
-    const { authInfo, loading, error, updateEmployee, updateEmployeePhoto } = useEmployee();
+    const { authInfo, loading, error, updateEmployee, updateEmployeePhoto, refresh } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -20,49 +20,33 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarRef = useRef<HTMLImageElement>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
-
-    // Используем переданного сотрудника или сотрудника из authInfo
-    const employee = propEmployee || authInfo?.employee;
+    console.log()
+    const employee = propEmployee || (isCurrentUser ? authInfo?.employee : null);
     
     const handleEditClick = () => {
-        if (!isCurrentUser) return; // Запрещаем редактирование чужого профиля
+        if (!isCurrentUser) return;
         setIsModalOpen(true);
     };
 
-    useEffect(() => {
-        if (employee?.photoPath && avatarRef.current) {
-            const newAvatarSrc = employee.photoPath 
-                ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
-                : generateAvatar(getInitials(employee.fullName), 100);
-            
-            avatarRef.current.src = newAvatarSrc;
-        }
-    }, [employee]);
-
     const handleModalClose = async () => {
+        let result = await refresh();
+        employee.photoPath = result.employee.photoPath;
         setIsModalOpen(false);
-        if (employee?.photoPath && avatarRef.current) {
-            const newAvatarSrc = employee.photoPath 
-                ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
-                : generateAvatar(getInitials(employee.fullName), 100);
-            
-            avatarRef.current.src = newAvatarSrc;
-        }
     };
 
     const handleModalSubmit = async (updatedData: {
-        fio: string;
+        fullName: string;
         address: string;
         role: string;
         phone: string;
         minSurcharge: number;
-    }) => {
+    }) => {        
         if (!employee?.id || !isCurrentUser) return;
         
         try {
             await updateEmployee({
                 id: employee.id,
-                fullName: updatedData.fio,
+                fullName: updatedData.fullName,
                 address: updatedData.address,
                 phone: updatedData.phone,
             });
@@ -116,7 +100,6 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         } else if (action === 'change' && fileInputRef.current) {
             fileInputRef.current.click();
         } else if (action === 'remove' && employee?.id && isCurrentUser) {
-            // Логика удаления фото
         }
     };
 
@@ -125,13 +108,18 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         
         if (e.target.files && e.target.files.length > 0) {
             try {
-                await updateEmployeePhoto(employee.id, e.target.files[0]);
+                let result = await updateEmployeePhoto(employee.id, e.target.files[0]);
+                employee.photoPath = result.photoPath;
             } catch (err) {
                 console.error("Failed to update photo:", err);
+            } finally {
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
             }
         }
     };
-
+    
     if (loading && !propEmployee) {
         return <Container>Loading...</Container>;
     }
@@ -143,10 +131,10 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     if (!employee) {
         return <Container>No employee data</Container>;
     }
-
-    const avatarSrc = employee.photoPath 
+    
+    const avatarSrc = employee?.photoPath 
         ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
-        : generateAvatar(getInitials(employee.fullName), 100);
+        : generateAvatar(getInitials(employee?.fullName || ''), 100);
         
     return (
         <>
@@ -266,7 +254,6 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     );
 }
 
-
 const Container = styled.div`
     background-color: white;
     border-radius: 10px;
@@ -380,7 +367,3 @@ const PhotoModalContent = styled.div`
 `;
 
 export default UserContainer;
-
-function refresh() {
-    throw new Error("Function not implemented.");
-}
