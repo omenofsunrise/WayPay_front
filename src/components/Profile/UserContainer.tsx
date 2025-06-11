@@ -20,8 +20,8 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarRef = useRef<HTMLImageElement>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
-    console.log()
-    const employee = propEmployee || (isCurrentUser ? authInfo?.employee : null);
+    const employee = propEmployee;
+    console.log(employee);
     
     const handleEditClick = () => {
         if (!isCurrentUser) return;
