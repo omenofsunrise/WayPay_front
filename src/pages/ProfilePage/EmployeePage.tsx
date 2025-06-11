@@ -247,19 +247,28 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             </TitleField>
             
             <FilterField>
-                <CustomInput 
-                    inputType="text"
-                    placeholder="ФИО сотрудника"
-                    value={nameFilter}
-                    onChange={(e) => handleFilterChange(e.target.value)}
-                />
-                <CustomSelect
-                    options={roleOptions}
-                    value={roleFilter || ''}
-                    onChange={(e) => handleRoleFilterChange(e.target.value)}
-                />
+                <div style={{ 
+                    display: 'flex', 
+                    gap: '16px', 
+                    width: '50%', 
+                    alignItems: 'center' 
+                }}>
+                    <CustomInput 
+                        inputType="text"
+                        placeholder="ФИО сотрудника"
+                        value={nameFilter}
+                        onChange={(e) => handleFilterChange(e.target.value)}
+                        style={{ flex: 1 }}
+                    />
+                    <CustomSelect
+                        options={roleOptions}
+                        value={roleFilter || ''}
+                        onChange={(e) => handleRoleFilterChange(e.target.value)}
+                        style={{ flex: 1 }}
+                    />
+                </div>
                 <DarkCyanButton 
-                    style={{ width: "15vw" }}
+                    style={{ width: "15vw", marginLeft: 'auto' }}
                     onClick={handleCreateEmployee}
                 >
                     + Новый сотрудник
