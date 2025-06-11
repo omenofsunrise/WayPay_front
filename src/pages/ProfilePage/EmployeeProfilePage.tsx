@@ -58,120 +58,120 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         [statsToUse]
     );
 
-    const paymentsChartData = useMemo(() => 
-        paymentsStats.map(stat => ({
-            label: getShortMonthName(stat.month),
-            total: stat.total,
-            bars: [
-                { 
-                    name: 'Неподтверждённые, руб', 
-                    value: stat.notAssumed, 
-                    color: 'rgba(209, 213, 219, 1)' 
-                },
-                { 
-                    name: 'Подтверждённые, руб', 
-                    value: stat.assumed, 
-                    color: 'rgba(0, 125, 136, 1)' 
-                },
-            ]
-        })),
-    [paymentsStats]);
+const paymentsChartData = useMemo(() => 
+    paymentsToUse.map(stat => ({
+        label: getShortMonthName(stat.month),
+        total: stat.total,
+        bars: [
+            { 
+                name: 'Неподтверждённые, руб', 
+                value: stat.notAssumed, 
+                color: 'rgba(209, 213, 219, 1)' 
+            },
+            { 
+                name: 'Подтверждённые, руб', 
+                value: stat.assumed, 
+                color: 'rgba(0, 125, 136, 1)' 
+            },
+        ]
+    })),
+[paymentsToUse]); // Используем paymentsToUse вместо paymentsStats
 
-    const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-        
-        const currentMonthStat = creditsStats.find(
-            stat => stat.month === currentMonth && stat.year === currentYear
-        );
-        
-        let prevMonth = currentMonth - 1;
-        let prevYear = currentYear;
-        if (prevMonth === 0) {
-            prevMonth = 12;
-            prevYear--;
+const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
+    const currentMonthStat = statsToUse.find(
+        stat => stat.month === currentMonth && stat.year === currentYear
+    );
+    
+    let prevMonth = currentMonth - 1;
+    let prevYear = currentYear;
+    if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear--;
+    }
+    
+    const prevMonthStat = statsToUse.find(
+        stat => stat.month === prevMonth && stat.year === prevYear
+    );
+
+    const currentCount = currentMonthStat?.count || 0;
+    const prevCount = prevMonthStat?.count || 0;
+    
+    let change = 0;
+    let hasChange = false;
+    
+    if (prevCount > 0 && currentCount > 0) {
+        change = ((currentCount - prevCount) / prevCount) * 100;
+        hasChange = true;
+    } else if (prevCount === 0 && currentCount > 0) {
+        change = 100;
+        hasChange = true;
+    } else if (currentCount === 0 && prevCount > 0) {
+        change = -100;
+        hasChange = true;
+    }
+
+    return {
+        currentMonthCount: currentCount,
+        percentageChange: {
+            value: Math.round(change),
+            hasChange,
+            isPositive: change > 0,
+            isNeutral: change === 0
         }
-        
-        const prevMonthStat = creditsStats.find(
-            stat => stat.month === prevMonth && stat.year === prevYear
-        );
-
-        const currentCount = currentMonthStat?.count || 0;
-        const prevCount = prevMonthStat?.count || 0;
-        
-        let change = 0;
-        let hasChange = false;
-        
-        if (prevCount > 0 && currentCount > 0) {
-            change = ((currentCount - prevCount) / prevCount) * 100;
-            hasChange = true;
-        } else if (prevCount === 0 && currentCount > 0) {
-            change = 100;
-            hasChange = true;
-        } else if (currentCount === 0 && prevCount > 0) {
-            change = -100;
-            hasChange = true;
-        }
-
-        return {
-            currentMonthCount: currentCount,
-            percentageChange: {
-                value: Math.round(change),
-                hasChange,
-                isPositive: change > 0,
-                isNeutral: change === 0
-            }
-        };
-    }, [creditsStats]);
+    };
+}, [statsToUse]);
 
     const { currentMonthPayments, paymentsPercentageChange } = useMemo(() => {
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-        
-        const currentMonthStat = paymentsStats.find(
-            stat => stat.month === currentMonth && stat.year === currentYear
-        );
-        
-        let prevMonth = currentMonth - 1;
-        let prevYear = currentYear;
-        if (prevMonth === 0) {
-            prevMonth = 12;
-            prevYear--;
-        }
-        
-        const prevMonthStat = paymentsStats.find(
-            stat => stat.month === prevMonth && stat.year === prevYear
-        );
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
+    const currentMonthStat = paymentsToUse.find(
+        stat => stat.month === currentMonth && stat.year === currentYear
+    );
+    
+    let prevMonth = currentMonth - 1;
+    let prevYear = currentYear;
+    if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear--;
+    }
+    
+    const prevMonthStat = paymentsToUse.find(
+        stat => stat.month === prevMonth && stat.year === prevYear
+    );
 
-        const currentTotal = currentMonthStat?.total || 0;
-        const prevTotal = prevMonthStat?.total || 0;
-        
-        let change = 0;
-        let hasChange = false;
-        
-        if (prevTotal > 0 && currentTotal > 0) {
-            change = ((currentTotal - prevTotal) / prevTotal) * 100;
-            hasChange = true;
-        } else if (prevTotal === 0 && currentTotal > 0) {
-            change = 100;
-            hasChange = true;
-        } else if (currentTotal === 0 && prevTotal > 0) {
-            change = -100;
-            hasChange = true;
-        }
+    const currentTotal = currentMonthStat?.total || 0;
+    const prevTotal = prevMonthStat?.total || 0;
+    
+    let change = 0;
+    let hasChange = false;
+    
+    if (prevTotal > 0 && currentTotal > 0) {
+        change = ((currentTotal - prevTotal) / prevTotal) * 100;
+        hasChange = true;
+    } else if (prevTotal === 0 && currentTotal > 0) {
+        change = 100;
+        hasChange = true;
+    } else if (currentTotal === 0 && prevTotal > 0) {
+        change = -100;
+        hasChange = true;
+    }
 
-        return {
-            currentMonthPayments: currentTotal,
-            paymentsPercentageChange: {
-                value: Math.round(change),
-                hasChange,
-                isPositive: change > 0,
-                isNeutral: change === 0
-            }
-        };
-    }, [paymentsStats]);
+    return {
+        currentMonthPayments: currentTotal,
+        paymentsPercentageChange: {
+            value: Math.round(change),
+            hasChange,
+            isPositive: change > 0,
+            isNeutral: change === 0
+        }
+    };
+}, [paymentsToUse]);
 
     function getMonthName(month: number): string {
         const months = [

@@ -126,7 +126,7 @@ class EmployeeService {
 
   static async getEmployeeCreditsStats(id: number, months: number = 12): Promise<CreditStats[]> {
     try {
-      const response = await apiClient.get(`/Employee/credits-stats/${id}?months=${months}`);
+      const response = await apiClient.get(`/Employee/credits-stats${id}?months=${months}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -135,7 +135,7 @@ class EmployeeService {
 
   static async getEmployeePaymentsStats(id: number, months: number = 12): Promise<PaymentStatsResponse[]> {
     try {
-      const response = await apiClient.get(`/Employee/payments-stats/${id}?months=${months}`);
+      const response = await apiClient.get(`/Employee/payments-stats${id}?months=${months}`);
       return response.data;
     } catch (error) {
       throw error;

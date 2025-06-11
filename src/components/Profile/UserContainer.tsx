@@ -4,8 +4,14 @@ import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
 import { BASE_URL } from "../../api/client";
 import { getInitials, generateAvatar } from "../../utils/avatarUtils";
+import type { Employee } from "../../api/types/employee";
 
-const UserContainer = () => {
+interface UserContainerProps {
+    employee?: Employee;
+    isCurrentUser?: boolean;
+}
+
+const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserContainerProps) => {
     const { authInfo, loading, error, updateEmployee, updateEmployeePhoto } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
@@ -15,35 +21,32 @@ const UserContainer = () => {
     const avatarRef = useRef<HTMLImageElement>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
 
+    // Используем переданного сотрудника или сотрудника из authInfo
+    const employee = propEmployee || authInfo?.employee;
+    
     const handleEditClick = () => {
+        if (!isCurrentUser) return; // Запрещаем редактирование чужого профиля
         setIsModalOpen(true);
     };
 
     useEffect(() => {
-        if (authInfo?.employee) {
-                const employee = authInfo.employee;
-                const newAvatarSrc = employee.photoPath 
+        if (employee?.photoPath && avatarRef.current) {
+            const newAvatarSrc = employee.photoPath 
                 ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
                 : generateAvatar(getInitials(employee.fullName), 100);
-                
-                if (avatarRef.current) {
-                avatarRef.current.src = newAvatarSrc;
-                }
-            }
-    }, [authInfo]);
+            
+            avatarRef.current.src = newAvatarSrc;
+        }
+    }, [employee]);
 
     const handleModalClose = async () => {
         setIsModalOpen(false);
-        if (authInfo?.employee) {
-            await refresh();
-            const employee = authInfo.employee;
+        if (employee?.photoPath && avatarRef.current) {
             const newAvatarSrc = employee.photoPath 
-            ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
-            : generateAvatar(getInitials(employee.fullName), 100);
+                ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
+                : generateAvatar(getInitials(employee.fullName), 100);
             
-            if (avatarRef.current) {
             avatarRef.current.src = newAvatarSrc;
-            }
         }
     };
 
@@ -54,9 +57,11 @@ const UserContainer = () => {
         phone: string;
         minSurcharge: number;
     }) => {
+        if (!employee?.id || !isCurrentUser) return;
+        
         try {
             await updateEmployee({
-                id: authInfo?.employee.id || 0,
+                id: employee.id,
                 fullName: updatedData.fio,
                 address: updatedData.address,
                 phone: updatedData.phone,
@@ -68,6 +73,8 @@ const UserContainer = () => {
     };
 
     const handleAvatarMouseEnter = (e: React.MouseEvent) => {
+        if (!isCurrentUser) return;
+        
         if (hoverTimeoutRef.current) {
             clearTimeout(hoverTimeoutRef.current);
         }
@@ -83,6 +90,8 @@ const UserContainer = () => {
     };
 
     const handleAvatarMouseLeave = () => {
+        if (!isCurrentUser) return;
+        
         hoverTimeoutRef.current = window.setTimeout(() => {
             setIsContextMenuOpen(false);
         }, 100);
@@ -106,29 +115,35 @@ const UserContainer = () => {
             setIsViewingPhoto(true);
         } else if (action === 'change' && fileInputRef.current) {
             fileInputRef.current.click();
-        } else if (action === 'remove' && authInfo?.employee.id) {
+        } else if (action === 'remove' && employee?.id && isCurrentUser) {
+            // Логика удаления фото
         }
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0 && authInfo?.employee.id) {
+        if (!employee?.id || !isCurrentUser) return;
+        
+        if (e.target.files && e.target.files.length > 0) {
             try {
-                await updateEmployeePhoto(authInfo.employee.id, e.target.files[0]);
+                await updateEmployeePhoto(employee.id, e.target.files[0]);
             } catch (err) {
                 console.error("Failed to update photo:", err);
             }
         }
     };
 
-    if (loading) {
+    if (loading && !propEmployee) {
         return <Container>Loading...</Container>;
     }
 
-    if (error || !authInfo?.employee) {
+    if ((error || !employee) && !propEmployee) {
         return <Container>Error: {error || "Employee data not available"}</Container>;
     }
 
-    const employee = authInfo.employee;
+    if (!employee) {
+        return <Container>No employee data</Container>;
+    }
+
     const avatarSrc = employee.photoPath 
         ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
         : generateAvatar(getInitials(employee.fullName), 100);
@@ -136,32 +151,37 @@ const UserContainer = () => {
     return (
         <>
             <Container>
-                <EditIcon onClick={handleEditClick}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 17.2498V20.9998H6.75L17.81 9.93984L14.06 6.18984L3 17.2498ZM21.41 6.33984L17.66 2.58984L15.13 5.12984L18.88 8.87984L21.41 6.33984Z" fill="#50555C"/>
-                    </svg>
-                </EditIcon>
+                {isCurrentUser && (
+                    <EditIcon onClick={handleEditClick}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 17.2498V20.9998H6.75L17.81 9.93984L14.06 6.18984L3 17.2498ZM21.41 6.33984L17.66 2.58984L15.13 5.12984L18.88 8.87984L21.41 6.33984Z" fill="#50555C"/>
+                        </svg>
+                    </EditIcon>
+                )}
                 
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                />
+                {isCurrentUser && (
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange}
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                    />
+                )}
                 
                 <ProfileImage 
                     ref={avatarRef}
                     src={avatarSrc} 
                     alt={employee.fullName} 
-                    onMouseEnter={handleAvatarMouseEnter}
-                    onMouseLeave={handleAvatarMouseLeave}
+                    onMouseEnter={isCurrentUser ? handleAvatarMouseEnter : undefined}
+                    onMouseLeave={isCurrentUser ? handleAvatarMouseLeave : undefined}
+                    onClick={isCurrentUser ? undefined : () => setIsViewingPhoto(true)}
                     onError={(e) => {
                         e.currentTarget.src = generateAvatar(getInitials(employee.fullName), 100);
                     }}
                 />
                 
-                {isContextMenuOpen && (
+                {isContextMenuOpen && isCurrentUser && (
                     <ContextMenu 
                         style={{
                             left: `${contextMenuPosition.x}px`,
@@ -200,7 +220,7 @@ const UserContainer = () => {
                         <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M10.5 10.0625C9.91984 10.0625 9.36344 9.83203 8.9532 9.42179C8.54297 9.01156 8.3125 8.45516 8.3125 7.875C8.3125 7.29484 8.54297 6.73844 8.9532 6.3282C9.36344 5.91797 9.91984 5.6875 10.5 5.6875C11.0802 5.6875 11.6366 5.91797 12.0468 6.3282C12.457 6.73844 12.6875 7.29484 12.6875 7.875C12.6875 8.16227 12.6309 8.44672 12.521 8.71212C12.4111 8.97752 12.2499 9.21867 12.0468 9.42179C11.8437 9.62492 11.6025 9.78605 11.3371 9.89599C11.0717 10.0059 10.7873 10.0625 10.5 10.0625ZM10.5 1.75C8.87555 1.75 7.31763 2.39531 6.16897 3.54397C5.02031 4.69263 4.375 6.25055 4.375 7.875C4.375 12.4687 10.5 19.25 10.5 19.25C10.5 19.25 16.625 12.4687 16.625 7.875C16.625 6.25055 15.9797 4.69263 14.831 3.54397C13.6824 2.39531 12.1245 1.75 10.5 1.75Z" fill="#50555C"/>
                         </svg>
-                        {employee.address}
+                        {employee.address || 'Не указан'}
                     </ContactItem>
                     <ContactItem>
                         <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -211,21 +231,23 @@ const UserContainer = () => {
                 </ContactInfo>
             </Container>
 
-            <EmployeeModal
-                mode="edit"
-                isOpen={isModalOpen}
-                onClose={handleModalClose}
-                onSubmit={handleModalSubmit}
-                initialData={{
-                    fullName: employee.fullName,
-                    address: employee.address || '',
-                    role: employee.role,
-                    phone: employee.phone,
-                    minSurcharge: employee.minSurcharge,
-                    avatar: employee.photoPath,
-                    id: employee.id
-                }}
-            />
+            {isCurrentUser && (
+                <EmployeeModal
+                    mode="edit"
+                    isOpen={isModalOpen}
+                    onClose={handleModalClose}
+                    onSubmit={handleModalSubmit}
+                    initialData={{
+                        fullName: employee.fullName,
+                        address: employee.address || '',
+                        role: employee.role,
+                        phone: employee.phone,
+                        minSurcharge: employee.minSurcharge,
+                        avatar: employee.photoPath,
+                        id: employee.id
+                    }}
+                />
+            )}
 
             {isViewingPhoto && (
                 <PhotoModal onClick={() => setIsViewingPhoto(false)}>
@@ -243,6 +265,7 @@ const UserContainer = () => {
         </>
     );
 }
+
 
 const Container = styled.div`
     background-color: white;
