@@ -243,16 +243,15 @@ const InvestorPage = () => {
     };
 
     const tableData = investorsData?.items?.map(investor => {
-        // Проверяем, существует ли investor и его свойства
         if (!investor || investor.id === undefined || investor.id === null) {
             return [
-                '', // id
-                '', // nickname
-                '', // fullName
-                '', // phoneNumber
-                '0%', // investorPie
-                formatMoney('0'), // investmentAmount
-                formatMoney('0'), // balance
+                '',
+                '',
+                '',
+                '',
+                '0%',
+                formatMoney('0'),
+                formatMoney('0'),
             ];
         }
 

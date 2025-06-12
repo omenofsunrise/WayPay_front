@@ -17,6 +17,7 @@ import SchedulePage from './pages/SchedulePage';
 import CreditControlPage from './pages/CreditControlPage';
 import EmployeeProfilePage from './pages/ProfilePage/EmployeeProfilePage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
+import InvestorReportPage from './pages/InvestorReportPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -135,6 +136,13 @@ function App() {
               <ProfilePage />
             </MainLayout>
         } />
+
+        <Route path="investors-report" element={
+            <MainLayout>
+              <InvestorReportPage />
+            </MainLayout>
+        } />
+
         <Route path="*" element={
              <MainLayout>
               <NotFoundContent />

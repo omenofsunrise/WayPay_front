@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import investorService from '../services/investorService';
-import type { AutoSelectInvestorResponse, Investor, InvestorParams } from '../types/investor';
+import type { AutoSelectInvestorResponse, Investor, InvestorParams, InvestorReport } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
 
 const useInvestor = () => {
@@ -8,6 +8,7 @@ const useInvestor = () => {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<Investor> | null>(null);
   const [currentInvestor, setCurrentInvestor] = useState<Investor | null>(null);
+  const [reportData, setReportData] = useState<any>(null);
 
   const getInvestors = useCallback(async (params?: InvestorParams): Promise<PaginatedResponse<Investor> | null> => {
     setIsLoading(true);
@@ -131,18 +132,35 @@ const useInvestor = () => {
     }
   };
 
+  const getInvestorReport = useCallback(async (id: number): Promise<InvestorReport> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await investorService.getInvestorReport(id);
+      setReportData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
     data,
     currentInvestor,
+    reportData,
     getInvestors,
     getInvestorById,
     createInvestor,
     updateInvestor,
     deleteInvestor,
     addInvestment,
-    autoSelectInvestor
+    autoSelectInvestor,
+    getInvestorReport
   };
 };
 

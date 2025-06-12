@@ -26,3 +26,15 @@ export interface AutoSelectInvestorResponse {
   nickname: string;
   balance: number;
 }
+
+export interface InvestorReport {
+  nickName: string;
+  fullName: string;
+  createdAt: string;
+  investment: number;
+  activeCreditsAmount: number;
+  investorIncome: number;
+  selfIncome: number;
+  balance: number;
+  isCompany: boolean;
+}
