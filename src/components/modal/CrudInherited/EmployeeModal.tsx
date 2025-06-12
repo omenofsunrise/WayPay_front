@@ -226,7 +226,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
         phone: formData.phone.trim(),
         minSurcharge: Number(formData.minSurcharge),
       });
-      onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {

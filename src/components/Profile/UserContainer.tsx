@@ -17,14 +17,13 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const [isViewingPhoto, setIsViewingPhoto] = useState(false);
-    const [isDefaultAvatar, setIsDefaultAvatar] = useState(true); // Новое состояние для отслеживания типа аватара
+    const [isDefaultAvatar, setIsDefaultAvatar] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarRef = useRef<HTMLImageElement>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
     const employee = propEmployee;
     
     useEffect(() => {
-        // При изменении employee проверяем, является ли аватар дефолтным
         if (employee?.photoPath) {
             setIsDefaultAvatar(false);
         } else {
@@ -53,15 +52,19 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         if (!employee?.id || !isCurrentUser) return;
         
         try {
-            await updateEmployee({
-                id: employee.id,
-                fullName: updatedData.fullName,
-                address: updatedData.address,
-                phone: updatedData.phone,
-            });
-            setIsModalOpen(false);
+        const result = await updateEmployee({
+            id: employee.id,
+            fullName: updatedData.fullName,
+            address: updatedData.address,
+            phone: updatedData.phone,
+        });
+        employee.fullName = result.fullName;
+        employee.address =result.address;
+        setIsModalOpen(false);
+        
+        await refresh();
         } catch (err) {
-            console.error("Failed to update employee:", err);
+        console.error("Failed to update employee:", err);
         }
     };
 
@@ -272,20 +275,6 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         </>
     );
 }
-
-const DefaultAvatarLabel = styled.div`
-    position: absolute;
-    bottom: 20px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    color: white;
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 5px 10px;
-    border-radius: 4px;
-    margin: 0 auto;
-    width: fit-content;
-`;
 
 const Container = styled.div`
     background-color: white;
