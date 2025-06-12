@@ -52,6 +52,34 @@ const usePayment = () => {
     }
   }, []);
 
+  const confirmPayment = useCallback(async (id: number): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await paymentService.confirmPayment(id);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const deletePayment = useCallback(async (id: number): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await paymentService.deletePayment(id);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -59,6 +87,8 @@ const usePayment = () => {
     getPayments,
     getPaymentsByCreditId,
     createPayment,
+    confirmPayment,
+    deletePayment,
   };
 };
 

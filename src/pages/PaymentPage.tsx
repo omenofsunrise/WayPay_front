@@ -39,7 +39,9 @@ const PaymentPage = () => {
         isLoading, 
         error, 
         data: paymentsData, 
-        getPayments
+        getPayments,
+        confirmPayment,
+        deletePayment
     } = usePayment();
     
     const loadPayments = useCallback(async () => {
@@ -131,6 +133,68 @@ const PaymentPage = () => {
         ]);
     };
 
+    const handleConfirmPayment = async (rowData: any[]) => {
+        const rowIndex = tableData.indexOf(rowData);
+        const payment = paymentsData?.items[rowIndex];
+        
+        if (!payment) return;
+        
+        if (window.confirm('Вы уверены, что хотите подтвердить этот платёж?')) {
+            try {
+                await confirmPayment(payment.id);
+                loadPayments();
+            } catch (err) {
+                console.error('Ошибка при подтверждении платежа:', err);
+            }
+        }
+    };
+
+    const handleDeletePayment = async (rowData: any[]) => {
+        const rowIndex = tableData.indexOf(rowData);
+        const payment = paymentsData?.items[rowIndex];
+        
+        if (!payment) return;
+        
+        if (payment.accepted) {
+            alert('Нельзя удалить подтверждённый платёж');
+            return;
+        }
+        
+        if (window.confirm('Вы уверены, что хотите удалить этот платёж?')) {
+            try {
+                await deletePayment(payment.id);
+                loadPayments();
+            } catch (err) {
+                console.error('Ошибка при удалении платежа:', err);
+            }
+        }
+    };
+
+    const tableData = formatPaymentsData(paymentsData?.items);
+
+    const tableActions = [
+        {
+            label: 'Подтвердить',
+            action: handleConfirmPayment,
+            color: '#007D88',
+            shouldShow: (rowData: any[]) => {
+                const rowIndex = tableData.indexOf(rowData);
+                const payment = paymentsData?.items[rowIndex];
+                return payment && !payment.accepted;
+            }
+        },
+        {
+            label: 'Удалить',
+            action: handleDeletePayment,
+            color: '#EF4444',
+            shouldShow: (rowData: any[]) => {
+                const rowIndex = tableData.indexOf(rowData);
+                const payment = paymentsData?.items[rowIndex];
+                return payment && !payment.accepted;
+            }
+        }
+    ];
+
     return (
         <PageLayout>
             <TitleField>
@@ -166,9 +230,10 @@ const PaymentPage = () => {
                             { name: "Платёж принял", align: "left" },
                             { name: "Подтверждён", align: "center" },                
                         ]} 
-                        data={formatPaymentsData(paymentsData?.items)}
+                        data={tableData}
                         onSort={handleSort}
                         sortConfig={sortConfig}
+                        contextMenuActions={tableActions}
                     />
                     
                     <PaginationLayout>

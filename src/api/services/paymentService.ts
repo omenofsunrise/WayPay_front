@@ -20,6 +20,14 @@ class PaymentService {
     const response = await apiClient.post<Payment>('/Payment', paymentData);
     return response.data;
   }
+
+  async confirmPayment(id: number): Promise<void> {
+    await apiClient.patch(`/Payment/${id}/confirm`);
+  }
+
+  async deletePayment(id: number): Promise<void> {
+    await apiClient.delete(`/Payment/${id}`);
+  }
 }
 
 export default new PaymentService();
