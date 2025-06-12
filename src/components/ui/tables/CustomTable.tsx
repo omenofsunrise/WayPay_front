@@ -39,7 +39,7 @@ interface CreditsTableProps {
   fixedHeight?: string;
   hasTotalsRow?: boolean;
   debtChecker?: (rowData: any[]) => boolean;
-  rowStyles?: { [rowIndex: number]: RowStyle }; // New prop for custom row styles
+  rowStyles?: { [rowIndex: number]: RowStyle };
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -54,7 +54,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   fixedHeight,
   hasTotalsRow,
   debtChecker,
-  rowStyles = {}, // Default to empty object
+  rowStyles = {},
 }) => {
   const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -146,25 +146,21 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     };
   }, [contextMenu]);
 
-  // Function to get row style with fallbacks
   const getRowStyle = (rowIndex: number, isTotalsRow: boolean, isDebtRow: boolean): RowStyle => {
     if (isTotalsRow) {
       return { backgroundColor: 'white', color: 'black', fontWeight: 'bold' };
     }
     
-    // Apply custom row style if defined
     const customStyle = rowStyles[rowIndex] || {};
     
-    // For selected row, override background and text color unless custom style specifies them
     if (rowIndex === selectedRow) {
       return {
-        backgroundColor: customStyle.backgroundColor || '#007D88', // Дефолтный цвет выбранной строки
+        backgroundColor: customStyle.backgroundColor || '#007D88',
         color: customStyle.color || 'white',
         fontWeight: customStyle.fontWeight || 'normal'
       };
     }
     
-    // For debt rows, apply custom style or default
     if (isDebtRow) {
       return {
         backgroundColor: customStyle.backgroundColor || 'rgba(232, 216, 216, 1)',
@@ -173,7 +169,15 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       };
     }
     
-    // For other rows, apply custom style or default
+    const isActive = data[rowIndex][data[rowIndex].length - 1] === false;
+    if (isActive) {
+      return {
+        backgroundColor: customStyle.backgroundColor || 'rgba(37, 203, 161, 1)',
+        color: customStyle.color || 'inherit',
+        fontWeight: customStyle.fontWeight || 'normal'
+      };
+    }
+    
     return {
       backgroundColor: customStyle.backgroundColor || 'white',
       color: customStyle.color || 'inherit',
