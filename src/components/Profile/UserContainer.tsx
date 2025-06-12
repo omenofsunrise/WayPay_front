@@ -179,9 +179,9 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                     onClick={isCurrentUser ? undefined : (!isDefaultAvatar ? () => setIsViewingPhoto(true) : undefined)}
                     onError={(e) => {
                         e.currentTarget.src = generateAvatar(getInitials(employee.fullName), 100);
-                        setIsDefaultAvatar(true); // При ошибке загрузки устанавливаем дефолтный аватар
+                        setIsDefaultAvatar(true);
                     }}
-                    data-is-default={isDefaultAvatar} // Добавляем data-атрибут для стилизации
+                    data-is-default={isDefaultAvatar}
                 />
                 
                 {isContextMenuOpen && isCurrentUser && (
@@ -252,7 +252,6 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                         minSurcharge: employee.minSurcharge,
                         avatar: employee.photoPath,
                         id: employee.id,
-                        isDefaultAvatar: isDefaultAvatar
                     }}
                 />
             )}

@@ -9,6 +9,7 @@ export interface Payment {
     accepted: boolean;
     clientFullName: string;
     investorNickname: string;
+    employeeFullName: string;
 }
 
 export interface PaymentParams extends PaginationParams {

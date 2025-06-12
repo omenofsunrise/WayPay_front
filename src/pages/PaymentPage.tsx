@@ -126,7 +126,7 @@ const PaymentPage = () => {
             formatMoney(payment.paymentAmount?.toString() || '0'),
             payment.paymentDate ? formatDate(payment.paymentDate) : '',
             payment.type === 'cash' ? 'Наличными' : 'Картой',
-            payment.investorNickname || '',
+            payment.employeeFullName || '',
             payment.accepted ? 'Да' : 'Нет'
         ]);
     };
