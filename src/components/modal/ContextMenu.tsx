@@ -39,14 +39,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, ...prop
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
 
-    // Учитываем прокрутку страницы
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
 
     let adjustedX = x + scrollX;
     let adjustedY = y + scrollY;
 
-    // Проверяем, чтобы меню не выходило за границы окна
     if (adjustedX + menuWidth > windowWidth + scrollX) {
       adjustedX = x + scrollX - menuWidth;
     }
@@ -68,7 +66,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, ...prop
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{ duration: 0.15 }}
       style={{
-        position: 'absolute', // Меняем fixed на absolute
+        position: 'absolute',
         top: position.y,
         left: position.x,
       }}
@@ -102,6 +100,7 @@ const ContextMenuContainer = styled(motion.div)`
   padding: 4px 0;
   z-index: 1000;
   min-width: 150px;
+  width: auto;
   overflow: hidden;
 `;
 
@@ -110,6 +109,7 @@ const ContextMenuItem = styled(motion.div)<{ $color?: string }>`
   font-size: 14px;
   cursor: pointer;
   color: ${({ $color }) => $color || '#333'};
+  white-space: nowrap;
 `;
 
 export default ContextMenu;

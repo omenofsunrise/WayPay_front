@@ -318,7 +318,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                   <Title>Роль</Title>
                   <CustomSelect
                     options={roleOptions}
-                    disabled={mode === 'view'}
+                    disabled={mode === 'view' || (mode === 'edit')}
                     placeholder="Выберите роль"
                     value={formData.role}
                     onChange={handleSelectChange}
@@ -332,7 +332,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                     placeholder="8 (XXX) XXX-XX-XX"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    disabled={mode === 'view'}
+                    disabled={mode === 'view' || (mode === 'edit')}
                     hasError={touchedFields.phone && validationErrors.phone}
                     errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
                   />
@@ -346,7 +346,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                     placeholder="Минимальная надбавка"
                     value={formData.minSurcharge.toString()}
                     onChange={handleNumberChange}
-                    disabled={mode === 'view'}
+                    disabled={mode === 'view' || (mode === 'edit')}
                     min={0}
                   />
                 </FieldContainer>

@@ -282,10 +282,9 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'sum') {
-      setDisplaySum(value);
-      
-      const numericValue = parseInt(value.replace(/[^\d]/g, ''), 10) || 0;
+    if (name === 'investmentAmount') {
+      const numericValue = parseMoney(value); // Используем вашу функцию parseMoney
+      setDisplaySum(formatMoney(numericValue.toString())); // Форматируем для отображения
       setFormData(prev => ({
         ...prev,
         [name]: numericValue
@@ -293,14 +292,10 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: name === 'clientId' ? Number(value) : value
+        [name]: value
       }));
     }
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
     setTouchedFields(prev => ({
       ...prev,
       [name]: true

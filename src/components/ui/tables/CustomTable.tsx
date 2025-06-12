@@ -63,6 +63,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     rowIndex: number | null;
   } | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const LONG_PRESS_DURATION = 500;
 
   const selectedRow = externalSelectedRow !== undefined ? externalSelectedRow : internalSelectedRow;
 
@@ -100,17 +102,23 @@ const CustomTable: React.FC<CreditsTableProps> = ({
 
   const handleContextMenu = (event: React.MouseEvent, rowIndex: number) => {
     event.preventDefault();
-    
+    showContextMenu(event, rowIndex);
+  };
+
+  const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: number) => {
     if (contextMenuActions.length === 0) return;
     
     if (tableRef.current) {
+      const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+      const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+      
       const rect = tableRef.current.getBoundingClientRect();
       const menuWidth = 200;
       const menuItemHeight = 40;
       const menuHeight = contextMenuActions.length * menuItemHeight;
       
-      let x = event.clientX - rect.left;
-      let y = event.clientY - rect.top;
+      let x = clientX - rect.left;
+      let y = clientY - rect.top;
       
       if (x + menuWidth > rect.width) {
         x = rect.width - menuWidth;
@@ -120,8 +128,13 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         y = rect.height - menuHeight;
       }
       
-      x = Math.max(0, x);
-      y = Math.max(0, y);
+      if (y < 0) {
+        y = 0;
+      }
+      
+      if (x < 0) {
+        x = 0;
+      }
 
       setContextMenu({
         x,
@@ -129,6 +142,31 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         rowIndex
       });
     }
+  };
+
+  const handleTouchStart = (event: React.TouchEvent, rowIndex: number) => {
+    if (contextMenuActions.length === 0) return;
+    
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+    
+    longPressTimer.current = window.setTimeout(() => {
+      showContextMenu(event, rowIndex);
+    }, LONG_PRESS_DURATION);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimer.current) {
+    window.clearTimeout(longPressTimer.current);
+  }
   };
 
   const closeContextMenu = () => {
@@ -143,6 +181,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     document.addEventListener('click', handleClickOutside);
     return () => {
       document.removeEventListener('click', handleClickOutside);
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
     };
   }, [contextMenu]);
 
@@ -251,6 +292,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                   onClick={() => !isTotalsRow && handleRowClick(rowIndex)}
                   onDoubleClick={() => !isTotalsRow && handleRowDoubleClick(row, rowIndex)}
                   onContextMenu={(e) => !isTotalsRow && handleContextMenu(e, rowIndex)}
+                  onTouchStart={(e) => !isTotalsRow && handleTouchStart(e, rowIndex)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchMove}
                   whileHover={{
                     backgroundColor: isTotalsRow ? 'white' : 
                                     rowIndex === selectedRow ? '#007D88' : 
@@ -317,6 +361,7 @@ const TableContainer = styled.div`
   position: relative;
   background-color: white;
   color: black;
+  height: 100%;
 `;
 
 const StyledTable = styled.table`
@@ -354,8 +399,8 @@ const TableBody = styled.tbody<{ $fixedHeight?: string }>`
   ${({ $fixedHeight }) => $fixedHeight && `
     display: block;
     overflow-y: auto;
-    max-height: calc(${$fixedHeight} - 57px); // Subtract header height
   `}
+  position: relative;
 `;
 
 const TableRow = styled(motion.tr)<{ 

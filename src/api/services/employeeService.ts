@@ -58,7 +58,6 @@ class EmployeeService {
     id: number;
     fullName: string;
     address?: string;
-    phone: string;
   }): Promise<Employee> {
     try {
       const formData = new FormData();
@@ -67,7 +66,6 @@ class EmployeeService {
       if (employeeData.address) {
         formData.append('Address', employeeData.address);
       }
-      formData.append('Phone', employeeData.phone);
 
       const response = await apiClient.put('/Employee', formData, {
         headers: {
