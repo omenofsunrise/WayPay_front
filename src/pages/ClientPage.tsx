@@ -24,7 +24,7 @@ interface Client {
   birthdate: Date | null;
   docIssueDate: Date | null;
   docIssueYear: number;
-  regAddress: string | null;
+  registrationAddress: string | null;
 }
 const ClientPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -52,7 +52,8 @@ const ClientPage = () => {
         getClients,
         createClient,
         updateClient,
-        deleteClient
+        deleteClient,
+        checkClientCredits
     } = useClients();
     
     const loadClients = useCallback(async () => {
@@ -106,7 +107,7 @@ const ClientPage = () => {
             birthdate: null,
             docIssueDate: null,
             docIssueYear: 0,
-            regAddress: '',
+            registrationAddress: '',
         });
         setIsModalOpen(true);
     };
@@ -119,6 +120,13 @@ const ClientPage = () => {
 
     const handleDeleteClient = async (rowData: any[]) => {
         const [id] = rowData;
+
+        if (await checkClientCredits(Number(id)))
+        {
+            alert('Нельзя удалить клиента, привязанного к договору');
+            return;
+        }
+
         if (window.confirm('Вы уверены, что хотите удалить этого клиента?')) {
             try {
                 await deleteClient(Number(id));

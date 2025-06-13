@@ -44,6 +44,19 @@ class ProductService {
     const response = await apiClient.get(`/Investor/report/${id}`);
     return response.data;
   }
+
+  async CheckInvestorCredits(id: number): Promise<boolean> {
+    const result = await apiClient.get(`/Investor/have_credits/${id}`);
+    return result.data;
+  }
+
+  async blockInvestor(id: number): Promise<void> {
+    await apiClient.patch(`/Investor/block/${id}`);
+  }
+
+  async clearInvestor(id: number): Promise<void> {
+    await apiClient.patch(`/Investor/clear/${id}`);
+  }
 }
 
 export default new ProductService();

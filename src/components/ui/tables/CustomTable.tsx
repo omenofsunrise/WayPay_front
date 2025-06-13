@@ -12,10 +12,11 @@ interface Column {
   isHidden?: boolean;
 }
 
-interface TableAction {
+export interface TableAction {
   label: string;
   action: (rowData: any[], rowIndex: number) => void;
   color?: string;
+  disabled?: boolean;
 }
 
 export interface RowStyle {
@@ -28,7 +29,7 @@ interface CreditsTableProps {
   columns: Column[];
   data: any[][];
   onRowDoubleClick?: (rowData: any[], rowIndex: number) => void;
-  contextMenuActions?: TableAction[];
+  contextMenuActions?: TableAction[] | ((rowData: any[]) => TableAction[]);
   onSort?: (columnIndex: number) => void;
   onRowClick?: (rowData: any[], rowIndex: number) => void;
   sortConfig?: {
@@ -40,6 +41,7 @@ interface CreditsTableProps {
   hasTotalsRow?: boolean;
   debtChecker?: (rowData: any[]) => boolean;
   rowStyles?: { [rowIndex: number]: RowStyle };
+  isLoading?: boolean;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -55,6 +57,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   hasTotalsRow,
   debtChecker,
   rowStyles = {},
+  isLoading
 }) => {
   const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -115,7 +118,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       const rect = tableRef.current.getBoundingClientRect();
       const menuWidth = 200;
       const menuItemHeight = 40;
-      const menuHeight = contextMenuActions.length * menuItemHeight;
+      const menuHeight = (typeof contextMenuActions === 'function' 
+        ? contextMenuActions(data[rowIndex]).length 
+        : contextMenuActions.length) * menuItemHeight;
       
       let x = clientX - rect.left;
       let y = clientY - rect.top;
@@ -230,98 +235,105 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     <TableContainer
       ref={tableRef}
     >
-      <StyledTable>
-        <TableHeader>
-          <TableRow>
-            {columns.map((column, index) => (
-              !column.isHidden && (
-              <HeaderCell 
-                key={index} 
-                $isSortable={column.isSortable}
-                $isActive={sortConfig?.key === index}
-                onClick={() => handleSort(index)}
-                $align={column.align || 'center'}
-                $isFirst={index === 0}
-                $isLast={index === columns.length - 1}
-              >
-                <HeaderContent $align={column.align || 'center'}>
-                  {column.name}
-                  {column.isSortable && (
-                    <SortIcon 
-                      $direction={sortConfig?.key === index ? sortConfig.direction : 'asc'}
-                      animate={{
-                        rotate: sortConfig?.key === index && sortConfig.direction === 'desc' ? 180 : 0,
-                        color: sortConfig?.key === index ? '#007D88' : '#6B7280'
-                      }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5.77734 2.92383L5.25 3.45117L3.26953 1.47656L3.26367 12H2.51367L2.51953 1.45898L0.527344 3.45117L0 2.92383L2.88867 0.0351562L5.77734 2.92383ZM10.5059 8.54883L11.0391 9.07617L8.15039 11.9648L5.25586 9.07617L5.78906 8.54883L7.76953 10.5293L7.76367 0H8.51367L8.51953 10.5352L10.5059 8.54883Z" fill="currentColor"/>
-                      </svg>
-                    </SortIcon>
-                  )}
-                </HeaderContent>
-              </HeaderCell>
-              )
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody $fixedHeight={fixedHeight}>
-          <AnimatePresence>
-            {data.map((row, rowIndex) => {
-              const isTotalsRow = hasTotalsRow && rowIndex === data.length - 1;
-              const isDebtRow = !isTotalsRow && checkDebt(row);
-              const rowStyle = getRowStyle(rowIndex, isTotalsRow, isDebtRow);
+      {isLoading ? (
+      <LoadingOverlay>
+          <LoadingSpinner />
+        </LoadingOverlay>
+      ) : (
+        <>
+          <StyledTable>
+            <TableHeader>
+              <TableRow>
+                {columns.map((column, index) => (
+                  !column.isHidden && (
+                  <HeaderCell 
+                    key={index} 
+                    $isSortable={column.isSortable}
+                    $isActive={sortConfig?.key === index}
+                    onClick={() => handleSort(index)}
+                    $align={column.align || 'center'}
+                    $isFirst={index === 0}
+                    $isLast={index === columns.length - 1}
+                  >
+                    <HeaderContent $align={column.align || 'center'}>
+                      {column.name}
+                      {column.isSortable && (
+                        <SortIcon 
+                          $direction={sortConfig?.key === index ? sortConfig.direction : 'asc'}
+                          animate={{
+                            rotate: sortConfig?.key === index && sortConfig.direction === 'desc' ? 180 : 0,
+                            color: sortConfig?.key === index ? '#007D88' : '#6B7280'
+                          }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5.77734 2.92383L5.25 3.45117L3.26953 1.47656L3.26367 12H2.51367L2.51953 1.45898L0.527344 3.45117L0 2.92383L2.88867 0.0351562L5.77734 2.92383ZM10.5059 8.54883L11.0391 9.07617L8.15039 11.9648L5.25586 9.07617L5.78906 8.54883L7.76953 10.5293L7.76367 0H8.51367L8.51953 10.5352L10.5059 8.54883Z" fill="currentColor"/>
+                          </svg>
+                        </SortIcon>
+                      )}
+                    </HeaderContent>
+                  </HeaderCell>
+                  )
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody $fixedHeight={fixedHeight}>
+              <AnimatePresence>
+                {data.map((row, rowIndex) => {
+                  const isTotalsRow = hasTotalsRow && rowIndex === data.length - 1;
+                  const isDebtRow = !isTotalsRow && checkDebt(row);
+                  const rowStyle = getRowStyle(rowIndex, isTotalsRow, isDebtRow);
 
-              return (
-                <TableRow 
-                  key={`row-${rowIndex}`}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ 
-                    opacity: 1, 
-                    y: 0,
-                    backgroundColor: rowStyle.backgroundColor || 'white',
-                    color: rowStyle.color || 'inherit',
-                    fontWeight: rowStyle.fontWeight || 'normal'
-                  }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  $isLast={rowIndex === data.length - 1}
-                  $isSelected={rowIndex === selectedRow}
-                  $isTotalsRow={isTotalsRow}
-                  onClick={() => !isTotalsRow && handleRowClick(rowIndex)}
-                  onDoubleClick={() => !isTotalsRow && handleRowDoubleClick(row, rowIndex)}
-                  onContextMenu={(e) => !isTotalsRow && handleContextMenu(e, rowIndex)}
-                  onTouchStart={(e) => !isTotalsRow && handleTouchStart(e, rowIndex)}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchMove={handleTouchMove}
-                  whileHover={{
-                    backgroundColor: isTotalsRow ? 'white' : 
-                                    rowIndex === selectedRow ? '#007D88' : 
-                                    isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
-                                    row[row.length - 1] === false ? 'rgba(81, 213, 180, 0.8)' : '#F3F4F6'
-                  }}
-                >
-                  {row.map((cell, cellIndex) => (
-                    !columns[cellIndex]?.isHidden && (
-                    <BodyCell 
-                      key={cellIndex}
-                      $align={columns[cellIndex]?.align || 'center'}
-                      $isFirst={cellIndex === 0}
-                      $isLast={cellIndex === row.length - 1}
-                      $isTotalsCell={isTotalsRow}
-                      $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
+                  return (
+                    <TableRow 
+                      key={`row-${rowIndex}`}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ 
+                        opacity: 1, 
+                        y: 0,
+                        backgroundColor: rowStyle.backgroundColor || 'white',
+                        color: rowStyle.color || 'inherit',
+                        fontWeight: rowStyle.fontWeight || 'normal'
+                      }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      $isLast={rowIndex === data.length - 1}
+                      $isSelected={rowIndex === selectedRow}
+                      $isTotalsRow={isTotalsRow}
+                      onClick={() => !isTotalsRow && handleRowClick(rowIndex)}
+                      onDoubleClick={() => !isTotalsRow && handleRowDoubleClick(row, rowIndex)}
+                      onContextMenu={(e) => !isTotalsRow && handleContextMenu(e, rowIndex)}
+                      onTouchStart={(e) => !isTotalsRow && handleTouchStart(e, rowIndex)}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchMove={handleTouchMove}
+                      whileHover={{
+                        backgroundColor: isTotalsRow ? 'white' : 
+                                        rowIndex === selectedRow ? '#007D88' : 
+                                        isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
+                                        row[row.length - 1] === false ? 'rgba(81, 213, 180, 0.8)' : '#F3F4F6'
+                      }}
                     >
-                      {cell}
-                    </BodyCell>
-                    )
-                  ))}
-                </TableRow>
-              );
-            })}
-          </AnimatePresence>
-        </TableBody>
-      </StyledTable>
+                      {row.map((cell, cellIndex) => (
+                        !columns[cellIndex]?.isHidden && (
+                        <BodyCell 
+                          key={cellIndex}
+                          $align={columns[cellIndex]?.align || 'center'}
+                          $isFirst={cellIndex === 0}
+                          $isLast={cellIndex === row.length - 1}
+                          $isTotalsCell={isTotalsRow}
+                          $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
+                        >
+                          {cell}
+                        </BodyCell>
+                        )
+                      ))}
+                    </TableRow>
+                  );
+                })}
+              </AnimatePresence>
+            </TableBody>
+          </StyledTable>
+        
 
       <AnimatePresence>
         {contextMenu && contextMenuActions.length > 0 && (
@@ -338,21 +350,57 @@ const CustomTable: React.FC<CreditsTableProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <ContextMenu
-              items={contextMenuActions.map(action => ({
-                label: action.label,
-                action: () => {
-                  action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
-                  closeContextMenu();
-                },
-                color: action.color
-              }))}
-              onClose={closeContextMenu} x={0} y={0}            />
+              items={
+                  (typeof contextMenuActions === 'function' 
+                    ? contextMenuActions(data[contextMenu.rowIndex!]) 
+                    : contextMenuActions
+                  ).map(action => ({
+                    label: action.label,
+                    action: () => {
+                      action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
+                      closeContextMenu();
+                    },
+                    color: action.color
+                  }))}
+                onClose={closeContextMenu} 
+                x={0} 
+                y={0}
+              />
           </ContextMenuWrapper>
         )}
       </AnimatePresence>
+      </>
+      )}
     </TableContainer>
   );
 };
+
+const LoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.7);
+  z-index: 10;
+`;
+
+const LoadingSpinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007D88;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
 
 const TableContainer = styled.div`
   border: 1px solid #e2e8f0;

@@ -1,38 +1,28 @@
 import type { InvestorPayout, CreateInvestorPayoutDto } from '../types/investorPayout';
-import { API_BASE_URL } from '../client';
+import apiClient from '../client';
 
 export const createInvestorPayout = async (dto: CreateInvestorPayoutDto): Promise<InvestorPayout> => {
-  const response = await fetch(API_BASE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(dto),
-  });
-
-  if (!response.ok) {
+  try {
+    const response = await apiClient.post<InvestorPayout>('/InvestorPayouts', dto);
+    return response.data;
+  } catch (error) {
     throw new Error('Failed to create investor payout');
   }
-
-  return response.json();
 };
 
 export const deleteInvestorPayout = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/${id}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
+  try {
+    await apiClient.delete(`/InvestorPayouts/${id}`);
+  } catch (error) {
     throw new Error('Failed to delete investor payout');
   }
 };
 
 export const getInvestorPayouts = async (investorId: number): Promise<InvestorPayout[]> => {
-  const response = await fetch(`${API_BASE_URL}/investor/${investorId}`);
-
-  if (!response.ok) {
+  try {
+    const response = await apiClient.get<InvestorPayout[]>(`/InvestorPayouts/investor/${investorId}`);
+    return response.data;
+  } catch (error) {
     throw new Error('Failed to fetch investor payouts');
   }
-
-  return response.json();
 };

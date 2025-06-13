@@ -147,6 +147,47 @@ const useInvestor = () => {
     }
   }, []);
 
+  const checkInvestorCredits = async (id: number): Promise<boolean> => {
+    try {
+      const result = await investorService.CheckInvestorCredits(id);
+      return result;
+    }
+    catch (err) {
+    }
+    finally {
+    }
+  }
+
+  const blockInvestor = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await investorService.blockInvestor(id);
+    }
+    catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+    finally {
+      setIsLoading(false);
+    }
+  }
+
+  const clearInvestor = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await investorService.clearInvestor(id);
+    }
+    catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+    finally {
+      setIsLoading(false);
+    }
+  }
+
   return {
     isLoading,
     error,
@@ -160,7 +201,10 @@ const useInvestor = () => {
     deleteInvestor,
     addInvestment,
     autoSelectInvestor,
-    getInvestorReport
+    getInvestorReport,
+    checkInvestorCredits,
+    blockInvestor,
+    clearInvestor
   };
 };
 

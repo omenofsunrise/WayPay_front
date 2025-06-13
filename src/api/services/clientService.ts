@@ -41,6 +41,11 @@ class ClientService {
     });
     return response.data.exists;
   }
+
+  async CheckClientCredits(id: number): Promise<boolean> {
+    const result = await apiClient.get(`/Client/have_credits/${id}`);
+    return result.data;
+  }
 }
 
 export default new ClientService();

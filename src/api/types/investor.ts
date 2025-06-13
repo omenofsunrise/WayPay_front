@@ -9,6 +9,7 @@ export interface Investor {
   investmentAmount: number;
   balance: number;
   isCompany: boolean;
+  isBlocked: boolean;
 }
 
 export interface InvestorParams extends PaginationParams {

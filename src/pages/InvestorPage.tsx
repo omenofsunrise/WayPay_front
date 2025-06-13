@@ -3,7 +3,7 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable from "../components/ui/tables/CustomTable";
+import CustomTable, { type TableAction } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
@@ -53,7 +53,10 @@ const InvestorPage = () => {
         createInvestor,
         updateInvestor,
         deleteInvestor,
-        addInvestment
+        addInvestment,
+        checkInvestorCredits,
+        blockInvestor,
+        clearInvestor
     } = useInvestor();
     
     const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
@@ -79,8 +82,8 @@ const InvestorPage = () => {
             await addInvestment(selectedInvestor.id, amount);
             setIsInvestmentModalOpen(false);
             setInvestmentAmount('');
-            setSelectedInvestor(null); // Добавьте эту строку
-            await loadInvestors(); // Убедитесь, что loadInvestors вызывается после обновления состояния
+            setSelectedInvestor(null); 
+            await loadInvestors();
         } catch (err) {
             console.error('Ошибка при добавлении инвестиции:', err);
             alert('Произошла ошибка при добавлении инвестиции');
@@ -173,7 +176,8 @@ const InvestorPage = () => {
             investorPie: 0,
             investmentAmount: 0,
             balance: 0,
-            isCompany: false
+            isCompany: false,
+            isBlocked: false
         });
         setIsModalOpen(true);
     };
@@ -199,7 +203,7 @@ const InvestorPage = () => {
         }
 
         const investorToDelete = investorsData?.items.find(i => i.id === Number(id));
-        
+
         if (!investorToDelete) {
             console.error('Инвестор не найден');
             return;
@@ -210,12 +214,18 @@ const InvestorPage = () => {
             return;
         }
         
+        if (await checkInvestorCredits(Number(id)))
+        {
+            alert('Нельзя удалить инвестора, привязанного к договору');
+            return;
+        }
+        
         if (window.confirm('Вы уверены, что хотите удалить этого инвестора?')) {
             try {
                 await deleteInvestor(Number(id));
                 loadInvestors();
             } catch (err) {
-                console.error('Ошибка при удалении инвестора:', err);
+                alert('Произошла ошибка');
             }
         }
     };
@@ -245,13 +255,14 @@ const InvestorPage = () => {
     const tableData = investorsData?.items?.map(investor => {
         if (!investor || investor.id === undefined || investor.id === null) {
             return [
-                '',
-                '',
-                '',
-                '',
-                '0%',
-                formatMoney('0'),
-                formatMoney('0'),
+            '',
+            '',
+            '',
+            '',
+            '0%',
+            formatMoney('0'),
+            formatMoney('0'),
+            'false'
             ];
         }
 
@@ -263,21 +274,85 @@ const InvestorPage = () => {
             `${investor.investorPie || 0}%`,
             formatMoney((investor.investmentAmount || 0).toString()),
             formatMoney((investor.balance || 0).toString()),
+            investor.isBlocked?.toString() || 'false'
         ];
     }) ?? [];
 
-    const tableActions = [
-        {
-            label: 'Добавить инвестицию',
-            action: handleAddInvestment,
-            color: '#10B981'
-        },
-        {
-            label: 'Удалить',
-            action: handleDeleteInvestor,
-            color: '#EF4444'
+    const tableActions = (rowData: any[]): TableAction[] => {
+        // Получаем ID инвестора из rowData
+        const [id] = rowData;
+        // Находим инвестора в данных
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        // Проверяем, заблокирован ли инвестор
+        const isBlocked = investor?.isBlocked || false;
+
+        // Если инвестор заблокирован - показываем только действие "Аннулировать"
+        if (isBlocked) {
+            return [
+                {
+                    label: 'Аннулировать инвестора',
+                    action: (rowData) => handleClearInvestor(rowData),
+                    color: '#F59E0B'
+                }
+            ];
+        } 
+        // Если инвестор не заблокирован - показываем стандартные действия
+        else {
+            return [
+                {
+                    label: 'Добавить инвестицию',
+                    action: (rowData) => handleAddInvestment(rowData),
+                    color: '#10B981'
+                },
+                {
+                    label: 'Удалить',
+                    action: (rowData) => handleDeleteInvestor(rowData),
+                    color: '#EF4444'
+                },
+                {
+                    label: 'Заблокировать инвестора',
+                    action: (rowData) => handleBlockInvestor(rowData),
+                    color: '#F59E0B'
+                }
+            ];
         }
-    ];
+    };
+
+    const handleBlockInvestor = async (rowData: any[]) => {
+        const [id] = rowData;
+        
+        if (isNaN(Number(id))) {
+            console.error('Неверный ID инвестора');
+            return;
+        }
+
+        if (window.confirm('Вы уверены, что хотите заблокировать этого инвестора?')) {
+            try {
+            await blockInvestor(Number(id));
+            loadInvestors();
+            } catch (err) {
+            alert('Произошла ошибка при блокировке инвестора');
+            }
+        }
+    };
+
+        const handleClearInvestor = async (rowData: any[]) => {
+        const [id] = rowData;
+        
+        if (isNaN(Number(id))) {
+            console.error('Неверный ID инвестора');
+            return;
+        }
+
+        if (window.confirm('Вы уверены, что хотите анулировать этого инвестора?')) {
+            try {
+            await clearInvestor(Number(id));
+            loadInvestors();
+            } catch (err) {
+            alert('Произошла ошибка при анулировании инвестора');
+            }
+        }
+    };
 
     return (
         <PageLayout>
@@ -313,10 +388,11 @@ const InvestorPage = () => {
                             { name: "Доля инвестора", isSortable: true, align: "right" },
                             { name: "Инвестиция", isSortable: true, align: "right" },
                             { name: "Касса", isSortable: true, align: "right" },
+                            { name: "isBlocked", isHidden: true }
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}
-                        contextMenuActions={tableActions}
+                        contextMenuActions={(rowData) => tableActions(rowData)}
                         onSort={handleSort}
                         sortConfig={sortConfig}
                     />
@@ -349,7 +425,8 @@ const InvestorPage = () => {
                     investorPie: 0,
                     investmentAmount: 0,
                     balance: 0,
-                    isCompany: false
+                    isCompany: false,
+                    isBlocked: false
                 }}
             />
 

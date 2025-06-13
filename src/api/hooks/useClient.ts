@@ -144,6 +144,17 @@ const useClient = () => {
     }
   }, []);
 
+  const checkClientCredits = async (id: number): Promise<boolean> => {
+    try {
+      const result = await clientService.CheckClientCredits(id);
+      return result;
+    }
+    catch (err) {
+    }
+    finally {
+    }
+  }
+    
   return {
     isLoading,
     error,
@@ -157,6 +168,7 @@ const useClient = () => {
     updateClientDoc,
     updateClientDocIssueDate,
     checkClientExists,
+    checkClientCredits
   };
 };
 
