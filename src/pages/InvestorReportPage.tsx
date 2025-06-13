@@ -239,18 +239,6 @@ const InvestorReportPage = () => {
                             'Доход инвестора'
                         ) : ''}
                         
-                        ${!report.isCompany ? createCard(
-                            selfIncomeSvg,
-                            formatMoney(report.selfIncome.toString()),
-                            'Собственный доход'
-                        ) : ''}
-                        
-                        ${!report.isCompany ? createCard(
-                            commonIncomeSvg,
-                            formatMoney((report.investorIncome + report.selfIncome).toString()),
-                            'Общий доход'
-                        ) : ''}
-                        
                         ${createCard(
                             balanceSvg,
                             formatMoney(report.balance.toString()),
@@ -409,17 +397,12 @@ const InvestorReportPage = () => {
                     url: window.location.href,
                 });
             } else {
-                // Для десктопов - копирование ссылки
-                await navigator.clipboard.writeText(window.location.href);
-                alert('Ссылка на отчет скопирована в буфер обмена!');
             }
         } catch (error) {
             console.error('Ошибка при попытке поделиться:', error);
             
             // Fallback для браузеров без поддержки Web Share API
             try {
-                await navigator.clipboard.writeText(window.location.href);
-                alert('Ссылка на отчет скопирована в буфер обмена!');
             } catch (err) {
                 console.error('Не удалось скопировать ссылку:', err);
                 prompt('Скопируйте эту ссылку для общего доступа:', window.location.href);
