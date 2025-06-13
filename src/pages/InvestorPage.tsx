@@ -279,24 +279,24 @@ const InvestorPage = () => {
     }) ?? [];
 
     const tableActions = (rowData: any[]): TableAction[] => {
-        // Получаем ID инвестора из rowData
         const [id] = rowData;
-        // Находим инвестора в данных
         const investor = investorsData?.items.find(i => i.id === Number(id));
-        // Проверяем, заблокирован ли инвестор
         const isBlocked = investor?.isBlocked || false;
 
-        // Если инвестор заблокирован - показываем только действие "Аннулировать"
         if (isBlocked) {
             return [
                 {
                     label: 'Аннулировать инвестора',
                     action: (rowData) => handleClearInvestor(rowData),
                     color: '#F59E0B'
-                }
+                },
+                {
+                    label: 'Удалить',
+                    action: (rowData) => handleDeleteInvestor(rowData),
+                    color: '#EF4444'
+                },
             ];
         } 
-        // Если инвестор не заблокирован - показываем стандартные действия
         else {
             return [
                 {

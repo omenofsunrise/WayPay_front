@@ -24,7 +24,8 @@ const emptyInvestor: Omit<Investor, 'id'> = {
   investorPie: 0,
   investmentAmount: 0,
   balance: 0,
-  isCompany: false
+  isCompany: false,
+  isBlocked: false
 };
 
 const InvestorModal: React.FC<InvestorModalProps> = ({
@@ -40,7 +41,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     investorPie: 0,
     investmentAmount: 0,
     balance: 0,
-    isCompany: false
+    isCompany: false,
+    isBlocked: false
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Investor, 'id'>>(
@@ -51,7 +53,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       investorPie: initialData?.investorPie || 0,
       investmentAmount: initialData?.investmentAmount || 0,
       balance: initialData?.balance || 0,
-      isCompany: initialData?.isCompany || false
+      isCompany: initialData?.isCompany || false,
+      isBlocked: initialData?.isBlocked || false
     }
   );
   const [displaySum, setDisplaySum] = useState<string>(initialData.investmentAmount.toString());
@@ -126,7 +129,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           investorPie: initialData?.investorPie || 0,
           investmentAmount: initialData?.investmentAmount || 0,
           balance: initialData?.balance || 0,
-          isCompany: initialData?.isCompany || false
+          isCompany: initialData?.isCompany || false,
+          isBlocked: initialData?.isBlocked || false
         }
       );
       setDisplaySum(initialData.investmentAmount.toString());
@@ -198,7 +202,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
         newErrorMessages.balance = validateNumber(
           formData.balance, 
-          'Баланс', 
+          'Касса', 
           -1000000, 
           1000000000
         );
@@ -283,8 +287,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     const { name, value } = e.target;
     
     if (name === 'investmentAmount') {
-      const numericValue = parseMoney(value); // Используем вашу функцию parseMoney
-      setDisplaySum(formatMoney(numericValue.toString())); // Форматируем для отображения
+      const numericValue = parseMoney(value);
+      setDisplaySum(formatMoney(numericValue.toString())); 
       setFormData(prev => ({
         ...prev,
         [name]: numericValue
@@ -441,7 +445,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
           {mode === 'view' && (
             <InputRow>
-              <InputLabel>Баланс (касса):</InputLabel>
+              <InputLabel>Касса:</InputLabel>
               <InputContainer>
                 <CustomInput
                   name="balance"
@@ -450,6 +454,19 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
                   disabled={true}
                 />
               </InputContainer>
+            </InputRow>
+          )}
+
+          {mode === 'view' && (
+            <InputRow>
+                <InputLabel>Заблокирован:</InputLabel>
+                <InputContainer>
+                  <CustomInput
+                    name="isBlocked"
+                    value={formData.isBlocked ? "Да" : "Нет"}
+                    disabled={true}
+                  />
+                </InputContainer>
             </InputRow>
           )}
 

@@ -532,7 +532,8 @@ const NewCreditPage = () => {
           investorPie: investor.investorPie,
           investmentAmount: investor.investmentAmount,
           balance: investor.balance,
-          isCompany: false
+          isCompany: false,
+          isBlocked: false
         } : undefined}
       />
     </PageLayout>
