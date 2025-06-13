@@ -17,6 +17,7 @@ import selfIncomeSvg from '../assets/ui/InvestorReport/selfIncome.svg';
 import commonIncomeSvg from '../assets/ui/InvestorReport/commonIncome.svg';
 import balanceSvg from '../assets/ui/InvestorReport/balance.svg';
 import CustomTable from '../components/ui/tables/CustomTable';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 
 const InvestorReportPage = () => {
     const { getInvestors, currentInvestor, getInvestorById, getInvestorReport } = useInvestor();
@@ -32,7 +33,6 @@ const InvestorReportPage = () => {
                 const result = await getInvestors();
                 if (result?.items) {
                     setInvestors(result.items);
-                    // Находим первого инвестора с isCompany: true
                     const companyInvestor = result.items.find(investor => investor.isCompany);
                     if (companyInvestor) {
                         setSelectedInvestorId(companyInvestor.id.toString());
@@ -90,10 +90,6 @@ const InvestorReportPage = () => {
                 )}
 
                 <InvestorInfoContainer>
-                    <InvestorName>
-                        {report?.fullName || 'Выберите инвестора'}
-                    </InvestorName>
-                    
                     <SelectWrapper>
                         <CustomSelect
                             value={selectedInvestorId}
@@ -104,59 +100,76 @@ const InvestorReportPage = () => {
                             disabled={isLoading}
                         />
                     </SelectWrapper>
+                    {report != null && !report.isCompany && (
+                        <DarkCyanButton style={{marginLeft: "auto"}}>Выплатить инвестору</DarkCyanButton>
+                    )}
                 </InvestorInfoContainer>
                 <ModalInfoTitle>Общие данные</ModalInfoTitle>
                 {report && (
-                    <ReportDataContainer>
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={investmentSvg} alt="Investment" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
-                            <ReportLabel>Инвестиции</ReportLabel>
-                        </ReportCard>
+    <ReportDataContainer>
+        <ReportCard>
+            <IconContainer>
+                <Icon src={investmentSvg} alt="Investment" />
+            </IconContainer>
+            <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
+            <ReportLabel>Инвестиция</ReportLabel>
+        </ReportCard>
 
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={activeCreditsSvg} alt="Active credits" />
-                            </IconContainer>
-                            <ReportValue>{report.activeCreditsAmount}</ReportValue>
-                            <ReportLabel>Незакрытые договоры</ReportLabel>
-                        </ReportCard>
+        <ReportCard>
+            <IconContainer>
+                <Icon src={activeCreditsSvg} alt="Active credits" />
+            </IconContainer>
+            <ReportValue>{report.activeCreditsAmount}</ReportValue>
+            <ReportLabel>Незакрытые договоры</ReportLabel>
+        </ReportCard>
 
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={investorIncomeScg} alt="Investor income" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
-                            <ReportLabel>Доход инвестора</ReportLabel>
-                        </ReportCard>
+        {report.isCompany ? (
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={commonIncomeSvg} alt="Company income" />
+                </IconContainer>
+                <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
+                <ReportLabel>Доход компании</ReportLabel>
+            </ReportCard>
+        ) : (
+            <>
+                <ReportCard>
+                    <IconContainer>
+                        <Icon src={investorIncomeScg} alt="Investor income" />
+                    </IconContainer>
+                    <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
+                    <ReportLabel>Доход инвестора</ReportLabel>
+                </ReportCard>
 
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={selfIncomeSvg} alt="Self income" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
-                            <ReportLabel>Собственный доход</ReportLabel>
-                        </ReportCard>
+                <ReportCard>
+                    <IconContainer>
+                        <Icon src={selfIncomeSvg} alt="Self income" />
+                    </IconContainer>
+                    <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
+                    <ReportLabel>Собственный доход</ReportLabel>
+                </ReportCard>
+            </>
+        )}
 
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={report.isCompany ? commonIncomeSvg : selfIncomeSvg} alt="Type" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
-                            <ReportLabel>Общий доход</ReportLabel>
-                        </ReportCard>
+        {!report.isCompany && (
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={commonIncomeSvg} alt="Total income" />
+                </IconContainer>
+                <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
+                <ReportLabel>Общий доход</ReportLabel>
+            </ReportCard>
+        )}
 
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={balanceSvg} alt="Balance" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
-                            <ReportLabel>Текущий баланс</ReportLabel>
-                        </ReportCard>
-                    </ReportDataContainer>
-                )}
+        <ReportCard>
+            <IconContainer>
+                <Icon src={balanceSvg} alt="Balance" />
+            </IconContainer>
+            <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+            <ReportLabel>Касса</ReportLabel>
+        </ReportCard>
+    </ReportDataContainer>
+)}
                 <ModalInfoTitle style={{marginTop: "30px" }}>Общие данные</ModalInfoTitle>
                 <CustomTable 
                     columns={[
@@ -210,7 +223,6 @@ const InvestorName = styled.div`
 const SelectWrapper = styled.div`
     flex-grow: 1;
     max-width: 300px;
-    margin-left: auto;
 `;
 
 const ReportDataContainer = styled.div`
