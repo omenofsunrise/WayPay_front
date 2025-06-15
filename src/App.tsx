@@ -18,6 +18,7 @@ import CreditControlPage from './pages/CreditControlPage';
 import EmployeeProfilePage from './pages/ProfilePage/EmployeeProfilePage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import InvestorReportPage from './pages/InvestorReportPage';
+import BudgetPage from './pages/BudgetPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -140,6 +141,12 @@ function App() {
         <Route path="investors-report" element={
             <MainLayout>
               <InvestorReportPage />
+            </MainLayout>
+        } />
+
+        <Route path="budget" element={
+            <MainLayout>
+              <BudgetPage />
             </MainLayout>
         } />
 

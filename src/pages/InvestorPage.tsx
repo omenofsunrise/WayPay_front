@@ -286,9 +286,14 @@ const InvestorPage = () => {
         if (isBlocked) {
             return [
                 {
+                    label: 'Разблокировать инвестора',
+                    action: (rowData) => handleBlockInvestor(rowData),
+                    color: '#F59E0B'
+                },
+                {
                     label: 'Аннулировать инвестора',
                     action: (rowData) => handleClearInvestor(rowData),
-                    color: '#F59E0B'
+                    color: 'rgba(255, 158, 66, 1)'
                 },
                 {
                     label: 'Удалить',

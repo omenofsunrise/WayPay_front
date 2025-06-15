@@ -51,7 +51,7 @@ class ProductService {
   }
 
   async blockInvestor(id: number): Promise<void> {
-    await apiClient.patch(`/Investor/block/${id}`);
+    await apiClient.patch(`/Investor/toggle-block/${id}`);
   }
 
   async clearInvestor(id: number): Promise<void> {
