@@ -8,9 +8,17 @@ interface CountInfoTitleProps {
 const CountInfoTitle = ({ total }: CountInfoTitleProps) => {
     return (
         <div>
-            <p>Всего: {total}</p>
+            <Paragraph>Всего: {total}</Paragraph>
         </div>
     );
 };
+
+const Paragraph = styled.p`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px; 
+  margin-top: 30px;
+`;
 
 export default CountInfoTitle;
