@@ -19,6 +19,7 @@ import EmployeeProfilePage from './pages/ProfilePage/EmployeeProfilePage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import InvestorReportPage from './pages/InvestorReportPage';
 import BudgetPage from './pages/BudgetPage';
+import { ErrorBoundary } from "react-error-boundary";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -146,7 +147,9 @@ function App() {
 
         <Route path="budget" element={
             <MainLayout>
-              <BudgetPage />
+              <ErrorBoundary fallback={<div>Something went wrong</div>}>
+                <BudgetPage />
+              </ErrorBoundary>
             </MainLayout>
         } />
 
