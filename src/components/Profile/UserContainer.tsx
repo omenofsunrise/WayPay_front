@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { useState, useRef, useEffect } from "react";
+import { useMediaQuery } from "react-responsive";
 import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
 import { BASE_URL } from "../../api/client";
@@ -20,7 +21,9 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     const [isDefaultAvatar, setIsDefaultAvatar] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarRef = useRef<HTMLImageElement>(null);
+    const contextMenuRef = useRef<HTMLDivElement>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
+    const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
     const employee = propEmployee;
     
     useEffect(() => {
@@ -31,6 +34,23 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         }
     }, [employee?.photoPath]);
 
+    // Обработчик кликов вне меню
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+                setIsContextMenuOpen(false);
+            }
+        };
+
+        if (isContextMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isContextMenuOpen]);
+
     const handleEditClick = () => {
         if (!isCurrentUser) return;
         setIsModalOpen(true);
@@ -38,7 +58,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
 
     const handleModalClose = async () => {
         let result = await refresh();
-        employee.photoPath = result.employee.photoPath;
+        if (employee) employee.photoPath = result.employee.photoPath;
         setIsModalOpen(false);
     };
 
@@ -52,23 +72,24 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         if (!employee?.id || !isCurrentUser) return;
         
         try {
-        const result = await updateEmployee({
-            id: employee.id,
-            fullName: updatedData.fullName,
-            address: updatedData.address,
-            phone: updatedData.phone,
-        });
-        employee.fullName = result.fullName;
-        employee.address =result.address;
-        setIsModalOpen(false);
-        
-        await refresh();
+            const result = await updateEmployee({
+                id: employee.id,
+                fullName: updatedData.fullName,
+                address: updatedData.address,
+                phone: updatedData.phone,
+            });
+            if (employee) {
+                employee.fullName = result.fullName;
+                employee.address = result.address;
+            }
+            setIsModalOpen(false);
+            await refresh();
         } catch (err) {
-        console.error("Failed to update employee:", err);
+            console.error("Failed to update employee:", err);
         }
     };
 
-    const handleAvatarMouseEnter = (e: React.MouseEvent) => {
+    const handleAvatarInteraction = (e: React.MouseEvent) => {
         if (!isCurrentUser) return;
         
         if (hoverTimeoutRef.current) {
@@ -81,16 +102,34 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                 x: e.clientX,
                 y: e.clientY + 10
             });
-            setIsContextMenuOpen(true);
+            setIsContextMenuOpen(prev => !prev);
         }
     };
 
+    const handleAvatarMouseEnter = (e: React.MouseEvent) => {
+        if (!isCurrentUser || isMobile) return;
+        handleAvatarInteraction(e);
+    };
+
     const handleAvatarMouseLeave = () => {
-        if (!isCurrentUser) return;
+        if (!isCurrentUser || isMobile) return;
         
         hoverTimeoutRef.current = window.setTimeout(() => {
             setIsContextMenuOpen(false);
         }, 100);
+    };
+
+    const handleAvatarClick = (e: React.MouseEvent) => {
+        if (!isCurrentUser) {
+            if (!isDefaultAvatar) {
+                setIsViewingPhoto(true);
+            }
+            return;
+        }
+        
+        if (isMobile) {
+            handleAvatarInteraction(e);
+        }
     };
 
     const handleContextMenuMouseEnter = () => {
@@ -101,6 +140,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     };
 
     const handleContextMenuMouseLeave = () => {
+        if (isMobile) return;
         setIsContextMenuOpen(false);
     };
 
@@ -124,8 +164,8 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         if (e.target.files && e.target.files.length > 0) {
             try {
                 let result = await updateEmployeePhoto(employee.id, e.target.files[0]);
-                employee.photoPath = result.photoPath;
-                setIsDefaultAvatar(false); // После загрузки фото устанавливаем флаг пользовательского аватара
+                if (employee) employee.photoPath = result.photoPath;
+                setIsDefaultAvatar(false);
             } catch (err) {
                 console.error("Failed to update photo:", err);
             } finally {
@@ -177,9 +217,9 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                     ref={avatarRef}
                     src={avatarSrc} 
                     alt={employee.fullName} 
-                    onMouseEnter={isCurrentUser ? handleAvatarMouseEnter : undefined}
-                    onMouseLeave={isCurrentUser ? handleAvatarMouseLeave : undefined}
-                    onClick={isCurrentUser ? undefined : (!isDefaultAvatar ? () => setIsViewingPhoto(true) : undefined)}
+                    onMouseEnter={handleAvatarMouseEnter}
+                    onMouseLeave={handleAvatarMouseLeave}
+                    onClick={handleAvatarClick}
                     onError={(e) => {
                         e.currentTarget.src = generateAvatar(getInitials(employee.fullName), 100);
                         setIsDefaultAvatar(true);
@@ -189,6 +229,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                 
                 {isContextMenuOpen && isCurrentUser && (
                     <ContextMenu 
+                        ref={contextMenuRef}
                         style={{
                             left: `${contextMenuPosition.x}px`,
                             top: `${contextMenuPosition.y}px`,
@@ -205,7 +246,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                         <ContextMenuItem onClick={() => handleContextMenuAction('change')}>
                             {isDefaultAvatar ? "Добавить фото" : "Изменить фото"} 
                         </ContextMenuItem>
-                        {!isDefaultAvatar && ( // Показываем кнопку удаления только для пользовательских аватаров
+                        {!isDefaultAvatar && (
                             <ContextMenuItem onClick={() => handleContextMenuAction('remove')}>
                                 Удалить фото
                             </ContextMenuItem>

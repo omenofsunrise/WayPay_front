@@ -19,6 +19,12 @@ const parseMoney = (value: string): number => {
   return parseFloat(value.replace(/\D/g, '')) || 0;
 };
 
+const getNextMonthDate = () => {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1);
+  return date;
+};
+
 interface CustomCalendarWrapperProps {
   selectedDate: Date;
   onChange: (date: Date) => void;
@@ -55,8 +61,8 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
     months: '',
     initial: '',
     percent: '',
-    round: '1000',
-    startDate: new Date(),
+    round: '50',
+    startDate: getNextMonthDate(),
   });
 
   const [displayAmount, setDisplayAmount] = useState('');
@@ -70,6 +76,19 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
     lastPaymentMonth: '',
   });
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   const generatePdf = async () => {
     return new Promise<Blob>(async (resolve, reject) => {
       const pdfContainer = document.createElement('div');
@@ -78,58 +97,140 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
       pdfContainer.style.width = '800px';
       pdfContainer.style.padding = '20px';
       pdfContainer.style.fontFamily = 'Arial, sans-serif';
-      pdfContainer.style.backgroundColor = 'white';
+      pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
       document.body.appendChild(pdfContainer);
 
       pdfContainer.innerHTML = `
-        <div style="margin-bottom: 20px;">
-          <h1 style="color: rgba(0, 125, 136, 1); font-size: 24px; margin-bottom: 5px; border-bottom: 2px solid rgba(37, 203, 161, 1); padding-bottom: 10px;">
-            Расчет рассрочки
+        <div style="
+          margin-bottom: 30px;
+          background: rgba(255, 255, 255, 1);
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        ">
+          <h1 style="
+            color: rgba(0, 125, 136, 1);
+            font-size: 24px;
+            margin-bottom: 5px;
+            border-bottom: 2px solid rgba(37, 203, 161, 1);
+            padding-bottom: 10px;
+          ">
+            Расчёт рассрочки
           </h1>
-          <p style="color: #6B7280; font-size: 14px; margin: 0;">
+          <p style="
+            color: #6B7280;
+            font-size: 14px;
+            margin: 0;
+          ">
             Дата формирования: ${new Date().toLocaleDateString('ru-RU')}
           </p>
         </div>
 
-        <div style="margin-bottom: 20px; background: #f9fafafa; padding: 15px; border-radius: 8px;">
-          <h2 style="color: rgba(0, 125, 136, 1); font-size: 18px; margin-top: 0; margin-bottom: 15px;">
+        <div style="
+          margin-bottom: 30px;
+          background: rgba(255, 255, 255, 1);
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        ">
+          <h2 style="
+            color: rgba(0, 125, 136, 1);
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+          ">
+            <span style="
+              display: inline-block;
+              width: 4px;
+              height: 20px;
+              background: rgba(37, 203, 161, 1);
+              margin-right: 10px;
+              border-radius: 2px;
+            "></span>
             Входные данные
           </h2>
-          
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div>
               <p style="margin: 5px 0; color: #374151;"><strong>Сумма рассрочки:</strong> ${displayAmount || '0'} ₽</p>
               <p style="margin: 5px 0; color: #374151;"><strong>Первоначальный взнос:</strong> ${displayInitial || '0'} ₽</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Начало выплат:</strong> ${formData.startDate.toLocaleDateString('ru-RU')}</p>
+              <p style="margin: 5px 0; color: #374151;"><strong>Надбавка:</strong> ${formData.percent || '0'}%</p>
             </div>
             <div>
               <p style="margin: 5px 0; color: #374151;"><strong>Количество месяцев:</strong> ${formData.months || '0'}</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Надбавка:</strong> ${formData.percent || '0'} %</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Округление до:</strong> ${formData.round || '1000'} ₽</p>
+              <p style="margin: 5px 0; color: #374151;"><strong>Начало выплат:</strong> ${formData.startDate.toLocaleDateString('ru-RU')}</p>
+              <p style="margin: 5px 0; color: #374151;"><strong>Округление до:</strong> ${formData.round || '50'} ₽</p>
             </div>
           </div>
         </div>
 
-        <div style="background: #f9fafafa; padding: 15px; border-radius: 8px;">
-          <h2 style="color: rgba(0, 125, 136, 1); font-size: 18px; margin-top: 0; margin-bottom: 15px;">
-            Результаты расчета
+        <div style="
+          background: rgba(255, 255, 255, 1);
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          margin-bottom: 30px;
+        ">
+          <h2 style="
+            color: rgba(0, 125, 136, 1);
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+          ">
+            <span style="
+              display: inline-block;
+              width: 4px;
+              height: 20px;
+              background: rgba(37, 203, 161, 1);
+              margin-right: 10px;
+              border-radius: 2px;
+            "></span>
+            Результаты расчёта
           </h2>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div>
-              <p style="margin: 5px 0; color: #374151;"><strong>Ежемесячный платёж:</strong> ${results.monthlyPayment} ₽</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Сумма долга:</strong> ${results.totalDebt} ₽</p>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
+              <span style="color: #374151;">Ежемесячный платёж</span>
+              <span style="font-weight: 500; color: #111827;">${results.monthlyPayment} ₽</span>
             </div>
-            <div>
-              <p style="margin: 5px 0; color: #374151;"><strong>Переплата:</strong> ${results.overpayment} ₽</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Общая сумма:</strong> ${results.totalAmount} ₽</p>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
+              <span style="color: #374151;">Сумма долга</span>
+              <span style="font-weight: 500; color: #111827;">${results.totalDebt} ₽</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
+              <span style="color: #374151;">Переплата</span>
+              <span style="font-weight: 500; color: #111827;">${results.overpayment} ₽</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
+              <span style="color: #374151;">Общая сумма</span>
+              <span style="font-weight: 500; color: #111827;">${results.totalAmount} ₽</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+              <span style="color: #374151;">Последний месяц оплаты</span>
+              <span style="font-weight: 500; color: #111827;">${results.lastPaymentMonth}</span>
             </div>
           </div>
-          
-          <p style="margin: 10px 0 0; color: #374151;"><strong>Последний месяц оплаты:</strong> ${results.lastPaymentMonth}</p>
+          <div style="margin-top: 20px; width: 100%; height: 10px; position: relative; background: rgba(37, 203, 161, 1); border-radius: 5px; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${
+              parseFloat(results.totalDebt.replace(/\s/g, '')) > 0 && parseFloat(results.overpayment.replace(/\s/g, '')) > 0
+                ? (parseFloat(results.totalDebt.replace(/\s/g, '')) / 
+                  (parseFloat(results.totalDebt.replace(/\s/g, '')) + parseFloat(results.overpayment.replace(/\s/g, ''))) * 100)
+                : 50
+            }%; background: rgba(0, 125, 136, 1); border-radius: 5px 0 0 5px;"></div>
+          </div>
         </div>
 
-        <div style="margin-top: 20px; padding: 10px; text-align: center; color: #6B7280; font-size: 12px;">
+        <div style="
+          padding: 15px;
+          text-align: center;
+          color: #6B7280;
+          font-size: 12px;
+          background: rgba(255, 255, 255, 1);
+          border-radius: 12px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        ">
           <p>© ${new Date().getFullYear()} WayPay. Все права защищены.</p>
         </div>
       `;
@@ -139,6 +240,7 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
           scale: 2,
           logging: false,
           useCORS: true,
+          allowTaint: true,
           width: pdfContainer.offsetWidth,
           height: pdfContainer.scrollHeight,
           windowWidth: pdfContainer.scrollWidth,
@@ -147,8 +249,8 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
 
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 210;
-        const pageHeight = 295;
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 295; // A4 height in mm
         const imgHeight = canvas.height * imgWidth / canvas.width;
         let heightLeft = imgHeight;
         let position = 0;
@@ -164,6 +266,7 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
         }
 
         document.body.removeChild(pdfContainer);
+
         const pdfBlob = pdf.output('blob');
         resolve(pdfBlob);
       } catch (error) {
@@ -198,33 +301,40 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
       
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], `Расчет_рассрочки_${new Date().toLocaleDateString('ru-RU')}.pdf`, { type: 'application/pdf' })] })) {
         await navigator.share({
-          title: `Расчет рассрочки`,
-          text: `Результаты расчета рассрочки: Ежемесячный платеж ${results.monthlyPayment} ₽, Общая сумма ${results.totalAmount} ₽`,
+          title: `Расчёт рассрочки`,
+          text: `Результаты расчёта рассрочки: Ежемесячный платёж ${results.monthlyPayment} ₽, Общая сумма ${results.totalAmount} ₽`,
           files: [new File([pdfBlob], `Расчет_рассрочки_${new Date().toLocaleDateString('ru-RU')}.pdf`, { type: 'application/pdf' })]
         });
       } else if (navigator.share) {
         await navigator.share({
-          title: `Расчет рассрочки`,
-          text: `Результаты расчета рассрочки: Ежемесячный платеж ${results.monthlyPayment} ₽, Общая сумма ${results.totalAmount} ₽`,
+          title: `Расчёт рассрочки`,
+          text: `Результаты расчёта рассрочки: Ежемесячный платёж ${results.monthlyPayment} ₽, Общая сумма ${results.totalAmount} ₽`,
           url: window.location.href,
         });
       } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(`Результаты расчета рассрочки:\nЕжемесячный платеж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платеж: ${results.lastPaymentMonth}`);
-        alert('Результаты скопированы в буфер обмена');
+        try {
+          await navigator.clipboard.writeText(`Результаты расчёта рассрочки:\nЕжемесячный платёж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платёж: ${results.lastPaymentMonth}`);
+          alert('Результаты скопированы в буфер обмена');
+        } catch (err) {
+          console.error('Не удалось скопировать в буфер обмена:', err);
+          prompt('Скопируйте эту информацию:', `Результаты расчёта рассрочки:\nЕжемесячный платёж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платёж: ${results.lastPaymentMonth}`);
+        }
       } else {
-        prompt('Скопируйте результаты расчета:', `Ежемесячный платеж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платеж: ${results.lastPaymentMonth}`);
+        prompt('Скопируйте эту информацию:', `Результаты расчёта рассрочки:\nЕжемесячный платёж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платёж: ${results.lastPaymentMonth}`);
       }
     } catch (error) {
       console.error('Ошибка при попытке поделиться:', error);
+      
       if (navigator.clipboard) {
         try {
-          await navigator.clipboard.writeText(`Результаты расчета рассрочки:\nЕжемесячный платеж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платеж: ${results.lastPaymentMonth}`);
+          await navigator.clipboard.writeText(`Результаты расчёта рассрочки:\nЕжемесячный платёж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платёж: ${results.lastPaymentMonth}`);
           alert('Результаты скопированы в буфер обмена');
         } catch (err) {
-          prompt('Скопируйте результаты расчета:', `Ежемесячный платеж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платеж: ${results.lastPaymentMonth}`);
+          console.error('Не удалось скопировать в буфер обмена:', err);
+          prompt('Скопируйте эту информацию:', `Результаты расчёта рассрочки:\nЕжемесячный платёж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платёж: ${results.lastPaymentMonth}`);
         }
       } else {
-        prompt('Скопируйте результаты расчета:', `Ежемесячный платеж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платеж: ${results.lastPaymentMonth}`);
+        prompt('Скопируйте эту информацию:', `Результаты расчёта рассрочки:\nЕжемесячный платёж: ${results.monthlyPayment} ₽\nОбщая сумма: ${results.totalAmount} ₽\nПоследний платёж: ${results.lastPaymentMonth}`);
       }
     }
   };
@@ -272,7 +382,7 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
       const months = parseFloat(formData.months) || 1;
       const initial = parseFloat(formData.initial) || 0;
       const percent = parseFloat(formData.percent) || 0;
-      const round = parseFloat(formData.round) || 1000;
+      const round = parseFloat(formData.round) || 50;
 
       const totalAmount = amount * (1 + percent / 100);
       const roundedTotalAmount = roundUp(totalAmount, round);
@@ -445,40 +555,6 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
     document.body
   );
 };
-
-const PDFInputsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-`;
-
-const PDFInputRow = styled.div`
-  display: flex;
-  gap: 32px;
-`;
-
-const PDFInputGroup = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const PDFLabel = styled.label`
-  font-size: 14px;
-  color: #888;
-  font-weight: 500;
-  text-align: left;
-`;
-
-const PDFValue = styled.div`
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  padding: 8px 12px;
-  background: #f5f5f5;
-  border-radius: 4px;
-`;
 
 const ModalOverlay = styled.div`
   position: fixed;

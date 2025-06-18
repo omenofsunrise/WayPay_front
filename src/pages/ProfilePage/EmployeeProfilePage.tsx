@@ -11,6 +11,7 @@ import paymentsSvg from '../../assets/ui/analitic/payments.svg';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import { useEffect, useMemo, useState } from 'react';
 import type { Employee } from '../../api/types/employee';
+import { useMediaQuery } from 'react-responsive';
 
 interface EmployeeProfilePageProps {
     employeeId?: number;
@@ -51,7 +52,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     
     const statsToUse = employeeId ? employeeCreditsStats : creditsStats;
     const paymentsToUse = employeeId ? employeePaymentsStats : paymentsStats;
-
+    const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
     const [employee, setEmployee] = useState<Employee | null>(null);
     
     const scatterPlotData = useMemo(() => 
