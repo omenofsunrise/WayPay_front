@@ -451,8 +451,8 @@ const NewCreditPage = () => {
                 />
               </InputRow>
             </InputGroup>
-            <InputGroup>
-              <ButtonWrapper>
+            <InputGroup style={{ margin: 0 }}>
+              <ButtonWrapper style={{ margin: 5 }}>
                 <GrayButton onClick={() => navigate(-1)}>
                   Отменить
                 </GrayButton>

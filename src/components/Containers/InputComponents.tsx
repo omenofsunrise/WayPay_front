@@ -22,4 +22,5 @@ export const InputContainer = styled.div`
   margin-left: auto;
   flex: 1;
   max-width: 425px;
+  margin-top: 10px;
 `;
