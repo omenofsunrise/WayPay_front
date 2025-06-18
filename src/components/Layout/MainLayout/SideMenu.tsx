@@ -50,21 +50,32 @@ const SideMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
+  const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
     const menuItem = menuItemsMap[currentPath];
     
     if (menuItem) {
-      setSelectedSideMenuItem(menuItem.mainItem);
       if (menuItem.subItems) {
-        setExpandedItem(menuItem.mainItem);
         const subItemKey = Object.keys(menuItem.subItems).find(key => currentPath.startsWith(key));
         if (subItemKey) {
-          setSelectedSideMenuItem(menuItem.subItems[subItemKey]);
+          return menuItem.subItems[subItemKey];
         }
       }
+      return menuItem.mainItem;
     }
-  }, [location.pathname, setSelectedSideMenuItem]);
+    return null;
+  };
+
+  useEffect(() => {
+      const currentMenuItem = getCurrentMenuItem();
+      if (currentMenuItem) {
+        setSelectedSideMenuItem(currentMenuItem);
+        const menuItem = menuItemsMap[location.pathname];
+        if (menuItem?.subItems) {
+          setExpandedItem(menuItem.mainItem);
+        }
+      }
+    }, [location.pathname, setSelectedSideMenuItem]);
 
   const toggleItem = (item: string) => {
     if (collapsed) {
@@ -81,13 +92,11 @@ const SideMenu = () => {
 
   const handleMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
-    setSelectedTopMenuItem(null);
     navigate(path);
   };
 
   const handleSubMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
-    setSelectedTopMenuItem(null);
     navigate(path);
   };
 

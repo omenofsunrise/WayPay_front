@@ -1,23 +1,23 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import CalculatorIcon from '../../../assets/ui/TopBar/calculator.svg';
 import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
-import CalendarIcon from '../../../assets/ui/TopBar/calendar.svg';
 import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
 import BlogIcon from '../../../assets/ui/TopBar/blog.svg';
 import newCreditIcon from '../../../assets/ui/TopBar/newCredit.svg';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import CalculatorModal from '../../modal/CalculatorModal';
 
 const menuItems = [
   { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit'},
-  { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', path: '/calculator' },
+  { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
   { id: 'blog', icon: BlogIcon, text: 'Блог', path: '/blog' }
 ];
 
-const pathToMenuItemMap: Record<string, string> = {
+export const pathToMenuItemMap: Record<string, string> = {
   '/new-credit': 'newCredit',
   '/calculator': 'calculator',
   '/chat': 'chat',
@@ -34,40 +34,64 @@ const TopMenu = () => {
   } = useContext(SideMenuContext);
   const navigate = useNavigate();
   const location = useLocation();
+  const [showCalculator, setShowCalculator] = useState(false);
+
+  const getCurrentMenuItem = () => {
+    const currentPath = location.pathname;
+    return pathToMenuItemMap[currentPath] || null;
+  };
 
   useEffect(() => {
-    const currentPath = location.pathname;
-    const menuItemId = pathToMenuItemMap[currentPath];
-    
-    if (menuItemId) {
-      setSelectedTopMenuItem(menuItemId);
+    const currentMenuItem = getCurrentMenuItem();
+    if (currentMenuItem) {
+      setSelectedTopMenuItem(currentMenuItem);
       setSelectedSideMenuItem(null);
     }
   }, [location.pathname, setSelectedTopMenuItem, setSelectedSideMenuItem]);
 
-  const handleMenuItemClick = (itemId: string, path: string) => {
+  const handleMenuItemClick = (itemId: string, path?: string, isModal?: boolean) => {
     setSelectedTopMenuItem(itemId);
-    setSelectedSideMenuItem(null);
-    navigate(path);
+    if (!isModal && path) {
+      navigate(path);
+    }
+    if (isModal) {
+      setShowCalculator(true);
+    }
+  };
+
+  const handleCalculatorClose = () => {
+    setShowCalculator(false);
+    setSelectedTopMenuItem(null);
+  };
+
+  const isItemSelected = (itemId: string) => {
+    if (itemId === 'calculator') {
+      return showCalculator || selectedTopMenuItem === 'calculator';
+    }
+    return selectedTopMenuItem === itemId || getCurrentMenuItem() === itemId;
   };
 
   return (
-    <TopMenuContainer $collapsed={collapsed}>
-      <MenuItemsWrapper>
-        {menuItems.map((item) => (
-          <MenuItem 
-            key={item.id}
-            onClick={() => handleMenuItemClick(item.id, item.path)}
-            $selected={selectedTopMenuItem === item.id}
-          >
-            <IconWrapper>
-              <Icon src={item.icon} alt={item.text} $selected={selectedTopMenuItem === item.id} />
-            </IconWrapper>
-            <Text $selected={selectedTopMenuItem === item.id}>{item.text}</Text>
-          </MenuItem>
-        ))}
-      </MenuItemsWrapper>
-    </TopMenuContainer>
+    <>
+      <TopMenuContainer $collapsed={collapsed}>
+        <MenuItemsWrapper>
+          {menuItems.map((item) => (
+            <MenuItem 
+              key={item.id}
+              onClick={() => handleMenuItemClick(item.id, item.path, item.modal)}
+              $selected={isItemSelected(item.id)}
+            >
+              <IconWrapper>
+                <Icon src={item.icon} alt={item.text} $selected={isItemSelected(item.id)} />
+              </IconWrapper>
+              <Text $selected={isItemSelected(item.id)}>{item.text}</Text>
+            </MenuItem>
+          ))}
+        </MenuItemsWrapper>
+      </TopMenuContainer>
+      
+      {showCalculator && <CalculatorModal onClose={handleCalculatorClose} />}
+    </>
   );
 };
 

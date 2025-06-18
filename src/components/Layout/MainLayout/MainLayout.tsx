@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import SideMenu from './SideMenu';
-import TopMenu from './TopMenu';
+import TopMenu, { pathToMenuItemMap } from './TopMenu';
 import { SideMenuContext } from './SideMenuContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -12,7 +13,18 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedSideMenuItem, setSelectedSideMenuItem] = useState<string | null>(null);
   const [selectedTopMenuItem, setSelectedTopMenuItem] = useState<string | null>(null);
-  
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const isTopMenuPath = Object.keys(pathToMenuItemMap).includes(location.pathname);
+    if (isTopMenuPath) {
+      setSelectedSideMenuItem(null);
+    } else {
+      setSelectedTopMenuItem(null);
+    }
+  }, [location.pathname]);
+
   const toggleCollapsed = () => {
     setCollapsed(!collapsed);
   };
