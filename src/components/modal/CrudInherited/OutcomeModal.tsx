@@ -1,11 +1,12 @@
 import React from 'react';
-import CustomInput from '../../ui/fields/CustomInput';
 import BaseModal from '../BASE/modalCRUBase';
+import CustomInput from '../../ui/fields/CustomInput';
+import { formatMoney } from '../../../utils/formatPrice';
 
 interface OutcomeModalProps {
     show: boolean;
     onClose: () => void;
-    onSave: (e: React.FormEvent) => void;
+    onSave: (e: React.FormEvent) => Promise<boolean> | void;
     newOutcome: {
         amount: string;
         comment: string;
@@ -23,6 +24,41 @@ const OutcomeModal: React.FC<OutcomeModalProps> = ({
     newOutcome,
     setNewOutcome
 }) => {
+    const [formattedAmount, setFormattedAmount] = React.useState('');
+
+    React.useEffect(() => {
+        if (show) {
+            setFormattedAmount(newOutcome.amount ? formatMoney(newOutcome.amount) : '');
+        } else {
+            setFormattedAmount('');
+        }
+    }, [show]);
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        const rawValue = value.replace(/\D/g, '');
+        setNewOutcome(prev => ({...prev, amount: rawValue}));
+        setFormattedAmount(formatMoney(rawValue));
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!newOutcome.amount) {
+            alert('Пожалуйста, укажите сумму');
+            return;
+        }
+
+        try {
+            await onSave(e);
+            // Reset after successful save
+            setNewOutcome({ amount: '', comment: '' });
+            setFormattedAmount('');
+        } catch (error) {
+            console.error('Ошибка при сохранении:', error);
+        }
+    };
+
     if (!show) return null;
 
     return (
@@ -30,14 +66,14 @@ const OutcomeModal: React.FC<OutcomeModalProps> = ({
             title="Добавить расход"
             onClose={onClose}
             onCancel={onClose}
-            onSave={onSave}
+            onSave={handleSave}
             isSaveDisabled={!newOutcome.amount}
         >
             <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
                 <CustomInput
-                    type="rubles"
-                    value={newOutcome.amount}
-                    onChange={(e) => setNewOutcome({...newOutcome, amount: e.target.value})}
+                    type="text"
+                    value={formattedAmount}
+                    onChange={handleAmountChange}
                     placeholder="Введите сумму"
                     required
                 />

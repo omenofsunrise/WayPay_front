@@ -11,12 +11,26 @@ import CustomTable from "../components/ui/tables/CustomTable"
 import Pagination from "../components/ui/fields/CustomPagination"
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout"
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle"
-import CustomInput from "../components/ui/fields/CustomInput"
 import useBudgetIncome from "../api/hooks/useBudgetIncome"
 import useBudgetOutcome from "../api/hooks/useBudgetOutcome"
 import { formatMoney } from "../utils/formatPrice"
 import OutcomeModal from "../components/modal/CrudInherited/OutcomeModal"
 import IncomeModal from "../components/modal/CrudInherited/IncomeModal"
+import InvestorSelectModal from "../components/modal/CrudInherited/InvestorSelectModal"
+import InvestorModal from "../components/modal/CrudInherited/InvestorModal"
+import { BudgetService } from "../api/services/budgetService"
+import { formatDate } from "../utils/dateFormatter"
+import * as XLSX from 'xlsx';
+
+interface Investor {
+  id: number;
+  nickname: string;
+  fullName: string;
+  phoneNumber: string;
+  investorPie: number;
+  investmentAmount: number;
+  balance: number;
+}
 
 interface IncomeState {
     items?: any[];
@@ -32,12 +46,30 @@ interface OutcomeState {
     page?: number;
 }
 
+interface Income {
+  id: number;
+  amount: number;
+  createdAt: string;
+  comment: string;
+  investorName?: string;
+  investorId?: number;
+}
+
+interface Outcome {
+  id: number;
+  amount: number;
+  createdAt: string;
+  comment: string;
+}
+
 const BudgetPage = () => {
     const currentDate = new Date();
     const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
     const [showIncomeModal, setShowIncomeModal] = useState(false);
     const [showOutcomeModal, setShowOutcomeModal] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportProgress, setExportProgress] = useState(0);
     const [newIncome, setNewIncome] = useState({
         amount: '',
         comment: '',
@@ -47,10 +79,17 @@ const BudgetPage = () => {
         amount: '',
         comment: ''
     });
+    const [investors, setInvestors] = useState<Investor[]>([]);
+    const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
+    const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
+    const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
 
-    // Initialize with empty states
     const [incomes, setIncomes] = useState<IncomeState>({});
     const [outcomes, setOutcomes] = useState<OutcomeState>({});
+
+    const isCurrentMonthAndYear = 
+        selectedMonth === currentDate.getMonth() + 1 && 
+        selectedYear === currentDate.getFullYear();
 
     const { 
         getIncomes, 
@@ -106,6 +145,7 @@ const BudgetPage = () => {
                 pageSize
             });
             if (outcomeData) setOutcomes(outcomeData);
+
         } catch (error) {
             console.error("Error fetching budget data:", error);
         }
@@ -165,10 +205,114 @@ const BudgetPage = () => {
         if (outcomeData) setOutcomes(outcomeData);
     };
 
+    const handleExportBudget = async () => {
+        setIsExporting(true);
+        setExportProgress(0);
+        
+        try {
+            // Fetch all incomes
+            let allIncomes: Income[] = [];
+            let page = 1;
+            let totalIncomes = 0;
+            
+            do {
+                setExportProgress(Math.min(30, Math.floor((page - 1) * 30 / 5))); // First 30% for incomes
+                const incomeData = await BudgetService.getIncomes({
+                    month: selectedMonth,
+                    year: selectedYear,
+                    page,
+                    pageSize: 100 // Larger page size for export
+                });
+                
+                if (incomeData?.items) {
+                    allIncomes = [...allIncomes, ...incomeData.items];
+                    totalIncomes = incomeData.totalCount || 0;
+                }
+                page++;
+            } while (allIncomes.length < totalIncomes);
+
+            // Fetch all outcomes
+            let allOutcomes: Outcome[] = [];
+            page = 1;
+            let totalOutcomes = 0;
+            
+            do {
+                setExportProgress(30 + Math.min(30, Math.floor((page - 1) * 30 / 5))); // Next 30% for outcomes
+                const outcomeData = await BudgetService.getOutcomes({
+                    month: selectedMonth,
+                    year: selectedYear,
+                    page,
+                    pageSize: 100
+                });
+                
+                if (outcomeData?.items) {
+                    allOutcomes = [...allOutcomes, ...outcomeData.items];
+                    totalOutcomes = outcomeData.totalCount || 0;
+                }
+                page++;
+            } while (allOutcomes.length < totalOutcomes);
+
+            setExportProgress(70);
+            
+            const incomeSheetData = allIncomes.map(income => ({
+                'Тип': 'Доход',
+                'ID': income.id,
+                'Сумма': formatMoney(income.amount?.toString() || '0'),
+                'Дата': income.createdAt ? formatDate(income.createdAt) : '',
+                'Комментарий': income.comment || '',
+            }));
+
+            const outcomeSheetData = allOutcomes.map(outcome => ({
+                'Тип': 'Расход',
+                'ID': outcome.id,
+                'Сумма': formatMoney(outcome.amount?.toString() || '0'),
+                'Дата': outcome.createdAt ? formatDate(outcome.createdAt) : '',
+                'Комментарий': outcome.comment || '',
+            }));
+
+            const combinedData = [...incomeSheetData, ...outcomeSheetData];
+            
+            const totalIncome = allIncomes.reduce((sum, item) => sum + (item.amount || 0), 0);
+            const totalOutcome = allOutcomes.reduce((sum, item) => sum + (item.amount || 0), 0);
+            const balance = totalIncome - totalOutcome;
+
+            const summaryData = [
+                {},
+                { 'Тип': 'ИТОГО', 'Сумма': '' },
+                { 'Тип': 'Общий доход', 'Сумма': formatMoney(totalIncome.toString()) },
+                { 'Тип': 'Общий расход', 'Сумма': formatMoney(totalOutcome.toString()) },
+                { 'Тип': 'Баланс', 'Сумма': formatMoney(balance.toString()) }
+            ];
+
+            setExportProgress(90);
+            
+            const workbook = XLSX.utils.book_new();
+            
+            const mainWorksheet = XLSX.utils.json_to_sheet(combinedData);
+            XLSX.utils.book_append_sheet(workbook, mainWorksheet, 'Бюджет');
+            
+            const summaryWorksheet = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Итоги');
+            
+            const monthName = months.find(m => m.value === selectedMonth.toString())?.label || selectedMonth;
+            const fileName = `Бюджет_${monthName}_${selectedYear}`;
+            
+            setExportProgress(95);
+            
+            XLSX.writeFile(workbook, `${fileName}.xlsx`);
+            
+            setExportProgress(100);
+        } catch (error) {
+            console.error("Error exporting budget data:", error);
+            alert("Произошла ошибка при экспорте данных бюджета");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     const prepareTableData = (data: any[] = []) => {
         return data.map(item => {
-            // Проверяем наличие обязательных полей
-            if (!item) return ['', '', '', '']; // или можно вернуть null и отфильтровать потом
+            if (!item) return ['', '', '', ''];
             
             const amount = item.amount !== undefined ? formatMoney(item.amount.toString()) : '';
             
@@ -188,7 +332,13 @@ const BudgetPage = () => {
                 date,
                 comment
             ];
-        }).filter(row => row !== null); // если мы возвращали null для некорректных данных
+        }).filter(row => row !== null);
+    };
+
+    const handleSelectInvestor = (investor: Investor) => {
+        setSelectedInvestor(investor);
+        setNewIncome(prev => ({...prev, investorId: investor.id.toString()}));
+        setIsInvestorModalOpen(false);
     };
 
     const handleAddIncome = async () => {
@@ -202,13 +352,14 @@ const BudgetPage = () => {
             if (result) {
                 setShowIncomeModal(false);
                 setNewIncome({ amount: '', comment: '', investorId: '' });
-                await fetchData(); // Обновляем данные
-                return true; // Успешное выполнение
+                setSelectedInvestor(null);
+                await fetchData();
+                return true;
             }
         } catch (error) {
             console.error("Error adding income:", error);
-            alert("Произошла ошибка при добавлении дохода"); // Показываем пользователю
-            return false; // Ошибка
+            alert("Произошла ошибка при добавлении дохода");
+            return false;
         }
     };
 
@@ -223,9 +374,12 @@ const BudgetPage = () => {
                 setShowOutcomeModal(false);
                 setNewOutcome({ amount: '', comment: '' });
                 await fetchData();
+                return true;
             }
+            return false;
         } catch (error) {
             console.error("Error adding outcome:", error);
+            return false;
         }
     };
 
@@ -254,7 +408,12 @@ const BudgetPage = () => {
             <TitleField>
                 <CustomTitle>Бюджет</CustomTitle>
                 <CustomTitle>{formatMoney(totalBalance.toString())}</CustomTitle>
-                <ExportButton />
+                <ExportButton 
+                    onClick={handleExportBudget}
+                    isExporting={isExporting}
+                    exportProgress={exportProgress}
+                    title="Экспорт бюджета"
+                />
             </TitleField>
 
             <FilterField>
@@ -274,29 +433,25 @@ const BudgetPage = () => {
                         style={{ flex: "0 1 150px" }}
                     />
                 </div>
-                <div style={{ display: "flex", gap: "10px" }}>
-                    <DarkCyanButton 
-                        style={{ width: "15vw" }}
-                        onClick={() => setShowIncomeModal(true)}
-                    >
-                        + Доход
-                    </DarkCyanButton>
-                    <DarkCyanButton 
-                        style={{ width: "15vw" }}
-                        onClick={() => setShowOutcomeModal(true)}
-                    >
-                        + Расход
-                    </DarkCyanButton>
-                </div>
             </FilterField>
 
             <TablesContainer>
                 <TableWrapper>
-                    <TableTitle>
-                        Доходы: {incomes?.totalIncomeAmount !== undefined ? 
-                            formatMoney(incomes.totalIncomeAmount.toString()) : 
-                            '0'}
-                    </TableTitle>
+                    <TableHeader>
+                        <TableTitle>
+                            Доходы: {incomes?.totalIncomeAmount !== undefined ? 
+                                formatMoney(incomes.totalIncomeAmount.toString()) : 
+                                '0'}
+                        </TableTitle>
+                        {isCurrentMonthAndYear && (
+                            <DarkCyanButton 
+                                style={{ width: "120px" }}
+                                onClick={() => setShowIncomeModal(true)}
+                            >
+                                + Добавить
+                            </DarkCyanButton>
+                        )}
+                    </TableHeader>
                     <CustomTable 
                         columns={[
                             { name: "id" },
@@ -323,7 +478,21 @@ const BudgetPage = () => {
                 </TableWrapper>
 
                 <TableWrapper>
-                    <TableTitle>Расходы: {outcomes?.totalOutcomeAmount ? formatMoney(outcomes.totalOutcomeAmount.toString()) : '0'}</TableTitle>
+                    <TableHeader>
+                        <TableTitle>
+                            Расходы: {outcomes?.totalOutcomeAmount ? 
+                                formatMoney(outcomes.totalOutcomeAmount.toString()) : 
+                                '0'}
+                        </TableTitle>
+                        {isCurrentMonthAndYear && (
+                            <DarkCyanButton 
+                                style={{ width: "120px" }}
+                                onClick={() => setShowOutcomeModal(true)}
+                            >
+                                + Добавить
+                            </DarkCyanButton>
+                        )}
+                    </TableHeader>
                     <CustomTable 
                         columns={[
                             { name: "id" },
@@ -352,13 +521,17 @@ const BudgetPage = () => {
 
             <IncomeModal
                 show={showIncomeModal}
-                onClose={() => setShowIncomeModal(false)}
-                onSave={(e) => {
+                onClose={() => {
+                    setShowIncomeModal(false);
+                    setSelectedInvestor(null);
+                }}
+                onSave={async (e) => {
                     e.preventDefault();
-                    handleAddIncome();
+                    await handleAddIncome();
                 }}
                 newIncome={newIncome}
                 setNewIncome={setNewIncome}
+                investors={investors}
             />
 
             <OutcomeModal
@@ -371,6 +544,32 @@ const BudgetPage = () => {
                 newOutcome={newOutcome}
                 setNewOutcome={setNewOutcome}
             />
+
+            <InvestorSelectModal
+                isOpen={isInvestorModalOpen}
+                onClose={() => setIsInvestorModalOpen(false)}
+                onSubmit={handleSelectInvestor}
+            />
+
+            {selectedInvestor && (
+                <InvestorModal
+                    mode="view"
+                    isOpen={isViewInvestorModalOpen}
+                    onClose={() => setIsViewInvestorModalOpen(false)}
+                    onSubmit={async () => false}
+                    initialData={{
+                        id: selectedInvestor.id,
+                        nickname: selectedInvestor.nickname,
+                        fullName: selectedInvestor.fullName,
+                        phoneNumber: selectedInvestor.phoneNumber,
+                        investorPie: selectedInvestor.investorPie,
+                        investmentAmount: selectedInvestor.investmentAmount,
+                        balance: selectedInvestor.balance,
+                        isCompany: false,
+                        isBlocked: false
+                    }}
+                />
+            )}
         </PageLayout>
     );
 };
@@ -388,6 +587,13 @@ const TableWrapper = styled.div`
     display: flex;
     flex-direction: column;
     gap: 10px;
+`;
+
+const TableHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
 `;
 
 const TableTitle = styled.h3`
