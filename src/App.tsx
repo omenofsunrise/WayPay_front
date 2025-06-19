@@ -20,6 +20,8 @@ import ProfilePage from './pages/ProfilePage/ProfilePage';
 import InvestorReportPage from './pages/InvestorReportPage';
 import BudgetPage from './pages/BudgetPage';
 import { ErrorBoundary } from "react-error-boundary";
+import { AuthProvider } from './сontext/AuthContext';
+import AdminPanelPage from './pages/AdminPanelPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -55,111 +57,119 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={
-          <Navigate to={isAuthenticated ? "/credits" : "/auth"} replace />
-        } />
-        
-        <Route path="/auth" element={
-          isAuthenticated ? (
-            <Navigate to="/credits" replace />
-          ) : (
-            <AuthPage onLoginSuccess={() => setIsAuthenticated(true)} />
-          )
-        } />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={
+            <Navigate to={isAuthenticated ? "/credits" : "/auth"} replace />
+          } />
+          
+          <Route path="/auth" element={
+            isAuthenticated ? (
+              <Navigate to="/credits" replace />
+            ) : (
+              <AuthPage onLoginSuccess={() => setIsAuthenticated(true)} />
+            )
+          } />
 
-        <Route path="/credits" element={
-          isAuthenticated ? (
+          <Route path="/credits" element={
+            isAuthenticated ? (
+              <MainLayout>
+                <CreditPage />
+              </MainLayout>
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          } />
+
+          <Route path="payments" element={
+              <MainLayout>
+                <PaymentPage/>
+              </MainLayout>
+          } />
+
+          <Route path="products" element={
+              <MainLayout>
+                <ProductPage/>
+              </MainLayout>
+          } />
+
+          <Route path="queue" element={
+              <MainLayout>
+                <QueuePage />
+              </MainLayout>
+          } />
+
+          <Route path="clients" element={
+              <MainLayout>
+                <ClientPage />
+              </MainLayout>
+          } />
+
+          <Route path="blacklist" element={
+              <MainLayout>
+                <BlacklistPage />
+              </MainLayout>
+          } />
+
+          <Route path="investors" element={
+              <MainLayout>
+                <InvestorPage />
+              </MainLayout>
+          } />
+
+          <Route path="new-credit" element={
+              <MainLayout>
+                <NewCreditPage />
+              </MainLayout>
+          } />
+
+          <Route path="schedules" element={
+              <MainLayout> 
+                <SchedulePage />
+              </MainLayout>
+          } />
+
+          <Route path="credit-control" element={
+              <MainLayout>
+                <CreditControlPage />
+              </MainLayout>
+          } />
+
+          <Route path="profile" element={
+              <MainLayout>
+                <ProfilePage />
+              </MainLayout>
+          } />
+
+          <Route path="investors-report" element={
+              <MainLayout>
+                <InvestorReportPage />
+              </MainLayout>
+          } />
+
+          <Route path="budget" element={
+              <MainLayout>
+                <ErrorBoundary fallback={<div>Something went wrong</div>}>
+                  <BudgetPage />
+                </ErrorBoundary>
+              </MainLayout>
+          } />
+
+          <Route path="admin" element={
             <MainLayout>
-              <CreditPage />
+              <AdminPanelPage />
             </MainLayout>
-          ) : (
-            <Navigate to="/auth" replace />
-          )
-        } />
+          } />
 
-        <Route path="payments" element={
-            <MainLayout>
-              <PaymentPage/>
-            </MainLayout>
-        } />
-
-        <Route path="products" element={
-            <MainLayout>
-              <ProductPage/>
-            </MainLayout>
-        } />
-
-        <Route path="queue" element={
-            <MainLayout>
-              <QueuePage />
-            </MainLayout>
-        } />
-
-        <Route path="clients" element={
-            <MainLayout>
-              <ClientPage />
-            </MainLayout>
-        } />
-
-        <Route path="blacklist" element={
-            <MainLayout>
-              <BlacklistPage />
-            </MainLayout>
-        } />
-
-        <Route path="investors" element={
-            <MainLayout>
-              <InvestorPage />
-            </MainLayout>
-        } />
-
-        <Route path="new-credit" element={
-            <MainLayout>
-              <NewCreditPage />
-            </MainLayout>
-        } />
-
-        <Route path="schedules" element={
-            <MainLayout> 
-              <SchedulePage />
-            </MainLayout>
-        } />
-
-        <Route path="credit-control" element={
-            <MainLayout>
-              <CreditControlPage />
-            </MainLayout>
-        } />
-
-        <Route path="profile" element={
-            <MainLayout>
-              <ProfilePage />
-            </MainLayout>
-        } />
-
-        <Route path="investors-report" element={
-            <MainLayout>
-              <InvestorReportPage />
-            </MainLayout>
-        } />
-
-        <Route path="budget" element={
-            <MainLayout>
-              <ErrorBoundary fallback={<div>Something went wrong</div>}>
-                <BudgetPage />
-              </ErrorBoundary>
-            </MainLayout>
-        } />
-
-        <Route path="*" element={
-             <MainLayout>
-              <NotFoundContent />
-            </MainLayout>
-        } />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={
+              <MainLayout>
+                <NotFoundContent />
+              </MainLayout>
+          } />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

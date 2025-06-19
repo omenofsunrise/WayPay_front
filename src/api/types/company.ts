@@ -6,4 +6,16 @@ export interface Company {
   officeAddress: string;
   bank: string;
   chief: string;
+  licenceDate?: Date;
+}
+
+export interface CompanyCreateRequest {
+  AdminPhone: string;
+  LicenceDate: Date;
+}
+
+export interface CompanyListItem {
+  id: number;
+  name: string;
+  phone: string;
 }

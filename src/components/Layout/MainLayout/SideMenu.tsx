@@ -12,6 +12,7 @@ import profileIcon from '../../../assets/ui/MenuItems/profile.svg';
 import { useState, useContext, useEffect } from 'react';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../../сontext/AuthContext';
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -49,7 +50,8 @@ const SideMenu = () => {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-
+  const { hasRole } = useAuth();
+  
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
     const menuItem = menuItemsMap[currentPath];
@@ -428,6 +430,21 @@ const SideMenu = () => {
           <Icon src={profileIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'profile'} />
           {!collapsed && <MenuItemText>Профиль</MenuItemText>}
         </MenuItem>
+
+        {hasRole('суперадмин') && (
+          <MenuItem 
+            onClick={() => handleMenuItemClick('admin', '/admin')}
+            $collapsed={collapsed}
+            $selected={selectedSideMenuItem === 'admin'}
+          >
+            <Icon 
+              src={analyticsIcon}
+              $collapsed={collapsed} 
+              $selected={selectedSideMenuItem === 'admin'} 
+            />
+            {!collapsed && <MenuItemText>Админ-панель</MenuItemText>}
+          </MenuItem>
+        )}
       </MenuList>
       
       <RightBorder $collapsed={collapsed} />
