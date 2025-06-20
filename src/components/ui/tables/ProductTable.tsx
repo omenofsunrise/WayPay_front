@@ -101,6 +101,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
   };
 
   const handleMarkupBlur = (id: number, value: string) => {
+    console.log("мяу");
     const numericValue = Number(value) || 0;
     if (numericValue < minMarkup) {
       handleInputChange(id, 'markup', minMarkup.toString());

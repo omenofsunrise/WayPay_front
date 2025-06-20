@@ -255,8 +255,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                 
                 <ProfileName>{employee.fullName}</ProfileName>
                 <ProfileInfo>
-                    {employee.role === "админ" ? "Администратор" : 
-                     employee.role === "manager" ? "Менеджер" : "Сотрудник"}
+                    {employee.role}
                 </ProfileInfo>
                 
                 <ContactInfo>

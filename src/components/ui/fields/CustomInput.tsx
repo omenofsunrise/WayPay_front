@@ -9,6 +9,7 @@ interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   inputType?: InputType;
   hasError?: boolean;
   errorMessage?: string;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 const CustomInput: React.FC<CustomInputProps> = ({
@@ -185,7 +186,10 @@ const CustomInput: React.FC<CustomInputProps> = ({
         value={value}
         placeholder={showCustomPlaceholder ? '' : placeholder}
         onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onBlur={(e) => {
+          setIsFocused(false);
+          props.onBlur?.(e);
+        }}
         onChange={handleInputChange}
         inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' || inputType === 'rubles' ? 'numeric' : 'text'}
         maxLength={inputType === 'doc' ? 11 : inputType === 'date' ? 10 : undefined}

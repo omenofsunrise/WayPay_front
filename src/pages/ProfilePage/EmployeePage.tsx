@@ -241,6 +241,24 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         }
     };
 
+    const canEditSurcharge = (employee: Employee): boolean => {
+        if (!authInfo) return false;
+        
+        if (employee.id === authInfo.employee.id) {
+            return hasRole('суперадмин') || hasRole('директор') || hasRole('админ');
+        }
+        
+        if (hasRole('суперадмин') || hasRole('директор')) {
+            return true;
+        }
+        
+        if (hasRole('админ')) {
+            return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
+        }
+        
+        return false;
+    };
+
     const handleRowDoubleClick = (rowData: any[]) => {
         const employeeId = Number(rowData[0]);
         onViewEmployee(employeeId);
@@ -322,7 +340,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         </div>,
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {employee.minSurcharge}
-            {canEditEmployee(employee) && (
+            {canEditSurcharge(employee) && (
             <button 
                 onClick={(e) => {
                 e.stopPropagation();
