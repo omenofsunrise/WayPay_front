@@ -185,6 +185,22 @@ class EmployeeService {
       throw error;
     }
   }
+
+  static async togglePermission(employeeId: number, permissionCode: string): Promise<Employee> {
+    try {
+      const response = await apiClient.put('/Permission/toggle', {
+        employeeId,
+        permissionCode
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default EmployeeService;

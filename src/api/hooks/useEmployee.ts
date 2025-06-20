@@ -298,6 +298,35 @@ export function useEmployee() {
       }
     }, []);
 
+    const togglePermission = useCallback(async (employeeId: number, permissionCode: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const updatedEmployee = await EmployeeService.togglePermission(employeeId, permissionCode);
+        
+        setEmployees(prev => prev ? {
+          ...prev,
+          items: prev.items.map(e => e.id === employeeId ? updatedEmployee : e)
+        } : null);
+        
+        if (employee && employee.id === employeeId) {
+          setEmployee(updatedEmployee);
+        }
+        
+        setAuthInfo(prev => prev && prev.employee.id === employeeId ? {
+          ...prev,
+          employee: updatedEmployee
+        } : prev);
+        
+        return updatedEmployee;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, [employee]);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -336,6 +365,7 @@ export function useEmployee() {
     fetchEmployeePaymentsStats,
     deletePhoto,
     updateEmployeePhone,
-    updateEmployeeMinSurcharge
+    updateEmployeeMinSurcharge,
+    togglePermission
   };
 }
