@@ -154,13 +154,11 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div>
               <p style="margin: 5px 0; color: #374151;"><strong>Сумма рассрочки:</strong> ${displayAmount || '0'} ₽</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Первоначальный взнос:</strong> ${displayInitial || '0'} ₽</p>
               <p style="margin: 5px 0; color: #374151;"><strong>Надбавка:</strong> ${formData.percent || '0'}%</p>
             </div>
             <div>
               <p style="margin: 5px 0; color: #374151;"><strong>Количество месяцев:</strong> ${formData.months || '0'}</p>
               <p style="margin: 5px 0; color: #374151;"><strong>Начало выплат:</strong> ${formData.startDate.toLocaleDateString('ru-RU')}</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Округление до:</strong> ${formData.round || '50'} ₽</p>
             </div>
           </div>
         </div>
@@ -192,20 +190,20 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
           </h2>
           <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
-              <span style="color: #374151;">Ежемесячный платёж</span>
-              <span style="font-weight: 500; color: #111827;">${results.monthlyPayment} ₽</span>
+              <span style="color: #374151;">Общая стоимость</span>
+              <span style="font-weight: 500; color: #111827;">${results.totalAmount} ₽</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
+              <span style="color: #374151;">Взнос</span>
+              <span style="font-weight: 500; color: #111827;">${displayInitial} ₽</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
               <span style="color: #374151;">Сумма долга</span>
               <span style="font-weight: 500; color: #111827;">${results.totalDebt} ₽</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
-              <span style="color: #374151;">Переплата</span>
-              <span style="font-weight: 500; color: #111827;">${results.overpayment} ₽</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB;">
-              <span style="color: #374151;">Общая сумма</span>
-              <span style="font-weight: 500; color: #111827;">${results.totalAmount} ₽</span>
+              <span style="color: #374151;">Ежемесячный платёж</span>
+              <span style="font-weight: 500; color: #111827;">${results.monthlyPayment} ₽</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0;">
               <span style="color: #374151;">Последний месяц оплаты</span>

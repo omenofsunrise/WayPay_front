@@ -441,14 +441,12 @@ const BudgetPage = () => {
                                 formatMoney(incomes.totalIncomeAmount.toString()) : 
                                 '0'}
                         </TableTitle>
-                        {isCurrentMonthAndYear && (
-                            <DarkCyanButton 
-                                style={{ width: "120px" }}
-                                onClick={() => setShowIncomeModal(true)}
-                            >
-                                + Добавить
-                            </DarkCyanButton>
-                        )}
+                        <DarkCyanButton 
+                            style={{ width: "120px" }}
+                            onClick={() => setShowIncomeModal(true)}
+                        >
+                            + Добавить
+                        </DarkCyanButton>
                     </TableHeader>
                     <CustomTable 
                         columns={[

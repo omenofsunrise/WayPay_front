@@ -312,6 +312,15 @@ const NewCreditPage = () => {
     setIsInvestorModalOpen(true);
   };
 
+  const handleMonthsBlur = (value: string) => {
+    const numericValue = Number(value) || 0;
+    if (numericValue > 50) {
+      setMonths('50');
+    } else if (numericValue < 1) {
+      setMonths('1');
+    }
+  };
+
   return (
     <PageLayout>
       <TitleField style={{ marginTop: "0" }}>
@@ -434,6 +443,7 @@ const NewCreditPage = () => {
                   placeholder="Месяцев" 
                   value={months}
                   onChange={(e) => setMonths(e.target.value.replace(/[^0-9]/g, ''))}
+                  onBlur={(e) => handleMonthsBlur(e.target.value)}
                   style={{ flex: 1 }}
                   min="1"
                   max="60"
