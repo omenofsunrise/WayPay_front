@@ -1,26 +1,27 @@
 import { useState, useCallback, useEffect } from 'react';
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
-import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable from "../components/ui/tables/CustomTable";
+import CustomTable, { type TableAction } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
-import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import { exportToExcel } from '../utils/exportUtils';
 import ClientSelectModal from "../components/modal/CrudInherited/ClientSelectModal";
 import useBlacklist from "../api/hooks/useBlacklist";
 import { formatDate } from '../utils/dateFormatter';
+import { useAuth } from '../сontext/AuthContext';
+import TitleField from '../components/ui/Layouts/TitleLayout';
 
 interface BlacklistItem {
   id: number;
   clientId: number;
   fullName: string;
   phone: string;
-  createdAt: Date;
+  birthdate: string;
+  createdAt: string;
+  debt?: string;
 }
 
 const BlacklistPage = () => {
@@ -31,12 +32,12 @@ const BlacklistPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    
+    const { hasRole } = useAuth();
     const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
     
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
-        1: 'full_Name',
+        1: 'fullName',
         2: 'birthdate'
     };
     
@@ -45,14 +46,15 @@ const BlacklistPage = () => {
         error, 
         data: blacklistData, 
         getBlacklist,
-        addBlacklist
+        addBlacklist,
+        deleteFromBlacklist
     } = useBlacklist();
     
     const loadBlacklist = useCallback(async () => {
         const params: any = {
             page: currentPage,
             pageSize,
-            FullName: nameFilter || undefined
+            fullName: nameFilter || undefined
         };
 
         if (sortConfig.key !== null) {
@@ -88,6 +90,30 @@ const BlacklistPage = () => {
             };
         });
     };
+
+    const handleDeleteFromBlacklist = async (rowData: any[]) => {
+        const [id] = rowData;
+
+        if (window.confirm('Вы уверены, что хотите убрать этого клиента из чёрного списка?')) {
+            try {
+                await deleteFromBlacklist(Number(id));
+                loadBlacklist();
+            } catch (err) {
+                console.error('Ошибка при удалении клиента:', err);
+            }
+        }
+    };
+
+    const tableActions = [
+        {
+            label: 'Удалить',
+            action: handleDeleteFromBlacklist,
+            color: '#EF4444'
+        }
+    ];
+
+    const getTableActions = (rowData: any[]): TableAction[] | null => 
+        hasRole('суперадмин') ? tableActions : null;
 
     const handleAddToBlacklist = () => {
         setIsSelectModalOpen(true);
@@ -150,6 +176,7 @@ const BlacklistPage = () => {
                         data={tableData}
                         onSort={handleSort}
                         sortConfig={sortConfig}
+                        contextMenuActions={getTableActions}
                     />
                     
                     <PaginationLayout>

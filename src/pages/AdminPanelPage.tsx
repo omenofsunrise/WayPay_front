@@ -24,7 +24,6 @@ const AdminPanelPage = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedCompany, setSelectedCompany] = useState<CompanyModalData | null>(null);
   
-  // State for field edit modals
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);

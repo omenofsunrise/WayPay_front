@@ -36,12 +36,26 @@ const useClient = () => {
     }
   };
 
+  const deleteFromBlacklist = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await blacklistService.deleteFromBlacklist(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
     data,
     getBlacklist,
-    addBlacklist
+    addBlacklist,
+    deleteFromBlacklist
   };
 };
 
