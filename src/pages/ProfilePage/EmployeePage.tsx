@@ -18,15 +18,9 @@ import { BASE_URL } from '../../api/client';
 import { useAuth } from '../../сontext/AuthContext';
 import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import { EditOutlined } from '@ant-design/icons';
-import styled from 'styled-components';
 
 interface EmployeePageProps {
     onViewEmployee: (id: number) => void;
-}
-
-interface PermissionDisplay {
-  code: string;
-  label: string;
 }
 
 const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
@@ -52,7 +46,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     const [surchargeValue, setSurchargeValue] = useState(0);
     const [currentSurchargeEmployeeId, setCurrentSurchargeEmployeeId] = useState<number | null>(null);
     const [isSavingSurcharge, setIsSavingSurcharge] = useState(false);
-    
+
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'fullName',
@@ -455,29 +449,5 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         </PageLayout>
     );
 };
-
-const PermissionsPanel = styled.div`
-  margin-top: 20px;
-  padding: 16px;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-`;
-
-const PermissionsTitle = styled.h3`
-  margin-bottom: 12px;
-  font-size: 16px;
-  color: #333;
-`;
-
-const PermissionItem = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
-`;
-
-const PermissionLabel = styled.span`
-  font-size: 14px;
-`;
 
 export default EmployeePage;
