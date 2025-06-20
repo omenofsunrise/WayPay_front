@@ -250,6 +250,54 @@ export function useEmployee() {
       }
     }, []);
 
+    const updateEmployeePhone = useCallback(async (id: number, phone: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const updatedEmployee = await EmployeeService.updateEmployeePhone(id, phone);
+        
+        setEmployees(prev => prev ? {
+          ...prev,
+          items: prev.items.map(e => e.id === id ? updatedEmployee : e)
+        } : null);
+        
+        setAuthInfo(prev => prev && prev.employee.id === id ? {
+          ...prev,
+          employee: {
+            ...prev.employee,
+            phone: updatedEmployee.phone
+          }
+        } : prev);
+        
+        return updatedEmployee;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
+    const updateEmployeeMinSurcharge = useCallback(async (id: number, minSurcharge: number) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const updatedEmployee = await EmployeeService.updateEmployeeMinSurcharge(id, minSurcharge);
+        
+        setEmployees(prev => prev ? {
+          ...prev,
+          items: prev.items.map(e => e.id === id ? updatedEmployee : e)
+        } : null);
+        
+        return updatedEmployee;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -286,6 +334,8 @@ export function useEmployee() {
     fetchEmployeeById,
     fetchEmployeeCreditsStats,
     fetchEmployeePaymentsStats,
-    deletePhoto
+    deletePhoto,
+    updateEmployeePhone,
+    updateEmployeeMinSurcharge
   };
 }

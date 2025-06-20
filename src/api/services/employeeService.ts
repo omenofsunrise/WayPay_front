@@ -159,6 +159,32 @@ class EmployeeService {
     await apiClient.delete('/Employee/photo');
     return;
   }
+
+  static async updateEmployeePhone(id: number, phone: string): Promise<Employee> {
+    try {
+      const response = await apiClient.patch(`/Employee/phone/${id}`, phone, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async updateEmployeeMinSurcharge(id: number, minSurcharge: number): Promise<Employee> {
+    try {
+      const response = await apiClient.patch(`/Employee/min-surcharge/${id}`, minSurcharge, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default EmployeeService;

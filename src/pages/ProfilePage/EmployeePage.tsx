@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
-import ExportButton from "../../components/ui/Buttons/ExportButton";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import Pagination from "../../components/ui/fields/CustomPagination";
 import CustomTable from "../../components/ui/tables/CustomTable";
@@ -12,12 +11,13 @@ import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import EmployeeModal from "../../components/modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
-import useExport from '../../api/hooks/useExport';
 import type { Employee, EmployeeFilterRequest } from '../../api/types/employee';
-import employeeService from '../../api/services/employeeService';
 import CustomSelect from '../../components/ui/fields/CustomSelect';
 import Avatar from '../../components/Profile/Avatar';
 import { BASE_URL } from '../../api/client';
+import { useAuth } from '../../сontext/AuthContext';
+import BaseModal from '../../components/modal/BASE/modalCRUBase';
+import { EditOutlined } from '@ant-design/icons';
 
 interface EmployeePageProps {
     onViewEmployee: (id: number) => void;
@@ -32,13 +32,21 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    
+    const { authInfo, hasRole } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [localEmployees, setLocalEmployees] = useState<Employee[]>([]);
     const [totalCount, setTotalCount] = useState(0);
-    
+    const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+    const [phoneValue, setPhoneValue] = useState('');
+    const [currentPhoneEmployeeId, setCurrentPhoneEmployeeId] = useState<number | null>(null);
+    const [isSavingPhone, setIsSavingPhone] = useState(false);
+    const [isSurchargeModalOpen, setIsSurchargeModalOpen] = useState(false);
+    const [surchargeValue, setSurchargeValue] = useState(0);
+    const [currentSurchargeEmployeeId, setCurrentSurchargeEmployeeId] = useState<number | null>(null);
+    const [isSavingSurcharge, setIsSavingSurcharge] = useState(false);
+
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'fullName',
@@ -56,8 +64,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         photoPath: ''
     };
 
-    const { exportData, isExporting, exportProgress } = useExport<Employee>();
-
     const { 
         employees,
         employeesLoading, 
@@ -65,7 +71,9 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         fetchEmployees,
         updateEmployee,
         createEmployee,
-        deleteEmployee
+        deleteEmployee,
+        updateEmployeeMinSurcharge,
+        updateEmployeePhone,
     } = useEmployee();
     
     const loadEmployees = useCallback(async () => {
@@ -102,6 +110,21 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         setCurrentPage(1);
     };
 
+    const canEditEmployee = (employee: Employee): boolean => {
+        if (!authInfo) return false;
+        if (employee.id === authInfo.employee.id) return false;
+        
+        if (hasRole('суперадмин') || hasRole('директор')) {
+        return true;
+        }
+        
+        if (hasRole('админ')) {
+        return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
+        }
+        
+        return false;
+    };
+
     const handleSort = (columnIndex: number) => {
         if (!columnToApiSortMap[columnIndex]) return;
         
@@ -122,18 +145,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     const handleCreateEmployee = () => {
         setModalMode('create');
         setSelectedEmployee(defaultEmployee);
-        setIsModalOpen(true);
-    };
-
-    const handleEditEmployee = (employee: Employee) => {
-        setModalMode('edit');
-        setSelectedEmployee(employee);
-        setIsModalOpen(true);
-    };
-
-    const handleViewEmployee = (employee: Employee) => {
-        setModalMode('view');
-        setSelectedEmployee(employee);
         setIsModalOpen(true);
     };
 
@@ -210,18 +221,100 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         onViewEmployee(employeeId);
     };
 
+    const handleOpenPhoneModal = (employee: Employee, e: React.MouseEvent) => {
+        e.preventDefault();
+        setPhoneValue(employee.phone);
+        setCurrentPhoneEmployeeId(employee.id);
+        setIsPhoneModalOpen(true);
+    };
+
+    const handleOpenSurchargeModal = (employee: Employee, e: React.MouseEvent) => {
+        e.preventDefault();
+        setSurchargeValue(employee.minSurcharge);
+        setCurrentSurchargeEmployeeId(employee.id);
+        setIsSurchargeModalOpen(true);
+    };
+
+    const handleSavePhone = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentPhoneEmployeeId || !phoneValue) return;
+        
+        setIsSavingPhone(true);
+        try {
+            await updateEmployeePhone(currentPhoneEmployeeId, phoneValue);
+            await loadEmployees();
+            setIsPhoneModalOpen(false);
+        } catch (error) {
+            console.error('Ошибка при сохранении телефона:', error);
+        } finally {
+            setIsSavingPhone(false);
+        }
+        };
+
+    const handleSaveSurcharge = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentSurchargeEmployeeId) return;
+        
+        setIsSavingSurcharge(true);
+        try {
+            await updateEmployeeMinSurcharge(currentSurchargeEmployeeId, surchargeValue);
+            await loadEmployees();
+            setIsSurchargeModalOpen(false);
+        } catch (error) {
+            console.error('Ошибка при сохранении надбавки:', error);
+        } finally {
+            setIsSavingSurcharge(false);
+        }
+    };
+
     const tableData = localEmployees.map(employee => [
         employee.id.toString(),
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Avatar 
-                src={employee.photoPath ? BASE_URL + employee.photoPath : null} 
-                name={employee.fullName}
+            src={employee.photoPath ? BASE_URL + employee.photoPath : null} 
+            name={employee.fullName}
             />
             {employee.fullName}
         </div>,
         employee.role,
-        employee.minSurcharge.toString(),
-        employee.phone,
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {employee.minSurcharge}
+            {canEditEmployee(employee) && (
+            <button 
+                onClick={(e) => {
+                e.stopPropagation();
+                handleOpenSurchargeModal(employee, e);
+                }}
+                style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: '#1890ff', 
+                cursor: 'pointer' 
+                }}
+            >
+                <EditOutlined />
+            </button>
+            )}
+        </div>,
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {employee.phone}
+            {canEditEmployee(employee) && (
+            <button 
+                onClick={(e) => {
+                e.stopPropagation();
+                handleOpenPhoneModal(employee, e);
+                }}
+                style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: '#1890ff', 
+                cursor: 'pointer' 
+                }}
+            >
+                <EditOutlined />
+            </button>
+            )}
+        </div>,
         employee.address || '-',
     ]);
 
@@ -318,6 +411,41 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                 onSubmit={handleSubmitEmployee}
                 initialData={selectedEmployee || defaultEmployee}
             />
+
+            {isPhoneModalOpen && (
+            <BaseModal
+                title="Изменение телефона"
+                onClose={() => setIsPhoneModalOpen(false)}
+                onCancel={() => setIsPhoneModalOpen(false)}
+                onSave={handleSavePhone}
+                isSubmitting={isSavingPhone}
+            >
+                <CustomInput
+                inputType="text"
+                value={phoneValue}
+                onChange={(e) => setPhoneValue(e.target.value)}
+                placeholder="Введите новый телефон"
+                />
+            </BaseModal>
+            )}
+            
+            {isSurchargeModalOpen && (
+            <BaseModal
+                title="Изменение минимальной надбавки"
+                onClose={() => setIsSurchargeModalOpen(false)}
+                onCancel={() => setIsSurchargeModalOpen(false)}
+                onSave={handleSaveSurcharge}
+                isSubmitting={isSavingSurcharge}
+            >
+                <CustomInput
+                inputType="number"
+                value={surchargeValue.toString()}
+                onChange={(e) => setSurchargeValue(Number(e.target.value))}
+                placeholder="Введите новую надбавку"
+                min={0}
+                />
+            </BaseModal>
+            )}
         </PageLayout>
     );
 };
