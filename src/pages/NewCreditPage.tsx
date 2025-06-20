@@ -23,6 +23,7 @@ import type { CreateCreditRequest } from '../api/types/credit';
 import useInvestor from '../api/hooks/useInvestor';
 import ViewButton from '../components/ui/Buttons/ViewButton';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import { useEmployee } from '../api/hooks/useEmployee';
 
 interface Client {
   id: number;
@@ -77,7 +78,9 @@ const NewCreditPage = () => {
   const { getClientById } = useClient();
   const { createCredit, isLoading: isCreditLoading } = useCredit();
   const { autoSelectInvestor } = useInvestor();
-  
+  const { authInfo } = useEmployee();
+  const minSurcharge = authInfo?.employee.minSurcharge || 0;
+
   const formatAmount = useCallback((value: number): string => {
     return value.toLocaleString('ru-RU') + '₽';
   }, []);

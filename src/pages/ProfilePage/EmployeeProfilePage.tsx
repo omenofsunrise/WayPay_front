@@ -288,21 +288,21 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
 
             {showPermissionsPanel && (
                 <PermissionsSection>
-                    <ModalInfoTitle>Управление правами доступа</ModalInfoTitle>
+                    <ModalInfoTitle>Права пользователя</ModalInfoTitle>
                     <PermissionsGrid>
                         <PermissionItem>
                             <Checkbox 
                                 checked={employee?.permissions?.some(p => p.code === 'CREATE_CREDITS') || false}
                                 onChange={() => handleTogglePermission('CREATE_CREDITS')}
                             />
-                            <PermissionLabel>Просмотр кредитов</PermissionLabel>
+                            <PermissionLabel>Создание договоров</PermissionLabel>
                         </PermissionItem>
                         <PermissionItem>
                             <Checkbox 
                                 checked={employee?.permissions?.some(p => p.code === 'DELETE_CREDITS') || false}
                                 onChange={() => handleTogglePermission('DELETE_CREDITS')}
                             />
-                            <PermissionLabel>Удаление кредитов</PermissionLabel>
+                            <PermissionLabel>Удаление договоров</PermissionLabel>
                         </PermissionItem>
                     </PermissionsGrid>
                 </PermissionsSection>

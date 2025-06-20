@@ -13,5 +13,6 @@ export interface AuthInfo {
     fullName: string;
     role: Role;
     permissions: Permission[];
+    minSurcharge: number;
   };
 }

@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useProducts from '../../../api/hooks/useProducts';
 import Portal from '../../../utils/Portal';
 import CustomInput from '../fields/CustomInput';
-import { parseMoney } from '../../../utils/formatPrice';
 import ProductSelectModal from '../../modal/CrudInherited/ProductSelectModal';
+import { useAuth } from '../../../сontext/AuthContext';
 
 interface Product {
   id: number;
@@ -23,6 +23,7 @@ interface ProductsTableProps {
 }
 
 const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: ProductsTableProps) => {
+  const { authInfo } = useAuth();
   const { data: productsData, getProducts } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
@@ -31,6 +32,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
+  const minMarkup = authInfo?.employee.minSurcharge || 0;
 
   useEffect(() => {
     if (products.length === 0) {
@@ -96,6 +98,13 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
         input.setSelectionRange(cursorPosition, cursorPosition);
       }
     });
+  };
+
+  const handleMarkupBlur = (id: number, value: string) => {
+    const numericValue = Number(value) || 0;
+    if (numericValue < minMarkup) {
+      handleInputChange(id, 'markup', minMarkup.toString());
+    }
   };
 
   const handleInputChange = (id: number, field: keyof Product, value: string ) => {
@@ -305,6 +314,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
                       inputType="number"
                       value={product.markup || ''}
                       onChange={(e) => handleInputChange(product.id, 'markup', e.target.value)}
+                      onBlur={(e) => handleMarkupBlur(product.id, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="0"
                       min="0"
