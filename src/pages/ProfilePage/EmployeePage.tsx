@@ -46,6 +46,10 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     const [surchargeValue, setSurchargeValue] = useState(0);
     const [currentSurchargeEmployeeId, setCurrentSurchargeEmployeeId] = useState<number | null>(null);
     const [isSavingSurcharge, setIsSavingSurcharge] = useState(false);
+    const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+    const [roleValue, setRoleValue] = useState('');
+    const [currentRoleEmployeeId, setCurrentRoleEmployeeId] = useState<number | null>(null);
+    const [isSavingRole, setIsSavingRole] = useState(false);
 
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -74,6 +78,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         deleteEmployee,
         updateEmployeeMinSurcharge,
         updateEmployeePhone,
+        updateEmployeeRole
     } = useEmployee();
     
     const loadEmployees = useCallback(async () => {
@@ -105,21 +110,41 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         setCurrentPage(1);
     };
 
-    const handleRoleFilterChange = (value: string) => {
-        setRoleFilter(value || undefined);
-        setCurrentPage(1);
+    const handleOpenRoleModal = (employee: Employee, e: React.MouseEvent) => {
+        e.preventDefault();
+        setRoleValue(employee.role);
+        setCurrentRoleEmployeeId(employee.id);
+        setIsRoleModalOpen(true);
     };
 
+    const handleSaveRole = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentRoleEmployeeId || !roleValue) return;
+        
+        setIsSavingRole(true);
+        try {
+            await updateEmployeeRole(currentRoleEmployeeId, roleValue);
+            await loadEmployees();
+            setIsRoleModalOpen(false);
+        } catch (error) {
+            console.error('Ошибка при сохранении роли:', error);
+        } finally {
+            setIsSavingRole(false);
+        }
+    };
+    
     const canEditEmployee = (employee: Employee): boolean => {
         if (!authInfo) return false;
         if (employee.id === authInfo.employee.id) return false;
         
         if (hasRole('суперадмин') || hasRole('директор')) {
-        return true;
+            return true;
         }
         
         if (hasRole('админ')) {
-        return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
+            // Админ может редактировать только сотрудников и бухгалтеров
+            // и не может повышать их до админов
+            return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
         }
         
         return false;
@@ -276,7 +301,25 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             />
             {employee.fullName}
         </div>,
-        employee.role,
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {employee.role}
+            {canEditEmployee(employee) && (
+            <button 
+                onClick={(e) => {
+                e.stopPropagation();
+                handleOpenRoleModal(employee, e);
+                }}
+                style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: '#1890ff', 
+                cursor: 'pointer' 
+                }}
+            >
+                <EditOutlined />
+            </button>
+            )}
+        </div>,
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {employee.minSurcharge}
             {canEditEmployee(employee) && (
@@ -351,12 +394,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                         placeholder="ФИО сотрудника"
                         value={nameFilter}
                         onChange={(e) => handleFilterChange(e.target.value)}
-                        style={{ flex: 1 }}
-                    />
-                    <CustomSelect
-                        options={roleOptions}
-                        value={roleFilter || ''}
-                        onChange={(e) => handleRoleFilterChange(e.target.value)}
                         style={{ flex: 1 }}
                     />
                 </div>
@@ -446,6 +483,29 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                 />
             </BaseModal>
             )}
+
+            {isRoleModalOpen && (
+                <BaseModal
+                    title="Изменение роли сотрудника"
+                    onClose={() => setIsRoleModalOpen(false)}
+                    onCancel={() => setIsRoleModalOpen(false)}
+                    onSave={handleSaveRole}
+                    isSubmitting={isSavingRole}
+                >
+                    <CustomSelect
+                    style={{marginLeft: "25px"}}
+                        value={roleValue}
+                        onChange={(e) => setRoleValue(e.target.value)}
+                        options={[
+                            { value: 'сотрудник', label: 'Сотрудник' },
+                            { value: 'бухгалтер', label: 'Бухгалтер' },
+                            { value: 'админ', label: 'Администратор' },
+                        ]}
+                        placeholder="Выберите роль"
+                    />
+                </BaseModal>
+            )}
+
         </PageLayout>
     );
 };

@@ -8,9 +8,20 @@ import newCreditIcon from '../../../assets/ui/TopBar/newCredit.svg';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CalculatorModal from '../../modal/CalculatorModal';
+import { useAuth } from '../../../сontext/AuthContext';
+import type { Permission } from '../../../api/types/auth';
 
-const menuItems = [
-  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit'},
+interface MenuItem {
+  id: string;
+  icon: string;
+  text: string;
+  path?: string;
+  modal?: boolean;
+  permission?: Permission; // Explicitly type as Permission
+}
+
+const allMenuItems: MenuItem[] = [
+  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit', permission: 'CREATE_CREDITS' },
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
@@ -32,9 +43,15 @@ const TopMenu = () => {
     setSelectedTopMenuItem,
     setSelectedSideMenuItem
   } = useContext(SideMenuContext);
+  const { hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
+
+  // Filter menu items based on permissions
+  const menuItems = allMenuItems.filter(item => 
+    !item.permission || hasPermission(item.permission)
+  );
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;

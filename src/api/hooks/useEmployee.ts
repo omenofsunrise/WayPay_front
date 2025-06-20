@@ -327,6 +327,38 @@ export function useEmployee() {
       }
     }, [employee]);
 
+    const updateEmployeeRole = useCallback(async (id: number, role: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const updatedEmployee = await EmployeeService.updateEmployeeRole(id, role);
+        
+        setEmployees(prev => prev ? {
+          ...prev,
+          items: prev.items.map(e => e.id === id ? updatedEmployee : e)
+        } : null);
+        
+        setAuthInfo(prev => prev && prev.employee.id === id ? {
+          ...prev,
+          employee: {
+            ...prev.employee,
+            role: updatedEmployee.role
+          }
+        } : prev);
+        
+        if (employee && employee.id === id) {
+          setEmployee(updatedEmployee);
+        }
+        
+        return updatedEmployee;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, [employee]);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -366,6 +398,7 @@ export function useEmployee() {
     deletePhoto,
     updateEmployeePhone,
     updateEmployeeMinSurcharge,
-    togglePermission
+    togglePermission,
+    updateEmployeeRole
   };
 }

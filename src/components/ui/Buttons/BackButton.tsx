@@ -6,6 +6,7 @@ interface BackButtonProps {
 }
 
 const BackButton = styled.button<BackButtonProps>`
+  color: black;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -15,7 +16,6 @@ const BackButton = styled.button<BackButtonProps>`
   padding: 0;
   font-family: inherit;
   font-size: inherit;
-  color: inherit;
   margin: 25px;
 
   &:hover {

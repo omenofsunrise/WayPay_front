@@ -23,6 +23,7 @@ import usePayment from '../api/hooks/usePayment';
 import styled from 'styled-components';
 import { Container } from 'react-bootstrap';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import { useAuth } from '../сontext/AuthContext';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -57,7 +58,7 @@ const CreditControlPage = () => {
     5: 'income_percents',
     6: 'income_rubles',
   };
-
+  const { hasPermission } = useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
   const navigate = useNavigate();
@@ -176,7 +177,8 @@ const CreditControlPage = () => {
     {
       label: 'Удалить',
       action: handleDeleteCredit,
-      color: '#EF4444'
+      color: '#EF4444',
+      shouldShow: () => hasPermission('DELETE_CREDITS')
     }
   ];
 

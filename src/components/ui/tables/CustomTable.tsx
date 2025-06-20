@@ -17,6 +17,7 @@ export interface TableAction {
   action: (rowData: any[], rowIndex: number) => void;
   color?: string;
   disabled?: boolean;
+  shouldShow?: (rowData: any[]) => boolean;
 }
 
 export interface RowStyle {
@@ -336,38 +337,47 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         
 
       <AnimatePresence>
-        {contextMenu && contextMenuActions.length > 0 && (
-          <ContextMenuWrapper
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: 'absolute',
-              left: contextMenu.x,
-              top: contextMenu.y,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ContextMenu
-              items={
-                  (typeof contextMenuActions === 'function' 
-                    ? contextMenuActions(data[contextMenu.rowIndex!]) 
-                    : contextMenuActions
-                  ).map(action => ({
-                    label: action.label,
-                    action: () => {
-                      action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
-                      closeContextMenu();
-                    },
-                    color: action.color
-                  }))}
+        {contextMenu && contextMenuActions.length > 0 && (() => {
+          const filteredActions = (typeof contextMenuActions === 'function' 
+            ? contextMenuActions(data[contextMenu.rowIndex!]) 
+            : contextMenuActions
+          ).filter(action => 
+            typeof action === 'object' && 
+            (typeof action.shouldShow !== 'function' || 
+            action.shouldShow(data[contextMenu.rowIndex!]))
+          );
+
+          if (filteredActions.length === 0) return null;
+
+          return (
+            <ContextMenuWrapper
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              style={{
+                position: 'absolute',
+                left: contextMenu.x,
+                top: contextMenu.y,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ContextMenu
+                items={filteredActions.map(action => ({
+                  label: action.label,
+                  action: () => {
+                    action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
+                    closeContextMenu();
+                  },
+                  color: action.color
+                }))}
                 onClose={closeContextMenu} 
                 x={0} 
                 y={0}
               />
-          </ContextMenuWrapper>
-        )}
+            </ContextMenuWrapper>
+          );
+        })()}
       </AnimatePresence>
       </>
       )}

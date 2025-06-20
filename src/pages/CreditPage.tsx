@@ -23,6 +23,7 @@ import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { formatMoney } from '../utils/formatPrice';
 import usePayment from '../api/hooks/usePayment';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import { useAuth } from '../сontext/AuthContext';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -55,6 +56,7 @@ const CreditPage = () => {
     7: 'rest',
     8: 'debt'
   };
+  const { hasPermission } = useAuth();
 
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
@@ -157,7 +159,8 @@ const CreditPage = () => {
     {
       label: 'Удалить',
       action: handleDeleteCredit,
-      color: '#EF4444'
+      color: '#EF4444',
+      shouldShow: () => hasPermission('DELETE_CREDITS')
     }
   ];
 
@@ -352,12 +355,14 @@ const CreditPage = () => {
             setCurrentPage(1);
           }}
         />
-        <DarkCyanButton 
-          style={{ marginLeft: "auto", width: "15vw"}}
-          onClick={() => navigate('/new-credit')}
-        >
-          + Новый договор
-        </DarkCyanButton>
+        {hasPermission('CREATE_CREDITS') && (
+          <DarkCyanButton 
+            style={{ marginLeft: "auto", width: "15vw" }}
+            onClick={() => navigate('/new-credit')}
+          >
+            + Новый договор
+          </DarkCyanButton>
+        )}
       </SecondRaw>
 
       <CreditTypes onTabChange={handleTabChange} />

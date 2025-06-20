@@ -1,12 +1,18 @@
 import type { PaginationParams } from './common';
 
+export interface Permission {
+  id: number;
+  code: string;
+  description: string;
+}
+
 export interface Employee {
   id: number;
   fullName: string;
   address: string;
   phone: string;
   role: string;
-  permissions: string[] | null;
+  permissions: Permission[] | null;
   minSurcharge: number;
   photoPath: string;
 }

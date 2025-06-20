@@ -15,6 +15,7 @@ import paymentService from '../api/services/paymentService';
 import type { Payment, PaymentParams } from '../api/types/payment';
 import { formatDate } from '../utils/dateFormatter';
 import { formatMoney } from '../utils/formatPrice';
+import { useAuth } from '../сontext/AuthContext';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -24,6 +25,7 @@ const PaymentPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
+    const { authInfo } = useAuth();
     
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditId',
@@ -179,7 +181,7 @@ const PaymentPage = () => {
             shouldShow: (rowData: any[]) => {
                 const rowIndex = tableData.indexOf(rowData);
                 const payment = paymentsData?.items[rowIndex];
-                return payment && !payment.accepted;
+                return payment && !payment.accepted && authInfo?.employee.role === 'бухгалтер';
             }
         },
         {

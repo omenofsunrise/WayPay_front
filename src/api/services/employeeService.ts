@@ -201,6 +201,20 @@ class EmployeeService {
       throw error;
     }
   }
+
+  static async updateEmployeeRole(id: number, role: string): Promise<Employee> {
+    try {
+      const response = await apiClient.patch(`/Employee/role/${id}`, role, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
 }
 
 export default EmployeeService;

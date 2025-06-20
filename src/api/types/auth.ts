@@ -1,7 +1,8 @@
 export type Permission = 
-  | 'VIEW_CREDITS'
+  | 'CREATE_CREDITS'
   | 'DELETE_CREDITS'
-  ;
+  | 'VIEW_CREDITS'
+;
 
 export type Role = 'админ' | 'сотрудник' | 'директор' | 'суперадмин' | 'бухгалтер';
 

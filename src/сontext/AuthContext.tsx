@@ -14,6 +14,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const SUPER_ROLES: Role[] = ['админ', 'суперадмин', 'директор'];
+
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +46,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
   const hasPermission = (permission: Permission): boolean => {
     if (!authInfo) return false;
+    
+    if (SUPER_ROLES.includes(authInfo.employee.role)) {
+      return true;
+    }
+    
     return authInfo.employee.permissions.includes(permission);
   };
 

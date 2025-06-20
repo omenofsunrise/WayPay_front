@@ -50,7 +50,7 @@ const SideMenu = () => {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole } = useAuth();
+  const { hasRole, hasPermission } = useAuth();
   
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
@@ -160,6 +160,7 @@ const SideMenu = () => {
             </>
           )}
         </MenuItem>
+        
         {!collapsed && expandedItem === 'contracts' && (
           <SubMenu>
             <SubMenuLine />

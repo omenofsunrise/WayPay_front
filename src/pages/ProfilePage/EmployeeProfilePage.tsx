@@ -12,6 +12,8 @@ import { useEmployee } from '../../api/hooks/useEmployee';
 import { useEffect, useMemo, useState } from 'react';
 import type { Employee } from '../../api/types/employee';
 import { useMediaQuery } from 'react-responsive';
+import { useAuth } from '../../сontext/AuthContext';
+import Checkbox from '../../components/ui/CheckBoxes/Checkbox';
 
 interface EmployeeProfilePageProps {
     employeeId?: number;
@@ -28,9 +30,27 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         fetchPaymentsStats,
         fetchEmployeeById,
         fetchEmployeeCreditsStats,
-        fetchEmployeePaymentsStats
+        fetchEmployeePaymentsStats,
+        togglePermission
     } = useEmployee();
+    const { hasPermission, hasRole } = useAuth();
+    const [isUpdatingPermissions, setIsUpdatingPermissions] = useState(false);
     
+    const handleTogglePermission = async (permissionCode: string) => {
+        if (!employeeId || !employee) return;
+        
+        try {
+            setIsUpdatingPermissions(true);
+            await togglePermission(employeeId, permissionCode);
+            const updatedEmployee = await fetchEmployeeById(employeeId);
+            setEmployee(updatedEmployee);
+        } catch (error) {
+            console.error('Error updating permission:', error);
+        } finally {
+            setIsUpdatingPermissions(false);
+        }
+    };
+                                
     useEffect(() => {
         if (employeeId) {
             localStorage.setItem('viewingEmployeeId', employeeId.toString());
@@ -65,72 +85,77 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         [statsToUse]
     );
 
-const paymentsChartData = useMemo(() => 
-    paymentsToUse.map(stat => ({
-        label: getShortMonthName(stat.month),
-        total: stat.total,
-        bars: [
-            { 
-                name: 'Неподтверждённые, руб', 
-                value: stat.notAssumed, 
-                color: 'rgba(209, 213, 219, 1)' 
-            },
-            { 
-                name: 'Подтверждённые, руб', 
-                value: stat.assumed, 
-                color: 'rgba(0, 125, 136, 1)' 
-            },
-        ]
-    })),
-[paymentsToUse]);
+    const paymentsChartData = useMemo(() => 
+        paymentsToUse.map(stat => ({
+            label: getShortMonthName(stat.month),
+            total: stat.total,
+            bars: [
+                { 
+                    name: 'Неподтверждённые, руб', 
+                    value: stat.notAssumed, 
+                    color: 'rgba(209, 213, 219, 1)' 
+                },
+                { 
+                    name: 'Подтверждённые, руб', 
+                    value: stat.assumed, 
+                    color: 'rgba(0, 125, 136, 1)' 
+                },
+            ]
+        })),
+    [paymentsToUse]);
 
-const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-    
-    const currentMonthStat = statsToUse.find(
-        stat => stat.month === currentMonth && stat.year === currentYear
-    );
-    
-    let prevMonth = currentMonth - 1;
-    let prevYear = currentYear;
-    if (prevMonth === 0) {
-        prevMonth = 12;
-        prevYear--;
-    }
-    
-    const prevMonthStat = statsToUse.find(
-        stat => stat.month === prevMonth && stat.year === prevYear
-    );
+    const showPermissionsPanel = employeeId && 
+                                authInfo?.employee.id !== employeeId && 
+                                (employee?.role === 'сотрудник' || employee?.role === 'бухгалтер') &&
+                                (hasRole('админ') || hasRole('суперадмин') || hasRole('директор'));
 
-    const currentCount = currentMonthStat?.count || 0;
-    const prevCount = prevMonthStat?.count || 0;
-    
-    let change = 0;
-    let hasChange = false;
-    
-    if (prevCount > 0 && currentCount > 0) {
-        change = ((currentCount - prevCount) / prevCount) * 100;
-        hasChange = true;
-    } else if (prevCount === 0 && currentCount > 0) {
-        change = 100;
-        hasChange = true;
-    } else if (currentCount === 0 && prevCount > 0) {
-        change = -100;
-        hasChange = true;
-    }
-
-    return {
-        currentMonthCount: currentCount,
-        percentageChange: {
-            value: Math.round(change),
-            hasChange,
-            isPositive: change > 0,
-            isNeutral: change === 0
+    const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        
+        const currentMonthStat = statsToUse.find(
+            stat => stat.month === currentMonth && stat.year === currentYear
+        );
+        
+        let prevMonth = currentMonth - 1;
+        let prevYear = currentYear;
+        if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear--;
         }
-    };
-}, [statsToUse]);
+        
+        const prevMonthStat = statsToUse.find(
+            stat => stat.month === prevMonth && stat.year === prevYear
+        );
+
+        const currentCount = currentMonthStat?.count || 0;
+        const prevCount = prevMonthStat?.count || 0;
+        
+        let change = 0;
+        let hasChange = false;
+        
+        if (prevCount > 0 && currentCount > 0) {
+            change = ((currentCount - prevCount) / prevCount) * 100;
+            hasChange = true;
+        } else if (prevCount === 0 && currentCount > 0) {
+            change = 100;
+            hasChange = true;
+        } else if (currentCount === 0 && prevCount > 0) {
+            change = -100;
+            hasChange = true;
+        }
+
+        return {
+            currentMonthCount: currentCount,
+            percentageChange: {
+                value: Math.round(change),
+                hasChange,
+                isPositive: change > 0,
+                isNeutral: change === 0
+            }
+        };
+    }, [statsToUse]);
 
     const { currentMonthPayments, paymentsPercentageChange } = useMemo(() => {
     const now = new Date();
@@ -260,6 +285,28 @@ const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo
                     />
                 </ResultsWrapper>
             </BottomSection>
+
+            {showPermissionsPanel && (
+                <PermissionsSection>
+                    <ModalInfoTitle>Управление правами доступа</ModalInfoTitle>
+                    <PermissionsGrid>
+                        <PermissionItem>
+                            <Checkbox 
+                                checked={employee?.permissions?.some(p => p.code === 'CREATE_CREDITS') || false}
+                                onChange={() => handleTogglePermission('CREATE_CREDITS')}
+                            />
+                            <PermissionLabel>Просмотр кредитов</PermissionLabel>
+                        </PermissionItem>
+                        <PermissionItem>
+                            <Checkbox 
+                                checked={employee?.permissions?.some(p => p.code === 'DELETE_CREDITS') || false}
+                                onChange={() => handleTogglePermission('DELETE_CREDITS')}
+                            />
+                            <PermissionLabel>Удаление кредитов</PermissionLabel>
+                        </PermissionItem>
+                    </PermissionsGrid>
+                </PermissionsSection>
+            )}
         </PageLayout>
     );
 };
@@ -301,6 +348,31 @@ const ResultsWrapper = styled.div`
     & > div {
         flex: 1;
     }
+`;
+
+const PermissionsSection = styled.div`
+    margin-top: 30px;
+    padding-bottom: 20px;
+    background: #FFFFFF;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+`;
+
+const PermissionsGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+`;
+
+const PermissionItem = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+`;
+
+const PermissionLabel = styled.span`
+    font-size: 14px;
+    color: #374151;
 `;
 
 export default EmployeeProfilePage;
