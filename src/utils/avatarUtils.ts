@@ -33,14 +33,12 @@ export const generateAvatar = (initials: string, size = 100): string => {
 
   if (!ctx) return "";
 
-  // Фон
   const bgColor = stringToColor(initials);
   ctx.fillStyle = bgColor;
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Текст
   ctx.fillStyle = "#ffffff";
   const fontSize = size / 2;
   ctx.font = `bold ${fontSize}px "Manrope", Arial, sans-serif`;

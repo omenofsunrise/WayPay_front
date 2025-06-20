@@ -116,7 +116,6 @@ const useCompany = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Преобразуем Date в строку в нужном формате (например, 'yyyy-MM-dd')
       const success = await companyService.changeLicenceDate(id, licenceDate);
       return success;
     } catch (err) {

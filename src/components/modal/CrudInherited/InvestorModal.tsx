@@ -4,9 +4,7 @@ import CustomInput from '../../ui/fields/CustomInput';
 import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
 import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
-import Button from '../../ui/Buttons/DarkCyanButton';
 import type { Investor } from '../../../api/types/investor';
-import useInvestor from '../../../api/hooks/useInvestor';
 import { formatMoney, parseMoney } from '../../../utils/formatPrice';
 
 type InvestorModalProps = {
@@ -320,14 +318,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     setTouchedFields(prev => ({
       ...prev,
       [name]: true
-    }));
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked
     }));
   };
 

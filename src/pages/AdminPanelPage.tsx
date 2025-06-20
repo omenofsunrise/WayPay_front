@@ -9,8 +9,6 @@ import CompanyModal, { type CompanyModalData } from '../components/modal/CrudInh
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import CustomInput from '../components/ui/fields/CustomInput';
-import DateInput from '../components/ui/fields/DateInput';
-import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import DateModalInput from '../components/ui/fields/DateModalInput';
 import { formatDate } from '../utils/dateFormatter';
 
@@ -39,7 +37,6 @@ const AdminPanelPage = () => {
     getCompany,
     getAllCompanies,
     createCompany,
-    updateCompanyById,
     deleteCompany,
     changeLicenceDate,
     changePhone

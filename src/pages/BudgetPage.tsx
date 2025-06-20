@@ -210,18 +210,17 @@ const BudgetPage = () => {
         setExportProgress(0);
         
         try {
-            // Fetch all incomes
             let allIncomes: Income[] = [];
             let page = 1;
             let totalIncomes = 0;
             
             do {
-                setExportProgress(Math.min(30, Math.floor((page - 1) * 30 / 5))); // First 30% for incomes
+                setExportProgress(Math.min(30, Math.floor((page - 1) * 30 / 5)));
                 const incomeData = await BudgetService.getIncomes({
                     month: selectedMonth,
                     year: selectedYear,
                     page,
-                    pageSize: 100 // Larger page size for export
+                    pageSize: 100
                 });
                 
                 if (incomeData?.items) {
@@ -231,13 +230,12 @@ const BudgetPage = () => {
                 page++;
             } while (allIncomes.length < totalIncomes);
 
-            // Fetch all outcomes
             let allOutcomes: Outcome[] = [];
             page = 1;
             let totalOutcomes = 0;
             
             do {
-                setExportProgress(30 + Math.min(30, Math.floor((page - 1) * 30 / 5))); // Next 30% for outcomes
+                setExportProgress(30 + Math.min(30, Math.floor((page - 1) * 30 / 5)));
                 const outcomeData = await BudgetService.getOutcomes({
                     month: selectedMonth,
                     year: selectedYear,

@@ -33,7 +33,7 @@ const ButtonContainer = styled.button`
   font-size: 15px;
   font-weight: 400;
   height: auto;
-  white-space: nowrap; /* Добавлено, чтобы текст не переносился */
+  white-space: nowrap;
   transition: background-color 0.2s ease;
   margin: 0;
   

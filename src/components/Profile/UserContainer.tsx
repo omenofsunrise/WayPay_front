@@ -34,7 +34,6 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         }
     }, [employee?.photoPath]);
 
-    // Обработчик кликов вне меню
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {

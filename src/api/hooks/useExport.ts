@@ -34,7 +34,6 @@ const useExport = <T, C = any>() => {
         if (items.length === 0) {
           hasMoreData = false;
         } else {
-          // Обрабатываем дополнительные данные, если нужно
           const itemsWithAdditionalData = await Promise.all(
             items.map(async (item) => {
               const additionalData = fetchAdditionalData 

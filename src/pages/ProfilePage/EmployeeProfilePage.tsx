@@ -48,11 +48,10 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                 fetchCreditsStats(12);
                 fetchPaymentsStats(12);
             }
-    }, [employeeId, /* остальные зависимости */]);
+    }, [employeeId]);
     
     const statsToUse = employeeId ? employeeCreditsStats : creditsStats;
     const paymentsToUse = employeeId ? employeePaymentsStats : paymentsStats;
-    const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
     const [employee, setEmployee] = useState<Employee | null>(null);
     
     const scatterPlotData = useMemo(() => 

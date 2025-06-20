@@ -71,16 +71,14 @@ const StyledTable = styled.table`
   th, td {
     box-sizing: border-box;
     position: relative;
-    border-right: 1px solid #e2e8f0; /* Добавляем вертикальные линии для всех ячеек */
+    border-right: 1px solid #e2e8f0;
   }
 
-  /* Убираем границу у последней ячейки в строке */
   th:last-child,
   td:last-child {
     border-right: none;
   }
 
-  /* Убираем нижнюю границу у последней строки */
   tbody tr:last-child {
     border-bottom: none;
   }
@@ -113,7 +111,7 @@ const HeaderCell = styled.th`
   padding: 12px 16px;
   text-align: left;
   font-weight: 500;
-  width: 25%; // Равномерное распределение для 4 колонок
+  width: 25%;
   min-width: 100px;
 `;
 

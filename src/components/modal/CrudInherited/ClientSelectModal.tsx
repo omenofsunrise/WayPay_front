@@ -35,7 +35,7 @@ const ClientSelectModal = ({
     fullName: string;
     phone: string;
   } | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // State for create modal
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   const pageSize = 5;
   
@@ -212,7 +212,6 @@ const ClientSelectModal = ({
         </ModalContent>
       </BaseModal>
 
-      {/* Client creation modal */}
       <ClientModal
         mode="create"
         isOpen={isCreateModalOpen}

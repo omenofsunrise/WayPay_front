@@ -45,7 +45,7 @@ const CompanyModal = ({
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value.length === 10) { // Check if date is complete (dd.mm.yyyy)
+    if (value.length === 10) {
       const [day, month, year] = value.split('.');
       const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
       if (!isNaN(date.getTime())) {

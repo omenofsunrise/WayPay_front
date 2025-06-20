@@ -41,11 +41,10 @@ class CompanyService {
 
   async changeLicenceDate(id: number, licenceDate: Date): Promise<boolean> {
     try {
-      // Обрезаем время, оставляем только дату (например, "2026-06-27")
       const dateOnlyStr = licenceDate.toISOString().split('T')[0];
       await apiClient.patch(`/Company/licence-date/${id}`, dateOnlyStr, {
         headers: {
-          'Content-Type': 'application/json', // Важно!
+          'Content-Type': 'application/json',
         },
       });
       return true;

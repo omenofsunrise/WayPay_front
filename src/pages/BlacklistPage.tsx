@@ -14,16 +14,6 @@ import { formatDate } from '../utils/dateFormatter';
 import { useAuth } from '../сontext/AuthContext';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 
-interface BlacklistItem {
-  id: number;
-  clientId: number;
-  fullName: string;
-  phone: string;
-  birthdate: string;
-  createdAt: string;
-  debt?: string;
-}
-
 const BlacklistPage = () => {
     const [nameFilter, setNameFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);

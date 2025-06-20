@@ -10,7 +10,6 @@ import type {
 } from '../types/budget';
 
 export const BudgetService = {
-  // Income endpoints
   getIncomes: async (params: BudgetParams): Promise<BudgetIncomeResponse> => {
     const response = await apiClient.get<BudgetIncomeResponse>('/BudgetIncome', { params });
     return response.data;
@@ -25,7 +24,6 @@ export const BudgetService = {
     await apiClient.delete(`/BudgetIncome/${id}`);
   },
 
-  // Outcome endpoints
   getOutcomes: async (params: BudgetParams): Promise<BudgetOutcomeResponse> => {
     const response = await apiClient.get<BudgetOutcomeResponse>('/BudgetOutcome', { params });
     return response.data;

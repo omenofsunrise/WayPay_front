@@ -32,13 +32,10 @@ const PhoneModalInput: React.FC<PhoneInputProps> = ({
     const showCustomPlaceholder = Boolean(customPlaceholder && !value && !isFocused);
 
     const formatPhoneNumber = (inputValue: string): string => {
-        // Удаляем все нецифровые символы
         const cleaned = inputValue.replace(/\D/g, '');
         
-        // Ограничиваем длину 11 цифрами (первая 8, остальные 10)
         const limited = cleaned.slice(0, 11);
         
-        // Форматируем номер по шаблону 8 (XXX) XXX-XX-XX
         let formattedValue = '';
         
         if (limited.length > 0) {
@@ -113,7 +110,6 @@ const PhoneModalInput: React.FC<PhoneInputProps> = ({
     );
 };
 
-// Styled components remain the same as in your original code
 const InputContainer = styled.div`
   position: relative;
   display: inline-block;

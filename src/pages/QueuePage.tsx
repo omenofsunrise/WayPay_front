@@ -164,21 +164,6 @@ const QueuePage = () => {
         setIsModalOpen(true);
     };
 
-    const handleEditQueue = async (queue: Queue) => {
-        try {
-            const client = await getClientById(queue.clientId);
-            setModalMode('edit');
-            setSelectedQueue({
-                ...queue,
-                clientFullName: client?.fullName,
-                clientPhone: client?.phone
-            });
-            setIsModalOpen(true);
-        } catch (err) {
-            console.error('Ошибка при загрузке клиента:', err);
-        }
-    };
-
     const handleViewQueue = async (queue: Queue) => {
         try {
             const client = await getClientById(queue.clientId);

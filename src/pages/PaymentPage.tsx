@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";

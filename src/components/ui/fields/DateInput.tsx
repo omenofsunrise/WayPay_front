@@ -93,7 +93,7 @@ const Field = styled.div`
   background-color: white;
   width: 100%;
   transition: border-color 0.2s ease;
-    height: auto; /* Занимает всю высоту родителя */
+    height: auto;
     max-height: 38px;
   box-sizing: border-box;
 

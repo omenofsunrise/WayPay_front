@@ -83,7 +83,7 @@ const CustomCalendar: React.FC<DateInputProps> = ({
 
   const handleReset = () => {
     setSelectedDate(null);
-    onChange?.(''); // Add this line to trigger onChange with empty value
+    onChange?.('');
     onReset?.();
     setIsPickerOpen(false);
   };
@@ -115,7 +115,6 @@ const CustomCalendar: React.FC<DateInputProps> = ({
     const days = [];
     const totalDays = 35;
     
-    // Previous month days
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = 0; i < startDay; i++) {
       const day = prevMonthLastDay - startDay + i + 1;
@@ -137,7 +136,6 @@ const CustomCalendar: React.FC<DateInputProps> = ({
       );
     }
     
-    // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
       const isSelected = selectedDate && 
@@ -156,7 +154,6 @@ const CustomCalendar: React.FC<DateInputProps> = ({
       );
     }
     
-    // Next month days
     const remainingDays = totalDays - days.length;
     for (let i = 1; i <= remainingDays; i++) {
       const date = new Date(year, month + 1, i);

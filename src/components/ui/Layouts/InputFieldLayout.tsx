@@ -1,11 +1,9 @@
 import styled from "styled-components";
 
-// Пропсы для левой части
 interface LeftPartProps {
   leftRatio?: number;
 }
 
-// Пропсы для правой части
 interface RightPartProps {
   rightRatio?: number;
 }

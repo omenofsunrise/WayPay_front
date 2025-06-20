@@ -126,7 +126,6 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
             />
           ))}
 
-          {/* Connecting lines between points */}
           {data.map((point, index) => {
             if (index === 0) return null;
 

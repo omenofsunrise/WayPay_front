@@ -23,15 +23,15 @@ export interface ClientForm {
   fullName: string;
   phone: string;
   doc: string;
-  birthdate: string; // формат "dd.mm.yyyy"
-  docIssueDate: string; // формат "dd.mm.yyyy"
+  birthdate: string;
+  docIssueDate: string;
   registrationAddress: string;
 }
 
 export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {
   id: number;
-  birthdate: Date; // Для API - объект Date
-  docIssueDate: Date; // Для API - объект Date
+  birthdate: Date;
+  docIssueDate: Date;
 }
 
 export interface ClientExistsResponse {

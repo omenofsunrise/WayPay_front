@@ -51,7 +51,6 @@ const OutcomeModal: React.FC<OutcomeModalProps> = ({
 
         try {
             await onSave(e);
-            // Reset after successful save
             setNewOutcome({ amount: '', comment: '' });
             setFormattedAmount('');
         } catch (error) {

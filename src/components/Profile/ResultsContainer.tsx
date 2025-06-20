@@ -94,7 +94,7 @@ const Title = styled.span`
 const Content = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: baseline; /* Изменено с flex-end на baseline */
+  align-items: baseline;
 `;
 
 const Value = styled.span`

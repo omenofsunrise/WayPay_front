@@ -34,7 +34,6 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
           return;
         }
       } catch {
-        // ignore parsing errors
       }
     }
     setDisplayValue('');
@@ -43,28 +42,22 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     
-    // Разрешаем только цифры и точки
     const cleanedValue = input.replace(/[^\d.]/g, '');
     
-    // Разбиваем на части по точкам
     const parts = cleanedValue.split('.').filter(part => part !== '');
     
-    // Форматируем ввод
     let formattedValue = '';
     if (parts.length > 0) {
-      // Ограничиваем день двумя цифрами
       const day = parts[0].slice(0, 2);
       formattedValue = day;
       
       if (parts.length > 1 || (parts[0].length > 2 && parts.length === 1)) {
-        // Ограничиваем месяц двумя цифрами
         const monthPart = parts.length > 1 ? parts[1] : parts[0].slice(2);
         const month = monthPart.slice(0, 2);
         formattedValue += `.${month}`;
         
         if (parts.length > 2 || (monthPart.length > 2 && parts.length === 2) || 
             (parts.length === 1 && parts[0].length > 4)) {
-          // Ограничиваем год четырьмя цифрами
           const yearPart = parts.length > 2 ? parts[2] : 
                          parts.length === 2 ? parts[1].slice(2) : 
                          parts[0].slice(4);
@@ -76,7 +69,6 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
     
     setDisplayValue(formattedValue);
     
-    // Если введена полная дата (дд.мм.гггг), преобразуем в ISO строку
     if (formattedValue.length === 10) {
       const [day, month, year] = formattedValue.split('.');
       const dayNum = parseInt(day, 10);
@@ -107,13 +99,11 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Разрешаем: backspace, delete, tab, escape, enter, стрелки
     if ([8, 9, 27, 13, 46].includes(e.keyCode) || 
         (e.keyCode >= 37 && e.keyCode <= 40)) {
       return;
     }
 
-    // Разрешаем только цифры и точки
     if (!/[0-9.]/.test(e.key)) {
       e.preventDefault();
     }
@@ -163,7 +153,6 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
   );
 };
 
-// Стили остаются без изменений
 const InputContainer = styled.div`
   position: relative;
   display: inline-block;

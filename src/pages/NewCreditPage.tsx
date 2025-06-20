@@ -7,11 +7,9 @@ import PageLayout from '../components/ui/Layouts/PageLayout';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import GrayButton from '../components/ui/Buttons/GrayButton';
 import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
-import DateInput from '../components/ui/fields/DateInput';
 import EntitySelectContainer from '../components/ui/Layouts/EntitySelectContainer';
 import ClientSelectModal from '../components/modal/CrudInherited/ClientSelectModal';
 import InvestorSelectModal from '../components/modal/CrudInherited/InvestorSelectModal';
-import view from '../assets/ui/credits/newCredit/view.svg';
 import ProductsTable from '../components/ui/tables/ProductTable';
 import PaymentScheduleTable, { type PaymentScheduleItem } from '../components/ui/tables/PaymentScheduleTable';
 import CustomInput from '../components/ui/fields/CustomInput';
@@ -54,10 +52,6 @@ interface Product {
   quantity: number;
   markup: number;
   totalPrice: number;
-}
-
-interface ViewButtonProps {
-  onClick?: () => void;
 }
 
 const NewCreditPage = () => {

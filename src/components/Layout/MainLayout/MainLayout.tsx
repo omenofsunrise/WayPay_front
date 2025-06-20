@@ -13,7 +13,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedSideMenuItem, setSelectedSideMenuItem] = useState<string | null>(null);
   const [selectedTopMenuItem, setSelectedTopMenuItem] = useState<string | null>(null);
-  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {

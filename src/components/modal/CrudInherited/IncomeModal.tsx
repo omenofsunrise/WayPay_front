@@ -65,7 +65,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Валидация
         if (!newIncome.amount || !newIncome.investorId) {
             alert('Пожалуйста, заполните все обязательные поля');
             return;
@@ -73,7 +72,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
         try {
             await onSave(e);
-            // Сброс после успешного сохранения
             setNewIncome({ amount: '', comment: '', investorId: '' });
             setSelectedInvestor(null);
             setFormattedAmount('');
@@ -134,7 +132,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                 </div>
             </BaseModal>
 
-            {/* Модалки для выбора/просмотра инвестора */}
             <InvestorSelectModal
                 isOpen={isInvestorModalOpen}
                 onClose={() => setIsInvestorModalOpen(false)}

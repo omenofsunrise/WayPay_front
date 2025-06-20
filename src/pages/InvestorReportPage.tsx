@@ -75,7 +75,6 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
         pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
         document.body.appendChild(pdfContainer);
 
-        // Функция для создания карточки с иконкой
         const createCard = (icon: string, value: string, label: string) => `
             <div style="
                 background: rgba(255, 255, 255, 1);
@@ -115,7 +114,6 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
             </div>
         `;
 
-        // Основной контент PDF
         pdfContainer.innerHTML = `
             <div style="
                 margin-bottom: 30px;
@@ -328,8 +326,8 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 210; // A4 width in mm
-            const pageHeight = 295; // A4 height in mm
+            const imgWidth = 210;
+            const pageHeight = 295;
             const imgHeight = canvas.height * imgWidth / canvas.width;
             let heightLeft = imgHeight;
             let position = 0;
@@ -344,10 +342,8 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                 heightLeft -= pageHeight;
             }
 
-            // Удаляем временный контейнер
             document.body.removeChild(pdfContainer);
 
-            // Получаем PDF как Blob
             const pdfBlob = pdf.output('blob');
             resolve(pdfBlob);
         } catch (error) {
@@ -362,7 +358,6 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
             const pdfBlob = await generatePdf(report, currentInvestor, payouts);
             const pdfUrl = URL.createObjectURL(pdfBlob);
             
-            // Создаем ссылку для скачивания
             const downloadLink = document.createElement('a');
             downloadLink.href = pdfUrl;
             downloadLink.download = `Отчет_инвестора_${currentInvestor?.nickname || currentInvestor?.fullName || 'Без_названия'}_${formatDate(new Date().toISOString())}.pdf`;
@@ -370,7 +365,6 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
             downloadLink.click();
             document.body.removeChild(downloadLink);
             
-            // Освобождаем память
             setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
         } catch (error) {
             console.error('Ошибка при генерации PDF:', error);
@@ -385,14 +379,12 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
             const pdfBlob = await generatePdf(report, currentInvestor, payouts);
             
             if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], `Отчет_инвестора_${currentInvestor.nickname || currentInvestor.fullName}.pdf`, { type: 'application/pdf' })] })) {
-                // Для мобильных устройств с поддержкой sharing files
                 await navigator.share({
                     title: `Отчёт инвестора ${currentInvestor.nickname || currentInvestor.fullName}`,
                     text: `Финансовый отчет по инвестору ${currentInvestor.nickname || currentInvestor.fullName}`,
                     files: [new File([pdfBlob], `Отчет_инвестора_${currentInvestor.nickname || currentInvestor.fullName}.pdf`, { type: 'application/pdf' })]
                 });
             } else if (navigator.share) {
-                // Для мобильных устройств без поддержки sharing files
                 await navigator.share({
                     title: `Отчёт инвестора ${currentInvestor.nickname || currentInvestor.fullName}`,
                     text: `Финансовый отчет по инвестору ${currentInvestor.nickname || currentInvestor.fullName}. Инвестиция: ${formatMoney(report.investment.toString())}, Доход: ${formatMoney(report.investorIncome.toString())}`,

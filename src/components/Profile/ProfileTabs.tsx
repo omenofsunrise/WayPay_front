@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { useAuth } from "../../сontext/AuthContext";
 
 interface ProfileTabButtonProps {
     $isActive: boolean;
@@ -10,11 +11,19 @@ interface ProfileTabsProps {
 }
 
 const ProfileTabs = ({ activeTab, onTabChange }: ProfileTabsProps) => {
-    const tabs = [
-        { name: "Мой профиль" },
-        { name: "Список пользователей" },
-        { name: "Данные компании" }
-    ];
+  const { hasRole } = useAuth();
+    const tabs = [];
+    
+    tabs.push({ name: "Мой профиль" });
+    
+    if (hasRole('директор') || hasRole("суперадмин")) {
+        tabs.push({ name: "Список пользователей" });
+        tabs.push({ name: "Данные компании" });
+    }
+
+    if (hasRole("админ")) {
+        tabs.push({ name: "Список пользователей" });
+    }
 
     return (
         <ProfileTabsContainer>

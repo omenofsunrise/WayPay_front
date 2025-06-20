@@ -1,9 +1,5 @@
 import styled from 'styled-components';
 
-interface InputContainerProps {
-  $maxWidth?: string;
-}
-
 export const InputRow = styled.div`
   display: flex;
   align-items: center;

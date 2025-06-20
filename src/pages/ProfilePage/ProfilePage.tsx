@@ -1,7 +1,6 @@
 import styled from 'styled-components';
 import ProfileTabs from '../../components/Profile/ProfileTabs';
 import PageLayout from '../../components/ui/Layouts/PageLayout';
-import CustomTitle from '../../components/ui/Text/CustomTitle';
 import CompanyPage from './CompanyPage';
 import EmployeePage from './EmployeePage';
 import EmployeeProfilePage from './EmployeeProfilePage';
