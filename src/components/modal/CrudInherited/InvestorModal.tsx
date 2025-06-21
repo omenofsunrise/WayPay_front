@@ -369,7 +369,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           </InputRow>
           
             <InputRow>
-              <InputLabel>{formData.isCompany ? 'Владелец:' : 'ФИО:'}</InputLabel>
+              <InputLabel>{formData.isCompany ? 'В лице:' : 'ФИО:'}</InputLabel>
               <InputContainer>
                 <CustomInput
                   name="fullName"

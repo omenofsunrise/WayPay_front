@@ -480,14 +480,12 @@ const BudgetPage = () => {
                                 formatMoney(outcomes.totalOutcomeAmount.toString()) : 
                                 '0'}
                         </TableTitle>
-                        {isCurrentMonthAndYear && (
-                            <DarkCyanButton 
-                                style={{ width: "120px" }}
-                                onClick={() => setShowOutcomeModal(true)}
-                            >
-                                + Добавить
-                            </DarkCyanButton>
-                        )}
+                        <DarkCyanButton 
+                            style={{ width: "120px" }}
+                            onClick={() => setShowOutcomeModal(true)}
+                        >
+                            + Добавить
+                        </DarkCyanButton>
                     </TableHeader>
                     <CustomTable 
                         columns={[
