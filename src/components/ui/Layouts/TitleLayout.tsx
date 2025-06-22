@@ -8,6 +8,7 @@ const TitleField = styled.div`
     color: black;
     font-weight: 600;
     margin-top: 20px;
+    align-items: center;
 `;
 
 export default TitleField; 

@@ -156,7 +156,7 @@ const BudgetPage = () => {
             label: "Удалить",
             action: (rowData: any[]) => {
                 const id = rowData[0];
-                if (window.confirm("Вы уверены, что хотите удалить этот доход?")) {
+                if (window.confirm("Вы уверены, что хотите удалить этот приход?")) {
                     handleDeleteIncome(id);
                 }
             },
@@ -253,7 +253,7 @@ const BudgetPage = () => {
             setExportProgress(70);
             
             const incomeSheetData = allIncomes.map(income => ({
-                'Тип': 'Доход',
+                'Тип': 'приход',
                 'ID': income.id,
                 'Сумма': formatMoney(income.amount?.toString() || '0'),
                 'Дата': income.createdAt ? formatDate(income.createdAt) : '',
@@ -277,7 +277,7 @@ const BudgetPage = () => {
             const summaryData = [
                 {},
                 { 'Тип': 'ИТОГО', 'Сумма': '' },
-                { 'Тип': 'Общий доход', 'Сумма': formatMoney(totalIncome.toString()) },
+                { 'Тип': 'Общий приход', 'Сумма': formatMoney(totalIncome.toString()) },
                 { 'Тип': 'Общий расход', 'Сумма': formatMoney(totalOutcome.toString()) },
                 { 'Тип': 'Баланс', 'Сумма': formatMoney(balance.toString()) }
             ];
@@ -356,7 +356,7 @@ const BudgetPage = () => {
             }
         } catch (error) {
             console.error("Error adding income:", error);
-            alert("Произошла ошибка при добавлении дохода");
+            alert("Произошла ошибка при добавлении прихода");
             return false;
         }
     };
@@ -437,7 +437,7 @@ const BudgetPage = () => {
                 <TableWrapper>
                     <TableHeader>
                         <TableTitle>
-                            Доходы: {incomes?.totalIncomeAmount !== undefined ? 
+                            Приходы: {incomes?.totalIncomeAmount !== undefined ? 
                                 formatMoney(incomes.totalIncomeAmount.toString()) : 
                                 '0'}
                         </TableTitle>

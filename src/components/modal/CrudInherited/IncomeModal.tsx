@@ -93,7 +93,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     return (
         <>
             <BaseModal
-                title="Добавить доход"
+                title="Добавить приход"
                 onClose={onClose}
                 onCancel={onClose}
                 onSave={handleSave}

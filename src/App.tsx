@@ -22,6 +22,7 @@ import BudgetPage from './pages/BudgetPage';
 import { ErrorBoundary } from "react-error-boundary";
 import { AuthProvider } from './сontext/AuthContext';
 import AdminPanelPage from './pages/AdminPanelPage';
+import ToDoListPage from './pages/ToDoListPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -159,6 +160,12 @@ function App() {
           <Route path="admin" element={
             <MainLayout>
               <AdminPanelPage />
+            </MainLayout>
+          } />
+
+          <Route path="todo" element={
+            <MainLayout>
+              <ToDoListPage />
             </MainLayout>
           } />
 
