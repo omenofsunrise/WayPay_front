@@ -81,13 +81,13 @@ const Container = styled.div`
 
 const TitleWrapper = styled.div`
   display: flex;
-  align-items: flex-start; /* Изменено с center на flex-start для правильного выравнивания */
+  align-items: flex-start;
   margin-bottom: 8px;
-  gap: 8px; /* Добавлен gap вместо margin-right для иконки */
+  gap: 8px;
 `;
 
 const PriorityIcon = styled.div<{ color: string }>`
-  flex-shrink: 0; /* Предотвращает сжатие иконки */
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
   display: flex;
@@ -105,8 +105,8 @@ const PriorityIcon = styled.div<{ color: string }>`
 const Title = styled.h4`
   margin: 0;
   color: #333;
-  word-break: break-word; /* Перенос слов */
-  flex: 1; /* Занимает все доступное пространство */
+  word-break: break-word;
+  flex: 1;
   text-align: left;
   margin-top: 0px;
 `;
@@ -130,7 +130,7 @@ const Avatar = styled.div`
   height: 24px;
   border-radius: 50%;
   overflow: hidden;
-  min-width: 24px; /* Гарантирует, что ширина не уменьшится */
+  min-width: 24px;
   min-height: 24px;
   
   img {
