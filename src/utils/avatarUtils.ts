@@ -1,7 +1,7 @@
 /**
  * Генерирует цвет на основе строки (чтобы один и тот же текст давал один и тот же цвет)
  */
-const stringToColor = (str: string): string => {
+export const stringToColor = (str: string): string => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
