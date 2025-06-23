@@ -1,7 +1,7 @@
 import apiClient from '../client';
 import type { ClientExistsResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
-import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse } from '../types/employee';
+import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, EmployeeFullnames, PaymentStatsResponse } from '../types/employee';
 
 class EmployeeService {
   static async getAuthInfo(): Promise<AuthInfoResponse> {
@@ -140,6 +140,15 @@ class EmployeeService {
     }
   }
   
+  static async getEmployeeFullnames(): Promise<EmployeeFullnames[]> {
+    try {
+      const response = await apiClient.get(`/Employee/fullnames`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   static async deleteEmployee(id: number): Promise<void> {
     try {
       await apiClient.delete(`/Employee/${id}`);

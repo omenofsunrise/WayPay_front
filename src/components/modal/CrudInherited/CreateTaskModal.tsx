@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { TaskForm } from '../../../api/types/task';
 import useTask from '../../../api/hooks/useTask';
+import { useEmployee } from '../../../api/hooks/useEmployee';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
 import CustomSelect from '../../ui/fields/CustomSelect';
 import CustomCalendar from '../../ui/fields/CustomCalendar';
-import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
 import InputTitle from '../../ui/Text/InputTitle';
 import SelectPriority from '../../ui/fields/SelectPriority';
 
@@ -15,20 +15,11 @@ interface CreateTaskModalProps {
   onTaskCreated: () => void;
 }
 
-const assigneeOptions = [
-  { value: '1', label: 'Иван Иванов' },
-  { value: '2', label: 'Петр Петров' },
-  { value: '3', label: 'Сергей Сергеев' }
-];
-
-const responsibleOptions = [
-  { value: '1', label: 'Иван Иванов' },
-  { value: '2', label: 'Петр Петров' },
-  { value: '3', label: 'Сергей Сергеев' }
-];
-
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTaskCreated }) => {
   const { createTask } = useTask();
+  const { fetchEmployeeFullnames } = useEmployee();
+  const [assigneeOptions, setAssigneeOptions] = useState<{ value: string; label: string }[]>([]);
+  const [responsibleOptions, setResponsibleOptions] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState<TaskForm>({
     title: '',
     description: '',
@@ -38,6 +29,40 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     priority: 'medium'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      if (!isOpen) return;
+      
+      try {
+        setIsLoading(true);
+        const fullNames = await fetchEmployeeFullnames();
+        const options = fullNames.map(employee => ({
+          value: employee.id.toString(),
+          label: employee.fullName
+        }));
+        
+        setAssigneeOptions(options);
+        setResponsibleOptions(options);
+        
+        // Set default values if options are available
+        if (options.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            employeeId: parseInt(options[0].value),
+            responsibleId: parseInt(options[0].value)
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching employee names:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, [isOpen, fetchEmployeeFullnames]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -80,8 +105,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
       setFormData({
         title: '',
         description: '',
-        employeeId: 1,
-        responsibleId: 1,
+        employeeId: assigneeOptions[0]?.value ? parseInt(assigneeOptions[0].value) : 1,
+        responsibleId: responsibleOptions[0]?.value ? parseInt(responsibleOptions[0].value) : 1,
         deadline: '',
         priority: 'medium'
       });
@@ -100,8 +125,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
-      isSubmitting={isSubmitting}
-      isSaveDisabled={!formData.title || !formData.deadline}
+      isSubmitting={isSubmitting || isLoading}
+      isSaveDisabled={!formData.title || !formData.deadline || isLoading}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: "5px", maxWidth: "500px", marginLeft: "30px" }}>
         <InputTitle>Заголовок</InputTitle>
@@ -138,6 +163,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
           value={formData.employeeId.toString()}
           onChange={handleSelectChange}
           options={assigneeOptions}
+          disabled={isLoading}
         />
         
         <InputTitle>Ответственный</InputTitle>
@@ -146,6 +172,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
           value={formData.responsibleId.toString()}
           onChange={handleSelectChange}
           options={responsibleOptions}
+          disabled={isLoading}
         />
       </div>
     </BaseModal>

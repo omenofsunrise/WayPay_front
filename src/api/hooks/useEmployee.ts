@@ -134,6 +134,16 @@ export function useEmployee() {
     }
   }, []);
 
+  const fetchEmployeeFullnames = useCallback(async () => {
+    try {
+      const fullNames = await EmployeeService.getEmployeeFullnames();
+      return fullNames;
+    } catch (err) {
+      throw err;
+    } finally {
+    }
+  }, []);
+
   const updateEmployee = useCallback(async (employeeData: {
     id: number;
     fullName: string;
@@ -399,6 +409,7 @@ export function useEmployee() {
     updateEmployeePhone,
     updateEmployeeMinSurcharge,
     togglePermission,
-    updateEmployeeRole
+    updateEmployeeRole,
+    fetchEmployeeFullnames
   };
 }

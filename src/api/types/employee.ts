@@ -45,3 +45,8 @@ export interface PaymentStatsResponse {
 export interface EmployeeExistsResponse {
   exists: boolean;
 }
+
+export interface EmployeeFullnames {
+  id: number;
+  fullName: string;
+}
