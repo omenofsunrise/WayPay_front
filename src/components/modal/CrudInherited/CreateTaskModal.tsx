@@ -7,18 +7,13 @@ import CustomSelect from '../../ui/fields/CustomSelect';
 import CustomCalendar from '../../ui/fields/CustomCalendar';
 import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
 import InputTitle from '../../ui/Text/InputTitle';
+import SelectPriority from '../../ui/fields/SelectPriority';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTaskCreated: () => void;
 }
-
-const priorityOptions = [
-  { value: 'low', label: 'Низкий приоритет' },
-  { value: 'medium', label: 'Средний приоритет' },
-  { value: 'high', label: 'Высокий приоритет' }
-];
 
 const assigneeOptions = [
   { value: '1', label: 'Иван Иванов' },
@@ -44,7 +39,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -64,6 +59,13 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     setFormData(prev => ({
       ...prev,
       [name]: parseInt(value)
+    }));
+  };
+
+  const handlePriorityChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      priority: value as 'low' | 'medium' | 'high'
     }));
   };
 
@@ -123,11 +125,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
           
           <div style={{ flex: 1, gap: "5px" }}>
             <InputTitle style={{ marginBottom: "5px" }}>Приоритет</InputTitle>
-            <CustomSelect
-              name="priority"
+            <SelectPriority
               value={formData.priority}
-              onChange={handleInputChange}
-              options={priorityOptions}
+              onChange={handlePriorityChange}
             />
           </div>
         </div>
