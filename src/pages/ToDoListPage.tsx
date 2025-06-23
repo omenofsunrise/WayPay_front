@@ -9,6 +9,7 @@ import TaskListContainer from "../components/ToDo/TaskListContainer";
 import styled from "styled-components";
 import useTask from "../api/hooks/useTask";
 import type { Task, TaskParams } from "../api/types/task";
+import CreateTaskModal from "../components/modal/CrudInherited/CreateTaskModal";
 
 const ToDoListPage = () => {
     const priorityOptions = [
@@ -17,7 +18,7 @@ const ToDoListPage = () => {
         { value: "medium", label: "Средний приоритет" },
         { value: "low", label: "Низкий приоритет" }
     ];
-
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const assigneeOptions = [
         { value: "", label: "Все исполнители" },
         { value: "user1", label: "Иван Иванов" },
@@ -48,7 +49,6 @@ const fetchTasks = async () => {
         };
 
         const tasks = await getTasks(params);
-        console.log("Fetched tasks:", tasks); // Debug log
 
         if (Array.isArray(tasks)) {
             const groupedTasks = {
@@ -109,7 +109,12 @@ const fetchTasks = async () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>To do</CustomTitle>
-                <DarkCyanButton style={{}}>Добавить задачу</DarkCyanButton>
+                <DarkCyanButton 
+                    style={{}} 
+                    onClick={() => setIsCreateModalOpen(true)}
+                    >
+                    Добавить задачу
+                </DarkCyanButton>
             </TitleField>
             <FilterField style={{maxWidth: "800px", gap: "16px" }}>
                 <CustomSelect
@@ -157,6 +162,11 @@ const fetchTasks = async () => {
                     onDragStart={handleDragStart}
                 />
             </TaskListContainersWrapper>
+            <CreateTaskModal 
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onTaskCreated={fetchTasks}
+            />
         </PageLayout>
     )
 }
