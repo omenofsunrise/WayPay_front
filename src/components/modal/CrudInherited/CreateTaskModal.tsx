@@ -24,7 +24,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     title: '',
     description: '',
     employeeId: 1,
-    responsibleId: 1,
+    responsibleId: null, // Изменено на nullable
     deadline: '',
     priority: 'medium'
   });
@@ -44,14 +44,14 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         }));
         
         setAssigneeOptions(options);
-        setResponsibleOptions(options);
+        setResponsibleOptions([{ value: '', label: 'Нет ответственного' }, ...options]);
         
         // Set default values if options are available
         if (options.length > 0) {
           setFormData(prev => ({
             ...prev,
             employeeId: parseInt(options[0].value),
-            responsibleId: parseInt(options[0].value)
+            responsibleId: null
           }));
         }
       } catch (error) {
@@ -83,7 +83,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: parseInt(value)
+      [name]: value ? parseInt(value) : null
     }));
   };
 
@@ -106,7 +106,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         title: '',
         description: '',
         employeeId: assigneeOptions[0]?.value ? parseInt(assigneeOptions[0].value) : 1,
-        responsibleId: responsibleOptions[0]?.value ? parseInt(responsibleOptions[0].value) : 1,
+        responsibleId: null,
         deadline: '',
         priority: 'medium'
       });
@@ -160,16 +160,17 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         <InputTitle>Исполнитель</InputTitle>
         <CustomSelect
           name="employeeId"
-          value={formData.employeeId.toString()}
+          value={formData.employeeId?.toString() || ''}
           onChange={handleSelectChange}
           options={assigneeOptions}
           disabled={isLoading}
+          required
         />
         
         <InputTitle>Ответственный</InputTitle>
         <CustomSelect
           name="responsibleId"
-          value={formData.responsibleId.toString()}
+          value={formData.responsibleId?.toString() || ''}
           onChange={handleSelectChange}
           options={responsibleOptions}
           disabled={isLoading}

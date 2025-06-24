@@ -21,88 +21,143 @@ const ToDoListPage = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const assigneeOptions = [
         { value: "", label: "Все исполнители" },
-        { value: "user1", label: "Иван Иванов" },
-        { value: "user2", label: "Петр Петров" },
-        { value: "user3", label: "Сергей Сергеев" }
+        { value: "1", label: "Иван Иванов" },
+        { value: "2", label: "Петр Петров" },
+        { value: "3", label: "Сергей Сергеев" }
     ];
 
     const [priority, setPriority] = React.useState("");
     const [assignee, setAssignee] = React.useState("");
-    const { getTasks, isLoading, data } = useTask();
+    const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+    const { 
+        getTasks, 
+        createTask,
+        deleteTask,
+        setTaskPending,
+        setTaskInProgress,
+        setTaskInReview,
+        setTaskDone,
+        isLoading 
+    } = useTask();
+    
     const [tasks, setTasks] = useState<Record<string, Task[]>>({
         pending: [],
         in_progress: [],
-        completed: [],
-        verified: []
+        review: [],
+        done: []
     });
     const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 
+    const handleEditTask = (task: Task) => {
+        setTaskToEdit(task);
+    };
+
+    const handleDeleteTask = async (taskId: number) => {
+        try {
+            await deleteTask(taskId);
+            fetchTasks();
+        } catch (error) {
+            console.error("Error deleting task:", error);
+        }
+    };
+
+    const handleTaskUpdated = async () => {
+        await fetchTasks();
+        setTaskToEdit(null);
+    };
+    
     useEffect(() => {
         fetchTasks();
     }, [priority, assignee]);
 
-const fetchTasks = async () => {
-    try {
-        const params: TaskParams = {
-            priority: priority as 'low' | 'medium' | 'high' | undefined,
-            employeeId: assignee ? parseInt(assignee.replace("user", "")) : undefined,
-        };
-
-        const tasks = await getTasks(params);
-
-        if (Array.isArray(tasks)) {
-            const groupedTasks = {
-                pending: tasks.filter(t => t.taskStatus === 'pending'),
-                in_progress: tasks.filter(t => t.taskStatus === 'in_progress'),
-                completed: tasks.filter(t => t.taskStatus === 'completed'),
-                verified: tasks.filter(t => t.taskStatus === 'verified')
+    const fetchTasks = async () => {
+        try {
+            const params: TaskParams = {
+                priority: priority as 'low' | 'medium' | 'high' | undefined,
+                employeeId: assignee ? parseInt(assignee) : undefined,
             };
+
+            const response = await getTasks(params);
+            
+            const tasksArray = Array.isArray(response) ? response : (response?.items || []);
+            
+            const groupedTasks = {
+                pending: tasksArray.filter(t => t.taskStatus === 'pending'),
+                in_progress: tasksArray.filter(t => t.taskStatus === 'in_progress'),
+                review: tasksArray.filter(t => t.taskStatus === 'review'),
+                done: tasksArray.filter(t => t.taskStatus === 'done')
+            };
+            
             setTasks(groupedTasks);
-        } else {
-            console.error("API response is not an array");
+        } catch (error) {
+            console.error("Error fetching tasks:", error);
             setTasks({
                 pending: [],
                 in_progress: [],
-                completed: [],
-                verified: []
+                review: [],
+                done: []
             });
-        }
-    } catch (error) {
-        console.error("Error fetching tasks:", error);
-        setTasks({
-            pending: [],
-            in_progress: [],
-            completed: [],
-            verified: []
-        });
-    }
-};
-
-    const handleTaskDrop = async (newStatus: 'pending' | 'in_progress' | 'completed' | 'verified', taskId: number) => {
-        if (!draggedTask) return;
-        
-        try {
-            // Here should be your API call to update the task status
-            // await updateTaskStatus(taskId, newStatus);
-            
-            // Update local state
-            setTasks(prev => {
-                const newTasks = {...prev};
-                // Remove task from old status
-                Object.keys(newTasks).forEach(status => {
-                    newTasks[status] = newTasks[status].filter(t => t.id !== taskId);
-                });
-                // Add task with new status
-                newTasks[newStatus] = [...newTasks[newStatus], {...draggedTask, taskStatus: newStatus}];
-                return newTasks;
-            });
-        } catch (error) {
-            console.error("Failed to update task status:", error);
         }
     };
 
+    const handleTaskDrop = async (newStatus: 'pending' | 'in_progress' | 'review' | 'done', taskId: number) => {
+    if (!draggedTask) return;
+    
+    try {
+        setTasks(prev => {
+            const newTasks = {...prev};
+            Object.keys(newTasks).forEach(status => {
+                newTasks[status] = newTasks[status].filter(t => t.id !== taskId);
+            });
+            newTasks[newStatus] = [...newTasks[newStatus], {
+                ...draggedTask,
+                taskStatus: newStatus
+            }];
+            return newTasks;
+        });
+
+        let updatedTask: Task | null = null;
+        switch(newStatus) {
+            case 'pending':
+                updatedTask = await setTaskPending(taskId);
+                break;
+            case 'in_progress':
+                updatedTask = await setTaskInProgress(taskId);
+                break;
+            case 'review':
+                updatedTask = await setTaskInReview(taskId);
+                break;
+            case 'done':
+                updatedTask = await setTaskDone(taskId);
+                break;
+            default:
+                console.error('Unknown status:', newStatus);
+                return;
+        }
+
+        if (updatedTask) {
+            setTasks(prev => {
+                const newTasks = {...prev};
+                newTasks[newStatus] = newTasks[newStatus].filter(t => t.id !== taskId);
+                newTasks[newStatus] = [...newTasks[newStatus], updatedTask!];
+                return newTasks;
+            });
+        }
+    } catch (error) {
+        console.error("Failed to update task status:", error);
+        fetchTasks();
+    } finally {
+        setDraggedTask(null);
+    }
+};
+
     const handleDragStart = (task: Task) => {
         setDraggedTask(task);
+    };
+
+    const handleTaskCreated = async () => {
+        await fetchTasks();
+        setIsCreateModalOpen(false);
     };
 
     return (
@@ -112,7 +167,7 @@ const fetchTasks = async () => {
                 <DarkCyanButton 
                     style={{}} 
                     onClick={() => setIsCreateModalOpen(true)}
-                    >
+                >
                     Добавить задачу
                 </DarkCyanButton>
             </TitleField>
@@ -139,6 +194,8 @@ const fetchTasks = async () => {
                     status="pending"
                     onTaskDrop={handleTaskDrop}
                     onDragStart={handleDragStart}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={handleDeleteTask}
                 />
                 <TaskListContainer 
                     title="В работе" 
@@ -146,26 +203,41 @@ const fetchTasks = async () => {
                     status="in_progress"
                     onTaskDrop={handleTaskDrop}
                     onDragStart={handleDragStart}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={handleDeleteTask}
                 />
                 <TaskListContainer 
                     title="На проверке" 
-                    tasks={tasks.completed} 
-                    status="completed"
+                    tasks={tasks.review} 
+                    status="review"
                     onTaskDrop={handleTaskDrop}
                     onDragStart={handleDragStart}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={handleDeleteTask}
                 />
                 <TaskListContainer 
                     title="Выполнено" 
-                    tasks={tasks.verified} 
-                    status="verified"
+                    tasks={tasks.done} 
+                    status="done"
                     onTaskDrop={handleTaskDrop}
                     onDragStart={handleDragStart}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={handleDeleteTask}
                 />
             </TaskListContainersWrapper>
+
+            {/* {taskToEdit && (
+                <EditTaskModal 
+                    isOpen={!!taskToEdit}
+                    onClose={() => setTaskToEdit(null)}
+                    onTaskUpdated={handleTaskUpdated}
+                    task={taskToEdit}
+                />
+            )} */}
             <CreateTaskModal 
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onTaskCreated={fetchTasks}
+                onTaskCreated={handleTaskCreated}
             />
         </PageLayout>
     )

@@ -7,7 +7,7 @@ export interface Task {
   responsibleId: number;
   deadline: Date;
   priority: 'low' | 'medium' | 'high';
-  taskStatus: 'pending' | 'in_progress' | 'completed' | 'verified';
+  taskStatus: 'pending' | 'in_progress' | 'done' | 'review';
   createdAt: Date;
   updatedAt: Date;
   completedAt: Date;
@@ -22,7 +22,7 @@ export interface TaskParams extends PaginationParams {
   employeeId?: number;
   responsibleId?: number;
   priority?: 'low' | 'medium' | 'high';
-  status?: 'pending' | 'in_progress' | 'completed' | 'verified';
+  status?: 'pending' | 'in_progress' | 'done' | 'review';
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }

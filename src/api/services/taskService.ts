@@ -13,13 +13,23 @@ class TaskService {
     return response.data;
   }
 
-  async markTaskAsComplete(id: number): Promise<Task> {
-    const response = await socialApiClient.put<Task>(`/Task/${id}/complete`);
+  async setTaskPending(id: number): Promise<Task> {
+    const response = await socialApiClient.patch<Task>(`/Task/${id}/pending`);
     return response.data;
   }
 
-  async verifyTask(id: number): Promise<Task> {
-    const response = await socialApiClient.put<Task>(`/Task/${id}/verify`);
+  async setTaskInProgress(id: number): Promise<Task> {
+    const response = await socialApiClient.patch<Task>(`/Task/${id}/in-progress`);
+    return response.data;
+  }
+
+  async setTaskInReview(id: number): Promise<Task> {
+    const response = await socialApiClient.patch<Task>(`/Task/${id}/review`);
+    return response.data;
+  }
+
+  async setTaskDone(id: number): Promise<Task> {
+    const response = await socialApiClient.patch<Task>(`/Task/${id}/done`);
     return response.data;
   }
 

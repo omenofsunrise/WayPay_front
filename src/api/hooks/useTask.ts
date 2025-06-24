@@ -1,3 +1,4 @@
+// hooks/useTask.ts
 import { useState, useCallback } from 'react';
 import taskService from '../services/taskService';
 import type { Task, TaskParams, TaskForm } from '../types/task';
@@ -38,17 +39,12 @@ const useTask = () => {
     }
   };
 
-  const markTaskAsComplete = async (id: number): Promise<Task | null> => {
+  const setTaskPending = async (id: number): Promise<Task | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedTask = await taskService.markTaskAsComplete(id);
-      if (data) {
-        const updatedItems = data.items.map(item => 
-          item.id === id ? updatedTask : item
-        );
-        setData({ ...data, items: updatedItems });
-      }
+      const updatedTask = await taskService.setTaskPending(id);
+      updateTaskInList(updatedTask);
       return updatedTask;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -58,17 +54,42 @@ const useTask = () => {
     }
   };
 
-  const verifyTask = async (id: number): Promise<Task | null> => {
+  const setTaskInProgress = async (id: number): Promise<Task | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedTask = await taskService.verifyTask(id);
-      if (data) {
-        const updatedItems = data.items.map(item => 
-          item.id === id ? updatedTask : item
-        );
-        setData({ ...data, items: updatedItems });
-      }
+      const updatedTask = await taskService.setTaskInProgress(id);
+      updateTaskInList(updatedTask);
+      return updatedTask;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setTaskInReview = async (id: number): Promise<Task | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedTask = await taskService.setTaskInReview(id);
+      updateTaskInList(updatedTask);
+      return updatedTask;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setTaskDone = async (id: number): Promise<Task | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedTask = await taskService.setTaskDone(id);
+      updateTaskInList(updatedTask);
       return updatedTask;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -94,6 +115,15 @@ const useTask = () => {
     }
   };
 
+  const updateTaskInList = (updatedTask: Task) => {
+    if (data) {
+      const updatedItems = data.items.map(item => 
+        item.id === updatedTask.id ? updatedTask : item
+      );
+      setData({ ...data, items: updatedItems });
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -101,8 +131,10 @@ const useTask = () => {
     currentTask,
     getTasks,
     createTask,
-    markTaskAsComplete,
-    verifyTask,
+    setTaskPending,
+    setTaskInProgress,
+    setTaskInReview,
+    setTaskDone,
     deleteTask,
   };
 };

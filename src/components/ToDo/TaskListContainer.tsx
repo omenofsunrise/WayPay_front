@@ -7,8 +7,8 @@ import type { Task } from "../../api/types/task";
 export interface TaskListContainerProps {
     title: string;
     tasks: Task[];
-    status: 'pending' | 'in_progress' | 'completed' | 'verified';
-    onTaskDrop: (status: 'pending' | 'in_progress' | 'completed' | 'verified', taskId: number) => void;
+    status: 'pending' | 'in_progress' | 'done' | 'review';
+    onTaskDrop: (status: 'pending' | 'in_progress' | 'done' | 'review', taskId: number) => void;
     onDragStart: (task: Task) => void;
 } 
 
@@ -17,8 +17,13 @@ const TaskListContainer = ({
     tasks, 
     status, 
     onTaskDrop,
-    onDragStart
-}: TaskListContainerProps) => {
+    onDragStart,
+    onEditTask,
+    onDeleteTask
+}: TaskListContainerProps & {
+    onEditTask: (task: Task) => void;
+    onDeleteTask: (taskId: number) => void;
+}) => {
     const [count, setCount] = useState<number>(0);
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -28,10 +33,13 @@ const TaskListContainer = ({
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         const taskId = parseInt(e.dataTransfer.getData("text/plain"));
-        onTaskDrop(status, taskId);
+        if (!isNaN(taskId)) {
+            onTaskDrop(status, taskId);
+        }
     };
 
     useEffect(() => {
+        console.log(tasks)
         setCount(tasks.length);
     }, [tasks]);
 
@@ -50,6 +58,8 @@ const TaskListContainer = ({
                         key={task.id} 
                         task={task} 
                         onDragStart={onDragStart}
+                        onEdit={onEditTask}
+                        onDelete={onDeleteTask}
                     />
                 ))}
             </TasksList>
@@ -65,7 +75,7 @@ const Title = styled.h3`
 `;
 
 const Count = styled.span`
-    margin-left: 8px;
+    margin-left: auto;
     background: #e0e0e0;
     padding: 2px 8px;
     border-radius: 10px;
@@ -77,12 +87,13 @@ const TasksList = styled.div`
 `;
 
 const Container = styled.div`
-    width: 250px;
+    flex: 1;
     min-height: 400px;
     background: rgba(240, 243, 246, 1);
     padding: 20px;
     border: 1px solid rgba(209, 213, 219, 1);
     border-radius: 10px;
+    margin: 0;
 `;
 
 export default TaskListContainer;
