@@ -175,9 +175,11 @@ const ToDoListPage = () => {
         switch(newStatus) {
             case 'pending':
             case 'in_progress':
-            case 'review':
                 // Только админ или исполнитель задачи может изменить на эти статусы
                 return isAdmin || task.employeeId === currentUserId;
+            case 'review':
+                // Только админ, исполнитель или создатель задачи может перевести в "на проверке"
+                return isAdmin || task.employeeId === currentUserId || task.createdBy === currentUserId;
             case 'done':
                 // Только админ или ответственный может завершить задачу
                 return isAdmin || task.responsibleId === currentUserId;
