@@ -24,7 +24,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     title: '',
     description: '',
     employeeId: 1,
-    responsibleId: null, // Изменено на nullable
+    responsibleId: null,
     deadline: '',
     priority: 'medium'
   });
@@ -46,7 +46,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         setAssigneeOptions(options);
         setResponsibleOptions([{ value: '', label: 'Нет ответственного' }, ...options]);
         
-        // Set default values if options are available
         if (options.length > 0) {
           setFormData(prev => ({
             ...prev,
