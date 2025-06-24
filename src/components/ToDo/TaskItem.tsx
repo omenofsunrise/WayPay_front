@@ -4,6 +4,7 @@ import type { Task } from "../../api/types/task";
 import { getInitials, generateAvatar, stringToColor } from "../../utils/avatarUtils";
 import { BASE_URL } from "../../api/client";
 import TaskContextMenu from "./TaskContextMenu";
+import { useAuth } from "../../сontext/AuthContext";
 
 interface TaskItemProps {
   task: Task;
@@ -13,6 +14,9 @@ interface TaskItemProps {
 }
 
 const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
+  const { authInfo, hasRole } = useAuth();
+  const currentUserId = authInfo?.employee.id;
+  const isAdmin = hasRole('админ') || hasRole('директор') || hasRole('суперадмин');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const taskRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -21,8 +25,14 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
   const [showPlaceholder, setShowPlaceholder] = useState(false);
   const [itemRect, setItemRect] = useState<DOMRect | null>(null);
 
+  const canDrag = isAdmin || task.employeeId === currentUserId || task.responsibleId === currentUserId;
+
   const handleDragStart = (e: React.DragEvent) => {
-    // Получаем размеры и позицию элемента перед перетаскиванием
+    if (!canDrag) {
+            e.preventDefault();
+            return;
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
     setItemRect(rect);
     setShowPlaceholder(true);
@@ -124,6 +134,10 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
               onDrag={handleDrag}
               onDragEnd={handleDragEnd}
               onContextMenu={handleContextMenu}
+              style={{
+                cursor: canDrag ? 'grab' : 'not-allowed',
+                opacity: canDrag ? 1 : 0.7
+              }}
           >
               <TitleWrapper>
                   <PriorityIcon color={getPriorityColor()}>

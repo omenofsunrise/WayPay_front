@@ -10,8 +10,13 @@ import styled from "styled-components";
 import useTask from "../api/hooks/useTask";
 import type { Task, TaskParams } from "../api/types/task";
 import CreateTaskModal from "../components/modal/CrudInherited/CreateTaskModal";
+import EditTaskModal from "../components/modal/CrudInherited/EditTaskModal";
+import { useAuth } from "../сontext/AuthContext";
 
 const ToDoListPage = () => {
+    const { authInfo, hasRole } = useAuth();
+    const currentUserId = authInfo?.employee.id;
+    const isAdmin = hasRole('админ') || hasRole('директор') || hasRole('суперадмин');
     const priorityOptions = [
         { value: "", label: "Любой приоритет задач" },
         { value: "high", label: "Высокий приоритет" },
@@ -101,56 +106,86 @@ const ToDoListPage = () => {
     };
 
     const handleTaskDrop = async (newStatus: 'pending' | 'in_progress' | 'review' | 'done', taskId: number) => {
-    if (!draggedTask) return;
-    
-    try {
-        setTasks(prev => {
-            const newTasks = {...prev};
-            Object.keys(newTasks).forEach(status => {
-                newTasks[status] = newTasks[status].filter(t => t.id !== taskId);
-            });
-            newTasks[newStatus] = [...newTasks[newStatus], {
-                ...draggedTask,
-                taskStatus: newStatus
-            }];
-            return newTasks;
-        });
-
-        let updatedTask: Task | null = null;
-        switch(newStatus) {
-            case 'pending':
-                updatedTask = await setTaskPending(taskId);
-                break;
-            case 'in_progress':
-                updatedTask = await setTaskInProgress(taskId);
-                break;
-            case 'review':
-                updatedTask = await setTaskInReview(taskId);
-                break;
-            case 'done':
-                updatedTask = await setTaskDone(taskId);
-                break;
-            default:
-                console.error('Unknown status:', newStatus);
+        if (!draggedTask) return;
+        
+        try {
+            // Проверяем права перед изменением статуса
+            const canChangeStatus = checkStatusChangePermission(draggedTask, newStatus, currentUserId, isAdmin);
+            if (!canChangeStatus) {
+                console.warn("Нет прав для изменения статуса задачи");
                 return;
-        }
+            }
 
-        if (updatedTask) {
+            // Остальная логика обработки перетаскивания
             setTasks(prev => {
                 const newTasks = {...prev};
-                newTasks[newStatus] = newTasks[newStatus].filter(t => t.id !== taskId);
-                newTasks[newStatus] = [...newTasks[newStatus], updatedTask!];
+                Object.keys(newTasks).forEach(status => {
+                    newTasks[status] = newTasks[status].filter(t => t.id !== taskId);
+                });
+                newTasks[newStatus] = [...newTasks[newStatus], {
+                    ...draggedTask,
+                    taskStatus: newStatus
+                }];
                 return newTasks;
             });
-        }
-    } catch (error) {
-        console.error("Failed to update task status:", error);
-        fetchTasks();
-    } finally {
-        setDraggedTask(null);
-    }
-};
 
+            let updatedTask: Task | null = null;
+                    switch(newStatus) {
+                        case 'pending':
+                            updatedTask = await setTaskPending(taskId);
+                            break;
+                        case 'in_progress':
+                            updatedTask = await setTaskInProgress(taskId);
+                            break;
+                        case 'review':
+                            updatedTask = await setTaskInReview(taskId);
+                            break;
+                        case 'done':
+                            updatedTask = await setTaskDone(taskId);
+                            break;
+                        default:
+                            console.error('Unknown status:', newStatus);
+                            return;
+                    }
+
+                    if (updatedTask) {
+                        setTasks(prev => {
+                            const newTasks = {...prev};
+                            newTasks[newStatus] = newTasks[newStatus].filter(t => t.id !== taskId);
+                            newTasks[newStatus] = [...newTasks[newStatus], updatedTask!];
+                            return newTasks;
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to update task status:", error);
+                    fetchTasks();
+                } finally {
+                    setDraggedTask(null);
+                }
+            };
+
+    const checkStatusChangePermission = (
+        task: Task, 
+        newStatus: 'pending' | 'in_progress' | 'review' | 'done',
+        currentUserId?: number,
+        isAdmin?: boolean
+    ) => {
+        if (!currentUserId) return false;
+
+        switch(newStatus) {
+            case 'pending':
+            case 'in_progress':
+            case 'review':
+                // Только админ или исполнитель задачи может изменить на эти статусы
+                return isAdmin || task.employeeId === currentUserId;
+            case 'done':
+                // Только админ или ответственный может завершить задачу
+                return isAdmin || task.responsibleId === currentUserId;
+            default:
+                return false;
+        }
+    };
+    
     const handleDragStart = (task: Task) => {
         setDraggedTask(task);
     };
@@ -226,14 +261,15 @@ const ToDoListPage = () => {
                 />
             </TaskListContainersWrapper>
 
-            {/* {taskToEdit && (
+            {taskToEdit && (
                 <EditTaskModal 
                     isOpen={!!taskToEdit}
                     onClose={() => setTaskToEdit(null)}
                     onTaskUpdated={handleTaskUpdated}
                     task={taskToEdit}
                 />
-            )} */}
+            )}
+            
             <CreateTaskModal 
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}

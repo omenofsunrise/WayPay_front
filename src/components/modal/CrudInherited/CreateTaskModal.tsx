@@ -22,7 +22,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
   const [responsibleOptions, setResponsibleOptions] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState<TaskForm>({
     title: '',
-    description: '',
     employeeId: 1,
     responsibleId: null,
     deadline: '',
@@ -103,7 +102,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
       onClose();
       setFormData({
         title: '',
-        description: '',
         employeeId: assigneeOptions[0]?.value ? parseInt(assigneeOptions[0].value) : 1,
         responsibleId: null,
         deadline: '',

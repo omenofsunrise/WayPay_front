@@ -29,7 +29,6 @@ export interface TaskParams extends PaginationParams {
 
 export interface TaskForm {
   title: string;
-  description: string;
   employeeId: number;
   responsibleId: number;
   deadline: string;

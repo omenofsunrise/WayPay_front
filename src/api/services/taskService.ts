@@ -13,6 +13,11 @@ class TaskService {
     return response.data;
   }
 
+  async updateTask(id: number, task: TaskForm): Promise<Task> {
+    const response = await socialApiClient.put<Task>(`/Task/${id}`, task);
+    return response.data;
+  }
+
   async setTaskPending(id: number): Promise<Task> {
     const response = await socialApiClient.patch<Task>(`/Task/${id}/pending`);
     return response.data;

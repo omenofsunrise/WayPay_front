@@ -39,6 +39,20 @@ const useTask = () => {
     }
   };
 
+  const updateTask = async (id: number, task: TaskForm): Promise<Task | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedTask = await taskService.updateTask(id, task);
+      return updatedTask;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const setTaskPending = async (id: number): Promise<Task | null> => {
     setIsLoading(true);
     setError(null);
@@ -136,6 +150,7 @@ const useTask = () => {
     setTaskInReview,
     setTaskDone,
     deleteTask,
+    updateTask
   };
 };
 
