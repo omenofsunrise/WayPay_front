@@ -17,6 +17,7 @@ import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Checkbox from "../components/ui/CheckBoxes/Checkbox";
 import { useEmployee } from "../api/hooks/useEmployee";
 import CompletedTasksModal from "../components/ToDo/CompletedTasksModal";
+import { useTaskCount } from "../сontext/TaskCountContext";
 
 const ToDoListPage = () => {
     const { authInfo, hasRole } = useAuth();
@@ -33,7 +34,8 @@ const ToDoListPage = () => {
         priority: undefined,
         taskEmployeeId: undefined
     });
-
+    const { setActiveTasksCount } = useTaskCount();
+    const { getActiveTasksCount } = useTask();
     const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
     const { 
         getTasks, 
@@ -46,24 +48,31 @@ const ToDoListPage = () => {
         isLoading 
     } = useTask();
 
+    const updateTasksCount = async () => {
+        const count = await getActiveTasksCount();
+        if (count !== null) {
+        setActiveTasksCount(count);
+        }
+    };
+
     const { 
         fetchEmployeeFullnames, 
     } = useEmployee();
 
     useEffect(() => {
-  const loadEmployeeFullnames = async () => {
-        try {
-        const fullNames = await fetchEmployeeFullnames();
-        setAssigneeOptions([
-            { value: "", label: "Все исполнители" },
-            ...fullNames.map(emp => ({
-            value: emp.id.toString(),
-            label: emp.fullName
-            }))
-        ]);
-        } catch (error) {
-        console.error("Failed to load employee fullnames:", error);
-        }
+        const loadEmployeeFullnames = async () => {
+            try {
+            const fullNames = await fetchEmployeeFullnames();
+            setAssigneeOptions([
+                { value: "", label: "Все исполнители" },
+                ...fullNames.map(emp => ({
+                value: emp.id.toString(),
+                label: emp.fullName
+                }))
+            ]);
+            } catch (error) {
+            console.error("Failed to load employee fullnames:", error);
+            }
     };
 
     loadEmployeeFullnames();
@@ -84,7 +93,8 @@ const ToDoListPage = () => {
     const handleDeleteTask = async (taskId: number) => {
         try {
             await deleteTask(taskId);
-            fetchTasks();
+            await fetchTasks();
+            await updateTasksCount();
         } catch (error) {
             console.error("Error deleting task:", error);
         }
@@ -92,6 +102,7 @@ const ToDoListPage = () => {
 
     const handleTaskUpdated = async () => {
         await fetchTasks();
+        await updateTasksCount();
         setTaskToEdit(null);
     };
     
@@ -178,6 +189,7 @@ const ToDoListPage = () => {
                             return newTasks;
                         });
                     }
+                    await updateTasksCount();
                 } catch (error) {
                     console.error("Failed to update task status:", error);
                     fetchTasks();
@@ -185,6 +197,11 @@ const ToDoListPage = () => {
                     setDraggedTask(null);
                 }
             };
+
+
+    useEffect(() => {
+        updateTasksCount();
+    }, []);
 
     const checkStatusChangePermission = (
         task: Task, 
@@ -223,6 +240,7 @@ const ToDoListPage = () => {
 
     const handleTaskCreated = async () => {
         await fetchTasks();
+        await updateTasksCount();
         setIsCreateModalOpen(false);
     };
 

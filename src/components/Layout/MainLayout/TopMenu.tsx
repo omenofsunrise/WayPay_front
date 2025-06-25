@@ -10,6 +10,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import CalculatorModal from '../../modal/CalculatorModal';
 import { useAuth } from '../../../сontext/AuthContext';
 import type { Permission } from '../../../api/types/auth';
+import useTask from '../../../api/hooks/useTask';
+import { useTaskCount } from '../../../сontext/TaskCountContext';
 
 interface MenuItem {
   id: string;
@@ -17,7 +19,7 @@ interface MenuItem {
   text: string;
   path?: string;
   modal?: boolean;
-  permission?: Permission; // Explicitly type as Permission
+  permission?: Permission;
 }
 
 const allMenuItems: MenuItem[] = [
@@ -47,8 +49,9 @@ const TopMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
+  const { activeTasksCount } = useTaskCount();
+  const { getActiveTasksCount } = useTask();
 
-  // Filter menu items based on permissions
   const menuItems = allMenuItems.filter(item => 
     !item.permission || hasPermission(item.permission)
   );
@@ -102,6 +105,9 @@ const TopMenu = () => {
                 <Icon src={item.icon} alt={item.text} $selected={isItemSelected(item.id)} />
               </IconWrapper>
               <Text $selected={isItemSelected(item.id)}>{item.text}</Text>
+              {item.id === 'todo' && activeTasksCount > 0 && (
+                <TaskCountBadge>{activeTasksCount}</TaskCountBadge>
+              )}
             </MenuItem>
           ))}
         </MenuItemsWrapper>
@@ -128,6 +134,16 @@ type IconProps = {
 type TextProps = {
   $selected?: boolean;
 };
+
+const TaskCountBadge = styled.div`
+  margin-left: 8px;
+  background-color: rgba(89, 212, 188, 1);
+  color: black;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 16px;
+  font-weight: 500;
+`;
 
 const TopMenuContainer = styled.div<TopMenuContainerProps>`
   width: calc(100% - ${({ $collapsed }) => ($collapsed ? '70px' : '315px')});
