@@ -10,6 +10,7 @@ export interface Payment {
     clientFullName: string;
     investorNickname: string;
     employeeFullName: string;
+    income: number;
 }
 
 export interface PaymentParams extends PaginationParams {
