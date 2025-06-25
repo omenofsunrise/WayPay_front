@@ -25,33 +25,38 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
   const [showPlaceholder, setShowPlaceholder] = useState(false);
   const [itemRect, setItemRect] = useState<DOMRect | null>(null);
 
-  const canDrag = isAdmin || task.employeeId === currentUserId || task.responsibleId === currentUserId;
+  const canDrag = isAdmin || task.employeeId === currentUserId || task.responsibleId === currentUserId || task.createdBy === currentUserId;;
+  const canDropToDone = isAdmin || task.responsibleId === currentUserId || task.createdBy === currentUserId;
 
   const handleDragStart = (e: React.DragEvent) => {
-    if (!canDrag) {
-            e.preventDefault();
-            return;
-    }
+      if (!canDrag) {
+          e.preventDefault();
+          return;
+      }
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    setItemRect(rect);
-    setShowPlaceholder(true);
-    
-    setPreviewPosition({
-      x: e.clientX,
-      y: e.clientY
-    });
-    
-    e.dataTransfer.setData("text/plain", task.id.toString());
-    onDragStart(task);
-    setIsDragging(true);
-    
-    const element = e.currentTarget as HTMLElement;
-    element.classList.add('is-dragging');
-    
-    const dragImg = new Image();
-    dragImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    e.dataTransfer.setDragImage(dragImg, 0, 0);
+      console.log("До" + e.dataTransfer.getData("can-drop-to-done"));
+      e.dataTransfer.setData("can-drop-to-done", canDropToDone.toString());
+      console.log("После" + e.dataTransfer.getData("can-drop-to-done"));
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      setItemRect(rect);
+      setShowPlaceholder(true);
+      
+      setPreviewPosition({
+          x: e.clientX,
+          y: e.clientY
+      });
+      
+      e.dataTransfer.setData("text/plain", task.id.toString());
+      onDragStart(task);
+      setIsDragging(true);
+      
+      const element = e.currentTarget as HTMLElement;
+      element.classList.add('is-dragging');
+      
+      const dragImg = new Image();
+      dragImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      e.dataTransfer.setDragImage(dragImg, 0, 0);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -244,7 +249,8 @@ const Container = styled.div`
 
     &.is-dragging {
         opacity: 0;
-        border: 1px solid green;
+        /* Убрать зелёную границу */
+        border: 1px solid transparent;
         box-shadow: none;
         background: transparent;
         padding: 12px;

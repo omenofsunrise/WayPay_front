@@ -10,6 +10,11 @@ export interface TaskListContainerProps {
     status: 'pending' | 'in_progress' | 'done' | 'review';
     onTaskDrop: (status: 'pending' | 'in_progress' | 'done' | 'review', taskId: number) => void;
     onDragStart: (task: Task) => void;
+    draggedTask: Task | null;
+    isAdmin: boolean;
+    currentUserId?: number;
+    onEditTask: (task: Task) => void;
+    onDeleteTask: (taskId: number) => void;
 } 
 
 const TaskListContainer = ({ 
@@ -19,34 +24,65 @@ const TaskListContainer = ({
     onTaskDrop,
     onDragStart,
     onEditTask,
-    onDeleteTask
-}: TaskListContainerProps & {
-    onEditTask: (task: Task) => void;
-    onDeleteTask: (taskId: number) => void;
-}) => {
+    onDeleteTask,
+    draggedTask,
+    isAdmin,
+    currentUserId
+}: TaskListContainerProps) => {
+    const [isDropForbidden, setIsDropForbidden] = useState(false);
     const [count, setCount] = useState<number>(0);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
+        
+        const canDropToDone = isAdmin || 
+            (draggedTask && 
+            (draggedTask.responsibleId === currentUserId || 
+            draggedTask.createdBy === currentUserId));
+        
+        const forbidden = status === 'done' && !canDropToDone;
+        setIsDropForbidden(forbidden);
+        
+        if (forbidden) {
+            e.dataTransfer.dropEffect = 'none';
+            return;
+        }
+        
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDragLeave = () => {
+        setIsDropForbidden(false);
     };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         const taskId = parseInt(e.dataTransfer.getData("text/plain"));
-        if (!isNaN(taskId)) {
-            onTaskDrop(status, taskId);
+        
+        if (isNaN(taskId)) return;
+        
+        const canDropToDone = isAdmin || 
+            (draggedTask && 
+            (draggedTask.responsibleId === currentUserId || 
+            draggedTask.createdBy === currentUserId));
+        
+        if (status === 'done' && !canDropToDone) {
+            return;
         }
+        
+        onTaskDrop(status, taskId);
     };
 
     useEffect(() => {
-        console.log(tasks)
         setCount(tasks.length);
     }, [tasks]);
 
     return (
         <Container 
             onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            $isDropForbidden={isDropForbidden}
         >
             <TitleField style={{margin: 0}}>
                 <Title>{title}</Title>
@@ -86,7 +122,7 @@ const TasksList = styled.div`
     margin-top: 16px;
 `;
 
-const Container = styled.div`
+const Container = styled.div<{ $isDropForbidden?: boolean }>`
     flex: 1;
     min-height: 400px;
     background: rgba(240, 243, 246, 1);
@@ -94,6 +130,22 @@ const Container = styled.div`
     border: 1px solid rgba(209, 213, 219, 1);
     border-radius: 10px;
     margin: 0;
+    position: relative;
+    
+    ${props => props.$isDropForbidden && `
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 0, 0, 0.05);
+            border: 2px dashed rgba(255, 0, 0, 0.3);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+    `}
 `;
 
 export default TaskListContainer;

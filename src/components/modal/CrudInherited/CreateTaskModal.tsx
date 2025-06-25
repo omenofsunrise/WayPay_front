@@ -8,6 +8,7 @@ import CustomSelect from '../../ui/fields/CustomSelect';
 import CustomCalendar from '../../ui/fields/CustomCalendar';
 import InputTitle from '../../ui/Text/InputTitle';
 import SelectPriority from '../../ui/fields/SelectPriority';
+import { useAuth } from '../../../сontext/AuthContext';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -29,7 +30,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  const { authInfo } = useAuth();
+  
   useEffect(() => {
     const fetchEmployees = async () => {
       if (!isOpen) return;
@@ -45,7 +47,13 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         setAssigneeOptions(options);
         setResponsibleOptions([{ value: '', label: 'Нет ответственного' }, ...options]);
         
-        if (options.length > 0) {
+        if (authInfo) {
+          setFormData(prev => ({
+            ...prev,
+            employeeId: authInfo.employee.id,
+            responsibleId: null
+          }));
+        } else if (options.length > 0) {
           setFormData(prev => ({
             ...prev,
             employeeId: parseInt(options[0].value),
@@ -60,7 +68,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     };
 
     fetchEmployees();
-  }, [isOpen, fetchEmployeeFullnames]);
+  }, [isOpen, fetchEmployeeFullnames, authInfo]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

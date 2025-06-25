@@ -109,14 +109,12 @@ const ToDoListPage = () => {
         if (!draggedTask) return;
         
         try {
-            // Проверяем права перед изменением статуса
             const canChangeStatus = checkStatusChangePermission(draggedTask, newStatus, currentUserId, isAdmin);
             if (!canChangeStatus) {
                 console.warn("Нет прав для изменения статуса задачи");
                 return;
             }
 
-            // Остальная логика обработки перетаскивания
             setTasks(prev => {
                 const newTasks = {...prev};
                 Object.keys(newTasks).forEach(status => {
@@ -172,17 +170,24 @@ const ToDoListPage = () => {
     ) => {
         if (!currentUserId) return false;
 
+        if (isAdmin) return true;
+
         switch(newStatus) {
             case 'pending':
+                return task.employeeId === currentUserId || 
+                    task.responsibleId === currentUserId || 
+                    task.createdBy === currentUserId;
             case 'in_progress':
-                // Только админ или исполнитель задачи может изменить на эти статусы
-                return isAdmin || task.employeeId === currentUserId;
+                return task.employeeId === currentUserId || 
+                    task.responsibleId === currentUserId || 
+                    task.createdBy === currentUserId;
             case 'review':
-                // Только админ, исполнитель или создатель задачи может перевести в "на проверке"
-                return isAdmin || task.employeeId === currentUserId || task.createdBy === currentUserId;
+                return task.employeeId === currentUserId || 
+                    task.responsibleId === currentUserId || 
+                    task.createdBy === currentUserId;
             case 'done':
-                // Только админ или ответственный может завершить задачу
-                return isAdmin || task.responsibleId === currentUserId;
+                return task.responsibleId === currentUserId || 
+                    task.createdBy === currentUserId;
             default:
                 return false;
         }
@@ -233,6 +238,9 @@ const ToDoListPage = () => {
                     onDragStart={handleDragStart}
                     onEditTask={handleEditTask}
                     onDeleteTask={handleDeleteTask}
+                    draggedTask={draggedTask}
+                    isAdmin={isAdmin}
+                    currentUserId={currentUserId}
                 />
                 <TaskListContainer 
                     title="В работе" 
@@ -242,6 +250,9 @@ const ToDoListPage = () => {
                     onDragStart={handleDragStart}
                     onEditTask={handleEditTask}
                     onDeleteTask={handleDeleteTask}
+                    draggedTask={draggedTask}
+                    isAdmin={isAdmin}
+                    currentUserId={currentUserId}
                 />
                 <TaskListContainer 
                     title="На проверке" 
@@ -251,6 +262,9 @@ const ToDoListPage = () => {
                     onDragStart={handleDragStart}
                     onEditTask={handleEditTask}
                     onDeleteTask={handleDeleteTask}
+                    draggedTask={draggedTask}
+                    isAdmin={isAdmin}
+                    currentUserId={currentUserId}
                 />
                 <TaskListContainer 
                     title="Выполнено" 
@@ -260,6 +274,9 @@ const ToDoListPage = () => {
                     onDragStart={handleDragStart}
                     onEditTask={handleEditTask}
                     onDeleteTask={handleDeleteTask}
+                    draggedTask={draggedTask}
+                    isAdmin={isAdmin}
+                    currentUserId={currentUserId}
                 />
             </TaskListContainersWrapper>
 
