@@ -24,6 +24,7 @@ import { AuthProvider } from './сontext/AuthContext';
 import AdminPanelPage from './pages/AdminPanelPage';
 import ToDoListPage from './pages/ToDoListPage';
 import { TaskCountProvider } from './сontext/TaskCountContext';
+import PaymentsIncomePage from './pages/PaymentIncomePage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -169,6 +170,13 @@ function App() {
               
                 <MainLayout>
                   <ToDoListPage />
+                </MainLayout>
+            } />
+
+            <Route path="payments-income" element={
+              
+                <MainLayout>
+                  <PaymentsIncomePage />
                 </MainLayout>
             } />
 

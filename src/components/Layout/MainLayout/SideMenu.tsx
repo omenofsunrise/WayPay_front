@@ -36,7 +36,8 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
   '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
   '/budget': { mainItem: 'finance', subItems: { '/budget': 'budget' } },
-  '/profile': { mainItem: 'profile' }
+  '/payments-income': { mainItem: 'finance', subItems: { '/payments-income': 'payments-income' } },
+  '/profile': { mainItem: 'profile' },
 };
 
 const SideMenu = () => {
@@ -417,6 +418,12 @@ const SideMenu = () => {
               $selected={selectedSideMenuItem === 'budget'}
             >
               Бюджет
+            </SubMenuItem>
+            <SubMenuItem 
+              onClick={() => handleSubMenuItemClick('payments-income', '/payments-income')}
+              $selected={selectedSideMenuItem === 'payments-income'}
+            >
+              Доходы от платежей
             </SubMenuItem>
           </SubMenu>
         )}
