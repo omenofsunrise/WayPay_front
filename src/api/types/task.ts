@@ -20,11 +20,13 @@ export interface Task {
 export interface TaskParams extends PaginationParams {
   title?: string;
   employeeId?: number;
-  responsibleId?: number;
+  taskEmployeeId?: number;
   priority?: 'low' | 'medium' | 'high';
   status?: 'pending' | 'in_progress' | 'done' | 'review';
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
+  onlyMine?: boolean;
+  includeCompleted?: boolean;
 }
 
 export interface TaskForm {

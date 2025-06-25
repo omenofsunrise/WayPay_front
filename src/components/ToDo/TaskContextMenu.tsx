@@ -7,9 +7,25 @@ interface TaskContextMenuProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  isAdmin: boolean;
+  currentUserId?: number;
 }
 
-const TaskContextMenu = ({ task, position, onClose, onEdit, onDelete }: TaskContextMenuProps) => {
+const TaskContextMenu = ({ 
+  task, 
+  position, 
+  onClose, 
+  onEdit, 
+  onDelete,
+  isAdmin,
+  currentUserId
+}: TaskContextMenuProps) => {
+  const canEditOrDelete = isAdmin || task.createdBy === currentUserId;
+
+  if (!canEditOrDelete) {
+    return null;
+  }
+
   return (
     <ContextMenuContainer 
       style={{ left: `${position.x}px`, top: `${position.y}px` }}

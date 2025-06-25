@@ -15,29 +15,25 @@ import { useAuth } from "../сontext/AuthContext";
 import SelectPriority from "../components/ui/fields/SelectPriority";
 import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Checkbox from "../components/ui/CheckBoxes/Checkbox";
+import { useEmployee } from "../api/hooks/useEmployee";
+import CompletedTasksModal from "../components/ToDo/CompletedTasksModal";
 
 const ToDoListPage = () => {
     const { authInfo, hasRole } = useAuth();
     const currentUserId = authInfo?.employee.id;
     const isAdmin = hasRole('админ') || hasRole('директор') || hasRole('суперадмин');
-    const priorityOptions = [
-        { value: "", label: "Любой приоритет задач" },
-        { value: "high", label: "Высокий приоритет" },
-        { value: "medium", label: "Средний приоритет" },
-        { value: "low", label: "Низкий приоритет" }
-    ];
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const assigneeOptions = [
-        { value: "", label: "Все исполнители" },
-        { value: "1", label: "Иван Иванов" },
-        { value: "2", label: "Петр Петров" },
-        { value: "3", label: "Сергей Сергеев" }
-    ];
+    const [assigneeOptions, setAssigneeOptions] = useState<{value: string, label: string}[]>([
+        { value: "", label: "Все исполнители" }
+    ]);
+    const [isCompletedModalOpen, setIsCompletedModalOpen] = useState(false);
+    const [filters, setFilters] = useState<TaskParams>({
+        onlyMine: true,
+        includeCompleted: true,
+        priority: undefined,
+        taskEmployeeId: undefined
+    });
 
-    const [priority, setPriority] = React.useState("");
-    const [assignee, setAssignee] = React.useState("");
-    const [onlyMine, setOnlyMine] = useState(false);
-    const [selectedPriority, setSelectedPriority] = useState<string | undefined>();
     const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
     const { 
         getTasks, 
@@ -49,7 +45,30 @@ const ToDoListPage = () => {
         setTaskDone,
         isLoading 
     } = useTask();
-    
+
+    const { 
+        fetchEmployeeFullnames, 
+    } = useEmployee();
+
+    useEffect(() => {
+  const loadEmployeeFullnames = async () => {
+        try {
+        const fullNames = await fetchEmployeeFullnames();
+        setAssigneeOptions([
+            { value: "", label: "Все исполнители" },
+            ...fullNames.map(emp => ({
+            value: emp.id.toString(),
+            label: emp.fullName
+            }))
+        ]);
+        } catch (error) {
+        console.error("Failed to load employee fullnames:", error);
+        }
+    };
+
+    loadEmployeeFullnames();
+    }, [fetchEmployeeFullnames]);
+
     const [tasks, setTasks] = useState<Record<string, Task[]>>({
         pending: [],
         in_progress: [],
@@ -57,7 +76,7 @@ const ToDoListPage = () => {
         done: []
     });
     const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-
+    
     const handleEditTask = (task: Task) => {
         setTaskToEdit(task);
     };
@@ -78,13 +97,13 @@ const ToDoListPage = () => {
     
     useEffect(() => {
         fetchTasks();
-    }, [priority, assignee, onlyMine, selectedPriority]);
+    }, [filters]);
 
     const fetchTasks = async () => {
         try {
             const params: TaskParams = {
-                priority: priority as 'low' | 'medium' | 'high' | undefined,
-                employeeId: assignee ? parseInt(assignee) : undefined,
+                ...filters,
+                priority: filters.priority as 'low' | 'medium' | 'high' | undefined
             };
 
             const response = await getTasks(params);
@@ -95,7 +114,7 @@ const ToDoListPage = () => {
                 pending: tasksArray.filter(t => t.taskStatus === 'pending'),
                 in_progress: tasksArray.filter(t => t.taskStatus === 'in_progress'),
                 review: tasksArray.filter(t => t.taskStatus === 'review'),
-                done: tasksArray.filter(t => t.taskStatus === 'done')
+                done: tasksArray.filter(t => t.taskStatus === 'done').slice(0, 10)
             };
             
             setTasks(groupedTasks);
@@ -207,6 +226,13 @@ const ToDoListPage = () => {
         setIsCreateModalOpen(false);
     };
 
+    const handleFilterChange = (newFilters: Partial<TaskParams>) => {
+        if (newFilters.priority !== undefined) {
+            newFilters.priority = newFilters.priority as 'low' | 'medium' | 'high' | undefined;
+        }
+        setFilters(prev => ({ ...prev, ...newFilters }));
+    };
+
     return (
         <PageLayout>
             <TitleField>
@@ -220,20 +246,25 @@ const ToDoListPage = () => {
             </TitleField>
             <FilterField style={{maxWidth: "800px", gap: "16px" }}>
                 <SelectPriority
-                    value={selectedPriority}
-                    onChange={setSelectedPriority}
+                    value={filters.priority}
+                    onChange={(value) => handleFilterChange({ 
+                        priority: value as 'low' | 'medium' | 'high' | undefined 
+                    })}
                     className="priority-select"
+                    showAnyOption={true}
                 />
                 <CustomSelect
-                    value={assignee}
-                    onChange={(e) => setAssignee(e.target.value)}
+                    value={filters.taskEmployeeId?.toString() || ""}
+                    onChange={(e) => handleFilterChange({ 
+                        taskEmployeeId: e.target.value ? parseInt(e.target.value) : undefined 
+                    })}
                     options={assigneeOptions}
                     style={{ minWidth: '200px', height: "43px", margin: "0" }}
                 />
                 <ToggleContainer>
                     <Checkbox
-                        checked={onlyMine}
-                        onChange={setOnlyMine}
+                        checked={filters.onlyMine || false}
+                        onChange={(checked) => handleFilterChange({ onlyMine: checked })}
                     />
                     <ToggleLabel>Только свои</ToggleLabel>
                 </ToggleContainer>
@@ -286,6 +317,7 @@ const ToDoListPage = () => {
                     draggedTask={draggedTask}
                     isAdmin={isAdmin}
                     currentUserId={currentUserId}
+                    onShowAllCompleted={() => setIsCompletedModalOpen(true)}
                 />
             </TaskListContainersWrapper>
 
@@ -302,6 +334,11 @@ const ToDoListPage = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onTaskCreated={handleTaskCreated}
+            />
+
+            <CompletedTasksModal 
+                isOpen={isCompletedModalOpen}
+                onClose={() => setIsCompletedModalOpen(false)}
             />
         </PageLayout>
     )

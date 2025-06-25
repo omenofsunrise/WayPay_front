@@ -13,29 +13,41 @@ interface SelectPriorityProps {
   hasError?: boolean;
   errorMessage?: string;
   className?: string;
+  showAnyOption?: boolean;
 }
 
-const priorityOptions: PriorityOption[] = [
+const basePriorityOptions: PriorityOption[] = [
   { value: 'low', label: 'Низкий приоритет', color: 'rgba(37, 203, 161, 1)' },
   { value: 'medium', label: 'Средний приоритет', color: 'rgba(255, 198, 24, 1)' },
   { value: 'high', label: 'Высокий приоритет', color: 'rgba(255, 90, 90, 1)' }
 ];
+
+const anyPriorityOption: PriorityOption = {
+  value: '',
+  label: 'Любой приоритет',
+  color: 'rgba(156, 163, 175, 1)'
+};
 
 const SelectPriority: React.FC<SelectPriorityProps> = ({
   value,
   onChange,
   hasError = false,
   errorMessage,
-  className
+  className,
+  showAnyOption = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState<PriorityOption | null>(null);
   const selectRef = useRef<HTMLDivElement>(null);
 
+  const priorityOptions = showAnyOption 
+    ? [anyPriorityOption, ...basePriorityOptions]
+    : basePriorityOptions;
+
   useEffect(() => {
     const option = priorityOptions.find(opt => opt.value === value) || null;
     setSelectedOption(option);
-  }, [value]);
+  }, [value, showAnyOption]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -11,9 +11,10 @@ interface TaskItemProps {
   onDragStart: (task: Task) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: number) => void;
+  disableContextMenu?: boolean;
 }
 
-const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
+const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = false }: TaskItemProps) => {
   const { authInfo, hasRole } = useAuth();
   const currentUserId = authInfo?.employee.id;
   const isAdmin = hasRole('админ') || hasRole('директор') || hasRole('суперадмин');
@@ -29,14 +30,13 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
   const canDropToDone = isAdmin || task.responsibleId === currentUserId || task.createdBy === currentUserId;
 
   const handleDragStart = (e: React.DragEvent) => {
+    if (disableContextMenu) return;
       if (!canDrag) {
           e.preventDefault();
           return;
       }
 
-      console.log("До" + e.dataTransfer.getData("can-drop-to-done"));
       e.dataTransfer.setData("can-drop-to-done", canDropToDone.toString());
-      console.log("После" + e.dataTransfer.getData("can-drop-to-done"));
 
       const rect = e.currentTarget.getBoundingClientRect();
       setItemRect(rect);
@@ -78,6 +78,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (disableContextMenu) return;
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
@@ -210,13 +211,15 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete }: TaskItemProps) => {
           )}
 
           {contextMenu && (
-              <TaskContextMenu
-                  task={task}
-                  position={contextMenu}
-                  onClose={handleCloseContextMenu}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-              />
+            <TaskContextMenu
+              task={task}
+              position={contextMenu}
+              onClose={handleCloseContextMenu}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+            />
           )}
       </div>
   );

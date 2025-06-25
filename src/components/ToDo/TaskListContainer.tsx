@@ -3,6 +3,7 @@ import TitleField from "../ui/Layouts/TitleLayout";
 import { useEffect, useState } from "react";
 import TaskItem from "./TaskItem";
 import type { Task } from "../../api/types/task";
+import ShowAllButton from "./ShowAllButton";
 
 export interface TaskListContainerProps {
     title: string;
@@ -15,6 +16,7 @@ export interface TaskListContainerProps {
     currentUserId?: number;
     onEditTask: (task: Task) => void;
     onDeleteTask: (taskId: number) => void;
+    onShowAllCompleted?: () => void;
 } 
 
 const TaskListContainer = ({ 
@@ -27,7 +29,8 @@ const TaskListContainer = ({
     onDeleteTask,
     draggedTask,
     isAdmin,
-    currentUserId
+    currentUserId,
+    onShowAllCompleted
 }: TaskListContainerProps) => {
     const [isDropForbidden, setIsDropForbidden] = useState(false);
     const [count, setCount] = useState<number>(0);
@@ -99,6 +102,11 @@ const TaskListContainer = ({
                     />
                 ))}
             </TasksList>
+            {status === 'done' && tasks.length >= 5 && onShowAllCompleted && (
+                <ShowAllButton onClick={onShowAllCompleted}>
+                    Посмотреть все
+                </ShowAllButton>
+            )}
         </Container>
     )
 }

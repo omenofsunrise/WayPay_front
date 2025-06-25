@@ -138,6 +138,35 @@ const useTask = () => {
     }
   };
 
+  const getCompletedTasks = useCallback(async (page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<Task> | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await taskService.getCompletedTasks(page, pageSize);
+      setData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getActiveTasksCount = useCallback(async (): Promise<number | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const count = await taskService.getActiveTasksCount();
+      return count;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -150,7 +179,9 @@ const useTask = () => {
     setTaskInReview,
     setTaskDone,
     deleteTask,
-    updateTask
+    updateTask,
+    getCompletedTasks,
+    getActiveTasksCount
   };
 };
 

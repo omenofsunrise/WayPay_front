@@ -4,7 +4,25 @@ import socialApiClient from '../socialApiClient';
 
 class TaskService {
   async getTasks(params?: TaskParams): Promise<PaginatedResponse<Task>> {
-    const response = await socialApiClient.get<PaginatedResponse<Task>>('/Task', { params });
+    const response = await socialApiClient.get<PaginatedResponse<Task>>('/Task', { 
+      params: {
+        ...params,
+        priority: params?.priority ? String(params.priority) : undefined,
+        status: params?.status ? String(params.status) : undefined
+      }
+    });
+    return response.data;
+  }
+
+  async getCompletedTasks(page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<Task>> {
+    const response = await socialApiClient.get<PaginatedResponse<Task>>('/Task/completed', { 
+      params: { page, pageSize }
+    });
+    return response.data;
+  }
+
+  async getActiveTasksCount(): Promise<number> {
+    const response = await socialApiClient.get<number>('/Task/active-count');
     return response.data;
   }
 
