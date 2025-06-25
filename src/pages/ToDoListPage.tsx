@@ -12,6 +12,9 @@ import type { Task, TaskParams } from "../api/types/task";
 import CreateTaskModal from "../components/modal/CrudInherited/CreateTaskModal";
 import EditTaskModal from "../components/modal/CrudInherited/EditTaskModal";
 import { useAuth } from "../сontext/AuthContext";
+import SelectPriority from "../components/ui/fields/SelectPriority";
+import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
+import Checkbox from "../components/ui/CheckBoxes/Checkbox";
 
 const ToDoListPage = () => {
     const { authInfo, hasRole } = useAuth();
@@ -33,6 +36,8 @@ const ToDoListPage = () => {
 
     const [priority, setPriority] = React.useState("");
     const [assignee, setAssignee] = React.useState("");
+    const [onlyMine, setOnlyMine] = useState(false);
+    const [selectedPriority, setSelectedPriority] = useState<string | undefined>();
     const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
     const { 
         getTasks, 
@@ -73,7 +78,7 @@ const ToDoListPage = () => {
     
     useEffect(() => {
         fetchTasks();
-    }, [priority, assignee]);
+    }, [priority, assignee, onlyMine, selectedPriority]);
 
     const fetchTasks = async () => {
         try {
@@ -214,20 +219,24 @@ const ToDoListPage = () => {
                 </DarkCyanButton>
             </TitleField>
             <FilterField style={{maxWidth: "800px", gap: "16px" }}>
-                <CustomSelect
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
-                    options={priorityOptions}
-                    customPlaceholder="Любой приоритет задач"
-                    style={{ minWidth: '200px', marginRight: '16px' }}
+                <SelectPriority
+                    value={selectedPriority}
+                    onChange={setSelectedPriority}
+                    className="priority-select"
                 />
                 <CustomSelect
                     value={assignee}
                     onChange={(e) => setAssignee(e.target.value)}
                     options={assigneeOptions}
-                    customPlaceholder="Все исполнители"
-                    style={{ minWidth: '200px' }}
+                    style={{ minWidth: '200px', height: "43px", margin: "0" }}
                 />
+                <ToggleContainer>
+                    <Checkbox
+                        checked={onlyMine}
+                        onChange={setOnlyMine}
+                    />
+                    <ToggleLabel>Только свои</ToggleLabel>
+                </ToggleContainer>
             </FilterField>
             <TaskListContainersWrapper>
                 <TaskListContainer 
@@ -303,6 +312,20 @@ const TaskListContainersWrapper = styled.div`
     gap: 20px;
     overflow-x: auto;
     padding-bottom: 20px;
+`;
+
+const ToggleContainer = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+`;
+
+const ToggleLabel = styled.span`
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
 `;
 
 export default ToDoListPage;

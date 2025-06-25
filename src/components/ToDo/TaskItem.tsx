@@ -247,9 +247,12 @@ const Container = styled.div`
         cursor: grabbing;
     }
 
+    &:hover {
+      box-shadow: 1px 1px 10px 5px rgba(80, 85, 92, 0.5);
+    }
+
     &.is-dragging {
         opacity: 0;
-        /* Убрать зелёную границу */
         border: 1px solid transparent;
         box-shadow: none;
         background: transparent;
