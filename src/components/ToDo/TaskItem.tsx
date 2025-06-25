@@ -25,7 +25,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
   const dragPreviewRef = useRef<HTMLDivElement>(null);
   const [showPlaceholder, setShowPlaceholder] = useState(false);
   const [itemRect, setItemRect] = useState<DOMRect | null>(null);
-
+  const isOverdue = new Date(task.deadline) < new Date() && task.taskStatus !== 'done';
   const canDrag = isAdmin || task.employeeId === currentUserId || task.responsibleId === currentUserId || task.createdBy === currentUserId;;
   const canDropToDone = isAdmin || task.responsibleId === currentUserId || task.createdBy === currentUserId;
 
@@ -140,6 +140,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
               onDrag={handleDrag}
               onDragEnd={handleDragEnd}
               onContextMenu={handleContextMenu}
+              isOverdue={isOverdue}
               style={{
                 cursor: canDrag ? 'grab' : 'not-allowed',
                 opacity: canDrag ? 1 : 0.7
@@ -153,7 +154,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
                   </PriorityIcon>
                   <Title>{task.title}</Title>
               </TitleWrapper>
-              <Deadline>
+              <Deadline isOverdue={isOverdue}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M1.6665 3.66732V5.00065H12.3332V3.66732C12.3332 3.3137 12.1927 2.97456 11.9426 2.72451C11.6926 2.47446 11.3535 2.33398 10.9998 2.33398H2.99984C2.64622 2.33398 2.30708 2.47446 2.05703 2.72451C1.80698 2.97391 1.6665 3.31304 1.6665 3.66667V5H12.3332V3.66667C12.3332 3.31304 12.1927 2.97391 11.9426 2.72386C11.6926 2.47381 11.3535 2.33333 10.9998 2.33333H2.99984C2.64622 2.33333 2.30708 2.47381 2.05703 2.72386C1.80698 2.97391 1.6665 3.31304 1.6665 3.66667V5.33333V11.6667C1.6665 12.0203 1.80698 12.3594 2.05703 12.6095C2.30708 12.8595 2.64622 13 2.99984 13H10.9998C11.3535 13 11.6926 12.8595 11.9426 12.6095C12.1927 12.3594 12.3332 12.0203 12.3332 11.6667V5.33333" stroke="#50555C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -189,7 +190,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
                       </PriorityIcon>
                       <Title>{task.title}</Title>
                   </TitleWrapper>
-                  <Deadline>
+                  <Deadline isOverdue={isOverdue}>
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M1.6665 3.66732V5.00065H12.3332V3.66732C12.3332 3.3137 12.1927 2.97456 11.9426 2.72451C11.6926 2.47446 11.3535 2.33398 10.9998 2.33398H2.99984C2.64622 2.33398 2.30708 2.47446 2.05703 2.72451C1.80698 2.97391 1.6665 3.31304 1.6665 3.66667V5H12.3332V3.66667C12.3332 3.31304 12.1927 2.97391 11.9426 2.72386C11.6926 2.47381 11.3535 2.33333 10.9998 2.33333H2.99984C2.64622 2.33333 2.30708 2.47381 2.05703 2.72386C1.80698 2.97391 1.6665 3.31304 1.6665 3.66667V5.33333V11.6667C1.6665 12.0203 1.80698 12.3594 2.05703 12.6095C2.30708 12.8595 2.64622 13 2.99984 13H10.9998C11.3535 13 11.6926 12.8595 11.9426 12.6095C12.1927 12.3594 12.3332 12.0203 12.3332 11.6667V5.33333" stroke="#50555C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
@@ -234,7 +235,7 @@ const Placeholder = styled.div`
   margin-bottom: 8px;
 `;
 
-const Container = styled.div`
+const Container = styled.div<{ isOverdue: boolean }>`
     background: white;
     padding: 12px;
     margin-bottom: 8px;
@@ -245,6 +246,11 @@ const Container = styled.div`
     transition: all 0.2s ease;
     min-height: 80px;
     border: 1px solid transparent;
+    
+    ${props => props.isOverdue && `
+      border-left: 4px solid #FF5A5A;
+      background: rgba(255, 90, 90, 0.05);
+    `}
 
     &:active {
         cursor: grabbing;
@@ -344,13 +350,24 @@ const ExecutorName = styled.span`
   text-align: left;
 `;
 
-const Deadline = styled.div`
-  color: rgba(80, 85, 92, 1);
-  font-weight: 400;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+const Deadline = styled.div<{ isOverdue: boolean }>`
+    color: ${props => props.isOverdue ? '#FF5A5A' : '#50555C'};
+    font-weight: ${props => props.isOverdue ? '600' : '400'};
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    ${props => props.isOverdue && `
+      &::after {
+        content: 'Просрочено';
+        background: #FF5A5A;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 8px;
+      }
+    `}
 `;
 
 export default TaskItem;
