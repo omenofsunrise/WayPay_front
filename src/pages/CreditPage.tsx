@@ -61,7 +61,7 @@ const CreditPage = () => {
   const { hasPermission } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData } = useCredit();
   const navigate = useNavigate();
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
 
@@ -74,85 +74,26 @@ const CreditPage = () => {
   };
 
   const handlePrintOptionSelect = async (option: 'sale' | 'guarantee') => {
-  if (!selectedCreditForPrint) {
-    console.error('No credit selected123');
-    return;
-  }
-
-  try {
-    if (option === 'sale') {
-      // Подготовка данных для договора
-      const buyerData: BuyerData = {
-        lastName: selectedCreditForPrint.clientFullName.split(' ')[0] || '',
-        firstName: selectedCreditForPrint.clientFullName.split(' ')[1] || '',
-        middleName: selectedCreditForPrint.clientFullName.split(' ')[2] || '',
-        birthDate: new Date(), // Заменить на реальные данные из credit
-        passportSeries: '0000', // Заменить на реальные данные
-        passportNumber: '000000', // Заменить на реальные данные
-        passportIssueDate: new Date(), // Заменить на реальные данные
-        passportIssuedBy: 'Отделом УФМС', // Заменить на реальные данные
-        passportDepartmentCode: '000-000', // Заменить на реальные данные
-        address: 'г. Москва', // Заменить на реальные данные
-        phone: selectedCreditForPrint.clientPhone || 'не указан'
-      };
-
-      const sellerData: SellerData = {
-        lastName: 'Иванов', // Заменить на реальные данные
-        firstName: 'Иван', // Заменить на реальные данные
-        middleName: 'Иванович', // Заменить на реальные данные
-        ogrnip: '000000000000000', // Заменить на реальные данные
-        legalAddress: 'г. Москва', // Заменить на реальные данные
-        inn: '000000000000', // Заменить на реальные данные
-        bankAccount: '00000000000000000000', // Заменить на реальные данные
-        bankName: 'ПАО Сбербанк', // Заменить на реальные данные
-        corrAccount: '00000000000000000000', // Заменить на реальные данные
-        bankInn: '000000000', // Заменить на реальные данные
-        bankBik: '000000000', // Заменить на реальные данные
-        email: 'example@mail.com', // Заменить на реальные данные
-        shopAddress: 'г. Москва' // Заменить на реальные данные
-      };
-
-      const productData: ProductData = {
-        name: 'Товар', // Заменить на реальные данные
-        model: 'Модель', // Заменить на реальные данные
-        specs: 'Характеристики', // Заменить на реальные данные
-        totalPrice: selectedCreditForPrint.totalAmount || 0,
-        basePrice: selectedCreditForPrint.totalAmount || 0, // Можно добавить поле в credit
-        markup: 0, // Можно добавить поле в credit
-        installmentMonths: 12 // Заменить на реальные данные
-      };
-
-      const contractData: ContractData = {
-        contractNumber: selectedCreditForPrint.id.toString(),
-        contractDate: new Date(selectedCreditForPrint.creditDate),
-        city: 'г. Москва', // Заменить на реальные данные
-        initialPayment: selectedCreditForPrint.payed || 0,
-        initialPaymentDate: new Date(), // Заменить на реальные данные
-        finalPaymentDate: new Date(new Date().setMonth(new Date().getMonth() + 12)), // Пример: +12 месяцев
-        paymentDay: 15, // Заменить на реальные данные
-        guarantor: null // Можно добавить данные поручителя если есть
-      };
-
-      // Создаем генератор и скачиваем договор
-      const docxGenerator = new DocxGenerator();
-      await docxGenerator.generateAndDownloadContract(
-        buyerData,
-        sellerData,
-        productData,
-        contractData
-      );
-
-    } else if (option === 'guarantee') {
-      console.log('Печать договора поручительства для кредита:', selectedCreditForPrint);
-      // Логика печати для выбранного кредита
-    }
-  } catch (error) {
-    console.error('Ошибка при генерации документа:', error);
-    alert('Произошла ошибка при генерации документа');
-  }
-  
-  setIsPrintModalOpen(false);
-};
+      if (!selectedCreditForPrint) return;
+      
+      try {
+          const docxGenerator = new DocxGenerator(getDocsData);
+          
+          if (option === 'sale') {
+              await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
+          } else if (option === 'guarantee') {
+              await docxGenerator.generateFromCreditData(
+                  selectedCreditForPrint.id,
+                  '/Docs/guaranteeContract.docx'
+              );
+          }
+      } catch (error) {
+          console.error('Ошибка при генерации документа:', error);
+          alert('Произошла ошибка при генерации документа');
+      }
+      
+      setIsPrintModalOpen(false);
+  };
 
   const loadCredits = useCallback(async () => {
     const params = {

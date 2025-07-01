@@ -57,7 +57,35 @@ export interface CreditParams extends PaginationParams {
 
 export interface CreditDocs {
     city?: string;
-    contractNumber?: number;
+    contractNumber?: string;
+    contractDate?: string;
+    clientName?: string;
+    product?: string;
+    clientBirthdate?: string;
+    passportSeries?: string;
+    passportNumber?: string;
+    docIssueDate?: string;
+    clientPhone?: string;
+    clientAddress?: string;
+    chief?: string;
+    address?: string;
+    lastDay?: string;
+    termMonths?: string;
+    totalAmount?: string;
+    cleanAmount?: string;
+    addAmount?: string;
+    firstPayment?: string;
+    restAmount?: string;
+    paymentSchedule?: PaymentScheduleItem[];
+    
+    [key: string]: any;
+}
+
+export interface PaymentScheduleItem {
+    date: string;       
+    balance: string;    
+    payment: string;    
+    note?: string;      
 }
 
 export interface CreditResponse extends PaginatedResponse<Credit> {
