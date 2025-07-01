@@ -1,22 +1,33 @@
 import styled from "styled-components";
+import type { Credit } from "../../api/types/credit";
+import { useState } from "react";
 
-// Добавим новый интерфейс для пропсов модального окна
 interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (option: 'sale' | 'guarantee') => void;
+  selectedCredit: Credit | null;
 }
 
-const PrintOptionModal = ({ isOpen, onClose, onSelect }: PrintOptionModalProps) => {
+const PrintOptionModal = ({ isOpen, onClose, onSelect, selectedCredit }: PrintOptionModalProps) => {
+  const handleSelect = (option: 'sale' | 'guarantee') => {
+    if (selectedCredit) {
+      onSelect(option);
+    } else {
+      console.error('No credit selected321');
+      onClose();
+    }
+  };
+
   return (
     <ModalOverlay isOpen={isOpen} onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalTitle>Выберите тип договора</ModalTitle>
         <PrintOptions>
-          <PrintOption onClick={() => onSelect('sale')}>
+          <PrintOption onClick={() => handleSelect('sale')}>
             Договор купли-продажи
           </PrintOption>
-          <PrintOption onClick={() => onSelect('guarantee')}>
+          <PrintOption onClick={() => handleSelect('guarantee')}>
             Договор поручительства
           </PrintOption>
         </PrintOptions>

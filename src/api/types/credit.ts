@@ -55,6 +55,11 @@ export interface CreditParams extends PaginationParams {
     isActive?: boolean;
 }
 
+export interface CreditDocs {
+    city?: string;
+    contractNumber?: number;
+}
+
 export interface CreditResponse extends PaginatedResponse<Credit> {
     totalAccured: number;
     totalDebt: number;

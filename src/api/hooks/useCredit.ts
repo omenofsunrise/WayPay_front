@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import creditService from '../services/creditService';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse } from '../types/credit';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs } from '../types/credit';
 
 const useCredit = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +30,19 @@ const useCredit = () => {
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create credit');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getDocsData = useCallback(async (id?: number): Promise<CreditDocs | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      return null;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
       return null;
     } finally {
       setIsLoading(false);
@@ -72,7 +85,8 @@ const useCredit = () => {
     getCredits,
     createCredit,
     toggleFavourite,
-    deleteCredit
+    deleteCredit,
+    getDocsData
   };
 };
 
