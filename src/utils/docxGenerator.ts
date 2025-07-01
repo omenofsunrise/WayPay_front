@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver';
 import { TemplateHandler } from 'easy-template-x';
-import type { CreditDocs } from '../api/types/credit';
+import type { CreditDocs, PaymentScheduleItem } from '../api/types/credit';
 
 class DocxGenerator {
   private templateUrl: string;
@@ -24,10 +24,13 @@ class DocxGenerator {
         throw new Error('Не удалось получить данные для документа');
       }
       
+      // Форматируем данные для шаблона
+      const templateData = this.prepareTemplateData(docsData);
+      
       const templateFile = await this.loadTemplate(templateUrl || this.templateUrl);
       
       const handler = new TemplateHandler();
-      const docx = await handler.process(templateFile, docsData);
+      const docx = await handler.process(templateFile, templateData);
       
       const fileName = this.generateFileName(docsData);
       saveAs(docx, fileName);
@@ -38,6 +41,31 @@ class DocxGenerator {
         error instanceof Error ? error.message : 'Unknown error'
       }`);
     }
+  }
+
+  /**
+   * Подготавливает данные для шаблона, включая таблицу платежей
+   */
+  private prepareTemplateData(docsData: CreditDocs): any {
+    if (!docsData.paymentSchedule || docsData.paymentSchedule.length === 0) {
+      return docsData;
+    }
+    console.log(docsData.paymentSchedule);
+    // Формируем данные для таблицы платежей
+    const paymentTable = {
+      rows: docsData.paymentSchedule.map((item, index) => ({
+        index: (index + 1).toString(),
+        date: item.date,
+        balance: item.balance,
+        payment: item.payment,
+        note: item.note || ''
+      }))
+    };
+
+    return {
+      ...docsData,
+      paymentTable // Добавляем таблицу платежей в данные для шаблона
+    };
   }
 
   private async loadTemplate(url: string): Promise<Blob> {
