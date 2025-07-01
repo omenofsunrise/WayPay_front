@@ -24,6 +24,8 @@ import { formatMoney } from '../utils/formatPrice';
 import usePayment from '../api/hooks/usePayment';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useAuth } from '../сontext/AuthContext';
+import PrintOptionModal from '../components/modal/PrintOptionModal';
+import { generateGuaranteeContractDocx, generateSalesContractDocx, type ContractData } from '../utils/docxGenerator';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -57,10 +59,79 @@ const CreditPage = () => {
     8: 'debt'
   };
   const { hasPermission } = useAuth();
-
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
   const navigate = useNavigate();
+
+  const handlePrintOptionSelect = async (option: 'sale' | 'guarantee', credit: Credit) => {
+    setIsPrintModalOpen(false);
+    
+    try {
+      // Подготовка данных для договора
+      const contractData: ContractData = {
+        contractNumber: credit.id.toString(),
+        contractDate: credit.creditDate.toISOString(),
+        client: {
+          fullName: credit.clientFullName,
+          birthDate: '12.12.1912', // Эти данные нужно получать из системы
+          passportSeries: '9600',
+          passportNumber: '121212',
+          passportIssuedBy: 'МВД по Чеченской Республике',
+          passportIssueDate: '12.12.2025',
+          passportDepartmentCode: '200-005',
+          address: 'Чеченская Республика, г. Грозный, ул. Космонавтов, д. 0, кв. 0',
+          phone: credit.clientPhone || '+7 928 000 00 00'
+        },
+        seller: {
+          fullName: 'Фамилия Имя Отчество', // Данные продавца из системы
+          ogrnip: '0000000000000',
+          inn: '200000000',
+          address: '364024, Чеченская Республика, г. Грозный, ул. Космонавтов, д.0, кв.0',
+          bankAccount: '40802000000000000000',
+          bankName: 'ПАО «Сбербанк»',
+          bankCorrAccount: '30101000000000',
+          bankInn: '770000000',
+          bankBik: '040702615',
+          email: 'dfdfdff@mail.ru'
+        },
+        product: {
+          name: 'телефон (модель айфон 16 про, 256 гб)', // Эти данные нужно получать из системы
+          fullCost: credit.totalAmount,
+          baseCost: Math.round(credit.totalAmount * 0.8),
+          markup: Math.round(credit.totalAmount * 0.2),
+          initialPayment: 1000,
+          remainingPayment: credit.totalAmount - 1000,
+          termMonths: 12,
+          finalPaymentDate: new Date(credit.creditDate.getFullYear(), credit.creditDate.getMonth() + 12, 0).toISOString()
+        },
+        guarantor: option === 'guarantee' ? {
+          fullName: 'Фамилия Имя Отчество', // Данные поручителя из системы
+          relation: 'брат'
+        } : undefined
+      };
+
+      let blob: Blob;
+      if (option === 'sale') {
+        blob = await generateSalesContractDocx(contractData);
+      } else {
+        blob = await generateGuaranteeContractDocx(contractData);
+      }
+
+      // Создаем ссылку для скачивания
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Договор_${option === 'sale' ? 'КП' : 'поручительства'}_${credit.id}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Ошибка при генерации документа:', error);
+      alert('Произошла ошибка при генерации документа');
+    }
+  };
 
   const loadCredits = useCallback(async () => {
     const params = {
@@ -284,9 +355,12 @@ const CreditPage = () => {
     <PageLayout>
       <TitleField>
         <CustomTitle>Договоры</CustomTitle>
-          <ExportButton icon={<PrintIcon />} onClick={handlePrint}>
+        <ExportButton 
+            icon={<PrintIcon />} 
+            onClick={() => setIsPrintModalOpen(true)}
+          >
             Печать
-          </ExportButton>
+        </ExportButton>
           <ExportButton 
             onClick={handleExport}
             isExporting={isExporting}
@@ -424,6 +498,12 @@ const CreditPage = () => {
         id={viewingCreditId || 0}
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
+      />  
+
+      <PrintOptionModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        onSelect={handlePrintOptionSelect}
       />
     </PageLayout>
   );
