@@ -119,6 +119,13 @@ const ClientSelectModal = ({
     }
   };
 
+  const parseDateString = (dateStr: string): Date | null => {
+    if (!dateStr) return null;
+    
+    const [day, month, year] = dateStr.split('.').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   const handleCreateClient = () => {
     setIsCreateModalOpen(true);
   };
@@ -128,9 +135,9 @@ const ClientSelectModal = ({
       await createClient({
         fullName: clientData.fullName,
         phone: clientData.phone,
-        birthdate: clientData.birthdate ? new Date(clientData.birthdate) : null,
+        birthdate: clientData.birthdate ? parseDateString(clientData.birthdate) : null,
         doc: clientData.doc || undefined,
-        docIssueDate: clientData.docIssueDate ? new Date(clientData.docIssueDate) : undefined,
+        docIssueDate: clientData.docIssueDate ? parseDateString(clientData.docIssueDate) : undefined,
         docIssueYear: clientData.docIssueYear || 0,
         registrationAddress: clientData.registrationAddress || '',
         creditIds: null,
