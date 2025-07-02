@@ -373,7 +373,7 @@ const CreditPage = () => {
           />
         </InputWrapper>
         
-        <InputWrapper style={{ minWidth: "500px" }}>
+        <InputWrapper>
           <CustomInput
             inputType="text"
             placeholder="Инвестор"
@@ -384,27 +384,30 @@ const CreditPage = () => {
             }}
           />
         </InputWrapper>
+
+        <InputWrapper>
+          <CustomInput 
+            style={{ marginRight: "auto", display: "flex"}}
+            inputType="fullname"
+            placeholder="ФИО"
+            value={clientFullName}
+            onChange={(e) => {
+              setClientFullName(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
       </FilterField>
 
       <SecondRaw style={{ color: "white" }}>
-        <CustomInput 
-          style={{ marginRight: "auto", display: "flex"}}
-          inputType="fullname"
-          placeholder="ФИО"
-          value={clientFullName}
-          onChange={(e) => {
-            setClientFullName(e.target.value);
-            setCurrentPage(1);
-          }}
-        />
-        {hasPermission('CREATE_CREDITS') && (
+        {/* {hasPermission('CREATE_CREDITS') && (
           <DarkCyanButton 
             style={{ marginLeft: "auto", width: "15vw" }}
             onClick={() => navigate('/new-credit')}
           >
             + Новый договор
           </DarkCyanButton>
-        )}
+        )} */}
       </SecondRaw>
 
       <CreditTypes onTabChange={handleTabChange} />

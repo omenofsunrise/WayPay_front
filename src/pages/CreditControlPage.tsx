@@ -304,9 +304,9 @@ const CreditControlPage = () => {
     <PageLayout>
       <TitleField>
         <CustomTitle>Контроль договоров</CustomTitle>
-          <ExportButton icon={<PrintIcon />} onClick={handlePrint}>
+          {/* <ExportButton icon={<PrintIcon />} onClick={handlePrint}>
             Печать
-          </ExportButton>
+          </ExportButton> */}
           <ExportButton 
             onClick={handleExport}
             isExporting={isExporting}
