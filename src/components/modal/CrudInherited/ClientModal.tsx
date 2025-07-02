@@ -337,9 +337,10 @@ const ClientModal: React.FC<ClientModalProps> = ({
     setIsSubmitting(true);
     setApiError('');
 
+    console.log(formData.birthdate);
     try {
       const formattedBirthdate = typeof formData.birthdate === 'string' 
-        ? formData.birthdate 
+        ? formData.birthdate
         : formatDate(formData.birthdate.toString());
 
       const submitData = {

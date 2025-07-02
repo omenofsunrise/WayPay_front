@@ -133,8 +133,8 @@ const ClientSelectModal = ({
         docIssueDate: clientData.docIssueDate ? new Date(clientData.docIssueDate) : undefined,
         docIssueYear: clientData.docIssueYear || 0,
         registrationAddress: clientData.registrationAddress || '',
-        creditIds: new number[1],
-        creditRestTerms: new number[1]
+        creditIds: null,
+        creditRestTerms: null
       });
       
       loadClients();
@@ -175,14 +175,12 @@ const ClientSelectModal = ({
               value={nameFilter}
               onChange={(e) => handleFilterChange(e.target.value)}
             />
-            {(hasRole('директор') || hasRole('суперадмин')) && (
-              <DarkCyanButton 
-                style={{ marginLeft: '16px', width: "auto" }}
-                onClick={handleCreateClient}
-              >
-                + Добавить
-              </DarkCyanButton>
-            )}
+            <DarkCyanButton 
+              style={{ marginLeft: '16px', width: "auto" }}
+              onClick={handleCreateClient}
+            >
+              + Добавить
+            </DarkCyanButton>
           </FilterContainer>
           
           {isLoading && <LoadingMessage>Загрузка клиентов...</LoadingMessage>}
