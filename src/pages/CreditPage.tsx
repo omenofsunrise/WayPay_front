@@ -58,7 +58,7 @@ const CreditPage = () => {
     7: 'rest',
     8: 'debt'
   };
-  const { hasPermission } = useAuth();
+  const { hasPermission, forbiddenRole } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData } = useCredit();
@@ -187,13 +187,14 @@ const CreditPage = () => {
     {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
-      color: '#008b8b'
+      color: '#008b8b',
+      shouldShow: () => forbiddenRole("бухгалтер")
     },
     {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
-      shouldShow: () => hasPermission('DELETE_CREDITS')
+      shouldShow: () => (hasPermission('DELETE_CREDITS') && forbiddenRole("бухгалтер"))
     }
   ];
 

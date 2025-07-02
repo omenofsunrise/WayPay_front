@@ -9,7 +9,7 @@ import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CalculatorModal from '../../modal/CalculatorModal';
 import { useAuth } from '../../../сontext/AuthContext';
-import type { Permission } from '../../../api/types/auth';
+import type { Permission, Role } from '../../../api/types/auth';
 import useTask from '../../../api/hooks/useTask';
 import { useTaskCount } from '../../../сontext/TaskCountContext';
 
@@ -20,10 +20,11 @@ interface MenuItem {
   path?: string;
   modal?: boolean;
   permission?: Permission;
+  forbiddenRole?: Role;
 }
 
 const allMenuItems: MenuItem[] = [
-  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit', permission: 'CREATE_CREDITS' },
+  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit', permission: 'CREATE_CREDITS', forbiddenRole: 'бухгалтер' },
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
@@ -45,7 +46,7 @@ const TopMenu = () => {
     setSelectedTopMenuItem,
     setSelectedSideMenuItem
   } = useContext(SideMenuContext);
-  const { hasPermission } = useAuth();
+  const { hasPermission, forbiddenRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
@@ -53,7 +54,7 @@ const TopMenu = () => {
   const { getActiveTasksCount } = useTask();
 
   const menuItems = allMenuItems.filter(item => 
-    !item.permission || hasPermission(item.permission)
+    (!item.permission || hasPermission(item.permission)) && forbiddenRole(item.forbiddenRole)
   );
 
   const getCurrentMenuItem = () => {

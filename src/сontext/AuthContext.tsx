@@ -10,6 +10,7 @@ interface AuthContextType {
   refresh: () => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
   hasRole: (role: Role) => boolean;
+  forbiddenRole: (role: Role) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +60,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     return authInfo.employee.role === role;
   };
 
+  const forbiddenRole = (role: Role): boolean => {
+    if (!authInfo) return false;
+    return authInfo.employee.role !== role;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       authInfo, 
@@ -66,7 +72,8 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       error, 
       refresh: fetchAuthInfo,
       hasPermission,
-      hasRole
+      hasRole,
+      forbiddenRole
     }}>
       {children}
     </AuthContext.Provider>
