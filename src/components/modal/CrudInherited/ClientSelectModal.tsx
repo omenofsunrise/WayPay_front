@@ -8,6 +8,8 @@ import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
 import { formatDate } from '../../../utils/dateFormatter';
 import ClientModal from './ClientModal';
+import { number } from 'framer-motion';
+import { useAuth } from '../../../сontext/AuthContext';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -36,8 +38,9 @@ const ClientSelectModal = ({
     phone: string;
   } | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  
   const pageSize = 5;
+  const { hasRole } = useAuth();
+  
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
@@ -129,7 +132,9 @@ const ClientSelectModal = ({
         doc: clientData.doc || undefined,
         docIssueDate: clientData.docIssueDate ? new Date(clientData.docIssueDate) : undefined,
         docIssueYear: clientData.docIssueYear || 0,
-        registrationAddress: clientData.registrationAddress || ''
+        registrationAddress: clientData.registrationAddress || '',
+        creditIds: new number[1],
+        creditRestTerms: new number[1]
       });
       
       loadClients();
@@ -170,12 +175,14 @@ const ClientSelectModal = ({
               value={nameFilter}
               onChange={(e) => handleFilterChange(e.target.value)}
             />
-            <DarkCyanButton 
-              style={{ marginLeft: '16px', width: "auto" }}
-              onClick={handleCreateClient}
-            >
-              + Добавить
-            </DarkCyanButton>
+            {(hasRole('директор') || hasRole('суперадмин')) && (
+              <DarkCyanButton 
+                style={{ marginLeft: '16px', width: "auto" }}
+                onClick={handleCreateClient}
+              >
+                + Добавить
+              </DarkCyanButton>
+            )}
           </FilterContainer>
           
           {isLoading && <LoadingMessage>Загрузка клиентов...</LoadingMessage>}
