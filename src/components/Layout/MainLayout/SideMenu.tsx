@@ -118,15 +118,18 @@ const SideMenu = () => {
       />
       {!collapsed && <Logo src={logo} alt="logo" />}
       
+      
       <MenuList $collapsed={collapsed}>
-        <MenuItem 
-          onClick={() => handleMenuItemClick('analytics', '/analytics')}
-          $collapsed={collapsed}
-          $selected={selectedSideMenuItem === 'analytics'}
-        >
-          <Icon src={analyticsIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'analytics'} />
-          {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
-        </MenuItem>
+        {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
+          <MenuItem 
+            onClick={() => handleMenuItemClick('analytics', '/analytics')}
+            $collapsed={collapsed}
+            $selected={selectedSideMenuItem === 'analytics'}
+          >
+            <Icon src={analyticsIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'analytics'} />
+            {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
+          </MenuItem>
+        )}
         
         {!collapsed && <Divider />}
         
@@ -171,12 +174,14 @@ const SideMenu = () => {
             >
               Договоры
             </SubMenuItem>
-            <SubMenuItem 
-              onClick={() => handleSubMenuItemClick('contracts-control', '/credit-control')}
-              $selected={selectedSideMenuItem === 'contracts-control'}
-            >
-              Контроль договоров
-            </SubMenuItem>
+            {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
+              <SubMenuItem 
+                onClick={() => handleSubMenuItemClick('contracts-control', '/credit-control')}
+                $selected={selectedSideMenuItem === 'contracts-control'}
+              >
+                Контроль договоров
+              </SubMenuItem>
+            )}
           </SubMenu>
         )}
         
@@ -288,38 +293,40 @@ const SideMenu = () => {
           </SubMenu>
         )}
         
-        <MenuItem 
-          onClick={() => toggleItem('investors')}
-          $collapsed={collapsed}
-          $selected={selectedSideMenuItem === 'investors' || 
-                    selectedSideMenuItem === 'investors-report'}
-        >
-          <Icon 
-            src={investorsIcon} 
-            $collapsed={collapsed} 
+        {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
+          <MenuItem 
+            onClick={() => toggleItem('investors')}
+            $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'investors' || 
-                      selectedSideMenuItem === 'investors-report'} 
-          />
-          {!collapsed && (
-            <>
-              <MenuItemText>Инвесторы</MenuItemText>
-              <ExpandArrow 
-                width="14" 
-                height="8" 
-                viewBox="0 0 14 8" 
-                fill="none" 
-                $expanded={expandedItem === 'investors'}
-              >
-                <path 
-                  d="M1 1.32422L7 7.32422L13 1.32422" 
-                  stroke="#50555C" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                />
-              </ExpandArrow>
-            </>
-          )}
-        </MenuItem>
+                      selectedSideMenuItem === 'investors-report'}
+          >
+            <Icon 
+              src={investorsIcon} 
+              $collapsed={collapsed} 
+              $selected={selectedSideMenuItem === 'investors' || 
+                        selectedSideMenuItem === 'investors-report'} 
+            />
+            {!collapsed && (
+              <>
+                <MenuItemText>Инвесторы</MenuItemText>
+                <ExpandArrow 
+                  width="14" 
+                  height="8" 
+                  viewBox="0 0 14 8" 
+                  fill="none" 
+                  $expanded={expandedItem === 'investors'}
+                >
+                  <path 
+                    d="M1 1.32422L7 7.32422L13 1.32422" 
+                    stroke="#50555C" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </ExpandArrow>
+              </>
+            )}
+          </MenuItem>
+        )}
         {!collapsed && expandedItem === 'investors' && (
           <SubMenu>
             <SubMenuLine />
@@ -380,36 +387,38 @@ const SideMenu = () => {
           </SubMenu>
         )}
         
-        <MenuItem 
-          onClick={() => toggleItem('finance')}
-          $collapsed={collapsed}
-          $selected={selectedSideMenuItem === 'budget' } 
-        >
-          <Icon 
-            src={financeIcon} 
-            $collapsed={collapsed} 
-            $selected={selectedSideMenuItem === 'budget' } 
-          />
-          {!collapsed && (
-            <>
-              <MenuItemText>Финансы</MenuItemText>
-              <ExpandArrow 
-                width="14" 
-                height="8" 
-                viewBox="0 0 14 8" 
-                fill="none" 
-                $expanded={expandedItem === 'finance'}
-              >
-                <path 
-                  d="M1 1.32422L7 7.32422L13 1.32422" 
-                  stroke="#50555C" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                />
-              </ExpandArrow>
-            </>
-          )}
-        </MenuItem>
+        {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
+          <MenuItem 
+            onClick={() => toggleItem('finance')}
+            $collapsed={collapsed}
+            $selected={selectedSideMenuItem === 'budget'} 
+          >
+            <Icon 
+              src={financeIcon} 
+              $collapsed={collapsed} 
+              $selected={selectedSideMenuItem === 'budget'} 
+            />
+            {!collapsed && (
+              <>
+                <MenuItemText>Финансы</MenuItemText>
+                <ExpandArrow 
+                  width="14" 
+                  height="8" 
+                  viewBox="0 0 14 8" 
+                  fill="none" 
+                  $expanded={expandedItem === 'finance'}
+                >
+                  <path 
+                    d="M1 1.32422L7 7.32422L13 1.32422" 
+                    stroke="#50555C" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </ExpandArrow>
+              </>
+            )}
+          </MenuItem>
+        )}
         {!collapsed && expandedItem === 'finance' && (
           <SubMenu>
             <SubMenuLine />
@@ -427,7 +436,7 @@ const SideMenu = () => {
             </SubMenuItem>
           </SubMenu>
         )}
-        
+
         {!collapsed && <Divider />}
         
         <MenuItem 
