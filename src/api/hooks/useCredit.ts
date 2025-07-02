@@ -58,6 +58,8 @@ const useCredit = () => {
               chief: "Элипханов Ибрагим",
               address: "364024, Чеченская Республика, г. Грозный, ул. Космонавтов, д.2, кв.2",
               checkingAccount: "787487312",
+              email: "asdsasd@yandex.com",
+              inn: "777477777",
 
               lastDay: "31.12.2026 г.",
               product: "Samsung Galaxy S12",

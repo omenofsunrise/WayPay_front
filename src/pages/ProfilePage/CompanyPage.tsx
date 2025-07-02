@@ -17,7 +17,9 @@ const CompanyPage = () => {
         city: "",
         officeAddress: "",
         bank: "",
-        phone: ""
+        phone: "",
+        inn: "",
+        email: ""
     });
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -33,7 +35,9 @@ const CompanyPage = () => {
                 city: company.city || "",
                 officeAddress: company.officeAddress || "",
                 bank: company.bank || "",
-                phone: company.phone || ""
+                phone: company.phone || "",
+                inn: company.inn || "",
+                email: company.email || ""
             });
         }
     }, [company]);
@@ -54,7 +58,9 @@ const CompanyPage = () => {
                 city: company.city || "",
                 officeAddress: company.officeAddress || "",
                 bank: company.bank || "",
-                phone: company.phone || ""
+                phone: company.phone || "",
+                inn: company.inn || "",
+                email: company.email || ""
             });
         }
     };
@@ -113,6 +119,26 @@ const CompanyPage = () => {
                     <StyledInput 
                         name="officeAddress"
                         value={formData.officeAddress}
+                        onChange={handleInputChange}
+                    />
+                </InputGroup>
+            </InputContainer>
+            
+            <InputContainer>
+                <InputGroup>
+                    <Label>ИНН</Label>
+                    <StyledInput 
+                        name="inn"
+                        value={formData.inn}
+                        onChange={handleInputChange}
+                    />
+                </InputGroup>
+                <InputGroup>
+                    <Label>Email</Label>
+                    <StyledInput 
+                        name="email"
+                        type="email"
+                        value={formData.email}
                         onChange={handleInputChange}
                     />
                 </InputGroup>
@@ -225,7 +251,6 @@ const ButtonsContainer = styled.div`
 const FooterContainer = styled.div`
     margin-top: 24px;
     margin-right: auto;
-
 `;
 
 const Disclaimer = styled.span`

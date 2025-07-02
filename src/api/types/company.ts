@@ -7,6 +7,8 @@ export interface Company {
   bank: string;
   chief: string;
   licenceDate?: Date;
+  inn?: string;
+  email?: string;
 }
 
 export interface CompanyCreateRequest {

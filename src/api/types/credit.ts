@@ -78,6 +78,8 @@ export interface CreditDocs {
     restAmount?: string;
     checkingAccount?: string;
     guarantorName?: string;
+    email?: string;
+    inn?: string;
     paymentSchedule?: PaymentScheduleItem[];
     
     [key: string]: any;
