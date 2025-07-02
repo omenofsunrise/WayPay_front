@@ -10,6 +10,7 @@ interface PayoutModalProps {
   onAmountChange: (value: string) => void;
   onSubmit: () => void;
   maxAmount: number;
+  balance: number;
   isLoading: boolean;
 }
 
@@ -20,9 +21,15 @@ const PayoutModal = ({
   onAmountChange,
   onSubmit,
   maxAmount,
+  balance,
   isLoading
 }: PayoutModalProps) => {
   const [error, setError] = useState('');
+  const [actualMaxAmount, setActualMaxAmount] = useState(0);
+
+  useEffect(() => {
+    setActualMaxAmount(Math.min(maxAmount, balance));
+  }, [maxAmount, balance]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '');
@@ -43,8 +50,8 @@ const PayoutModal = ({
       return;
     }
     
-    if (numericAmount > maxAmount) {
-      setError(`Сумма не может превышать ${maxAmount.toLocaleString()} ₽`);
+    if (numericAmount > actualMaxAmount) {
+      setError(`Сумма не может превышать ${actualMaxAmount.toLocaleString()} ₽`);
       return;
     }
     
@@ -71,7 +78,8 @@ const PayoutModal = ({
           onChange={handleAmountChange}
           placeholder="Введите сумму"
         />
-        <MaxAmount>Можно вывести: {maxAmount.toLocaleString()} ₽</MaxAmount>
+        <MaxAmount>Можно вывести: {actualMaxAmount.toLocaleString()} ₽</MaxAmount>
+        <BalanceInfo>Доход: {maxAmount.toLocaleString()} ₽ | Баланс: {balance.toLocaleString()} ₽</BalanceInfo>
         {error && <ErrorMessage>{error}</ErrorMessage>}
       </ModalContent>
     </BaseModal>
@@ -84,8 +92,15 @@ const ModalContent = styled.div`
 
 const MaxAmount = styled.div`
   margin-top: 8px;
-  font-size: 14px;
+  font-size: 18px;
   color: #6B7280;
+  font-weight: 500;
+`;
+
+const BalanceInfo = styled.div`
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9CA3AF;
 `;
 
 const ErrorMessage = styled.div`

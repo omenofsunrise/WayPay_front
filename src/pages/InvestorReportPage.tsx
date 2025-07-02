@@ -630,11 +630,12 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                 onSubmit={handlePayoutSubmit}
                 maxAmount={
                     currentInvestor?.isBlocked 
-                        ? report?.balance || 0 
-                        : report?.isCompany 
-                            ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
-                            : report?.investorIncome || 0
+                    ? report?.balance || 0 
+                    : report?.isCompany 
+                        ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
+                        : report?.investorIncome || 0
                 }
+                balance={report?.balance || 0} // Add balance prop
                 isLoading={isPayoutsLoading}
             />
 

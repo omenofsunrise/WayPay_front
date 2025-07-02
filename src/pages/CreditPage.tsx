@@ -73,26 +73,31 @@ const CreditPage = () => {
     }
   };
 
-  const handlePrintOptionSelect = async (option: 'sale' | 'guarantee') => {
-      if (!selectedCreditForPrint) return;
+  const handlePrintOptionSelect = async (option: 'sale' | 'guarantee' | 'guaranteeConsent') => {
+    if (!selectedCreditForPrint) return;
+    
+    try {
+      const docxGenerator = new DocxGenerator(getDocsData);
       
-      try {
-          const docxGenerator = new DocxGenerator(getDocsData);
-          
-          if (option === 'sale') {
-              await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
-          } else if (option === 'guarantee') {
-              await docxGenerator.generateFromCreditData(
-                  selectedCreditForPrint.id,
-                  '/Docs/guaranteeContract.docx'
-              );
-          }
-      } catch (error) {
-          console.error('Ошибка при генерации документа:', error);
-          alert('Произошла ошибка при генерации документа');
+      if (option === 'sale') {
+        await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
+      } else if (option === 'guarantee') {
+        await docxGenerator.generateFromCreditData(
+          selectedCreditForPrint.id,
+          '/Docs/guaranteeContract.docx'
+        );
+      } else if (option === 'guaranteeConsent') {
+        await docxGenerator.generateFromCreditData(
+          selectedCreditForPrint.id,
+          '/Docs/guaranteeandConsentAgreement.docx'
+        );
       }
-      
-      setIsPrintModalOpen(false);
+    } catch (error) {
+      console.error('Ошибка при генерации документа:', error);
+      alert('Произошла ошибка при генерации документа');
+    }
+    
+    setIsPrintModalOpen(false);
   };
 
   const loadCredits = useCallback(async () => {

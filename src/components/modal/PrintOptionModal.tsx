@@ -5,16 +5,16 @@ import { useState } from "react";
 interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: 'sale' | 'guarantee') => void;
+  onSelect: (option: 'sale' | 'guaranteeConsent') => void;
   selectedCredit: Credit | null;
 }
 
 const PrintOptionModal = ({ isOpen, onClose, onSelect, selectedCredit }: PrintOptionModalProps) => {
-  const handleSelect = (option: 'sale' | 'guarantee') => {
+  const handleSelect = (option: 'sale' | 'guaranteeConsent') => {
     if (selectedCredit) {
       onSelect(option);
     } else {
-      console.error('No credit selected321');
+      console.error('No credit selected');
       onClose();
     }
   };
@@ -27,7 +27,7 @@ const PrintOptionModal = ({ isOpen, onClose, onSelect, selectedCredit }: PrintOp
           <PrintOption onClick={() => handleSelect('sale')}>
             Договор купли-продажи
           </PrintOption>
-          <PrintOption onClick={() => handleSelect('guarantee')}>
+          <PrintOption onClick={() => handleSelect('guaranteeConsent')}>
             Договор поручительства
           </PrintOption>
         </PrintOptions>

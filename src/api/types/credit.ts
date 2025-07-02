@@ -56,19 +56,32 @@ export interface CreditParams extends PaginationParams {
 }
 
 export interface CreditDocs {
-    city?: string;
     contractNumber?: string;
     contractDate?: string;
+
     clientName?: string;
-    product?: string;
     clientBirthdate?: string;
     passportSeries?: string;
     passportNumber?: string;
     docIssueDate?: string;
     clientPhone?: string;
     clientAddress?: string;
+
+    guarantorName?: string;
+    guarantorBirthdate?: string;
+    guarantorPassportSeries?: string;
+    guarantorPassportNumber?: string;
+    guarantorDocIssueDate?: string;
+    guarantorPhone?: string;
+    guarantorAddress?: string;
+    
+    city?: string;
     chief?: string;
     address?: string;
+    checkingAccount?: string;
+    email?: string;
+    inn?: string;
+    
     lastDay?: string;
     termMonths?: string;
     totalAmount?: string;
@@ -76,10 +89,8 @@ export interface CreditDocs {
     addAmount?: string;
     firstPayment?: string;
     restAmount?: string;
-    checkingAccount?: string;
-    guarantorName?: string;
-    email?: string;
-    inn?: string;
+    product?: string;
+
     paymentSchedule?: PaymentScheduleItem[];
     
     [key: string]: any;

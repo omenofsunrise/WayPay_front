@@ -21,7 +21,7 @@ class CreditService {
   }
 
   async getSpaData(id: number): Promise<CreditDocs> {
-    const response = await apiClient.get<CreditDocs>(`/Credit/spa${id}`);
+    const response = await apiClient.get<CreditDocs>(`/Credit/spa/${id}`);
     return response.data;
   }
 }

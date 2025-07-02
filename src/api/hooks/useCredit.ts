@@ -89,7 +89,7 @@ const useCredit = () => {
     createCredit,
     toggleFavourite,
     deleteCredit,
-    getDocsData
+    getDocsData,
   };
 };
 

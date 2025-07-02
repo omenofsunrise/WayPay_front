@@ -17,7 +17,10 @@ class DocxGenerator {
   /**
    * Генерирует документ из данных кредита и инициирует его скачивание
    */
-  public async generateFromCreditData(creditId: number, templateUrl?: string): Promise<void> {
+  public async generateFromCreditData(
+    creditId: number, 
+    templateUrl: string = '/Docs/salesContract.docx'
+  ): Promise<void> {
     try {
       const docsData = await this.getDocsData(creditId);
       if (!docsData) {
@@ -27,12 +30,12 @@ class DocxGenerator {
       // Форматируем данные для шаблона
       const templateData = this.prepareTemplateData(docsData);
       
-      const templateFile = await this.loadTemplate(templateUrl || this.templateUrl);
+      const templateFile = await this.loadTemplate(templateUrl);
       
       const handler = new TemplateHandler();
       const docx = await handler.process(templateFile, templateData);
       
-      const fileName = this.generateFileName(docsData);
+      const fileName = this.generateFileName(docsData, templateUrl);
       saveAs(docx, fileName);
 
     } catch (error) {
@@ -85,11 +88,19 @@ class DocxGenerator {
     return templateFile;
   }
 
-  private generateFileName(docsData: CreditDocs): string {
+  private generateFileName(docsData: CreditDocs, templateUrl: string): string {
     const clientName = docsData.clientName 
       ? docsData.clientName.split(' ')[0] 
       : 'клиент';
-    return `Договор_${docsData.contractNumber}_${clientName}.docx`;
+    
+    let docType = 'Договор';
+    if (templateUrl.includes('guaranteeContract')) {
+      docType = 'Договор_поручительства';
+    } else if (templateUrl.includes('guaranteeandConsentAgreement')) {
+      docType = 'Договор_поручительства_и_согласие';
+    }
+    
+    return `${docType}_${docsData.contractNumber}_${clientName}.docx`;
   }
 
   private async verifyDocxSignature(blob: Blob): Promise<boolean> {

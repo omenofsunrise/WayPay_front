@@ -96,7 +96,7 @@ const CompanyPage = () => {
                     />
                 </InputGroup>
                 <InputGroup>
-                    <Label>В лице</Label>
+                    <Label>Учредитель</Label>
                     <StyledInput 
                         name="chief"
                         inputType="fullname"
