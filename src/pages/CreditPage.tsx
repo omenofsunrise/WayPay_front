@@ -8,7 +8,6 @@ import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';
 import styled from 'styled-components';
-import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import CreditTypes from '../components/ui/fields/CreditTypes';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
@@ -25,7 +24,6 @@ import usePayment from '../api/hooks/usePayment';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useAuth } from '../сontext/AuthContext';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
-import type { BuyerData, ContractData, ProductData, SellerData } from '../api/utils/contractTypes';
 import DocxGenerator from '../utils/docxGenerator';
 
 interface EmptyStarIconProps {
