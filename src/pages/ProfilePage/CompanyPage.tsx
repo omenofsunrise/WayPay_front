@@ -121,7 +121,7 @@ const CompanyPage = () => {
             <ThirdRowContainer>
                 <HalfContainer>
                     <InputGroup>
-                        <Label>Банковские данные</Label>
+                        <Label>Рассчётный счёт</Label>
                         <StyledInput 
                             name="bank"
                             value={formData.bank}

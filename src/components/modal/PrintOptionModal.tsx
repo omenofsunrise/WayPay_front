@@ -47,6 +47,7 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  color: black;
 `;
 
 const ModalContent = styled.div`
@@ -55,6 +56,7 @@ const ModalContent = styled.div`
   border-radius: 8px;
   width: 400px;
   max-width: 90%;
+  color: black;
 `;
 
 const ModalTitle = styled.h3`
@@ -76,9 +78,10 @@ const PrintOption = styled.button`
   border: 1px solid #ddd;
   border-radius: 4px;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
   transition: background-color 0.2s;
-
+  color: black;
+  
   &:hover {
     background-color: #e9e9e9;
     border-color: rgba(0, 125, 136, 1);

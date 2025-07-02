@@ -52,10 +52,12 @@ const useCredit = () => {
               passportNumber: "439578",
               docIssueDate: "31.12.2026",
               clientPhone: "8 (961)-501-21-13", 
+              guarantorName: "Адлер Манис Эвглевич",
 
               city: "Москва",
               chief: "Элипханов Ибрагим",
               address: "364024, Чеченская Республика, г. Грозный, ул. Космонавтов, д.2, кв.2",
+              checkingAccount: "787487312",
 
               lastDay: "31.12.2026 г.",
               product: "Samsung Galaxy S12",

@@ -76,6 +76,8 @@ export interface CreditDocs {
     addAmount?: string;
     firstPayment?: string;
     restAmount?: string;
+    checkingAccount?: string;
+    guarantorName?: string;
     paymentSchedule?: PaymentScheduleItem[];
     
     [key: string]: any;

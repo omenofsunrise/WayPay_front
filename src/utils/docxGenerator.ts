@@ -47,25 +47,22 @@ class DocxGenerator {
    * Подготавливает данные для шаблона, включая таблицу платежей
    */
   private prepareTemplateData(docsData: CreditDocs): any {
-    if (!docsData.paymentSchedule || docsData.paymentSchedule.length === 0) {
-      return docsData;
-    }
-    console.log(docsData.paymentSchedule);
-    // Формируем данные для таблицы платежей
-    const paymentTable = {
-      rows: docsData.paymentSchedule.map((item, index) => ({
+      if (!docsData.paymentSchedule || docsData.paymentSchedule.length === 0) {
+        return docsData;
+      }
+      
+      const paymentTable = docsData.paymentSchedule.map((item, index) => ({
         index: (index + 1).toString(),
         date: item.date,
         balance: item.balance,
         payment: item.payment,
         note: item.note || ''
-      }))
-    };
+      }));
 
-    return {
-      ...docsData,
-      paymentTable // Добавляем таблицу платежей в данные для шаблона
-    };
+      return {
+        ...docsData,
+        paymentTable
+      };
   }
 
   private async loadTemplate(url: string): Promise<Blob> {
