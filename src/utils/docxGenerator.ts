@@ -48,20 +48,23 @@ class DocxGenerator {
    */
   private prepareTemplateData(docsData: CreditDocs): any {
       if (!docsData.paymentSchedule || docsData.paymentSchedule.length === 0) {
-        return docsData;
+          return docsData;
       }
       
       const paymentTable = docsData.paymentSchedule.map((item, index) => ({
-        index: (index + 1).toString(),
-        date: item.date,
-        balance: item.balance,
-        payment: item.payment,
-        note: item.note || ''
+          index: (index + 1).toString(),
+          date: item.date,
+          balance: item.balance,
+          payment: item.payment,
+          note: item.note || ''
       }));
 
+      const hasGuarantor = !!docsData.guarantorName;
+      
       return {
-        ...docsData,
-        paymentTable
+          ...docsData,
+          paymentTable,
+          hasGuarantor
       };
   }
 

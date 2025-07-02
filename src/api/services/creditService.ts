@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse } from '../types/credit';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs } from '../types/credit';
 
 class CreditService {
   async getCredits(params?: CreditParams): Promise<CreditResponse> {
@@ -18,6 +18,11 @@ class CreditService {
 
   async deleteCredit(id: number): Promise<void> {
     await apiClient.delete(`/Credit/${id}`);
+  }
+
+  async getSpaData(id: number): Promise<CreditDocs> {
+    const response = await apiClient.get<CreditDocs>(`/Credit/spa${id}`);
+    return response.data;
   }
 }
 
