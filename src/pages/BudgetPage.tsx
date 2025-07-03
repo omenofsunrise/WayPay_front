@@ -64,7 +64,7 @@ interface Outcome {
 
 const BudgetPage = () => {
     const currentDate = new Date();
-    const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 2);
+    const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
     const [showIncomeModal, setShowIncomeModal] = useState(false);
     const [showOutcomeModal, setShowOutcomeModal] = useState(false);

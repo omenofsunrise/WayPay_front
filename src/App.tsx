@@ -25,6 +25,7 @@ import AdminPanelPage from './pages/AdminPanelPage';
 import ToDoListPage from './pages/ToDoListPage';
 import { TaskCountProvider } from './сontext/TaskCountContext';
 import PaymentsIncomePage from './pages/PaymentIncomePage';
+import BlogPage from './pages/BlogPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -174,9 +175,14 @@ function App() {
             } />
 
             <Route path="payments-income" element={
-              
                 <MainLayout>
                   <PaymentsIncomePage />
+                </MainLayout>
+            } />
+
+            <Route path="blog" element={
+                <MainLayout>
+                  <BlogPage />
                 </MainLayout>
             } />
 
