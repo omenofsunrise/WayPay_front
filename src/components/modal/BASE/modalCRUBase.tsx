@@ -5,7 +5,7 @@ import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 export type ModalMode = 'create' | 'edit' | 'view';
 
 interface ModalProps {
-  title: string;
+  title?: string;
   onClose: () => void;
   onCancel: () => void;
   onSave?: (e: React.FormEvent) => void;
