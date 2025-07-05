@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import FileItem from './FileItem';
+import { FiTrash2 } from 'react-icons/fi';
 
 interface FileRecepientProps {
   files: File[];
@@ -33,6 +34,23 @@ const FileRecepient: React.FC<FileRecepientProps> = ({
     }
   };
 
+  const handleFilePreview = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      const imageUrl = URL.createObjectURL(file);
+      window.open(imageUrl, '_blank');
+    } else {
+      const fileUrl = URL.createObjectURL(file);
+      const a = document.createElement('a');
+      a.href = fileUrl;
+      a.target = '_blank';
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(fileUrl), 100);
+    }
+  };
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     const input = document.createElement('input');
@@ -44,11 +62,15 @@ const FileRecepient: React.FC<FileRecepientProps> = ({
     input.click();
   };
 
+  const imageFiles = files.filter(file => file.type.startsWith('image/'));
+  const otherFiles = files.filter(file => !file.type.startsWith('image/'));
+
   return (
     <FileRecepientContainer 
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleClick}
+      hasFiles={files.length > 0}
     >
       {files.length === 0 ? (
         <>
@@ -62,34 +84,71 @@ const FileRecepient: React.FC<FileRecepientProps> = ({
           <FileHint>Перетащите файлы сюда или нажмите для выбора</FileHint>
         </>
       ) : (
-        <FilesList onClick={(e) => e.stopPropagation()}>
-          {files.map((file, index) => (
-            <FileItem 
-              key={index}
-              file={file}
-              onRemove={(e) => {
-                e.stopPropagation();
-                onFileRemove(index);
-              }}
-              onPreview={(e) => {
-                e.stopPropagation();
-                onFilePreview(file);
-              }}
-            />
-          ))}
-        </FilesList>
+        <>
+          {imageFiles.length > 0 && (
+            <ImagesGrid>
+              {imageFiles.map((file, index) => {
+                const originalIndex = files.indexOf(file);
+                return (
+                  <ImageItem key={originalIndex}>
+                    <img 
+                      src={URL.createObjectURL(file)} 
+                      alt={file.name} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFilePreview(file);
+                      }}
+                    />
+                    <RemoveImageButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFileRemove(originalIndex);
+                      }}
+                    >
+                      <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M0.949286 14.2822C0.949286 15.2298 1.80364 16.005 2.84786 16.005H10.4421C11.4864 16.005 12.3407 15.2298 12.3407 14.2822V3.94556H0.949286V14.2822ZM13.29 1.36139H9.9675L9.01821 0.5H4.27179L3.3225 1.36139H0V3.08417H13.29V1.36139Z" fill="#50555C"/>
+                      </svg>
+                    </RemoveImageButton>
+                  </ImageItem>
+                );
+              })}
+            </ImagesGrid>
+          )}
+          
+          {otherFiles.length > 0 && (
+            <FilesList onClick={(e) => e.stopPropagation()}>
+              {otherFiles.map((file, index) => {
+                const originalIndex = files.indexOf(file);
+                return (
+                  <FileItem 
+                      key={originalIndex}
+                      file={file}
+                      onRemove={(e) => {
+                          e.stopPropagation();
+                          onFileRemove(originalIndex);
+                      }}
+                      onPreview={(e) => {
+                          e.stopPropagation();
+                          handleFilePreview(file);
+                      }}
+                  />
+                );
+              })}
+            </FilesList>
+          )}
+        </>
       )}
     </FileRecepientContainer>
   );
 };
 
-const FileRecepientContainer = styled.div`
+const FileRecepientContainer = styled.div<{ hasFiles?: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: ${props => props.hasFiles ? 'flex-start' : 'center'};
   gap: 16px;
-  padding: 40px; 
+  padding: ${props => props.hasFiles ? '20px' : '40px'}; 
   margin: 0 30px; 
   border-radius: 10px;
   border: 1px dashed rgba(209, 213, 219, 1);
@@ -100,7 +159,7 @@ const FileRecepientContainer = styled.div`
   box-sizing: border-box;
   min-height: 200px;
   max-height: 500px;
-  
+  overflow-y: auto;
 
   &:hover {
     background-color: rgba(249, 250, 251, 0.5);
@@ -130,6 +189,59 @@ const FilesList = styled.div`
   flex-direction: column;
   width: 100%;
   gap: 12px;
+`;
+
+const ImagesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  width: 100%;
+`;
+
+const ImageItem = styled.div`
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.2s;
+    
+    &:hover {
+      transform: scale(1.02);
+    }
+  }
+`;
+
+const RemoveImageButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  z-index: 10;
+  transition: all 0.2s;
+  padding: 4px;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  svg {
+    width: 14px;
+    height: 16px;
+  }
 `;
 
 export default FileRecepient;

@@ -66,7 +66,7 @@ const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
           multiple
           style={{ display: 'none' }}
           onChange={handleFileUpload}
-          onClick={(e) => e.stopPropagation()} // Предотвращаем всплытие
+          onClick={(e) => e.stopPropagation()}
         />
         <DarkCyanButton 
           style={{ minWidth: '136px', margin: '0', borderRadius: '10px', fontSize: '16px' }}
