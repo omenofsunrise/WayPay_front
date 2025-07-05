@@ -24,21 +24,6 @@ const useBlog = () => {
     }
   }, []);
 
-  const getFeed = useCallback(async (params: BlogFeedParams): Promise<PaginatedResponse<BlogPost> | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await blogService.getFeed(params);
-      setPosts(result);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const createPost = async (post: BlogPostForm): Promise<BlogPost | null> => {
     setIsLoading(true);
     setError(null);
@@ -53,31 +38,45 @@ const useBlog = () => {
     }
   };
 
-  const publishPost = async (id: number): Promise<BlogPost | null> => {
+  const publishPost = async (id: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedPost = await blogService.publishPost(id);
-      updatePostInList(updatedPost);
-      return updatedPost;
+      await blogService.publishPost(id);
+      if (posts) {
+        const updatedItems = posts.items.map(item => 
+          item.id === id ? { ...item, isPublished: true } : item
+        );
+        setPosts({ ...posts, items: updatedItems });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const likePost = async (postId: number): Promise<BlogPost | null> => {
+  const toggleLike = async (postId: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedPost = await blogService.likePost(postId);
-      updatePostInList(updatedPost);
-      return updatedPost;
+      await blogService.toggleLike(postId);
+      if (posts) {
+        const updatedItems = posts.items.map(item => {
+          if (item.id === postId) {
+            const isLiked = !item.isLiked;
+            return {
+              ...item,
+              isLiked,
+              likesCount: isLiked ? item.likesCount + 1 : item.likesCount - 1
+            };
+          }
+          return item;
+        });
+        setPosts({ ...posts, items: updatedItems });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +93,7 @@ const useBlog = () => {
             return {
               ...post,
               images: post.images.filter(img => !img.endsWith(`/${attachmentId}`)),
-              files: post.files.filter(file => !file.endsWith(`/${attachmentId}`))
+              attachments: post.attachments.filter(file => !file.endsWith(`/${attachmentId}`))
             };
           }
           return post;
@@ -108,25 +107,15 @@ const useBlog = () => {
     }
   };
 
-  const updatePostInList = (updatedPost: BlogPost) => {
-    if (posts) {
-      const updatedItems = posts.items.map(item => 
-        item.id === updatedPost.id ? updatedPost : item
-      );
-      setPosts({ ...posts, items: updatedItems });
-    }
-  };
-
   return {
     isLoading,
     error,
     posts,
     currentPost,
     getPosts,
-    getFeed,
     createPost,
     publishPost,
-    likePost,
+    toggleLike,
     deleteAttachment,
     setCurrentPost
   };

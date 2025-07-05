@@ -4,10 +4,11 @@ export interface BlogPost {
   id: number;
   content: string;
   images: string[];
-  files: string[];
+  attachments: string[];
   isPublished: boolean;
   likesCount: number;
   isLiked: boolean;
+  commentsCount: number;
   createdAt: Date;
   updatedAt: Date;
   authorId: number;
@@ -22,15 +23,15 @@ export interface BlogPostForm {
 }
 
 export interface BlogFeedParams {
-  filter?: string;
-  sortBy?: string;
+  filter?: 'mine' | 'liked';
+  sortBy?: 'likes' | 'comments' | 'date_desc' | 'date_asc';
   search?: string;
   page?: number;
   pageSize?: number;
 }
 
 export interface BlogParams extends PaginationParams {
-  mode?: 'feed' | 'search';
+  filter?: 'mine' | 'liked';
+  sortBy?: 'likes' | 'comments' | 'date_desc' | 'date_asc';
   search?: string;
-  sort?: 'date_desc';
 }

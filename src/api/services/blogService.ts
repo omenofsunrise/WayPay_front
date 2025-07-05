@@ -5,13 +5,15 @@ import socialApiClient from '../socialApiClient';
 class BlogService {
   async getPosts(params?: BlogParams): Promise<PaginatedResponse<BlogPost>> {
     const response = await socialApiClient.get<PaginatedResponse<BlogPost>>('/Blog', { 
-      params
+      params: {
+        ...params,
+        filter: params?.filter,
+        sortBy: params?.sortBy,
+        search: params?.search,
+        page: params?.page,
+        pageSize: params?.pageSize
+      }
     });
-    return response.data;
-  }
-
-  async getFeed(params: BlogFeedParams): Promise<PaginatedResponse<BlogPost>> {
-    const response = await socialApiClient.post<PaginatedResponse<BlogPost>>('/Blog/feed', params);
     return response.data;
   }
 
@@ -19,12 +21,12 @@ class BlogService {
     const formData = new FormData();
     formData.append('Content', post.content);
     
-    post.images.forEach((image, index) => {
-      formData.append(`Images`, image);
+    post.images.forEach((image) => {
+      formData.append('Images', image);
     });
     
-    post.files.forEach((file, index) => {
-      formData.append(`Files`, file);
+    post.files.forEach((file) => {
+      formData.append('Files', file);
     });
 
     const response = await socialApiClient.post<BlogPost>('/Blog', formData, {
@@ -35,18 +37,16 @@ class BlogService {
     return response.data;
   }
 
-  async publishPost(id: number): Promise<BlogPost> {
-    const response = await socialApiClient.put<BlogPost>(`/Blog/${id}/publish`);
-    return response.data;
-  }
-
-  async likePost(postId: number): Promise<BlogPost> {
-    const response = await socialApiClient.post<BlogPost>(`/Blog/${postId}/like`);
-    return response.data;
+  async publishPost(id: number): Promise<void> {
+    await socialApiClient.put(`/Blog/${id}/publish`);
   }
 
   async deleteAttachment(postId: number, attachmentId: number): Promise<void> {
     await socialApiClient.delete(`/Blog/${postId}/attachments/${attachmentId}`);
+  }
+
+  async toggleLike(postId: number): Promise<void> {
+    await socialApiClient.post(`/Blog/${postId}/like`);
   }
 }
 

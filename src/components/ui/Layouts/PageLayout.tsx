@@ -6,7 +6,7 @@ const PageLayout = styled.div`
   flex: 1;
   background-color: rgba(249, 250, 250, 1);
   min-height: 100%;
-  margin: 0 20px 0 30px;
+  margin: 0 20px;
 `;
 
 export default PageLayout;
