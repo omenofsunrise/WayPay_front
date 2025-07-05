@@ -5,20 +5,45 @@ import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
 import CustomTextArea from '../../ui/fields/CustomTextArea';
 import { Container } from 'react-bootstrap';
 import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
+import useBlog from '../../../api/hooks/useBlog';
+import type { BlogPostForm } from '../../../api/types/blog';
 
 const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
+  const { createPost, isLoading } = useBlog();
 
   const MAX_FILES = 10;
   const MAX_FILE_SIZE_MB = 10; // 10MB
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ title, content, files });
-    onClose();
+    
+    if (!content.trim() && files.length === 0) {
+      setError('Пост должен содержать текст или файлы');
+      return;
+    }
+
+    try {
+      const formData: BlogPostForm = {
+        content,
+        images: files.filter(file => file.type.startsWith('image/')),
+        files: files.filter(file => !file.type.startsWith('image/')),
+      };
+
+      await createPost(formData);
+      onClose();
+      resetForm();
+    } catch (err) {
+      setError('Ошибка при создании поста');
+    }
+  };
+
+  const resetForm = () => {
+    setContent('');
+    setFiles([]);
+    setError('');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,8 +99,9 @@ const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
             e.stopPropagation();
             document.getElementById('file-upload')?.click();
           }}
+          disabled={isLoading}
         >
-          Загрузить файл
+          {isLoading ? 'Загрузка...' : 'Загрузить файл'}
         </DarkCyanButton>
       </div>
     </div>
@@ -84,11 +110,18 @@ const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
   return (
     <BaseModal
       customLayout={customHeader}
-      onClose={onClose}
-      onCancel={onClose}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
+      onCancel={() => {
+        resetForm();
+        onClose();
+      }}
       onSave={handleSubmit}
       mode="create"
-      saveButtonText="Опубликовать"
+      saveButtonText={isLoading ? 'Публикация...' : 'Опубликовать'}
+      isSaveDisabled={(content.trim().length === 0 && files.length === 0) || isLoading}
     >
       <Container style={{ height: "20px" }}></Container>
       {error && <div style={{ color: 'red', margin: '0 30px', textAlign: 'center' }}>{error}</div>}
@@ -103,8 +136,12 @@ const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
         placeholder='Напишите что-нибудь...'
         rows={6}
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-      ></CustomTextArea>
+        onChange={(e) => {
+          setContent(e.target.value);
+          setError('');
+        }}
+        disabled={isLoading}
+      />
     </BaseModal>
   );
 };
