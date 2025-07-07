@@ -36,7 +36,7 @@ const BlogPage = () => {
 
   const handleCreatePost = async (postData: BlogPostForm) => {
     await createPost(postData);
-    getPosts(filters); // Refresh the posts list
+    getPosts(filters);
     handleCloseCreateModal();
   };
 

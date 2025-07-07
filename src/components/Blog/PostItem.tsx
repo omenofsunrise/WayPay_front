@@ -1,8 +1,8 @@
-// components/Blog/PostItem.tsx
 import React from 'react';
 import styled from 'styled-components';
 import type { BlogPost } from '../../api/types/blog';
 import { formatDate } from '../../utils/dateFormatter';
+import { BASE_URL } from '../../api/client';
 
 interface PostItemProps {
   post: BlogPost;
@@ -13,7 +13,7 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike }) => {
   return (
     <PostItemContainer>
       <PostHeader>
-        <AuthorAvatar src={post.authorPhotoPath || '/default-avatar.png'} />
+        <AuthorAvatar src={post.authorPhotoPath}/>
         <AuthorInfo>
           <AuthorName>{post.authorFullName}</AuthorName>
           <PostDate>{formatDate(post.createdAt)}</PostDate>
@@ -24,12 +24,12 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike }) => {
         <p>{post.content}</p>
       </PostContent>
       
-      {post.images.length > 0 && (
+      {post.images && post.images.length > 0 && (
         <PostImages>
           {post.images.map((image, index) => (
             <PostImage 
               key={index} 
-              src={image} 
+              src={BASE_URL + image} 
               alt={`Post image ${index + 1}`} 
             />
           ))}
