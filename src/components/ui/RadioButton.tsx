@@ -1,12 +1,42 @@
 import React from 'react';
 import styled from 'styled-components';
 
+interface RadioButtonProps {
+  id: string;
+  name: string;
+  checked: boolean;
+  onChange: () => void;
+  children: React.ReactNode;
+}
+
+export const RadioButton: React.FC<RadioButtonProps> = ({
+  id,
+  name,
+  checked,
+  onChange,
+  children,
+}) => {
+  return (
+    <RadioButtonLabel htmlFor={id}>
+      <RadioButtonInput
+        type="radio"
+        id={id}
+        name={name}
+        checked={checked}
+        onChange={onChange}
+      />
+      {children}
+    </RadioButtonLabel>
+  );
+};
+
 const RadioButtonLabel = styled.label`
   display: flex;
   align-items: center;
   cursor: pointer;
   font-size: 14px;
   gap: 8px;
+  color: black;
 `;
 
 const RadioButtonInput = styled.input`
@@ -36,32 +66,3 @@ const RadioButtonInput = styled.input`
     }
   }
 `;
-
-interface RadioButtonProps {
-  id: string;
-  name: string;
-  checked: boolean;
-  onChange: () => void;
-  children: React.ReactNode;
-}
-
-export const RadioButton: React.FC<RadioButtonProps> = ({
-  id,
-  name,
-  checked,
-  onChange,
-  children,
-}) => {
-  return (
-    <RadioButtonLabel htmlFor={id}>
-      <RadioButtonInput
-        type="radio"
-        id={id}
-        name={name}
-        checked={checked}
-        onChange={onChange}
-      />
-      {children}
-    </RadioButtonLabel>
-  );
-};

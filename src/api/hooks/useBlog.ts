@@ -64,10 +64,10 @@ const useBlog = () => {
       if (posts) {
         const updatedItems = posts.items.map(item => {
           if (item.id === postId) {
-            const isLiked = !item.isLiked;
+            const isLiked = !item.isLikedByCurrentUser;
             return {
               ...item,
-              isLiked,
+              isLikedByCurrentUser: isLiked,
               likesCount: isLiked ? item.likesCount + 1 : item.likesCount - 1
             };
           }

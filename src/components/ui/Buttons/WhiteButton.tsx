@@ -39,6 +39,9 @@ const WhiteButton: React.FC<WhiteButtonProps> = ({
       backgroundColor: 'rgba(0, 125, 136, 0.05)',
       borderColor: 'rgba(0, 125, 136, 0.5)',
     }),
+    ...(!isHovered && {
+      borderColor: 'rgba(209, 213, 219, 1)',
+    }),
     ...(isActive && {
       transform: 'scale(0.98)',
       backgroundColor: 'rgba(0, 125, 136, 0.1)',

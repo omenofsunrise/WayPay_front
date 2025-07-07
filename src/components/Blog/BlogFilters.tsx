@@ -118,6 +118,7 @@ const FilterItem = styled.div<{ active: boolean }>`
   font-weight: ${({ active }) => active ? '500' : '400'};
   transition: all 0.2s ease;
   text-align: left;
+  color: black;
   
   &:hover {
     background-color: rgba(209, 213, 219, 0.5);

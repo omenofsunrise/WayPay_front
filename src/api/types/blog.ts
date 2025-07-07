@@ -7,12 +7,12 @@ export interface BlogPost {
   attachments: string[];
   isPublished: boolean;
   likesCount: number;
-  isLiked: boolean;
+  isLikedByCurrentUser: boolean;
   commentsCount: number;
   createdAt: Date;
   updatedAt: Date;
   authorId: number;
-  authorFullName: string;
+  authorName: string;
   authorPhotoPath: string;
 }
 
