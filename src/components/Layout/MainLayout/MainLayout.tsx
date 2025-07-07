@@ -61,7 +61,6 @@ const ContentContainer = styled.div<{ $collapsed: boolean }>`
   margin-top: 56px;
   box-sizing: border-box;
   transition: all 0.3s ease;
-  overflow: auto; /* Добавьте, если контент может быть больше экрана */
   min-height: calc(100vh - 56px); /* Высота минус TopMenu */
 `;
 
