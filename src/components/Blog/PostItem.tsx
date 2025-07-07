@@ -1,22 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import type { BlogPost, FileAttachment } from '../../api/types/blog';
 import { formatDate } from '../../utils/dateFormatter';
 import { BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
+import PhotoViewerModal from '../modal/PhotoViewerModal';
 
 interface PostItemProps {
   post: BlogPost;
   onToggleLike: (postId: number) => void;
+  onDeletePost?: (postId: number) => void;
+  onEditPost?: (postId: number) => void;
 }
 
-const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike }) => {
+const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost }) => {
+  const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+
   const avatarSrc = post.authorAvatarPath 
     ? BASE_URL + post.authorAvatarPath 
     : generateAvatar(getInitials(post.authorName));
 
-  // Функция для скачивания файла
   const handleFileDownload = (file: FileAttachment) => {
     const link = document.createElement('a');
     link.href = SOCIAL_BASE_URL + file.url;
@@ -26,7 +32,6 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike }) => {
     document.body.removeChild(link);
   };
 
-  // Функция для форматирования размера файла
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -35,14 +40,42 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const handleContextMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsContextMenuOpen(!isContextMenuOpen);
+  };
+
+  const handleDeleteClick = () => {
+    setIsContextMenuOpen(false);
+    onDeletePost && onDeletePost(post.id);
+  };
+
   return (
     <PostItemContainer>
       <PostHeader>
-        <AuthorAvatar src={avatarSrc} alt={post.authorName}/>
-        <AuthorInfo>
-          <AuthorName>{post.authorName}</AuthorName>
-          <PostDate>{formatDate(post.createdAt)}</PostDate>
-        </AuthorInfo>
+        <AuthorInfoContainer>
+          <AuthorAvatar src={avatarSrc} alt={post.authorName}/>
+          <AuthorInfo>
+            <AuthorName>{post.authorName}</AuthorName>
+            <PostDate>{formatDate(post.createdAt)}</PostDate>
+          </AuthorInfo>
+        </AuthorInfoContainer>
+        
+        {post.isAuthor && (
+          <ContextMenuContainer>
+            <ContextMenuButton onClick={handleContextMenuClick}>
+              <svg width="17" height="4" viewBox="0 0 17 4" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1.88065 0C0.84629 0 0 0.84629 0 1.88065C0 2.915 0.84629 3.76129 1.88065 3.76129C2.915 3.76129 3.76129 2.915 3.76129 1.88065C3.76129 0.84629 2.915 0 1.88065 0ZM15.0452 0C14.0108 0 13.1645 0.84629 13.1645 1.88065C13.1645 2.915 14.0108 3.76129 15.0452 3.76129C16.0795 3.76129 16.9258 2.915 16.9258 1.88065C16.9258 0.84629 16.0795 0 15.0452 0ZM8.4629 0C7.42855 0 6.58226 0.84629 6.58226 1.88065C6.58226 2.915 7.42855 3.76129 8.4629 3.76129C9.49726 3.76129 10.3435 2.915 10.3435 1.88065C10.3435 0.84629 9.49726 0 8.4629 0Z" fill="#50555C"/>
+              </svg>
+            </ContextMenuButton>
+            
+            {isContextMenuOpen && (
+              <ContextMenu>
+                <ContextMenuItem onClick={handleDeleteClick}>Удалить</ContextMenuItem>
+              </ContextMenu>
+            )}
+          </ContextMenuContainer>
+        )}
       </PostHeader>
       
       <PostContent>
@@ -57,6 +90,10 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike }) => {
               src={SOCIAL_BASE_URL + image}
               alt={`Post image ${index + 1}`} 
               $singleImage={post.imageUrls.length === 1}
+              onClick={() => {
+                setCurrentPhotoIndex(index);
+                setIsPhotoViewerOpen(true);
+              }}
             />
           ))}
         </PostImages>
@@ -109,6 +146,13 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike }) => {
           <ActionLabel>Поделиться</ActionLabel>
         </ActionButton>
       </PostFooter>
+      {isPhotoViewerOpen && post.imageUrls && (
+        <PhotoViewerModal 
+          images={post.imageUrls.map(url => SOCIAL_BASE_URL + url)}
+          initialIndex={currentPhotoIndex}
+          onClose={() => setIsPhotoViewerOpen(false)}
+        />
+      )}
     </PostItemContainer>
   );
 };
@@ -121,12 +165,19 @@ const PostItemContainer = styled.div`
   border: 1px solid rgba(209, 213, 219, 1);
   color: black;
   text-align: left;
+  position: relative;
 `;
 
 const PostHeader = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 15px;
+`;
+
+const AuthorInfoContainer = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
 const AuthorAvatar = styled.img`
@@ -149,6 +200,57 @@ const PostDate = styled.p`
   color: #6B7280;
   font-size: 14px;
   margin: 0;
+`;
+
+const ContextMenuContainer = styled.div`
+  position: relative;
+`;
+
+const ContextMenuButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+`;
+
+const ContextMenu = styled.div`
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  min-width: 120px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+`;
+
+const ContextMenuItem = styled.button`
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid #e5e7eb;
+  }
 `;
 
 const PostContent = styled.div`
@@ -220,8 +322,7 @@ const FileItem = styled.div`
   transition: all 0.2s;
   gap: 10px;
 
-  &:ho
-ver {
+  &:hover {
     background: #e0e0e0;
     
     ${DownloadIcon} {

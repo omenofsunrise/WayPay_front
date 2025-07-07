@@ -13,6 +13,7 @@ export interface BlogPost {
   authorId: number;
   authorName: string;
   authorAvatarPath?: string;
+  isAuthor: boolean;
 }
 
 export interface FileAttachment {

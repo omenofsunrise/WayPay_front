@@ -20,7 +20,7 @@ const BlogPage = () => {
     pageSize: 10
   });
 
-  const { posts, getPosts, createPost, toggleLike, isLoading, error } = useBlog();
+  const { posts, getPosts, createPost, deletePost, toggleLike, isLoading, error } = useBlog();
 
   useEffect(() => {
     getPosts(filters);
@@ -52,6 +52,15 @@ const BlogPage = () => {
     setFilters(prev => ({ ...prev, sortBy: sortValue, page: 1 }));
   };
 
+  const handleDeletePost = async (postId: number) => {
+    try {
+      await deletePost(postId);
+      getPosts(filters);
+    } catch (err) {
+      console.error('Ошибка при удалении поста:', err);
+    }
+  };
+
   return (
     <PageLayout style={{
       display: "flex",
@@ -78,6 +87,7 @@ const BlogPage = () => {
             key={post.id} 
             post={post} 
             onToggleLike={toggleLike}
+            onDeletePost={handleDeletePost}
           />
         ))}
 

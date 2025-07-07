@@ -107,6 +107,27 @@ const useBlog = () => {
     }
   };
 
+  const deletePost = async (postId: number): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await blogService.deletePost(postId);
+      if (posts) {
+        setPosts({
+          ...posts,
+          items: posts.items.filter(post => post.id !== postId),
+          totalCount: posts.totalCount - 1
+        });
+      }
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete post');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const downloadAttachment = useCallback(async (attachmentId: number): Promise<FileDownloadResponse | null> => {
     setIsLoading(true);
     setError(null);
@@ -132,7 +153,8 @@ const useBlog = () => {
     toggleLike,
     deleteAttachment,
     setCurrentPost,
-    downloadAttachment
+    downloadAttachment,
+    deletePost
   };
 };
 

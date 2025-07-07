@@ -69,6 +69,10 @@ class BlogService {
       blob: response.data
     };
   }
+
+  async deletePost(postId: number): Promise<void> {
+    await socialApiClient.delete(`/Blog/${postId}`);
+  }
 }
 
 export default new BlogService();
