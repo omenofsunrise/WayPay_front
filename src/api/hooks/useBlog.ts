@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import blogService from '../services/blogService';
-import type { BlogPost, BlogPostForm, BlogFeedParams, BlogParams } from '../types/blog';
+import type { BlogPost, BlogPostForm, BlogFeedParams, BlogParams, FileDownloadResponse } from '../types/blog';
 import type { PaginatedResponse } from '../types/common';
 
 const useBlog = () => {
@@ -92,8 +92,8 @@ const useBlog = () => {
           if (post.id === postId) {
             return {
               ...post,
-              images: post.images.filter(img => !img.endsWith(`/${attachmentId}`)),
-              attachments: post.attachments.filter(file => !file.endsWith(`/${attachmentId}`))
+              imageUrls: post.imageUrls.filter(img => !img.endsWith(`/${attachmentId}`)),
+              fileUrls: post.attachments.filter(file => !file.url.endsWith(`/${attachmentId}`))
             };
           }
           return post;
@@ -107,6 +107,20 @@ const useBlog = () => {
     }
   };
 
+  const downloadAttachment = useCallback(async (attachmentId: number): Promise<FileDownloadResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await blogService.downloadAttachment(attachmentId);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download file');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -117,7 +131,8 @@ const useBlog = () => {
     publishPost,
     toggleLike,
     deleteAttachment,
-    setCurrentPost
+    setCurrentPost,
+    downloadAttachment
   };
 };
 

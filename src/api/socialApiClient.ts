@@ -1,8 +1,9 @@
 import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { authStorage } from './utils/auth-storage';
+import { API_BASE_URL } from './client';
 
+export const SOCIAL_BASE_URL = 'https://web.waypay.one:5002/';
 export const SOCIAL_API_BASE_URL = 'https://web.waypay.one:5002/api';
-export const API_BASE_URL = 'https://web.waypay.one:5001/api';
 
 const socialApiClient = axios.create({
     baseURL: SOCIAL_API_BASE_URL,
@@ -70,7 +71,6 @@ socialApiClient.interceptors.response.use(
                     throw new Error('No tokens available');
                 }
 
-                // Используем API_BASE_URL (порт 5001) для запроса обновления токена
                 const response = await axios.post(`${API_BASE_URL}/Auth/refresh`, {
                     accessToken,
                     refreshToken
