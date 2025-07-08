@@ -5,7 +5,7 @@ export interface BlogComment {
   postId: number;
   parentId: number | null;
   content: string;
-  attachments: FileAttachment[];
+  attachments: CommentFileAttachment[];
   likesCount: number;
   isLikedByCurrentUser: boolean;
   createdAt: Date;
@@ -21,4 +21,10 @@ export interface BlogCommentForm {
   parentId?: number;
   content: string;
   attachments: File[];
+}
+
+export interface CommentFileAttachment {
+  id: number;
+  filePath: string;
+  isImage: boolean;
 }

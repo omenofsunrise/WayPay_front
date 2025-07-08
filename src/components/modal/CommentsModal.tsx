@@ -6,12 +6,17 @@ import { BASE_URL } from '../../api/client';
 import useBlogComment from '../../api/hooks/useBlogComment';
 import type { BlogPost } from '../../api/types/blog';
 import type { BlogCommentForm, BlogComment } from '../../api/types/blogComment';
+import { useEmployee } from '../../api/hooks/useEmployee';
+import CustomInput from '../ui/fields/CustomInput';
+import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 
 interface CommentsModalProps {
   post: BlogPost;
   onClose: () => void;
   onCommentAdded?: () => void;
 }
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentAdded }) => {
   const { 
@@ -26,7 +31,10 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { authInfo } = useEmployee();
 
   useEffect(() => {
     getCommentsByPost(post.id);
@@ -55,18 +63,59 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const validateFile = (file: File): boolean => {
+    if (file.size > MAX_FILE_SIZE) {
+      setErrorMessage(`Файл "${file.name}" превышает максимальный размер 10MB`);
+      return false;
+    }
+    return true;
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMessage(null);
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      const newFiles = Array.from(e.target.files).filter(file => {
+        if (!file.type.startsWith('image/')) {
+          setErrorMessage(`Файл "${file.name}" не является изображением`);
+          return false;
+        }
+        return validateFile(file);
+      });
+      
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMessage(null);
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files).filter(file => {
+        if (file.type.startsWith('image/')) {
+          setErrorMessage(`Для загрузки изображений используйте кнопку "Фото"`);
+          return false;
+        }
+        return validateFile(file);
+      });
+      
+      setFiles(prev => [...prev, ...newFiles]);
     }
   };
 
   const handleRemoveFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index));
+    setErrorMessage(null);
+  };
+
+  const handleImageClick = () => {
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+      imageInputRef.current.click();
+    }
   };
 
   const handleFileClick = () => {
     if (fileInputRef.current) {
+      fileInputRef.current.value = '';
       fileInputRef.current.click();
     }
   };
@@ -99,8 +148,14 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
           <AttachmentsContainer>
             {comment.attachments.map((file, index) => (
               <AttachmentItem key={index}>
-                <AttachmentName>{file.name}</AttachmentName>
-                <AttachmentSize>{formatFileSize(file.size)}</AttachmentSize>
+                {file.isImage ? (
+                  <ImagePreview src={SOCIAL_BASE_URL + file.filePath} alt={`Прикрепленное изображение ${index + 1}`} />
+                ) : (
+                  <FileIcon />
+                )}
+                <RemoveAttachmentButton onClick={() => handleRemoveFile(index)}>
+                  ×
+                </RemoveAttachmentButton>
               </AttachmentItem>
             ))}
           </AttachmentsContainer>
@@ -128,6 +183,17 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
               onChange={(e) => setNewComment(e.target.value)}
             />
             <ReplyActions>
+              <FileButton onClick={handleImageClick}>
+                <PhotoIcon />
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  onChange={handleImageChange}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  multiple
+                />
+              </FileButton>
               <FileButton onClick={handleFileClick}>
                 <FileIcon />
                 <input
@@ -138,7 +204,12 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
                   multiple
                 />
               </FileButton>
-              <SubmitButton onClick={handleSubmitComment}>Отправить</SubmitButton>
+              <SubmitButton 
+                onClick={handleSubmitComment}
+                disabled={!newComment.trim() && files.length === 0}
+              >
+                Отправить
+              </SubmitButton>
             </ReplyActions>
           </ReplyForm>
         )}
@@ -179,45 +250,72 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
         </CommentsList>
         
         <NewCommentForm onSubmit={handleSubmitComment}>
-          <CommentInput
-            placeholder="Напишите комментарий..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-          />
+          <CommentInputContainer>
+            <AuthorAvatar 
+              src={authInfo?.employee.photoPath 
+                ? BASE_URL + authInfo.employee.photoPath 
+                : generateAvatar(getInitials(authInfo?.employee.fullName || 'U'))} 
+              alt={authInfo?.employee.fullName || 'User'}
+            />
+            <InputWrapper>
+              <CommentInput
+                placeholder="Напишите комментарий..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <ActionButtons>
+                <FileButton type="button" onClick={handleImageClick}>
+                  <PhotoIcon />
+                  <input
+                    type="file"
+                    ref={imageInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    multiple
+                  />
+                </FileButton>
+                <FileButton type="button" onClick={handleFileClick}>
+                  <FileIcon />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                    multiple
+                  />
+                </FileButton>
+                <SubmitButton 
+                  type="submit" 
+                  disabled={!newComment.trim() && files.length === 0}
+                >
+                  <SendIcon />
+                </SubmitButton>
+              </ActionButtons>
+            </InputWrapper>
+          </CommentInputContainer>
           
-          {files.length > 0 && (
-            <FilesPreview>
+          {(files.length > 0 || errorMessage) && (
+            <FilesSection>
+              {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
               {files.map((file, index) => (
                 <FilePreviewItem key={index}>
-                  <FileName>{file.name}</FileName>
-                  <FileSize>{formatFileSize(file.size)}</FileSize>
+                  {file.type.startsWith('image/') ? (
+                    <ImagePreview src={URL.createObjectURL(file)} alt={`Прикрепленное изображение ${index + 1}`} />
+                  ) : (
+                    <FileIcon />
+                  )}
+                  <FileInfo>
+                    <FileName>{file.name}</FileName>
+                    <FileSize>{formatFileSize(file.size)}</FileSize>
+                  </FileInfo>
                   <RemoveFileButton onClick={() => handleRemoveFile(index)}>
                     ×
                   </RemoveFileButton>
                 </FilePreviewItem>
               ))}
-            </FilesPreview>
+            </FilesSection>
           )}
-          
-          <FormActions>
-            <FileUploadButton onClick={handleFileClick}>
-              <FileIcon />
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-                multiple
-              />
-            </FileUploadButton>
-            
-            <SubmitCommentButton 
-              type="submit" 
-              disabled={!newComment.trim() && files.length === 0}
-            >
-              Отправить
-            </SubmitCommentButton>
-          </FormActions>
         </NewCommentForm>
       </ModalContent>
     </ModalOverlay>
@@ -325,6 +423,13 @@ const CommentDate = styled.span`
 
 const CommentActions = styled.div`
   margin-left: auto;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
 `;
 
 const ActionButton = styled.button`
@@ -504,26 +609,22 @@ const SubmitButton = styled.button`
 const NewCommentForm = styled.form`
   padding: 16px;
   border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  display: flex;
+  flex-direction: column;
 `;
 
-const CommentInput = styled.textarea`
+const CommentInputWrapper = styled.div`
+  flex: 1;
+  display: flex;
   width: 100%;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  resize: none;
-  font-size: 14px;
-  min-height: 80px;
-  margin-bottom: 8px;
-  
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
+  background: black;
 `;
 
 const FilesPreview = styled.div`
-  margin-bottom: 8px;
+  margin-top: 8px;
 `;
 
 const FilePreviewItem = styled.div`
@@ -533,8 +634,6 @@ const FilePreviewItem = styled.div`
   background-color: #f3f4f6;
   border-radius: 4px;
   margin-bottom: 4px;
-  font-size: 12px;
-  position: relative;
 `;
 
 const FileName = styled.span`
@@ -573,31 +672,114 @@ const FileUploadButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
-  color: #6b7280;
+  padding: 4px;
+  color: #73777D;
   
   &:hover {
     color: #4b5563;
   }
 `;
 
+const ImageUploadButton = styled(FileUploadButton)`
+  /* Additional styles if needed */
+`;
+
 const SubmitCommentButton = styled.button`
-  background-color: #3b82f6;
-  color: white;
+  background: none;
   border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 14px;
   cursor: pointer;
-  
-  &:hover {
-    background-color: #2563eb;
-  }
+  padding: 4px;
+  color: #ADB3BC;
   
   &:disabled {
-    background-color: #9ca3af;
     cursor: not-allowed;
   }
+  
+  &:not(:disabled):hover {
+    color: rgba(0, 125, 136, 1);
+  }
+`;
+
+const CommentInputContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+`;
+
+const InputWrapper = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #f3f4f6;
+  border-radius: 20px;
+  padding: 8px 12px;
+`;
+
+const CommentInput = styled.input`
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  padding: 4px 0;
+  color: black;
+`;
+
+const FilesSection = styled.div`
+  margin-top: 8px;
+  width: 100%;
+`;
+
+const FileInfo = styled.div`
+  flex: 1;
+  margin-left: 8px;
+  overflow: hidden;
+`;
+
+const ImagePreview = styled.img`
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+`;
+
+const RemoveAttachmentButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  margin-left: 8px;
+  
+  &:hover {
+    color: #ef4444;
+  }
+`;
+
+const PhotoIcon = styled.span`
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M18.33 15.657C18.44 15.291 18.5 14.902 18.5 14.5V5.5C18.5 4.43913 18.0786 3.42172 17.3284 2.67157C16.5783 1.92143 15.5609 1.5 14.5 1.5H5.5C4.43913 1.5 3.42172 1.92143 2.67157 2.67157C1.92143 3.42172 1.5 4.43913 1.5 5.5V14.57C1.51835 15.6187 1.94787 16.6182 2.69604 17.3533C3.4442 18.0884 4.45115 18.5002 5.5 18.5H14.5L14.617 18.498M18.33 15.657L18.242 15.553L15.776 12.577C15.5889 12.3513 15.3544 12.1694 15.0892 12.0443C14.824 11.9193 14.5346 11.8541 14.2414 11.8533C13.9482 11.8525 13.6584 11.9162 13.3925 12.0399C13.1267 12.1636 12.8913 12.3442 12.703 12.569L11.391 14.135L11.177 14.396M18.33 15.657C18.0874 16.4603 17.5984 17.166 16.932 17.676C16.2657 18.1861 15.4558 18.4736 14.617 18.498M11.177 14.396L14.524 18.392L14.617 18.498M11.177 14.396L7.95 10.543C7.76228 10.319 7.52774 10.1388 7.26288 10.0152C6.99802 9.89155 6.70929 9.82749 6.417 9.82749C6.12471 9.82749 5.83598 9.89155 5.57112 10.0152C5.30626 10.1388 5.07172 10.319 4.884 10.543L1.678 14.37L1.501 14.571' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M13.0918 8.4082C13.9202 8.4082 14.5918 7.73663 14.5918 6.9082C14.5918 6.07978 13.9202 5.4082 13.0918 5.4082C12.2634 5.4082 11.5918 6.07978 11.5918 6.9082C11.5918 7.73663 12.2634 8.4082 13.0918 8.4082Z' fill='currentColor'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
+`;
+
+const SendIcon = styled.span`
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.63109 0.122078C0.737594 -0.324422 -0.251406 0.528078 0.0580936 1.47758L2.06509 7.63008C2.12186 7.80389 2.22519 7.95882 2.36386 8.078C2.50253 8.19719 2.67122 8.27607 2.85159 8.30608L10.7816 9.62758C11.1991 9.69758 11.1991 10.2976 10.7816 10.3676L2.85209 11.6891C2.67172 11.7191 2.50303 11.798 2.36436 11.9172C2.22569 12.0363 2.12236 12.1913 2.06559 12.3651L0.0580936 18.5211C-0.251906 19.4711 0.737594 20.3236 1.63109 19.8771L19.3781 11.0061C20.2076 10.5911 20.2076 9.40758 19.3781 8.99308L1.63109 0.122078Z' fill='currentColor'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
+`;
+
+const ErrorMessage = styled.div`
+  color: #ef4444;
+  font-size: 12px;
+  margin-bottom: 8px;
 `;
 
 export default CommentsModal;
