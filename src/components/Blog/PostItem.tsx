@@ -6,6 +6,7 @@ import { BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import PhotoViewerModal from '../modal/PhotoViewerModal';
+import CommentsModal from '../modal/CommentsModal';
 
 interface PostItemProps {
   post: BlogPost;
@@ -18,6 +19,7 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost })
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
 
   const avatarSrc = post.authorAvatarPath 
     ? BASE_URL + post.authorAvatarPath 
@@ -48,6 +50,10 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost })
   const handleDeleteClick = () => {
     setIsContextMenuOpen(false);
     onDeletePost && onDeletePost(post.id);
+  };
+
+  const handleCommentsClick = () => {
+    setIsCommentsModalOpen(true);
   };
 
   return (
@@ -136,7 +142,7 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost })
           <ActionLabel>{post.likesCount} Реакций</ActionLabel>
         </ActionButton>
         
-        <ActionButton>
+        <ActionButton onClick={handleCommentsClick}>
           <CommentIcon />
           <ActionLabel>{post.commentsCount} Комментариев</ActionLabel>
         </ActionButton>
@@ -146,11 +152,21 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost })
           <ActionLabel>Поделиться</ActionLabel>
         </ActionButton>
       </PostFooter>
+      
       {isPhotoViewerOpen && post.imageUrls && (
         <PhotoViewerModal 
           images={post.imageUrls.map(url => SOCIAL_BASE_URL + url)}
           initialIndex={currentPhotoIndex}
           onClose={() => setIsPhotoViewerOpen(false)}
+        />
+      )}
+
+      {isCommentsModalOpen && (
+        <CommentsModal 
+          post={post}
+          onClose={() => setIsCommentsModalOpen(false)}
+          onCommentAdded={() => {
+          }}
         />
       )}
     </PostItemContainer>
