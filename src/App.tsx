@@ -26,6 +26,7 @@ import ToDoListPage from './pages/ToDoListPage';
 import { TaskCountProvider } from './сontext/TaskCountContext';
 import PaymentsIncomePage from './pages/PaymentIncomePage';
 import BlogPage from './pages/BlogPage';
+import ChatPage from './pages/ChatPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -183,6 +184,12 @@ function App() {
             <Route path="blog" element={
                 <MainLayout>
                   <BlogPage />
+                </MainLayout>
+            } />
+
+            <Route path="chat" element={
+                <MainLayout>
+                  <ChatPage />
                 </MainLayout>
             } />
 
