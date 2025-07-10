@@ -1,219 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Avatar, Badge, Input, List, Menu, Tabs, Typography } from 'antd';
-import {
-  MessageOutlined,
-  UserOutlined,
-  SearchOutlined,
-  MoreOutlined,
-  PaperClipOutlined,
-  SendOutlined,
-  SmileOutlined,
-} from '@ant-design/icons';
-import styled from 'styled-components';
-
-type ChatPageParams = {
-  chatId?: string;
-};
+import { Avatar, Badge, Input, List, Tabs, Typography, message as antMessage } from 'antd';
+import { MessageOutlined, UserOutlined, PaperClipOutlined, SendOutlined, SmileOutlined } from '@ant-design/icons';
+import * as signalR from '@microsoft/signalr';
+import { authStorage } from '../api/utils/auth-storage';
 
 const { Text, Title } = Typography;
 
-// Styled components
-const ChatPageContainer = styled.div`
-  display: flex;
-  height: 100vh;
-  background-color: #f5f5f5;
-`;
-
-const ChatListPanel = styled.div`
-  width: 350px;
-  border-right: 1px solid #e8e8e8;
-  background-color: white;
-  display: flex;
-  flex-direction: column;
-`;
-
-const ChatListHeader = styled.div`
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e8e8e8;
-`;
-
-const ChatListActions = styled.div`
-  display: flex;
-  gap: 16px;
-`;
-
-const ChatSearchInput = styled(Input)`
-  margin: 16px;
-`;
-
-const ChatList = styled(List)`
-  flex: 1;
-  overflow-y: auto;
-`;
-
-const ChatItem = styled(List.Item)<{ $active?: boolean }>`
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  background-color: ${props => props.$active ? '#e6f7ff' : 'transparent'};
-
-  &:hover {
-    background-color: #f5f5f5;
-  }
-`;
-
-const ChatItemContent = styled.div`
-  flex: 1;
-  margin-left: 12px;
-  overflow: hidden;
-`;
-
-const ChatItemTime = styled(Text)`
-  font-size: 12px;
-`;
-
-const ChatMainPanel = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: white;
-`;
-
-const ChatHeader = styled.div`
-  padding: 12px 16px;
-  border-bottom: 1px solid #e8e8e8;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const ChatUserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-`;
-
-const ChatUserDetails = styled.div`
-  margin-left: 12px;
-`;
-
-const ChatActions = styled.div`
-  display: flex;
-  gap: 16px;
-`;
-
-const ChatMessages = styled.div`
-  flex: 1;
-  padding: 16px;
-  overflow-y: auto;
-  background-color: #fafafa;
-`;
-
-const Message = styled.div<{ $sent?: boolean }>`
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: ${props => props.$sent ? 'flex-end' : 'flex-start'};
-`;
-
-const MessageContent = styled.div<{ $sent?: boolean }>`
-  max-width: 60%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  position: relative;
-  background-color: ${props => props.$sent ? '#1890ff' : 'white'};
-  color: ${props => props.$sent ? 'white' : 'inherit'};
-  border: ${props => !props.$sent ? '1px solid #e8e8e8' : 'none'};
-`;
-
-const MessageTime = styled(Text)`
-  font-size: 11px;
-  margin-left: 8px;
-`;
-
-const ChatInputContainer = styled.div`
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  border-top: 1px solid #e8e8e8;
-`;
-
-const MessageInput = styled(Input)`
-  flex: 1;
-  margin: 0 12px;
-`;
-
-const InputAction = styled.div`
-  font-size: 20px;
-  color: #1890ff;
-  cursor: pointer;
-`;
-
-const ChatEmpty = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: #8c8c8c;
-`;
-
-const ChatInfoPanel = styled.div`
-  width: 350px;
-  border-left: 1px solid #e8e8e8;
-  background-color: white;
-  display: flex;
-  flex-direction: column;
-`;
-
-const ChatInfoHeader = styled.div`
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e8e8e8;
-`;
-
-const ChatInfoContent = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-`;
-
-const UserInfoSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const MediaSection = styled.div`
-  padding: 16px 0;
-`;
-
-const FilesSection = styled.div`
-  padding: 16px 0;
-`;
-
-const ChatInfoTabs = styled(Tabs)`
-  margin-top: 16px;
-`;
-
-// Types and data
 interface User {
   id: string;
   name: string;
-  avatar: string;
+  avatar?: string;
   status: 'online' | 'offline';
   lastSeen?: string;
 }
 
-interface Message {
+interface ChatMessage {
   id: string;
   text: string;
   sender: User;
@@ -224,43 +26,32 @@ interface Message {
 interface Chat {
   id: string;
   users: User[];
-  messages: Message[];
+  messages: ChatMessage[];
   unreadCount: number;
-  lastMessage: Message;
+  lastMessage: ChatMessage;
 }
 
 const ChatPage: React.FC = () => {
-  const { chatId } = useParams<ChatPageParams>();
+  const { chatId } = useParams<{ chatId?: string }>();
   const [activeChat, setActiveChat] = useState<string | null>(chatId || null);
-  const [showChatInfo, setShowChatInfo] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [inputMessage, setInputMessage] = useState('');
+  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
+  const [realTimeMessages, setRealTimeMessages] = useState<ChatMessage[]>([]);
 
   // Mock данные
   const currentUser: User = {
     id: '1',
     name: 'Иван Иванов',
-    avatar: '',
     status: 'online',
   };
 
   const users: User[] = [
     currentUser,
-    {
-      id: '2',
-      name: 'Мария Петрова',
-      avatar: '',
-      status: 'online',
-    },
-    {
-      id: '3',
-      name: 'Алексей Смирнов',
-      avatar: '',
-      status: 'offline',
-      lastSeen: '2 часа назад',
-    },
+    { id: '2', name: 'Мария Петрова', status: 'online' },
+    { id: '3', name: 'Алексей Смирнов', status: 'offline', lastSeen: '2 часа назад' },
   ];
 
-  const chats: Chat[] = [
+  const [chats, setChats] = useState<Chat[]>([
     {
       id: '1',
       users: [users[0], users[1]],
@@ -310,212 +101,204 @@ const ChatPage: React.FC = () => {
         isRead: false,
       },
     },
-  ];
+  ]);
 
   const selectedChat = chats.find(chat => chat.id === activeChat) || null;
 
-  const handleChatSelect = (chatId: string) => {
-    setActiveChat(chatId);
-    setShowChatInfo(false);
+  // Инициализация SignalR соединения
+  useEffect(() => {
+    const token = authStorage.getAccessToken();
+    if (!token) return;
+
+    const newConnection = new signalR.HubConnectionBuilder()
+      .withUrl('https://web.waypay.one:5001/chatHub', {
+        accessTokenFactory: () => token
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    newConnection.start()
+      .then(() => {
+        console.log('SignalR Connected');
+        setConnection(newConnection);
+      })
+      .catch(err => console.log('Connection error: ', err));
+
+    newConnection.on('ReceiveMessage', (senderId, message, createdAt) => {
+      const sender = users.find(u => u.id === senderId.toString()) || {
+        id: senderId,
+        name: `User ${senderId}`,
+        status: 'online'
+      };
+
+      const newMessage: ChatMessage = {
+        id: Date.now().toString(),
+        text: message,
+        sender,
+        timestamp: createdAt,
+        isRead: true
+      };
+
+      setRealTimeMessages(prev => [...prev, newMessage]);
+    });
+
+    return () => {
+      if (newConnection) {
+        newConnection.stop();
+      }
+    };
+  }, []);
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim() || !connection || !selectedChat) return;
+
+    const receiver = selectedChat.users.find(u => u.id !== currentUser.id);
+    
+    if (receiver) {
+      // Личное сообщение
+      connection.invoke('SendPrivateMessage', receiver.id, inputMessage)
+        .catch(err => console.error('Send error:', err));
+    } else {
+      // Групповое сообщение (можно добавить логику для чатов компаний)
+      connection.invoke('SendGlobalMessage', inputMessage)
+        .catch(err => console.error('Send error:', err));
+    }
+
+    setInputMessage('');
   };
 
-  const handleUserClick = () => {
-    setShowChatInfo(!showChatInfo);
+  // Объединяем mock сообщения с реальными из SignalR
+  const getCombinedMessages = () => {
+    if (!selectedChat) return [];
+    
+    const chatMessages = selectedChat.messages;
+    const relevantRealTimeMessages = realTimeMessages.filter(m => 
+      selectedChat.users.some(u => u.id === m.sender.id)
+    );
+    
+    return [...chatMessages, ...relevantRealTimeMessages];
   };
-
-  const filteredChats = chats.filter(chat =>
-    chat.users.some(user =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
 
   return (
-    <ChatPageContainer>
+    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#f5f5f5' }}>
       {/* Левая панель - список чатов */}
-      <ChatListPanel>
-        <ChatListHeader>
-          <Title level={4} style={{ margin: 0 }}>
-            Чаты
-          </Title>
-          <ChatListActions>
-            <SearchOutlined />
-            <MoreOutlined />
-          </ChatListActions>
-        </ChatListHeader>
+      <div style={{ width: 350, borderRight: '1px solid #e8e8e8', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={4} style={{ margin: 0 }}>Чаты</Title>
+          <div style={{ background: 'rgba(0, 125, 136, 1)', borderRadius: 20, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+            2
+          </div>
+        </div>
 
-        <ChatSearchInput
-          placeholder="Поиск чатов"
-          prefix={<SearchOutlined />}
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-        />
+        <div style={{ margin: 10 }}>
+          <Input.Search placeholder="Поиск чатов" />
+        </div>
 
-        <ChatList
-          dataSource={filteredChats}
+        <List
+          dataSource={chats}
+          style={{ flex: 1, overflowY: 'auto' }}
           renderItem={chat => (
-            <ChatItem
-              $active={activeChat === chat.id}
-              onClick={() => handleChatSelect(chat.id)}
+            <List.Item 
+              style={{ 
+                cursor: 'pointer', 
+                backgroundColor: activeChat === chat.id ? 'rgba(0, 125, 136, 0.3)' : 'transparent',
+                padding: 15
+              }}
+              onClick={() => setActiveChat(chat.id)}
             >
               <Badge dot={chat.unreadCount > 0}>
-                <Avatar
-                  icon={<UserOutlined />}
-                  src={chat.users.find(u => u.id !== currentUser.id)?.avatar}
-                />
+                <Avatar icon={<UserOutlined />} />
               </Badge>
-              <ChatItemContent>
+              <div style={{ marginLeft: 12, overflow: 'hidden' }}>
                 <Text strong>
                   {chat.users.find(u => u.id !== currentUser.id)?.name}
                 </Text>
-                <Text type="secondary" ellipsis>
+                <Text type="secondary" ellipsis style={{ display: 'block' }}>
                   {chat.lastMessage.text}
                 </Text>
-              </ChatItemContent>
-              <ChatItemTime type="secondary">
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
                 {chat.lastMessage.timestamp}
-              </ChatItemTime>
-            </ChatItem>
+              </Text>
+            </List.Item>
           )}
         />
-      </ChatListPanel>
+      </div>
 
       {/* Центральная панель - выбранный чат */}
-      <ChatMainPanel>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white' }}>
         {selectedChat ? (
           <>
-            <ChatHeader>
-              <ChatUserInfo onClick={handleUserClick}>
-                <Badge
-                  dot={selectedChat.users.find(u => u.id !== currentUser.id)?.status === 'online'}
-                  status="success"
-                >
-                  <Avatar
-                    icon={<UserOutlined />}
-                    src={selectedChat.users.find(u => u.id !== currentUser.id)?.avatar}
-                  />
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8e8e8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <Badge dot={selectedChat.users.find(u => u.id !== currentUser.id)?.status === 'online'}>
+                  <Avatar icon={<UserOutlined />} />
                 </Badge>
-                <ChatUserDetails>
-                  <Text strong>
-                    {selectedChat.users.find(u => u.id !== currentUser.id)?.name}
-                  </Text>
-                  <Text type="secondary">
-                    {selectedChat.users.find(u => u.id !== currentUser.id)?.status === 'online'
-                      ? 'online'
+                <div style={{ marginLeft: 12 }}>
+                  <Text strong>{selectedChat.users.find(u => u.id !== currentUser.id)?.name}</Text>
+                  <Text type="secondary" style={{ display: 'block' }}>
+                    {selectedChat.users.find(u => u.id !== currentUser.id)?.status === 'online' 
+                      ? 'online' 
                       : `был(а) ${selectedChat.users.find(u => u.id !== currentUser.id)?.lastSeen}`}
                   </Text>
-                </ChatUserDetails>
-              </ChatUserInfo>
-              <ChatActions>
-                <SearchOutlined />
-                <MoreOutlined />
-              </ChatActions>
-            </ChatHeader>
+                </div>
+              </div>
+            </div>
 
-            <ChatMessages>
-              {selectedChat.messages.map(message => (
-                <Message
-                  key={message.id}
-                  $sent={message.sender.id === currentUser.id}
+            <div style={{ flex: 1, padding: 16, overflowY: 'auto', backgroundColor: '#fafafa' }}>
+              {getCombinedMessages().map(msg => (
+                <div 
+                  key={msg.id} 
+                  style={{ 
+                    marginBottom: 16, 
+                    display: 'flex', 
+                    justifyContent: msg.sender.id === currentUser.id ? 'flex-end' : 'flex-start'
+                  }}
                 >
-                  <MessageContent $sent={message.sender.id === currentUser.id}>
-                    <Text>{message.text}</Text>
-                    <MessageTime type="secondary">
-                      {message.timestamp}
-                    </MessageTime>
-                  </MessageContent>
-                </Message>
+                  <div 
+                    style={{ 
+                      maxWidth: '60%', 
+                      padding: '8px 12px', 
+                      borderRadius: 8,
+                      backgroundColor: msg.sender.id === currentUser.id ? '#1890ff' : 'white',
+                      color: msg.sender.id === currentUser.id ? 'white' : 'inherit',
+                      border: msg.sender.id !== currentUser.id ? '1px solid #e8e8e8' : 'none'
+                    }}
+                  >
+                    <Text>{msg.text}</Text>
+                    <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
+                      {msg.timestamp}
+                    </Text>
+                  </div>
+                </div>
               ))}
-            </ChatMessages>
+            </div>
 
-            <ChatInputContainer>
-              <InputAction>
-                <PaperClipOutlined />
-              </InputAction>
-              <MessageInput
+            <div style={{ padding: 16, display: 'flex', alignItems: 'center', borderTop: '1px solid #e8e8e8' }}>
+              <PaperClipOutlined style={{ fontSize: 20, color: '#1890ff', cursor: 'pointer' }} />
+              <Input
                 placeholder="Написать сообщение..."
                 suffix={<SmileOutlined />}
+                value={inputMessage}
+                onChange={e => setInputMessage(e.target.value)}
+                onPressEnter={handleSendMessage}
+                style={{ flex: 1, margin: '0 12px' }}
               />
-              <InputAction>
-                <SendOutlined />
-              </InputAction>
-            </ChatInputContainer>
+              <SendOutlined 
+                style={{ fontSize: 20, color: '#1890ff', cursor: 'pointer' }} 
+                onClick={handleSendMessage}
+              />
+            </div>
           </>
         ) : (
-          <ChatEmpty>
-            <MessageOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#8c8c8c' }}>
+            <MessageOutlined style={{ fontSize: 48, color: '#1890ff' }} />
             <Title level={4}>Выберите чат</Title>
             <Text type="secondary">Начните общение с кем-нибудь</Text>
-          </ChatEmpty>
+          </div>
         )}
-      </ChatMainPanel>
-
-      {/* Правая панель - информация о чате (отображается при клике на пользователя) */}
-      {showChatInfo && selectedChat && (
-        <ChatInfoPanel>
-          <ChatInfoHeader>
-            <Title level={4} style={{ margin: 0 }}>
-              Информация о чате
-            </Title>
-            <MoreOutlined />
-          </ChatInfoHeader>
-
-          <ChatInfoContent>
-            <UserInfoSection>
-              <Avatar
-                size={64}
-                icon={<UserOutlined />}
-                src={selectedChat.users.find(u => u.id !== currentUser.id)?.avatar}
-              />
-              <Title level={5} style={{ marginTop: 16 }}>
-                {selectedChat.users.find(u => u.id !== currentUser.id)?.name}
-              </Title>
-              <Text type="secondary">
-                {selectedChat.users.find(u => u.id !== currentUser.id)?.status === 'online'
-                  ? 'online'
-                  : `был(а) ${selectedChat.users.find(u => u.id !== currentUser.id)?.lastSeen}`}
-              </Text>
-            </UserInfoSection>
-
-            <ChatInfoTabs defaultActiveKey="1">
-              <Tabs.TabPane tab="Медиа" key="1">
-                <MediaSection>
-                  <Text type="secondary">Нет медиафайлов</Text>
-                </MediaSection>
-              </Tabs.TabPane>
-              <Tabs.TabPane tab="Файлы" key="2">
-                <FilesSection>
-                  <Text type="secondary">Нет файлов</Text>
-                </FilesSection>
-              </Tabs.TabPane>
-              <Tabs.TabPane tab="Участники" key="3">
-                <List
-                  dataSource={selectedChat.users}
-                  renderItem={user => (
-                    <List.Item>
-                      <List.Item.Meta
-                        avatar={
-                          <Badge dot={user.status === 'online'}>
-                            <Avatar icon={<UserOutlined />} src={user.avatar} />
-                          </Badge>
-                        }
-                        title={user.name}
-                        description={
-                          user.id === currentUser.id
-                            ? 'Это вы'
-                            : user.status === 'online'
-                            ? 'online'
-                            : `был(а) ${user.lastSeen}`
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              </Tabs.TabPane>
-            </ChatInfoTabs>
-          </ChatInfoContent>
-        </ChatInfoPanel>
-      )}
-    </ChatPageContainer>
+      </div>
+    </div>
   );
 };
 
