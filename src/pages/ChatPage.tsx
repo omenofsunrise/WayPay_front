@@ -104,7 +104,7 @@ const ChatPage = () => {
   const handleMessageSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalMessageSearch(value);
-    searchMessages(value); // Вызываем поиск сразу при изменении
+    searchMessages(value);
   };
 
   const handleMessageSearchSubmit = () => {
