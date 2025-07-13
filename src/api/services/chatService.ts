@@ -1,33 +1,117 @@
-import socialApiClient from "../socialApiClient";
+import socialApiClient from '../socialApiClient';
+import type { 
+  Chat, 
+  Message, 
+  CreateMessageRequest, 
+  MessageResponse,
+  MessagesPagination,
+  MessagesResponse
+} from '../types/chat';
 
-export const ChatService = {
-  getGlobalMessages: async () => {
-    try {
-      const response = await socialApiClient.get('/messages/global');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching global messages:', error);
-      throw error;
-    }
-  },
-
-  getCompanyMessages: async (companyId: string) => {
-    try {
-      const response = await socialApiClient.get(`/messages/company/${companyId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching company messages:', error);
-      throw error;
-    }
-  },
-
-  getPrivateMessages: async (userId: string) => {
-    try {
-      const response = await socialApiClient.get(`/messages/private/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching private messages:', error);
-      throw error;
-    }
+class ChatService {
+  async getUserChats(): Promise<Chat[]> {
+    const response = await socialApiClient.get<Chat[]>('/chats/my');
+    return response.data;
   }
-};
+
+  async getOrCreatePrivateChat(targetUserId: number): Promise<Chat> {
+    const response = await socialApiClient.get<Chat>(`/chats/private/${targetUserId}`);
+    return response.data;
+  }
+
+  async getCompanyChat(): Promise<Chat> {
+    const response = await socialApiClient.get<Chat>('/chats/company');
+    return response.data;
+  }
+
+  async getGlobalChat(): Promise<Chat> {
+    const response = await socialApiClient.get<Chat>('/chats/global');
+    return response.data;
+  }
+
+  /**
+   * Получить сообщения чата
+   * @param chatId ID чата
+   * @param params Параметры пагинации
+   */
+  async getChatMessages(
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<MessagesResponse> {
+    const { skip = 0, take = 50 } = params || {};
+    const response = await socialApiClient.get<MessagesResponse>(
+      `/chats/${chatId}/messages`,
+      { params: { skip, take } }
+    );
+    return response.data;
+  }
+
+  /**
+   * Отправить сообщение
+   * @param chatId ID чата
+   * @param messageData Данные сообщения
+   */
+  async sendMessage(
+    chatId: number, 
+    messageData: CreateMessageRequest
+  ): Promise<MessageResponse> {
+    const formData = new FormData();
+    formData.append('text', messageData.text);
+    
+    if (messageData.replyToId) {
+      formData.append('replyToId', messageData.replyToId.toString());
+    }
+    
+    if (messageData.attachments) {
+      messageData.attachments.forEach(file => {
+        formData.append('attachments', file);
+      });
+    }
+
+    const response = await socialApiClient.post<MessageResponse>(
+      `/chats/${chatId}/messages`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return response.data;
+  }
+
+  /**
+   * Редактировать сообщение
+   * @param chatId ID чата
+   * @param messageId ID сообщения
+   * @param newText Новый текст сообщения
+   */
+  async editMessage(
+    chatId: number, 
+    messageId: number, 
+    newText: string
+  ): Promise<MessageResponse> {
+    const response = await socialApiClient.put<MessageResponse>(
+      `/chats/${chatId}/messages/${messageId}`,
+      { newText }
+    );
+    return response.data;
+  }
+
+  /**
+   * Удалить сообщение
+   * @param chatId ID чата
+   * @param messageId ID сообщения
+   */
+  async deleteMessage(chatId: number, messageId: number): Promise<void> {
+    await socialApiClient.delete(`/chats/${chatId}/messages/${messageId}`);
+  }
+
+  /**
+   * Пометить сообщения как прочитанные
+   * @param chatId ID чата
+   */
+  async readMessages(chatId: number): Promise<void> {
+    await socialApiClient.post(`/chats/${chatId}/messages/read`);
+  }
+
+  
+}
+
+export default new ChatService();
