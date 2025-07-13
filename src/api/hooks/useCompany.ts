@@ -126,6 +126,40 @@ const useCompany = () => {
     }
   }, []);
 
+  const updateCompanyPhoto = useCallback(async (photo: File): Promise<Company | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedCompany = await companyService.updateCompanyPhoto(photo);
+      setCompany(prev => prev ? {...prev, photoPath: updatedCompany.photoPath} : null);
+      return updatedCompany;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update photo');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const deleteCompanyPhoto = useCallback(async (): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await companyService.deleteCompanyPhoto();
+      setCompany(prev => prev ? {...prev, photoPath: undefined} : null);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete photo');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getCompanyPhotoUrl = useCallback((photoPath?: string): string | null => {
+    return companyService.getCompanyPhotoUrl(photoPath);
+  }, []);
+
   const changePhone = useCallback(async (id: number, phone: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -153,7 +187,10 @@ const useCompany = () => {
     deleteCompany,
     createCompany,
     changeLicenceDate,
-    changePhone
+    changePhone,
+    updateCompanyPhoto,
+    deleteCompanyPhoto,
+    getCompanyPhotoUrl
   };
 };
 

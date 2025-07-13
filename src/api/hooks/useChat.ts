@@ -1,4 +1,3 @@
-// Improved hook implementation:
 import { useState, useCallback, useEffect } from 'react';
 import chatService from '../services/chatService';
 import type { 
@@ -11,7 +10,6 @@ import type {
 
 const toMessage = (response: Message): Message => ({
   ...response,
-  // Add any necessary transformations here
 });
 
 const useChat = () => {
@@ -21,12 +19,14 @@ const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [pagination, setPagination] = useState<MessagesPagination>({ skip: 0, take: 20 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
 
-  const fetchUserChats = useCallback(async (): Promise<Chat[] | null> => {
+  const fetchUserChats = useCallback(async (search?: string): Promise<Chat[] | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await chatService.getUserChats();
+      const result = await chatService.getUserChats(search);
       setChats(result);
       return result;
     } catch (err) {
@@ -38,9 +38,14 @@ const useChat = () => {
     }
   }, []);
 
+  const searchChats = useCallback(async (query: string) => {
+    setSearchQuery(query);
+    await fetchUserChats(query);
+  }, [fetchUserChats]);
+
   const fetchChatMessages = useCallback(async (
     chatId: number, 
-    params?: MessagesPagination,
+    params?: MessagesPagination & { search?: string },
     loadMore: boolean = false
   ): Promise<Message[] | null> => {
     setIsLoading(true);
@@ -67,6 +72,13 @@ const useChat = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const searchMessages = useCallback(async (query: string) => {
+    setMessageSearchQuery(query);
+    if (currentChat) {
+      await fetchChatMessages(currentChat.id, { ...pagination, search: query });
+    }
+  }, [currentChat, fetchChatMessages, pagination]);
 
   const loadMoreMessages = useCallback(async () => {
     if (!currentChat) return null;
@@ -207,6 +219,7 @@ const useChat = () => {
     messages,
     currentChat,
     pagination,
+    searchQuery,
     fetchUserChats,
     fetchChatMessages,
     loadMoreMessages,
@@ -215,6 +228,9 @@ const useChat = () => {
     deleteMessage,
     markMessagesAsRead,
     selectChat,
+    searchChats,
+    messageSearchQuery,
+    searchMessages,
   };
 };
 

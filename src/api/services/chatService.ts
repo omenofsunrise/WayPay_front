@@ -9,8 +9,10 @@ import type {
 } from '../types/chat';
 
 class ChatService {
-  async getUserChats(): Promise<Chat[]> {
-    const response = await socialApiClient.get<Chat[]>('/chats/my');
+  async getUserChats(search?: string): Promise<Chat[]> {
+    const response = await socialApiClient.get<Chat[]>('/chats/my', {
+      params: { search }
+    });
     return response.data;
   }
 
@@ -36,12 +38,12 @@ class ChatService {
    */
   async getChatMessages(
     chatId: number, 
-    params?: MessagesPagination
+    params?: MessagesPagination & { search?: string }
   ): Promise<MessagesResponse> {
-    const { skip = 0, take = 50 } = params || {};
+    const { skip = 0, take = 50, search } = params || {};
     const response = await socialApiClient.get<MessagesResponse>(
       `/chats/${chatId}/messages`,
-      { params: { skip, take } }
+      { params: { skip, take, search } }
     );
     return response.data;
   }

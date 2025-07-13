@@ -1,10 +1,11 @@
 export interface Chat {
   id: number;
   name: string;
-  type: 'Общий' | 'Компании' | 'Личный' | 'Групповой';
+  type: 'general' | 'company' | 'private' | 'private_chat';
   createdAt: string;
   unreadCount: number;
   lastMessage?: Message;
+  avatarPath?: string;
 }
 
 export interface Message {
@@ -43,7 +44,6 @@ export interface Attachment {
   type: 'Изображение' | 'Документ' | 'Видео' | 'Аудио';
 }
 
-// Интерфейсы для сообщений
 export interface Message {
   id: number;
   text: string;
@@ -53,7 +53,7 @@ export interface Message {
   chatId: number;
   sender: SimpleEmployee;
   replyTo?: Message;
-  isRead?: boolean; // Добавляем поле из бэкенда
+  isRead?: boolean;
 }
 
 export interface MessageResponse {
@@ -67,7 +67,6 @@ export interface MessageResponse {
   replyTo?: MessageResponse;
 }
 
-// DTO для запросов
 export interface CreateMessageRequest {
   text: string;
   replyToId?: number;
@@ -78,11 +77,9 @@ export interface EditMessageRequest {
   newText: string;
 }
 
-// Типы для пагинации сообщений
 export interface MessagesPagination {
   skip?: number;
   take?: number;
 }
 
-// Тип для ответа с сообщениями
 export type MessagesResponse = MessageResponse[];

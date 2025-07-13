@@ -1,4 +1,4 @@
-import apiClient from '../client';
+import apiClient, { API_BASE_URL, BASE_URL } from '../client';
 import type { Company } from '../types/company';
 
 class CompanyService {
@@ -29,6 +29,31 @@ class CompanyService {
 
   async deleteCompany(id: number): Promise<void> {
     await apiClient.delete(`/Company/${id}`);
+  }
+
+  async updateCompanyPhoto(photo: File): Promise<Company> {
+    const formData = new FormData();
+    formData.append('photo', photo);
+    
+    const response = await apiClient.patch<Company>(
+      '/Company/photo',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  }
+
+  async deleteCompanyPhoto(): Promise<void> {
+    await apiClient.delete('/Company/photo');
+  }
+
+  getCompanyPhotoUrl(photoPath?: string): string | null {
+    if (!photoPath) return null;
+    return `${BASE_URL}${photoPath}`;
   }
 
   async createCompany(companyData: {

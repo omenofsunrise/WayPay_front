@@ -9,6 +9,7 @@ export interface Company {
   licenceDate?: Date;
   inn?: string;
   email?: string;
+  photoPath?: string;
 }
 
 export interface CompanyCreateRequest {
@@ -20,4 +21,5 @@ export interface CompanyListItem {
   id: number;
   name: string;
   phone: string;
+  photoPath?: string;
 }
