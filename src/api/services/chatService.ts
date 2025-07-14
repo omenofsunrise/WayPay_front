@@ -91,7 +91,7 @@ class ChatService {
   ): Promise<MessageResponse> {
     const response = await socialApiClient.put<MessageResponse>(
       `/chats/${chatId}/messages/${messageId}`,
-      { newText }
+      newText
     );
     return response.data;
   }

@@ -10,6 +10,7 @@ import type {
 
 const toMessage = (response: Message): Message => ({
   ...response,
+  attachments: response.attachments || []
 });
 
 const useChat = () => {
@@ -21,6 +22,36 @@ const useChat = () => {
   const [pagination, setPagination] = useState<MessagesPagination>({ skip: 0, take: 20 });
   const [searchQuery, setSearchQuery] = useState('');
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [previewAttachments, setPreviewAttachments] = useState<Array<{url: string, file: File}>>([]);
+
+  const addAttachments = useCallback((files: FileList | File[]) => {
+    const newFiles = Array.from(files);
+    setAttachments(prev => [...prev, ...newFiles]);
+    
+    const newPreviews = newFiles.map(file => ({
+      url: URL.createObjectURL(file),
+      file
+    }));
+    setPreviewAttachments(prev => [...prev, ...newPreviews]);
+  }, []);
+
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+    setPreviewAttachments(prev => {
+      const newPreviews = prev.filter((_, i) => i !== index);
+      URL.revokeObjectURL(prev[index].url);
+      return newPreviews;
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      previewAttachments.forEach(preview => {
+        URL.revokeObjectURL(preview.url);
+      });
+    };
+  }, [previewAttachments]);
 
   const fetchUserChats = useCallback(async (search?: string): Promise<Chat[] | null> => {
     setIsLoading(true);
@@ -93,27 +124,37 @@ const useChat = () => {
   ): Promise<Message | null> => {
     setIsLoading(true);
     setError(null);
+    
+    let tempMessage: Message | null = null;
+    
     try {
-      // Optimistic update
-      const tempMessage: Message = {
-        id: Date.now(), // temporary ID
+      tempMessage = {
+        id: Date.now(),
         text: messageData.text,
         sentAt: new Date().toISOString(),
         isDeleted: false,
         chatId,
-        sender: {} as SimpleEmployee, // You should provide actual sender data
-        attachments: [],
+        sender: {} as SimpleEmployee,
+        attachments: messageData.attachments?.map((file, index) => ({
+          id: Date.now() + index,
+          fileUrl: URL.createObjectURL(file),
+          fileName: file.name,
+          contentType: file.type
+        })) || [],
         isRead: false
       };
       
       setMessages(prev => [...prev, tempMessage]);
       
-      const result = await chatService.sendMessage(chatId, messageData);
+      const result = await chatService.sendMessage(chatId, {
+        ...messageData,
+        attachments: messageData.attachments
+      });
+      
       const message = toMessage(result);
       
-      // Replace temporary message with actual one
       setMessages(prev => [
-        ...prev.filter(m => m.id !== tempMessage.id),
+        ...prev.filter(m => m.id !== tempMessage?.id),
         message
       ]);
       
@@ -125,12 +166,16 @@ const useChat = () => {
         } : chat
       ));
       
+      setAttachments([]);
+      setPreviewAttachments([]);
+      
       return message;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to send message';
       setError(message);
-      // Rollback optimistic update
-      setMessages(prev => prev.filter(m => m.id !== tempMessage?.id));
+      if (tempMessage) {
+        setMessages(prev => prev.filter(m => m.id !== tempMessage?.id));
+      }
       return null;
     } finally {
       setIsLoading(false);
@@ -231,6 +276,12 @@ const useChat = () => {
     searchChats,
     messageSearchQuery,
     searchMessages,
+    attachments,
+    previewAttachments,
+    addAttachments,
+    removeAttachment,
+    setAttachments,
+    setPreviewAttachments
   };
 };
 

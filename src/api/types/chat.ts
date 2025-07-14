@@ -41,7 +41,9 @@ export interface SimpleEmployee {
 export interface Attachment {
   id: number;
   fileUrl: string;
-  type: 'Изображение' | 'Документ' | 'Видео' | 'Аудио';
+  fileName: string;
+  contentType: string;
+  fileSize?: number;
 }
 
 export interface Message {
@@ -53,6 +55,7 @@ export interface Message {
   chatId: number;
   sender: SimpleEmployee;
   replyTo?: Message;
+  attachments: Attachment[];
   isRead?: boolean;
 }
 
@@ -65,12 +68,6 @@ export interface MessageResponse {
   chatId: number;
   sender: SimpleEmployee;
   replyTo?: MessageResponse;
-}
-
-export interface CreateMessageRequest {
-  text: string;
-  replyToId?: number;
-  attachments?: File[];
 }
 
 export interface EditMessageRequest {
