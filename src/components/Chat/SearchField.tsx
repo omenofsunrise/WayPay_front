@@ -81,7 +81,6 @@ const StyledInput = styled.input<{ hasError?: boolean; hasIcon?: boolean }>`
   height: auto;
   min-height: 38px;
   box-sizing: border-box;
-  max-width: 500px;
   background-color: white;
   color: black;
 

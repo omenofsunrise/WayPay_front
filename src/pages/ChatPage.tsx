@@ -35,6 +35,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatSide from '../components/Chat/ChatSide';
 import SearchField from '../components/Chat/SearchField';
+import MessageInput from '../components/Chat/MessageInput';
 
 interface ContextMenuProps {
   x: number;
@@ -217,8 +218,14 @@ const ChatPage = () => {
       return BASE_URL + chat.avatarPath;
     }
     
-    const initials = getInitials(chat.name);
-    return generateAvatar(initials);
+    return generateAvatar(getInitials(chat.name));
+  };
+
+  const getUserAvatar = (user: { fullName: string; photoPath?: string | null }) => {
+    if (user.photoPath) {
+      return BASE_URL + user.photoPath;
+    }
+    return generateAvatar(getInitials(user.fullName));
   };
 
   const handleSendMessage = async () => {
@@ -396,6 +403,18 @@ const ChatPage = () => {
                   }}
                 />
               </a>
+            ) : attachment.contentType.startsWith('video/') ? (
+              <video
+                controls
+                style={{
+                  width: 200,
+                  borderRadius: 4,
+                  cursor: 'pointer'
+                }}
+              >
+                <source src={SOCIAL_BASE_URL + attachment.fileUrl} type={attachment.contentType} />
+                Your browser does not support the video tag.
+              </video>
             ) : (
               <Button
                 variant="outlined"
@@ -426,24 +445,29 @@ const ChatPage = () => {
       onTouchStart={() => handleMessageTouchStart(message)}
       onTouchEnd={handleMessageTouchEnd}
     >
-      <ListItemAvatar sx={{ minWidth: 40 }}>
-        <Avatar 
-          alt={message.sender.fullName} 
-          src={message.sender.photoPath || generateAvatar(getInitials(message.sender.fullName))}
-          sx={{ width: 32, height: 32 }}
-        />
-      </ListItemAvatar>
+      {message.sender.id !== currentUser?.id && (
+        <ListItemAvatar sx={{ minWidth: 40 }}>
+          <Avatar 
+            alt={message.sender.fullName} 
+            src={getUserAvatar(message.sender)}
+            sx={{ width: 32, height: 32 }}
+          />
+        </ListItemAvatar>
+      )}
       <Box 
         sx={{
           maxWidth: '70%',
-          bgcolor: message.sender.id === currentUser?.id ? '#e3f2fd' : '#fff',
+          bgcolor: message.sender.id === currentUser?.id ? 'rgba(0, 125, 136, 0.3)' : 'rgba(226, 227, 231, 1)',
+          color: "black",
           borderRadius: 2,
           p: 1.5,
           boxShadow: 1,
+          position: 'relative',
+          paddingRight: '50px'
         }}
       >
         {message.sender.id !== currentUser?.id && (
-          <Typography variant="subtitle2" color="text.primary">
+          <Typography variant="subtitle2" sx={{ color: 'rgba(0, 125, 136, 1)', fontWeight: 550 }}>
             {message.sender.fullName}
           </Typography>
         )}
@@ -456,7 +480,11 @@ const ChatPage = () => {
         <Typography 
           variant="caption" 
           color="textSecondary"
-          sx={{ display: 'block', textAlign: 'right' }}
+          sx={{ 
+            position: 'absolute',
+            right: 8,
+            bottom: 8
+          }}
         >
           {formatMessageDate(message.sentAt)}
         </Typography>
@@ -599,34 +627,16 @@ const ChatPage = () => {
                   {chatMembers.length} участников
                 </Typography>
               </Box>
+              <Box sx={{ width: "75%", margin: "0 auto" }}>
+                <SearchField
+                    placeholder="Поиск в сообщениях"
+                    value={localMessageSearch}
+                    onChange={handleMessageSearchChange}
+                    onKeyPress={(e) => e.key === 'Enter' && handleMessageSearchSubmit()}
+                />
+              </Box>
             </Box>
-            
-            <Box p={2} borderBottom="1px solid #eee">
-              <TextField
-                fullWidth
-                variant="outlined"
-                size="small"
-                placeholder="Поиск в сообщениях..."
-                value={localMessageSearch}
-                onChange={handleMessageSearchChange}
-                onKeyPress={(e) => e.key === 'Enter' && handleMessageSearchSubmit()}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                  endAdornment: localMessageSearch && (
-                    <InputAdornment position="end">
-                      <IconButton size="small" onClick={clearMessageSearch}>
-                        <ClearIcon fontSize="small" />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-            
+                        
             <MessagesContainer>
               <List>
                 {messages.map(renderMessageItem)}
@@ -634,70 +644,29 @@ const ChatPage = () => {
               </List>
             </MessagesContainer>
             
-            <Box p={2} borderTop="1px solid #eee">
               {attachments.length > 0 && renderAttachmentPreviews()}
-              <Box display="flex" alignItems="center" gap={1}>
-                <IconButton 
-                  color="primary"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <AttachFileIcon />
-                </IconButton>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                  multiple
-                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
-                />
-                <TextField
-                  fullWidth
-                  multiline
-                  maxRows={4}
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        {editingMessage ? (
-                          <>
-                            <IconButton 
-                              edge="end" 
-                              onClick={() => {
-                                setEditingMessage(null);
-                                setMessageText('');
-                              }}
-                            >
-                              <ClearIcon />
-                            </IconButton>
-                            <IconButton 
-                              edge="end" 
-                              color="primary"
-                              onClick={handleSendMessage}
-                              disabled={!messageText.trim() && attachments.length === 0}
-                            >
-                              <SendIcon />
-                            </IconButton>
-                          </>
-                        ) : (
-                          <IconButton 
-                            edge="end" 
-                            color="primary"
-                            onClick={handleSendMessage}
-                            disabled={!messageText.trim() && attachments.length === 0}
-                          >
-                            <SendIcon />
-                          </IconButton>
-                        )}
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Box>
-            </Box>
+              <MessageInput
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onSend={handleSendMessage}
+                onAttach={() => fileInputRef.current?.click()}
+                onCancelEdit={() => {
+                  setEditingMessage(null);
+                  setMessageText('');
+                }}
+                isEditing={!!editingMessage}
+                hasAttachments={attachments.length > 0}
+                placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
+                onKeyPress={handleKeyPress}
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,video/*"
+              />
           </>
         )}
       </ChatContentContainer>
