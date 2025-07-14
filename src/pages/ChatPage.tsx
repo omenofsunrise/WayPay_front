@@ -418,11 +418,16 @@ const ChatPage = () => {
             ) : (
               <Button
                 variant="outlined"
-                startIcon={<AttachFileIcon />}
+                startIcon={<DocumentIcon />}
                 href={SOCIAL_BASE_URL + attachment.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{ textTransform: 'none' }}
+                sx={{ 
+                  textTransform: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
               >
                 {attachment.fileName}
               </Button>
@@ -432,6 +437,41 @@ const ChatPage = () => {
       </Box>
     );
   };
+
+  const DocumentIcon = () => (
+    <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="33" height="33" rx="10" fill="#C0DBE0"/>
+      <path d="M14.1333 7.125H11.8125C11.1909 7.125 10.5948 7.37193 10.1552 7.81147C9.71568 8.25101 9.46875 8.84715 9.46875 9.46875V23.5312C9.46875 24.1529 9.71568 24.749 10.1552 25.1885C10.5948 25.6281 11.1909 25.875 11.8125 25.875H21.1875C21.8091 25.875 22.4052 25.6281 22.8448 25.1885C23.2843 24.749 23.5312 24.1529 23.5312 23.5312V16.5M14.1333 7.125C15.4281 7.125 16.5 8.17396 16.5 9.46875V11.8125C16.5 12.4341 16.7469 13.0302 17.1865 13.4698C17.626 13.9093 18.2221 14.1562 18.8437 14.1562H21.1875C21.8091 14.1562 22.4052 14.4032 22.8448 14.8427C23.2843 15.2823 23.5312 15.8784 23.5312 16.5M14.1333 7.125C17.9771 7.125 23.5312 12.7083 23.5312 16.5" stroke="#007D88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
+const renderMessageTextWithLinks = (text: string) => {
+  if (!text) return null;
+
+  // Проверяем URL по старинке, но без жадных групп
+  const urlRegex = /(https?:\/\/[^\s]+)|(^|\s)([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*)/g;
+  
+  return text.split(' ').map((word, i) => {
+    // Если слово - полная ссылка с http(s)
+    if (word.match(/^https?:\/\/[^\s]+/)) {
+      return (
+        <a key={i} href={word} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
+          {word + ' '}
+        </a>
+      );
+    }
+    // Если слово - домен типа lets-digit.ru
+    else if (word.match(/^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*/) && !word.endsWith('.')) {
+      return (
+        <a key={i} href={`https://${word}`} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
+          {word + ' '}
+        </a>
+      );
+    }
+    // Обычный текст
+    return word + ' ';
+  });
+};
 
   const renderMessageItem = (message: Message) => (
     <ListItem 
@@ -473,7 +513,7 @@ const ChatPage = () => {
         )}
         {message.text && (
           <Typography variant="body1" paragraph sx={{ mb: 0, wordBreak: 'break-word' }}>
-            {message.text}
+            {renderMessageTextWithLinks(message.text)}
           </Typography>
         )}
         {renderMessageAttachments(message)}
