@@ -17,12 +17,18 @@ import {
   ImageListItem,
   ListItemAvatar,
   Link as MuiLink,
-  Skeleton
+  Skeleton,
+  Modal,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogActions,
+  Button
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import LinkIcon from '@mui/icons-material/Link';
+import DownloadIcon from '@mui/icons-material/Download';
 import { format } from 'date-fns';
 import type { Chat, ChatMember, MessageAttachmentResponse, ChatLinkResponse } from '../../api/types/chat';
 import { BASE_URL } from '../../api/client';
@@ -37,6 +43,8 @@ interface ChatSideProps {
 
 const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
   const [activeTab, setActiveTab] = React.useState(0);
+  const [openMediaModal, setOpenMediaModal] = React.useState(false);
+  const [currentMedia, setCurrentMedia] = React.useState<MessageAttachmentResponse | null>(null);
   const { 
     chatMembers, 
     fetchChatMembers,
@@ -80,26 +88,56 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
     setActiveTab(newValue);
   };
 
+  const handleOpenMedia = (media: MessageAttachmentResponse) => {
+    setCurrentMedia(media);
+    setOpenMediaModal(true);
+  };
+
+  const handleCloseMedia = () => {
+    setOpenMediaModal(false);
+    setCurrentMedia(null);
+  };
+
+  const handleDownload = (fileUrl: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = SOCIAL_BASE_URL + fileUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const FileIcon = () => (
+    <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="33" height="33" rx="10" fill="#C0DBE0"/>
+      <path d="M14.1333 7.125H11.8125C11.1909 7.125 10.5948 7.37193 10.1552 7.81147C9.71568 8.25101 9.46875 8.84715 9.46875 9.46875V23.5312C9.46875 24.1529 9.71568 24.749 10.1552 25.1885C10.5948 25.6281 11.1909 25.875 11.8125 25.875H21.1875C21.8091 25.875 22.4052 25.6281 22.8448 25.1885C23.2843 24.749 23.5312 24.1529 23.5312 23.5312V16.5M14.1333 7.125C15.4281 7.125 16.5 8.17396 16.5 9.46875V11.8125C16.5 12.4341 16.7469 13.0302 17.1865 13.4698C17.626 13.9093 18.2221 14.1562 18.8437 14.1562H21.1875C21.8091 14.1562 22.4052 14.4032 22.8448 14.8427C23.2843 15.2823 23.5312 15.8784 23.5312 16.5M14.1333 7.125C17.9771 7.125 23.5312 12.7083 23.5312 16.5" stroke="#007D88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
   const renderMediaItem = (item: MessageAttachmentResponse) => {
     const isImage = item.contentType.startsWith('image/');
     const isVideo = item.contentType.startsWith('video/');
     
     return (
-      <ListItem key={item.id} sx={{ px: 0 }}>
+      <ListItem 
+        key={item.id} 
+        sx={{ px: 0, cursor: 'pointer' }}
+        onClick={() => handleOpenMedia(item)}
+      >
         <ListItemAvatar>
           {isImage ? (
             <Avatar 
               variant="rounded" 
-              src={BASE_URL + item.fileUrl} 
+              src={SOCIAL_BASE_URL + item.fileUrl} 
               sx={{ width: 56, height: 56 }}
             />
           ) : isVideo ? (
-            <Avatar variant="rounded" sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>
-              <VideoLibraryIcon />
+            <Avatar variant="rounded" sx={{ width: 56, height: 56, bgcolor: 'rgba(0, 125, 136, 0.3)' }}>
+              <VideoLibraryIcon sx={{ color: 'rgba(0, 125, 136, 1)' }} />
             </Avatar>
           ) : (
-            <Avatar variant="rounded" sx={{ width: 56, height: 56, bgcolor: 'secondary.main' }}>
-              <InsertDriveFileIcon />
+            <Avatar variant="rounded" sx={{ width: 56, height: 56, bgcolor: 'rgba(0, 125, 136, 0.3)' }}>
+              <FileIcon />
             </Avatar>
           )}
         </ListItemAvatar>
@@ -108,6 +146,15 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           secondary={`${(item.fileSize / 1024).toFixed(1)} KB`}
           sx={{ ml: 1 }}
         />
+        <IconButton 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDownload(item.fileUrl, item.fileName);
+          }}
+          sx={{ color: 'rgba(0, 125, 136, 1)' }}
+        >
+          <DownloadIcon />
+        </IconButton>
       </ListItem>
     );
   };
@@ -115,13 +162,23 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
   const renderLinkItem = (item: ChatLinkResponse) => (
     <ListItem key={item.messageId} sx={{ px: 0 }}>
       <ListItemAvatar>
-        <Avatar variant="rounded" sx={{ bgcolor: 'info.main' }}>
-          <LinkIcon />
+        <Avatar variant="rounded" sx={{ bgcolor: 'rgba(0, 125, 136, 0.3)' }}>
+          <LinkIcon sx={{ color: 'rgba(0, 125, 136, 1)' }} />
         </Avatar>
       </ListItemAvatar>
       <ListItemText
         primary={
-          <MuiLink href={item.url} target="_blank" rel="noopener">
+          <MuiLink 
+            href={item.url} 
+            target="_blank" 
+            rel="noopener"
+            sx={{ 
+              color: 'rgba(37, 203, 161, 1)',
+              '&:hover': {
+                color: 'rgba(0, 125, 136, 1)'
+              }
+            }}
+          >
             {item.url.length > 30 ? `${item.url.substring(0, 30)}...` : item.url}
           </MuiLink>
         }
@@ -188,58 +245,55 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
       <Divider />
 
       <Tabs 
-  value={activeTab} 
-  onChange={handleTabChange} 
-  variant="scrollable"
-  scrollButtons="auto"
-  allowScrollButtonsMobile
-  sx={{ 
-    borderBottom: 1, 
-    borderColor: 'divider',
-    '& .MuiTabs-indicator': {
-      display: 'none'
-    },
-    // Добавляем стили для скролла
-    overflowX: 'auto',
-    scrollbarWidth: 'none', // Для Firefox
-    '&::-webkit-scrollbar': {
-      display: 'none' // Для Chrome, Safari, Edge
-    },
-    // Стили для жеста скролла
-    WebkitOverflowScrolling: 'touch', // Для плавного скролла на iOS
-    whiteSpace: 'nowrap' // Чтобы вкладки не переносились
-  }}
->
-  {['Участники', 'Фото', 'Файлы', 'Видео', 'Ссылки'].map((label, index) => (
-    <Tab
-      key={index}
-      label={label}
-      sx={{
-        color: 'common.black',
-        outline: 'none',
-        textTransform: 'none',
-        fontSize: '0.875rem',
-        borderRadius: '10px',
-        '&.Mui-selected': {
-          backgroundColor: 'rgba(89, 212, 188, 1)',
-          color: 'common.black',
-          borderRadius: '10px',
-          mx: 0.5
-        },
-        px: 2,
-        my: 0.5,
-        transition: 'all 0.2s ease-in-out',
-        '&:focus': {
-          outline: 'none',
-          boxShadow: 'none',
-        },
-        // Отключаем сокращение текста при скролле
-        minWidth: 'auto',
-        flexShrink: 0
-      }}
-    />
-  ))}
-</Tabs>
+        value={activeTab} 
+        onChange={handleTabChange} 
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
+        sx={{ 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          '& .MuiTabs-indicator': {
+            display: 'none'
+          },
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none'
+          },
+          WebkitOverflowScrolling: 'touch',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {['Участники', 'Фото', 'Файлы', 'Видео', 'Ссылки'].map((label, index) => (
+          <Tab
+            key={index}
+            label={label}
+            sx={{
+              color: 'common.black',
+              outline: 'none',
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              borderRadius: '10px',
+              '&.Mui-selected': {
+                backgroundColor: 'rgba(89, 212, 188, 1)',
+                color: 'common.black',
+                borderRadius: '10px',
+                mx: 0.5
+              },
+              px: 2,
+              my: 0.5,
+              transition: 'all 0.2s ease-in-out',
+              '&:focus': {
+                outline: 'none',
+                boxShadow: 'none',
+              },
+              minWidth: 'auto',
+              flexShrink: 0
+            }}
+          />
+        ))}
+      </Tabs>
 
       <Box sx={{ p: 2 }}>
         {activeTab === 0 && (
@@ -274,10 +328,14 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
             ) : chatPhotos.length > 0 ? (
               <ImageList cols={2} gap={8}>
                 {chatPhotos.map((photo) => (
-                  <ImageListItem key={photo.id}>
+                  <ImageListItem 
+                    key={photo.id} 
+                    onClick={() => handleOpenMedia(photo)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <img
                       src={`${SOCIAL_BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format`}
-                      srcSet={`${BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
+                      srcSet={`${SOCIAL_BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
                       alt={photo.fileName}
                       loading="lazy"
                       style={{ borderRadius: 4 }}
@@ -353,6 +411,54 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           </Box>
         )}
       </Box>
+
+      {/* Media Modal */}
+      <Dialog
+        open={openMediaModal}
+        onClose={handleCloseMedia}
+        maxWidth="md"
+        fullWidth
+      >
+        {currentMedia && (
+          <>
+            <DialogTitle>{currentMedia.fileName}</DialogTitle>
+            <DialogContent>
+              {currentMedia.contentType.startsWith('image/') ? (
+                <img
+                  src={SOCIAL_BASE_URL + currentMedia.fileUrl}
+                  alt={currentMedia.fileName}
+                  style={{ width: '100%', height: 'auto' }}
+                />
+              ) : currentMedia.contentType.startsWith('video/') ? (
+                <video controls style={{ width: '100%' }}>
+                  <source src={SOCIAL_BASE_URL + currentMedia.fileUrl} type={currentMedia.contentType} />
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <FileIcon />
+                  <Typography variant="h6" sx={{ mt: 2 }}>
+                    {currentMedia.fileName}
+                  </Typography>
+                  <Typography variant="body2">
+                    {(currentMedia.fileSize / 1024).toFixed(1)} KB
+                  </Typography>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button 
+                onClick={() => handleDownload(currentMedia.fileUrl, currentMedia.fileName)}
+                startIcon={<DownloadIcon />}
+                sx={{ color: 'rgba(0, 125, 136, 1)' }}
+              >
+                Скачать
+              </Button>
+              <Button onClick={handleCloseMedia}>Закрыть</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Paper>
   );
 };
