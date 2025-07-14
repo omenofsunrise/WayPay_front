@@ -5,7 +5,10 @@ import type {
   Message, 
   CreateMessageRequest,
   MessagesPagination,
-  SimpleEmployee
+  SimpleEmployee,
+  ChatMember,
+  MessageAttachmentResponse,
+  ChatLinkResponse
 } from '../types/chat';
 
 const toMessage = (response: Message): Message => ({
@@ -24,6 +27,87 @@ const useChat = () => {
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [previewAttachments, setPreviewAttachments] = useState<Array<{url: string, file: File}>>([]);
+  const [chatMembers, setChatMembers] = useState<ChatMember[]>([]);
+  const [chatPhotos, setChatPhotos] = useState<MessageAttachmentResponse[]>([]);
+  const [chatFiles, setChatFiles] = useState<MessageAttachmentResponse[]>([]);
+  const [chatVideos, setChatVideos] = useState<MessageAttachmentResponse[]>([]);
+  const [chatLinks, setChatLinks] = useState<ChatLinkResponse[]>([]);
+
+  const fetchChatPhotos = useCallback(async (
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<MessageAttachmentResponse[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await chatService.getChatPhotos(chatId, params);
+      setChatPhotos(result);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch chat photos';
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchChatFiles = useCallback(async (
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<MessageAttachmentResponse[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await chatService.getChatFiles(chatId, params);
+      setChatFiles(result);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch chat files';
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchChatVideos = useCallback(async (
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<MessageAttachmentResponse[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await chatService.getChatVideos(chatId, params);
+      setChatVideos(result);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch chat videos';
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchChatLinks = useCallback(async (
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<ChatLinkResponse[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await chatService.getChatLinks(chatId, params);
+      setChatLinks(result);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch chat links';
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const addAttachments = useCallback((files: FileList | File[]) => {
     const newFiles = Array.from(files);
@@ -197,7 +281,6 @@ const useChat = () => {
         msg.id === messageId ? message : msg
       ));
       
-      // Update last message if this was the last one
       setChats(prev => prev.map(chat => {
         if (chat.id !== chatId) return chat;
         return {
@@ -211,6 +294,22 @@ const useChat = () => {
       return message;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to edit message';
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchChatMembers = useCallback(async (chatId: number): Promise<ChatMember[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await chatService.getChatMembers(chatId);
+      setChatMembers(result);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch chat members';
       setError(message);
       return null;
     } finally {
@@ -256,7 +355,7 @@ const useChat = () => {
     fetchChatMessages(chat.id);
     markMessagesAsRead(chat.id);
   }, [fetchChatMessages, markMessagesAsRead]);
-
+  
   return {
     isLoading,
     error,
@@ -281,7 +380,17 @@ const useChat = () => {
     addAttachments,
     removeAttachment,
     setAttachments,
-    setPreviewAttachments
+    setPreviewAttachments,
+    chatMembers,
+    fetchChatMembers,
+    chatPhotos,
+    chatFiles,
+    chatVideos,
+    chatLinks,
+    fetchChatPhotos,
+    fetchChatFiles,
+    fetchChatVideos,
+    fetchChatLinks,
   };
 };
 

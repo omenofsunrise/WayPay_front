@@ -9,13 +9,16 @@ import {
   ListItem,
   ListItemText,
   Paper,
-  Chip
+  Chip,
+  Tab,
+  Tabs
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { format } from 'date-fns';
-import type { Chat } from '../../api/types/chat';
+import type { Chat, ChatMember } from '../../api/types/chat';
 import { BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
+import useChat from '../../api/hooks/useChat';
 
 interface ChatSideProps {
   chat: Chat | null;
@@ -23,6 +26,15 @@ interface ChatSideProps {
 }
 
 const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
+  const [activeTab, setActiveTab] = React.useState(0);
+  const { chatMembers, fetchChatMembers } = useChat();
+  
+  React.useEffect(() => {
+    if (chat?.id) {
+      fetchChatMembers(chat.id);
+    }
+  }, [chat?.id, fetchChatMembers]);
+
   if (!chat) return null;
 
   const getChatAvatar = () => {
@@ -36,6 +48,10 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
     
     const initials = getInitials(chat.name);
     return generateAvatar(initials);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
   };
 
   return (
@@ -78,26 +94,58 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
         <Typography variant="h5" gutterBottom>
           {chat.name}
         </Typography>
+        <Chip 
+            label={`${chatMembers?.length ?? 0} участников`} 
+            size="small" 
+            sx={{ mt: 1 }}
+        />
       </Box>
 
       <Divider />
 
-      <Box sx={{ p: 2 }}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-        </Typography>
-        <List dense>
-        </List>
-      </Box>
+      <Tabs 
+        value={activeTab} 
+        onChange={handleTabChange} 
+        variant="fullWidth"
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab label="Информация" />
+        <Tab label="Участники" />
+      </Tabs>
 
-        <>
-          <Box sx={{ p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Описание
-            </Typography>
-            <Typography variant="body2">
-            </Typography>
-          </Box>
-        </>
+      {activeTab === 0 && (
+        <Box sx={{ p: 2 }}>
+          {/* Добавьте дополнительную информацию о чате здесь */}
+          <Typography variant="body1" paragraph>
+            Тип чата: {chat.type === 'general' ? 'Общий чат' : 'Групповой чат'}
+          </Typography>
+          <Typography variant="body1">
+            Создан: {format(new Date(chat.createdAt), 'dd.MM.yyyy HH:mm')}
+          </Typography>
+        </Box>
+      )}
+
+      {activeTab === 1 && (
+        <Box sx={{ p: 2 }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+            Участники ({chatMembers?.length ?? 0})
+          </Typography>
+          <List dense>
+            {chatMembers.map((member) => (
+              <ListItem key={member.id} sx={{ px: 0 }}>
+                <Avatar 
+                  src={member.photoPath ? BASE_URL + member.photoPath : generateAvatar(getInitials(member.fullName))}
+                  sx={{ width: 40, height: 40, mr: 2 }}
+                />
+                <ListItemText
+                  primary={member.fullName}
+                  secondary={member.role || ''}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
     </Paper>
   );
 };

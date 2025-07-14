@@ -79,4 +79,32 @@ export interface MessagesPagination {
   take?: number;
 }
 
+export interface ChatMember {
+  id: number;
+  fullName: string;
+  photoPath: string | null;
+  lastOnlineAt: string | null;
+  role: string;
+}
+
+export interface MessageAttachmentResponse {
+  id: number;
+  messageId: number;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  contentType: string;
+  sentAt: string;
+  senderId: number;
+  senderName: string;
+}
+
+export interface ChatLinkResponse {
+  messageId: number;
+  url: string;
+  sentAt: string;
+  senderId: number;
+  senderName: string;
+}
+
 export type MessagesResponse = MessageResponse[];

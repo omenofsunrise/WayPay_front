@@ -5,7 +5,10 @@ import type {
   CreateMessageRequest, 
   MessageResponse,
   MessagesPagination,
-  MessagesResponse
+  MessagesResponse,
+  ChatMember,
+  MessageAttachmentResponse,
+  ChatLinkResponse
 } from '../types/chat';
 
 class ChatService {
@@ -113,7 +116,78 @@ class ChatService {
     await socialApiClient.post(`/chats/${chatId}/messages/read`);
   }
 
+  /**
+   * Get photos from chat
+   * @param chatId ID of the chat
+   * @param params Pagination parameters
+   */
+  async getChatPhotos(
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<MessageAttachmentResponse[]> {
+    const { skip = 0, take = 20 } = params || {};
+    const response = await socialApiClient.get<MessageAttachmentResponse[]>(
+      `/chats/${chatId}/photos`,
+      { params: { skip, take } }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get files from chat
+   * @param chatId ID of the chat
+   * @param params Pagination parameters
+   */
+  async getChatFiles(
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<MessageAttachmentResponse[]> {
+    const { skip = 0, take = 20 } = params || {};
+    const response = await socialApiClient.get<MessageAttachmentResponse[]>(
+      `/chats/${chatId}/files`,
+      { params: { skip, take } }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get videos from chat
+   * @param chatId ID of the chat
+   * @param params Pagination parameters
+   */
+  async getChatVideos(
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<MessageAttachmentResponse[]> {
+    const { skip = 0, take = 20 } = params || {};
+    const response = await socialApiClient.get<MessageAttachmentResponse[]>(
+      `/chats/${chatId}/videos`,
+      { params: { skip, take } }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get links from chat
+   * @param chatId ID of the chat
+   * @param params Pagination parameters
+   */
+  async getChatLinks(
+    chatId: number, 
+    params?: MessagesPagination
+  ): Promise<ChatLinkResponse[]> {
+    const { skip = 0, take = 20 } = params || {};
+    const response = await socialApiClient.get<ChatLinkResponse[]>(
+      `/chats/${chatId}/links`,
+      { params: { skip, take } }
+    );
+    return response.data;
+  }
   
+  async getChatMembers(chatId: number): Promise<ChatMember[]> {
+    const response = await socialApiClient.get<ChatMember[]>(`/chats/${chatId}/members`);
+    return response.data;
+  }
 }
 
 export default new ChatService();
