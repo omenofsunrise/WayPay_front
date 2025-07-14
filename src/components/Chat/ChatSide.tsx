@@ -144,20 +144,16 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
     >
       <Box 
         sx={{
-          position: 'sticky',
           top: 0,
           backgroundColor: 'background.paper',
           zIndex: 1,
           p: 2,
+          borderColor: 'divider',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid',
-          borderColor: 'divider'
+          justifyContent: 'flex-end'
         }}
       >
-        <Typography variant="h6">Информация о чате</Typography>
-        <IconButton onClick={onClose}>
+        <IconButton onClick={onClose} sx={{ position: 'absolute', left: 16, top: 16 }}>
           <CloseIcon />
         </IconButton>
       </Box>
@@ -172,34 +168,82 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           {chat.name}
         </Typography>
         <Chip 
-          label={`${chatMembers?.length ?? 0} участников`} 
-          size="small" 
-          sx={{ mt: 1 }}
+          label={`${chatMembers?.length ?? 0} участников`}
+          size="small"
+          sx={{ 
+            mt: 1,
+            color: 'rgba(80, 85, 92, 1)',
+            backgroundColor: 'transparent',
+            '& .MuiChip-label': {
+              px: 0.5,
+            },
+            border: 'none',
+            boxShadow: 'none',
+            fontSize: '14px',
+            margin: 0
+          }}
         />
       </Box>
 
       <Divider />
 
       <Tabs 
-        value={activeTab} 
-        onChange={handleTabChange} 
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
-      >
-        <Tab label="Участники" />
-        <Tab label="Фото" />
-        <Tab label="Файлы" />
-        <Tab label="Видео" />
-        <Tab label="Ссылки" />
-      </Tabs>
+  value={activeTab} 
+  onChange={handleTabChange} 
+  variant="scrollable"
+  scrollButtons="auto"
+  allowScrollButtonsMobile
+  sx={{ 
+    borderBottom: 1, 
+    borderColor: 'divider',
+    '& .MuiTabs-indicator': {
+      display: 'none'
+    },
+    // Добавляем стили для скролла
+    overflowX: 'auto',
+    scrollbarWidth: 'none', // Для Firefox
+    '&::-webkit-scrollbar': {
+      display: 'none' // Для Chrome, Safari, Edge
+    },
+    // Стили для жеста скролла
+    WebkitOverflowScrolling: 'touch', // Для плавного скролла на iOS
+    whiteSpace: 'nowrap' // Чтобы вкладки не переносились
+  }}
+>
+  {['Участники', 'Фото', 'Файлы', 'Видео', 'Ссылки'].map((label, index) => (
+    <Tab
+      key={index}
+      label={label}
+      sx={{
+        color: 'common.black',
+        outline: 'none',
+        textTransform: 'none',
+        fontSize: '0.875rem',
+        borderRadius: '10px',
+        '&.Mui-selected': {
+          backgroundColor: 'rgba(89, 212, 188, 1)',
+          color: 'common.black',
+          borderRadius: '10px',
+          mx: 0.5
+        },
+        px: 2,
+        my: 0.5,
+        transition: 'all 0.2s ease-in-out',
+        '&:focus': {
+          outline: 'none',
+          boxShadow: 'none',
+        },
+        // Отключаем сокращение текста при скролле
+        minWidth: 'auto',
+        flexShrink: 0
+      }}
+    />
+  ))}
+</Tabs>
 
       <Box sx={{ p: 2 }}>
         {activeTab === 0 && (
           <Box>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Участники ({chatMembers?.length ?? 0})
-            </Typography>
             <List dense>
               {chatMembers.map((member) => (
                 <ListItem key={member.id} sx={{ px: 0 }}>
@@ -219,9 +263,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
 
         {activeTab === 1 && (
           <Box>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Фотографии ({chatPhotos?.length ?? 0})
-            </Typography>
             {isLoading ? (
               <Grid container spacing={1}>
                 {[...Array(4)].map((_, index) => (
@@ -254,9 +295,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
 
         {activeTab === 2 && (
           <Box>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Файлы ({chatFiles?.length ?? 0})
-            </Typography>
             {isLoading ? (
               <Box>
                 {[...Array(3)].map((_, index) => (
@@ -277,9 +315,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
 
         {activeTab === 3 && (
           <Box>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Видео ({chatVideos?.length ?? 0})
-            </Typography>
             {isLoading ? (
               <Box>
                 {[...Array(3)].map((_, index) => (
@@ -300,9 +335,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
 
         {activeTab === 4 && (
           <Box>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Ссылки ({chatLinks?.length ?? 0})
-            </Typography>
             {isLoading ? (
               <Box>
                 {[...Array(3)].map((_, index) => (
