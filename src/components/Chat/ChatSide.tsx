@@ -28,6 +28,7 @@ import type { Chat, ChatMember, MessageAttachmentResponse, ChatLinkResponse } fr
 import { BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import useChat from '../../api/hooks/useChat';
+import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 
 interface ChatSideProps {
   chat: Chat | null;
@@ -186,7 +187,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
         scrollButtons="auto"
         sx={{ borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab label="Информация" />
         <Tab label="Участники" />
         <Tab label="Фото" />
         <Tab label="Файлы" />
@@ -196,17 +196,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
 
       <Box sx={{ p: 2 }}>
         {activeTab === 0 && (
-          <Box>
-            <Typography variant="body1" paragraph>
-              Тип чата: {chat.type === 'general' ? 'Общий чат' : 'Групповой чат'}
-            </Typography>
-            <Typography variant="body1">
-              Создан: {format(new Date(chat.createdAt), 'dd.MM.yyyy HH:mm')}
-            </Typography>
-          </Box>
-        )}
-
-        {activeTab === 1 && (
           <Box>
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
               Участники ({chatMembers?.length ?? 0})
@@ -228,7 +217,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           </Box>
         )}
 
-        {activeTab === 2 && (
+        {activeTab === 1 && (
           <Box>
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
               Фотографии ({chatPhotos?.length ?? 0})
@@ -246,7 +235,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
                 {chatPhotos.map((photo) => (
                   <ImageListItem key={photo.id}>
                     <img
-                      src={`${BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format`}
+                      src={`${SOCIAL_BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format`}
                       srcSet={`${BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
                       alt={photo.fileName}
                       loading="lazy"
@@ -263,7 +252,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           </Box>
         )}
 
-        {activeTab === 3 && (
+        {activeTab === 2 && (
           <Box>
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
               Файлы ({chatFiles?.length ?? 0})
@@ -286,7 +275,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           </Box>
         )}
 
-        {activeTab === 4 && (
+        {activeTab === 3 && (
           <Box>
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
               Видео ({chatVideos?.length ?? 0})
@@ -309,7 +298,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           </Box>
         )}
 
-        {activeTab === 5 && (
+        {activeTab === 4 && (
           <Box>
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
               Ссылки ({chatLinks?.length ?? 0})

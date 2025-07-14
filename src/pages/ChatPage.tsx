@@ -34,6 +34,7 @@ import styled from "styled-components";
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatSide from '../components/Chat/ChatSide';
+import SearchField from '../components/Chat/SearchField';
 
 interface ContextMenuProps {
   x: number;
@@ -89,6 +90,36 @@ const MenuContainer = styled.div`
   padding: 4px 0;
 `;
 
+const ChatContainer = styled.div`
+  display: flex;
+  height: calc(100vh - 64px); // Adjust based on your header height
+  overflow: hidden;
+`;
+
+const ChatListContainer = styled.div`
+  width: 350px;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e0e0e0;
+`;
+
+const ChatContentContainer = styled.div`
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+const MessagesContainer = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background-color: #f9f9f9;
+`;
+
 const ChatPage = () => {
   const {
     chats,
@@ -111,7 +142,9 @@ const ChatPage = () => {
     addAttachments,
     removeAttachment,
     setAttachments,
-    setPreviewAttachments
+    setPreviewAttachments,
+    chatMembers,
+    fetchChatMembers
   } = useChat();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +173,12 @@ const ChatPage = () => {
   useEffect(() => {
     fetchUserChats();
   }, [fetchUserChats]);
+
+  useEffect(() => {
+    if (currentChat) {
+      fetchChatMembers(currentChat.id);
+    }
+  }, [currentChat, fetchChatMembers]);
 
   useEffect(() => {
     scrollToBottom();
@@ -246,7 +285,7 @@ const ChatPage = () => {
     longPressTimerRef.current = setTimeout(() => {
       setContextMenu({
         message,
-        x: 100, // Примерные координаты для мобильных устройств
+        x: 100,
         y: 100,
       });
     }, 500);
@@ -434,21 +473,16 @@ const ChatPage = () => {
   }
 
   return (
-    <Box display="flex" height="100%">
-      <Paper elevation={3} sx={{ width: 350, height: '100%', overflow: 'auto' }}>
+    <ChatContainer>
+      <ChatListContainer>
         <Box p={2}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', fontSize: "30px", textAlign: "left", paddingLeft: "5px" }}>
             Чаты
           </Typography>
-          <TextField
-            fullWidth
-            variant="outlined"
-            size="small"
-            placeholder="Поиск чатов..."
-            value={searchQuery}
+          <SearchField
             onChange={(e) => searchChats(e.target.value)}
-            sx={{ mt: 2 }}
-          />
+            placeholder="Поиск">
+          </SearchField>
         </Box>
         <Divider />
         
@@ -457,7 +491,7 @@ const ChatPage = () => {
             <CircularProgress />
           </Box>
         ) : (
-          <List>
+          <List sx={{ overflowY: 'auto', flex: 1 }}>
             {chats.map((chat) => (
               <React.Fragment key={chat.id}>
                 <ListItem 
@@ -502,6 +536,7 @@ const ChatPage = () => {
                       />
                     </ListItemAvatar>
                     <ListItemText
+                      style={{marginLeft: "10px" }}
                       primary={
                         <Box display="flex" justifyContent="space-between">
                           <Typography fontWeight="bold">{chat.name}</Typography>
@@ -534,9 +569,9 @@ const ChatPage = () => {
             ))}
           </List>
         )}
-      </Paper>
+      </ChatListContainer>
 
-      <Box flex={1} display="flex" flexDirection="column">
+      <ChatContentContainer>
         {!currentChat ? (
           <Box flex={1} display="flex" alignItems="center" justifyContent="center">
             <Typography variant="h6" color="textSecondary">
@@ -558,7 +593,12 @@ const ChatPage = () => {
                 src={getChatAvatar(currentChat)}
                 sx={{ width: 40, height: 40, mr: 2 }}
               />
-              <Typography variant="h6">{currentChat.name}</Typography>
+              <Box>
+                <Typography variant="h6">{currentChat.name}</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {chatMembers.length} участников
+                </Typography>
+              </Box>
             </Box>
             
             <Box p={2} borderBottom="1px solid #eee">
@@ -587,32 +627,12 @@ const ChatPage = () => {
               />
             </Box>
             
-            <Box 
-              flex={1} 
-              p={2} 
-              overflow="auto" 
-              bgcolor="#f9f9f9"
-              sx={{
-                '&::-webkit-scrollbar': {
-                  width: '6px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#888',
-                  borderRadius: '3px',
-                },
-                '&::-webkit-scrollbar-thumb:hover': {
-                  background: '#555',
-                },
-              }}
-            >
+            <MessagesContainer>
               <List>
                 {messages.map(renderMessageItem)}
                 <div ref={messagesEndRef} />
               </List>
-            </Box>
+            </MessagesContainer>
             
             <Box p={2} borderTop="1px solid #eee">
               {attachments.length > 0 && renderAttachmentPreviews()}
@@ -680,7 +700,7 @@ const ChatPage = () => {
             </Box>
           </>
         )}
-      </Box>
+      </ChatContentContainer>
 
       {contextMenu && (
         <ContextMenu
@@ -705,7 +725,7 @@ const ChatPage = () => {
       {isSideOpen && currentChat && (
         <ChatSide chat={currentChat} onClose={handleCloseSide} />
       )}
-    </Box>
+    </ChatContainer>
   );
 };
 
