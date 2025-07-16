@@ -448,11 +448,9 @@ const ChatPage = () => {
 const renderMessageTextWithLinks = (text: string) => {
   if (!text) return null;
 
-  // Проверяем URL по старинке, но без жадных групп
   const urlRegex = /(https?:\/\/[^\s]+)|(^|\s)([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*)/g;
   
   return text.split(' ').map((word, i) => {
-    // Если слово - полная ссылка с http(s)
     if (word.match(/^https?:\/\/[^\s]+/)) {
       return (
         <a key={i} href={word} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
@@ -460,7 +458,6 @@ const renderMessageTextWithLinks = (text: string) => {
         </a>
       );
     }
-    // Если слово - домен типа lets-digit.ru
     else if (word.match(/^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*/) && !word.endsWith('.')) {
       return (
         <a key={i} href={`https://${word}`} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
@@ -468,7 +465,6 @@ const renderMessageTextWithLinks = (text: string) => {
         </a>
       );
     }
-    // Обычный текст
     return word + ' ';
   });
 };
