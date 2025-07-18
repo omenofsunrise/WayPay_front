@@ -43,7 +43,7 @@ const CreditControlPage = () => {
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
-  }>({ key: null, direction: 'asc' });
+  }>({ key: null, direction: 'desc' });
   const itemsPerPage = 10;
   const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
