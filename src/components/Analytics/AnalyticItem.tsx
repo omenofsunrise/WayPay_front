@@ -13,15 +13,15 @@ const Container = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-  width: 100%;
+  width: auto;
 `;
 
 const IconContainer = styled.div<{ $iconColor?: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background-color: ${({ $iconColor }) => $iconColor || '#000'};
 `;
@@ -30,6 +30,7 @@ const Content = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
+  text-align: left;
 `;
 
 const Label = styled.span`
@@ -60,6 +61,8 @@ const ChangeText = styled.span<{ $isPositive?: boolean; $neutral?: boolean }>`
     $neutral ? 'rgba(80, 85, 92, 1)' : $isPositive ? '#007D88' : 'rgba(255, 90, 90, 1)'};
   font-size: 12px;
   font-weight: 400;
+  text-align: left;
+  white-space: pre-line; // Добавляем это свойство
 `;
 
 const AnalyticItem: React.FC<AnalyticItemProps> = ({
@@ -84,6 +87,9 @@ const AnalyticItem: React.FC<AnalyticItemProps> = ({
 
     const isPositive = changeValue > 0;
     const text = isPositive ? 'больше' : 'меньше';
+    const formattedValue = changeValue % 1 === 0 ? 
+      Math.abs(changeValue) : 
+      Math.abs(changeValue).toFixed(1);
 
     return (
       <ChangeContainer>
@@ -102,7 +108,7 @@ const AnalyticItem: React.FC<AnalyticItemProps> = ({
           </svg>
         </ChangeIcon>
         <ChangeText $isPositive={isPositive}>
-          на {Math.abs(changeValue)}% {text}, чем за прошлый период
+          на {formattedValue}% {text},<br />чем за прошлый период
         </ChangeText>
       </ChangeContainer>
     );
