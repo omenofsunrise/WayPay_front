@@ -6,6 +6,8 @@ import CustomTitle from "../components/ui/Text/CustomTitle";
 import styled from "styled-components";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import ScatterPlot from "../components/Dashboards/ScatterPlot";
+import ColumnChart from "../components/Dashboards/ColumnChart";
+import MiniPieChart from "../components/Dashboards/MiniPieChart";
 
 const AnalyticsPage = () => {
     const financialData: PointData[] = [
@@ -29,6 +31,102 @@ const AnalyticsPage = () => {
         { x: 4, y: 1050000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Апр" },
         { x: 5, y: 700000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Май" },
         { x: 6, y: 900000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Июн" },
+    ];
+
+    const investmentData: ChartData[] = [
+        {
+            label: "Янв",
+            total: 1200000,
+            bars: [
+                { name: "Инвестиция", value: 400000, color: "rgba(37, 203, 161, 1)" },
+            ]
+        },
+        {
+            label: "Фев",
+            total: 1500000,
+            bars: [
+                { name: "Инвестиция", value: 600000, color: "rgba(37, 203, 161, 1)" },
+            ]
+        },
+        {
+            label: "Мар",
+            total: 1800000,
+            bars: [
+                { name: "Инвестиция", value: 700000, color: "rgba(37, 203, 161, 1)" },
+            ]
+        },
+        {
+            label: "Апр",
+            total: 2100000,
+            bars: [
+                { name: "Инвестиция", value: 900000, color: "rgba(37, 203, 161, 1)" },
+            ]
+        },
+        {
+            label: "Май",
+            total: 2400000,
+            bars: [
+                { name: "Инвестиция", value: 1000000, color: "rgba(37, 203, 161, 1)" },
+            ]
+        },
+        {
+            label: "Июн",
+            total: 2700000,
+            bars: [
+                { name: "Инвестиция", value: 1200000, color: "rgba(37, 203, 161, 1)" },
+            ]
+        }
+    ];
+
+    const financialObligationsData: ChartData[] = [
+        {
+            label: "Янв",
+            total: 500000,
+            bars: [
+                { name: "Сумма просрочки", value: 150000, color: "rgba(0, 125, 136, 1)" },
+                { name: "Сумма ежемесячных платежей", value: 350000, color: "rgba(173, 179, 188, 1)" },
+            ]
+        },
+        {
+            label: "Фев",
+            total: 550000,
+            bars: [
+                { name: "Сумма просрочки", value: 120000, color: "rgba(0, 125, 136, 1)" },
+                { name: "Сумма ежемесячных платежей", value: 430000, color: "rgba(173, 179, 188, 1)" },
+            ]
+        },
+        {
+            label: "Мар",
+            total: 600000,
+            bars: [
+                { name: "Сумма просрочки", value: 180000, color: "rgba(0, 125, 136, 1)" },
+                { name: "Сумма ежемесячных платежей", value: 420000, color: "rgba(173, 179, 188, 1)" },
+            ]
+        },
+        {
+            label: "Апр",
+            total: 650000,
+            bars: [
+                { name: "Сумма просрочки", value: 90000, color: "rgba(0, 125, 136, 1)" },
+                { name: "Сумма ежемесячных платежей", value: 560000, color: "rgba(173, 179, 188, 1)" },
+            ]
+        },
+        {
+            label: "Май",
+            total: 700000,
+            bars: [
+                { name: "Сумма просрочки", value: 200000, color: "rgba(0, 125, 136, 1)" },
+                { name: "Сумма ежемесячных платежей", value: 500000, color: "rgba(173, 179, 188, 1)" },
+            ]
+        },
+        {
+            label: "Июн",
+            total: 750000,
+            bars: [
+                { name: "Сумма просрочки", value: 100000, color: "rgba(0, 125, 136, 1)" },
+                { name: "Сумма ежемесячных платежей", value: 650000, color: "rgba(173, 179, 188, 1)" },
+            ]
+        }
     ];
 
     return (
@@ -68,7 +166,7 @@ const AnalyticsPage = () => {
                     <AnalyticItem
                         icon={
                             <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12.458 0C5.76855 0 0.348633 5.41992 0.348633 12.1094C0.348633 18.7988 5.76855 24.2188 12.458 24.2188C19.1475 24.2188 24.5674 18.7988 24.5674 12.1094C24.5674 5.41992 19.1475 0 12.458 0ZM15.2461 17.0947L10.9395 13.9648C10.7881 13.8525 10.7002 13.6768 10.7002 13.4912V5.27344C10.7002 4.95117 10.9639 4.6875 11.2861 4.6875H13.6299C13.9521 4.6875 14.2158 4.95117 14.2158 5.27344V11.9971L17.3164 14.2529C17.5801 14.4434 17.6338 14.8096 17.4434 15.0732L16.0664 16.9678C15.876 17.2266 15.5098 17.2852 15.2461 17.0947Z" fill="#CA792D"/>
+                                <path d="M12.458 0C5.76855 0 0.348633 5.41992 0.348633 12.1094C0.348633 18.7988 5.76855 24.2188 12.458 24.2188C19.1475 24.2188 24.5674 18.7988 24.5674 12.1094C24.5674 5.41992 19.1475 0 12.458 0ZM15.2461 17.0947L10.9395 13.9648C10.7881 13.8525 10.7002 13.6768 10.7002 13.4912V5.27344C10.7002 4.95117 10.9639 4.6875 11.2861 4.6875H13.6299C13.9521 4.6875 14.2158 4.95117 14.2158 5.27344V11.9971L17.3164 14.2529C17.5801 14.4434 17.6338 14.8096 17.4434 15.0732L16.0664 16.9678C15.8760 17.2266 15.5098 17.2852 15.2461 17.0947Z" fill="#CA792D"/>
                             </svg>
                         }
                         iconColor="rgba(255, 218, 182, 1)"
@@ -90,22 +188,63 @@ const AnalyticsPage = () => {
                     />
                 </AnalyticsContainer>
 
-                <ChartSection>
-                    <ScatterPlot
-                        title="Динамика продаж, покупок и остатка в кассе"
-                        data={financialData}
-                        xAxisLabel=""
-                        yAxisLabel="Сумма (руб)"
-                        maxX={6}
-                        maxY={2500000}
-                        xStep={1}
-                        yStep={500000}
-                        height={200}
-                        showLegend={true}
-                        xAxisCustomLabels={["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]}
-                        titleFontSize="15px"
-                    />
-                </ChartSection>
+                <ChartsContainer>
+                    <ChartSection>
+                        <ScatterPlot
+                            title="Динамика продаж, покупок и остатка в кассе"
+                            data={financialData}
+                            xAxisLabel=""
+                            yAxisLabel="Сумма (руб)"
+                            maxX={6}
+                            maxY={2500000}
+                            xStep={1}
+                            yStep={500000}
+                            height={150}
+                            showLegend={true}
+                            xAxisCustomLabels={["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]}
+                            titleFontSize="15px"
+                        />
+                    </ChartSection>
+                    <ChartSection style={{flex: 0.6}}>
+                        <ColumnChart
+                            title="Динамика инвестиций"
+                            data={investmentData}
+                            maxValue={3000000}
+                            step={500000}
+                            height={200}
+                        />
+                    </ChartSection>
+                </ChartsContainer>
+
+                <ChartsContainer>
+                    <ChartSection2 style={{flex: 1.4}}>
+                        <ColumnChart
+                            title="Исполнение финансовых обязательств"
+                            data={financialObligationsData}
+                            maxValue={800000}
+                            step={200000}
+                            height={100}
+                        />
+                    </ChartSection2>
+                    <PieChartsContainer>
+                      <MiniPieChart
+                        title="Колво договоров"
+                        total={70}
+                        data={[
+                          { name: "Действующие", value: 40, color: "rgba(37, 203, 161, 1)" },
+                          { name: "Закрытые", value: 30, color: "rgba(209, 213, 219, 1)" },
+                        ]}
+                      />
+                      <MiniPieChart
+                        title="Соотношение продаж и покупок"
+                        total={100}
+                        data={[
+                          { name: "Продажи", value: 40, color: "rgba(0, 125, 136, 1)" },
+                          { name: "Покупки", value: 30, color: "rgba(209, 213, 219, 1)" },
+                        ]}
+                      />
+                    </PieChartsContainer>
+                </ChartsContainer>
             </AnalyticsWrapper>
         </PageLayout>
     )
@@ -129,14 +268,34 @@ const AnalyticsContainer = styled.div`
     margin-bottom: 24px;
 `;
 
-const ChartSection = styled.div`
-    width: 60%;
+const ChartsContainer = styled.div`
+    display: flex;
+    gap: 24px;
+    width: 100%;
     box-sizing: border-box;
+    margin-bottom: 24px;
+`;
+
+const ChartSection = styled.div`
+    flex: 1;
+    flexDirection: row;
+`;
+
+const PieChartsContainer = styled.div`
+    flex: 1;
+    display: flex;
+    gap: 16px;
+`;
+
+const ChartSection2 = styled.div`
+    flex: 1;
+    display: flex; 
+    flex-direction: row;
+    gap: 16px;
 `;
 
 export default AnalyticsPage;
 
-// Типы для данных графика
 interface PointData {
     x: number;
     y: number;
@@ -144,4 +303,16 @@ interface PointData {
     label?: string;
     value?: number;
     name?: string;
+}
+
+interface BarData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface ChartData {
+  label: string;
+  total: number;
+  bars: BarData[];
 }
