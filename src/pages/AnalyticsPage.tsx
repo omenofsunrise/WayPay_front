@@ -217,7 +217,7 @@ const AnalyticsPage = () => {
                 </ChartsContainer>
 
                 <ChartsContainer>
-                    <ChartSection2 style={{flex: 1.4}}>
+                    <ChartSection2 style={{flex: 1.7}}>
                         <ColumnChart
                             title="Исполнение финансовых обязательств"
                             data={financialObligationsData}

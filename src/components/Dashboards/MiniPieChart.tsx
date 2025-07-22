@@ -83,7 +83,7 @@ const ChartContainer = styled.div`
   border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 10px;
   padding: 16px;
-  width: fit-content;
+  width: 100%;
   font-family: sans-serif;
   color: black;
 `;
