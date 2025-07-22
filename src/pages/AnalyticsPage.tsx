@@ -5,8 +5,32 @@ import PageLayout from "../components/ui/Layouts/PageLayout"
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import styled from "styled-components";
 import TitleField from "../components/ui/Layouts/TitleLayout";
+import ScatterPlot from "../components/Dashboards/ScatterPlot";
 
 const AnalyticsPage = () => {
+    const financialData: PointData[] = [
+        { x: 1, y: 1200000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Янв" },
+        { x: 2, y: 1800000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Фев" },
+        { x: 3, y: 1500000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Мар" },
+        { x: 4, y: 2100000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Апр" },
+        { x: 5, y: 1900000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Май" },
+        { x: 6, y: 2300000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Июн" },
+        
+        { x: 1, y: 800000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Янв" },
+        { x: 2, y: 950000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Фев" },
+        { x: 3, y: 1100000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Мар" },
+        { x: 4, y: 1050000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Апр" },
+        { x: 5, y: 1200000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Май" },
+        { x: 6, y: 1400000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Июн" },
+        
+        { x: 1, y: 400000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Янв" },
+        { x: 2, y: 850000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Фев" },
+        { x: 3, y: 400000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Мар" },
+        { x: 4, y: 1050000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Апр" },
+        { x: 5, y: 700000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Май" },
+        { x: 6, y: 900000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Июн" },
+    ];
+
     return (
         <PageLayout>
             <TitleField>
@@ -65,15 +89,31 @@ const AnalyticsPage = () => {
                         changeValue={0}
                     />
                 </AnalyticsContainer>
+
+                <ChartSection>
+                    <ScatterPlot
+                        title="Динамика продаж, покупок и остатка в кассе"
+                        data={financialData}
+                        xAxisLabel=""
+                        yAxisLabel="Сумма (руб)"
+                        maxX={6}
+                        maxY={2500000}
+                        xStep={1}
+                        yStep={500000}
+                        height={200}
+                        showLegend={true}
+                        xAxisCustomLabels={["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]}
+                        titleFontSize="15px"
+                    />
+                </ChartSection>
             </AnalyticsWrapper>
         </PageLayout>
     )
 }
 
 const AnalyticsWrapper = styled.div`
-    padding: 0 16px; // Добавляем отступы по бокам
     width: 100%;
-    box-sizing: border-box; // Чтобы padding не увеличивал общую ширину
+    box-sizing: border-box;
 `;
 
 const AnalyticsContainer = styled.div`
@@ -81,11 +121,27 @@ const AnalyticsContainer = styled.div`
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 16px;
     width: 100%;
-    padding: 20px;
+    padding: 20px 80px;
     background-color: #f8fafc;
     border-radius: 8px;
     border: 1px solid rgba(209, 213, 219, 1);
     box-sizing: border-box;
+    margin-bottom: 24px;
+`;
+
+const ChartSection = styled.div`
+    width: 60%;
+    box-sizing: border-box;
 `;
 
 export default AnalyticsPage;
+
+// Типы для данных графика
+interface PointData {
+    x: number;
+    y: number;
+    color: string;
+    label?: string;
+    value?: number;
+    name?: string;
+}

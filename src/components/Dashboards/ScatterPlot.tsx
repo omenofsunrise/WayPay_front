@@ -25,6 +25,7 @@ interface ScatterPlotProps {
   showLegend?: boolean;
   xAxisCustomLabels?: string[];
   showTooltip?: boolean;
+  titleFontSize?: string;
 }
 
 const fadeIn = keyframes`
@@ -44,7 +45,8 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   height = 300,
   showLegend = true,
   xAxisCustomLabels,
-  showTooltip = true
+  showTooltip = true,
+  titleFontSize = '30px',
 }) => {
   const [hoveredPoint, setHoveredPoint] = useState<PointData | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -71,6 +73,16 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
         })
     : [];
 
+  // Группируем данные по категориям (label)
+  const groupedData: Record<string, PointData[]> = {};
+  data.forEach(point => {
+    const label = point.label || 'default';
+    if (!groupedData[label]) {
+      groupedData[label] = [];
+    }
+    groupedData[label].push(point);
+  });
+
   const calculateXPosition = (x: number) => {
     return ((x - 1) / (maxX - 1)) * 100;
   };
@@ -95,12 +107,12 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   return (
     <ChartContainer>
       <TitleField style={{ marginTop: "0" }}>
-        <CustomTitle>{title}</CustomTitle>
+        <CustomTitle style={{ fontSize: titleFontSize }}>{title}</CustomTitle>
         {showLegend && legendItems.length > 0 && (
           <Legend>
             {legendItems.map((item, index) => (
               <LegendItem key={index}>
-                <LegendColor color={item.color} />
+                <LegendLine color={item.color} />
                 <LegendText>{item.name}</LegendText>
               </LegendItem>
             ))}
@@ -126,38 +138,41 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
             />
           ))}
 
-          {data.map((point, index) => {
-            if (index === 0) return null;
+          {/* Рисуем линии для каждой группы отдельно */}
+          {Object.values(groupedData).map((group, groupIndex) => {
+            return group.map((point, index) => {
+              if (index === 0) return null;
 
-            const prevPoint = data[index - 1];
-            const x1 = calculateXPosition(prevPoint.x);
-            const y1 = calculateYPosition(prevPoint.y);
-            const x2 = calculateXPosition(point.x);
-            const y2 = calculateYPosition(point.y);
+              const prevPoint = group[index - 1];
+              const x1 = calculateXPosition(prevPoint.x);
+              const y1 = calculateYPosition(prevPoint.y);
+              const x2 = calculateXPosition(point.x);
+              const y2 = calculateYPosition(point.y);
 
-            return (
-              <svg
-                key={`line-${index}`}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  pointerEvents: 'none',
-                  zIndex: 1,
-                }}
-              >
-                <line
-                  x1={`${x1}%`}
-                  y1={`${y1}%`}
-                  x2={`${x2}%`}
-                  y2={`${y2}%`}
-                  stroke="rgba(0, 125, 136, 0.5)"
-                  strokeWidth="1"
-                />
-              </svg>
-            );
+              return (
+                <svg
+                  key={`line-${groupIndex}-${index}`}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                  }}
+                >
+                  <line
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
+                    stroke={point.color}
+                    strokeWidth="1"
+                  />
+                </svg>
+              );
+            });
           })}
 
           {data.map((point, index) => (
@@ -212,6 +227,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   );
 };
 
+// Остальные стили остаются без изменений
 const ChartContainer = styled.div`
   background-color: white;
   border-radius: 10px;
@@ -225,26 +241,28 @@ const ChartContainer = styled.div`
 const Legend = styled.div`
   display: flex;
   gap: 16px;
-  margin-bottom: 20px;
+  margin: 20px 0;
   flex-wrap: wrap;
+  width: 'auto';
 `;
 
 const LegendItem = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 100px;
 `;
 
-const LegendColor = styled.div<{ color: string }>`
+const LegendLine = styled.div<{ color: string }>`
   width: 16px;
-  height: 16px;
+  height: 2px;
   background-color: ${props => props.color};
-  border-radius: 50%;
 `;
 
 const LegendText = styled.span`
   font-size: 14px;
   color: #4B5563;
+  white-space: nowrap;
 `;
 
 const ChartContent = styled.div<{ height?: number | string }>`
@@ -341,7 +359,6 @@ const XAxisLabel = styled.span`
   font-size: 12px;
   color: #6B7280;
   text-align: center;
-  
 `;
 
 const TooltipWrapper = styled.div`

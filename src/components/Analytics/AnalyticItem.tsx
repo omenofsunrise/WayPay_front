@@ -31,6 +31,7 @@ const Content = styled.div`
   flex-direction: column;
   flex: 1;
   text-align: left;
+  max-width: 200px;
 `;
 
 const Label = styled.span`
@@ -38,17 +39,20 @@ const Label = styled.span`
   color: rgba(80, 85, 92, 1);
   white-space: nowrap;
   font-weight: 500;
+  max-width: 200px;
 `;
 
 const Value = styled.span`
   font-size: 20px;
   font-weight: 600;
+  max-width: 200px;
   color: #000;
 `;
 
 const ChangeContainer = styled.div`
   display: flex;
   align-items: center;
+  max-width: 200px;
   gap: 4px;
 `;
 
