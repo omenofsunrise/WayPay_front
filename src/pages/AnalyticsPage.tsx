@@ -8,8 +8,11 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import ScatterPlot from "../components/Dashboards/ScatterPlot";
 import ColumnChart from "../components/Dashboards/ColumnChart";
 import MiniPieChart from "../components/Dashboards/MiniPieChart";
+import { useState } from "react";
 
 const AnalyticsPage = () => {
+  const [period, setPeriod] = useState<string>('thisMonth');
+  
     const financialData: PointData[] = [
         { x: 1, y: 1200000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Янв" },
         { x: 2, y: 1800000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Фев" },
@@ -134,8 +137,11 @@ const AnalyticsPage = () => {
             <TitleField>
                 <CustomTitle>Аналитика</CustomTitle>
             </TitleField>
-            <FilterField>
-                <PeriodField></PeriodField>
+            <FilterField style={{margin: "0 0 10px"}}>
+                <PeriodField 
+                    value={period}
+                    onChange={(value) => setPeriod(value)}
+                />
             </FilterField>
             <AnalyticsWrapper>
                 <AnalyticsContainer>

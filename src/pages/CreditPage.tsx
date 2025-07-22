@@ -248,10 +248,6 @@ const CreditPage = () => {
     }
   };
 
-  const handlePrint = () => {
-    console.log('Печать данных', creditsData?.items);
-  };
-
   const formatCreditData = (credits: Credit[] | undefined) => {
     if (!credits) return [];
     

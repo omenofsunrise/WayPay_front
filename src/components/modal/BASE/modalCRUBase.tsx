@@ -126,14 +126,14 @@ const ModalForm = styled.form`
   flex: 1;
 `;
 
-const ModalHeader = styled.div`
+export const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 0;
 `;
 
-const ModalTitle = styled.h2`
+export const ModalTitle = styled.h2`
   font-size: 30px;
   font-weight: 600;
   color: #000;

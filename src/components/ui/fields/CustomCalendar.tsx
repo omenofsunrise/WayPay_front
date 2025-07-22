@@ -338,15 +338,17 @@ const DateText = styled.span<{ isEmpty: boolean }>`
 `;
 
 const CalendarPopup = styled.div`
-  position: absolute;
-  top: 100%;
-  left: 0;
+  position: fixed;
+  top: unset; 
+  bottom: unset;
+  left: unset; 
+  transform: translate(0, 0);
   margin-top: 8px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 16px;
-  z-index: 1000;
+  z-index: 9999;
   width: 280px;
   color: black;
 `;
