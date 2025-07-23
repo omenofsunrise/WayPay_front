@@ -277,7 +277,7 @@ const ClientPage = () => {
                             { name: "ФИО", isSortable: true, align: "left" },
                             { name: "Телефон", align: "left" },
                             { name: "WhatsApp", align: "left" },
-                            { name: "Дата рождения", isSortable: true, align: "right" },
+                            { name: "Дата рождения", isSortable: false, align: "right" },
                             { name: "№ договоров", align: "right" },
                             { name: "Остатки мес.", align: "right" }
                         ]} 
