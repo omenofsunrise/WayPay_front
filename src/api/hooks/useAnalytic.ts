@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import analiticService from '../services/analiticService';
-import type { AnalyticParams, AnalyticResponse } from '../types/analityc';
+import analyticService from '../services/analyticService';
+import type { AnalyticParams, AnalyticResponse } from '../types/analytic';
 
-const useAnalitic = () => {
+const useAnalytic = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyticResponse | null>(null);
@@ -11,7 +11,7 @@ const useAnalitic = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await analiticService.getAnalyticItems(params);
+      const result = await analyticService.getAnalyticItems(params);
       setData(result);
       return result;
     } catch (err) {
@@ -30,4 +30,4 @@ const useAnalitic = () => {
   };
 };
 
-export default useAnalitic;
+export default useAnalytic;

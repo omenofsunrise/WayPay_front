@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import CustomCalendar from './CustomCalendar';
 import BaseModal, { ModalHeader, ModalTitle } from '../../modal/BASE/modalCRUBase';
+import type { PredefinedPeriod } from '../../../api/types/analytic';
 
 interface PeriodOption {
   id: string;
   label: string;
-  value: string;
+  value: PredefinedPeriod;
 }
 
 interface PeriodFieldProps {
@@ -19,12 +20,12 @@ interface PeriodFieldProps {
 }
 
 const defaultOptions: PeriodOption[] = [
-  { id: '7days', label: 'За последние 7 дней', value: '7days' },
-  { id: 'thisMonth', label: 'За этот месяц', value: 'thisMonth' },
-  { id: '31days', label: 'За последний 31 день', value: '31days' },
-  { id: 'lastMonth', label: 'За прошлый месяц', value: 'lastMonth' },
-  { id: 'thisYear', label: 'За этот год', value: 'thisYear' },
-  { id: 'lastYear', label: 'За прошлый год', value: 'lastYear' },
+  { id: 'Last7Days', label: 'За последние 7 дней', value: 'Last7Days' },
+  { id: 'ThisMonth', label: 'За этот месяц', value: 'ThisMonth' },
+  { id: 'Last31Days', label: 'За последние 31 день', value: 'Last31Days' },
+  { id: 'PreviousMonth', label: 'За прошлый месяц', value: 'PreviousMonth' },
+  { id: 'ThisYear', label: 'За этот год', value: 'ThisYear' },
+  { id: 'PreviousYear', label: 'За прошлый год', value: 'PreviousYear' },
 ];
 
 const PeriodField: React.FC<PeriodFieldProps> = ({

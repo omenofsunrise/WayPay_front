@@ -17,14 +17,10 @@ export interface AnalyticParams {
 }
 
 export type PredefinedPeriod = 
-  | 'Today'
-  | 'Yesterday'
-  | 'ThisWeek'
-  | 'LastWeek'
+  | 'Last7Days'
   | 'ThisMonth'
-  | 'LastMonth'
-  | 'ThisQuarter'
-  | 'LastQuarter'
+  | 'Last31Days'
+  | 'PreviousMonth'
   | 'ThisYear'
-  | 'LastYear'
+  | 'PreviousYear'
   | 'Custom';

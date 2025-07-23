@@ -1,7 +1,7 @@
 import apiClient from '../client';
-import type { AnalyticParams, AnalyticResponse } from '../types/analityc';
+import type { AnalyticParams, AnalyticResponse } from '../types/analytic';
 
-class AnaliticService {
+class AnalyticService {
   async getAnalyticItems(params?: AnalyticParams): Promise<AnalyticResponse> {
     const response = await apiClient.get<AnalyticResponse>('/Analytic/items', { 
       params: {
@@ -15,4 +15,4 @@ class AnaliticService {
   }
 }
 
-export default new AnaliticService();
+export default new AnalyticService();
