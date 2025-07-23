@@ -5,7 +5,7 @@ import ContextMenu from '../../modal/ContextMenu';
 
 type Alignment = 'left' | 'center' | 'right';
 
-interface Column {
+export interface Column {
   name: string;
   isSortable?: boolean;
   align?: Alignment;

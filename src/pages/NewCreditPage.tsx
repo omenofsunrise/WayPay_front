@@ -346,7 +346,7 @@ const NewCreditPage = () => {
             <EntitySelectWrapper>
               <EntitySelectContainer
                 mode="create"
-                primaryValue={investor?.fullName || investor?.nickname || ''}
+                primaryValue={investor?.nickname || ''}
                 secondaryValue={investor?.phoneNumber}
                 placeholder="Выберите инвестора"
                 onSelect={openInvestorModal}

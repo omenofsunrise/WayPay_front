@@ -3,7 +3,7 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable, { type TableAction } from "../components/ui/tables/CustomTable";
+import CustomTable, { type Column, type TableAction } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
@@ -18,6 +18,7 @@ import useInvestor from '../api/hooks/useInvestor';
 import { formatMoney, parseMoney } from '../utils/formatPrice';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
+import { useAuth } from '../сontext/AuthContext';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -27,7 +28,7 @@ const InvestorPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    
+    const { hasRole } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
@@ -63,6 +64,8 @@ const InvestorPage = () => {
     const [investmentAmount, setInvestmentAmount] = useState('');
 
     const handleAddInvestment = (rowData: any[]) => {
+        if (!hasRole('директор')) return;
+        
         const [id] = rowData;
         setSelectedInvestor(investorsData?.items.find(i => i.id === Number(id)) || null);
         setIsInvestmentModalOpen(true);
@@ -167,6 +170,8 @@ const InvestorPage = () => {
     };
 
     const handleCreateInvestor = () => {
+        if (!hasRole('директор')) return;
+        
         setModalMode('create');
         setSelectedInvestor({
             id: 0,
@@ -183,6 +188,8 @@ const InvestorPage = () => {
     };
 
     const handleEditInvestor = (investor: Investor) => {
+        if (!hasRole('директор')) return;
+        
         setModalMode('edit');
         setSelectedInvestor(investor);
         setIsModalOpen(true);
@@ -195,6 +202,8 @@ const InvestorPage = () => {
     };
 
     const handleDeleteInvestor = async (rowData: any[]) => {
+        if (!hasRole('директор')) return;
+        
         const [id] = rowData;
         
         if (isNaN(Number(id))) {
@@ -248,28 +257,32 @@ const InvestorPage = () => {
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
         const investor = investorsData?.items.find(i => i.id === Number(rowData[0]));
         if (investor) {
-            handleEditInvestor(investor);
+            if (hasRole('директор')) {
+                handleEditInvestor(investor);
+            } else {
+                handleViewInvestor(investor);
+            }
         }
     };
 
     const tableData = investorsData?.items?.map(investor => {
         if (!investor || investor.id === undefined || investor.id === null) {
             return [
-            '',
-            '',
-            '',
-            '',
-            '0%',
-            formatMoney('0'),
-            formatMoney('0'),
-            'false'
+                '',
+                '',
+                ...(hasRole('директор') ? [''] : []),
+                '',
+                '0%',
+                formatMoney('0'),
+                formatMoney('0'),
+                'false'
             ];
         }
 
         return [
             investor.id.toString(),
             investor.nickname || '',
-            investor.fullName || '',
+            ...(hasRole('директор') ? [investor.fullName || ''] : []),
             investor.phoneNumber || '',
             `${investor.investorPie || 0}%`,
             formatMoney((investor.investmentAmount || 0).toString()),
@@ -279,6 +292,8 @@ const InvestorPage = () => {
     }) ?? [];
 
     const tableActions = (rowData: any[]): TableAction[] => {
+        if (!hasRole('директор')) return [];
+        
         const [id] = rowData;
         const investor = investorsData?.items.find(i => i.id === Number(id));
         const isBlocked = investor?.isBlocked || false;
@@ -324,6 +339,8 @@ const InvestorPage = () => {
     };
 
     const handleBlockInvestor = async (rowData: any[]) => {
+        if (!hasRole('директор')) return;
+        
         const [id] = rowData;
         
         if (isNaN(Number(id))) {
@@ -333,15 +350,17 @@ const InvestorPage = () => {
 
         if (window.confirm('Вы уверены, что хотите заблокировать этого инвестора?')) {
             try {
-            await blockInvestor(Number(id));
-            loadInvestors();
+                await blockInvestor(Number(id));
+                loadInvestors();
             } catch (err) {
-            alert('Произошла ошибка при блокировке инвестора');
+                alert('Произошла ошибка при блокировке инвестора');
             }
         }
     };
 
-        const handleClearInvestor = async (rowData: any[]) => {
+    const handleClearInvestor = async (rowData: any[]) => {
+        if (!hasRole('директор')) return;
+        
         const [id] = rowData;
         
         if (isNaN(Number(id))) {
@@ -351,13 +370,26 @@ const InvestorPage = () => {
 
         if (window.confirm('Вы уверены, что хотите анулировать этого инвестора?')) {
             try {
-            await clearInvestor(Number(id));
-            loadInvestors();
+                await clearInvestor(Number(id));
+                loadInvestors();
             } catch (err) {
-            alert('Произошла ошибка при анулировании инвестора');
+                alert('Произошла ошибка при анулировании инвестора');
             }
         }
     };
+
+    const columns: Column[] = [
+        { name: "id", isHidden: true },
+        { name: "Никнейм", align: "left" },
+        ...(hasRole('директор') 
+            ? [{ name: "ФИО (видно только директору)", isSortable: true, align: "left" } as Column]
+            : []),
+        { name: "Телефон", align: "left" },
+        { name: "Доля инвестора", isSortable: true, align: "right" },
+        { name: "Инвестиция", isSortable: true, align: "right" },
+        { name: "Касса", isSortable: true, align: "right" },
+        { name: "isBlocked", isHidden: true }
+    ];
 
     return (
         <PageLayout>
@@ -370,14 +402,16 @@ const InvestorPage = () => {
                 />
             </TitleField>
             
-            <FilterField>
-                <DarkCyanButton 
-                    style={{ width: "15vw", marginLeft: "auto" }}
-                    onClick={handleCreateInvestor}
-                >
-                    + Новый инвестор
-                </DarkCyanButton>
-            </FilterField>
+            {hasRole('директор') && (
+                <FilterField>
+                    <DarkCyanButton 
+                        style={{ width: "15vw", marginLeft: "auto" }}
+                        onClick={handleCreateInvestor}
+                    >
+                        + Новый инвестор
+                    </DarkCyanButton>
+                </FilterField>
+            )}
             
             {isLoading && <div>Загрузка...</div>}
             {error && <div>Ошибка: {error}</div>}
@@ -385,16 +419,7 @@ const InvestorPage = () => {
             {!isLoading && !error && investorsData && (
                 <>
                     <CustomTable 
-                        columns={[
-                            { name: "id", isHidden: true },
-                            { name: "Никнейм", align: "left" },
-                            { name: "ФИО (видно только админам)", isSortable: true, align: "left" },
-                            { name: "Телефон", align: "left" },
-                            { name: "Доля инвестора", isSortable: true, align: "right" },
-                            { name: "Инвестиция", isSortable: true, align: "right" },
-                            { name: "Касса", isSortable: true, align: "right" },
-                            { name: "isBlocked", isHidden: true }
-                        ]} 
+                        columns={columns} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}
                         contextMenuActions={(rowData) => tableActions(rowData)}
