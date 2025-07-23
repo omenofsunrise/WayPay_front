@@ -25,6 +25,7 @@ import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useAuth } from '../сontext/AuthContext';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import DocxGenerator from '../utils/docxGenerator';
+import InvestorSelect from '../components/ui/fields/InvestorSelect';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -374,13 +375,16 @@ const CreditPage = () => {
         </InputWrapper>
         
         <InputWrapper>
-          <CustomInput
-            inputType="text"
+          <InvestorSelect 
             placeholder="Инвестор"
             value={investorName}
-            onChange={(e) => {
-              setInvestorName(e.target.value);
+            onChange={(name) => {
+              setInvestorName(name);
               setCurrentPage(1);
+            }}
+            onInvestorSelect={(investor) => {
+              // Дополнительная обработка при выборе инвестора из списка
+              console.log('Selected investor:', investor);
             }}
           />
         </InputWrapper>

@@ -24,6 +24,7 @@ import styled from 'styled-components';
 import { Container } from 'react-bootstrap';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useAuth } from '../сontext/AuthContext';
+import InvestorSelect from '../components/ui/fields/InvestorSelect';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -352,13 +353,15 @@ const CreditControlPage = () => {
         </InputWrapper>
         
         <InputWrapper style={{ minWidth: "500px" }}>
-          <CustomInput
-            inputType="text"
+                    <InvestorSelect 
             placeholder="Инвестор"
             value={investorName}
-            onChange={(e) => {
-              setInvestorName(e.target.value);
+            onChange={(name) => {
+              setInvestorName(name);
               setCurrentPage(1);
+            }}
+            onInvestorSelect={(investor) => {
+              console.log('Selected investor:', investor);
             }}
           />
         </InputWrapper>

@@ -15,6 +15,7 @@ export interface Client {
 
 export interface ClientParams extends PaginationParams {
   FullName?: string;
+  Phone?: string;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }
@@ -22,6 +23,7 @@ export interface ClientParams extends PaginationParams {
 export interface ClientForm {
   fullName: string;
   phone: string;
+  secondPhone?: string;
   doc: string;
   birthdate: string;
   docIssueDate: string;

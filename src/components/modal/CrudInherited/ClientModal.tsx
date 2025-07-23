@@ -11,7 +11,8 @@ import useClient from '../../../api/hooks/useClient';
 interface Client {
   id: number;
   fullName: string;
-  phone?: string;
+  phone: string;
+  secondPhone?: string;
   doc?: string;
   birthdate?: string | Date;
   docIssueDate?: string | Date;
@@ -30,6 +31,7 @@ type ClientModalProps = {
 const emptyClient: Omit<Client, 'id'> = {
   fullName: '',
   phone: '',
+  secondPhone: '',
   doc: '',
   birthdate: '',
   docIssueDate: '',
@@ -102,6 +104,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     id: 0,
     fullName: '',
     phone: '',
+    secondPhone: '',
     doc: '',
     birthdate: null,
     docIssueDate: null,
@@ -113,6 +116,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     mode === 'create' ? emptyClient : {
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
+      secondPhone: initialData?.secondPhone || '',
       doc: initialData?.doc || '',
       birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
       docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : '',
@@ -192,6 +196,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         mode === 'create' ? emptyClient : {
           fullName: initialData?.fullName || '',
           phone: initialData?.phone || '',
+          secondPhone: initialData?.secondPhone || '',
           doc: initialData?.doc || '',
           birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
           docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : 
@@ -345,6 +350,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
       const submitData = {
         fullName: formData.fullName,
         phone: formData.phone,
+        secondPhone: formData.secondPhone,
         birthdate: formattedBirthdate,
         docIssueDate: formData.docIssueDate,
         doc: formData.doc,
@@ -523,21 +529,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
           </InputRow>
           
           <InputRow>
-            <InputLabel>Телефон:</InputLabel>
-            <InputContainer>
-              <PhoneModalInput
-                name="phone"
-                placeholder="Телефон"
-                value={formData.phone}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.phone && validationErrors.phone}
-                errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
-              />
-            </InputContainer>
-          </InputRow>
-          
-          <InputRow>
             <InputLabel>Дата рождения:</InputLabel>
             <InputContainer>
               <CustomInput
@@ -631,6 +622,35 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   </>
                 )}
               </div>
+            </InputContainer>
+          </InputRow>
+
+          <ModalInfoTitle>Контактные данные</ModalInfoTitle>
+          <InputRow>
+            <InputLabel>Телефон:</InputLabel>
+            <InputContainer>
+              <PhoneModalInput
+                name="phone"
+                placeholder="Телефон"
+                value={formData.phone}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.phone && validationErrors.phone}
+                errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
+              />
+            </InputContainer>
+          </InputRow>
+
+          <InputRow>
+            <InputLabel>WhatsApp:</InputLabel>
+            <InputContainer>
+              <PhoneModalInput
+                name="secondPhone"
+                placeholder="WhatsApp"
+                value={formData.secondPhone || ''}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+              />
             </InputContainer>
           </InputRow>
         </div>

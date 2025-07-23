@@ -15,11 +15,14 @@ import ClientModal from "../components/modal/CrudInherited/ClientModal";
 import useClients from "../api/hooks/useClient";
 import type { ClientForm } from '../api/types/client';
 import { formatDate } from '../utils/dateFormatter';
+import PhoneModalInput from '../components/ui/fields/PhoneModalInput';
+import { Container } from 'react-bootstrap';
 
 interface Client {
   id: number;
   fullName: string;
   phone: string;
+  secondPhone?: string;
   doc: string;
   birthdate: Date | null;
   docIssueDate: Date | null;
@@ -38,7 +41,8 @@ const ClientPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-    
+    const [phoneFilter, setPhoneFilter] = useState('');
+
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'fullName',
@@ -60,7 +64,8 @@ const ClientPage = () => {
         const params: any = {
             page: currentPage,
             pageSize,
-            FullName: nameFilter || undefined
+            FullName: nameFilter || undefined,
+            Phone: phoneFilter || undefined
         };
 
         if (sortConfig.key !== null) {
@@ -69,8 +74,13 @@ const ClientPage = () => {
         }
 
         await getClients(params);
-    }, [currentPage, nameFilter, sortConfig, getClients]);
+    }, [currentPage, nameFilter, phoneFilter, sortConfig, getClients]);
     
+    const handlePhoneFilterChange = (value: string) => {
+        setPhoneFilter(value);
+        setCurrentPage(1);
+    };
+
     useEffect(() => {
         loadClients();
     }, [currentPage, nameFilter, sortConfig, loadClients]);
@@ -103,6 +113,7 @@ const ClientPage = () => {
             id: 0,
             fullName: '',
             phone: '',
+            secondPhone: '',
             doc: '',
             birthdate: null,
             docIssueDate: null,
@@ -150,11 +161,12 @@ const ClientPage = () => {
             const apiData = {
                 fullName: clientData.fullName,
                 phone: clientData.phone,
+                secondPhone: clientData.secondPhone || undefined,
                 birthdate: parseDate(clientData.birthdate),
                 doc: (clientData as ClientForm).doc || undefined,
                 docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined,
                 docIssueYear: (clientData as ClientForm).docIssueDate || 0,
-                registrationAddress: clientData.registrationAddress
+                registrationAddress: clientData.registrationAddress,
             };
 
             if (modalMode === 'create') {
@@ -181,6 +193,7 @@ const ClientPage = () => {
         client.id.toString(),
         client.fullName,
         client.phone,
+        client.secondPhone,
         formatDate(client.birthdate),
         Array.isArray(client.creditIds) && client.creditIds.length > 0 
             ? client.creditIds.join(', ') 
@@ -191,7 +204,7 @@ const ClientPage = () => {
     ]) || [];
 
     const rowStyles = tableData.reduce((styles, rowData, index) => {
-        const contracts = rowData[4];
+        const contracts = rowData[5];
         
         if (Array.isArray(contracts) && contracts.length === 0) {
             styles[index] = {
@@ -233,14 +246,20 @@ const ClientPage = () => {
             </TitleField>
             
             <FilterField>
-                <CustomInput 
-                    inputType="fullname"
-                    placeholder="ФИО клиента"
-                    value={nameFilter}
-                    onChange={(e) => handleFilterChange(e.target.value)}
-                />
+                <Container style={{display: "flex", flexDirection: "row", width: "40vw", gap: "15px" }}>
+                    <CustomInput 
+                        inputType="fullname"
+                        placeholder="ФИО клиента"
+                        value={nameFilter}
+                        onChange={(e) => handleFilterChange(e.target.value)}
+                    />
+                    <PhoneModalInput 
+                        placeholder="Телефон"
+                        value={phoneFilter}
+                        onChange={(e) => handlePhoneFilterChange(e.target.value)} name={''}/>
+                </Container>
                 <DarkCyanButton 
-                    style={{ width: "15vw" }}
+                    style={{ width: "15vw", marginLeft: "auto" }}
                     onClick={handleCreateClient}
                 >
                     + Добавить
@@ -257,6 +276,7 @@ const ClientPage = () => {
                             { name: "ID", isSortable: true, align: "left" },
                             { name: "ФИО", isSortable: true, align: "left" },
                             { name: "Телефон", align: "left" },
+                            { name: "WhatsApp", align: "left" },
                             { name: "Дата рождения", isSortable: true, align: "right" },
                             { name: "№ договоров", align: "right" },
                             { name: "Остатки мес.", align: "right" }
@@ -294,6 +314,7 @@ const ClientPage = () => {
                     id: 0,
                     fullName: '',
                     phone: '',
+                    secondPhone: '',
                     doc: '',
                     birthdate: null,
                     docIssueDate: null,
