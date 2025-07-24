@@ -21,7 +21,6 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
   const [animatedTotal, setAnimatedTotal] = useState(total);
 
   useEffect(() => {
-    // Анимация для общего значения
     if (total !== prevTotalRef.current) {
       const duration = 1000;
       const startTime = performance.now();
@@ -43,7 +42,6 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
       prevTotalRef.current = total;
     }
 
-    // Анимация для сегментов
     const duration = 1000;
     const startTime = performance.now();
     
@@ -155,7 +153,6 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
   );
 };
 
-// Анимации
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 
 interface AnalyticItemProps {
@@ -11,10 +11,9 @@ interface AnalyticItemProps {
 }
 
 // Анимации
-const pulseAnimation = keyframes`
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+const flipAnimation = keyframes`
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 `;
 
 const fadeIn = keyframes`
@@ -57,16 +56,23 @@ const Label = styled.span`
   transition: color 0.3s ease;
 `;
 
-const Value = styled.span<{ $animate?: boolean }>`
+const ValueContainer = styled.div`
+  position: relative;
+  height: 24px;
+  overflow: hidden;
+`;
+
+const AnimatedValue = styled.span<{ $animate?: boolean }>`
   font-size: 20px;
   font-weight: 600;
   max-width: 200px;
   color: #000;
   transition: color 0.3s ease;
   display: inline-block;
+  position: absolute;
   
   ${({ $animate }) => $animate && css`
-    animation: ${pulseAnimation} 0.5s ease-in-out;
+    animation: ${flipAnimation} 0.5s ease-in-out;
   `}
 `;
 
@@ -101,22 +107,70 @@ const AnalyticItem: React.FC<AnalyticItemProps> = ({
   changeValue: initialChangeValue,
   animateChanges = true,
 }) => {
-  const [value, setValue] = useState(initialValue);
+  const [displayValue, setDisplayValue] = useState(initialValue);
+  const [prevValue, setPrevValue] = useState(initialValue);
   const [changeValue, setChangeValue] = useState(initialChangeValue);
-  const [animateValue, setAnimateValue] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animationRef = useRef<number>();
   
-  // Эффект для анимации при изменении value
+  // Эффект для анимации с эффектом пересчёта
   useEffect(() => {
-    if (initialValue !== value) {
-      setAnimateValue(true);
-      const timer = setTimeout(() => {
-        setValue(initialValue);
-        setAnimateValue(false);
-      }, 500); // Длительность анимации
+    if (initialValue !== prevValue) {
+      setIsAnimating(true);
       
-      return () => clearTimeout(timer);
+      if (typeof initialValue === 'number' && typeof prevValue === 'number') {
+        const startValue = Number(prevValue);
+        const endValue = Number(initialValue);
+        const duration = 800; // Общая длительность анимации
+        const startTime = performance.now();
+        
+        // Количество шагов анимации зависит от разницы значений
+        const steps = Math.min(Math.abs(endValue - startValue), 20);
+        let currentStep = 0;
+        
+        const animate = (currentTime: number) => {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Быстрое изменение значений с эффектом "пересчёта"
+          if (currentStep < steps) {
+            const stepProgress = currentStep / steps;
+            const currentValue = Math.floor(startValue + (endValue - startValue) * stepProgress);
+            setDisplayValue(currentValue);
+            currentStep++;
+          } else {
+            // В конце точно устанавливаем конечное значение
+            setDisplayValue(endValue);
+          }
+          
+          if (progress < 1) {
+            // Уменьшаем интервалы между шагами по мере приближения к концу
+            const delay = Math.max(30, 100 - (progress * 80));
+            animationRef.current = setTimeout(() => {
+              requestAnimationFrame(animate);
+            }, delay);
+          } else {
+            setIsAnimating(false);
+            setPrevValue(initialValue);
+          }
+        };
+        
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Для нечисловых значений просто обновляем
+        setDisplayValue(initialValue);
+        setPrevValue(initialValue);
+        setIsAnimating(false);
+      }
+      
+      return () => {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+          clearTimeout(animationRef.current);
+        }
+      };
     }
-  }, [initialValue]);
+  }, [initialValue, prevValue]);
   
   // Эффект для изменения changeValue
   useEffect(() => {
@@ -153,7 +207,7 @@ const AnalyticItem: React.FC<AnalyticItemProps> = ({
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M0.591604 8.3167H10.4087C10.5081 8.31638 10.6055 8.28897 10.6905 8.23741C10.7754 8.18584 10.8447 8.11208 10.8909 8.02406C10.9371 7.93604 10.9584 7.8371 10.9525 7.73788C10.9466 7.63866 10.9138 7.54292 10.8575 7.46097L5.949 0.370866C5.74557 0.0768989 5.25581 0.0768989 5.05183 0.370866L0.143291 7.46097C0.0864749 7.54275 0.0531565 7.63854 0.0469559 7.73792C0.0407554 7.83731 0.0619099 7.93649 0.108121 8.0247C0.154332 8.1129 0.223833 8.18676 0.309071 8.23824C0.39431 8.28972 0.492026 8.31685 0.591604 8.3167Z"
+              d="M0.591604 8.3167H10.4087C10.5081 8.31638 10.6055 8.28897 10.6905 8.23741C10.7754 8.18584 10.8447 8.11208 10.8909 8.02406C10.9371 7.93604 10.9584 7.8371 10.9525 7.73788C10.9466 7.63866 10.9138 7.54292 10.8575 7.46097L5.949 0.370866C5.74557 0.0768989 5.25581 0.0768989 5.05183 0.370866L0.143291 7.46097C0.0864749 7.54275 0.0531565 7.63854 0.0469559 7.73792C0.0407554 7.83731 0.0619099 7.93649 0.108121 8.0247C0.154332 8.1129 0.223833 8.18676 0.309071 8.23824C0.39431 8.28972 0.591604 8.3167Z"
               fill={isPositive ? '#007D88' : 'rgba(255, 90, 90, 1)'}
             />
           </svg>
@@ -170,7 +224,11 @@ const AnalyticItem: React.FC<AnalyticItemProps> = ({
       <IconContainer $iconColor={iconColor}>{icon}</IconContainer>
       <Content>
         <Label>{label}</Label>
-        <Value $animate={animateChanges && animateValue}>{value}</Value>
+        <ValueContainer>
+          <AnimatedValue $animate={animateChanges && isAnimating}>
+            {displayValue}
+          </AnimatedValue>
+        </ValueContainer>
         {renderChangeContent()}
       </Content>
     </Container>

@@ -133,12 +133,6 @@ const ChartContainer = styled.div`
   height: auto;
 `;
 
-const ChartTitle = styled.h3`
-  margin: 0 0 20px 0;
-  font-size: 18px;
-  font-weight: 600;
-`;
-
 const Legend = styled.div`
   display: flex;
   gap: 16px;
@@ -219,6 +213,7 @@ const HorizontalLine = styled.div<{ position: number }>`
 
 const BarGroup = styled.div`
   display: flex;
+  justify-content: center;
   align-items: flex-end;
   gap: 2px;
   flex: 1;
@@ -229,6 +224,7 @@ const BarGroup = styled.div`
   z-index: 1;
 `;
 
+
 const StackedBar = styled.div<{ height: number; offset: number; color: string; isHovered: boolean }>`
   position: absolute;
   width: 100%;
@@ -237,6 +233,7 @@ const StackedBar = styled.div<{ height: number; offset: number; color: string; i
   background-color: ${props => props.isHovered ? `color-mix(in srgb, ${props.color} 40%, #E5E7EB)` : props.color};
   border-radius: ${props => props.offset === 0 ? '5px' : '5px'};
   transition: background-color 0.2s ease;
+  max-width: 50px;
 `;
 
 const XAxis = styled.div`
