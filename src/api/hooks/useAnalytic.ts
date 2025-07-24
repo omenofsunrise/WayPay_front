@@ -1,18 +1,42 @@
 import { useState, useCallback } from 'react';
 import analyticService from '../services/analyticService';
-import type { AnalyticParams, AnalyticResponse } from '../types/analytic';
+import type { 
+  AnalyticParams, 
+  AnalyticResponse, 
+  AnalyticSellsResponse 
+} from '../types/analytic';
 
 const useAnalytic = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<AnalyticResponse | null>(null);
+  const [analyticData, setAnalyticData] = useState<AnalyticResponse | null>(null);
+  const [sellInfoData, setSellInfoData] = useState<AnalyticSellsResponse | null>(null);
 
   const getAnalyticItems = useCallback(async (params?: AnalyticParams): Promise<AnalyticResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await analyticService.getAnalyticItems(params);
-      setData(result);
+      const result = await analyticService.getAnalyticItems({
+        predefinedPeriod: params.predefinedPeriod,
+        start: params.start,
+        end: params.end
+      });
+      setAnalyticData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getSellInfo = useCallback(async (params?: AnalyticParams): Promise<AnalyticSellsResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await analyticService.getSellInfo(params);
+      setSellInfoData(result);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -25,8 +49,10 @@ const useAnalytic = () => {
   return {
     isLoading,
     error,
-    data,
+    analyticData,
+    sellInfoData,
     getAnalyticItems,
+    getSellInfo,
   };
 };
 

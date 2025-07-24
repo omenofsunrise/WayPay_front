@@ -28,3 +28,15 @@ export type PredefinedPeriod =
   | 'ThisYear'
   | 'PreviousYear'
   | 'Custom';
+
+export interface PointData {
+  x: number;
+  y: number;
+  color: string;
+  label: string;
+  name: string;
+}
+
+export interface AnalyticSellsResponse {
+  data: PointData[];
+}

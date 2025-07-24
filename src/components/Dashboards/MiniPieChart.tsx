@@ -1,4 +1,5 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { useEffect, useState, useRef } from 'react';
 
 interface DataItem {
   name: string;
@@ -13,13 +14,70 @@ interface MiniPieChartProps {
 }
 
 const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
-  // Рассчитываем проценты для каждого сегмента
-  const totalValue = data.reduce((sum, item) => sum + item.value, 0);
-  const calculatePercentage = (value: number) => (value / totalValue) * 100;
+  const prevDataRef = useRef<DataItem[]>(data);
+  const prevTotalRef = useRef<number>(total);
+  
+  const [animatedData, setAnimatedData] = useState<DataItem[]>(data);
+  const [animatedTotal, setAnimatedTotal] = useState(total);
 
-  // Генерируем SVG path для каждого сегмента
+  useEffect(() => {
+    // Анимация для общего значения
+    if (total !== prevTotalRef.current) {
+      const duration = 1000;
+      const startTime = performance.now();
+      const startValue = prevTotalRef.current;
+      const endValue = total;
+      const delta = endValue - startValue;
+      
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        setAnimatedTotal(Math.floor(startValue + progress * delta));
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+      prevTotalRef.current = total;
+    }
+
+    // Анимация для сегментов
+    const duration = 1000;
+    const startTime = performance.now();
+    
+    const animateData = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      setAnimatedData(prev => 
+        prev.map((item, index) => {
+          const prevItem = prevDataRef.current[index] || { value: 0 };
+          const currentItem = data[index] || { value: 0 };
+          const delta = currentItem.value - prevItem.value;
+          
+          return {
+            ...item,
+            value: Math.floor(prevItem.value + progress * delta)
+          };
+        })
+      );
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateData);
+      }
+    };
+    
+    requestAnimationFrame(animateData);
+    prevDataRef.current = data;
+  }, [data, total]);
+
+  const totalValue = animatedData.reduce((sum, item) => sum + item.value, 0);
+  const calculatePercentage = (value: number) => totalValue > 0 ? (value / totalValue) * 100 : 0;
+
   let cumulativePercentage = 0;
-  const paths = data.map((item) => {
+  const paths = animatedData.map((item) => {
     const percentage = calculatePercentage(item.value);
     const startX = 50 + 50 * Math.cos(2 * Math.PI * cumulativePercentage / 100);
     const startY = 50 + 50 * Math.sin(2 * Math.PI * cumulativePercentage / 100);
@@ -37,47 +95,86 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
     };
   });
 
+  const hasData = data.length > 0 && data.some(item => item.value > 0);
+
   return (
     <ChartContainer>
       <ChartTitle>{title}</ChartTitle>
       <ChartContent>
         <PieChartWrapper>
           <svg width="100" height="100" viewBox="0 0 100 100">
-            {paths.map((segment, index) => (
-              <path
-                key={index}
-                d={segment.path}
-                fill={segment.color}
-                stroke="white"
-                strokeWidth="1"
-              />
-            ))}
-            <circle cx="50" cy="50" r="30" fill="white" />
-            <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="10">
-              Всего
-            </text>
-            <text x="50" y="65" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="bold">
-              {total}
-            </text>
+            {hasData ? (
+              <>
+                {paths.map((segment, index) => (
+                  <AnimatedPath
+                    key={index}
+                    d={segment.path}
+                    fill={segment.color}
+                    stroke="white"
+                    strokeWidth="1"
+                  />
+                ))}
+                <circle cx="50" cy="50" r="30" fill="white" />
+                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="10">
+                  Всего
+                </text>
+                <text x="50" y="65" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="bold">
+                  {animatedTotal}
+                </text>
+              </>
+            ) : (
+              <>
+                <circle cx="50" cy="50" r="50" fill="#f0f0f0" />
+                <circle cx="50" cy="50" r="30" fill="white" />
+                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="10" fill="#666">
+                  Нет данных
+                </text>
+              </>
+            )}
           </svg>
         </PieChartWrapper>
         <Legend>
-          {paths.map((segment, index) => (
-            <LegendItem key={index}>
-              <LegendColor style={{ backgroundColor: segment.color }} />
-              <LegendText>
-                <div>{segment.name}</div>
-                <div>{segment.value}</div>
-              </LegendText>
-            </LegendItem>
-          ))}
+          {hasData ? (
+            paths.map((segment, index) => (
+              <LegendItem key={index}>
+                <LegendColor style={{ backgroundColor: segment.color }} />
+                <LegendText>
+                  <div>{segment.name}</div>
+                  <AnimatedValue>
+                    {segment.value}
+                  </AnimatedValue>
+                </LegendText>
+              </LegendItem>
+            ))
+          ) : (
+            <NoDataMessage>Данные отсутствуют</NoDataMessage>
+          )}
         </Legend>
       </ChartContent>
     </ChartContainer>
   );
 };
 
-// Стилизованные компоненты
+// Анимации
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const scaleIn = keyframes`
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+`;
+
+const AnimatedPath = styled.path`
+  animation: ${scaleIn} 0.5s ease-out forwards;
+`;
+
+const AnimatedValue = styled.div`
+  display: inline-block;
+  animation: ${fadeIn} 0.5s ease-out forwards;
+`;
+
 const ChartContainer = styled.div`
   background: white;
   border: 1px solid rgba(209, 213, 219, 1);
@@ -86,6 +183,12 @@ const ChartContainer = styled.div`
   width: 100%;
   font-family: sans-serif;
   color: black;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
 `;
 
 const ChartTitle = styled.h3`
@@ -104,34 +207,55 @@ const ChartContent = styled.div`
 const PieChartWrapper = styled.div`
   width: 100px;
   height: 100px;
+  transition: all 0.3s ease;
 `;
 
 const Legend = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
 `;
 
 const LegendItem = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  transition: all 0.3s ease;
 `;
 
 const LegendColor = styled.div`
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  transition: all 0.3s ease;
 `;
 
 const LegendText = styled.div`
   font-size: 12px;
   display: flex;
   gap: 8px;
+  width: 100%;
+  justify-content: space-between;
+
+  & div:first-child {
+    color: #666;
+  }
 
   & div:last-child {
     font-weight: bold;
+    min-width: 30px;
+    text-align: right;
   }
+`;
+
+const NoDataMessage = styled.div`
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  width: 100%;
+  padding: 10px 0;
+  animation: ${fadeIn} 0.5s ease-out;
 `;
 
 export default MiniPieChart;

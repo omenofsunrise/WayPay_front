@@ -1,7 +1,7 @@
 import AnalyticItem from "../components/Analytics/AnalyticItem";
 import PeriodField from "../components/ui/fields/PeriodField";
 import FilterField from "../components/ui/Layouts/FilterField";
-import PageLayout from "../components/ui/Layouts/PageLayout"
+import PageLayout from "../components/ui/Layouts/PageLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import styled from "styled-components";
 import TitleField from "../components/ui/Layouts/TitleLayout";
@@ -12,139 +12,158 @@ import { useEffect, useState } from "react";
 import useAnalytic from "../api/hooks/useAnalytic";
 import type { PredefinedPeriod } from "../api/types/analytic";
 
+interface PointData {
+  x: number;
+  y: number;
+  color: string;
+  label: string;
+  name: string;
+}
+
+interface BarData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface ChartData {
+  label: string;
+  total: number;
+  bars: BarData[];
+}
+
+interface AnalyticSellsResponse {
+  data: PointData[];
+}
+
 const AnalyticsPage = () => {
   const [period, setPeriod] = useState<PredefinedPeriod>('ThisMonth');
-  const { data, isLoading, error, getAnalyticItems } = useAnalytic();
+  const { 
+    analyticData, 
+    isLoading, 
+    error, 
+    getAnalyticItems, 
+    sellInfoData,
+    getSellInfo 
+  } = useAnalytic();
   
   useEffect(() => {
     getAnalyticItems({ predefinedPeriod: period });
-  }, [period, getAnalyticItems]);
+    getSellInfo({ predefinedPeriod: period });
+  }, [period, getAnalyticItems, getSellInfo]);
   
   const formatNumber = (num: number | undefined): string => {
     if (num === undefined) return '0';
     return new Intl.NumberFormat('ru-RU').format(num);
   };
 
-    const financialData: PointData[] = [
-        { x: 1, y: 1200000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Янв" },
-        { x: 2, y: 1800000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Фев" },
-        { x: 3, y: 1500000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Мар" },
-        { x: 4, y: 2100000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Апр" },
-        { x: 5, y: 1900000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Май" },
-        { x: 6, y: 2300000, color: "rgba(0, 125, 136, 1)", label: "Сумма продаж", name: "Июн" },
-        
-        { x: 1, y: 800000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Янв" },
-        { x: 2, y: 950000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Фев" },
-        { x: 3, y: 1100000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Мар" },
-        { x: 4, y: 1050000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Апр" },
-        { x: 5, y: 1200000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Май" },
-        { x: 6, y: 1400000, color: "rgba(37, 203, 161, 1)", label: "Сумма покупок", name: "Июн" },
-        
-        { x: 1, y: 400000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Янв" },
-        { x: 2, y: 850000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Фев" },
-        { x: 3, y: 400000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Мар" },
-        { x: 4, y: 1050000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Апр" },
-        { x: 5, y: 700000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Май" },
-        { x: 6, y: 900000, color: "rgba(255, 90, 90, 1)", label: "Остаток в кассе", name: "Июн" },
-    ];
+  const maxY = Math.max(
+    ...(sellInfoData?.data?.map(point => point.y) || []),
+    2500000
+  );
 
-    const investmentData: ChartData[] = [
-        {
-            label: "Янв",
-            total: 1200000,
-            bars: [
-                { name: "Инвестиция", value: 400000, color: "rgba(37, 203, 161, 1)" },
-            ]
-        },
-        {
-            label: "Фев",
-            total: 1500000,
-            bars: [
-                { name: "Инвестиция", value: 600000, color: "rgba(37, 203, 161, 1)" },
-            ]
-        },
-        {
-            label: "Мар",
-            total: 1800000,
-            bars: [
-                { name: "Инвестиция", value: 700000, color: "rgba(37, 203, 161, 1)" },
-            ]
-        },
-        {
-            label: "Апр",
-            total: 2100000,
-            bars: [
-                { name: "Инвестиция", value: 900000, color: "rgba(37, 203, 161, 1)" },
-            ]
-        },
-        {
-            label: "Май",
-            total: 2400000,
-            bars: [
-                { name: "Инвестиция", value: 1000000, color: "rgba(37, 203, 161, 1)" },
-            ]
-        },
-        {
-            label: "Июн",
-            total: 2700000,
-            bars: [
-                { name: "Инвестиция", value: 1200000, color: "rgba(37, 203, 161, 1)" },
-            ]
-        }
-    ];
+  const maxX = Math.max(
+    ...(sellInfoData?.data?.map(point => point.x) || []),
+    6
+  );
 
-    const financialObligationsData: ChartData[] = [
-        {
-            label: "Янв",
-            total: 500000,
-            bars: [
-                { name: "Сумма просрочки", value: 150000, color: "rgba(0, 125, 136, 1)" },
-                { name: "Сумма ежемесячных платежей", value: 350000, color: "rgba(173, 179, 188, 1)" },
-            ]
-        },
-        {
-            label: "Фев",
-            total: 550000,
-            bars: [
-                { name: "Сумма просрочки", value: 120000, color: "rgba(0, 125, 136, 1)" },
-                { name: "Сумма ежемесячных платежей", value: 430000, color: "rgba(173, 179, 188, 1)" },
-            ]
-        },
-        {
-            label: "Мар",
-            total: 600000,
-            bars: [
-                { name: "Сумма просрочки", value: 180000, color: "rgba(0, 125, 136, 1)" },
-                { name: "Сумма ежемесячных платежей", value: 420000, color: "rgba(173, 179, 188, 1)" },
-            ]
-        },
-        {
-            label: "Апр",
-            total: 650000,
-            bars: [
-                { name: "Сумма просрочки", value: 90000, color: "rgba(0, 125, 136, 1)" },
-                { name: "Сумма ежемесячных платежей", value: 560000, color: "rgba(173, 179, 188, 1)" },
-            ]
-        },
-        {
-            label: "Май",
-            total: 700000,
-            bars: [
-                { name: "Сумма просрочки", value: 200000, color: "rgba(0, 125, 136, 1)" },
-                { name: "Сумма ежемесячных платежей", value: 500000, color: "rgba(173, 179, 188, 1)" },
-            ]
-        },
-        {
-            label: "Июн",
-            total: 750000,
-            bars: [
-                { name: "Сумма просрочки", value: 100000, color: "rgba(0, 125, 136, 1)" },
-                { name: "Сумма ежемесячных платежей", value: 650000, color: "rgba(173, 179, 188, 1)" },
-            ]
-        }
-    ];
+  const investmentData: ChartData[] = [
+    {
+      label: "Янв",
+      total: 1200000,
+      bars: [
+        { name: "Инвестиция", value: 400000, color: "rgba(37, 203, 161, 1)" },
+      ]
+    },
+    {
+      label: "Фев",
+      total: 1500000,
+      bars: [
+        { name: "Инвестиция", value: 600000, color: "rgba(37, 203, 161, 1)" },
+      ]
+    },
+    {
+      label: "Мар",
+      total: 1800000,
+      bars: [
+        { name: "Инвестиция", value: 700000, color: "rgba(37, 203, 161, 1)" },
+      ]
+    },
+    {
+      label: "Апр",
+      total: 2100000,
+      bars: [
+        { name: "Инвестиция", value: 900000, color: "rgba(37, 203, 161, 1)" },
+      ]
+    },
+    {
+      label: "Май",
+      total: 2400000,
+      bars: [
+        { name: "Инвестиция", value: 1000000, color: "rgba(37, 203, 161, 1)" },
+      ]
+    },
+    {
+      label: "Июн",
+      total: 2700000,
+      bars: [
+        { name: "Инвестиция", value: 1200000, color: "rgba(37, 203, 161, 1)" },
+      ]
+    }
+  ];
 
-    return (
+  const financialObligationsData: ChartData[] = [
+    {
+      label: "Янв",
+      total: 500000,
+      bars: [
+        { name: "Сумма просрочки", value: 150000, color: "rgba(0, 125, 136, 1)" },
+        { name: "Сумма ежемесячных платежей", value: 350000, color: "rgba(173, 179, 188, 1)" },
+      ]
+    },
+    {
+      label: "Фев",
+      total: 550000,
+      bars: [
+        { name: "Сумма просрочки", value: 120000, color: "rgba(0, 125, 136, 1)" },
+        { name: "Сумма ежемесячных платежей", value: 430000, color: "rgba(173, 179, 188, 1)" },
+      ]
+    },
+    {
+      label: "Мар",
+      total: 600000,
+      bars: [
+        { name: "Сумма просрочки", value: 180000, color: "rgba(0, 125, 136, 1)" },
+        { name: "Сумма ежемесячных платежей", value: 420000, color: "rgba(173, 179, 188, 1)" },
+      ]
+    },
+    {
+      label: "Апр",
+      total: 650000,
+      bars: [
+        { name: "Сумма просрочки", value: 90000, color: "rgba(0, 125, 136, 1)" },
+        { name: "Сумма ежемесячных платежей", value: 560000, color: "rgba(173, 179, 188, 1)" },
+      ]
+    },
+    {
+      label: "Май",
+      total: 700000,
+      bars: [
+        { name: "Сумма просрочки", value: 200000, color: "rgba(0, 125, 136, 1)" },
+        { name: "Сумма ежемесячных платежей", value: 500000, color: "rgba(173, 179, 188, 1)" },
+      ]
+    },
+    {
+      label: "Июн",
+      total: 750000,
+      bars: [
+        { name: "Сумма просрочки", value: 100000, color: "rgba(0, 125, 136, 1)" },
+        { name: "Сумма ежемесячных платежей", value: 650000, color: "rgba(173, 179, 188, 1)" },
+      ]
+    }
+  ];
+
+  return (
     <PageLayout>
       <TitleField>
         <CustomTitle>Аналитика</CustomTitle>
@@ -165,8 +184,8 @@ const AnalyticsPage = () => {
             }
             iconColor="rgba(255, 189, 189, 1)"
             label="Сумма инвестиций"
-            value={formatNumber(data?.investmentAmount)}
-            changeValue={data?.investmentAmountDiffrence}
+            value={formatNumber(analyticData?.investmentAmount)}
+            changeValue={analyticData?.investmentAmountDiffrence}
           />
 
           <AnalyticItem
@@ -177,8 +196,8 @@ const AnalyticsPage = () => {
             }
             iconColor="rgba(172, 233, 221, 1)"
             label="Остаток в кассе"
-            value={formatNumber(data?.cash)}
-            changeValue={data?.cashDiffrence}
+            value={formatNumber(analyticData?.cash)}
+            changeValue={analyticData?.cashDiffrence}
           />
 
           <AnalyticItem
@@ -189,8 +208,8 @@ const AnalyticsPage = () => {
             }
             iconColor="rgba(255, 218, 182, 1)"
             label="Сумма в просрочке"
-            value={formatNumber(data?.latePayment)}
-            changeValue={data?.latePaymentDiffrence}
+            value={formatNumber(analyticData?.latePayment)}
+            changeValue={analyticData?.latePaymentDiffrence}
           />
 
           <AnalyticItem
@@ -201,8 +220,8 @@ const AnalyticsPage = () => {
             }
             iconColor="rgba(153, 203, 207, 1)"
             label="Действующие договоры"
-            value={formatNumber(data?.activeCredits)}
-            changeValue={data?.activeCreditsDiffrence}
+            value={formatNumber(analyticData?.activeCredits)}
+            changeValue={analyticData?.activeCreditsDiffrence}
           />
         </AnalyticsContainer>
 
@@ -210,13 +229,13 @@ const AnalyticsPage = () => {
           <ChartSection>
             <ScatterPlot
               title="Динамика продаж, покупок и остатка в кассе"
-              data={financialData}
+              data={sellInfoData?.data || []}
               xAxisLabel=""
               yAxisLabel="Сумма (руб)"
-              maxX={6}
-              maxY={2500000}
+              maxX={maxX}
+              maxY={maxY}
+              yStep={maxY / 5}
               xStep={1}
-              yStep={500000}
               height={150}
               showLegend={true}
               xAxisCustomLabels={["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]}
@@ -247,90 +266,69 @@ const AnalyticsPage = () => {
           <PieChartsContainer>
             <MiniPieChart
               title="Колво договоров"
-              total={data?.totalCredits || 0}
+              total={analyticData?.totalCredits || 0}
               data={[
-                { name: "Действующие", value: data?.activeCredits || 0, color: "rgba(37, 203, 161, 1)" },
-                { name: "Закрытые", value: (data?.totalCredits || 0) - (data?.activeCredits || 0), color: "rgba(209, 213, 219, 1)" },
+                { name: "Действующие", value: analyticData?.activeCredits || 0, color: "rgba(37, 203, 161, 1)" },
+                { name: "Закрытые", value: (analyticData?.totalCredits || 0) - (analyticData?.activeCredits || 0), color: "rgba(209, 213, 219, 1)" },
               ]}
             />
             <MiniPieChart
               title="Соотношение продаж и покупок"
-              total={(data?.sales || 0) + (data?.purchases || 0)}
+              total={(analyticData?.sales || 0) + (analyticData?.purchases || 0)}
               data={[
-                { name: "Продажи", value: data?.sales || 0, color: "rgba(0, 125, 136, 1)" },
-                { name: "Покупки", value: data?.purchases || 0, color: "rgba(209, 213, 219, 1)" },
+                { name: "Продажи", value: analyticData?.sales || 0, color: "rgba(0, 125, 136, 1)" },
+                { name: "Покупки", value: analyticData?.purchases || 0, color: "rgba(209, 213, 219, 1)" },
               ]}
             />
           </PieChartsContainer>
         </ChartsContainer>
       </AnalyticsWrapper>
     </PageLayout>
-  )
-}
+  );
+};
 
 const AnalyticsWrapper = styled.div`
-    width: 100%;
-    box-sizing: border-box;
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const AnalyticsContainer = styled.div`
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 16px;
-    width: 100%;
-    padding: 20px 80px;
-    background-color: white;
-    border-radius: 8px;
-    border: 1px solid rgba(209, 213, 219, 1);
-    box-sizing: border-box;
-    margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  width: 100%;
+  padding: 20px 80px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid rgba(209, 213, 219, 1);
+  box-sizing: border-box;
+  margin-bottom: 24px;
 `;
 
 const ChartsContainer = styled.div`
-    display: flex;
-    gap: 24px;
-    width: 100%;
-    box-sizing: border-box;
-    margin-bottom: 24px;
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 24px;
 `;
 
 const ChartSection = styled.div`
-    flex: 1;
-    flexDirection: row;
+  flex: 1;
+  flexDirection: row;
 `;
 
 const PieChartsContainer = styled.div`
-    flex: 1;
-    display: flex;
-    gap: 16px;
+  flex: 1;
+  display: flex;
+  gap: 16px;
 `;
 
 const ChartSection2 = styled.div`
-    flex: 1;
-    display: flex; 
-    flex-direction: row;
-    gap: 16px;
+  flex: 1;
+  display: flex; 
+  flex-direction: row;
+  gap: 16px;
 `;
 
 export default AnalyticsPage;
-
-interface PointData {
-    x: number;
-    y: number;
-    color: string;
-    label?: string;
-    value?: number;
-    name?: string;
-}
-
-interface BarData {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface ChartData {
-  label: string;
-  total: number;
-  bars: BarData[];
-}
