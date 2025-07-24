@@ -166,7 +166,7 @@ const AnalyticsPage = () => {
             iconColor="rgba(255, 189, 189, 1)"
             label="Сумма инвестиций"
             value={formatNumber(data?.investmentAmount)}
-            changeValue={5}
+            changeValue={data?.investmentAmountDiffrence}
           />
 
           <AnalyticItem
@@ -177,8 +177,8 @@ const AnalyticsPage = () => {
             }
             iconColor="rgba(172, 233, 221, 1)"
             label="Остаток в кассе"
-            value={`${formatNumber(data?.cash)}`}
-            changeValue={-5.3}
+            value={formatNumber(data?.cash)}
+            changeValue={data?.cashDiffrence}
           />
 
           <AnalyticItem
@@ -190,7 +190,7 @@ const AnalyticsPage = () => {
             iconColor="rgba(255, 218, 182, 1)"
             label="Сумма в просрочке"
             value={formatNumber(data?.latePayment)}
-            changeValue={0}
+            changeValue={data?.latePaymentDiffrence}
           />
 
           <AnalyticItem
@@ -202,7 +202,7 @@ const AnalyticsPage = () => {
             iconColor="rgba(153, 203, 207, 1)"
             label="Действующие договоры"
             value={formatNumber(data?.activeCredits)}
-            changeValue={0}
+            changeValue={data?.activeCreditsDiffrence}
           />
         </AnalyticsContainer>
 
@@ -279,7 +279,7 @@ const AnalyticsContainer = styled.div`
     gap: 16px;
     width: 100%;
     padding: 20px 80px;
-    background-color: #f8fafc;
+    background-color: white;
     border-radius: 8px;
     border: 1px solid rgba(209, 213, 219, 1);
     box-sizing: border-box;

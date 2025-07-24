@@ -201,7 +201,7 @@ const InputField = styled.div`
   justify-content: space-between;
   padding: 10px 12px;
   width: 100%;
-  height: 30px;
+  height: 20px;
   background: #FFFFFF;
   border: 1px solid #D1D5DB;
   border-radius: 5px;

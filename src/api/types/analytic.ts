@@ -2,10 +2,14 @@ import type { PaginationParams } from './common';
 
 export interface AnalyticResponse {
   investmentAmount: number;
+  investmentAmountDiffrence: number;
   cash: number;
+  cashDiffrence: number;
   latePayment: number;
+  latePaymentDiffrence: number;
   totalCredits: number;
   activeCredits: number;
+  activeCreditsDiffrence: number;
   sales: number;
   purchases: number;
 }

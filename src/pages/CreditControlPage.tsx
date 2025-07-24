@@ -217,14 +217,13 @@ const CreditControlPage = () => {
             : credit.creditDate;
             
           return {
-            'ID': credit.id,
-            'Дата договора': creditDate ? creditDate.toLocaleDateString() : 'Нет данных',
-            'ФИО покупателя': credit.clientFullName,
-            'Телефон': credit.clientPhone || 'Нет данных',
-            'Начислено': formatMoney(credit.totalAmount?.toString() || '0'),
-            'Уплачено': formatMoney(credit.payed?.toString() || '0'),
-            'Остаток': formatMoney(credit.rest?.toString() || '0'),
-            'Долг': formatMoney(credit.debt?.toString() || '0')
+            'Номер договора': credit.id,
+            'Дата договора': creditDate ? formatDate(creditDate) : 'Нет данных',
+            'ФИО сотрудника': credit.employeeName || 'Нет данных',
+            'Сумма договора': formatMoney(credit.totalAmount?.toString() || '0'),
+            'Начислено': formatMoney(credit.accured?.toString() || '0'),
+            'Доход в рублях': formatMoney(credit.incomeRubles?.toString() || '0'),
+            'Доход в %': `${credit.incomePercents || 0}%`,
           };
         }
       });
@@ -232,10 +231,6 @@ const CreditControlPage = () => {
       console.error('Export failed:', error);
       alert('Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.');
     }
-  };
-
-  const handlePrint = () => {
-    console.log('Печать данных', creditsData?.items);
   };
 
   const formatCreditData = (credits: Credit[] | undefined) => {

@@ -1,13 +1,26 @@
-import React from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useState } from 'react';
+import styled, { keyframes, css } from 'styled-components';
 
 interface AnalyticItemProps {
   icon: React.ReactNode;
   iconColor?: string;
   label: string;
-  value: string;
+  value: string | number;
   changeValue?: number;
+  animateChanges?: boolean;
 }
+
+// Анимации
+const pulseAnimation = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+`;
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
 
 const Container = styled.div`
   display: flex;
@@ -24,6 +37,7 @@ const IconContainer = styled.div<{ $iconColor?: string }>`
   height: 60px;
   border-radius: 50%;
   background-color: ${({ $iconColor }) => $iconColor || '#000'};
+  transition: background-color 0.3s ease;
 `;
 
 const Content = styled.div`
@@ -40,13 +54,20 @@ const Label = styled.span`
   white-space: nowrap;
   font-weight: 500;
   max-width: 200px;
+  transition: color 0.3s ease;
 `;
 
-const Value = styled.span`
+const Value = styled.span<{ $animate?: boolean }>`
   font-size: 20px;
   font-weight: 600;
   max-width: 200px;
   color: #000;
+  transition: color 0.3s ease;
+  display: inline-block;
+  
+  ${({ $animate }) => $animate && css`
+    animation: ${pulseAnimation} 0.5s ease-in-out;
+  `}
 `;
 
 const ChangeContainer = styled.div`
@@ -54,10 +75,12 @@ const ChangeContainer = styled.div`
   align-items: center;
   max-width: 200px;
   gap: 4px;
+  animation: ${fadeIn} 0.3s ease-out;
 `;
 
 const ChangeIcon = styled.div<{ $isPositive: boolean }>`
   transform: ${({ $isPositive }) => ($isPositive ? 'rotate(0deg)' : 'rotate(180deg)')};
+  transition: transform 0.3s ease;
 `;
 
 const ChangeText = styled.span<{ $isPositive?: boolean; $neutral?: boolean }>`
@@ -66,16 +89,40 @@ const ChangeText = styled.span<{ $isPositive?: boolean; $neutral?: boolean }>`
   font-size: 12px;
   font-weight: 400;
   text-align: left;
-  white-space: pre-line; // Добавляем это свойство
+  white-space: pre-line;
+  transition: color 0.3s ease;
 `;
 
 const AnalyticItem: React.FC<AnalyticItemProps> = ({
   icon,
   iconColor,
   label,
-  value,
-  changeValue,
+  value: initialValue,
+  changeValue: initialChangeValue,
+  animateChanges = true,
 }) => {
+  const [value, setValue] = useState(initialValue);
+  const [changeValue, setChangeValue] = useState(initialChangeValue);
+  const [animateValue, setAnimateValue] = useState(false);
+  
+  // Эффект для анимации при изменении value
+  useEffect(() => {
+    if (initialValue !== value) {
+      setAnimateValue(true);
+      const timer = setTimeout(() => {
+        setValue(initialValue);
+        setAnimateValue(false);
+      }, 500); // Длительность анимации
+      
+      return () => clearTimeout(timer);
+    }
+  }, [initialValue]);
+  
+  // Эффект для изменения changeValue
+  useEffect(() => {
+    setChangeValue(initialChangeValue);
+  }, [initialChangeValue]);
+
   const renderChangeContent = () => {
     if (changeValue === undefined || changeValue === null) return null;
 
@@ -123,7 +170,7 @@ const AnalyticItem: React.FC<AnalyticItemProps> = ({
       <IconContainer $iconColor={iconColor}>{icon}</IconContainer>
       <Content>
         <Label>{label}</Label>
-        <Value>{value}</Value>
+        <Value $animate={animateChanges && animateValue}>{value}</Value>
         {renderChangeContent()}
       </Content>
     </Container>
