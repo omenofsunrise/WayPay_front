@@ -44,7 +44,9 @@ const AnalyticsPage = () => {
     error, 
     getAnalyticItems, 
     sellInfoData,
-    getSellInfo 
+    getSellInfo,
+    getInvestmentDynamic,
+    investmentDynamicData
   } = useAnalytic();
   
   useEffect(() => {
@@ -52,6 +54,12 @@ const AnalyticsPage = () => {
     getSellInfo({ predefinedPeriod: period });
   }, [period, getAnalyticItems, getSellInfo]);
   
+   useEffect(() => {
+    getAnalyticItems({ predefinedPeriod: period });
+    getSellInfo({ predefinedPeriod: period });
+    getInvestmentDynamic({ predefinedPeriod: period });
+  }, [period, getAnalyticItems, getSellInfo, getInvestmentDynamic]);
+
   const formatNumber = (num: number | undefined): string => {
     if (num === undefined) return '0';
     return new Intl.NumberFormat('ru-RU').format(num);
@@ -67,50 +75,18 @@ const AnalyticsPage = () => {
     6
   );
 
-  const investmentData: ChartData[] = [
-    {
-      label: "Янв",
-      total: 1200000,
-      bars: [
-        { name: "Инвестиция", value: 400000, color: "rgba(37, 203, 161, 1)" },
-      ]
-    },
-    {
-      label: "Фев",
-      total: 1500000,
-      bars: [
-        { name: "Инвестиция", value: 600000, color: "rgba(37, 203, 161, 1)" },
-      ]
-    },
-    {
-      label: "Мар",
-      total: 1800000,
-      bars: [
-        { name: "Инвестиция", value: 700000, color: "rgba(37, 203, 161, 1)" },
-      ]
-    },
-    {
-      label: "Апр",
-      total: 2100000,
-      bars: [
-        { name: "Инвестиция", value: 900000, color: "rgba(37, 203, 161, 1)" },
-      ]
-    },
-    {
-      label: "Май",
-      total: 2400000,
-      bars: [
-        { name: "Инвестиция", value: 1000000, color: "rgba(37, 203, 161, 1)" },
-      ]
-    },
-    {
-      label: "Июн",
-      total: 2700000,
-      bars: [
-        { name: "Инвестиция", value: 1200000, color: "rgba(37, 203, 161, 1)" },
-      ]
-    }
-  ];
+  const investmentData: ChartData[] = investmentDynamicData?.periods?.map(period => ({
+    label: period.periodName,
+    total: period.value,
+    bars: [
+      { name: "Инвестиция", value: period.value, color: "rgba(37, 203, 161, 1)" }
+    ]
+  })) || [];
+
+  const investmentMaxValue = Math.max(
+    ...(investmentDynamicData?.periods?.map(p => p.value) || []),
+    1000000
+  );
 
   const financialObligationsData: ChartData[] = [
     {
@@ -227,34 +203,37 @@ const AnalyticsPage = () => {
 
         <ChartsContainer>
           <ChartSection>
-            <ScatterPlot
-              title="Динамика продаж, покупок и остатка в кассе"
-              data={sellInfoData?.data || []}
-              xAxisLabel=""
-              yAxisLabel="Сумма (руб)"
-              maxX={maxX}
-              maxY={maxY}
-              yStep={maxY / 5}
-              xStep={1}
-              height={150}
-              showLegend={true}
-              xAxisCustomLabels={["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]}
-              titleFontSize="15px"
-            />
+          <ScatterPlot
+            title="Динамика продаж, покупок и остатка в кассе"
+            data={sellInfoData?.data || []}
+            xAxisLabel=""
+            yAxisLabel="Сумма (руб)"
+            maxX={maxX}
+            maxY={maxY}
+            yStep={maxY / 5}
+            xStep={1}
+            height={150}
+            showLegend={true}
+            xAxisCustomLabels={sellInfoData?.data?.map((_, index) => {
+              const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+              return months[index % 12];
+            })}
+            titleFontSize="15px"
+          />
           </ChartSection>
-          <ChartSection style={{flex: 0.6}}>
-            <ColumnChart
+          <ChartSection style={{flex: 0.8}}>
+          <ColumnChart
               title="Динамика инвестиций"
               data={investmentData}
-              maxValue={3000000}
-              step={500000}
+              maxValue={investmentMaxValue}
+              step={Math.ceil(investmentMaxValue / 5)}
               height={200}
             />
           </ChartSection>
         </ChartsContainer>
 
         <ChartsContainer>
-          <ChartSection2 style={{flex: 1.7}}>
+          <ChartSection2>
             <ColumnChart
               title="Исполнение финансовых обязательств"
               data={financialObligationsData}
@@ -263,7 +242,7 @@ const AnalyticsPage = () => {
               height={100}
             />
           </ChartSection2>
-          <PieChartsContainer>
+          <PieChartsContainer style={{flex: 0.8}}>
             <MiniPieChart
               title="Колво договоров"
               total={analyticData?.totalCredits || 0}

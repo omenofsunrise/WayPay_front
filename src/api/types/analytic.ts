@@ -37,6 +37,15 @@ export interface PointData {
   name: string;
 }
 
+export interface AnalyticInvestmentResponse {
+  periods: PeriodItem[];
+}
+
+export interface PeriodItem {
+  periodName: string;
+  value: number;
+}
+
 export interface AnalyticSellsResponse {
   data: PointData[];
 }

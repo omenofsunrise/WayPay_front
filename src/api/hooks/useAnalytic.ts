@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import analyticService from '../services/analyticService';
 import type { 
+  AnalyticInvestmentResponse,
   AnalyticParams, 
   AnalyticResponse, 
   AnalyticSellsResponse 
@@ -11,6 +12,7 @@ const useAnalytic = () => {
   const [error, setError] = useState<string | null>(null);
   const [analyticData, setAnalyticData] = useState<AnalyticResponse | null>(null);
   const [sellInfoData, setSellInfoData] = useState<AnalyticSellsResponse | null>(null);
+  const [investmentDynamicData, setInvestmentDynamicData] = useState<AnalyticInvestmentResponse | null>(null);
 
   const getAnalyticItems = useCallback(async (params?: AnalyticParams): Promise<AnalyticResponse | null> => {
     setIsLoading(true);
@@ -46,13 +48,30 @@ const useAnalytic = () => {
     }
   }, []);
 
+  const getInvestmentDynamic = useCallback(async (params?: AnalyticParams): Promise<AnalyticInvestmentResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await analyticService.getInvestmentDynamic(params);
+      setInvestmentDynamicData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
     analyticData,
     sellInfoData,
+    investmentDynamicData, 
     getAnalyticItems,
     getSellInfo,
+    getInvestmentDynamic, 
   };
 };
 

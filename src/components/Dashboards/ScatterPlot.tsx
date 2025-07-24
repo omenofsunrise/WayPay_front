@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
-import CustomTitle from '../ui/Text/CustomTitle';
-import TitleField from '../ui/Layouts/TitleLayout';
 
 interface PointData {
   x: number;
@@ -73,7 +71,6 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
         })
     : [];
 
-  // Группируем данные по категориям (label)
   const groupedData: Record<string, PointData[]> = {};
   data.forEach(point => {
     const label = point.label || 'default';
@@ -84,7 +81,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   });
 
   const calculateXPosition = (x: number) => {
-    return ((x - 1) / (maxX - 1)) * 100;
+    return (x / maxX) * 100;
   };
 
   const calculateYPosition = (y: number) => {
@@ -134,11 +131,10 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
           {yAxisValues.map((value, index) => (
             <HorizontalLine 
               key={`hline-${index}`}
-              position={(value / maxY) * 100}
+              position={(1 - value / maxY) * 100}
             />
           ))}
 
-          {/* Рисуем линии для каждой группы отдельно */}
           {Object.values(groupedData).map((group, groupIndex) => {
             return group.map((point, index) => {
               if (index === 0) return null;
@@ -199,7 +195,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
         >
           <TooltipContent>
             {hoveredPoint.name && <TooltipTitle>{hoveredPoint.name}</TooltipTitle>}
-            <TooltipItem>{hoveredPoint.y} договоров</TooltipItem>
+            <TooltipItem>{hoveredPoint.y.toLocaleString()}</TooltipItem>
           </TooltipContent>
           <TooltipArrow />
         </TooltipWrapper>
@@ -207,14 +203,13 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
 
       <XAxis>
         {xLabels.map((label, index) => {
-          const position = (index / (xLabels.length - 0.8)) * 100;
+          const position = (index / (xLabels.length - 1)) * 100;
           return (
             <XAxisLabel 
               key={index} 
               style={{ 
                 left: `${position}%`,
-                transform: 'translateX(+50%)',
-                position: 'absolute'
+                transform: 'translateX(-50%)',
               }}
             >
               {label}
@@ -227,7 +222,6 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   );
 };
 
-// Остальные стили остаются без изменений
 const ChartContainer = styled.div`
   background-color: white;
   border-radius: 10px;
@@ -238,19 +232,28 @@ const ChartContainer = styled.div`
   height: auto;
 `;
 
+const TitleField = styled.div`
+  margin-bottom: 20px;
+`;
+
+const CustomTitle = styled.h2`
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+`;
+
 const Legend = styled.div`
   display: flex;
   gap: 16px;
-  margin: 20px 0;
+  margin-top: 16px;
   flex-wrap: wrap;
-  width: 'auto';
 `;
 
 const LegendItem = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 100px;
 `;
 
 const LegendLine = styled.div<{ color: string }>`
@@ -262,7 +265,6 @@ const LegendLine = styled.div<{ color: string }>`
 const LegendText = styled.span`
   font-size: 14px;
   color: #4B5563;
-  white-space: nowrap;
 `;
 
 const ChartContent = styled.div<{ height?: number | string }>`
@@ -277,7 +279,7 @@ const YAxis = styled.div`
   justify-content: space-between;
   height: 100%;
   margin-right: 10px;
-  position: relative;
+  min-width: 40px;
 `;
 
 const YAxisLabel = styled.span`
@@ -285,21 +287,11 @@ const YAxisLabel = styled.span`
   color: #6B7280;
 `;
 
-const AxisTitle = styled.div<{ children?: React.ReactNode }>`
+const AxisTitle = styled.div`
   font-size: 12px;
   color: #6B7280;
   text-align: center;
   margin-top: 10px;
-  ${props => props.children && props.children.toString().includes('Y') 
-    ? `
-      transform: rotate(-90deg);
-      transform-origin: left top;
-      position: absolute;
-      left: 100%;
-      top: 50%;
-      white-space: nowrap;
-    ` 
-    : ''}
 `;
 
 const PlotArea = styled.div`
@@ -330,10 +322,9 @@ const Point = styled.div<{ x: number; y: number; color: string; isHovered: boole
   position: absolute;
   left: ${props => props.x}%;
   top: ${props => props.y}%;
-  width: ${props => props.isHovered ? '4px' : '8px'};
-  height: ${props => props.isHovered ? '4px' : '8px'};
-  background-color: white;
-  border: 2px solid ${props => props.color};
+  width: ${props => props.isHovered ? '8px' : '6px'};
+  height: ${props => props.isHovered ? '8px' : '6px'};
+  background-color: ${props => props.color};
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;
@@ -341,24 +332,22 @@ const Point = styled.div<{ x: number; y: number; color: string; isHovered: boole
   cursor: pointer;
   
   &:hover {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
   }
 `;
 
 const XAxis = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
   position: relative;
   height: 20px;
+  margin-top: 10px;
 `;
 
 const XAxisLabel = styled.span`
   font-size: 12px;
   color: #6B7280;
-  text-align: center;
+  position: absolute;
 `;
 
 const TooltipWrapper = styled.div`
@@ -377,8 +366,6 @@ const TooltipContent = styled.div`
   font-size: 14px;
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(2px);
-  transform: translateY(-15%);
 `;
 
 const TooltipTitle = styled.div`
@@ -394,7 +381,7 @@ const TooltipItem = styled.div`
 
 const TooltipArrow = styled.div`
   position: absolute;
-  bottom: 10px;
+  bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
   width: 0;
