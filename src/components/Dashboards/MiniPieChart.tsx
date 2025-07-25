@@ -13,6 +13,10 @@ interface MiniPieChartProps {
   data: DataItem[];
 }
 
+const formatNumber = (num: number): string => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
+
 const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
   const prevDataRef = useRef<DataItem[]>(data);
   const prevTotalRef = useRef<number>(total || 0);
@@ -95,7 +99,7 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
   });
 
   const hasData = data.length > 0 && data.some(item => item.value > 0);
-  const displayTotal = total === undefined || total === null ? '100%' : animatedTotal;
+  const displayTotal = total === undefined || total === null ? '100%' : formatNumber(animatedTotal);
 
   return (
     <ChartContainer>
@@ -139,9 +143,9 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
               <LegendItem key={index}>
                 <LegendColor style={{ backgroundColor: segment.color }} />
                 <LegendText>
-                  <div>{segment.name}</div>
+                  <LegendName>{segment.name}</LegendName>
                   <AnimatedValue>
-                    {segment.value}
+                    {formatNumber(segment.value)}
                   </AnimatedValue>
                 </LegendText>
               </LegendItem>
@@ -172,6 +176,7 @@ const AnimatedPath = styled.path`
 const AnimatedValue = styled.div`
   display: inline-block;
   animation: ${fadeIn} 0.5s ease-out forwards;
+  font-weight: bold;
 `;
 
 const ChartContainer = styled.div`
@@ -213,45 +218,43 @@ const PieChartWrapper = styled.div`
 const Legend = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
-  max-width: 200px;
+  max-width: 250px;
 `;
 
 const LegendItem = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   transition: all 0.3s ease;
 `;
 
 const LegendColor = styled.div`
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
+  flex-shrink: 0;
   transition: all 0.3s ease;
 `;
 
 const LegendText = styled.div`
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
   justify-content: space-between;
+  align-items: center;
+`;
 
-  & div:first-child {
-    color: #666;
-  }
-
-  & div:last-child {
-    font-weight: bold;
-    min-width: 30px;
-    text-align: right;
-  }
+const LegendName = styled.div`
+  color: #666;
+  flex-grow: 1;
+  text-align: left;
 `;
 
 const NoDataMessage = styled.div`
-  font-size: 12px;
+  font-size: 14px;
   color: #999;
   text-align: center;
   width: 100%;

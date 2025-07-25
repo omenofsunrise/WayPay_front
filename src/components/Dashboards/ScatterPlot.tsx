@@ -17,6 +17,7 @@ interface ScatterPlotProps {
   yAxisLabel: string;
   maxX: number;
   maxY: number;
+  minY: number;
   xStep: number;
   yStep: number;
   height?: number | string;
@@ -38,6 +39,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   yAxisLabel, 
   maxX, 
   maxY, 
+  minY,
   xStep, 
   yStep, 
   height = 300,
@@ -57,7 +59,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   }
 
   const yAxisValues = [];
-  for (let i = 0; i <= maxY; i += yStep) {
+  for (let i = minY; i <= maxY; i += yStep) {
     yAxisValues.push(i);
   }
 
@@ -85,21 +87,22 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   };
 
   const calculateYPosition = (y: number) => {
-    return 100 - (y / maxY) * 100;
+    const range = maxY - minY;
+    return 100 - ((y - minY) / range) * 100;
   };
 
   useEffect(() => {
     if (hoveredPoint && plotAreaRef.current) {
       const plotRect = plotAreaRef.current.getBoundingClientRect();
       const x = calculateXPosition(hoveredPoint.x) / 100 * plotRect.width;
-      const y = (1 - hoveredPoint.y / maxY) * plotRect.height;
+      const y = calculateYPosition(hoveredPoint.y) / 100 * plotRect.height;
       
       setTooltipPosition({
         x: x + plotRect.left,
         y: y + plotRect.top
       });
     }
-  }, [hoveredPoint, maxX, maxY]);
+  }, [hoveredPoint, maxX, maxY, minY]);
 
   return (
     <ChartContainer>
@@ -131,7 +134,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
           {yAxisValues.map((value, index) => (
             <HorizontalLine 
               key={`hline-${index}`}
-              position={(1 - value / maxY) * 100}
+              position={calculateYPosition(value)}
             />
           ))}
 

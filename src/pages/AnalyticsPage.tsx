@@ -83,6 +83,11 @@ const AnalyticsPage = () => {
     2500000
   );
 
+  const minY = Math.min(
+    ...(scatterPlotData?.map(point => point.y) || []),
+    0 // или другое минимальное значение, если нужно
+  );
+
   const maxX = Math.max(
     ...(scatterPlotData?.map(point => point.x) || []),
     6
@@ -192,48 +197,42 @@ const AnalyticsPage = () => {
             changeValue={analyticData?.activeCreditsDiffrence}
           />
         </AnalyticsContainer>
-
+            <ChartSection>
+              <ScatterPlot
+                title="Динамика продаж, покупок и остатка в кассе"
+                data={scatterPlotData}
+                xAxisLabel=""
+                yAxisLabel="Сумма (руб)"
+                maxX={maxX}
+                maxY={maxY}
+                minY={minY}
+                yStep={maxY / 1}
+                xStep={1}
+                showLegend={true}
+                xAxisCustomLabels={sellInfoData?.sellsSum.periods.map(p => p.periodName)}
+                titleFontSize="20px"
+              />
+            </ChartSection>
+            <ChartSection>
+              <ColumnChart
+                title="Динамика инвестиций"
+                data={investmentData}
+                maxValue={investmentMaxValue}
+                step={Math.ceil(investmentMaxValue / 5)}
+                titleFontSize="20px"
+              />
+            </ChartSection>
+            <ChartSection>
+              <ColumnChart
+                title="Исполнение финансовых обязательств"
+                data={financialObligationsData}
+                maxValue={debtMaxValue}
+                step={Math.ceil(debtMaxValue / 5)}
+                titleFontSize="20px"
+              />
+            </ChartSection>
         <ChartsContainer>
-          <ChartSection>
-            <ScatterPlot
-              title="Динамика продаж, покупок и остатка в кассе"
-              data={scatterPlotData}
-              xAxisLabel=""
-              yAxisLabel="Сумма (руб)"
-              maxX={maxX}
-              maxY={maxY}
-              yStep={maxY / 5}
-              xStep={1}
-              height={150}
-              showLegend={true}
-              xAxisCustomLabels={sellInfoData?.sellsSum.periods.map(p => p.periodName)}
-              titleFontSize="20px"
-            />
-          </ChartSection>
-          <ChartSection style={{flex: 0.8}}>
-            <ColumnChart
-              title="Динамика инвестиций"
-              data={investmentData}
-              maxValue={investmentMaxValue}
-              step={Math.ceil(investmentMaxValue / 5)}
-              height={210}
-              titleFontSize="20px"
-            />
-          </ChartSection>
-        </ChartsContainer>
-
-        <ChartsContainer>
-          <ChartSection2 style={{flex: 1}}>
-            <ColumnChart
-              title="Исполнение финансовых обязательств"
-              data={financialObligationsData}
-              maxValue={debtMaxValue}
-              step={Math.ceil(debtMaxValue / 5)}
-              height={150}
-              titleFontSize="20px"
-            />
-          </ChartSection2>
-          <PieChartsContainer style={{flex: 0.8}}>
+          <PieChartsContainer>
             <MiniPieChart
               title="Колво договоров"
               total={analyticData?.totalCredits || 0}
@@ -283,8 +282,7 @@ const ChartsContainer = styled.div`
 `;
 
 const ChartSection = styled.div`
-  flex: 1;
-  flexDirection: row;
+  margin: 10px 0;
 `;
 
 const PieChartsContainer = styled.div`
