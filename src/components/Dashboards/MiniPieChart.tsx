@@ -9,23 +9,24 @@ interface DataItem {
 
 interface MiniPieChartProps {
   title: string;
-  total: number;
+  total?: number;
   data: DataItem[];
 }
 
 const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
   const prevDataRef = useRef<DataItem[]>(data);
-  const prevTotalRef = useRef<number>(total);
+  const prevTotalRef = useRef<number>(total || 0);
   
   const [animatedData, setAnimatedData] = useState<DataItem[]>(data);
-  const [animatedTotal, setAnimatedTotal] = useState(total);
+  const [animatedTotal, setAnimatedTotal] = useState(total || 0);
 
   useEffect(() => {
-    if (total !== prevTotalRef.current) {
+    const currentTotal = total || 0;
+    if (currentTotal !== prevTotalRef.current) {
       const duration = 1000;
       const startTime = performance.now();
       const startValue = prevTotalRef.current;
-      const endValue = total;
+      const endValue = currentTotal;
       const delta = endValue - startValue;
       
       const animate = (currentTime: number) => {
@@ -39,7 +40,7 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
       };
       
       requestAnimationFrame(animate);
-      prevTotalRef.current = total;
+      prevTotalRef.current = currentTotal;
     }
 
     const duration = 1000;
@@ -94,13 +95,14 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
   });
 
   const hasData = data.length > 0 && data.some(item => item.value > 0);
+  const displayTotal = total === undefined || total === null ? '100%' : animatedTotal;
 
   return (
     <ChartContainer>
       <ChartTitle>{title}</ChartTitle>
       <ChartContent>
         <PieChartWrapper>
-          <svg width="100" height="100" viewBox="0 0 100 100">
+          <svg width="150" height="150" viewBox="0 0 100 100">
             {hasData ? (
               <>
                 {paths.map((segment, index) => (
@@ -117,7 +119,7 @@ const MiniPieChart = ({ title, total, data }: MiniPieChartProps) => {
                   Всего
                 </text>
                 <text x="50" y="65" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="bold">
-                  {animatedTotal}
+                  {displayTotal}
                 </text>
               </>
             ) : (
@@ -192,18 +194,19 @@ const ChartTitle = styled.h3`
   margin: 0 0 16px 0;
   font-size: 14px;
   font-weight: 600;
-  text-align: left;
+  text-align: center;
 `;
 
 const ChartContent = styled.div`
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 20px;
 `;
 
 const PieChartWrapper = styled.div`
-  width: 100px;
-  height: 100px;
+  width: 150px;
+  height: 150px;
   transition: all 0.3s ease;
 `;
 
@@ -211,7 +214,8 @@ const Legend = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
+  width: 100%;
+  max-width: 200px;
 `;
 
 const LegendItem = styled.div`

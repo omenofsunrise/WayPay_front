@@ -29,23 +29,23 @@ export type PredefinedPeriod =
   | 'PreviousYear'
   | 'Custom';
 
-export interface PointData {
-  x: number;
-  y: number;
-  color: string;
-  label: string;
-  name: string;
-}
-
-export interface AnalyticInvestmentResponse {
-  periods: PeriodItem[];
-}
-
 export interface PeriodItem {
   periodName: string;
   value: number;
 }
 
-export interface AnalyticSellsResponse {
-  data: PointData[];
+export interface GraphResponse {
+  graphName: string;
+  periods: PeriodItem[];
+}
+
+export interface SellInfoResponse {
+  sellsSum: GraphResponse;
+  purchasesSum: GraphResponse;
+  cash: GraphResponse;
+}
+
+export interface DebtDynamicResponse {
+  paymentsDynamic: GraphResponse;
+  debtDynamic: GraphResponse;
 }

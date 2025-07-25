@@ -1,28 +1,26 @@
 import { useState, useCallback } from 'react';
 import analyticService from '../services/analyticService';
 import type { 
-  AnalyticInvestmentResponse,
   AnalyticParams, 
   AnalyticResponse, 
-  AnalyticSellsResponse 
+  SellInfoResponse,
+  GraphResponse,
+  DebtDynamicResponse
 } from '../types/analytic';
 
 const useAnalytic = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analyticData, setAnalyticData] = useState<AnalyticResponse | null>(null);
-  const [sellInfoData, setSellInfoData] = useState<AnalyticSellsResponse | null>(null);
-  const [investmentDynamicData, setInvestmentDynamicData] = useState<AnalyticInvestmentResponse | null>(null);
+  const [sellInfoData, setSellInfoData] = useState<SellInfoResponse | null>(null);
+  const [investmentDynamicData, setInvestmentDynamicData] = useState<GraphResponse | null>(null);
+  const [debtDynamicData, setDebtDynamicData] = useState<DebtDynamicResponse | null>(null);
 
   const getAnalyticItems = useCallback(async (params?: AnalyticParams): Promise<AnalyticResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await analyticService.getAnalyticItems({
-        predefinedPeriod: params.predefinedPeriod,
-        start: params.start,
-        end: params.end
-      });
+      const result = await analyticService.getAnalyticItems(params);
       setAnalyticData(result);
       return result;
     } catch (err) {
@@ -33,7 +31,7 @@ const useAnalytic = () => {
     }
   }, []);
 
-  const getSellInfo = useCallback(async (params?: AnalyticParams): Promise<AnalyticSellsResponse | null> => {
+  const getSellInfo = useCallback(async (params?: AnalyticParams): Promise<SellInfoResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -48,7 +46,7 @@ const useAnalytic = () => {
     }
   }, []);
 
-  const getInvestmentDynamic = useCallback(async (params?: AnalyticParams): Promise<AnalyticInvestmentResponse | null> => {
+  const getInvestmentDynamic = useCallback(async (params?: AnalyticParams): Promise<GraphResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -63,15 +61,32 @@ const useAnalytic = () => {
     }
   }, []);
 
+  const getDebtDynamic = useCallback(async (params?: AnalyticParams): Promise<DebtDynamicResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await analyticService.getDebtDynamic(params);
+      setDebtDynamicData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
     analyticData,
     sellInfoData,
-    investmentDynamicData, 
+    investmentDynamicData,
+    debtDynamicData,
     getAnalyticItems,
     getSellInfo,
-    getInvestmentDynamic, 
+    getInvestmentDynamic,
+    getDebtDynamic,
   };
 };
 

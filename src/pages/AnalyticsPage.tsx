@@ -12,14 +12,6 @@ import { useEffect, useState } from "react";
 import useAnalytic from "../api/hooks/useAnalytic";
 import type { PredefinedPeriod } from "../api/types/analytic";
 
-interface PointData {
-  x: number;
-  y: number;
-  color: string;
-  label: string;
-  name: string;
-}
-
 interface BarData {
   name: string;
   value: number;
@@ -32,10 +24,6 @@ interface ChartData {
   bars: BarData[];
 }
 
-interface AnalyticSellsResponse {
-  data: PointData[];
-}
-
 const AnalyticsPage = () => {
   const [period, setPeriod] = useState<PredefinedPeriod>('ThisMonth');
   const { 
@@ -46,35 +34,61 @@ const AnalyticsPage = () => {
     sellInfoData,
     getSellInfo,
     getInvestmentDynamic,
-    investmentDynamicData
+    investmentDynamicData,
+    getDebtDynamic,
+    debtDynamicData
   } = useAnalytic();
   
   useEffect(() => {
     getAnalyticItems({ predefinedPeriod: period });
     getSellInfo({ predefinedPeriod: period });
-  }, [period, getAnalyticItems, getSellInfo]);
-  
-   useEffect(() => {
-    getAnalyticItems({ predefinedPeriod: period });
-    getSellInfo({ predefinedPeriod: period });
     getInvestmentDynamic({ predefinedPeriod: period });
-  }, [period, getAnalyticItems, getSellInfo, getInvestmentDynamic]);
+    getDebtDynamic({ predefinedPeriod: period });
+  }, [period, getAnalyticItems, getSellInfo, getInvestmentDynamic, getDebtDynamic]);
 
   const formatNumber = (num: number | undefined): string => {
     if (num === undefined) return '0';
     return new Intl.NumberFormat('ru-RU').format(num);
   };
 
+  // Prepare sales/purchases/cash data for ScatterPlot
+  const scatterPlotData = sellInfoData 
+    ? [
+        ...(sellInfoData.sellsSum.periods.map((period, index) => ({
+          x: index,
+          y: period.value,
+          color: "rgba(0, 125, 136, 1)",
+          label: "Продажи",
+          name: period.periodName
+        }))),
+        ...(sellInfoData.purchasesSum.periods.map((period, index) => ({
+          x: index,
+          y: period.value,
+          color: "rgba(173, 179, 188, 1)",
+          label: "Покупки",
+          name: period.periodName
+        }))),
+        ...(sellInfoData.cash.periods.map((period, index) => ({
+          x: index,
+          y: period.value,
+          color: "rgba(37, 203, 161, 1)",
+          label: "Остаток в кассе",
+          name: period.periodName
+        })))
+      ]
+    : [];
+
   const maxY = Math.max(
-    ...(sellInfoData?.data?.map(point => point.y) || []),
+    ...(scatterPlotData?.map(point => point.y) || []),
     2500000
   );
 
   const maxX = Math.max(
-    ...(sellInfoData?.data?.map(point => point.x) || []),
+    ...(scatterPlotData?.map(point => point.x) || []),
     6
   );
 
+  // Prepare investment data for ColumnChart
   const investmentData: ChartData[] = investmentDynamicData?.periods?.map(period => ({
     label: period.periodName,
     total: period.value,
@@ -88,56 +102,34 @@ const AnalyticsPage = () => {
     1000000
   );
 
-  const financialObligationsData: ChartData[] = [
-    {
-      label: "Янв",
-      total: 500000,
+  // Prepare debt data for ColumnChart
+  const financialObligationsData: ChartData[] = debtDynamicData?.debtDynamic?.periods?.map((period, index) => {
+    const paymentPeriod = debtDynamicData.paymentsDynamic?.periods?.[index];
+    const paymentValue = paymentPeriod?.value || 0;
+    const debtValue = period.value;
+    
+    return {
+      label: period.periodName,
+      total: paymentValue + debtValue,
       bars: [
-        { name: "Сумма просрочки", value: 150000, color: "rgba(0, 125, 136, 1)" },
-        { name: "Сумма ежемесячных платежей", value: 350000, color: "rgba(173, 179, 188, 1)" },
+        { 
+          name: "Сумма просрочки", 
+          value: debtValue, 
+          color: "rgba(0, 125, 136, 1)" 
+        },
+        { 
+          name: "Сумма ежемесячных платежей", 
+          value: paymentValue, 
+          color: "rgba(173, 179, 188, 1)" 
+        },
       ]
-    },
-    {
-      label: "Фев",
-      total: 550000,
-      bars: [
-        { name: "Сумма просрочки", value: 120000, color: "rgba(0, 125, 136, 1)" },
-        { name: "Сумма ежемесячных платежей", value: 430000, color: "rgba(173, 179, 188, 1)" },
-      ]
-    },
-    {
-      label: "Мар",
-      total: 600000,
-      bars: [
-        { name: "Сумма просрочки", value: 180000, color: "rgba(0, 125, 136, 1)" },
-        { name: "Сумма ежемесячных платежей", value: 420000, color: "rgba(173, 179, 188, 1)" },
-      ]
-    },
-    {
-      label: "Апр",
-      total: 650000,
-      bars: [
-        { name: "Сумма просрочки", value: 90000, color: "rgba(0, 125, 136, 1)" },
-        { name: "Сумма ежемесячных платежей", value: 560000, color: "rgba(173, 179, 188, 1)" },
-      ]
-    },
-    {
-      label: "Май",
-      total: 700000,
-      bars: [
-        { name: "Сумма просрочки", value: 200000, color: "rgba(0, 125, 136, 1)" },
-        { name: "Сумма ежемесячных платежей", value: 500000, color: "rgba(173, 179, 188, 1)" },
-      ]
-    },
-    {
-      label: "Июн",
-      total: 750000,
-      bars: [
-        { name: "Сумма просрочки", value: 100000, color: "rgba(0, 125, 136, 1)" },
-        { name: "Сумма ежемесячных платежей", value: 650000, color: "rgba(173, 179, 188, 1)" },
-      ]
-    }
-  ];
+    };
+  }) || [];
+
+  const debtMaxValue = Math.max(
+    ...(financialObligationsData.map(item => item.total) || []),
+    800000
+  );
 
   return (
     <PageLayout>
@@ -203,26 +195,23 @@ const AnalyticsPage = () => {
 
         <ChartsContainer>
           <ChartSection>
-          <ScatterPlot
-            title="Динамика продаж, покупок и остатка в кассе"
-            data={sellInfoData?.data || []}
-            xAxisLabel=""
-            yAxisLabel="Сумма (руб)"
-            maxX={maxX}
-            maxY={maxY}
-            yStep={maxY / 5}
-            xStep={1}
-            height={150}
-            showLegend={true}
-            xAxisCustomLabels={sellInfoData?.data?.map((_, index) => {
-              const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
-              return months[index % 12];
-            })}
-            titleFontSize="20px"
-          />
+            <ScatterPlot
+              title="Динамика продаж, покупок и остатка в кассе"
+              data={scatterPlotData}
+              xAxisLabel=""
+              yAxisLabel="Сумма (руб)"
+              maxX={maxX}
+              maxY={maxY}
+              yStep={maxY / 5}
+              xStep={1}
+              height={150}
+              showLegend={true}
+              xAxisCustomLabels={sellInfoData?.sellsSum.periods.map(p => p.periodName)}
+              titleFontSize="20px"
+            />
           </ChartSection>
           <ChartSection style={{flex: 0.8}}>
-          <ColumnChart
+            <ColumnChart
               title="Динамика инвестиций"
               data={investmentData}
               maxValue={investmentMaxValue}
@@ -238,8 +227,8 @@ const AnalyticsPage = () => {
             <ColumnChart
               title="Исполнение финансовых обязательств"
               data={financialObligationsData}
-              maxValue={800000}
-              step={200000}
+              maxValue={debtMaxValue}
+              step={Math.ceil(debtMaxValue / 5)}
               height={150}
               titleFontSize="20px"
             />
@@ -255,7 +244,6 @@ const AnalyticsPage = () => {
             />
             <MiniPieChart
               title="Соотношение продаж и покупок"
-              total={(analyticData?.sales || 0) + (analyticData?.purchases || 0)}
               data={[
                 { name: "Продажи", value: analyticData?.sales || 0, color: "rgba(0, 125, 136, 1)" },
                 { name: "Покупки", value: analyticData?.purchases || 0, color: "rgba(209, 213, 219, 1)" },

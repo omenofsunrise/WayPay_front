@@ -1,5 +1,11 @@
 import apiClient from '../client';
-import type { AnalyticInvestmentResponse, AnalyticParams, AnalyticResponse, AnalyticSellsResponse } from '../types/analytic';
+import type { 
+  AnalyticParams, 
+  AnalyticResponse, 
+  SellInfoResponse,
+  GraphResponse,
+  DebtDynamicResponse
+} from '../types/analytic';
 
 class AnalyticService {
   async getAnalyticItems(params?: AnalyticParams): Promise<AnalyticResponse> {
@@ -14,8 +20,8 @@ class AnalyticService {
     return response.data;
   }
 
-  async getSellInfo(params?: AnalyticParams): Promise<AnalyticSellsResponse> {
-    const response = await apiClient.get<AnalyticSellsResponse>('/Analytic/sell-info', {
+  async getSellInfo(params?: AnalyticParams): Promise<SellInfoResponse> {
+    const response = await apiClient.get<SellInfoResponse>('/Analytic/sell-info', {
       params: {
         ...params,
         start: params?.start?.toISOString(),
@@ -26,8 +32,20 @@ class AnalyticService {
     return response.data;
   }
 
-  async getInvestmentDynamic(params?: AnalyticParams): Promise<AnalyticInvestmentResponse> {
-    const response = await apiClient.get<AnalyticInvestmentResponse>('/Analytic/InvestmentAmountDynamic', {
+  async getInvestmentDynamic(params?: AnalyticParams): Promise<GraphResponse> {
+    const response = await apiClient.get<GraphResponse>('/Analytic/InvestmentAmountDynamic', {
+      params: {
+        ...params,
+        start: params?.start?.toISOString(),
+        end: params?.end?.toISOString(),
+        predefinedPeriod: params?.predefinedPeriod
+      }
+    });
+    return response.data;
+  }
+
+  async getDebtDynamic(params?: AnalyticParams): Promise<DebtDynamicResponse> {
+    const response = await apiClient.get<DebtDynamicResponse>('/Analytic/DebtDynamic', {
       params: {
         ...params,
         start: params?.start?.toISOString(),
