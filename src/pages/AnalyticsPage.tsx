@@ -218,7 +218,7 @@ const AnalyticsPage = () => {
               const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
               return months[index % 12];
             })}
-            titleFontSize="15px"
+            titleFontSize="20px"
           />
           </ChartSection>
           <ChartSection style={{flex: 0.8}}>
@@ -227,19 +227,21 @@ const AnalyticsPage = () => {
               data={investmentData}
               maxValue={investmentMaxValue}
               step={Math.ceil(investmentMaxValue / 5)}
-              height={200}
+              height={210}
+              titleFontSize="20px"
             />
           </ChartSection>
         </ChartsContainer>
 
         <ChartsContainer>
-          <ChartSection2>
+          <ChartSection2 style={{flex: 1}}>
             <ColumnChart
               title="Исполнение финансовых обязательств"
               data={financialObligationsData}
               maxValue={800000}
               step={200000}
-              height={100}
+              height={150}
+              titleFontSize="20px"
             />
           </ChartSection2>
           <PieChartsContainer style={{flex: 0.8}}>

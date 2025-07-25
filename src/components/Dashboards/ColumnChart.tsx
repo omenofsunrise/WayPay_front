@@ -21,9 +21,17 @@ interface ColumnChartProps {
   maxValue: number;
   step: number;
   height?: number | string;
+  titleFontSize?: number | string; // Новый пропс для размера шрифта заголовка
 }
 
-const ColumnChart: React.FC<ColumnChartProps> = ({ title, data, maxValue, step, height = 300 }) => {
+const ColumnChart: React.FC<ColumnChartProps> = ({ 
+  title, 
+  data, 
+  maxValue, 
+  step, 
+  height = 300,
+  titleFontSize // Новый пропс
+}) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const yAxisValues = [];
@@ -38,7 +46,7 @@ const ColumnChart: React.FC<ColumnChartProps> = ({ title, data, maxValue, step, 
   return (
     <ChartContainer>
         <TitleField style={{ marginTop: "0" }}>
-            <CustomTitle>{title}</CustomTitle>
+            <CustomTitle style={{ fontSize: titleFontSize }}>{title}</CustomTitle>
             <Legend>
                 {legendItems.map((item, index) => (
                 <LegendItem key={index}>
