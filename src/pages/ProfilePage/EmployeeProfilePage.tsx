@@ -11,7 +11,6 @@ import paymentsSvg from '../../assets/ui/analitic/payments.svg';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import { useEffect, useMemo, useState } from 'react';
 import type { Employee } from '../../api/types/employee';
-import { useMediaQuery } from 'react-responsive';
 import { useAuth } from '../../сontext/AuthContext';
 import Checkbox from '../../components/ui/CheckBoxes/Checkbox';
 import { useNavigate } from 'react-router-dom';
@@ -286,7 +285,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                         yStep={Math.ceil(Math.max(...scatterPlotData.map(d => d.y), 10) / 5)}
                         height={220}
                         showLegend={false}
-                        xAxisCustomLabels={statsToUse.map(stat => getShortMonthName(stat.month))} // Используем тот же массив
+                        xAxisCustomLabels={statsToUse.map(stat => getShortMonthName(stat.month))}
                     />
                 </ScatterPlotWrapper>
                 
