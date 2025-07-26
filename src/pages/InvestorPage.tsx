@@ -3,7 +3,7 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable, { type Column, type TableAction } from "../components/ui/tables/CustomTable";
+import CustomTable, { type Column, type RowStyle, type TableAction } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
@@ -133,7 +133,7 @@ const InvestorPage = () => {
             };
         });
     };
-
+    
     const handleExport = async () => {
         try {
             await exportData({
@@ -291,6 +291,26 @@ const InvestorPage = () => {
         ];
     }) ?? [];
 
+    const rowStyles = tableData.reduce((styles, rowData, index) => {
+        const isBlocked = rowData[7] === 'true';
+        
+        if (isBlocked) {
+            styles[index] = {
+                backgroundColor: '#FFEBEE',
+                color: 'black',
+                fontWeight: 'normal'
+            };
+        } else {
+            styles[index] = {
+                backgroundColor: '#C8E6C9',
+                color: 'black',
+                fontWeight: 'normal'
+            };
+        }
+        
+        return styles;
+    }, {} as Record<number, RowStyle>);
+    
     const tableActions = (rowData: any[]): TableAction[] => {
         if (!hasRole('директор')) return [];
         
@@ -421,6 +441,7 @@ const InvestorPage = () => {
                     <CustomTable 
                         columns={columns} 
                         data={tableData}
+                        rowStyles={rowStyles} // Add this prop
                         onRowDoubleClick={handleRowDoubleClick}
                         contextMenuActions={(rowData) => tableActions(rowData)}
                         onSort={handleSort}
