@@ -82,16 +82,17 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     const paymentsToUse = employeeId ? employeePaymentsStats : paymentsStats;
     const [employee, setEmployee] = useState<Employee | null>(null);
     
-    const scatterPlotData = useMemo(() => 
-        statsToUse.map((stat, index) => ({
+    const scatterPlotData = useMemo(() => {
+        if (!statsToUse || statsToUse.length === 0) return [];
+        
+        return statsToUse.map((stat, index) => ({
             x: index + 1,
             y: stat.count,
             color: 'rgba(0, 125, 136, 1)',
             name: getMonthName(stat.month),
             value: stat.count
-        })), 
-        [statsToUse]
-    );
+        }));
+    }, [statsToUse]);
 
     const paymentsChartData = useMemo(() => 
         paymentsToUse.map(stat => ({
@@ -280,11 +281,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                         yAxisLabel=""
                         maxX={12}
                         maxY={Math.max(...scatterPlotData.map(d => d.y), 10)}
+                        minY={0}
                         xStep={1}
                         yStep={Math.ceil(Math.max(...scatterPlotData.map(d => d.y), 10) / 5)}
                         height={220}
                         showLegend={false}
-                        xAxisCustomLabels={creditsStats.map(stat => getShortMonthName(stat.month))}
+                        xAxisCustomLabels={statsToUse.map(stat => getShortMonthName(stat.month))} // Используем тот же массив
                     />
                 </ScatterPlotWrapper>
                 
@@ -385,6 +387,8 @@ const ChartWrapper = styled.div`
 
 const ScatterPlotWrapper = styled.div`
     flex: 2.5;
+    min-height: 220px;
+    position: relative;
 `;
 
 const ResultsWrapper = styled.div`
