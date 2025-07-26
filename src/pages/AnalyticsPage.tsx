@@ -10,7 +10,7 @@ import ColumnChart from "../components/Dashboards/ColumnChart";
 import MiniPieChart from "../components/Dashboards/MiniPieChart";
 import { useEffect, useState } from "react";
 import useAnalytic from "../api/hooks/useAnalytic";
-import type { PredefinedPeriod } from "../api/types/analytic";
+import type { AnalyticParams, PredefinedPeriod } from "../api/types/analytic";
 
 interface BarData {
   name: string;
@@ -85,7 +85,7 @@ const AnalyticsPage = () => {
 
   const minY = Math.min(
     ...(scatterPlotData?.map(point => point.y) || []),
-    0 // или другое минимальное значение, если нужно
+    0
   );
 
   const maxX = Math.max(
@@ -93,7 +93,6 @@ const AnalyticsPage = () => {
     6
   );
 
-  // Prepare investment data for ColumnChart
   const investmentData: ChartData[] = investmentDynamicData?.periods?.map(period => ({
     label: period.periodName,
     total: period.value,
@@ -131,6 +130,29 @@ const AnalyticsPage = () => {
     };
   }) || [];
 
+const handlePeriodChange = (period: string, startDate?: string, endDate?: string) => {
+  let params: AnalyticParams = {
+    predefinedPeriod: period as PredefinedPeriod
+  };
+  
+  if (period === 'Custom' && startDate && endDate) {
+    params = {
+      ...params,
+      start: new Date(startDate),
+      end: new Date(endDate)
+    };
+    setPeriod('Custom');
+    // Обновите selectedLabel в PeriodField через value
+  } else {
+    setPeriod(period as PredefinedPeriod);
+  }
+  
+  getAnalyticItems(params);
+  getSellInfo(params);
+  getInvestmentDynamic(params);
+  getDebtDynamic(params);
+};
+
   const debtMaxValue = Math.max(
     ...(financialObligationsData.map(item => item.total) || []),
     800000
@@ -144,7 +166,7 @@ const AnalyticsPage = () => {
       <FilterField style={{ margin: "0 0 10px" }}>
         <PeriodField 
           value={period}
-          onChange={(value: PredefinedPeriod) => setPeriod(value)}
+          onChange={handlePeriodChange}
         />
       </FilterField>
       <AnalyticsWrapper>

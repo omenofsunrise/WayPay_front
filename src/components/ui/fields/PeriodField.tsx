@@ -15,7 +15,7 @@ interface PeriodFieldProps {
   placeholder?: string;
   options?: PeriodOption[];
   showCustomPeriodButton?: boolean;
-  onChange?: (value: string) => void;
+  onChange?: (value: string, startDate?: string, endDate?: string) => void;
   onCustomPeriodClick?: () => void;
 }
 
@@ -44,16 +44,15 @@ const PeriodField: React.FC<PeriodFieldProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const selectedOption = options.find(opt => opt.value === value);
-    if (value.startsWith('custom_')) {
-      const dates = value.replace('custom_', '').split('_');
-      if (dates.length === 2) {
-        setSelectedLabel(`С ${dates[0]} по ${dates[1]}`);
-      }
+    if (value === 'Custom' && startDate && endDate) {
+      const formattedStart = formatDateForDisplay(startDate);
+      const formattedEnd = formatDateForDisplay(endDate);
+      setSelectedLabel(`С ${formattedStart} по ${formattedEnd}`);
     } else {
+      const selectedOption = options.find(opt => opt.value === value);
       setSelectedLabel(selectedOption ? selectedOption.label : '');
     }
-  }, [value, options]);
+  }, [value, options, startDate, endDate]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -93,20 +92,19 @@ const PeriodField: React.FC<PeriodFieldProps> = ({
     setEndDate('');
   };
 
-  const handleSavePeriod = () => {
-    if (startDate && endDate) {
-      const formattedStart = formatDateForDisplay(startDate);
-      const formattedEnd = formatDateForDisplay(endDate);
-      const customValue = `custom_${formattedStart}_${formattedEnd}`;
-      const customLabel = `С ${formattedStart} по ${formattedEnd}`;
-      
-      if (onChange) {
-        onChange(customValue);
-      }
-      setSelectedLabel(customLabel);
-      setIsModalOpen(false);
+const handleSavePeriod = () => {
+  if (startDate && endDate) {
+    const formattedStart = formatDateForDisplay(startDate);
+    const formattedEnd = formatDateForDisplay(endDate);
+    const customLabel = `С ${formattedStart} по ${formattedEnd}`;
+    
+    if (onChange) {
+      onChange('Custom', startDate, endDate);
     }
-  };
+    setSelectedLabel(customLabel);
+    setIsModalOpen(false);
+  }
+};
 
   const formatDateForDisplay = (dateString: string) => {
     const date = new Date(dateString);

@@ -1,5 +1,3 @@
-import type { PaginationParams } from './common';
-
 export interface AnalyticResponse {
   investmentAmount: number;
   investmentAmountDiffrence: number;

@@ -16,11 +16,27 @@ const useAnalytic = () => {
   const [investmentDynamicData, setInvestmentDynamicData] = useState<GraphResponse | null>(null);
   const [debtDynamicData, setDebtDynamicData] = useState<DebtDynamicResponse | null>(null);
 
+  const prepareParams = useCallback((params?: AnalyticParams) => {
+    if (!params) return undefined;
+    
+    if (params.predefinedPeriod === 'Custom') {
+      return {
+        start: params.start,
+        end: params.end
+      };
+    }
+    
+    return {
+      predefinedPeriod: params.predefinedPeriod
+    };
+  }, []);
+
   const getAnalyticItems = useCallback(async (params?: AnalyticParams): Promise<AnalyticResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await analyticService.getAnalyticItems(params);
+      const preparedParams = prepareParams(params);
+      const result = await analyticService.getAnalyticItems(preparedParams);
       setAnalyticData(result);
       return result;
     } catch (err) {
@@ -29,13 +45,14 @@ const useAnalytic = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [prepareParams]);
 
   const getSellInfo = useCallback(async (params?: AnalyticParams): Promise<SellInfoResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await analyticService.getSellInfo(params);
+      const preparedParams = prepareParams(params);
+      const result = await analyticService.getSellInfo(preparedParams);
       setSellInfoData(result);
       return result;
     } catch (err) {
@@ -44,13 +61,14 @@ const useAnalytic = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [prepareParams]);
 
   const getInvestmentDynamic = useCallback(async (params?: AnalyticParams): Promise<GraphResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await analyticService.getInvestmentDynamic(params);
+      const preparedParams = prepareParams(params);
+      const result = await analyticService.getInvestmentDynamic(preparedParams);
       setInvestmentDynamicData(result);
       return result;
     } catch (err) {
@@ -59,13 +77,14 @@ const useAnalytic = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [prepareParams]);
 
   const getDebtDynamic = useCallback(async (params?: AnalyticParams): Promise<DebtDynamicResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await analyticService.getDebtDynamic(params);
+      const preparedParams = prepareParams(params);
+      const result = await analyticService.getDebtDynamic(preparedParams);
       setDebtDynamicData(result);
       return result;
     } catch (err) {
@@ -74,7 +93,7 @@ const useAnalytic = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [prepareParams]);
 
   return {
     isLoading,
