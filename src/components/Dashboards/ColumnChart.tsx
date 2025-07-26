@@ -21,7 +21,7 @@ interface ColumnChartProps {
   maxValue: number;
   step: number;
   height?: number | string;
-  titleFontSize?: number | string; // Новый пропс для размера шрифта заголовка
+  titleFontSize?: number | string;
 }
 
 const ColumnChart: React.FC<ColumnChartProps> = ({ 
@@ -30,7 +30,7 @@ const ColumnChart: React.FC<ColumnChartProps> = ({
   maxValue, 
   step, 
   height = 300,
-  titleFontSize // Новый пропс
+  titleFontSize
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -68,7 +68,6 @@ const ColumnChart: React.FC<ColumnChartProps> = ({
 
             <ChartBarsWrapper>
                 <BarsContainer>
-                    {/* Горизонтальные линии */}
                     {yAxisValues.map((value, index) => {
                       const positionPercentage = (value / maxValue) * 100;
                       return (
@@ -232,14 +231,13 @@ const BarGroup = styled.div`
   z-index: 1;
 `;
 
-
 const StackedBar = styled.div<{ height: number; offset: number; color: string; isHovered: boolean }>`
-  position: absolute;
+  position: relative;
   width: 100%;
-  height: calc(${props => props.height}% - ${props => props.offset > 0 ? '-10px' : '0px'});
-  bottom: calc(${props => props.offset}% + ${props => props.offset > 0 ? '-10px' : '0px'});
+  height: ${props => Math.max(0, props.height)}%;
+  margin-top: ${props => Math.max(0, props.offset)}%;
   background-color: ${props => props.isHovered ? `color-mix(in srgb, ${props.color} 40%, #E5E7EB)` : props.color};
-  border-radius: ${props => props.offset === 0 ? '5px' : '5px'};
+  border-radius: 4px;
   transition: background-color 0.2s ease;
   max-width: 50px;
 `;

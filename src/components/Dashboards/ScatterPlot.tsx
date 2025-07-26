@@ -127,7 +127,6 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
               {value.toLocaleString()}
             </YAxisLabel>
           ))}
-          {yAxisLabel && <AxisTitle>{yAxisLabel}</AxisTitle>}
         </YAxis>
 
         <PlotArea ref={plotAreaRef}>
