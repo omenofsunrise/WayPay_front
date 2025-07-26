@@ -635,7 +635,7 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                         ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
                         : report?.investorIncome || 0
                 }
-                balance={report?.balance || 0} // Add balance prop
+                balance={report?.balance || 0}
                 isLoading={isPayoutsLoading}
             />
 
