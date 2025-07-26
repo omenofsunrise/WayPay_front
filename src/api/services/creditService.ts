@@ -1,9 +1,27 @@
 import apiClient from '../client';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs } from '../types/credit';
+import type { PaginatedResponse } from '../types/common';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, } from '../types/credit';
 
 class CreditService {
   async getCredits(params?: CreditParams): Promise<CreditResponse> {
     const response = await apiClient.get<CreditResponse>('/Credit', { params });
+    return response.data;
+  }
+
+  async getCreditsByInvestorId(
+    investorId: number,
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<PaginatedResponse<Credit>> {
+    const response = await apiClient.get<PaginatedResponse<Credit>>(
+      `/Credit/investor/${investorId}`,
+      {
+        params: {
+          page,
+          pageSize
+        }
+      }
+    );
     return response.data;
   }
 

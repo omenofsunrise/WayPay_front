@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import ExportButton from "../components/ui/Buttons/ExportButton";
-import PageLayout from "../components/ui/Layouts/PageLayout"
+import PageLayout from "../components/ui/Layouts/PageLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from '../api/types/investor';
@@ -14,10 +14,11 @@ import investmentSvg from '../assets/ui/InvestorReport/investment.svg';
 import activeCreditsSvg from '../assets/ui/InvestorReport/credits.svg';
 import investorIncomeScg from '../assets/ui/InvestorReport/investorIncome.svg'; 
 import selfIncomeSvg from '../assets/ui/InvestorReport/selfIncome.svg';
+import debtSvg from '../assets/ui/InvestorReport/debt.svg';
 import commonIncomeSvg from '../assets/ui/InvestorReport/commonIncome.svg';
 import shareSvg from '../assets/ui/InvestorReport/share.svg';
 import balanceSvg from '../assets/ui/InvestorReport/balance.svg';
-import CustomTable from '../components/ui/tables/CustomTable';
+import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import { useInvestorPayout } from '../api/hooks/useInvestorPayout';
 import type { InvestorPayout } from '../api/types/investorPayout';
@@ -26,6 +27,12 @@ import ViewButton from '../components/ui/Buttons/ViewButton';
 import InvestorModal from '../components/modal/CrudInherited/InvestorModal';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import useCredit from '../api/hooks/useCredit';
+import type { Credit } from '../api/types/credit';
+import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
+import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
+import Pagination from '../components/ui/fields/CustomPagination';
+import Tabs from '../components/ui/fields/Tabs';
 
 const InvestorReportPage = () => {
     const { getInvestors, currentInvestor, getInvestorById, getInvestorReport } = useInvestor();
@@ -36,6 +43,11 @@ const InvestorReportPage = () => {
         addPayout, 
         removePayout 
     } = useInvestorPayout();
+    const { 
+        investorCredits, 
+        getCreditsByInvestorId, 
+        isLoading: isCreditsLoading 
+    } = useCredit();
     
     const [investors, setInvestors] = useState<Investor[]>([]);
     const [selectedInvestorId, setSelectedInvestorId] = useState<string>('');
@@ -44,6 +56,10 @@ const InvestorReportPage = () => {
     const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
     const [payoutAmount, setPayoutAmount] = useState<string>('');
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'payouts' | 'credits'>('payouts');
+    const [creditsPage, setCreditsPage] = useState(1);
+    const [payoutsPage, setPayoutsPage] = useState(1);
+    const pageSize = 10;
 
     useEffect(() => {
         const fetchInvestors = async () => {
@@ -64,294 +80,318 @@ const InvestorReportPage = () => {
         fetchInvestors();
     }, [getInvestors]);
 
-const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
-    return new Promise<Blob>(async (resolve, reject) => {
-        const pdfContainer = document.createElement('div');
-        pdfContainer.style.position = 'absolute';
-        pdfContainer.style.left = '-9999px';
-        pdfContainer.style.width = '800px';
-        pdfContainer.style.padding = '20px';
-        pdfContainer.style.fontFamily = 'Arial, sans-serif';
-        pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
-        document.body.appendChild(pdfContainer);
+    useEffect(() => {
+        if (selectedInvestorId) {
+            const fetchReportData = async () => {
+                setIsLoading(true);
+                try {
+                    await getInvestorById(Number(selectedInvestorId));
+                    const reportData = await getInvestorReport(Number(selectedInvestorId));
+                    setReport(reportData);
+                    fetchPayouts(Number(selectedInvestorId));
+                    getCreditsByInvestorId(Number(selectedInvestorId), creditsPage, pageSize);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchReportData();
+        }
+    }, [selectedInvestorId, creditsPage, payoutsPage]);
 
-        const createCard = (icon: string, value: string, label: string) => `
-            <div style="
-                background: rgba(255, 255, 255, 1);
-                border-radius: 10px;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                height: 100%;
-                flex: 1;
-                min-width: 200px;
-                margin-bottom: 16px;
-            ">
+    const handleInvestorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedInvestorId(e.target.value);
+        setCreditsPage(1);
+        setPayoutsPage(1);
+    };
+
+    const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
+        return new Promise<Blob>(async (resolve, reject) => {
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.width = '800px';
+            pdfContainer.style.padding = '20px';
+            pdfContainer.style.fontFamily = 'Arial, sans-serif';
+            pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
+            document.body.appendChild(pdfContainer);
+
+            const createCard = (icon: string, value: string, label: string) => `
                 <div style="
-                    width: 50px;
-                    height: 50px;
-                    background: rgba(37, 203, 161, 0.1);
-                    border-radius: 8px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 10px;
+                    padding: 20px;
                     display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-bottom: 15px;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                    height: 100%;
+                    flex: 1;
+                    min-width: 200px;
+                    margin-bottom: 16px;
                 ">
-                    <img src="${icon}" width="30" height="30" />
-                </div>
-                <div style="
-                    font-size: 20px;
-                    font-weight: 600;
-                    color: #111827;
-                    margin-bottom: 5px;
-                ">${value}</div>
-                <div style="
-                    font-size: 14px;
-                    color: #6B7280;
-                ">${label}</div>
-            </div>
-        `;
-
-        pdfContainer.innerHTML = `
-            <div style="
-                margin-bottom: 30px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <h1 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 24px;
-                    margin-bottom: 5px;
-                    border-bottom: 2px solid rgba(37, 203, 161, 1);
-                    padding-bottom: 10px;
-                ">
-                    Отчёт для инвестора
-                </h1>
-                <p style="
-                    color: #6B7280;
-                    font-size: 14px;
-                    margin: 0;
-                ">
-                    Дата формирования: ${formatDate(new Date().toISOString())}
-                </p>
-            </div>
-
-            <div style="
-                margin-bottom: 30px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <h2 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 18px;
-                    margin-top: 0;
-                    margin-bottom: 15px;
-                    display: flex;
-                    align-items: center;
-                ">
-                    <span style="
-                        display: inline-block;
-                        width: 4px;
-                        height: 20px;
-                        background: rgba(37, 203, 161, 1);
-                        margin-right: 10px;
-                        border-radius: 2px;
-                    "></span>
-                    Информация об инвесторе
-                </h2>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Имя:</strong> ${currentInvestor?.fullName || 'Не указано'}</p>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber || 'Не указан'}</p>
+                    <div style="
+                        width: 50px;
+                        height: 50px;
+                        background: rgba(37, 203, 161, 0.1);
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-bottom: 15px;
+                    ">
+                        <img src="${icon}" width="30" height="30" />
                     </div>
-                    <div>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 
-                            <span style="color: ${currentInvestor?.isBlocked ? '#EF4444' : 'rgba(37, 203, 161, 1)'}">
-                                ${currentInvestor?.isBlocked ? 'Заблокирован' : 'Активен'}
-                            </span>
-                        </p>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Дата регистрации инвестора:</strong> ${formatDate(report.createdAt)}</p>
+                    <div style="
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: #111827;
+                        margin-bottom: 5px;
+                    ">${value}</div>
+                    <div style="
+                        font-size: 14px;
+                        color: #6B7280;
+                    ">${label}</div>
+                </div>
+            `;
+
+            pdfContainer.innerHTML = `
+                <div style="
+                    margin-bottom: 30px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">
+                    <h1 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 24px;
+                        margin-bottom: 5px;
+                        border-bottom: 2px solid rgba(37, 203, 161, 1);
+                        padding-bottom: 10px;
+                    ">
+                        Отчёт для инвестора
+                    </h1>
+                    <p style="
+                        color: #6B7280;
+                        font-size: 14px;
+                        margin: 0;
+                    ">
+                        Дата формирования: ${formatDate(new Date().toISOString())}
+                    </p>
+                </div>
+
+                <div style="
+                    margin-bottom: 30px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">
+                    <h2 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 18px;
+                        margin-top: 0;
+                        margin-bottom: 15px;
+                        display: flex;
+                        align-items: center;
+                    ">
+                        <span style="
+                            display: inline-block;
+                            width: 4px;
+                            height: 20px;
+                            background: rgba(37, 203, 161, 1);
+                            margin-right: 10px;
+                            border-radius: 2px;
+                        "></span>
+                        Информация об инвесторе
+                    </h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Имя:</strong> ${currentInvestor?.fullName || 'Не указано'}</p>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber || 'Не указан'}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 
+                                <span style="color: ${currentInvestor?.isBlocked ? '#EF4444' : 'rgba(37, 203, 161, 1)'}">
+                                    ${currentInvestor?.isBlocked ? 'Заблокирован' : 'Активен'}
+                                </span>
+                            </p>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Дата регистрации инвестора:</strong> ${formatDate(report.createdAt)}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div style="
-                margin-bottom: 30px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <h2 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 18px;
-                    margin-top: 0;
-                    margin-bottom: 20px;
-                    display: flex;
-                    align-items: center;
+                <div style="
+                    margin-bottom: 30px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
                 ">
-                    <span style="
-                        display: inline-block;
-                        width: 4px;
-                        height: 20px;
-                        background: rgba(37, 203, 161, 1);
-                        margin-right: 10px;
-                        border-radius: 2px;
-                    "></span>
-                    Финансовая информация
-                </h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                    ${createCard(
-                        investmentSvg,
-                        formatMoney(report.investment.toString()),
-                        'Инвестиция'
-                    )}
-                    
-                    ${createCard(
-                        activeCreditsSvg,
-                        report.activeCreditsAmount.toString(),
-                        'Незакрытые договоры'
-                    )}
-                    
-                    ${report.isCompany ? 
-                        createCard(
-                            commonIncomeSvg,
-                            formatMoney((report.investorIncome + report.selfIncome).toString()),
-                            'Доход компании'
-                        ) : 
-                        createCard(
-                            shareSvg,
-                            currentInvestor?.investorPie.toString() + "%",
-                            'Доля инвестора'
-                        )
-                    }
-                    
-                    ${!report.isCompany ? createCard(
-                        investorIncomeScg,
-                        formatMoney(report.investorIncome.toString()),
-                        'Доход инвестора'
-                    ) : ''}
-                    
-                    ${createCard(
-                        balanceSvg,
-                        formatMoney(report.balance.toString()),
-                        'Касса'
-                    )}
+                    <h2 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 18px;
+                        margin-top: 0;
+                        margin-bottom: 20px;
+                        display: flex;
+                        align-items: center;
+                    ">
+                        <span style="
+                            display: inline-block;
+                            width: 4px;
+                            height: 20px;
+                            background: rgba(37, 203, 161, 1);
+                            margin-right: 10px;
+                            border-radius: 2px;
+                        "></span>
+                        Финансовая информация
+                    </h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                        ${createCard(
+                            investmentSvg,
+                            formatMoney(report.investment.toString()),
+                            'Инвестиция'
+                        )}
+                        
+                        ${createCard(
+                            activeCreditsSvg,
+                            report.activeCreditsAmount.toString(),
+                            'Незакрытые договоры'
+                        )}
+                        
+                        ${report.isCompany ? 
+                            createCard(
+                                commonIncomeSvg,
+                                formatMoney((report.investorIncome + report.selfIncome).toString()),
+                                'Доход компании'
+                            ) : 
+                            createCard(
+                                shareSvg,
+                                currentInvestor?.investorPie.toString() + "%",
+                                'Доля инвестора'
+                            )
+                        }
+                        
+                        ${!report.isCompany ? createCard(
+                            investorIncomeScg,
+                            formatMoney(report.investorIncome.toString()),
+                            'Доход инвестора'
+                        ) : ''}
+                        
+                        ${createCard(
+                            balanceSvg,
+                            formatMoney(report.balance.toString()),
+                            'Касса'
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            <div style="
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                margin-bottom: 30px;
-            ">
-                <h2 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 18px;
-                    margin-top: 0;
-                    margin-bottom: 20px;
-                    display: flex;
-                    align-items: center;
+                <div style="
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                    margin-bottom: 30px;
                 ">
-                    <span style="
-                        display: inline-block;
-                        width: 4px;
-                        height: 20px;
-                        background: rgba(37, 203, 161, 1);
-                        margin-right: 10px;
-                        border-radius: 2px;
-                    "></span>
-                    История выплат
-                </h2>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background-color: rgba(0, 125, 136, 1); color: white;">
-                            <th style="padding: 12px; text-align: left; border-radius: 6px 0 0 0;">Дата выплаты</th>
-                            <th style="padding: 12px; text-align: left;">Выплатил</th>
-                            <th style="padding: 12px; text-align: right; border-radius: 0 6px 0 0;">Сумма</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${payouts.map((payout, index) => `
-                            <tr style="border-bottom: 1px solid #E5E7EB; background: ${index % 2 === 0 ? 'rgba(255, 255, 255, 1)' : 'rgba(249, 250, 250, 1)'}">
-                                <td style="padding: 12px; color: #374151;">${formatDate(payout.payoutDate)}</td>
-                                <td style="padding: 12px; color: #374151;">${payout.employeeFullName}</td>
-                                <td style="padding: 12px; text-align: right; color: #374151; font-weight: 500;">${formatMoney(payout.amount.toString())}</td>
+                    <h2 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 18px;
+                        margin-top: 0;
+                        margin-bottom: 20px;
+                        display: flex;
+                        align-items: center;
+                    ">
+                        <span style="
+                            display: inline-block;
+                            width: 4px;
+                            height: 20px;
+                            background: rgba(37, 203, 161, 1);
+                            margin-right: 10px;
+                            border-radius: 2px;
+                        "></span>
+                        История выплат
+                    </h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: rgba(0, 125, 136, 1); color: white;">
+                                <th style="padding: 12px; text-align: left; border-radius: 6px 0 0 0;">Дата выплаты</th>
+                                <th style="padding: 12px; text-align: left;">Выплатил</th>
+                                <th style="padding: 12px; text-align: right; border-radius: 0 6px 0 0;">Сумма</th>
                             </tr>
-                        `).join('')}
-                        ${payouts.length === 0 ? `
-                            <tr>
-                                <td colspan="3" style="padding: 15px; text-align: center; color: #9CA3AF; background: rgba(255, 255, 255, 1);">
-                                    Нет данных о выплатах
-                                </td>
-                            </tr>
-                        ` : ''}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            ${payouts.map((payout, index) => `
+                                <tr style="border-bottom: 1px solid #E5E7EB; background: ${index % 2 === 0 ? 'rgba(255, 255, 255, 1)' : 'rgba(249, 250, 250, 1)'}">
+                                    <td style="padding: 12px; color: #374151;">${formatDate(payout.payoutDate)}</td>
+                                    <td style="padding: 12px; color: #374151;">${payout.employeeFullName}</td>
+                                    <td style="padding: 12px; text-align: right; color: #374151; font-weight: 500;">${formatMoney(payout.amount.toString())}</td>
+                                </tr>
+                            `).join('')}
+                            ${payouts.length === 0 ? `
+                                <tr>
+                                    <td colspan="3" style="padding: 15px; text-align: center; color: #9CA3AF; background: rgba(255, 255, 255, 1);">
+                                        Нет данных о выплатах
+                                    </td>
+                                </tr>
+                            ` : ''}
+                        </tbody>
+                    </table>
+                </div>
 
-            <div style="
-                padding: 15px;
-                text-align: center;
-                color: #6B7280;
-                font-size: 12px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <p>© ${new Date().getFullYear()} WayPay. Все права защищены.</p>
-            </div>
-        `;
+                <div style="
+                    padding: 15px;
+                    text-align: center;
+                    color: #6B7280;
+                    font-size: 12px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">
+                    <p>© ${new Date().getFullYear()} WayPay. Все права защищены.</p>
+                </div>
+            `;
 
-        try {
-            const canvas = await html2canvas(pdfContainer, {
-                scale: 2,
-                logging: false,
-                useCORS: true,
-                allowTaint: true,
-                width: pdfContainer.offsetWidth,
-                height: pdfContainer.scrollHeight,
-                windowWidth: pdfContainer.scrollWidth,
-                windowHeight: pdfContainer.scrollHeight
-            });
+            try {
+                const canvas = await html2canvas(pdfContainer, {
+                    scale: 2,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    width: pdfContainer.offsetWidth,
+                    height: pdfContainer.scrollHeight,
+                    windowWidth: pdfContainer.scrollWidth,
+                    windowHeight: pdfContainer.scrollHeight
+                });
 
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 210;
-            const pageHeight = 295;
-            const imgHeight = canvas.height * imgWidth / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210;
+                const pageHeight = 295;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
 
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
                 heightLeft -= pageHeight;
+
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                document.body.removeChild(pdfContainer);
+
+                const pdfBlob = pdf.output('blob');
+                resolve(pdfBlob);
+            } catch (error) {
+                document.body.removeChild(pdfContainer);
+                reject(error);
             }
-
-            document.body.removeChild(pdfContainer);
-
-            const pdfBlob = pdf.output('blob');
-            resolve(pdfBlob);
-        } catch (error) {
-            document.body.removeChild(pdfContainer);
-            reject(error);
-        }
-    });
-};
+        });
+    };
 
     const exportToPdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
         try {
@@ -391,37 +431,20 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                     url: window.location.href,
                 });
             } else {
+                // Fallback for browsers that don't support sharing files
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Ссылка скопирована в буфер обмена');
             }
         } catch (error) {
             console.error('Ошибка при попытке поделиться:', error);
-            
             try {
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Ссылка скопирована в буфер обмена');
             } catch (err) {
                 console.error('Не удалось скопировать ссылку:', err);
                 prompt('Скопируйте эту ссылку для общего доступа:', window.location.href);
             }
         }
-    };
-
-    useEffect(() => {
-        if (selectedInvestorId) {
-            const fetchReportData = async () => {
-                setIsLoading(true);
-                try {
-                    await getInvestorById(Number(selectedInvestorId));
-                    const reportData = await getInvestorReport(Number(selectedInvestorId));
-                    setReport(reportData);
-                    fetchPayouts(Number(selectedInvestorId));
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchReportData();
-        }
-    }, [selectedInvestorId]);
-
-    const handleInvestorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedInvestorId(e.target.value);
     };
 
     const handlePayoutSubmit = async () => {
@@ -485,6 +508,42 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
             </svg>
         </DeleteButton>
     ]);
+
+    const creditsTableData = investorCredits?.items.map((credit: Credit) => {
+        const hasDebt = credit.debt > 0;
+        const isActive = credit.isActive;
+        
+        return [
+            formatDate(credit.creditDate.toString()),
+            credit.clientFullName,
+            credit.clientPhone,
+            formatMoney(credit.accured.toString()),
+            formatMoney(credit.payed.toString()),
+            formatMoney(credit.rest.toString()),
+            formatMoney(credit.debt.toString()),
+            hasDebt, 
+            isActive
+        ];
+    }) || [];
+
+    const rowStyles = investorCredits?.items.reduce((styles, credit, index) => {
+        const style: RowStyle = {};
+        
+        if (credit.debt > 0) {
+            style.backgroundColor = 'rgba(232, 216, 216, 1)';
+        }
+        
+        if (!credit.isActive) {
+            style.backgroundColor = 'rgba(81, 213, 180, 1)';
+            style.color = 'black';
+        }
+        
+        if (Object.keys(style).length > 0) {
+            styles[index] = style;
+        }
+        
+        return styles;
+    }, {} as { [key: number]: RowStyle });
 
     return (
         <PageLayout>
@@ -567,7 +626,7 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                                     <IconContainer>
                                         <Icon src={shareSvg} alt="Total income" />
                                     </IconContainer>
-                                    <ReportValue>{currentInvestor.investorPie.toString() + "%"}</ReportValue>
+                                    <ReportValue>{currentInvestor?.investorPie.toString() + "%"}</ReportValue>
                                     <ReportLabel>Доля инвестора</ReportLabel>
                                 </ReportCard>
 
@@ -606,59 +665,126 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                             <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
                             <ReportLabel>Касса</ReportLabel>
                         </ReportCard>
+                        
+                        <ReportCard>
+                            <IconContainer>
+                                <Icon src={debtSvg} alt="Debt" />
+                            </IconContainer>
+                            <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
+                            <ReportLabel>Просрочки руб.</ReportLabel>
+                        </ReportCard>
                     </ReportDataContainer>
                 )}
 
-                <ModalInfoTitle style={{marginTop: "30px" }}>История выплат</ModalInfoTitle>
-                <CustomTable 
-                    columns={[
-                        { name: "Дата выплаты", isSortable: true },
-                        { name: "Выплатил", align: "left" },
-                        { name: "Выплата, руб", isSortable: true, align: "left" },
-                        { name: "", align: "center" }
-                    ]} 
-                    data={payoutTableData}
+                <TabsContainer>
+                    <Tabs<'payouts' | 'credits'>
+                        tabs={[
+                            { id: 'payouts', label: 'История выплат' },
+                            { id: 'credits', label: 'Договоры' }
+                        ]}
+                        activeTab={activeTab}
+                        onChange={(tabId) => setActiveTab(tabId)}
+                    />
+                </TabsContainer>
+
+                {activeTab === 'payouts' ? (
+                    <>
+                        <CustomTable 
+                            columns={[
+                                { name: "Дата выплаты", isSortable: true },
+                                { name: "Выплатил", align: "left" },
+                                { name: "Выплата, руб", isSortable: true, align: "left" },
+                                { name: "", align: "center" }
+                            ]} 
+                            data={payoutTableData}
+                            isLoading={isPayoutsLoading}
+                        />
+                        <PaginationLayout>
+                            <CountInfoTitle 
+                                total={payouts?.length || 0} 
+                            />
+                            <Pagination
+                                total={payouts?.length || 0}
+                                current={payoutsPage}
+                                onChange={(page) => setPayoutsPage(page)}
+                                itemsPerPage={pageSize}
+                            />
+                        </PaginationLayout>
+                    </>
+                ) : (
+                    <>
+                        <CustomTable 
+                            columns={[
+                                { name: "Дата договора", isSortable: true },
+                                { name: "Клиент", align: "left" },
+                                { name: "Телефон", align: "left" },
+                                { name: "Начислено", isSortable: true, align: "left" },
+                                { name: "Уплачено", align: "left" },
+                                { name: "Остаток", align: "left" },
+                                { name: "Долг", align: "left" },
+                                { name: "Долг", align: "left", isHidden: true },
+                                { name: "Долг", align: "left", isHidden: true },
+                            ]} 
+                            data={creditsTableData}
+                            isLoading={isCreditsLoading}
+                            rowStyles={rowStyles}
+                        />
+                        <PaginationLayout>
+                            <CountInfoTitle 
+                                total={investorCredits?.totalCount || 0} 
+                            />
+                            <Pagination
+                                total={investorCredits?.totalCount || 0}
+                                current={creditsPage}
+                                onChange={(page) => setCreditsPage(page)}
+                                itemsPerPage={pageSize}
+                            />
+                        </PaginationLayout>
+                    </>
+                )}
+
+                <PayoutModal
+                    isOpen={isPayoutModalOpen}
+                    onClose={() => setIsPayoutModalOpen(false)}
+                    amount={payoutAmount}
+                    onAmountChange={setPayoutAmount}
+                    onSubmit={handlePayoutSubmit}
+                    maxAmount={
+                        currentInvestor?.isBlocked 
+                        ? report?.balance || 0 
+                        : report?.isCompany 
+                            ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
+                            : report?.investorIncome || 0
+                    }
+                    balance={report?.balance || 0}
                     isLoading={isPayoutsLoading}
                 />
+
+                <InvestorModal
+                    mode="view"
+                    isOpen={isViewInvestorModalOpen}
+                    onClose={() => setIsViewInvestorModalOpen(false)}
+                    onSubmit={async () => false}
+                    initialData={currentInvestor ? {
+                        id: currentInvestor.id,
+                        nickname: currentInvestor.nickname,
+                        fullName: currentInvestor.fullName,
+                        phoneNumber: currentInvestor.phoneNumber,
+                        investorPie: currentInvestor.investorPie,
+                        investmentAmount: currentInvestor.investmentAmount,
+                        balance: currentInvestor.balance,
+                        isCompany: currentInvestor.isCompany,
+                        isBlocked: currentInvestor.isBlocked
+                    } : undefined}
+                />
             </ContentContainer>
-
-            <PayoutModal
-                isOpen={isPayoutModalOpen}
-                onClose={() => setIsPayoutModalOpen(false)}
-                amount={payoutAmount}
-                onAmountChange={setPayoutAmount}
-                onSubmit={handlePayoutSubmit}
-                maxAmount={
-                    currentInvestor?.isBlocked 
-                    ? report?.balance || 0 
-                    : report?.isCompany 
-                        ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
-                        : report?.investorIncome || 0
-                }
-                balance={report?.balance || 0}
-                isLoading={isPayoutsLoading}
-            />
-
-            <InvestorModal
-                mode="view"
-                isOpen={isViewInvestorModalOpen}
-                onClose={() => setIsViewInvestorModalOpen(false)}
-                onSubmit={async () => false}
-                initialData={currentInvestor ? {
-                    id: currentInvestor.id,
-                    nickname: currentInvestor.nickname,
-                    fullName: currentInvestor.fullName,
-                    phoneNumber: currentInvestor.phoneNumber,
-                    investorPie: currentInvestor.investorPie,
-                    investmentAmount: currentInvestor.investmentAmount,
-                    balance: currentInvestor.balance,
-                    isCompany: currentInvestor.isCompany,
-                    isBlocked: currentInvestor.isBlocked
-                } : undefined}
-            />
         </PageLayout>
     );
 };
+
+const TabsContainer = styled.div`
+    margin: 30px 0 20px;
+`;
 
 const DeleteButton = styled.button`
     background: none;
