@@ -51,7 +51,6 @@ const AnalyticsPage = () => {
     return new Intl.NumberFormat('ru-RU').format(num);
   };
 
-  // Prepare sales/purchases/cash data for ScatterPlot
   const scatterPlotData = sellInfoData 
     ? [
         ...(sellInfoData.sellsSum.periods.map((period, index) => ({
@@ -106,7 +105,6 @@ const AnalyticsPage = () => {
     1000000
   );
 
-  // Prepare debt data for ColumnChart
   const financialObligationsData: ChartData[] = debtDynamicData?.debtDynamic?.periods?.map((period, index) => {
     const paymentPeriod = debtDynamicData.paymentsDynamic?.periods?.[index];
     const paymentValue = paymentPeriod?.value || 0;
@@ -142,7 +140,6 @@ const handlePeriodChange = (period: string, startDate?: string, endDate?: string
       end: new Date(endDate)
     };
     setPeriod('Custom');
-    // Обновите selectedLabel в PeriodField через value
   } else {
     setPeriod(period as PredefinedPeriod);
   }

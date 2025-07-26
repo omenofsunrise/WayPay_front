@@ -42,6 +42,7 @@ const PeriodField: React.FC<PeriodFieldProps> = ({
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (value === 'Custom' && startDate && endDate) {
@@ -59,13 +60,27 @@ const PeriodField: React.FC<PeriodFieldProps> = ({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
+      
+      if (isModalOpen && modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        const calendarElements = [
+          ...document.querySelectorAll('.calendar-container, .arrow-button')
+        ];
+        
+        const clickedInsideCalendar = calendarElements.some(el => 
+          el.contains(event.target as Node)
+        );
+        
+        if (!clickedInsideCalendar) {
+          setIsModalOpen(false);
+        }
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isModalOpen]);
 
   const handleSelect = (option: PeriodOption) => {
     if (onChange) {
@@ -157,32 +172,34 @@ const handleSavePeriod = () => {
       </Container>
 
       {isModalOpen && (
-        <BaseModal
-          title=""
-          onClose={() => setIsModalOpen(false)}
-          onCancel={() => setIsModalOpen(false)}
-          onSave={(e) => {
-            e.preventDefault();
-            handleSavePeriod();
-          }}
-          saveButtonText="Выбрать"
-          customLayout={<ModalHeaderContent />}
-        >
-          <CalendarContainer>
-            <CalendarColumn>
-              <CustomCalendar 
-                value={startDate}
-                onChange={(date) => setStartDate(date)}
-              />
-            </CalendarColumn>
-            <CalendarColumn>
-              <CustomCalendar 
-                value={endDate}
-                onChange={(date) => setEndDate(date)}
-              />
-            </CalendarColumn>
-          </CalendarContainer>
-        </BaseModal>
+        <div ref={modalRef}>
+          <BaseModal
+            title=""
+            onClose={() => setIsModalOpen(false)}
+            onCancel={() => setIsModalOpen(false)}
+            onSave={(e) => {
+              e.preventDefault();
+              handleSavePeriod();
+            }}
+            saveButtonText="Выбрать"
+            customLayout={<ModalHeaderContent />}
+          >
+            <CalendarContainer>
+              <CalendarColumn>
+                <CustomCalendar 
+                  value={startDate}
+                  onChange={(date) => setStartDate(date)}
+                />
+              </CalendarColumn>
+              <CalendarColumn>
+                <CustomCalendar 
+                  value={endDate}
+                  onChange={(date) => setEndDate(date)}
+                />
+              </CalendarColumn>
+            </CalendarContainer>
+          </BaseModal>
+        </div>
       )}
     </>
   );

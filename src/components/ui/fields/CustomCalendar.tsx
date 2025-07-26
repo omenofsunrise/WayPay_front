@@ -30,7 +30,7 @@ const CustomCalendar: React.FC<DateInputProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const monthDropdownRef = useRef<HTMLDivElement>(null);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
-
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -195,12 +195,16 @@ const CustomCalendar: React.FC<DateInputProps> = ({
     return years;
   };
 
-  const toggleMonthDropdown = () => {
+  const toggleMonthDropdown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setShowMonthDropdown(!showMonthDropdown);
     setShowYearDropdown(false);
   };
 
-  const toggleYearDropdown = () => {
+  const toggleYearDropdown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setShowYearDropdown(!showYearDropdown);
     setShowMonthDropdown(false);
   };
@@ -221,25 +225,41 @@ const CustomCalendar: React.FC<DateInputProps> = ({
       </Field>
 
       {isPickerOpen && (
-        <CalendarPopup>
+        <CalendarPopup className="calendar-container">
           <CalendarHeader>
-            <ArrowButton onClick={() => navigateMonth('prev')}>
-              <ArrowIcon direction="right" />
-            </ArrowButton>
+          <ArrowButton 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigateMonth('prev');
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <ArrowIcon direction="right" />
+          </ArrowButton>
             
             <MonthYearContainer>
               <MonthSelectWrapper ref={monthDropdownRef}>
-                <MonthSelectButton onClick={toggleMonthDropdown}>
+                <MonthSelectButton 
+                  onClick={(e) => toggleMonthDropdown(e)}
+                  onMouseDown={(e) => e.preventDefault()}
+                >
                   {months[currentDate.getMonth()]}
                   <DropdownArrow $open={showMonthDropdown} />
                 </MonthSelectButton>
                 {showMonthDropdown && (
-                  <DropdownList $width={120}>
+                  <DropdownList 
+                    $width={120}
+                    onClick={(e) => e.stopPropagation()} // Добавьте это
+                  >
                     {months.map((month, index) => (
                       <DropdownItem 
                         key={month}
                         $selected={index === currentDate.getMonth()}
-                        onClick={() => changeMonth(index)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Добавьте это
+                          changeMonth(index);
+                        }}
                       >
                         {month}
                       </DropdownItem>
@@ -249,17 +269,26 @@ const CustomCalendar: React.FC<DateInputProps> = ({
               </MonthSelectWrapper>
               
               <YearSelectWrapper ref={yearDropdownRef}>
-                <YearSelectButton onClick={toggleYearDropdown}>
+                <YearSelectButton 
+                  onClick={(e) => toggleYearDropdown(e)}
+                  onMouseDown={(e) => e.preventDefault()} // Добавьте это
+                >
                   {currentDate.getFullYear()}
                   <DropdownArrow $open={showYearDropdown} />
                 </YearSelectButton>
                 {showYearDropdown && (
-                  <DropdownList $width={80}>
+                  <DropdownList 
+                    $width={80}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {generateYears().map(year => (
                       <DropdownItem 
                         key={year}
                         $selected={year === currentDate.getFullYear()}
-                        onClick={() => changeYear(year)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          changeYear(year);
+                        }}
                       >
                         {year}
                       </DropdownItem>
@@ -269,7 +298,14 @@ const CustomCalendar: React.FC<DateInputProps> = ({
               </YearSelectWrapper>
             </MonthYearContainer>
             
-            <ArrowButton onClick={() => navigateMonth('next')}>
+            <ArrowButton 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigateMonth('next');
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+            >
               <ArrowIcon direction="left" />
             </ArrowButton>
           </CalendarHeader>
@@ -473,6 +509,9 @@ const ArrowButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
+  &:focus {
+    outline: none;
+  }
 `;
 
 const ArrowIcon = styled.div<{ direction: 'left' | 'right' }>`
