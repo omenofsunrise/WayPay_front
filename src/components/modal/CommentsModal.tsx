@@ -9,6 +9,7 @@ import type { BlogCommentForm, BlogComment } from '../../api/types/blogComment';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import CustomInput from '../ui/fields/CustomInput';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
+import PhotoViewerModal from './PhotoViewerModal';
 
 interface CommentsModalProps {
   post: BlogPost;
@@ -16,7 +17,7 @@ interface CommentsModalProps {
   onCommentAdded?: () => void;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentAdded }) => {
   const { 
@@ -32,6 +33,9 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [viewingImages, setViewingImages] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { authInfo } = useEmployee();
@@ -74,6 +78,11 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage(null);
     if (e.target.files) {
+      if (files.length >= 1) {
+        setErrorMessage("Можно прикрепить только один файл");
+        return;
+      }
+      
       const newFiles = Array.from(e.target.files).filter(file => {
         if (!file.type.startsWith('image/')) {
           setErrorMessage(`Файл "${file.name}" не является изображением`);
@@ -82,13 +91,18 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
         return validateFile(file);
       });
       
-      setFiles(prev => [...prev, ...newFiles]);
+      setFiles(prev => [...prev, ...newFiles.slice(0, 1 - prev.length)]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage(null);
     if (e.target.files) {
+      if (files.length >= 1) {
+        setErrorMessage("Можно прикрепить только один файл");
+        return;
+      }
+      
       const newFiles = Array.from(e.target.files).filter(file => {
         if (file.type.startsWith('image/')) {
           setErrorMessage(`Для загрузки изображений используйте кнопку "Фото"`);
@@ -97,7 +111,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
         return validateFile(file);
       });
       
-      setFiles(prev => [...prev, ...newFiles]);
+      setFiles(prev => [...prev, ...newFiles.slice(0, 1 - prev.length)]);
     }
   };
 
@@ -118,6 +132,12 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
       fileInputRef.current.value = '';
       fileInputRef.current.click();
     }
+  };
+
+  const openImageViewer = (images: string[], index: number) => {
+    setViewingImages(images);
+    setCurrentImageIndex(index);
+    setIsViewerOpen(true);
   };
 
   const renderComments = (commentsList: BlogComment[], level = 0) => {
@@ -147,16 +167,23 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
         {comment.attachments.length > 0 && (
           <AttachmentsContainer>
             {comment.attachments.map((file, index) => (
-              <AttachmentItem key={index}>
-                {file.isImage ? (
-                  <ImagePreview src={SOCIAL_BASE_URL + file.filePath} alt={`Прикрепленное изображение ${index + 1}`} />
-                ) : (
-                  <FileIcon />
-                )}
-                <RemoveAttachmentButton onClick={() => handleRemoveFile(index)}>
-                  ×
-                </RemoveAttachmentButton>
-              </AttachmentItem>
+              file.isImage ? (
+                <ImagePreviewWrapper key={index}>
+                  <ImagePreview 
+                    src={SOCIAL_BASE_URL + file.filePath} 
+                    alt={`Прикрепленное изображение ${index + 1}`}
+                    onClick={() => openImageViewer(
+                      comment.attachments.filter(a => a.isImage).map(a => SOCIAL_BASE_URL + a.filePath),
+                      comment.attachments.filter(a => a.isImage).findIndex(a => a.filePath === file.filePath)
+                    )}
+                  />
+                </ImagePreviewWrapper>
+              ) : (
+                <FileAttachment key={index}>
+                  <FileIconSvg />
+                  <FileAttachmentName>{file.filePath}</FileAttachmentName>
+                </FileAttachment>
+              )
             ))}
           </AttachmentsContainer>
         )}
@@ -195,7 +222,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
                 />
               </FileButton>
               <FileButton onClick={handleFileClick}>
-                <FileIcon />
+                <FileIconSvg />
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -232,93 +259,114 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
   };
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
-        <ModalHeader>
-          <ModalTitle>Комментарии</ModalTitle>
-          <CloseButton onClick={onClose}>×</CloseButton>
-        </ModalHeader>
-        
-        <CommentsList>
-          {isLoading && <LoadingText>Загрузка комментариев...</LoadingText>}
-          {error && <ErrorText>{error}</ErrorText>}
-          {comments && comments.length > 0 ? (
-            renderComments(comments)
-          ) : (
-            <NoCommentsText>Нет комментариев</NoCommentsText>
-          )}
-        </CommentsList>
-        
-        <NewCommentForm onSubmit={handleSubmitComment}>
-          <CommentInputContainer>
-            <AuthorAvatar 
-              src={authInfo?.employee.photoPath 
-                ? BASE_URL + authInfo.employee.photoPath 
-                : generateAvatar(getInitials(authInfo?.employee.fullName || 'U'))} 
-              alt={authInfo?.employee.fullName || 'User'}
-            />
-            <InputWrapper>
-              <CommentInput
-                placeholder="Напишите комментарий..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-              <ActionButtons>
-                <FileButton type="button" onClick={handleImageClick}>
-                  <PhotoIcon />
-                  <input
-                    type="file"
-                    ref={imageInputRef}
-                    onChange={handleImageChange}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    multiple
-                  />
-                </FileButton>
-                <FileButton type="button" onClick={handleFileClick}>
-                  <FileIcon />
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                    multiple
-                  />
-                </FileButton>
-                <SubmitButton 
-                  type="submit" 
-                  disabled={!newComment.trim() && files.length === 0}
-                >
-                  <SendIcon />
-                </SubmitButton>
-              </ActionButtons>
-            </InputWrapper>
-          </CommentInputContainer>
+    <>
+      <ModalOverlay onClick={onClose}>
+        <ModalContent onClick={(e) => e.stopPropagation()}>
+          <ModalHeader>
+            <ModalTitle>Комментарии</ModalTitle>
+            <CloseButton onClick={onClose}>×</CloseButton>
+          </ModalHeader>
           
-          {(files.length > 0 || errorMessage) && (
-            <FilesSection>
-              {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
-              {files.map((file, index) => (
-                <FilePreviewItem key={index}>
-                  {file.type.startsWith('image/') ? (
-                    <ImagePreview src={URL.createObjectURL(file)} alt={`Прикрепленное изображение ${index + 1}`} />
-                  ) : (
-                    <FileIcon />
-                  )}
-                  <FileInfo>
-                    <FileName>{file.name}</FileName>
-                    <FileSize>{formatFileSize(file.size)}</FileSize>
-                  </FileInfo>
-                  <RemoveFileButton onClick={() => handleRemoveFile(index)}>
-                    ×
-                  </RemoveFileButton>
-                </FilePreviewItem>
-              ))}
-            </FilesSection>
-          )}
-        </NewCommentForm>
-      </ModalContent>
-    </ModalOverlay>
+          <CommentsList>
+            {isLoading ? (
+              <LoadingText>Загрузка комментариев...</LoadingText>
+            ) : error ? (
+              <ErrorText>Ошибка загрузки комментариев</ErrorText>
+            ) : comments && comments.length > 0 ? (
+              renderComments(comments)
+            ) : (
+              <NoCommentsText>Напишите первый комментарий</NoCommentsText>
+            )}
+          </CommentsList>
+          
+          <NewCommentForm onSubmit={handleSubmitComment}>
+            <CommentInputContainer>
+              <AuthorAvatar 
+                src={authInfo?.employee.photoPath 
+                  ? BASE_URL + authInfo.employee.photoPath 
+                  : generateAvatar(getInitials(authInfo?.employee.fullName || 'U'))} 
+                alt={authInfo?.employee.fullName || 'User'}
+              />
+              <InputWrapper>
+                <CommentInput
+                  placeholder="Напишите комментарий..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                <ActionButtons>
+                  <FileButton type="button" onClick={handleImageClick}>
+                    <PhotoIcon />
+                    <input
+                      type="file"
+                      ref={imageInputRef}
+                      onChange={handleImageChange}
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      multiple
+                    />
+                  </FileButton>
+                  <FileButton type="button" onClick={handleFileClick}>
+                    <FileIconSvg />
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                      multiple
+                    />
+                  </FileButton>
+                  <SubmitButton 
+                    type="submit" 
+                    disabled={!newComment.trim() && files.length === 0}
+                  >
+                    <SendIcon />
+                  </SubmitButton>
+                </ActionButtons>
+              </InputWrapper>
+            </CommentInputContainer>
+            
+            {(files.length > 0 || errorMessage) && (
+              <FilesSection>
+                {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
+                {files.map((file, index) => (
+                  <FilePreviewItem key={index}>
+                    {file.type.startsWith('image/') ? (
+                      <ImagePreviewWrapper>
+                        <ImagePreview 
+                          src={URL.createObjectURL(file)} 
+                          alt={`Прикрепленное изображение ${index + 1}`}
+                          onClick={() => openImageViewer(
+                            files.filter(f => f.type.startsWith('image/')).map(f => URL.createObjectURL(f)),
+                            files.filter(f => f.type.startsWith('image/')).findIndex(f => f.name === file.name)
+                          )}
+                        />
+                      </ImagePreviewWrapper>
+                    ) : (
+                      <FileIconSvg />
+                    )}
+                    <FileInfo>
+                      <FileName>{file.name}</FileName>
+                      <FileSize>{formatFileSize(file.size)}</FileSize>
+                    </FileInfo>
+                    <RemoveFileButton onClick={() => handleRemoveFile(index)}>
+                      ×
+                    </RemoveFileButton>
+                  </FilePreviewItem>
+                ))}
+              </FilesSection>
+            )}
+          </NewCommentForm>
+        </ModalContent>
+      </ModalOverlay>
+
+      {isViewerOpen && (
+        <PhotoViewerModal
+          images={viewingImages}
+          initialIndex={currentImageIndex}
+          onClose={() => setIsViewerOpen(false)}
+        />
+      )}
+    </>
   );
 };
 
@@ -461,29 +509,44 @@ const CommentContent = styled.p`
 `;
 
 const AttachmentsContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 8px;
 `;
 
-const AttachmentItem = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 8px;
-  background-color: #f3f4f6;
-  border-radius: 4px;
-  margin-bottom: 4px;
-  font-size: 12px;
+const ImagePreviewWrapper = styled.div`
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.02);
+  }
 `;
 
-const AttachmentName = styled.span`
-  margin-right: 8px;
+const ImagePreview = styled.img`
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+`;
+
+const FileAttachment = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  gap: 8px;
+`;
+
+const FileAttachmentName = styled.span`
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-`;
-
-const AttachmentSize = styled.span`
-  color: #6b7280;
-  margin-left: auto;
+  max-width: 120px;
 `;
 
 const CommentFooter = styled.div`
@@ -577,32 +640,28 @@ const FileButton = styled.button`
   }
 `;
 
-const FileIcon = styled.span`
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  background-color: currentColor;
-  mask-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.3333 14H2.66667C2.29848 14 2 13.7015 2 13.3333V2.66667C2 2.29848 2.29848 2 2.66667 2H8L14 8V13.3333C14 13.7015 13.7015 14 13.3333 14Z' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M8 2V8H14' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  mask-repeat: no-repeat;
-  mask-position: center;
-`;
+const FileIconSvg = () => (
+  <svg width="21" height="22" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 4.9996L5.58603 13.5856C5.21088 13.9608 5.00012 14.4696 5.00012 15.0001C5.00012 15.5306 5.21088 16.0395 5.58603 16.4146C5.96118 16.7898 6.46999 17.0005 7.00053 17.0005C7.53107 17.0005 8.03988 16.7898 8.41503 16.4146L16.829 7.8286C17.5792 7.07844 18.0006 6.061 18.0006 5.0001C18.0006 3.93921 17.5792 2.92177 16.829 2.1716C16.0789 1.42144 15.0614 1 14.0005 1C12.9396 1 11.9222 1.42144 11.172 2.1716L2.79303 10.7226C2.22843 11.2781 1.77939 11.9399 1.47183 12.6697C1.16426 13.3996 1.00425 14.1832 1.00103 14.9752C0.997801 15.7673 1.15143 16.5521 1.45304 17.2845C1.75465 18.0168 2.19828 18.6822 2.75834 19.2423C3.3184 19.8024 3.9838 20.246 4.71617 20.5476C5.44854 20.8492 6.23337 21.0028 7.02541 20.9996C7.81745 20.9964 8.60101 20.8364 9.33089 20.5288C10.0608 20.2212 10.7226 19.7722 11.278 19.2076L19.657 10.6566" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+);
 
 const SubmitButton = styled.button`
-  background-color: #3b82f6;
-  color: white;
+  color: rgba(0, 125, 136, 1);
   border: none;
   border-radius: 4px;
   padding: 6px 12px;
   font-size: 12px;
   cursor: pointer;
-  
+  background-color: transparent;
+
   &:hover {
-    background-color: #2563eb;
+    color: rgba(0, 125, 136, 1)
   }
   
   &:disabled {
-    background-color: #9ca3af;
     cursor: not-allowed;
+    color: rgba(173, 179, 188, 1);
   }
 `;
 
@@ -632,8 +691,8 @@ const FilePreviewItem = styled.div`
   align-items: center;
   padding: 8px;
   background-color: #f3f4f6;
-  border-radius: 4px;
-  margin-bottom: 4px;
+  border-radius: 8px;
+  margin-bottom: 8px;
 `;
 
 const FileName = styled.span`
@@ -711,19 +770,20 @@ const InputWrapper = styled.div`
   flex: 1;
   display: flex;
   align-items: center;
-  background: #f3f4f6;
-  border-radius: 20px;
+  border-radius: 10px;
   padding: 8px 12px;
+  border: 1px solid rgba(209, 213, 219, 1);
+  max-height: 30px;
 `;
 
 const CommentInput = styled.input`
   flex: 1;
-  border: none;
   background: transparent;
   outline: none;
   font-size: 14px;
   padding: 4px 0;
   color: black;
+  border: none;
 `;
 
 const FilesSection = styled.div`
@@ -735,25 +795,6 @@ const FileInfo = styled.div`
   flex: 1;
   margin-left: 8px;
   overflow: hidden;
-`;
-
-const ImagePreview = styled.img`
-  width: 32px;
-  height: 32px;
-  object-fit: cover;
-  border-radius: 4px;
-`;
-
-const RemoveAttachmentButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #6b7280;
-  margin-left: 8px;
-  
-  &:hover {
-    color: #ef4444;
-  }
 `;
 
 const PhotoIcon = styled.span`

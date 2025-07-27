@@ -24,7 +24,7 @@ const BlogPage = () => {
 
   useEffect(() => {
     getPosts(filters);
-  }, [filters, getPosts]);
+  }, [filters, getPosts, posts]);
 
   const handleOpenCreateModal = () => {
     setIsCreateModalOpen(true);
@@ -37,7 +37,7 @@ const BlogPage = () => {
   const handleCreatePost = async (postData: BlogPostForm) => {
     await createPost(postData);
     getPosts(filters);
-    handleCloseCreateModal();
+    handleCloseCreateModal(); 
   };
 
   const handleSearch = (searchValue: string) => {
@@ -93,7 +93,7 @@ const BlogPage = () => {
 
         {posts?.items.length === 0 && (
           <div className="text-center py-10 text-gray-500">
-            Посты не найдены. Попробуйте изменить параметры поиска.
+            Постов по данному запросу нет.
           </div>
         )}
       </BlogLayout>

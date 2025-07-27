@@ -280,14 +280,18 @@ const PostImages = styled.div<{ $singleImage?: boolean }>`
   grid-template-columns: ${({ $singleImage }) => $singleImage ? '1fr' : 'repeat(2, 1fr)'};
   gap: 8px;
   margin-bottom: 15px;
+  max-width: 100%;
 `;
 
 const PostImage = styled.img<{ $singleImage?: boolean }>`
-  width: 100%;
+  width: ${({ $singleImage }) => $singleImage ? 'auto' : '100%'};
+  max-width: 100%;
   border-radius: 8px;
-  object-fit: cover;
-  height: ${({ $singleImage }) => $singleImage ? '350px' : '200px'};
+  object-fit: contain;
+  height: auto;
   max-height: 500px;
+  cursor: pointer;
+  margin: 0 auto;
 `;
 
 const FilesContainer = styled.div`
