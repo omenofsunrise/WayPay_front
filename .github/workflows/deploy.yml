@@ -1,0 +1,32 @@
+name: Deploy with Password
+
+on:
+  push:
+    branches:
+      - main  # продакшен
+      - dev   # тестовый сервер
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Install sshpass (for password auth)
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy to Production (main branch)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          sshpass -p "${{ secrets.PROD_SERVER_PASSWORD }}" scp -o StrictHostKeyChecking=no -r build/* ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}:${{ secrets.PROD_DEPLOY_PATH }}
+
+      - name: Deploy to Staging (dev branch)
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          sshpass -p "${{ secrets.STAGING_SERVER_PASSWORD }}" scp -o StrictHostKeyChecking=no -r build/* ${{ secrets.STAGING_SERVER_USER }}@${{ secrets.STAGING_SERVER_HOST }}:${{ secrets.STAGING_DEPLOY_PATH }}
