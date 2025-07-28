@@ -27,6 +27,14 @@ class BlogCommentService {
     return response.data;
   }
 
+  async updateCommentText(commentId: number, newText: string): Promise<void> {
+    await socialApiClient.put(`/BlogComment/${commentId}/text`, newText, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+  
   async toggleLike(commentId: number): Promise<void> {
     await socialApiClient.post(`/BlogComment/${commentId}/like`);
   }

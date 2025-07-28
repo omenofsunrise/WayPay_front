@@ -99,13 +99,11 @@ const useBlogComment = () => {
       await blogCommentService.deleteComment(commentId);
       
       setComments(prev => {
-        // First try to find and remove from top level
         const topLevelFiltered = prev.filter(c => c.id !== commentId);
         if (topLevelFiltered.length !== prev.length) {
           return topLevelFiltered;
         }
         
-        // If not found at top level, look through replies
         return prev.map(c => ({
           ...c,
           replies: c.replies.filter(r => r.id !== commentId)
@@ -155,6 +153,43 @@ const useBlogComment = () => {
     }
   };
 
+  const updateCommentText = async (commentId: number, newText: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await blogCommentService.updateCommentText(commentId, newText);
+      
+      setComments(prev => {
+        const updateCommentText = (comments: BlogComment[]): BlogComment[] => {
+          return comments.map(c => {
+            if (c.id === commentId) {
+              return {
+                ...c,
+                content: newText
+              };
+            }
+            if (c.replies.length > 0) {
+              return {
+                ...c,
+                replies: updateCommentText(c.replies)
+              };
+            }
+            return c;
+          });
+        };
+        
+        return updateCommentText(prev);
+      });
+      
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update comment');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -164,7 +199,8 @@ const useBlogComment = () => {
     toggleLike,
     deleteComment,
     deleteAttachment,
-    setComments
+    setComments,
+    updateCommentText
   };
 };
 
