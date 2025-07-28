@@ -34,4 +34,3 @@ jobs:
         rm: false
         overwrite: true
         strip_components: 1
-        sudo: true
