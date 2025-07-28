@@ -169,11 +169,11 @@ function App() {
               </MainLayout>
             } />
 
-            {/* <Route path="todo" element={
+            <Route path="todo" element={
                 <MainLayout>
                   <ToDoListPage />
                 </MainLayout>
-            } /> */}
+            } />
 
             <Route path="payments-income" element={
                 <MainLayout>
