@@ -29,7 +29,12 @@ jobs:
           echo "Using PRODUCTION environment variables:"
           cat .env | grep REACT_APP_
 
-      - name: Build
+      - name: Build (Staging mode for dev branch)
+        if: github.ref == 'refs/heads/dev'
+        run: npm run build:staging
+
+      - name: Build (Production mode for main branch)
+        if: github.ref == 'refs/heads/main'
         run: npm run build
 
       - name: Install sshpass (for password auth)
