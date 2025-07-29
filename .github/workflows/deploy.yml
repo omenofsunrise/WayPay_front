@@ -38,9 +38,9 @@ jobs:
       - name: Deploy to Production (main branch)
         if: github.ref == 'refs/heads/main'
         run: |
-          sshpass -p "${{ secrets.PROD_SERVER_PASSWORD }}" scp -o StrictHostKeyChecking=no -r build/* ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}:${{ secrets.PROD_DEPLOY_PATH }}
+          sshpass -p "${{ secrets.PROD_SERVER_PASSWORD }}" scp -o StrictHostKeyChecking=no -r dist/* ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}:${{ secrets.PROD_DEPLOY_PATH }}
 
       - name: Deploy to Staging (dev branch)
         if: github.ref == 'refs/heads/dev'
         run: |
-          sshpass -p "${{ secrets.STAGING_SERVER_PASSWORD }}" scp -o StrictHostKeyChecking=no -r build/* ${{ secrets.STAGING_SERVER_USER }}@${{ secrets.STAGING_SERVER_HOST }}:${{ secrets.STAGING_DEPLOY_PATH }}
+          sshpass -p "${{ secrets.STAGING_SERVER_PASSWORD }}" scp -o StrictHostKeyChecking=no -r dist/* ${{ secrets.STAGING_SERVER_USER }}@${{ secrets.STAGING_SERVER_HOST }}:${{ secrets.STAGING_DEPLOY_PATH }}
