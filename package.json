@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:staging": "REACT_APP_ENV=staging react-scripts build",
+    "build:staging": "vite build --mode staging",
     "check-types": "tsc",
     "lint": "eslint .",
     "preview": "vite preview",
