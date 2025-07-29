@@ -20,14 +20,14 @@ jobs:
         run: |
           cp .env.staging .env
           echo "Using STAGING environment variables:"
-          cat .env | grep REACT_APP_
+          cat .env | grep VITE_
 
       - name: Setup production environment
         if: github.ref == 'refs/heads/main'
         run: |
           cp .env.production .env
           echo "Using PRODUCTION environment variables:"
-          cat .env | grep REACT_APP_
+          cat .env | grep VITE_
 
       - name: Build (Staging mode for dev branch)
         if: github.ref == 'refs/heads/dev'
@@ -37,7 +37,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: npm run build
 
-      - name: Install sshpass (for password auth)
+      - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
       - name: Deploy to Production (main branch)
