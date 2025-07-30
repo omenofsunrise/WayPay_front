@@ -22,9 +22,10 @@ const BlogPage = () => {
 
   const { posts, getPosts, createPost, deletePost, toggleLike, isLoading, error } = useBlog();
 
+  // Загружаем посты только при изменении фильтров
   useEffect(() => {
     getPosts(filters);
-  }, [filters, getPosts, posts]);
+  }, [filters, getPosts]);
 
   const handleOpenCreateModal = () => {
     setIsCreateModalOpen(true);
@@ -36,7 +37,7 @@ const BlogPage = () => {
 
   const handleCreatePost = async (postData: BlogPostForm) => {
     await createPost(postData);
-    getPosts(filters);
+    getPosts(filters); // Обновляем после создания
     handleCloseCreateModal(); 
   };
 
@@ -55,7 +56,7 @@ const BlogPage = () => {
   const handleDeletePost = async (postId: number) => {
     try {
       await deletePost(postId);
-      getPosts(filters);
+      getPosts(filters); // Обновляем после удаления
     } catch (err) {
       console.error('Ошибка при удалении поста:', err);
     }

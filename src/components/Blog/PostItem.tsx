@@ -7,6 +7,7 @@ import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import PhotoViewerModal from '../modal/PhotoViewerModal';
 import CommentsModal from '../modal/CommentsModal';
+import { LikeButton, CommentButton, ShareButton } from '../ui/Buttons/SocialButtons';
 
 interface PostItemProps {
   post: BlogPost;
@@ -134,23 +135,18 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost })
       )}
       
       <PostFooter>
-        <ActionButton 
-          onClick={() => onToggleLike(post.id)}
-          $isLiked={post.isLikedByCurrentUser}
-        >
-          <LikeIcon $isLiked={post.isLikedByCurrentUser} />
-          <ActionLabel>{post.likesCount} Реакций</ActionLabel>
-        </ActionButton>
+        <LikeButton 
+          isLiked={post.isLikedByCurrentUser} 
+          count={post.likesCount} 
+          onClick={() => onToggleLike(post.id)} 
+        />
         
-        <ActionButton onClick={handleCommentsClick}>
-          <CommentIcon />
-          <ActionLabel>{post.commentsCount} Комментариев</ActionLabel>
-        </ActionButton>
+        <CommentButton 
+          count={post.commentsCount} 
+          onClick={handleCommentsClick} 
+        />
         
-        <ActionButton>
-          <ShareIcon />
-          <ActionLabel>Поделиться</ActionLabel>
-        </ActionButton>
+        <ShareButton onClick={() => {}} />
       </PostFooter>
       
       {isPhotoViewerOpen && post.imageUrls && (

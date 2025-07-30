@@ -61,7 +61,6 @@ const useBlogComment = () => {
     try {
       await blogCommentService.toggleLike(commentId);
       
-      // Update the comment's like status in the state
       setComments(prev => {
         const updateCommentLikes = (comments: BlogComment[]): BlogComment[] => {
           return comments.map(c => {

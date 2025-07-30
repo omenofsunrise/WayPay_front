@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { formatDate } from '../../utils/dateFormatter';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
@@ -7,9 +7,9 @@ import useBlogComment from '../../api/hooks/useBlogComment';
 import type { BlogPost } from '../../api/types/blog';
 import type { BlogCommentForm, BlogComment } from '../../api/types/blogComment';
 import { useEmployee } from '../../api/hooks/useEmployee';
-import CustomInput from '../ui/fields/CustomInput';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import PhotoViewerModal from './PhotoViewerModal';
+import { LikeButton } from '../ui/Buttons/SocialButtons';
 
 interface CommentsModalProps {
   post: BlogPost;
@@ -26,11 +26,14 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
     error, 
     getCommentsByPost, 
     createComment, 
+    updateCommentText,
     toggleLike, 
     deleteComment 
   } = useBlogComment();
+  
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyTexts, setReplyTexts] = useState<Record<number, string>>({});
   const [files, setFiles] = useState<File[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [viewingImages, setViewingImages] = useState<string[]>([]);
@@ -39,13 +42,47 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { authInfo } = useEmployee();
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const [cachedComments, setCachedComments] = useState<BlogComment[]>([]);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+  const commentsListRef = useRef<HTMLDivElement>(null);
+
+  const loadComments = useCallback(async () => {
+    const freshComments = await getCommentsByPost(post.id);
+    if (freshComments) {
+      setCachedComments(freshComments);
+    }
+  }, [post.id, getCommentsByPost]);
 
   useEffect(() => {
-    getCommentsByPost(post.id);
-  }, [post.id, getCommentsByPost]);
+    loadComments();
+  }, [loadComments]);
+
+  useEffect(() => {
+    if (replyingTo || editingCommentId) {
+      commentInputRef.current?.focus();
+    }
+  }, [replyingTo, editingCommentId]);
+
+  const handleEditSubmit = async () => {
+    if (!newComment.trim() || !editingCommentId) return;
+
+    await updateCommentText(editingCommentId, newComment);
+    
+    setEditingCommentId(null);
+    setNewComment('');
+    loadComments();
+  };
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (editingCommentId) {
+      await handleEditSubmit();
+      return;
+    }
+
     if (!newComment.trim() && files.length === 0) return;
 
     const commentData: BlogCommentForm = {
@@ -63,8 +100,63 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
       setNewComment('');
       setFiles([]);
       setReplyingTo(null);
+      loadComments();
       if (onCommentAdded) onCommentAdded();
     }
+  };
+
+  const handleLikeClick = async (commentId: number) => {
+    const updateCommentLikes = (comments: BlogComment[]): BlogComment[] => {
+      return comments.map(comment => {
+        if (comment.id === commentId) {
+          const newLikeCount = comment.isLikedByCurrentUser 
+            ? comment.likeCount - 1 
+            : comment.likeCount + 1;
+          
+          return {
+            ...comment,
+            isLikedByCurrentUser: !comment.isLikedByCurrentUser,
+            likeCount: newLikeCount
+          };
+        }
+        
+        if (comment.replies && comment.replies.length > 0) {
+          return {
+            ...comment,
+            replies: updateCommentLikes(comment.replies)
+          };
+        }
+        
+        return comment;
+      });
+    };
+
+    setCachedComments(prev => updateCommentLikes(prev));
+
+    try {
+      await toggleLike(commentId);
+      loadComments();
+    } catch (error) {
+      setCachedComments(prev => updateCommentLikes(prev));
+      console.error('Ошибка при обновлении лайка:', error);
+    }
+  };
+
+  const handleStartReply = (commentId: number) => {
+    setReplyingTo(commentId);
+    setEditingCommentId(null);
+    setNewComment(replyTexts[commentId] || '');
+  };
+
+  const handleCancelReply = () => {
+    if (replyingTo) {
+      setReplyTexts(prev => ({
+        ...prev,
+        [replyingTo]: newComment
+      }));
+    }
+    setReplyingTo(null);
+    setNewComment('');
   };
 
   const validateFile = (file: File): boolean => {
@@ -145,19 +237,29 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
       <CommentContainer key={comment.id} $level={level}>
         <CommentHeader>
           <AuthorAvatar 
-            src={comment.authorAvatarPath 
-              ? BASE_URL + comment.authorAvatarPath 
+            src={comment.authorPhotoPath 
+              ? BASE_URL + comment.authorPhotoPath 
               : generateAvatar(getInitials(comment.authorName))} 
             alt={comment.authorName}
           />
           <CommentAuthor>{comment.authorName}</CommentAuthor>
           <CommentDate>{formatDate(comment.createdAt)}</CommentDate>
           
-          {comment.isAuthor && (
+          {authInfo?.employee.id === comment.authorId && (
             <CommentActions>
-              <ActionButton onClick={() => deleteComment(comment.id)}>
-                <DeleteIcon />
-              </ActionButton>
+              <MenuButton>
+                <svg width="17" height="4" viewBox="0 0 17 4" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1.95486 0.119141C0.920509 0.119141 0.0742188 0.965431 0.0742188 1.99979C0.0742188 3.03414 0.920509 3.88043 1.95486 3.88043C2.98922 3.88043 3.83551 3.03414 3.83551 1.99979C3.83551 0.965431 2.98922 0.119141 1.95486 0.119141ZM15.1194 0.119141C14.085 0.119141 13.2387 0.965431 13.2387 1.99979C13.2387 3.03414 14.085 3.88043 15.1194 3.88043C16.1537 3.88043 17 3.03414 17 1.99979C17 0.965431 16.1537 0.119141 15.1194 0.119141ZM8.53712 0.119141C7.50277 0.119141 6.65648 0.965431 6.65648 1.99979C6.65648 3.03414 7.50277 3.88043 8.53712 3.88043C9.57148 3.88043 10.4178 3.03414 10.4178 1.99979C10.4178 0.965431 9.57148 0.119141 8.53712 0.119141Z" fill="#50555C"/>
+                </svg>
+                <MenuDropdown>
+                  <MenuItem onClick={() => {
+                    setEditingCommentId(comment.id);
+                    setNewComment(comment.content);
+                    setReplyingTo(null);
+                  }}>Изменить</MenuItem>
+                  <MenuItem onClick={() => deleteComment(comment.id)}>Удалить</MenuItem>
+                </MenuDropdown>
+              </MenuButton>
             </CommentActions>
           )}
         </CommentHeader>
@@ -190,58 +292,17 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
         
         <CommentFooter>
           <LikeButton 
-            onClick={() => toggleLike(comment.id)}
-            $isLiked={comment.isLikedByCurrentUser}
-          >
-            <LikeIcon $isLiked={comment.isLikedByCurrentUser} />
-            {comment.likesCount > 0 && <LikeCount>{comment.likesCount}</LikeCount>}
-          </LikeButton>
+            isLiked={comment.isLikedByCurrentUser}
+            count={comment.likeCount}
+            onClick={() => handleLikeClick(comment.id)}
+          />
           
-          <ReplyButton onClick={() => setReplyingTo(comment.id)}>
+          <ReplyButton onClick={() => handleStartReply(comment.id)}>
             Ответить
           </ReplyButton>
         </CommentFooter>
         
-        {replyingTo === comment.id && (
-          <ReplyForm>
-            <ReplyInput
-              placeholder="Напишите ответ..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-            />
-            <ReplyActions>
-              <FileButton onClick={handleImageClick}>
-                <PhotoIcon />
-                <input
-                  type="file"
-                  ref={imageInputRef}
-                  onChange={handleImageChange}
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  multiple
-                />
-              </FileButton>
-              <FileButton onClick={handleFileClick}>
-                <FileIconSvg />
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                  multiple
-                />
-              </FileButton>
-              <SubmitButton 
-                onClick={handleSubmitComment}
-                disabled={!newComment.trim() && files.length === 0}
-              >
-                Отправить
-              </SubmitButton>
-            </ReplyActions>
-          </ReplyForm>
-        )}
-        
-        {comment.replies.length > 0 && (
+        {comment.replies && comment.replies.length > 0 && (
           <RepliesContainer>
             {renderComments(comment.replies, level + 1)}
           </RepliesContainer>
@@ -255,7 +316,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]);
   };
 
   return (
@@ -267,13 +328,16 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
             <CloseButton onClick={onClose}>×</CloseButton>
           </ModalHeader>
           
-          <CommentsList>
-            {isLoading ? (
+          <CommentsList ref={commentsListRef}>
+            {isLoading && cachedComments.length === 0 ? (
               <LoadingText>Загрузка комментариев...</LoadingText>
             ) : error ? (
               <ErrorText>Ошибка загрузки комментариев</ErrorText>
-            ) : comments && comments.length > 0 ? (
-              renderComments(comments)
+            ) : cachedComments.length > 0 ? (
+              <>
+                {renderComments(cachedComments)}
+                <div ref={commentsEndRef} />
+              </>
             ) : (
               <NoCommentsText>Напишите первый комментарий</NoCommentsText>
             )}
@@ -289,11 +353,21 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
               />
               <InputWrapper>
                 <CommentInput
-                  placeholder="Напишите комментарий..."
+                  ref={commentInputRef}
+                  placeholder={
+                    editingCommentId ? "Редактируйте комментарий..." : 
+                    replyingTo ? "Напишите ответ..." : 
+                    "Напишите комментарий..."
+                  }
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                 />
                 <ActionButtons>
+                  {(replyingTo || editingCommentId) && (
+                    <CancelEditButton type="button" onClick={handleCancelReply}>
+                      <CloseIcon />
+                    </CancelEditButton>
+                  )}
                   <FileButton type="button" onClick={handleImageClick}>
                     <PhotoIcon />
                     <input
@@ -370,6 +444,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
   );
 };
 
+
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -400,6 +475,30 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+`;
+
+const CancelEditButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #6b7280;
+  font-size: 12px;
+  margin-right: auto;
+  
+  &:hover {
+    color: #4b5563;
+  }
+`;
+
+const SaveIcon = styled.span`
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.8333 5L7.49996 13.3333L4.16663 10' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
 `;
 
 const ModalTitle = styled.h3`
@@ -436,6 +535,31 @@ const ErrorText = styled.p`
 const NoCommentsText = styled.p`
   text-align: center;
   color: #6b7280;
+`;
+
+const CloseIcon = styled.span`
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  position: relative;
+  
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background-color: currentColor;
+  }
+  
+  &::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  
+  &::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
 `;
 
 const CommentContainer = styled.div<{ $level: number }>`
@@ -549,25 +673,57 @@ const FileAttachmentName = styled.span`
   max-width: 120px;
 `;
 
+const MenuButton = styled.div`
+  position: relative;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+`;
+
+const MenuDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  display: none;
+  
+  ${MenuButton}:hover & {
+    display: block;
+  }
+`;
+
+const MenuItem = styled.div`
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #50555C;
+  white-space: nowrap;
+  
+  &:hover {
+    background-color: #f3f4f6;
+    color: #ef4444;
+  }
+`;
+
 const CommentFooter = styled.div`
   display: flex;
   align-items: center;
   margin-top: 8px;
-`;
-
-const LikeButton = styled.button<{ $isLiked: boolean }>`
-  display: flex;
-  align-items: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 8px;
-  color: ${({ $isLiked }) => $isLiked ? '#ef4444' : '#6b7280'};
-  font-size: 12px;
-  
-  &:hover {
-    color: ${({ $isLiked }) => $isLiked ? '#dc2626' : '#4b5563'};
-  }
+  margin-left: 0;
+  padding-left: 0;
 `;
 
 const LikeIcon = styled.span<{ $isLiked: boolean }>`

@@ -15,7 +15,7 @@ const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
   const { createPost, isLoading } = useBlog();
 
   const MAX_FILES = 10;
-  const MAX_FILE_SIZE_MB = 10; // 10MB
+  const MAX_FILE_SIZE_MB = 10;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

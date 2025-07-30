@@ -6,13 +6,12 @@ export interface BlogComment {
   parentId: number | null;
   content: string;
   attachments: CommentFileAttachment[];
-  likesCount: number;
+  likeCount: number;
   isLikedByCurrentUser: boolean;
   createdAt: Date;
   authorId: number;
   authorName: string;
-  authorAvatarPath?: string;
-  isAuthor: boolean;
+  authorPhotoPath?: string;
   replies: BlogComment[];
 }
 
