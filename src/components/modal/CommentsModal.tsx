@@ -213,6 +213,29 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
     setErrorMessage(null);
   };
 
+  const handleDeleteComment = async (commentId: number) => {
+    try {
+      setCachedComments(prev => 
+        prev.filter(comment => comment.id !== commentId)
+          .map(comment => {
+            if (comment.replies) {
+              return {
+                ...comment,
+                replies: comment.replies.filter(reply => reply.id !== commentId)
+              };
+            }
+            return comment;
+          })
+      );
+
+      await deleteComment(commentId);
+      loadComments();
+    } catch (error) {
+      console.error('Ошибка при удалении комментария:', error);
+      loadComments();
+    }
+  };
+
   const handleImageClick = () => {
     if (imageInputRef.current) {
       imageInputRef.current.value = '';
@@ -258,7 +281,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
                     setNewComment(comment.content);
                     setReplyingTo(null);
                   }}>Изменить</MenuItem>
-                  <MenuItem onClick={() => deleteComment(comment.id)}>Удалить</MenuItem>
+                  <MenuItem onClick={() => handleDeleteComment(comment.id)}>Удалить</MenuItem>
                 </MenuDropdown>
               </MenuButton>
             </CommentActions>
