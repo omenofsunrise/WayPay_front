@@ -3,25 +3,31 @@ import styled from 'styled-components';
 
 interface FileItemProps {
   file: File;
-  onRemove: (e: React.MouseEvent) => void;
-  onPreview: (e: React.MouseEvent) => void;
+  onRemove?: (e: React.MouseEvent) => void;
+  onPreview?: (e: React.MouseEvent) => void;
+  showRemoveButton?: boolean;
 }
 
-const FileItem: React.FC<FileItemProps> = ({ file, onRemove, onPreview }) => {
+const FileItem: React.FC<FileItemProps> = ({ 
+  file, 
+  onRemove, 
+  onPreview, 
+  showRemoveButton = true 
+}) => {
   const fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
 
   const handleFileClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onPreview(e);
+    onPreview?.(e);
   };
 
   const handleRemoveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onRemove(e);
+    onRemove?.(e);
   };
 
   return (
-    <FileItemContainer onClick={handleFileClick}>
+    <FileItemContainer onClick={onPreview ? handleFileClick : undefined}>
       <FileInfo>
         <FileIcon>
           <DefaultIcon>
@@ -42,13 +48,15 @@ const FileItem: React.FC<FileItemProps> = ({ file, onRemove, onPreview }) => {
           <FileSize>{fileSize}</FileSize>
         </FileNameWrapper>
       </FileInfo>
-      <FileActions>
-        <FileActionButton onClick={handleRemoveClick} title="Удалить">
-          <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0.949286 14.2822C0.949286 15.2298 1.80364 16.005 2.84786 16.005H10.4421C11.4864 16.005 12.3407 15.2298 12.3407 14.2822V3.94556H0.949286V14.2822ZM13.29 1.36139H9.9675L9.01821 0.5H4.27179L3.3225 1.36139H0V3.08417H13.29V1.36139Z" fill="#50555C"/>
-          </svg>
-        </FileActionButton>
-      </FileActions>
+      {showRemoveButton && (
+        <FileActions>
+          <FileActionButton onClick={handleRemoveClick} title="Удалить">
+            <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0.949286 14.2822C0.949286 15.2298 1.80364 16.005 2.84786 16.005H10.4421C11.4864 16.005 12.3407 15.2298 12.3407 14.2822V3.94556H0.949286V14.2822ZM13.29 1.36139H9.9675L9.01821 0.5H4.27179L3.3225 1.36139H0V3.08417H13.29V1.36139Z" fill="#50555C"/>
+            </svg>
+          </FileActionButton>
+        </FileActions>
+      )}
     </FileItemContainer>
   );
 };

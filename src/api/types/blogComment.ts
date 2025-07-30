@@ -26,4 +26,5 @@ export interface CommentFileAttachment {
   id: number;
   filePath: string;
   isImage: boolean;
+  fileName: string;
 }

@@ -10,6 +10,7 @@ import { useEmployee } from '../../api/hooks/useEmployee';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import PhotoViewerModal from './PhotoViewerModal';
 import { LikeButton } from '../ui/Buttons/SocialButtons';
+import FileItem from '../Blog/FileItem';
 
 interface CommentsModalProps {
   post: BlogPost;
@@ -281,10 +282,19 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
                   />
                 </ImagePreviewWrapper>
               ) : (
-                <FileAttachment key={index}>
-                  <FileIconSvg />
-                  <FileAttachmentName>{file.filePath}</FileAttachmentName>
-                </FileAttachment>
+                <FileItem
+                  key={index}
+                  file={new File([], file.filePath, { type: file.isImage ? 'image/jpeg' : 'application/octet-stream' })}
+                  onPreview={() => {
+                    if (file.isImage) {
+                      openImageViewer(
+                        comment.attachments.filter(a => a.isImage).map(a => SOCIAL_BASE_URL + a.filePath),
+                        comment.attachments.filter(a => a.isImage).findIndex(a => a.filePath === file.filePath)
+                      );
+                    }
+                  }}
+                  showRemoveButton={false}
+                />
               )
             ))}
           </AttachmentsContainer>
@@ -403,29 +413,20 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
               <FilesSection>
                 {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
                 {files.map((file, index) => (
-                  <FilePreviewItem key={index}>
-                    {file.type.startsWith('image/') ? (
-                      <ImagePreviewWrapper>
-                        <ImagePreview 
-                          src={URL.createObjectURL(file)} 
-                          alt={`Прикрепленное изображение ${index + 1}`}
-                          onClick={() => openImageViewer(
-                            files.filter(f => f.type.startsWith('image/')).map(f => URL.createObjectURL(f)),
-                            files.filter(f => f.type.startsWith('image/')).findIndex(f => f.name === file.name)
-                          )}
-                        />
-                      </ImagePreviewWrapper>
-                    ) : (
-                      <FileIconSvg />
-                    )}
-                    <FileInfo>
-                      <FileName>{file.name}</FileName>
-                      <FileSize>{formatFileSize(file.size)}</FileSize>
-                    </FileInfo>
-                    <RemoveFileButton onClick={() => handleRemoveFile(index)}>
-                      ×
-                    </RemoveFileButton>
-                  </FilePreviewItem>
+                  <FileItem
+                    key={index}
+                    file={file}
+                    onRemove={() => handleRemoveFile(index)}
+                    onPreview={() => {
+                      if (file.type.startsWith('image/')) {
+                        openImageViewer(
+                          files.filter(f => f.type.startsWith('image/')).map(f => URL.createObjectURL(f)),
+                          files.filter(f => f.type.startsWith('image/')).findIndex(f => f.name === file.name)
+                        );
+                      }
+                    }}
+                    showRemoveButton={true}
+                  />
                 ))}
               </FilesSection>
             )}
@@ -654,15 +655,6 @@ const ImagePreview = styled.img`
   object-fit: cover;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-`;
-
-const FileAttachment = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: #f3f4f6;
-  border-radius: 8px;
-  gap: 8px;
 `;
 
 const FileAttachmentName = styled.span`
