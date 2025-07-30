@@ -284,13 +284,16 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
               ) : (
                 <FileItem
                   key={index}
-                  file={new File([], file.filePath, { type: file.isImage ? 'image/jpeg' : 'application/octet-stream' })}
+                  file={new File([], file.fileName, { type: file.isImage ? 'image/jpeg' : 'application/octet-stream' })}
                   onPreview={() => {
                     if (file.isImage) {
                       openImageViewer(
                         comment.attachments.filter(a => a.isImage).map(a => SOCIAL_BASE_URL + a.filePath),
                         comment.attachments.filter(a => a.isImage).findIndex(a => a.filePath === file.filePath)
                       );
+                    }
+                    else {
+                      window.open(SOCIAL_BASE_URL + file.filePath, '_blank');
                     }
                   }}
                   showRemoveButton={false}
