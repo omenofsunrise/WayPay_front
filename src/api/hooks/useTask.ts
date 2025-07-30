@@ -3,13 +3,15 @@ import { useState, useCallback } from 'react';
 import taskService from '../services/taskService';
 import type { Task, TaskParams, TaskForm } from '../types/task';
 import type { PaginatedResponse } from '../types/common';
+import { useTaskCount } from '../../сontext/TaskCountContext';
 
 const useTask = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<Task> | null>(null);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
-
+  const { activeTasksCount, setActiveTasksCount } = useTaskCount();
+  
   const getTasks = useCallback(async (params?: TaskParams): Promise<PaginatedResponse<Task> | null> => {
     setIsLoading(true);
     setError(null);
@@ -154,18 +156,19 @@ const useTask = () => {
   }, []);
 
   const getActiveTasksCount = useCallback(async (): Promise<number | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const count = await taskService.getActiveTasksCount();
-      return count;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      setIsLoading(true);
+      setError(null);
+      try {
+        const count = await taskService.getActiveTasksCount();
+        setActiveTasksCount(count || 0); // Обновляем контекст
+        return count;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    }, [setActiveTasksCount]);
 
   return {
     isLoading,

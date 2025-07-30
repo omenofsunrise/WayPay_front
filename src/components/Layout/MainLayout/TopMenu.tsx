@@ -50,8 +50,18 @@ const TopMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
-  const { activeTasksCount } = useTaskCount();
+  const { activeTasksCount, setActiveTasksCount } = useTaskCount();
   const { getActiveTasksCount } = useTask();
+  
+  useEffect(() => {
+    const fetchTaskCount = async () => {
+      const count = await getActiveTasksCount();
+      if (count !== null) {
+        setActiveTasksCount(count);
+      }
+    };
+    fetchTaskCount();
+  }, [getActiveTasksCount, setActiveTasksCount]);
 
   const menuItems = allMenuItems.filter(item => 
     (!item.permission || hasPermission(item.permission)) && forbiddenRole(item.forbiddenRole)
