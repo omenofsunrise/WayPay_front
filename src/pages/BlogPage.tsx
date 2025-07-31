@@ -56,9 +56,16 @@ const BlogPage = () => {
   };
 
   const handleCreatePost = async (postData: BlogPostForm) => {
-    await createPost(postData);
-    getPosts(filters);
-    handleCloseCreateModal(); 
+    try {
+      await createPost(postData);
+      // Сбрасываем страницу на первую при создании нового поста
+      setFilters(prev => ({ ...prev, page: 1 }));
+      // Явно вызываем обновление списка
+      await getPosts({ ...filters, page: 1 });
+      handleCloseCreateModal();
+    } catch (err) {
+      console.error('Ошибка при создании поста:', err);
+    }
   };
 
   const handleSearch = (searchValue: string) => {
