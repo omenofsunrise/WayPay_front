@@ -29,6 +29,7 @@ const useBlog = () => {
     setError(null);
     try {
       const createdPost = await blogService.createPost(post);
+      getPosts();
       return createdPost;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
