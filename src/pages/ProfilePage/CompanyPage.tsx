@@ -281,7 +281,7 @@ const CompanyPage = () => {
                                 onChange={handleInputChange}
                             />
                         </InputGroup>
-                        <InputGroup>
+                        <InputGroup style={{width: "100%", maxWidth: "100%" }}>
                             <Label>Телефон</Label>
                             <PhoneModalInput 
                                 name="phone"

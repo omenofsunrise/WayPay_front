@@ -128,12 +128,11 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
   height: auto;
   min-height: 38px;
   box-sizing: border-box;
-  max-width: 500px;
   background-color: white;
   color: black;
   padding: 5px;
   padding-left: 15px;
-
+    
   &:hover {
     border-color: ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(0, 125, 136, 1)'};
   }
