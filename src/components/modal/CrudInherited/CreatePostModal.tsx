@@ -8,7 +8,13 @@ import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 import useBlog from '../../../api/hooks/useBlog';
 import type { BlogPostForm } from '../../../api/types/blog';
 
-const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+interface CreatePostModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit?: (postData: BlogPostForm) => Promise<void>;
+}
+
+const CreatePostModal = ({ isOpen, onClose, onSubmit }: CreatePostModalProps) => {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
@@ -25,16 +31,18 @@ const CreatePostModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
       return;
     }
 
-    try {
-      const formData: BlogPostForm = {
-        content,
-        images: files.filter(file => file.type.startsWith('image/')),
-        files: files.filter(file => !file.type.startsWith('image/')),
-      };
+    const formData: BlogPostForm = {
+      content,
+      images: files.filter(file => file.type.startsWith('image/')),
+      files: files.filter(file => !file.type.startsWith('image/')),
+    };
 
-      await createPost(formData);
-      onClose();
+    try {
+      if (onSubmit) {
+        await onSubmit(formData);
+      }
       resetForm();
+      onClose();
     } catch (err) {
       setError('Ошибка при создании поста');
     }

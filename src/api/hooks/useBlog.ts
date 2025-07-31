@@ -24,20 +24,20 @@ const useBlog = () => {
     }
   }, []);
 
-  const createPost = async (post: BlogPostForm): Promise<BlogPost | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const createdPost = await blogService.createPost(post);
-      getPosts();
-      return createdPost;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<BlogPost | null> => {
+  setIsLoading(true);
+  setError(null);
+  try {
+    const createdPost = await blogService.createPost(post);
+    await getPosts(params); // Передаём текущие параметры
+    return createdPost;
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Unknown error');
+    return null;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const publishPost = async (id: number): Promise<void> => {
     setIsLoading(true);

@@ -41,7 +41,7 @@ const BlogPage = () => {
         authorId: undefined
       }));
     }
-  }, [profileId, posts]);
+  }, [profileId]);
 
   useEffect(() => {
     getPosts(filters);
@@ -55,10 +55,10 @@ const BlogPage = () => {
     setIsCreateModalOpen(false);
   };
 
-const handleCreatePost = async (postData: BlogPostForm) => {
-  await createPost(postData);
-  handleCloseCreateModal(); 
-};
+  const handleCreatePost = async (postData: BlogPostForm) => {
+    await createPost(postData);
+    getPosts(filters); // Обновляем список постов
+  };
 
   const handleSearch = (searchValue: string) => {
     setFilters(prev => ({ ...prev, search: searchValue, page: 1 }));
