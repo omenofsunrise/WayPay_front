@@ -46,6 +46,7 @@ export interface BlogParams extends PaginationParams {
   filter?: 'mine' | 'liked';
   sortBy?: 'likes' | 'comments' | 'date_desc' | 'date_asc';
   search?: string;
+  authorId?: number;
 }
 
 export interface BlogPostCreateRequest {

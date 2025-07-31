@@ -14,9 +14,10 @@ interface PostItemProps {
   onToggleLike: (postId: number) => void;
   onDeletePost?: (postId: number) => void;
   onEditPost?: (postId: number) => void;
+  onAvatarClick?: (id: number) => void;
 }
 
-const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost }) => {
+const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, onAvatarClick }) => {
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
@@ -61,7 +62,11 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost })
     <PostItemContainer>
       <PostHeader>
         <AuthorInfoContainer>
-          <AuthorAvatar src={avatarSrc} alt={post.authorName}/>
+          <AuthorAvatar 
+          src={avatarSrc} 
+          alt={post.authorName}
+          onClick={() => onAvatarClick && onAvatarClick(post.authorId)}
+          style={{ cursor: onAvatarClick ? 'pointer' : 'default' }}/>
           <AuthorInfo>
             <AuthorName>{post.authorName}</AuthorName>
             <PostDate>{formatDate(post.createdAt)}</PostDate>
@@ -173,7 +178,7 @@ const PostItemContainer = styled.div`
   background: white;
   border-radius: 10px;
   padding: 20px;
-  margin: 20px 0;
+  margin: 10px 0;
   border: 1px solid rgba(209, 213, 219, 1);
   color: black;
   text-align: left;

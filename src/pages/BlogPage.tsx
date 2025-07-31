@@ -9,6 +9,9 @@ import BlogFilters from '../components/Blog/BlogFilters';
 import PostItem from '../components/Blog/PostItem';
 import useBlog from '../api/hooks/useBlog';
 import type { BlogPostForm, BlogParams } from '../api/types/blog';
+import { BlogProfile } from '../components/Blog/BlogProfile';
+import { useNavigate, useParams } from 'react-router-dom';
+import BackButton from '../components/ui/Buttons/BackButton';
 
 const BlogPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -17,12 +20,29 @@ const BlogPage = () => {
     filter: undefined,
     sortBy: undefined,
     page: 1,
-    pageSize: 10
+    pageSize: 10,
+    authorId: undefined
   });
 
+  const { id: profileId } = useParams();
+  const navigate = useNavigate();
   const { posts, getPosts, createPost, deletePost, toggleLike, isLoading, error } = useBlog();
 
-  // Загружаем посты только при изменении фильтров
+  useEffect(() => {
+    if (profileId) {
+      setFilters(prev => ({
+        ...prev,
+        authorId: parseInt(profileId),
+        filter: undefined
+      }));
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        authorId: undefined
+      }));
+    }
+  }, [profileId]);
+
   useEffect(() => {
     getPosts(filters);
   }, [filters, getPosts]);
@@ -37,7 +57,7 @@ const BlogPage = () => {
 
   const handleCreatePost = async (postData: BlogPostForm) => {
     await createPost(postData);
-    getPosts(filters); // Обновляем после создания
+    getPosts(filters);
     handleCloseCreateModal(); 
   };
 
@@ -56,10 +76,23 @@ const BlogPage = () => {
   const handleDeletePost = async (postId: number) => {
     try {
       await deletePost(postId);
-      getPosts(filters); // Обновляем после удаления
+      getPosts(filters);
     } catch (err) {
       console.error('Ошибка при удалении поста:', err);
     }
+  };
+
+  const handleAvatarClick = (userId: number) => {
+    navigate(`/blog/${userId}`);
+    window.scroll({
+      top: 0,
+      left: 0,
+      behavior: "smooth"
+    });
+  };
+
+  const handleBackClick = () => {
+    navigate('/blog');
   };
 
   return (
@@ -69,16 +102,33 @@ const BlogPage = () => {
       margin: "0 100px",
       gap: "20px"
     }}>
+      {profileId && (
+        <div style={{
+        }}>
+          <BackButton onClick={handleBackClick} children={'Назад'} />
+        </div>
+      )}
+
       <BlogLayout>
-        <WhiteButton 
-          text={"+ Создать пост"}
-          onClick={handleOpenCreateModal}
+        <BlogProfile 
+          employeeId={profileId ? parseInt(profileId) : undefined}
+          onAvatarClick={handleAvatarClick}
         />
-        <CreatePostModal 
-          isOpen={isCreateModalOpen} 
-          onClose={handleCloseCreateModal}
-          onSubmit={handleCreatePost}
-        />
+
+        {!profileId && (
+          <>
+            <WhiteButton
+              style={{ marginTop: "10px"}} 
+              text={"+ Создать пост"}
+              onClick={handleOpenCreateModal}
+            />
+            <CreatePostModal 
+              isOpen={isCreateModalOpen} 
+              onClose={handleCloseCreateModal}
+              onSubmit={handleCreatePost}
+            />
+          </>
+        )}
 
         {isLoading && !posts && <div>Загрузка...</div>}
         {error && <div className="text-red-500">{error}</div>}
@@ -89,6 +139,7 @@ const BlogPage = () => {
             post={post} 
             onToggleLike={toggleLike}
             onDeletePost={handleDeletePost}
+            onAvatarClick={handleAvatarClick}
           />
         ))}
 
@@ -109,6 +160,7 @@ const BlogPage = () => {
           onSortChange={handleSortChange}
           currentFilter={filters.filter}
           currentSort={filters.sortBy}
+          disabled={!!profileId}
         />
       </BlogFiltersLayout>
     </PageLayout>

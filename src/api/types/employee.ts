@@ -1,3 +1,4 @@
+import { number } from 'framer-motion';
 import type { PaginationParams } from './common';
 
 export interface Permission {
@@ -49,4 +50,19 @@ export interface EmployeeExistsResponse {
 export interface EmployeeFullnames {
   id: number;
   fullName: string;
+}
+
+export interface Profile {
+  id: number;
+  fullName: string;
+  photoPath: string;
+  description: string
+  postsCount: number;
+  commentsCount: number;
+  likesCount: number;
+}
+
+export interface ProfileUpdateRequest {
+  id?: number; 
+  description: string;
 }

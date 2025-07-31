@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import EmployeeService from '../services/employeeService';
-import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse } from '../types/employee';
+import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse, Profile, ProfileUpdateRequest } from '../types/employee';
 import { authStorage } from '../utils/auth-storage';
 import type { PaginatedResponse } from '../types/common';
 
@@ -24,7 +24,10 @@ export function useEmployee() {
   const [employeePaymentsStats, setEmployeePaymentsStats] = useState<PaymentStatsResponse[]>([]);
   const [employeeStatsLoading, setEmployeeStatsLoading] = useState<boolean>(false);
   const [employeeStatsError, setEmployeeStatsError] = useState<string | null>(null);
-
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState<boolean>(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  
   const fetchAuthInfo = useCallback(async () => {
     if (!authStorage.getAccessToken()) {
       setError('No access token available');
@@ -369,6 +372,35 @@ export function useEmployee() {
       }
     }, [employee]);
 
+    const fetchProfile = useCallback(async (id?: number) => {
+      try {
+        setProfileLoading(true);
+        setProfileError(null);
+        const data = await EmployeeService.getProfile(id);
+        setProfile(data);
+        return data;
+      } catch (err) {
+        setProfileError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setProfileLoading(false);
+      }
+    }, []);
+
+    const updateProfile = useCallback(async (request: ProfileUpdateRequest) => {
+      try {
+        setProfileLoading(true);
+        setProfileError(null);
+        await EmployeeService.updateProfile(request);
+        await fetchProfile(request.id);
+      } catch (err) {
+        setProfileError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setProfileLoading(false);
+      }
+    }, [fetchProfile]);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -410,6 +442,11 @@ export function useEmployee() {
     updateEmployeeMinSurcharge,
     togglePermission,
     updateEmployeeRole,
-    fetchEmployeeFullnames
+    fetchEmployeeFullnames,
+    profile,
+    profileLoading,
+    profileError,
+    fetchProfile,
+    updateProfile,
   };
 }

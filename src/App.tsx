@@ -183,7 +183,13 @@ function App() {
 
             <Route path="blog" element={
                 <MainLayout>
-                  <BlogPage />
+                    <BlogPage />
+                </MainLayout>
+            } />
+
+            <Route path="blog/:id" element={
+                <MainLayout>
+                    <BlogPage />
                 </MainLayout>
             } />
 

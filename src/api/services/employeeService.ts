@@ -1,7 +1,8 @@
 import apiClient from '../client';
+import socialApiClient from '../socialApiClient';
 import type { ClientExistsResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
-import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, EmployeeFullnames, PaymentStatsResponse } from '../types/employee';
+import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, EmployeeFullnames, PaymentStatsResponse, Profile, ProfileUpdateRequest } from '../types/employee';
 
 class EmployeeService {
   static async getAuthInfo(): Promise<AuthInfoResponse> {
@@ -224,6 +225,33 @@ class EmployeeService {
     }
   }
 
+  static async getProfile(id?: number): Promise<Profile> {
+    try {
+      const url = id ? `/Profile?id=${id}` : '/Profile';
+      const response = await socialApiClient.get(url);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async updateProfile(request: ProfileUpdateRequest): Promise<void> {
+    try {
+      const formData = new FormData();
+      if (request.id) {
+        formData.append('Id', request.id.toString());
+      }
+      formData.append('Description', request.description);
+
+      await socialApiClient.put('/Profile/update', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default EmployeeService;

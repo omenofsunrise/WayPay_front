@@ -7,13 +7,15 @@ interface BlogFiltersProps {
   onSortChange: (value: 'likes' | 'comments' | 'date_desc' | 'date_asc' | undefined) => void;
   currentFilter?: 'mine' | 'liked';
   currentSort?: 'likes' | 'comments' | 'date_desc' | 'date_asc';
+  disabled?: boolean;
 }
 
 const BlogFilters: React.FC<BlogFiltersProps> = ({
   onFilterChange,
   onSortChange,
   currentFilter,
-  currentSort
+  currentSort,
+  disabled = false
 }) => {
   const handleFilterClick = (filter: 'all' | 'my' | 'liked') => {
     if (filter === 'all') {
@@ -34,6 +36,10 @@ const BlogFilters: React.FC<BlogFiltersProps> = ({
       onSortChange('comments');
     }
   };
+
+  if (disabled) {
+    return null;
+  }
 
   return (
     <FilterContainer>
