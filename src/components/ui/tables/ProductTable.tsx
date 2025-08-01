@@ -36,7 +36,25 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
 
   useEffect(() => {
     if (products.length === 0) {
-      addNewRow();
+      const initialProducts = [
+        {
+          id: 1,
+          name: '',
+          price: 0,
+          quantity: 1,
+          markup: 0,
+          totalPrice: 0
+        },
+        {
+          id: 2,
+          name: '',
+          price: 0,
+          quantity: 1,
+          markup: 0,
+          totalPrice: 0
+        }
+      ];
+      onProductsChange(initialProducts);
     }
   }, []);
 
@@ -77,7 +95,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
 
   const addNewRow = () => {
     const newProduct: Product = {
-      id: Date.now(),
+      id: products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1,
       name: '',
       price: 0,
       quantity: 1,
