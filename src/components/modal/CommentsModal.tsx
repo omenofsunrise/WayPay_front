@@ -427,7 +427,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
                   </FileButton>
                   <SubmitButton 
                     type="submit" 
-                    disabled={!newComment.trim() && files.length === 0}
+                    disabled={(!newComment || !newComment.trim()) && files.length === 0}
                   >
                     <SendIcon />
                   </SubmitButton>
