@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import CustomTitle from '../ui/Text/CustomTitle';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
 import CustomInput from '../ui/fields/CustomInput';
-import DateInput from '../ui/fields/DateInput';
 import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import GrayButton from '../ui/Buttons/GrayButton';
 import Checkbox from '../ui/CheckBoxes/Checkbox';
@@ -42,6 +41,18 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [remainingDebt, setRemainingDebt] = useState<number>(currentDebt);
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
+
+  // Сброс состояния при открытии модального окна
+  useEffect(() => {
+    if (isOpen) {
+      setPaymentDate('');
+      setPrincipalAmount('');
+      setPaymentMethod(undefined);
+      setTotalAmount(0);
+      setRemainingDebt(currentDebt);
+      setIsDebtPaid(currentDebt <= 0);
+    }
+  }, [isOpen, currentDebt]);
 
   useEffect(() => {
     setIsDebtPaid(currentDebt <= 0);

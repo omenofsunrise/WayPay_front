@@ -29,7 +29,7 @@ const ToDoListPage = () => {
     ]);
     const [isCompletedModalOpen, setIsCompletedModalOpen] = useState(false);
     const [filters, setFilters] = useState<TaskParams>({
-        onlyMine: true,
+        onlyMine: false,
         includeCompleted: true,
         priority: undefined,
         taskEmployeeId: undefined

@@ -383,7 +383,6 @@ const CreditPage = () => {
               setCurrentPage(1);
             }}
             onInvestorSelect={(investor) => {
-              // Дополнительная обработка при выборе инвестора из списка
               console.log('Selected investor:', investor);
             }}
           />
