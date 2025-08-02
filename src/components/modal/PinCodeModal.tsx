@@ -5,17 +5,26 @@ import apiClient from '../../api/client';
 interface PinCodeModalProps {
   isOpen: boolean;
   onSuccess: () => void;
+  mode: 'setup' | 'verify';
+  onMaxAttempts?: () => void;
 }
 
-const PinCodeModal: React.FC<PinCodeModalProps> = ({ isOpen, onSuccess }) => {
+const PinCodeModal: React.FC<PinCodeModalProps> = ({ 
+  isOpen, 
+  onSuccess, 
+  mode = 'setup', 
+  onMaxAttempts 
+}) => {
   const [pin, setPin] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
       setPin('');
       setError('');
+      setAttempts(0);
     }
   }, [isOpen]);
 
@@ -28,11 +37,25 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({ isOpen, onSuccess }) => {
 
     setIsLoading(true);
     try {
-      await apiClient.post('/Auth/setup-pin', { pinCode: pin });
+      if (mode === 'setup') {
+        await apiClient.post('/Auth/setup-pin', { pinCode: pin });
+      } else {
+        await apiClient.post('/Auth/verify-pin', { pinCode: pin });
+      }
       onSuccess();
     } catch (err) {
-      setError('Ошибка при установке пин-кода');
-      console.error('Pin setup error:', err);
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      
+      if (mode === 'verify' && newAttempts >= 3) {
+        if (onMaxAttempts) onMaxAttempts();
+        setError('Превышено количество попыток. Доступ заблокирован.');
+        return;
+      }
+      
+      setError(mode === 'setup' 
+        ? 'Ошибка при установке пин-кода' 
+        : `Неверный пин-код. Осталось попыток: ${3 - newAttempts}`);
     } finally {
       setIsLoading(false);
     }
@@ -52,10 +75,13 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({ isOpen, onSuccess }) => {
     <ModalOverlay>
       <ModalContainer>
         <ModalContent>
-          <Title>Установите пин-код</Title>
+          <Title>
+            {mode === 'setup' ? 'Установите пин-код' : 'Введите пин-код'}
+          </Title>
           <Description>
-            Для безопасности вашего аккаунта установите 5-значный пин-код.
-            Он потребуется для подтверждения важных операций.
+            {mode === 'setup' 
+              ? 'Для безопасности вашего аккаунта установите 5-значный пин-код. Он потребуется для подтверждения важных операций.'
+              : 'Для подтверждения операции введите ваш 5-значный пин-код.'}
           </Description>
           
           <PinForm onSubmit={handleSubmit}>
@@ -67,12 +93,22 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({ isOpen, onSuccess }) => {
               value={pin}
               onChange={handlePinChange}
               autoFocus
+              disabled={mode === 'verify' && attempts >= 3}
             />
             
             {error && <ErrorText>{error}</ErrorText>}
             
-            <SubmitButton type="submit" disabled={isLoading || pin.length !== 5}>
-              {isLoading ? 'Сохранение...' : 'Подтвердить'}
+            <SubmitButton 
+              type="submit" 
+              disabled={
+                isLoading || 
+                pin.length !== 5 || 
+                (mode === 'verify' && attempts >= 3)
+              }
+            >
+              {isLoading 
+                ? (mode === 'setup' ? 'Сохранение...' : 'Проверка...') 
+                : (mode === 'setup' ? 'Подтвердить' : 'Продолжить')}
             </SubmitButton>
           </PinForm>
         </ModalContent>
