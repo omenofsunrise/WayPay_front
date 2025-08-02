@@ -8,6 +8,7 @@ export type Role = 'админ' | 'сотрудник' | 'директор' | '�
 
 export interface AuthInfo {
   type: 'employee';
+  hasPin: boolean;
   employee: {
     id: number;
     fullName: string;

@@ -5,6 +5,7 @@ import { authStorage } from '../api/utils/auth-storage';
 import logoImage from '../assets/logos/logo.svg';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 import AuthCallModal from '../components/modal/AuthCallModal';
+import PinCodeModal from '../components/modal/PinCodeModal';
 
 interface AuthPageProps {
   onLoginSuccess: (token: string) => void;
@@ -20,6 +21,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     const [verificationError, setVerificationError] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const verificationInterval = useRef<number | undefined>(undefined);
+    const [showPinModal, setShowPinModal] = useState(false);
+    const [authCompleted, setAuthCompleted] = useState(false);
 
     useEffect(() => {
         return () => {
@@ -28,6 +31,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             }
         };
     }, []);
+
+    const closeModal = () => {
+        setShowCallModal(false);
+        if (verificationInterval.current) {
+            window.clearInterval(verificationInterval.current);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,14 +88,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             
             if (response.data.accessToken && response.data.refreshToken) {
                 authStorage.setTokens(response.data.accessToken, response.data.refreshToken);
-                onLoginSuccess(response.data.accessToken);
                 
                 if (verificationInterval.current) {
                     window.clearInterval(verificationInterval.current);
                 }
                 setShowCallModal(false);
                 
-                window.location.href = userType === 'user' ? '/credits' : '/client';
+                setShowPinModal(true);
             }
         } catch (error) {
             console.error('Verification error:', error);
@@ -95,13 +104,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    const closeModal = () => {
-        setShowCallModal(false);
-        if (verificationInterval.current) {
-            window.clearInterval(verificationInterval.current);
-        }
+    const completeAuth = () => {
+        setAuthCompleted(true);
+        onLoginSuccess(authStorage.getAccessToken()!);
+        window.location.href = userType === 'user' ? '/credits' : '/client';
     };
 
+    const handlePinSuccess = () => {
+        setShowPinModal(false);
+        setAuthCompleted(true);
+        onLoginSuccess(authStorage.getAccessToken()!);
+        window.location.href = userType === 'user' ? '/credits' : '/client';
+    };
+    
     return (
         <AuthContainer>
             <AuthCard>
@@ -169,6 +184,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 isVerifying={isVerifying}
                 error={verificationError}
             />
+
+            <PinCodeModal 
+                isOpen={showPinModal}
+                onSuccess={handlePinSuccess}
+            />
+
         </AuthContainer>
     );
 };
