@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AuthPage from './pages/AuthPage';
 import CreditPage from './pages/CreditPage';
 import MainLayout from './components/Layout/MainLayout/MainLayout';
@@ -33,48 +33,93 @@ import PinCodeModal from './components/modal/PinCodeModal';
 import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
+const INACTIVITY_TIMEOUT = 2 * 60 * 1000;
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
   
-  useEffect(() => {
-      const handlePinRequired = (event: CustomEvent<PinRequiredEventDetail>) => {
-          const { resolve, reject } = event.detail;
-          
-          // Create a modal container if it doesn't exist
-          let modalRoot = document.getElementById('pin-modal-root');
-          if (!modalRoot) {
-              modalRoot = document.createElement('div');
-              modalRoot.id = 'pin-modal-root';
-              document.body.appendChild(modalRoot);
-          }
-          
-          const root = createRoot(modalRoot);
-          
-          root.render(
-              <PinCodeModal
-                  isOpen={true}
-                  onSuccess={(pin) => {
-                      resolve(pin);
-                      root.unmount();
-                      modalRoot?.remove();
-                  }}
-                  mode="verify"
-                  onMaxAttempts={() => {
-                      reject(new Error('Max attempts reached'));
-                      root.unmount();
-                      modalRoot?.remove();
-                      authStorage.clear();
-                      window.location.href = '/auth';
-                  }}
-              />
-          );
-      };
+  const updateActivity = useCallback(() => {
+    setLastActivity(Date.now());
+  }, []);
 
-      window.addEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
-      return () => {
-          window.removeEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
-      };
+  useEffect(() => {
+    const handleUserActivity = () => {
+      updateActivity();
+    };
+
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity);
+    window.addEventListener('click', handleUserActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('scroll', handleUserActivity);
+      window.removeEventListener('click', handleUserActivity);
+    };
+  }, [updateActivity]);
+
+  useEffect(() => {
+    const checkInactivity = () => {
+      if (!isAuthenticated || !authInfo?.hasPin) return;
+
+      const currentTime = Date.now();
+      if (currentTime - lastActivity > INACTIVITY_TIMEOUT) {
+        setShowPinModal(true);
+      }
+    };
+
+    const interval = setInterval(checkInactivity, 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, authInfo?.hasPin, lastActivity]);
+
+  useEffect(() => {
+    if (isAuthenticated && authInfo?.hasPin) {
+      setShowPinModal(true);
+    }
+  }, [isAuthenticated, authInfo?.hasPin]);
+
+  useEffect(() => {
+    const handlePinRequired = (event: CustomEvent<PinRequiredEventDetail>) => {
+      const { resolve, reject } = event.detail;
+      
+      let modalRoot = document.getElementById('pin-modal-root');
+      if (!modalRoot) {
+        modalRoot = document.createElement('div');
+        modalRoot.id = 'pin-modal-root';
+        document.body.appendChild(modalRoot);
+      }
+      
+      const root = createRoot(modalRoot);
+      
+      root.render(
+        <PinCodeModal
+          isOpen={true}
+          onSuccess={(pin) => {
+            resolve(pin);
+            root.unmount();
+            modalRoot?.remove();
+          }}
+          mode="verify"
+          onMaxAttempts={() => {
+            reject(new Error('Max attempts reached'));
+            root.unmount();
+            modalRoot?.remove();
+            authStorage.clear();
+            window.location.href = '/auth';
+          }}
+        />
+      );
+    };
+
+    window.addEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
+    return () => {
+      window.removeEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -105,6 +150,11 @@ function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  const handlePinSuccess = useCallback(() => {
+    setShowPinModal(false);
+    updateActivity();
+  }, [updateActivity]);
+
   if (isAuthenticated && authInfo?.hasPin === false) {
     return (
       <PinCodeModal
@@ -129,6 +179,17 @@ function App() {
 
   return (
     <AuthProvider>
+      {showPinModal && (
+        <PinCodeModal
+          isOpen={true}
+          onSuccess={handlePinSuccess}
+          mode="verify"
+          onMaxAttempts={() => {
+            authStorage.clear();
+            window.location.href = '/auth';
+          }}
+        />
+      )}
       <BrowserRouter>
         <TaskCountProvider>
           <Routes>
