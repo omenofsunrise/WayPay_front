@@ -4,6 +4,21 @@ import { authStorage } from './utils/auth-storage';
 export const BASE_URL = import.meta.env.VITE_BASE_URL || 'https://web.waypay.one:5001/';
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://web.waypay.one:5001/api';
 
+export const PIN_REQUIRED_EVENT = 'pin-required';
+
+export interface PinRequiredEventDetail {
+  resolve: (pin: string) => void;
+  reject: (error: Error) => void;
+}
+
+declare global {
+  interface Window {
+    dispatchEvent(event: CustomEvent<PinRequiredEventDetail>): void;
+    addEventListener(type: typeof PIN_REQUIRED_EVENT, listener: (event: CustomEvent<PinRequiredEventDetail>) => void): void;
+    removeEventListener(type: typeof PIN_REQUIRED_EVENT, listener: (event: CustomEvent<PinRequiredEventDetail>) => void): void;
+  }
+}
+
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
     timeout: 10000,
@@ -83,11 +98,30 @@ apiClient.interceptors.response.use(
                 processQueue(null, newAccessToken);
                 return apiClient(originalRequest);
             } catch (refreshError) {
-                console.log();
-                processQueue(refreshError as AxiosError);
-                authStorage.clear();
-                if (window.location.pathname !== '/auth') {
-                    window.location.href = '/auth';
+                console.log(refreshError);
+                if (refreshError.response.data.errorCode === "PIN_REQUIRED")
+                {
+                    const event = new CustomEvent<PinRequiredEventDetail>(PIN_REQUIRED_EVENT, {
+                        detail: {
+                            resolve: (pin: string) => {
+                                originalRequest.headers.Authorization = `Bearer ${authStorage.getAccessToken()}`;
+                                return apiClient(originalRequest);
+                            },
+                            reject: (error: Error) => {
+                                authStorage.clear();
+                                window.location.href = '/auth';
+                            }
+                        }
+                    });
+                    window.dispatchEvent(event);
+                    return Promise.reject(refreshError);
+                }
+                else {
+                    processQueue(refreshError as AxiosError);
+                    authStorage.clear();
+                    if (window.location.pathname !== '/auth') {
+                        window.location.href = '/auth';
+                    }
                 }
                 return Promise.reject(refreshError);
             } finally {

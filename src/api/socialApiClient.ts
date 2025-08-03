@@ -1,6 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { authStorage } from './utils/auth-storage';
-import { API_BASE_URL } from './client';
+import apiClient, { API_BASE_URL, PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './client';
 
 export const SOCIAL_BASE_URL = import.meta.env.VITE_SOCIAL_BASE_URL || 'https://web.waypay.one:5002/';
 export const SOCIAL_API_BASE_URL = import.meta.env.VITE_SOCIAL_API_BASE_URL || 'https://web.waypay.one:5002/';
@@ -84,15 +84,35 @@ socialApiClient.interceptors.response.use(
                 processQueue(null, newAccessToken);
                 return socialApiClient(originalRequest);
             } catch (refreshError) {
-                processQueue(refreshError as AxiosError);
-                authStorage.clear();
-                if (window.location.pathname !== '/auth') {
-                    window.location.href = '/auth';
-                }
-                return Promise.reject(refreshError);
-            } finally {
-                isRefreshing = false;
-            }
+                            console.log(refreshError);
+                            if (refreshError.response.data.errorCode === "PIN_REQUIRED")
+                            {
+                                const event = new CustomEvent<PinRequiredEventDetail>(PIN_REQUIRED_EVENT, {
+                                    detail: {
+                                        resolve: (pin: string) => {
+                                            originalRequest.headers.Authorization = `Bearer ${authStorage.getAccessToken()}`;
+                                            return apiClient(originalRequest);
+                                        },
+                                        reject: (error: Error) => {
+                                            authStorage.clear();
+                                            window.location.href = '/auth';
+                                        }
+                                    }
+                                });
+                                window.dispatchEvent(event);
+                                return Promise.reject(refreshError);
+                            }
+                            else {
+                                processQueue(refreshError as AxiosError);
+                                authStorage.clear();
+                                if (window.location.pathname !== '/auth') {
+                                    window.location.href = '/auth';
+                                }
+                            }
+                            return Promise.reject(refreshError);
+                        } finally {
+                            isRefreshing = false;
+                        }
         }
 
         return Promise.reject(error);

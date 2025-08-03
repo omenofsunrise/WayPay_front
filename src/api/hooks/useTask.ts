@@ -1,4 +1,3 @@
-// hooks/useTask.ts
 import { useState, useCallback } from 'react';
 import taskService from '../services/taskService';
 import type { Task, TaskParams, TaskForm } from '../types/task';
@@ -160,7 +159,7 @@ const useTask = () => {
       setError(null);
       try {
         const count = await taskService.getActiveTasksCount();
-        setActiveTasksCount(count || 0); // Обновляем контекст
+        setActiveTasksCount(count || 0);
         return count;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');

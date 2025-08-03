@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import apiClient from '../../api/client';
+import apiClient, { API_BASE_URL } from '../../api/client';
+import { authStorage } from '../../api/utils/auth-storage';
 
 interface PinCodeModalProps {
   isOpen: boolean;
@@ -47,6 +48,18 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
         await apiClient.post('/Auth/setup-pin', { pinCode: pin });
         onSuccess();
       } else {
+
+        const refreshToken = authStorage.getRefreshToken();
+        const accessToken = authStorage.getAccessToken();
+        const pinCode = pin;
+        const response = await apiClient.post(`${API_BASE_URL}/Auth/refresh`, {
+            accessToken,
+            refreshToken,
+            pinCode
+        });
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
+        authStorage.setTokens(newAccessToken, newRefreshToken);
+
         onSuccess(pin);
       }
     } catch (err) {

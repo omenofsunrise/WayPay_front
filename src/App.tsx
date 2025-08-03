@@ -28,13 +28,55 @@ import BlogPage from './pages/BlogPage';
 import ChatPage from './pages/ChatPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import type { AuthInfo } from './api/types/auth';
-import apiClient from './api/client';
+import apiClient, { PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './api/client';
 import PinCodeModal from './components/modal/PinCodeModal';
+import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   
+  useEffect(() => {
+      const handlePinRequired = (event: CustomEvent<PinRequiredEventDetail>) => {
+          const { resolve, reject } = event.detail;
+          
+          // Create a modal container if it doesn't exist
+          let modalRoot = document.getElementById('pin-modal-root');
+          if (!modalRoot) {
+              modalRoot = document.createElement('div');
+              modalRoot.id = 'pin-modal-root';
+              document.body.appendChild(modalRoot);
+          }
+          
+          const root = createRoot(modalRoot);
+          
+          root.render(
+              <PinCodeModal
+                  isOpen={true}
+                  onSuccess={(pin) => {
+                      resolve(pin);
+                      root.unmount();
+                      modalRoot?.remove();
+                  }}
+                  mode="verify"
+                  onMaxAttempts={() => {
+                      reject(new Error('Max attempts reached'));
+                      root.unmount();
+                      modalRoot?.remove();
+                      authStorage.clear();
+                      window.location.href = '/auth';
+                  }}
+              />
+          );
+      };
+
+      window.addEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
+      return () => {
+          window.removeEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
+      };
+  }, []);
+
   useEffect(() => {
     const checkAuth = () => {
       const authenticated = authStorage.isAuthenticated();
@@ -48,7 +90,6 @@ function App() {
         window.location.href = '/auth';
       }
 
-      // Если аутентифицирован, получаем информацию о пользователе
       if (authenticated) {
         apiClient.get<AuthInfo>('/Auth/info')
           .then(response => setAuthInfo(response.data))
