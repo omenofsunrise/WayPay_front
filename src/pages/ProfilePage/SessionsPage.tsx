@@ -5,6 +5,10 @@ import type { AuthSession } from '../../api/types/auth';
 import { formatDate } from '../../utils/dateFormatter';
 import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
 import { Loader } from 'react-feather';
+import PageLayout from '../../components/ui/Layouts/PageLayout';
+import CustomTitle from '../../components/ui/Text/CustomTitle';
+import ModalInfoTitle from '../../components/ui/Text/ModalInfoTitle';
+import GrayButton from '../../components/ui/Buttons/GrayButton';
 
 const SessionsPage = () => {
   const { 
@@ -14,7 +18,8 @@ const SessionsPage = () => {
     fetchSessions, 
     revokeSession,
     revokeLoading,
-    revokeError
+    revokeError,
+    revokeAllSessions
   } = useEmployee();
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -41,6 +46,15 @@ const SessionsPage = () => {
     }
   };
 
+  const handleRevokeAllExceptCurrent = async () => {
+    try {
+      await revokeAllSessions();
+      await loadSessions();
+    } catch (err) {
+      setLocalError('Не удалось завершить все сессии');
+    }
+  };
+
   const renderSessionRow = (session: AuthSession) => (
     <SessionRow key={session.id} $isCurrent={session.isCurrentSession}>
       <SessionInfo>
@@ -63,6 +77,7 @@ const SessionsPage = () => {
           <DarkCyanButton 
             onClick={() => handleRevoke(session.id)}
             disabled={revokeLoading}
+            style={{ width: '120px' }}
           >
             Завершить
           </DarkCyanButton>
@@ -71,7 +86,7 @@ const SessionsPage = () => {
             onClick={() => handleRevoke()}
             disabled={revokeLoading}
           >
-            Выйти на всех устройствах
+            Завершить текущую сессию
           </DarkCyanButton>
         )}
       </SessionActions>
@@ -79,19 +94,30 @@ const SessionsPage = () => {
   );
 
   return (
-    <Container>
-      <Header>
-        <Title>Активные сессии</Title>
-        <RefreshButton onClick={loadSessions} disabled={sessionsLoading}>
-          Обновить
-        </RefreshButton>
-      </Header>
+    <PageLayout>
+      <HeaderContainer>
+        <TitleWrapper>
+          <CustomTitle style={{ margin: 0 }}>Активные сессии</CustomTitle>
+          <ModalInfoTitle>Управление активными сессиями вашего аккаунта</ModalInfoTitle>
+        </TitleWrapper>
+        
+        <ButtonGroup>
+          <GrayButton 
+            onClick={loadSessions} 
+            disabled={sessionsLoading}
+          >
+            Обновить
+          </GrayButton>
+        </ButtonGroup>
+      </HeaderContainer>
 
-      {sessionsLoading && <Loader />}
+      {sessionsLoading && <LoaderWrapper><Loader /></LoaderWrapper>}
       
-      {/* {(sessionsError || localError || revokeError) && (
-        <ErrorMessage message={sessionsError || localError || revokeError} />
-      )} */}
+      {sessionsError || localError || revokeError ? (
+        <ErrorMessage>
+          {sessionsError || localError || revokeError}
+        </ErrorMessage>
+      ) : null}
 
       {!sessionsLoading && sessions && (
         <SessionsList>
@@ -102,77 +128,72 @@ const SessionsPage = () => {
           )}
         </SessionsList>
       )}
-    </Container>
+    </PageLayout>
   );
 };
 
-const Container = styled.div`
-  padding: 20px;
-  max-width: 1000px;
-  margin: 0 auto;
-`;
 
-const Header = styled.div`
+const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 24px;
 `;
 
-const Title = styled.h2`
-  font-size: 24px;
-  color: #333;
-  margin: 0;
+const TitleWrapper = styled.div`
+  flex: 1;
 `;
 
-const RefreshButton = styled.button`
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  
-  &:hover {
-    background-color: #e0e0e0;
-  }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const LoaderWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+`;
+
+const ErrorMessage = styled.div`
+  color: #ef4444;
+  padding: 16px;
+  background-color: #fef2f2;
+  border-radius: 6px;
+  margin-bottom: 16px;
 `;
 
 const SessionsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
+  width: 100%;
 `;
 
 const SessionRow = styled.div<{ $isCurrent?: boolean }>`
   background-color: white;
-  border: 1px solid #eee;
   border-radius: 8px;
-  padding: 15px;
+  padding: 16px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  
-  ${({ $isCurrent }) => $isCurrent && `
-    border-left: 4px solid rgba(0, 125, 136, 1);
-  `}
+  align-items: flex-start;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid ${({ $isCurrent }) => $isCurrent ? 'rgba(0, 125, 136, 1)' : 'transparent'};
 `;
 
 const SessionInfo = styled.div`
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const DeviceInfo = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  font-size: 15px;
 `;
 
 const CurrentBadge = styled.span`
@@ -181,14 +202,14 @@ const CurrentBadge = styled.span`
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
+  font-weight: 500;
 `;
 
 const SessionMeta = styled.div`
   display: flex;
-  gap: 15px;
+  gap: 16px;
   font-size: 13px;
-  color: #666;
-  margin-bottom: 8px;
+  color: #6b7280;
 `;
 
 const SessionDates = styled.div`
@@ -196,7 +217,7 @@ const SessionDates = styled.div`
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
-  color: #888;
+  color: #9ca3af;
 `;
 
 const SessionActions = styled.div`
@@ -206,8 +227,10 @@ const SessionActions = styled.div`
 const EmptyMessage = styled.div`
   text-align: center;
   padding: 40px;
-  color: #888;
-  font-size: 16px;
+  color: #9ca3af;
+  font-size: 14px;
+  background-color: white;
+  border-radius: 8px;
 `;
 
 export default SessionsPage;

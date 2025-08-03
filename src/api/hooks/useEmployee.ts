@@ -33,6 +33,8 @@ export function useEmployee() {
   const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [revokeLoading, setRevokeLoading] = useState<boolean>(false);
   const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [revokeAllLoading, setRevokeAllLoading] = useState<boolean>(false);
+  const [revokeAllError, setRevokeAllError] = useState<string | null>(null);
 
   const fetchAuthInfo = useCallback(async () => {
     if (!authStorage.getAccessToken()) {
@@ -439,6 +441,21 @@ export function useEmployee() {
     }
   }, [fetchAuthInfo]);
 
+  const revokeAllSessions = useCallback(async () => {
+    try {
+      setRevokeAllLoading(true);
+      setRevokeAllError(null);
+      await EmployeeService.revokeAllSessions();
+      await fetchAuthInfo();
+      authStorage.clear();
+    } catch (err) {
+      setRevokeAllError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setRevokeAllLoading(false);
+    }
+  }, [fetchAuthInfo]);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -493,5 +510,8 @@ export function useEmployee() {
     revokeSession,
     revokeLoading,
     revokeError,
+    revokeAllSessions,
+    revokeAllLoading,
+    revokeAllError,
   };
 }
