@@ -16,12 +16,12 @@ const ProfileTabs = ({ activeTab, onTabChange }: ProfileTabsProps) => {
     
     tabs.push({ name: "Мой профиль" });
     
+    tabs.push({ name: "Активные сессии" });
+    
     if (hasRole('директор') || hasRole("суперадмин")) {
         tabs.push({ name: "Список пользователей" });
         tabs.push({ name: "Данные компании" });
-    }
-
-    if (hasRole("админ")) {
+    } else if (hasRole("админ")) {
         tabs.push({ name: "Список пользователей" });
     }
 

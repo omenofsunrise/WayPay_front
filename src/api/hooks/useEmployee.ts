@@ -422,12 +422,15 @@ export function useEmployee() {
     }
   }, []);
 
-  const revokeSession = useCallback(async () => {
+  const revokeSession = useCallback(async (tokenId?: number) => {
     try {
       setRevokeLoading(true);
       setRevokeError(null);
-      await EmployeeService.revokeSession();
+      await EmployeeService.revokeSession(tokenId);
       await fetchAuthInfo();
+      if (tokenId === undefined) {
+        authStorage.clear();
+      }
     } catch (err) {
       setRevokeError(err instanceof Error ? err.message : 'Unknown error');
       throw err;

@@ -1,9 +1,9 @@
-import styled from 'styled-components';
 import ProfileTabs from '../../components/Profile/ProfileTabs';
 import PageLayout from '../../components/ui/Layouts/PageLayout';
 import CompanyPage from './CompanyPage';
 import EmployeePage from './EmployeePage';
 import EmployeeProfilePage from './EmployeeProfilePage';
+import SessionsPage from './SessionsPage';
 import { useEffect, useState } from 'react';
 import BackButtonComponent from '../../components/ui/Buttons/BackButton';
 
@@ -62,6 +62,8 @@ const ProfilePage = () => {
                 return <EmployeePage onViewEmployee={handleViewEmployee} />;
             case "Данные компании":
                 return <CompanyPage />;
+            case "Активные сессии":
+                return <SessionsPage />;
             default:
                 return <EmployeeProfilePage />;
         }
