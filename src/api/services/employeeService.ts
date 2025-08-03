@@ -1,5 +1,6 @@
 import apiClient from '../client';
 import socialApiClient from '../socialApiClient';
+import type { AuthSession } from '../types/auth';
 import type { ClientExistsResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, EmployeeFullnames, PaymentStatsResponse, Profile, ProfileUpdateRequest } from '../types/employee';
@@ -248,6 +249,23 @@ class EmployeeService {
           'Content-Type': 'multipart/form-data',
         },
       });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getSessions(): Promise<AuthSession[]> {
+    try {
+      const response = await apiClient.get('/Auth/sessions');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async revokeSession(): Promise<void> {
+    try {
+      await apiClient.post('/Auth/revoke-session');
     } catch (error) {
       throw error;
     }

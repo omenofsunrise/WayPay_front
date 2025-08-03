@@ -17,3 +17,17 @@ export interface AuthInfo {
     minSurcharge: number;
   };
 }
+
+export interface AuthSession {
+  id: number;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+  ipAddress: string;
+  deviceInfo: string;
+  isMobile: boolean;
+  hasPin: boolean;
+  isCurrentSession: boolean;
+  pinLocked: boolean;
+  pinLockedUntil: string | null;
+}

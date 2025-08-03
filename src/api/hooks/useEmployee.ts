@@ -3,6 +3,7 @@ import EmployeeService from '../services/employeeService';
 import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse, Profile, ProfileUpdateRequest } from '../types/employee';
 import { authStorage } from '../utils/auth-storage';
 import type { PaginatedResponse } from '../types/common';
+import type { AuthSession } from '../types/auth';
 
 export function useEmployee() {
   const [authInfo, setAuthInfo] = useState<AuthInfoResponse | null>(null);
@@ -27,7 +28,12 @@ export function useEmployee() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const [profileError, setProfileError] = useState<string | null>(null);
-  
+  const [sessions, setSessions] = useState<AuthSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState<boolean>(false);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [revokeLoading, setRevokeLoading] = useState<boolean>(false);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+
   const fetchAuthInfo = useCallback(async () => {
     if (!authStorage.getAccessToken()) {
       setError('No access token available');
@@ -401,6 +407,35 @@ export function useEmployee() {
       }
     }, [fetchProfile]);
 
+  const fetchSessions = useCallback(async () => {
+    try {
+      setSessionsLoading(true);
+      setSessionsError(null);
+      const data = await EmployeeService.getSessions();
+      setSessions(data);
+      return data;
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, []);
+
+  const revokeSession = useCallback(async () => {
+    try {
+      setRevokeLoading(true);
+      setRevokeError(null);
+      await EmployeeService.revokeSession();
+      await fetchAuthInfo();
+    } catch (err) {
+      setRevokeError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setRevokeLoading(false);
+    }
+  }, [fetchAuthInfo]);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -448,5 +483,12 @@ export function useEmployee() {
     profileError,
     fetchProfile,
     updateProfile,
+    sessions,
+    sessionsLoading,
+    sessionsError,
+    fetchSessions,
+    revokeSession,
+    revokeLoading,
+    revokeError,
   };
 }

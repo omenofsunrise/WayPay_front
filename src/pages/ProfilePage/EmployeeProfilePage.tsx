@@ -32,7 +32,8 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         fetchEmployeeById,
         fetchEmployeeCreditsStats,
         fetchEmployeePaymentsStats,
-        togglePermission
+        togglePermission,
+        revokeSession
     } = useEmployee();
     const { hasPermission, hasRole } = useAuth();
     const [isUpdatingPermissions, setIsUpdatingPermissions] = useState(false);
@@ -54,8 +55,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     };
     
     const handleLogout = () => {
-        authStorage.clear();
-        navigate('/auth');
+        revokeSession();
     };
                                 
     useEffect(() => {
