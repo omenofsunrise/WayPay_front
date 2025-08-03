@@ -188,6 +188,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             <PinCodeModal 
                 isOpen={showPinModal}
                 onSuccess={handlePinSuccess}
+                mode='setup'
             />
 
         </AuthContainer>

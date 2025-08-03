@@ -4,21 +4,27 @@ import apiClient from '../../api/client';
 
 interface PinCodeModalProps {
   isOpen: boolean;
-  onSuccess: () => void;
+  onSuccess: (pin?: string) => void;
   mode: 'setup' | 'verify';
   onMaxAttempts?: () => void;
+  tokenId?: string;
+  maxAttempts?: number;
+  currentAttempts?: number;
 }
 
 const PinCodeModal: React.FC<PinCodeModalProps> = ({ 
   isOpen, 
   onSuccess, 
   mode = 'setup', 
-  onMaxAttempts 
+  onMaxAttempts,
+  tokenId,
+  maxAttempts = 3,
+  currentAttempts = 0
 }) => {
   const [pin, setPin] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [attempts, setAttempts] = useState(0);
+  const [attempts, setAttempts] = useState(currentAttempts);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,15 +45,15 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
     try {
       if (mode === 'setup') {
         await apiClient.post('/Auth/setup-pin', { pinCode: pin });
+        onSuccess();
       } else {
-        await apiClient.post('/Auth/verify-pin', { pinCode: pin });
+        onSuccess(pin);
       }
-      onSuccess();
     } catch (err) {
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
       
-      if (mode === 'verify' && newAttempts >= 3) {
+      if (newAttempts >= maxAttempts) {
         if (onMaxAttempts) onMaxAttempts();
         setError('Превышено количество попыток. Доступ заблокирован.');
         return;
@@ -55,7 +61,7 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
       
       setError(mode === 'setup' 
         ? 'Ошибка при установке пин-кода' 
-        : `Неверный пин-код. Осталось попыток: ${3 - newAttempts}`);
+        : `Неверный пин-код. Осталось попыток: ${maxAttempts - newAttempts}`);
     } finally {
       setIsLoading(false);
     }

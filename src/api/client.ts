@@ -83,6 +83,7 @@ apiClient.interceptors.response.use(
                 processQueue(null, newAccessToken);
                 return apiClient(originalRequest);
             } catch (refreshError) {
+                console.log();
                 processQueue(refreshError as AxiosError);
                 authStorage.clear();
                 if (window.location.pathname !== '/auth') {

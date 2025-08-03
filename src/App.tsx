@@ -15,12 +15,11 @@ import InvestorPage from './pages/InvestorPage';
 import NewCreditPage from './pages/NewCreditPage';
 import SchedulePage from './pages/SchedulePage';
 import CreditControlPage from './pages/CreditControlPage';
-import EmployeeProfilePage from './pages/ProfilePage/EmployeeProfilePage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import InvestorReportPage from './pages/InvestorReportPage';
 import BudgetPage from './pages/BudgetPage';
-import { ErrorBoundary } from "react-error-boundary";
-import { AuthProvider } from './сontext/AuthContext';
+// import { ErrorBoundary } from "react-error-boundary";
+import { AuthProvider, useAuth } from './сontext/AuthContext';
 import AdminPanelPage from './pages/AdminPanelPage';
 import ToDoListPage from './pages/ToDoListPage';
 import { TaskCountProvider } from './сontext/TaskCountContext';
@@ -28,10 +27,14 @@ import PaymentsIncomePage from './pages/PaymentIncomePage';
 import BlogPage from './pages/BlogPage';
 import ChatPage from './pages/ChatPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import type { AuthInfo } from './api/types/auth';
+import apiClient from './api/client';
+import PinCodeModal from './components/modal/PinCodeModal';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
+  const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
+  
   useEffect(() => {
     const checkAuth = () => {
       const authenticated = authStorage.isAuthenticated();
@@ -44,6 +47,13 @@ function App() {
       if (!authenticated && window.location.pathname !== '/auth') {
         window.location.href = '/auth';
       }
+
+      // Если аутентифицирован, получаем информацию о пользователе
+      if (authenticated) {
+        apiClient.get<AuthInfo>('/Auth/info')
+          .then(response => setAuthInfo(response.data))
+          .catch(() => setAuthInfo(null));
+      }
     };
 
     checkAuth();
@@ -53,6 +63,20 @@ function App() {
     
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  if (isAuthenticated && authInfo?.hasPin === false) {
+    return (
+      <PinCodeModal
+        isOpen={true}
+        onSuccess={() => window.location.reload()}
+        mode="setup"
+        onMaxAttempts={() => {
+          authStorage.clear();
+          window.location.href = '/auth';
+        }}
+      />
+    );
+  }
 
   if (isAuthenticated === null) {
     return (
@@ -65,7 +89,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-      <TaskCountProvider>
+        <TaskCountProvider>
           <Routes>
             <Route path="/" element={
               <Navigate to={isAuthenticated ? "/credits" : "/auth"} replace />
@@ -157,9 +181,7 @@ function App() {
 
             <Route path="budget" element={
                 <MainLayout>
-                  <ErrorBoundary fallback={<div>Something went wrong</div>}>
-                    <BudgetPage />
-                  </ErrorBoundary>
+                  <BudgetPage />
                 </MainLayout>
             } />
 
