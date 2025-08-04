@@ -13,8 +13,8 @@ export const stringToColor = (str: string): string => {
 /**
  * Генерирует инициалы из ФИО (например, "Иван Фёдоров" → "ИФ")
  */
-export const getInitials = (name: string): string => {
-  if (!name.trim()) return "?";
+export const getInitials = (name?: string | null): string => {
+  if (!name || !name.trim()) return "?";
 
   const parts = name.split(" ").filter(part => part.length > 0);
   const initials = parts.map(part => part[0].toUpperCase()).join("");

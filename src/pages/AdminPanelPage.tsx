@@ -52,7 +52,7 @@ const AdminPanelPage = () => {
     } else {
       getCompany();
     }
-  }, [hasRole, loadCompanies, getCompany]);
+  }, [loadCompanies, getCompany]);
 
   const handleCreateCompany = () => {
     setModalMode('create');

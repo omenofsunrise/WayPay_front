@@ -17,17 +17,12 @@ import {
   Button,
   Chip
 } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
-import SearchIcon from '@mui/icons-material/Search';
-import ClearIcon from '@mui/icons-material/Clear';
 import useChat from '../api/hooks/useChat';
 import type { Chat, Message } from '../api/types/chat';
 import { format } from 'date-fns';
 import { useEmployee } from '../api/hooks/useEmployee';
 import { getInitials, generateAvatar } from '../utils/avatarUtils';
 import { BASE_URL } from '../api/client';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import InsertPhotoIcon from '@mui/icons-material/InsertPhoto';
 import CloseIcon from '@mui/icons-material/Close';
 import { SOCIAL_BASE_URL } from '../api/socialApiClient';
 import styled from "styled-components";
