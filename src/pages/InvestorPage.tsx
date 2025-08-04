@@ -64,7 +64,7 @@ const InvestorPage = () => {
     const [investmentAmount, setInvestmentAmount] = useState('');
 
     const handleAddInvestment = (rowData: any[]) => {
-        if (!hasRole('директор')) return;
+        if (!hasRole('директор') && !hasRole('суперадмин')) return;
         
         const [id] = rowData;
         setSelectedInvestor(investorsData?.items.find(i => i.id === Number(id)) || null);
@@ -170,7 +170,7 @@ const InvestorPage = () => {
     };
 
     const handleCreateInvestor = () => {
-        if (!hasRole('директор')) return;
+        if (!hasRole('директор') && !hasRole('суперадмин')) return;
         
         setModalMode('create');
         setSelectedInvestor({
@@ -188,7 +188,7 @@ const InvestorPage = () => {
     };
 
     const handleEditInvestor = (investor: Investor) => {
-        if (!hasRole('директор')) return;
+        if (!hasRole('директор') && !hasRole('суперадмин')) return;
         
         setModalMode('edit');
         setSelectedInvestor(investor);
@@ -202,7 +202,7 @@ const InvestorPage = () => {
     };
 
     const handleDeleteInvestor = async (rowData: any[]) => {
-        if (!hasRole('директор')) return;
+        if (!hasRole('директор') && !hasRole('суперадмин')) return;
         
         const [id] = rowData;
         
@@ -257,7 +257,7 @@ const InvestorPage = () => {
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
         const investor = investorsData?.items.find(i => i.id === Number(rowData[0]));
         if (investor) {
-            if (hasRole('директор')) {
+            if (hasRole('директор') && !hasRole('суперадмин')) {
                 handleEditInvestor(investor);
             } else {
                 handleViewInvestor(investor);
@@ -270,7 +270,7 @@ const InvestorPage = () => {
             return [
                 '',
                 '',
-                ...(hasRole('директор') ? [''] : []),
+                ...((hasRole('директор') || hasRole('суперадмин')) ? [''] : []),
                 '',
                 '0%',
                 formatMoney('0'),
@@ -282,7 +282,7 @@ const InvestorPage = () => {
         return [
             investor.id.toString(),
             investor.nickname || '',
-            ...(hasRole('директор') ? [investor.fullName || ''] : []),
+            ...((hasRole('директор') || hasRole('суперадмин'))? [investor.fullName || ''] : []),
             investor.phoneNumber || '',
             `${investor.investorPie || 0}%`,
             formatMoney((investor.investmentAmount || 0).toString()),
@@ -312,7 +312,7 @@ const InvestorPage = () => {
     }, {} as Record<number, RowStyle>);
     
     const tableActions = (rowData: any[]): TableAction[] => {
-        if (!hasRole('директор')) return [];
+        if (!hasRole('директор') && !hasRole('суперадмин')) return [];
         
         const [id] = rowData;
         const investor = investorsData?.items.find(i => i.id === Number(id));
@@ -359,7 +359,7 @@ const InvestorPage = () => {
     };
 
     const handleBlockInvestor = async (rowData: any[]) => {
-        if (!hasRole('директор')) return;
+        if (!hasRole('директор') && !hasRole('суперадмин')) return;
         
         const [id] = rowData;
         
@@ -379,7 +379,7 @@ const InvestorPage = () => {
     };
 
     const handleClearInvestor = async (rowData: any[]) => {
-        if (!hasRole('директор')) return;
+        if (!hasRole('директор') && !hasRole('суперадмин')) return;
         
         const [id] = rowData;
         
@@ -401,7 +401,7 @@ const InvestorPage = () => {
     const columns: Column[] = [
         { name: "id", isHidden: true },
         { name: "Никнейм", align: "left" },
-        ...(hasRole('директор') 
+        ...((hasRole('директор') || hasRole('суперадмин')) 
             ? [{ name: "ФИО (видно только директору)", isSortable: true, align: "left" } as Column]
             : []),
         { name: "Телефон", align: "left" },
@@ -422,7 +422,7 @@ const InvestorPage = () => {
                 />
             </TitleField>
             
-            {hasRole('директор') && (
+            {hasRole('директор') || hasRole('суперадмин') && (
                 <FilterField>
                     <DarkCyanButton 
                         style={{ width: "15vw", marginLeft: "auto" }}

@@ -551,7 +551,168 @@ const renderMessageTextWithLinks = (text: string) => {
           </Box>
         ) : (
           <List sx={{ overflowY: 'auto', flex: 1 }}>
-            {chats.map((chat) => (
+            {/* Сначала общий чат */}
+            {chats.filter(chat => chat.type === 'general').map(chat => (
+              <React.Fragment key={chat.id}>
+                <ListItem 
+                  disablePadding
+                  secondaryAction={
+                    chat.unreadCount > 0 && (
+                      <Box 
+                        sx={{
+                          display: 'inline-flex',
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: 20,
+                          height: 20,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {chat.unreadCount}
+                      </Box>
+                    )
+                  }
+                >
+                  <ListItemButton 
+                    onClick={() => selectChat(chat)}
+                    selected={currentChat?.id === chat.id}
+                    sx={{
+                      '&.Mui-selected': {
+                        backgroundColor: '#e3f2fd',
+                      },
+                      '&:hover': {
+                        backgroundColor: '#f5f5f5',
+                      },
+                    }}
+                  >
+                    <ListItemAvatar sx={{ minWidth: 40 }}>
+                      <Avatar 
+                        alt={chat.name}
+                        src={getChatAvatar(chat)}
+                        sx={{ width: 40, height: 40 }}
+                      />
+                    </ListItemAvatar>
+                    <ListItemText
+                      style={{marginLeft: "10px" }}
+                      primary={
+                        <Box display="flex" justifyContent="space-between">
+                          <Typography fontWeight="bold">{chat.name}</Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
+                          </Typography>
+                        </Box>
+                      }
+                      secondary={
+                        <Typography 
+                          component="span" 
+                          variant="body2" 
+                          color="textSecondary"
+                          sx={{
+                            display: 'block',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {getLastMessagePreview(chat)}
+                        </Typography>
+                      }
+                      secondaryTypographyProps={{ component: 'div' }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+                <Divider component="li" />
+              </React.Fragment>
+            ))}
+
+            {/* Затем чат компании */}
+            {chats.filter(chat => chat.type === 'company').map(chat => (
+              <React.Fragment key={chat.id}>
+                <ListItem 
+                  disablePadding
+                  secondaryAction={
+                    chat.unreadCount > 0 && (
+                      <Box 
+                        sx={{
+                          display: 'inline-flex',
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          borderRadius: '50%',
+                          width: 20,
+                          height: 20,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {chat.unreadCount}
+                      </Box>
+                    )
+                  }
+                >
+                  <ListItemButton 
+                    onClick={() => selectChat(chat)}
+                    selected={currentChat?.id === chat.id}
+                    sx={{
+                      '&.Mui-selected': {
+                        backgroundColor: '#e3f2fd',
+                      },
+                      '&:hover': {
+                        backgroundColor: '#f5f5f5',
+                      },
+                    }}
+                  >
+                    <ListItemAvatar sx={{ minWidth: 40 }}>
+                      <Avatar 
+                        alt={chat.name}
+                        src={getChatAvatar(chat)}
+                        sx={{ width: 40, height: 40 }}
+                      />
+                    </ListItemAvatar>
+                    <ListItemText
+                      style={{marginLeft: "10px" }}
+                      primary={
+                        <Box display="flex" justifyContent="space-between">
+                          <Typography fontWeight="bold">{chat.name}</Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
+                          </Typography>
+                        </Box>
+                      }
+                      secondary={
+                        <Typography 
+                          component="span" 
+                          variant="body2" 
+                          color="textSecondary"
+                          sx={{
+                            display: 'block',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {getLastMessagePreview(chat)}
+                        </Typography>
+                      }
+                      secondaryTypographyProps={{ component: 'div' }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+                <Divider component="li" />
+              </React.Fragment>
+            ))}
+
+            {/* Добавляем разделитель перед остальными чатами */}
+            {(chats.some(chat => chat.type === 'general' || chat.type === 'company') && 
+            chats.some(chat => chat.type !== 'general' && chat.type !== 'company')) && (
+              <Divider sx={{ my: 1 }} />
+            )}
+
+            {/* Затем все остальные чаты */}
+            {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company').map(chat => (
               <React.Fragment key={chat.id}>
                 <ListItem 
                   disablePadding
@@ -676,20 +837,20 @@ const renderMessageTextWithLinks = (text: string) => {
             </MessagesContainer>
             
               {attachments.length > 0 && renderAttachmentPreviews()}
-              <MessageInput
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                onSend={handleSendMessage}
-                onAttach={() => fileInputRef.current?.click()}
-                onCancelEdit={() => {
-                  setEditingMessage(null);
-                  setMessageText('');
-                }}
-                isEditing={!!editingMessage}
-                hasAttachments={attachments.length > 0}
-                placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
-                onKeyPress={handleKeyPress}
-              />
+<MessageInput
+  value={messageText}
+  onChange={(e) => setMessageText(e.target.value)}
+  onSend={handleSendMessage}
+  onAttach={() => fileInputRef.current?.click()}
+  onCancelEdit={() => {
+    setEditingMessage(null);
+    setMessageText('');
+  }}
+  isEditing={!!editingMessage}
+  hasAttachments={attachments.length > 0}  // Это правильный пропс
+  placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
+  onKeyPress={handleKeyPress}
+/>
               <input
                 type="file"
                 ref={fileInputRef}

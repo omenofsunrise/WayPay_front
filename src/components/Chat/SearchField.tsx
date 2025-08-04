@@ -4,6 +4,7 @@ import React from 'react';
 interface SearchFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string;
   hasError?: boolean;
+  hasIcon?: boolean;
   errorMessage?: string;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
@@ -12,6 +13,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
   placeholder = '',
   value,
   onChange,
+  hasIcon = true,
   hasError = false,
   errorMessage,
   ...props
@@ -40,8 +42,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
           props.onBlur?.(e);
         }}
         onChange={onChange}
-        hasError={hasError}
-        hasIcon
+        $hasIcon={hasIcon}
       />
       {hasError && errorMessage && (
         <ErrorMessage>{errorMessage}</ErrorMessage>
@@ -69,9 +70,9 @@ const SearchIcon = styled.div`
   z-index: 1;
 `;
 
-const StyledInput = styled.input<{ hasError?: boolean; hasIcon?: boolean }>`
+const StyledInput = styled.input<{ $hasIcon?: boolean; hasError?: boolean }>`
   padding: 10px 12px;
-  padding-left: ${({ hasIcon }) => hasIcon ? '36px' : '12px'};
+  padding-left: ${({ $hasIcon }) => $hasIcon ? '36px' : '12px'};
   border: 1px solid ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(209, 213, 219, 1)'};
   border-radius: 5px;
   font-size: 14px;
