@@ -202,6 +202,8 @@ const PinInput = styled.input`
   border-radius: 8px;
   margin-bottom: 20px;
   transition: all 0.2s;
+  background: white;
+  color: black;
   
   &:focus {
     border-color: rgba(0, 125, 136, 0.5);
