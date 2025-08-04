@@ -192,49 +192,55 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(
-        mode === 'create' ? emptyClient : {
+      if (mode !== 'create') {
+        setFormData({
           fullName: initialData?.fullName || '',
           phone: initialData?.phone || '',
           secondPhone: initialData?.secondPhone || '',
           doc: initialData?.doc || '',
           birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
           docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : 
-                    initialData?.docIssueYear ? `01.01.${initialData.docIssueYear}` : '',
+          initialData?.docIssueYear ? `01.01.${initialData.docIssueYear}` : '',
           docIssueYear: initialData?.docIssueYear || 0,
           registrationAddress: initialData?.registrationAddress || '',
-        }
-      );
-      setPassportEditData({
-        doc: initialData?.doc || '',
-        docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : ''
-      });
-      setIsEditingPassport(false);
-      setValidationErrors({
-        fullName: false,
-        phone: false,
-        birthdate: false,
-        doc: false,
-        docIssueDate: false,
-        registrationAddress: false,
-      });
-      setErrorMessages({
-        fullName: '',
-        phone: '',
-        birthdate: '',
-        doc: '',
-        docIssueDate: '',
-        registrationAddress: ''
-      });
-      setTouchedFields({
-        fullName: false,
-        phone: false,
-        birthdate: false,
-        doc: false,
-        docIssueDate: false,
-        registrationAddress: false
-      });
-      setApiError('');
+        });
+        
+        setPassportEditData({
+          doc: initialData?.doc || '',
+          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : ''
+        });
+        
+        setIsEditingPassport(false);
+        
+        setValidationErrors({
+          fullName: false,
+          phone: false,
+          birthdate: false,
+          doc: false,
+          docIssueDate: false,
+          registrationAddress: false,
+        });
+        
+        setErrorMessages({
+          fullName: '',
+          phone: '',
+          birthdate: '',
+          doc: '',
+          docIssueDate: '',
+          registrationAddress: ''
+        });
+        
+        setTouchedFields({
+          fullName: false,
+          phone: false,
+          birthdate: false,
+          doc: false,
+          docIssueDate: false,
+          registrationAddress: false
+        });
+        
+        setApiError('');
+      }
     }
   }, [initialData, isOpen, mode]);
 

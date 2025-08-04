@@ -5,12 +5,13 @@ export interface Client {
   fullName: string;
   phone: string;
   doc: string;
-  birthdate: Date | null;
-  docIssueDate: Date | null;
+  birthdate: Date | null | string;
+  docIssueDate: Date | null | string;
   docIssueYear: number;
   creditIds: number[];
   creditRestTerms: number[];
   registrationAddress: string;
+  secondPhone?: string;
 }
 
 export interface ClientParams extends PaginationParams {

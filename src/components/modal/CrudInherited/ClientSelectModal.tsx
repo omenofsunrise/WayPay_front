@@ -8,7 +8,6 @@ import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
 import { formatDate } from '../../../utils/dateFormatter';
 import ClientModal from './ClientModal';
-import { number } from 'framer-motion';
 import { useAuth } from '../../../сontext/AuthContext';
 
 interface ClientSelectModalProps {
@@ -132,6 +131,7 @@ const ClientSelectModal = ({
 
   const handleSubmitNewClient = async (clientData: any): Promise<boolean> => {
     try {
+      console.log(clientData.secondPhone);
       await createClient({
         fullName: clientData.fullName,
         phone: clientData.phone,
@@ -140,6 +140,7 @@ const ClientSelectModal = ({
         docIssueDate: clientData.docIssueDate ? parseDateString(clientData.docIssueDate) : undefined,
         docIssueYear: clientData.docIssueYear || 0,
         registrationAddress: clientData.registrationAddress || '',
+        secondPhone: clientData.secondPhone || '',
         creditIds: null,
         creditRestTerms: null
       });
