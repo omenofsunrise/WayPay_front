@@ -40,7 +40,7 @@ const useChat = () => {
     const startConnection = async () => {
       try {
         const newConnection = new HubConnectionBuilder()
-          .withUrl(`${process.env.VITE_SOCIAL_BASE_URL}/chatHub`, {
+          .withUrl(`${import.meta.env.VITE_SOCIAL_BASE_URL}/chatHub`, {
             accessTokenFactory: () => localStorage.getItem('accessToken') || ''
           })
           .configureLogging(LogLevel.Information)

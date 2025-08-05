@@ -40,7 +40,7 @@ export const useSignalR = () => {
 
     try {
       const newConnection = new HubConnectionBuilder()
-        .withUrl(`${process.env.VITE_SOCIAL_BASE_URL}/chatHub`, {
+        .withUrl(`${"http://test.waypay.one:5003"}/chatHub`, {
           accessTokenFactory: () => token
         })
         .configureLogging(LogLevel.Information)
