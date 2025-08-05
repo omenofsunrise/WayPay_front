@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import chatService from '../services/chatService';
 import type { 
   Chat, 
@@ -10,6 +10,7 @@ import type {
   MessageAttachmentResponse,
   ChatLinkResponse
 } from '../types/chat';
+import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 
 const toMessage = (response: Message): Message => ({
   ...response,
@@ -32,6 +33,101 @@ const useChat = () => {
   const [chatFiles, setChatFiles] = useState<MessageAttachmentResponse[]>([]);
   const [chatVideos, setChatVideos] = useState<MessageAttachmentResponse[]>([]);
   const [chatLinks, setChatLinks] = useState<ChatLinkResponse[]>([]);
+  const [connection, setConnection] = useState<HubConnection | null>(null);
+  const lastTypingTimeRef = useRef<number>(0);
+  
+  useEffect(() => {
+    const startConnection = async () => {
+      try {
+        const newConnection = new HubConnectionBuilder()
+          .withUrl(`${process.env.REACT_APP_API_URL}/chatHub`, {
+            accessTokenFactory: () => localStorage.getItem('accessToken') || ''
+          })
+          .configureLogging(LogLevel.Information)
+          .withAutomaticReconnect()
+          .build();
+
+        await newConnection.start();
+        setConnection(newConnection);
+
+        // Подписка на события
+        newConnection.on('ReceiveMessage', handleNewMessage);
+        newConnection.on('UserTyping', handleUserTyping);
+        
+        newConnection.onclose(() => {
+          console.log('Connection closed, attempting to reconnect...');
+          setTimeout(startConnection, 5000);
+        });
+
+      } catch (err) {
+        console.error('SignalR Connection Error:', err);
+      }
+    };
+
+    startConnection();
+
+    return () => {
+      if (connection) {
+        connection.off('ReceiveMessage');
+        connection.off('UserTyping');
+        connection.stop();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!connection || !currentChat) return;
+    
+    connection.invoke('JoinChat', currentChat.id)
+      .catch(err => console.error('Error joining chat:', err));
+      
+    return () => {
+      connection.invoke('LeaveChat', currentChat.id)
+        .catch(err => console.error('Error leaving chat:', err));
+    };
+  }, [connection, currentChat]);
+
+  const handleNewMessage = useCallback((newMessage: Message) => {
+    const formattedMessage = toMessage(newMessage);
+    
+    setMessages(prev => {
+      // Проверяем, нет ли уже такого сообщения
+      if (prev.some(m => m.id === newMessage.id)) return prev;
+      
+      return [...prev, formattedMessage];
+    });
+    
+    setChats(prev => prev.map(chat => {
+      if (chat.id === newMessage.chatId) {
+        return {
+          ...chat,
+          lastMessage: formattedMessage,
+          unreadCount: chat.id === currentChat?.id ? 0 : (chat.unreadCount || 0) + 1
+        };
+      }
+      return chat;
+    }));
+  }, [currentChat]);
+
+  // Обработка уведомлений о наборе текста
+  const handleUserTyping = useCallback((chatId: number, userId: number, userName: string) => {
+    if (currentChat?.id === chatId) {
+      console.log(`${userName} печатает...`);
+      // Здесь можно добавить UI индикатор набора текста
+    }
+  }, [currentChat]);
+
+  // Уведомление о наборе текста
+  const notifyTyping = useCallback(() => {
+    if (!connection || !currentChat) return;
+    
+    const now = Date.now();
+    if (now - lastTypingTimeRef.current > 2000) { // Троттлинг 2 секунды
+      connection.invoke('NotifyTyping', currentChat.id)
+        .catch(err => console.error('Error notifying typing:', err));
+      lastTypingTimeRef.current = now;
+    }
+  }, [connection, currentChat]);
 
   const fetchChatPhotos = useCallback(async (
     chatId: number, 
