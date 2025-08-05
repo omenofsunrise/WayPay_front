@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
   List, 
   ListItem, 
@@ -7,13 +7,10 @@ import {
   Divider, 
   Box, 
   CircularProgress, 
-  Paper, 
   ListItemButton,
-  TextField,
   IconButton,
   Avatar,
   ListItemAvatar,
-  InputAdornment,
   Button,
   Chip
 } from '@mui/material';
@@ -31,6 +28,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ChatSide from '../components/Chat/ChatSide';
 import SearchField from '../components/Chat/SearchField';
 import MessageInput from '../components/Chat/MessageInput';
+import { useSignalR } from '../api/hooks/useSignalR';
 
 interface ContextMenuProps {
   x: number;
@@ -116,6 +114,23 @@ const MessagesContainer = styled.div`
   background-color: #f9f9f9;
 `;
 
+const EmptyChatContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 20px;
+`;
+
+const EmptyChatImage = styled.img`
+  width: 200px;
+  height: 200px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+`;
+
 const ChatPage = () => {
   const {
     chats,
@@ -157,7 +172,37 @@ const ChatPage = () => {
   const currentUser = authInfo?.employee;
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isSideOpen, setIsSideOpen] = useState(false);
+  const { connection } = useSignalR();
+  
+  useEffect(() => {
+    if (!connection) return;
 
+    // Обработка новых сообщений
+    connection.on('ReceiveMessage', (newMessage: Message) => {
+      // Если сообщение для текущего чата
+      if (currentChat?.id === newMessage.chatId) {
+        // Добавляем сообщение в список
+        // Ваш код для обновления состояния messages
+      }
+      
+      // Обновляем список чатов (чтобы показать новое сообщение в превью)
+      fetchUserChats();
+    });
+
+    // Обработка уведомлений о наборе текста
+    connection.on('UserTyping', (chatId: number, userId: number, userName: string) => {
+      if (currentChat?.id === chatId) {
+        // Показать индикатор набора текста
+        console.log(`${userName} печатает...`);
+      }
+    });
+
+    return () => {
+      connection.off('ReceiveMessage');
+      connection.off('UserTyping');
+    };
+  }, [connection, currentChat]);
+  
   useEffect(() => {
     return () => {
       previewAttachments.forEach(({url}) => {
@@ -177,8 +222,11 @@ const ChatPage = () => {
   }, [currentChat, fetchChatMembers]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messagesEndRef.current && messages.length > 0) {
+      // Используем instant scroll вместо smooth для первоначальной загрузки
+      messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+    }
+  }, [messages, currentChat]); // Добавляем currentChat в зависимости
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -191,9 +239,15 @@ const ChatPage = () => {
   };
 
   const getLastMessagePreview = (chat: Chat) => {
-    if (!chat.lastMessage) return 'Нет сообщений';
-    const senderName = chat.lastMessage.sender.fullName.split(' ')[0];
-    return `${senderName}: ${chat.lastMessage.text.substring(0, 30)}${chat.lastMessage.text.length > 30 ? '...' : ''}`;
+      if (!chat.lastMessage) return 'Нет сообщений';
+      
+      const senderName = chat.lastMessage.sender.fullName.split(' ')[0];
+      
+      if (chat.lastMessage.text === null || chat.lastMessage.attachments.length > 0) {
+          return `${senderName}: файл`;
+      }
+      
+      return `${senderName}: ${chat.lastMessage.text.substring(0, 30)}${chat.lastMessage.text.length > 30 ? '...' : ''}`;
   };
 
   const handleOpenSide = () => {
@@ -231,16 +285,45 @@ const ChatPage = () => {
         await editMessage(currentChat.id, editingMessage.id, messageText);
         setEditingMessage(null);
       } else {
-        await sendMessage(currentChat.id, { 
+        const sentMessage = await sendMessage(currentChat.id, { 
           text: messageText,
           attachments 
         });
+        
+        if (connection) {
+          await connection.invoke('SendMessageToChat', currentChat.id, sentMessage);
+        }
       }
+      
       setMessageText('');
       setAttachments([]);
       setPreviewAttachments([]);
     } catch (err) {
       console.error('Failed to send message:', err);
+    }
+  };
+
+  const notifyTyping = useCallback(() => {
+    if (!connection || !currentChat || !currentUser) return;
+    
+    try {
+      connection.invoke('NotifyTyping', currentChat.id, currentUser.id, currentUser.fullName);
+    } catch (e) {
+      console.error('Error notifying typing:', e);
+    }
+  }, [connection, currentChat, currentUser]);
+  
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageText(e.target.value);
+    
+    // Троттлинг уведомлений о наборе текста
+    const lastTypingTimeRef = useRef<number>(0);
+    const typingDelay = 2000; // 2 секунды
+    
+    const now = Date.now();
+    if (now - lastTypingTimeRef.current > typingDelay) {
+      notifyTyping();
+      lastTypingTimeRef.current = now;
     }
   };
 
@@ -302,7 +385,7 @@ const ChatPage = () => {
 
   const handleEditMessage = (message: Message) => {
     setEditingMessage(message);
-    setMessageText(message.text);
+    setMessageText(message.text || '');
     setContextMenu(null);
     scrollToBottom();
   };
@@ -369,35 +452,42 @@ const ChatPage = () => {
   };
 
   const renderMessageAttachments = (message: Message) => {
-    if (!message.attachments || message.attachments.length === 0) return null;
-    
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 1, 
-        flexWrap: 'wrap',
-        mt: 1
-      }}>
-        {message.attachments.map((attachment, index) => (
+  
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      gap: 1, 
+      flexWrap: 'wrap',
+      mt: 1
+    }}>
+      {message.attachments.map((attachment, index) => {
+        let fileUrl = attachment.fileUrl;
+        
+        if (!fileUrl.startsWith('http')) {
+          if (!fileUrl.startsWith('/')) {
+            fileUrl = '/' + fileUrl;
+          }
+          fileUrl = `${SOCIAL_BASE_URL}${fileUrl}`;
+        }
+        
+        console.log(fileUrl);
+        return (
           <Box key={index}>
             {attachment.contentType.startsWith('image/') ? (
-              <a 
-                href={SOCIAL_BASE_URL + attachment.fileUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                <img
-                  src={SOCIAL_BASE_URL + attachment.fileUrl}
-                  alt={attachment.fileName}
-                  style={{
-                    width: 200,
-                    height: 200,
-                    objectFit: 'cover',
-                    borderRadius: 4,
-                    cursor: 'pointer'
-                  }}
-                />
-              </a>
+              <img
+                src={fileUrl}
+                alt={attachment.fileName}
+                style={{
+                  width: 200,
+                  height: 200,
+                  objectFit: 'cover',
+                  borderRadius: 4,
+                  cursor: 'pointer'
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                }}
+              />
             ) : attachment.contentType.startsWith('video/') ? (
               <video
                 controls
@@ -407,14 +497,14 @@ const ChatPage = () => {
                   cursor: 'pointer'
                 }}
               >
-                <source src={SOCIAL_BASE_URL + attachment.fileUrl} type={attachment.contentType} />
+                <source src={fileUrl} type={attachment.contentType} />
                 Your browser does not support the video tag.
               </video>
             ) : (
               <Button
                 variant="outlined"
                 startIcon={<DocumentIcon />}
-                href={SOCIAL_BASE_URL + attachment.fileUrl}
+                href={fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{ 
@@ -428,10 +518,11 @@ const ChatPage = () => {
               </Button>
             )}
           </Box>
-        ))}
-      </Box>
-    );
-  };
+        );
+      })}
+    </Box>
+  );
+};
 
   const DocumentIcon = () => (
     <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -831,26 +922,43 @@ const renderMessageTextWithLinks = (text: string) => {
                         
             <MessagesContainer>
               <List>
-                {messages.map(renderMessageItem)}
-                <div ref={messagesEndRef} />
+                {messages.length > 0 ? (
+                  <>
+                    {messages.map(renderMessageItem)}
+                    <div ref={messagesEndRef} />
+                  </>
+                ) : (
+                  <EmptyChatContainer>
+                    <Typography variant="h6" color="textSecondary" gutterBottom>
+                      Здесь пока нет сообщений
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {currentChat.type === 'general' 
+                        ? "Начните общение в общем чате"
+                        : currentChat.type === 'company'
+                        ? "Это чат вашей компании"
+                        : "Напишите первое сообщение в этом чате"}
+                    </Typography>
+                  </EmptyChatContainer>
+                )}
               </List>
             </MessagesContainer>
             
               {attachments.length > 0 && renderAttachmentPreviews()}
-<MessageInput
-  value={messageText}
-  onChange={(e) => setMessageText(e.target.value)}
-  onSend={handleSendMessage}
-  onAttach={() => fileInputRef.current?.click()}
-  onCancelEdit={() => {
-    setEditingMessage(null);
-    setMessageText('');
-  }}
-  isEditing={!!editingMessage}
-  hasAttachments={attachments.length > 0}  // Это правильный пропс
-  placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
-  onKeyPress={handleKeyPress}
-/>
+                <MessageInput
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  onSend={handleSendMessage}
+                  onAttach={() => fileInputRef.current?.click()}
+                  onCancelEdit={() => {
+                    setEditingMessage(null);
+                    setMessageText('');
+                  }}
+                  isEditing={!!editingMessage}
+                  hasAttachments={attachments.length > 0}  // Это правильный пропс
+                  placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
+                  onKeyPress={handleKeyPress}
+                />
               <input
                 type="file"
                 ref={fileInputRef}

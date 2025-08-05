@@ -115,10 +115,15 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
   );
 
   const renderMediaItem = (item: MessageAttachmentResponse) => {
-    const isImage = item.contentType.startsWith('image/');
-    const isVideo = item.contentType.startsWith('video/');
-    
-    return (
+  const isImage = item.contentType.startsWith('image/');
+  const isVideo = item.contentType.startsWith('video/');
+  
+  // Формируем правильный URL
+  const fileUrl = item.fileUrl.startsWith('http') 
+    ? item.fileUrl 
+    : `${SOCIAL_BASE_URL}${item.fileUrl.startsWith('/') ? '' : '/'}${item.fileUrl}`;
+
+  return (
       <ListItem 
         key={item.id} 
         sx={{ px: 0, cursor: 'pointer' }}
@@ -128,8 +133,11 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           {isImage ? (
             <Avatar 
               variant="rounded" 
-              src={SOCIAL_BASE_URL + item.fileUrl} 
+              src={fileUrl}
               sx={{ width: 56, height: 56 }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/placeholder-image.png';
+              }}
             />
           ) : isVideo ? (
             <Avatar variant="rounded" sx={{ width: 56, height: 56, bgcolor: 'rgba(0, 125, 136, 0.3)' }}>
@@ -327,21 +335,30 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
               </Grid>
             ) : chatPhotos.length > 0 ? (
               <ImageList cols={2} gap={8}>
-                {chatPhotos.map((photo) => (
-                  <ImageListItem 
-                    key={photo.id} 
-                    onClick={() => handleOpenMedia(photo)}
-                    sx={{ cursor: 'pointer' }}
-                  >
-                    <img
-                      src={`${SOCIAL_BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format`}
-                      srcSet={`${SOCIAL_BASE_URL}${photo.fileUrl}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
-                      alt={photo.fileName}
-                      loading="lazy"
-                      style={{ borderRadius: 4 }}
-                    />
-                  </ImageListItem>
-                ))}
+                {chatPhotos.map((photo) => {
+                  const photoUrl = photo.fileUrl.startsWith('http') 
+                    ? photo.fileUrl 
+                    : `${SOCIAL_BASE_URL}${photo.fileUrl.startsWith('/') ? '' : '/'}${photo.fileUrl}`;
+                  
+                  return (
+                    <ImageListItem 
+                      key={photo.id} 
+                      onClick={() => handleOpenMedia(photo)}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <img
+                        src={`${photoUrl}?w=164&h=164&fit=crop&auto=format`}
+                        srcSet={`${photoUrl}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
+                        alt={photo.fileName}
+                        loading="lazy"
+                        style={{ borderRadius: 4 }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                        }}
+                      />
+                    </ImageListItem>
+                  );
+                })}
               </ImageList>
             ) : (
               <Typography variant="body2" color="text.secondary">
@@ -423,27 +440,39 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           <>
             <DialogTitle>{currentMedia.fileName}</DialogTitle>
             <DialogContent>
-              {currentMedia.contentType.startsWith('image/') ? (
-                <img
-                  src={SOCIAL_BASE_URL + currentMedia.fileUrl}
-                  alt={currentMedia.fileName}
-                  style={{ width: '100%', height: 'auto' }}
-                />
-              ) : currentMedia.contentType.startsWith('video/') ? (
-                <video controls style={{ width: '100%' }}>
-                  <source src={SOCIAL_BASE_URL + currentMedia.fileUrl} type={currentMedia.contentType} />
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <FileIcon />
-                  <Typography variant="h6" sx={{ mt: 2 }}>
-                    {currentMedia.fileName}
-                  </Typography>
-                  <Typography variant="body2">
-                    {(currentMedia.fileSize / 1024).toFixed(1)} KB
-                  </Typography>
-                </Box>
+              {currentMedia && (
+                currentMedia.contentType.startsWith('image/') ? (
+                  <img
+                    src={currentMedia.fileUrl.startsWith('http') 
+                      ? currentMedia.fileUrl 
+                      : `${SOCIAL_BASE_URL}${currentMedia.fileUrl.startsWith('/') ? '' : '/'}${currentMedia.fileUrl}`}
+                    alt={currentMedia.fileName}
+                    style={{ width: '100%', height: 'auto' }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                    }}
+                  />
+                ) : currentMedia.contentType.startsWith('video/') ? (
+                  <video controls style={{ width: '100%' }}>
+                    <source 
+                      src={currentMedia.fileUrl.startsWith('http') 
+                        ? currentMedia.fileUrl 
+                        : `${SOCIAL_BASE_URL}${currentMedia.fileUrl.startsWith('/') ? '' : '/'}${currentMedia.fileUrl}`} 
+                      type={currentMedia.contentType} 
+                    />
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <Box sx={{ p: 4, textAlign: 'center' }}>
+                    <FileIcon />
+                    <Typography variant="h6" sx={{ mt: 2 }}>
+                      {currentMedia.fileName}
+                    </Typography>
+                    <Typography variant="body2">
+                      {(currentMedia.fileSize / 1024).toFixed(1)} KB
+                    </Typography>
+                  </Box>
+                )
               )}
             </DialogContent>
             <DialogActions>
