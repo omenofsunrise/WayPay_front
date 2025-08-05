@@ -165,6 +165,24 @@ const useChat = () => {
     }
   }, []);
 
+  const createPrivateChat = useCallback(async (userId: number): Promise<Chat> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await chatService.createPrivateChat(userId);
+      
+      setChats(prev => [...prev, result]);
+      
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create private chat';
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const fetchChatVideos = useCallback(async (
     chatId: number, 
     params?: MessagesPagination
@@ -483,7 +501,8 @@ const useChat = () => {
     fetchChatFiles,
     fetchChatVideos,
     fetchChatLinks,
-    notifyTyping
+    notifyTyping,
+    createPrivateChat
   };
 };
 

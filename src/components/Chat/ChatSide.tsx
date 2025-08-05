@@ -35,13 +35,15 @@ import { BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import useChat from '../../api/hooks/useChat';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
+import type { Employee } from '../../api/types/employee';
 
 interface ChatSideProps {
   chat: Chat | null;
   onClose: () => void;
+  onUserClick: (user: number) => void;
 }
 
-const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
+const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
   const [activeTab, setActiveTab] = React.useState(0);
   const [openMediaModal, setOpenMediaModal] = React.useState(false);
   const [currentMedia, setCurrentMedia] = React.useState<MessageAttachmentResponse | null>(null);
@@ -56,7 +58,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
     fetchChatFiles,
     fetchChatVideos,
     fetchChatLinks,
-    isLoading
+    isLoading,
   } = useChat();
   
   React.useEffect(() => {
@@ -118,7 +120,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
   const isImage = item.contentType.startsWith('image/');
   const isVideo = item.contentType.startsWith('video/');
   
-  // Формируем правильный URL
   const fileUrl = item.fileUrl.startsWith('http') 
     ? item.fileUrl 
     : `${SOCIAL_BASE_URL}${item.fileUrl.startsWith('/') ? '' : '/'}${item.fileUrl}`;
@@ -308,7 +309,9 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
           <Box>
             <List dense>
               {chatMembers.map((member) => (
-                <ListItem key={member.id} sx={{ px: 0 }}>
+                <ListItem 
+                onClick={() => onUserClick(member.id)}
+                key={member.id} sx={{ px: 0 }}>
                   <Avatar 
                     src={member.photoPath ? BASE_URL + member.photoPath : generateAvatar(getInitials(member.fullName))}
                     sx={{ width: 40, height: 40, mr: 2 }}
@@ -429,7 +432,6 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose }) => {
         )}
       </Box>
 
-      {/* Media Modal */}
       <Dialog
         open={openMediaModal}
         onClose={handleCloseMedia}

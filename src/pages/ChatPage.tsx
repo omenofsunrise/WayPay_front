@@ -15,7 +15,7 @@ import {
   Chip
 } from '@mui/material';
 import useChat from '../api/hooks/useChat';
-import type { Chat, Message } from '../api/types/chat';
+import type { Chat, ChatMember, Message } from '../api/types/chat';
 import { format } from 'date-fns';
 import { useEmployee } from '../api/hooks/useEmployee';
 import { getInitials, generateAvatar } from '../utils/avatarUtils';
@@ -29,6 +29,7 @@ import ChatSide from '../components/Chat/ChatSide';
 import SearchField from '../components/Chat/SearchField';
 import MessageInput from '../components/Chat/MessageInput';
 import { useSignalR } from '../api/hooks/useSignalR';
+import type { Employee } from '../api/types/employee';
 
 interface ContextMenuProps {
   x: number;
@@ -156,7 +157,8 @@ const ChatPage = () => {
     setPreviewAttachments,
     chatMembers,
     fetchChatMembers,
-    markMessagesAsRead
+    markMessagesAsRead,
+    createPrivateChat
   } = useChat();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -278,6 +280,22 @@ const ChatPage = () => {
     }
     
     return generateAvatar(getInitials(chat.name));
+  };
+
+  const handleOpenUserChat = async (userId: number) => {
+    try {
+
+        const newChat = await createPrivateChat(userId);
+        
+        // Обновляем список чатов
+        await fetchUserChats();
+        
+        // Выбираем новый чат
+        selectChat(newChat);
+    } catch (err) {
+      console.error('Failed to open user chat:', err);
+    } finally {
+    }
   };
 
   const getUserAvatar = (user: { fullName: string; photoPath?: string | null }) => {
@@ -581,6 +599,7 @@ const renderMessageTextWithLinks = (text: string) => {
             alt={message.sender.fullName} 
             src={getUserAvatar(message.sender)}
             sx={{ width: 32, height: 32 }}
+            onClick={() => handleOpenUserChat(message.sender.id)}
           />
         </ListItemAvatar>
       )}
@@ -800,6 +819,48 @@ const renderMessageTextWithLinks = (text: string) => {
               </React.Fragment>
             ))}
 
+            {chats.filter(chat => chat.type === 'private').map(chat => {
+            // Для приватных чатов получаем собеседника (исключая текущего пользователя)
+            const otherMember = chat.members.find(m => m.id !== currentUser?.id);
+            
+            return (
+              <React.Fragment key={chat.id}>
+                <ListItem 
+                  disablePadding
+                  secondaryAction={
+                    chat.unreadCount > 0 && (
+                      <Box sx={{ /* стили для счетчика непрочитанных */ }}>
+                        {chat.unreadCount}
+                      </Box>
+                    )
+                  }
+                >
+                  <ListItemButton 
+                    onClick={() => selectChat(chat)}
+                    selected={currentChat?.id === chat.id}
+                    sx={{ /* стили */ }}
+                  >
+                    <ListItemAvatar sx={{ minWidth: 40 }}>
+                      <Avatar 
+                        alt={otherMember?.fullName || 'Unknown'}
+                        src={otherMember?.photoPath ? BASE_URL + otherMember.photoPath : generateAvatar(getInitials(otherMember?.fullName || '??'))}
+                        sx={{ width: 40, height: 40 }}
+                      />
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Typography fontWeight="bold">
+                          {otherMember?.fullName || 'Unknown'}
+                        </Typography>
+                      }
+                      secondary={getLastMessagePreview(chat)}
+                    />
+                  </ListItemButton>
+                </ListItem>
+                <Divider component="li" />
+              </React.Fragment>
+            );
+          })}
             {/* Добавляем разделитель перед остальными чатами */}
             {(chats.some(chat => chat.type === 'general' || chat.type === 'company') && 
             chats.some(chat => chat.type !== 'general' && chat.type !== 'company')) && (
@@ -1012,7 +1073,7 @@ const renderMessageTextWithLinks = (text: string) => {
       )}
       
       {isSideOpen && currentChat && (
-        <ChatSide chat={currentChat} onClose={handleCloseSide} />
+        <ChatSide onUserClick={handleOpenUserChat} chat={currentChat} onClose={handleCloseSide} />
       )}
     </ChatContainer>
   );
