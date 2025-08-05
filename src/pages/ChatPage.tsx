@@ -155,7 +155,8 @@ const ChatPage = () => {
     setAttachments,
     setPreviewAttachments,
     chatMembers,
-    fetchChatMembers
+    fetchChatMembers,
+    markMessagesAsRead
   } = useChat();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -289,6 +290,9 @@ const ChatPage = () => {
           text: messageText,
           attachments 
         });
+        
+        // Помечаем сообщения как прочитанные
+        await markMessagesAsRead(currentChat.id);
         
         if (connection) {
           await connection.invoke('SendMessageToChat', currentChat.id, sentMessage);
@@ -636,11 +640,7 @@ const renderMessageTextWithLinks = (text: string) => {
         </Box>
         <Divider />
         
-        {isLoading ? (
-          <Box display="flex" justifyContent="center" p={3}>
-            <CircularProgress />
-          </Box>
-        ) : (
+        
           <List sx={{ overflowY: 'auto', flex: 1 }}>
             {/* Сначала общий чат */}
             {chats.filter(chat => chat.type === 'general').map(chat => (
@@ -879,7 +879,6 @@ const renderMessageTextWithLinks = (text: string) => {
               </React.Fragment>
             ))}
           </List>
-        )}
       </ChatListContainer>
 
       <ChatContentContainer>
@@ -955,7 +954,7 @@ const renderMessageTextWithLinks = (text: string) => {
                     setMessageText('');
                   }}
                   isEditing={!!editingMessage}
-                  hasAttachments={attachments.length > 0}  // Это правильный пропс
+                  hasAttachments={attachments.length > 0}
                   placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
                   onKeyPress={handleKeyPress}
                 />

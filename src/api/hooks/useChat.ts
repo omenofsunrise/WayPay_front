@@ -50,7 +50,6 @@ const useChat = () => {
         await newConnection.start();
         setConnection(newConnection);
 
-        // Подписка на события
         newConnection.on('ReceiveMessage', handleNewMessage);
         newConnection.on('UserTyping', handleUserTyping);
         
@@ -323,8 +322,6 @@ const useChat = () => {
         })) || [],
         isRead: false
       };
-      
-      setMessages(prev => [...prev, tempMessage]);
       
       const result = await chatService.sendMessage(chatId, {
         ...messageData,

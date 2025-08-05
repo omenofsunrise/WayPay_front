@@ -163,6 +163,13 @@ const ClientModal: React.FC<ClientModalProps> = ({
     return '';
   };
 
+  const handleClose = () => {
+      if (mode === 'create') {
+          setFormData(emptyClient);
+      }
+      onClose();
+  };
+
   const [errorMessages, setErrorMessages] = useState({
     fullName: '',
     phone: '',
@@ -192,6 +199,37 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (mode === 'create') {
+            setFormData(emptyClient);
+            setIsEditingPassport(false);
+        
+        setValidationErrors({
+          fullName: false,
+          phone: false,
+          birthdate: false,
+          doc: false,
+          docIssueDate: false,
+          registrationAddress: false,
+        });
+        
+        setErrorMessages({
+          fullName: '',
+          phone: '',
+          birthdate: '',
+          doc: '',
+          docIssueDate: '',
+          registrationAddress: ''
+        });
+        
+        setTouchedFields({
+          fullName: false,
+          phone: false,
+          birthdate: false,
+          doc: false,
+          docIssueDate: false,
+          registrationAddress: false
+        });
+        }
       if (mode !== 'create') {
         setFormData({
           fullName: initialData?.fullName || '',
