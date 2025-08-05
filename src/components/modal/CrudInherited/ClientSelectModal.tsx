@@ -9,6 +9,7 @@ import styled from 'styled-components';
 import { formatDate } from '../../../utils/dateFormatter';
 import ClientModal from './ClientModal';
 import { useAuth } from '../../../сontext/AuthContext';
+import type { Client } from '../../../api/types/client';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -36,10 +37,9 @@ const ClientSelectModal = ({
     fullName: string;
     phone: string;
   } | null>(null);
+  const [creatingClient, setCreatingClient] = useState<Client | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const pageSize = 5;
-  const { hasRole } = useAuth();
-  
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
@@ -230,16 +230,18 @@ const ClientSelectModal = ({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleSubmitNewClient}
-        initialData={{
-          id: 0,
-          fullName: '',
-          phone: '',
-          doc: '',
-          birthdate: null,
-          docIssueDate: null,
-          docIssueYear: 0,
-          registrationAddress: ''
-        }}
+        initialData={ 
+          creatingClient || {
+                    id: 0,
+                    fullName: '',
+                    phone: '',
+                    secondPhone: '',
+                    doc: '',
+                    birthdate: null,
+                    docIssueDate: null,
+                    docIssueYear: 0,
+                    registrationAddress: ''
+                }}
       />
     </>
   );

@@ -149,39 +149,39 @@ const ClientPage = () => {
     };
 
     const handleSubmitClient = async (
-    clientData: Omit<ClientForm, 'doc' | 'docIssueDate'> | ClientForm
-): Promise<boolean> => {
-    try {
-        const parseDate = (dateStr: string): Date | null => {
-            if (!dateStr) return null;
-            const [day, month, year] = dateStr.split('.').map(Number);
-            return new Date(year, month - 1, day);
-        };
+        clientData: Omit<ClientForm, 'doc' | 'docIssueDate'> | ClientForm
+    ): Promise<boolean> => {
+        try {
+            const parseDate = (dateStr: string): Date | null => {
+                if (!dateStr) return null;
+                const [day, month, year] = dateStr.split('.').map(Number);
+                return new Date(year, month - 1, day);
+            };
 
-        const apiData = {
-            fullName: clientData.fullName,
-            phone: clientData.phone,
-            secondPhone: clientData.secondPhone || undefined,
-            birthdate: parseDate(clientData.birthdate),
-            doc: (clientData as ClientForm).doc || undefined,
-            docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined,
-            docIssueYear: (clientData as ClientForm).docIssueDate || 0,
-            registrationAddress: clientData.registrationAddress,
-        };
+            const apiData = {
+                fullName: clientData.fullName,
+                phone: clientData.phone,
+                secondPhone: clientData.secondPhone || undefined,
+                birthdate: parseDate(clientData.birthdate),
+                doc: (clientData as ClientForm).doc || undefined,
+                docIssueDate: parseDate((clientData as ClientForm).docIssueDate || '') || undefined,
+                docIssueYear: (clientData as ClientForm).docIssueDate || 0,
+                registrationAddress: clientData.registrationAddress,
+            };
 
-        if (modalMode === 'create') {
-            await createClient(apiData);
-        } else if (modalMode === 'edit' && selectedClient?.id) {
-            await updateClient(selectedClient.id, apiData);
+            if (modalMode === 'create') {
+                await createClient(apiData);
+            } else if (modalMode === 'edit' && selectedClient?.id) {
+                await updateClient(selectedClient.id, apiData);
+            }
+            
+            loadClients();
+            setIsModalOpen(false);
+            return true;
+        } catch (error: any) {            
+            return false;
         }
-        
-        loadClients();
-        setIsModalOpen(false); // Закрываем модальное окно в любом случае
-        return true;
-    } catch (error: any) {            
-        return false;
-    }
-};
+    };
 
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
         const client = clientsData?.items[rowIndex];

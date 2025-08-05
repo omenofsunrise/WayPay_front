@@ -280,7 +280,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         setApiError('');
       }
     }
-  }, [initialData, isOpen, mode]);
+  }, [isOpen, mode]);
 
   useEffect(() => {
     if (mode === 'view') return;
