@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
-import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
 import CustomTable, { type RowStyle } from "../components/ui/tables/CustomTable";
@@ -10,7 +9,6 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import { exportToExcel } from '../utils/exportUtils';
 import ClientModal from "../components/modal/CrudInherited/ClientModal";
 import useClients from "../api/hooks/useClient";
 import type { ClientForm } from '../api/types/client';

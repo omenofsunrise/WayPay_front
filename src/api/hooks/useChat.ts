@@ -11,6 +11,7 @@ import type {
   ChatLinkResponse
 } from '../types/chat';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { useEmployee } from './useEmployee';
 
 const toMessage = (response: Message): Message => ({
   ...response,
@@ -35,6 +36,7 @@ const useChat = () => {
   const [chatLinks, setChatLinks] = useState<ChatLinkResponse[]>([]);
   const [connection, setConnection] = useState<HubConnection | null>(null);
   const lastTypingTimeRef = useRef<number>(0);
+  const { authInfo } = useEmployee();
   
   useEffect(() => {
     const startConnection = async () => {
@@ -108,25 +110,22 @@ const useChat = () => {
     }));
   }, [currentChat]);
 
-  // Обработка уведомлений о наборе текста
   const handleUserTyping = useCallback((chatId: number, userId: number, userName: string) => {
     if (currentChat?.id === chatId) {
       console.log(`${userName} печатает...`);
-      // Здесь можно добавить UI индикатор набора текста
     }
   }, [currentChat]);
 
-  // Уведомление о наборе текста
   const notifyTyping = useCallback(() => {
-    if (!connection || !currentChat) return;
+    if (!connection || !currentChat || !authInfo?.employee) return;
     
     const now = Date.now();
-    if (now - lastTypingTimeRef.current > 2000) { // Троттлинг 2 секунды
-      connection.invoke('NotifyTyping', currentChat.id)
+    if (now - lastTypingTimeRef.current > 2000) {
+      connection.invoke('NotifyTyping', currentChat.id, authInfo.employee.id, authInfo.employee.fullName)
         .catch(err => console.error('Error notifying typing:', err));
       lastTypingTimeRef.current = now;
     }
-  }, [connection, currentChat]);
+  }, [connection, currentChat, authInfo]);
 
   const fetchChatPhotos = useCallback(async (
     chatId: number, 
@@ -484,6 +483,7 @@ const useChat = () => {
     fetchChatFiles,
     fetchChatVideos,
     fetchChatLinks,
+    notifyTyping
   };
 };
 

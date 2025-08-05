@@ -18,7 +18,6 @@ import CreditControlPage from './pages/CreditControlPage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import InvestorReportPage from './pages/InvestorReportPage';
 import BudgetPage from './pages/BudgetPage';
-// import { ErrorBoundary } from "react-error-boundary";
 import { AuthProvider, useAuth } from './сontext/AuthContext';
 import AdminPanelPage from './pages/AdminPanelPage';
 import ToDoListPage from './pages/ToDoListPage';
@@ -30,10 +29,9 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import type { AuthInfo } from './api/types/auth';
 import apiClient, { PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './api/client';
 import PinCodeModal from './components/modal/PinCodeModal';
-import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
-const INACTIVITY_TIMEOUT = 2 * 60 * 1000;
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -65,23 +63,18 @@ function App() {
 
   useEffect(() => {
     const checkInactivity = () => {
-      if (!isAuthenticated || !authInfo?.hasPin) return;
+      if (!isAuthenticated || !authInfo?.hasPin || showPinModal) return;
 
       const currentTime = Date.now();
       if (currentTime - lastActivity > INACTIVITY_TIMEOUT) {
         setShowPinModal(true);
+        sessionStorage.removeItem('lastActivity');
       }
     };
 
     const interval = setInterval(checkInactivity, 1000);
     return () => clearInterval(interval);
-  }, [isAuthenticated, authInfo?.hasPin, lastActivity]);
-
-  useEffect(() => {
-    if (isAuthenticated && authInfo?.hasPin) {
-      setShowPinModal(true);
-    }
-  }, [isAuthenticated, authInfo?.hasPin]);
+  }, [isAuthenticated, authInfo?.hasPin, lastActivity, showPinModal]);
 
   useEffect(() => {
     const handlePinRequired = (event: CustomEvent<PinRequiredEventDetail>) => {
@@ -123,36 +116,44 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = authStorage.isAuthenticated();
-      setIsAuthenticated(authenticated);
-      
-      if (authenticated && window.location.pathname === '/auth') {
-        window.location.href = '/credits';
-      }
-      
-      if (!authenticated && window.location.pathname !== '/auth') {
-        window.location.href = '/auth';
-      }
+      const checkAuth = () => {
+        const authenticated = authStorage.isAuthenticated();
+        setIsAuthenticated(authenticated);
+        
+        if (authenticated && window.location.pathname === '/auth') {
+          window.location.href = '/credits';
+        }
+        
+        if (!authenticated && window.location.pathname !== '/auth') {
+          window.location.href = '/auth';
+        }
 
-      if (authenticated) {
-        apiClient.get<AuthInfo>('/Auth/info')
-          .then(response => setAuthInfo(response.data))
-          .catch(() => setAuthInfo(null));
-      }
-    };
+        if (authenticated) {
+          apiClient.get<AuthInfo>('/Auth/info')
+            .then(response => {
+              setAuthInfo(response.data);
+              // При первой загрузке проверяем, нужно ли показать пин-код
+              const savedActivity = sessionStorage.getItem('lastActivity');
+              if (!savedActivity || (savedActivity && Date.now() - parseInt(savedActivity, 10) > INACTIVITY_TIMEOUT)) {
+                setShowPinModal(true);
+              }
+            })
+            .catch(() => setAuthInfo(null));
+        }
+      };
 
-    checkAuth();
-    
-    const handleStorageChange = () => checkAuth();
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+      checkAuth();
+      
+      const handleStorageChange = () => checkAuth();
+      window.addEventListener('storage', handleStorageChange);
+      
+      return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
 
   const handlePinSuccess = useCallback(() => {
     setShowPinModal(false);
     updateActivity();
+    sessionStorage.setItem('lastActivity', Date.now().toString());
   }, [updateActivity]);
 
   if (isAuthenticated && authInfo?.hasPin === false) {

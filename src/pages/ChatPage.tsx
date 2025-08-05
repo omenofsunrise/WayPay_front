@@ -174,6 +174,7 @@ const ChatPage = () => {
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isSideOpen, setIsSideOpen] = useState(false);
   const { connection } = useSignalR();
+  const [typingUsers, setTypingUsers] = useState<{id: number, name: string}[]>([]);
   
   useEffect(() => {
     if (!connection) return;
@@ -193,8 +194,16 @@ const ChatPage = () => {
     // Обработка уведомлений о наборе текста
     connection.on('UserTyping', (chatId: number, userId: number, userName: string) => {
       if (currentChat?.id === chatId) {
-        // Показать индикатор набора текста
-        console.log(`${userName} печатает...`);
+        setTypingUsers(prev => {
+          const existing = prev.find(u => u.id === userId);
+          if (existing) return prev;
+          return [...prev, {id: userId, name: userName}];
+        });
+        
+        // Через 3 секунды убираем уведомление
+        setTimeout(() => {
+          setTypingUsers(prev => prev.filter(u => u.id !== userId));
+        }, 3000);
       }
     });
 
@@ -317,18 +326,13 @@ const ChatPage = () => {
     }
   }, [connection, currentChat, currentUser]);
   
-  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const lastTypingTimeRef = useRef<number>(0);
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setMessageText(e.target.value);
     
-    // Троттлинг уведомлений о наборе текста
-    const lastTypingTimeRef = useRef<number>(0);
-    const typingDelay = 2000; // 2 секунды
-    
     const now = Date.now();
-    if (now - lastTypingTimeRef.current > typingDelay) {
-      notifyTyping();
-      lastTypingTimeRef.current = now;
-    }
+    notifyTyping();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -946,7 +950,7 @@ const renderMessageTextWithLinks = (text: string) => {
               {attachments.length > 0 && renderAttachmentPreviews()}
                 <MessageInput
                   value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
+                  onChange={handleMessageChange}
                   onSend={handleSendMessage}
                   onAttach={() => fileInputRef.current?.click()}
                   onCancelEdit={() => {
@@ -969,6 +973,23 @@ const renderMessageTextWithLinks = (text: string) => {
           </>
         )}
       </ChatContentContainer>
+
+        {typingUsers.length > 0 && (
+          <Box sx={{ 
+            position: 'absolute',
+            bottom: '100%',
+            left: 0,
+            right: 0,
+            bgcolor: 'background.paper',
+            px: 2,
+            py: 1,
+            boxShadow: 1
+          }}>
+            <Typography variant="caption" color="textSecondary">
+              {typingUsers.map(u => u.name).join(', ')} печатает...
+            </Typography>
+          </Box>
+        )}
 
       {contextMenu && (
         <ContextMenu
