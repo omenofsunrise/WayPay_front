@@ -23,6 +23,8 @@ const MessageInputContainer = styled.div`
   gap: 8px;
   width: auto;
   padding: 8px;
+  color: black;
+  background: white;
 `;
 
 const InputWrapper = styled.div`
