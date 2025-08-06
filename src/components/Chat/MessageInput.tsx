@@ -23,8 +23,6 @@ const MessageInputContainer = styled.div`
   gap: 8px;
   width: auto;
   padding: 8px;
-  color: black;
-  background: white;
 `;
 
 const InputWrapper = styled.div`
@@ -51,7 +49,8 @@ const TextArea = styled.textarea`
   overflow-y: auto;
   padding-right: 40px;
   background-color: rgba(249, 250, 250, 1);
-
+  color: black;
+  
   &::placeholder {
     color: #9ca3af;
   }

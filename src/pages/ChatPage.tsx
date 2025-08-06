@@ -657,7 +657,7 @@ const ChatPage = () => {
     <ChatContainer>
       <ChatListContainer>
         <Box p={2}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', fontSize: "30px", textAlign: "left", paddingLeft: "5px" }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', fontSize: "30px", textAlign: "left", paddingLeft: "5px", color: "black" }}>
             Чаты
           </Typography>
           <SearchField
@@ -715,7 +715,7 @@ const ChatPage = () => {
                     style={{marginLeft: "10px" }}
                     primary={
                       <Box display="flex" justifyContent="space-between">
-                        <Typography fontWeight="bold">{chat.name}</Typography>
+                        <Typography fontWeight="normal" style={{color: "black"}}>{chat.name}</Typography>
                         <Typography variant="caption" color="textSecondary">
                           {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
                         </Typography>
@@ -791,7 +791,7 @@ const ChatPage = () => {
                     style={{marginLeft: "10px" }}
                     primary={
                       <Box display="flex" justifyContent="space-between">
-                        <Typography fontWeight="bold">{chat.name}</Typography>
+                        <Typography fontWeight="normal" style={{color: "black"}}>{chat.name}</Typography>
                         <Typography variant="caption" color="textSecondary">
                           {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
                         </Typography>
@@ -867,7 +867,7 @@ const ChatPage = () => {
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <Typography fontWeight="bold">
+                        <Typography fontWeight="weight">
                           {otherMember?.fullName || 'Unknown'}
                         </Typography>
                       }
@@ -928,7 +928,7 @@ const ChatPage = () => {
                     style={{marginLeft: "10px" }}
                     primary={
                       <Box display="flex" justifyContent="space-between">
-                        <Typography fontWeight="bold">{chat.name}</Typography>
+                        <Typography fontWeight="normal" style={{color: "black"}}>{chat.name}</Typography>
                         <Typography variant="caption" color="textSecondary">
                           {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
                         </Typography>
@@ -982,7 +982,7 @@ const ChatPage = () => {
                 sx={{ width: 40, height: 40, mr: 2 }}
               />
               <Box>
-                <Typography variant="h6">{currentChat.name}</Typography>
+                <Typography variant="h6" color='black'>{currentChat.name}</Typography>
                 <Typography variant="body2" color="textSecondary">
                   {chatMembers.length} участников
                 </Typography>
