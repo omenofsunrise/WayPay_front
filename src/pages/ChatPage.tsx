@@ -6,7 +6,6 @@ import {
   Typography, 
   Divider, 
   Box, 
-  CircularProgress, 
   ListItemButton,
   IconButton,
   Avatar,
@@ -29,7 +28,6 @@ import ChatSide from '../components/Chat/ChatSide';
 import SearchField from '../components/Chat/SearchField';
 import MessageInput from '../components/Chat/MessageInput';
 import { useSignalR } from '../api/hooks/useSignalR';
-import type { Employee } from '../api/types/employee';
 
 interface ContextMenuProps {
   x: number;
@@ -125,13 +123,6 @@ const EmptyChatContainer = styled.div`
   padding: 20px;
 `;
 
-const EmptyChatImage = styled.img`
-  width: 200px;
-  height: 200px;
-  margin-bottom: 20px;
-  opacity: 0.6;
-`;
-
 const ChatPage = () => {
   const {
     chats,
@@ -189,7 +180,6 @@ const ChatPage = () => {
 
     connection.on('ReceiveMessage', (newMessage: Message) => {
       if (currentChat?.id === newMessage.chatId) {
-        // Ваш код для обновления состояния messages
       }
       fetchUserChats();
     });
@@ -305,16 +295,12 @@ const ChatPage = () => {
         await editMessage(currentChat.id, editingMessage.id, messageText);
         setEditingMessage(null);
       } else {
-        const sentMessage = await sendMessage(currentChat.id, { 
+        await sendMessage(currentChat.id, { 
           text: messageText,
           attachments 
         });
         
         await markMessagesAsRead(currentChat.id);
-        
-        if (connection) {
-          await connection.invoke('SendMessageToChat', currentChat.id, sentMessage);
-        }
       }
       
       setMessageText('');
@@ -365,11 +351,6 @@ const ChatPage = () => {
     searchMessages(localMessageSearch);
   };
 
-  const clearMessageSearch = () => {
-    setLocalMessageSearch('');
-    searchMessages('');
-  };
-
   const handleMessageRightClick = (e: React.MouseEvent, message: Message) => {
     e.preventDefault();
     if (message.sender.id !== currentUser?.id) return;
@@ -383,7 +364,6 @@ const ChatPage = () => {
 
   const handleChatRightClick = (e: React.MouseEvent, chat: Chat) => {
     e.preventDefault();
-    // Only allow deleting private chats or chats where current user is admin
     if (chat.type === 'general' || chat.type === 'company') return;
     
     setChatContextMenu({
@@ -688,7 +668,6 @@ const ChatPage = () => {
         <Divider />
         
         <List sx={{ overflowY: 'auto', flex: 1 }}>
-          {/* Сначала общий чат */}
           {chats.filter(chat => chat.type === 'general').map(chat => (
             <React.Fragment key={chat.id}>
               <ListItem 
@@ -765,7 +744,6 @@ const ChatPage = () => {
             </React.Fragment>
           ))}
 
-          {/* Затем чат компании */}
           {chats.filter(chat => chat.type === 'company').map(chat => (
             <React.Fragment key={chat.id}>
               <ListItem 
@@ -902,7 +880,6 @@ const ChatPage = () => {
             );
           })}
           
-          {/* Затем все остальные чаты */}
           {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company' && chat.type !== 'private').map(chat => (
             <React.Fragment key={chat.id}>
               <ListItem 

@@ -347,10 +347,10 @@ const useChat = () => {
       
       const message = toMessage(result);
       
-      setMessages(prev => [
-        ...prev.filter(m => m.id !== tempMessage?.id),
-        message
-      ]);
+      // setMessages(prev => [
+      //   ...prev.filter(m => m.id !== tempMessage?.id),
+      //   message
+      // ]);
       
       setChats(prev => prev.map(chat => 
         chat.id === chatId ? { 

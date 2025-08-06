@@ -64,7 +64,6 @@ const SessionsPage = () => {
         </DeviceInfo>
         <SessionMeta>
           <div>IP: {session.ipAddress}</div>
-          <div>{session.isMobile ? 'Мобильное' : 'Десктопное'} устройство</div>
         </SessionMeta>
         <SessionDates>
           <div>Создана: {formatDate(session.createdAt)}</div>
