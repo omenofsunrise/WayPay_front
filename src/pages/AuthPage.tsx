@@ -57,7 +57,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         } catch (error: any) {
             console.error('Auth error:', error);
             if (error.response?.status === 400 && userType === 'user') {
-                alert('Номер сотрудника не найден в системе');
+                alert(error.response.data);
             } else {
                 alert('Произошла ошибка при авторизации');
             }

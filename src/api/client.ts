@@ -116,6 +116,12 @@ apiClient.interceptors.response.use(
                     window.dispatchEvent(event);
                     return Promise.reject(refreshError);
                 }
+                else if (refreshError.response?.data?.errorCode === "LICENCE_DATE_OUT") {
+                    if (window.location.pathname !== '/licence-out') {
+                        window.location.href = '/licence-out';
+                    }
+                    return Promise.reject(refreshError);
+                }
                 else {
                     processQueue(refreshError as AxiosError);
                     authStorage.clear();

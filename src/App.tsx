@@ -30,6 +30,7 @@ import type { AuthInfo } from './api/types/auth';
 import apiClient, { PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './api/client';
 import PinCodeModal from './components/modal/PinCodeModal';
 import { createRoot } from 'react-dom/client';
+import LicenseOutPage from './pages/LicenseOutPage';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 
@@ -329,6 +330,8 @@ function App() {
                   <AnalyticsPage />
                 </MainLayout>
             } />
+
+            <Route path="/licence-out" element={<LicenseOutPage />} />
 
             <Route path="*" element={
                 <MainLayout>
