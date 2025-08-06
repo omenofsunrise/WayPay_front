@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { 
   List, 
   ListItem, 
@@ -28,6 +28,7 @@ import ChatSide from '../components/Chat/ChatSide';
 import SearchField from '../components/Chat/SearchField';
 import MessageInput from '../components/Chat/MessageInput';
 import { useSignalR } from '../api/hooks/useSignalR';
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface ContextMenuProps {
   x: number;
@@ -152,7 +153,8 @@ const ChatPage = () => {
     createPrivateChat,
     deleteChat
   } = useChat();
-  
+  const { chatId } = useParams<{ chatId?: string }>();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [messageText, setMessageText] = useState('');
   const [localMessageSearch, setLocalMessageSearch] = useState('');
@@ -175,6 +177,22 @@ const ChatPage = () => {
   const { connection } = useSignalR();
   const [typingUsers, setTypingUsers] = useState<{id: number, name: string}[]>([]);
   
+  const currentChatFromUrl = useMemo(() => {
+    return chatId ? chats.find(c => c.id.toString() === chatId) : null;
+  }, [chatId, chats]);
+
+  useEffect(() => {
+    if (currentChat && currentChat.id.toString() !== chatId) {
+      navigate(`/chat/${currentChat.id}`, { replace: true });
+    }
+  }, [currentChat, chatId, navigate]);
+
+  useEffect(() => {
+    if (currentChatFromUrl && currentChat?.id !== currentChatFromUrl.id) {
+      selectChat(currentChatFromUrl);
+    }
+  }, [currentChatFromUrl]);
+
   useEffect(() => {
     if (!connection) return;
 
@@ -249,6 +267,15 @@ const ChatPage = () => {
       
       return `${senderName}: ${chat.lastMessage.text.substring(0, 30)}${chat.lastMessage.text.length > 30 ? '...' : ''}`;
   };
+
+  const handleSelectChat = useCallback((chat: Chat | null) => {
+    if (chat) {
+      navigate(`/chat/${chat.id}`);
+    } else {
+      navigate('/chat');
+    }
+    selectChat(chat);
+  }, [navigate]);
 
   const handleOpenSide = () => {
     setIsSideOpen(true);
@@ -423,7 +450,7 @@ const ChatPage = () => {
       await fetchUserChats();
       
       if (currentChat?.id === chat.id) {
-        selectChat(null);
+        handleSelectChat(null);
       }
     } catch (err) {
       console.error('Failed to delete chat:', err);
@@ -693,7 +720,7 @@ const ChatPage = () => {
                 }
               >
                 <ListItemButton 
-                  onClick={() => selectChat(chat)}
+                  onClick={() => handleSelectChat(chat)}
                   selected={currentChat?.id === chat.id}
                   sx={{
                     '&.Mui-selected': {
@@ -769,7 +796,7 @@ const ChatPage = () => {
                 }
               >
                 <ListItemButton 
-                  onClick={() => selectChat(chat)}
+                  onClick={() => handleSelectChat(chat)}
                   selected={currentChat?.id === chat.id}
                   sx={{
                     '&.Mui-selected': {
@@ -847,7 +874,7 @@ const ChatPage = () => {
                   }
                 >
                   <ListItemButton 
-                    onClick={() => selectChat(chat)}
+                    onClick={() => handleSelectChat(chat)}
                     selected={currentChat?.id === chat.id}
                     sx={{ 
                       '&.Mui-selected': {
@@ -906,7 +933,7 @@ const ChatPage = () => {
                 }
               >
                 <ListItemButton 
-                  onClick={() => selectChat(chat)}
+                  onClick={() => handleSelectChat(chat)}
                   selected={currentChat?.id === chat.id}
                   sx={{
                     '&.Mui-selected': {

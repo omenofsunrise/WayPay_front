@@ -325,6 +325,12 @@ function App() {
                 </MainLayout>
             } />
 
+            <Route path="chat/:chatId?" element={
+                <MainLayout>
+                  <ChatPage />
+                </MainLayout>
+            } />
+
             <Route path="analytics" element={
                 <MainLayout>
                   <AnalyticsPage />
