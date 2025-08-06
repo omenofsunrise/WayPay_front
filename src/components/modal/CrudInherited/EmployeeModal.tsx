@@ -152,7 +152,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     } else if (initialData.fullName) {
       setAvatarSrc(generateAvatar(getInitials(initialData.fullName || ''), 100));
     }
-  }, [initialData]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (mode === 'view') return;

@@ -444,6 +444,21 @@ const useChat = () => {
     }
   }, []);
 
+  const deleteChat = useCallback(async (
+    userId: number,
+  ): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await chatService.deleteChat(userId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete message';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const markMessagesAsRead = useCallback(async (chatId: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -502,7 +517,8 @@ const useChat = () => {
     fetchChatVideos,
     fetchChatLinks,
     notifyTyping,
-    createPrivateChat
+    createPrivateChat,
+    deleteChat
   };
 };
 

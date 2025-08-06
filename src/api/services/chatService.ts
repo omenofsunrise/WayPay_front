@@ -189,6 +189,11 @@ class ChatService {
     return response.data;
   }
 
+  async deleteChat(userId: number) {
+    const response = await socialApiClient.delete(`/chats/private/${userId}`);
+    return response.data;
+  }
+
   async createPrivateChat(userId: number): Promise<Chat> {
     const response = await socialApiClient.get<Chat>(`/chats/private/${userId}`);
     return response.data;
