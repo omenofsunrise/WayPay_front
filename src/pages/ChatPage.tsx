@@ -158,15 +158,21 @@ const ChatPage = () => {
     chatMembers,
     fetchChatMembers,
     markMessagesAsRead,
-    createPrivateChat
+    createPrivateChat,
+    deleteChat
   } = useChat();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [messageText, setMessageText] = useState('');
   const [localMessageSearch, setLocalMessageSearch] = useState('');
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [contextMenu, setContextMenu] = useState<{
+  const [messageContextMenu, setMessageContextMenu] = useState<{
     message: Message;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [chatContextMenu, setChatContextMenu] = useState<{
+    chat: Chat;
     x: number;
     y: number;
   } | null>(null);
@@ -181,19 +187,13 @@ const ChatPage = () => {
   useEffect(() => {
     if (!connection) return;
 
-    // Обработка новых сообщений
     connection.on('ReceiveMessage', (newMessage: Message) => {
-      // Если сообщение для текущего чата
       if (currentChat?.id === newMessage.chatId) {
-        // Добавляем сообщение в список
         // Ваш код для обновления состояния messages
       }
-      
-      // Обновляем список чатов (чтобы показать новое сообщение в превью)
       fetchUserChats();
     });
 
-    // Обработка уведомлений о наборе текста
     connection.on('UserTyping', (chatId: number, userId: number, userName: string) => {
       if (currentChat?.id === chatId) {
         setTypingUsers(prev => {
@@ -202,7 +202,6 @@ const ChatPage = () => {
           return [...prev, {id: userId, name: userName}];
         });
         
-        // Через 3 секунды убираем уведомление
         setTimeout(() => {
           setTypingUsers(prev => prev.filter(u => u.id !== userId));
         }, 3000);
@@ -235,10 +234,9 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (messagesEndRef.current && messages.length > 0) {
-      // Используем instant scroll вместо smooth для первоначальной загрузки
       messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
     }
-  }, [messages, currentChat]); // Добавляем currentChat в зависимости
+  }, [messages, currentChat]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -284,17 +282,11 @@ const ChatPage = () => {
 
   const handleOpenUserChat = async (userId: number) => {
     try {
-
         const newChat = await createPrivateChat(userId);
-        
-        // Обновляем список чатов
         await fetchUserChats();
-        
-        // Выбираем новый чат
         selectChat(newChat);
     } catch (err) {
       console.error('Failed to open user chat:', err);
-    } finally {
     }
   };
 
@@ -318,7 +310,6 @@ const ChatPage = () => {
           attachments 
         });
         
-        // Помечаем сообщения как прочитанные
         await markMessagesAsRead(currentChat.id);
         
         if (connection) {
@@ -383,8 +374,20 @@ const ChatPage = () => {
     e.preventDefault();
     if (message.sender.id !== currentUser?.id) return;
     
-    setContextMenu({
+    setMessageContextMenu({
       message,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  const handleChatRightClick = (e: React.MouseEvent, chat: Chat) => {
+    e.preventDefault();
+    // Only allow deleting private chats or chats where current user is admin
+    if (chat.type === 'general' || chat.type === 'company') return;
+    
+    setChatContextMenu({
+      chat,
       x: e.clientX,
       y: e.clientY,
     });
@@ -394,7 +397,7 @@ const ChatPage = () => {
     if (message.sender.id !== currentUser?.id) return;
     
     longPressTimerRef.current = setTimeout(() => {
-      setContextMenu({
+      setMessageContextMenu({
         message,
         x: 100,
         y: 100,
@@ -412,7 +415,7 @@ const ChatPage = () => {
   const handleEditMessage = (message: Message) => {
     setEditingMessage(message);
     setMessageText(message.text || '');
-    setContextMenu(null);
+    setMessageContextMenu(null);
     scrollToBottom();
   };
 
@@ -423,7 +426,29 @@ const ChatPage = () => {
     } catch (err) {
       console.error('Failed to delete message:', err);
     } finally {
-      setContextMenu(null);
+      setMessageContextMenu(null);
+    }
+  };
+
+  const handleDeleteChat = async (chat: Chat) => {
+    try {
+      const isConfirmed = window.confirm('Вы действительно хотите удалить этот чат?');
+      
+      if (!isConfirmed) {
+        setChatContextMenu(null);
+        return;
+      }
+
+      await deleteChat(chat.id);
+      await fetchUserChats();
+      
+      if (currentChat?.id === chat.id) {
+        selectChat(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete chat:', err);
+    } finally {
+      setChatContextMenu(null);
     }
   };
 
@@ -478,77 +503,76 @@ const ChatPage = () => {
   };
 
   const renderMessageAttachments = (message: Message) => {
-  
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      gap: 1, 
-      flexWrap: 'wrap',
-      mt: 1
-    }}>
-      {message.attachments.map((attachment, index) => {
-        let fileUrl = attachment.fileUrl;
-        
-        if (!fileUrl.startsWith('http')) {
-          if (!fileUrl.startsWith('/')) {
-            fileUrl = '/' + fileUrl;
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 1, 
+        flexWrap: 'wrap',
+        mt: 1
+      }}>
+        {message.attachments.map((attachment, index) => {
+          let fileUrl = attachment.fileUrl;
+          
+          if (!fileUrl.startsWith('http')) {
+            if (!fileUrl.startsWith('/')) {
+              fileUrl = '/' + fileUrl;
+            }
+            fileUrl = `${SOCIAL_BASE_URL}${fileUrl}`;
           }
-          fileUrl = `${SOCIAL_BASE_URL}${fileUrl}`;
-        }
-        
-        console.log(fileUrl);
-        return (
-          <Box key={index}>
-            {attachment.contentType.startsWith('image/') ? (
-              <img
-                src={fileUrl}
-                alt={attachment.fileName}
-                style={{
-                  width: 200,
-                  height: 200,
-                  objectFit: 'cover',
-                  borderRadius: 4,
-                  cursor: 'pointer'
-                }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
-                }}
-              />
-            ) : attachment.contentType.startsWith('video/') ? (
-              <video
-                controls
-                style={{
-                  width: 200,
-                  borderRadius: 4,
-                  cursor: 'pointer'
-                }}
-              >
-                <source src={fileUrl} type={attachment.contentType} />
-                Your browser does not support the video tag.
-              </video>
-            ) : (
-              <Button
-                variant="outlined"
-                startIcon={<DocumentIcon />}
-                href={fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ 
-                  textTransform: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}
-              >
-                {attachment.fileName}
-              </Button>
-            )}
-          </Box>
-        );
-      })}
-    </Box>
-  );
-};
+          
+          console.log(fileUrl);
+          return (
+            <Box key={index}>
+              {attachment.contentType.startsWith('image/') ? (
+                <img
+                  src={fileUrl}
+                  alt={attachment.fileName}
+                  style={{
+                    width: 200,
+                    height: 200,
+                    objectFit: 'cover',
+                    borderRadius: 4,
+                    cursor: 'pointer'
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                  }}
+                />
+              ) : attachment.contentType.startsWith('video/') ? (
+                <video
+                  controls
+                  style={{
+                    width: 200,
+                    borderRadius: 4,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <source src={fileUrl} type={attachment.contentType} />
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <Button
+                  variant="outlined"
+                  startIcon={<DocumentIcon />}
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ 
+                    textTransform: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  {attachment.fileName}
+                </Button>
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
 
   const DocumentIcon = () => (
     <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -557,29 +581,29 @@ const ChatPage = () => {
     </svg>
   );
 
-const renderMessageTextWithLinks = (text: string) => {
-  if (!text) return null;
+  const renderMessageTextWithLinks = (text: string) => {
+    if (!text) return null;
 
-  const urlRegex = /(https?:\/\/[^\s]+)|(^|\s)([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*)/g;
-  
-  return text.split(' ').map((word, i) => {
-    if (word.match(/^https?:\/\/[^\s]+/)) {
-      return (
-        <a key={i} href={word} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
-          {word + ' '}
-        </a>
-      );
-    }
-    else if (word.match(/^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*/) && !word.endsWith('.')) {
-      return (
-        <a key={i} href={`https://${word}`} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
-          {word + ' '}
-        </a>
-      );
-    }
-    return word + ' ';
-  });
-};
+    const urlRegex = /(https?:\/\/[^\s]+)|(^|\s)([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*)/g;
+    
+    return text.split(' ').map((word, i) => {
+      if (word.match(/^https?:\/\/[^\s]+/)) {
+        return (
+          <a key={i} href={word} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
+            {word + ' '}
+          </a>
+        );
+      }
+      else if (word.match(/^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*/) && !word.endsWith('.')) {
+        return (
+          <a key={i} href={`https://${word}`} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
+            {word + ' '}
+          </a>
+        );
+      }
+      return word + ' ';
+    });
+  };
 
   const renderMessageItem = (message: Message) => (
     <ListItem 
@@ -663,173 +687,182 @@ const renderMessageTextWithLinks = (text: string) => {
         </Box>
         <Divider />
         
-        
-          <List sx={{ overflowY: 'auto', flex: 1 }}>
-            {/* Сначала общий чат */}
-            {chats.filter(chat => chat.type === 'general').map(chat => (
-              <React.Fragment key={chat.id}>
-                <ListItem 
-                  disablePadding
-                  secondaryAction={
-                    chat.unreadCount > 0 && (
-                      <Box 
+        <List sx={{ overflowY: 'auto', flex: 1 }}>
+          {/* Сначала общий чат */}
+          {chats.filter(chat => chat.type === 'general').map(chat => (
+            <React.Fragment key={chat.id}>
+              <ListItem 
+                disablePadding
+                secondaryAction={
+                  chat.unreadCount > 0 && (
+                    <Box 
+                      sx={{
+                        display: 'inline-flex',
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: 20,
+                        height: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {chat.unreadCount}
+                    </Box>
+                  )
+                }
+              >
+                <ListItemButton 
+                  onClick={() => selectChat(chat)}
+                  selected={currentChat?.id === chat.id}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: '#e3f2fd',
+                    },
+                    '&:hover': {
+                      backgroundColor: '#f5f5f5',
+                    },
+                  }}
+                >
+                  <ListItemAvatar sx={{ minWidth: 40 }}>
+                    <Avatar 
+                      alt={chat.name}
+                      src={getChatAvatar(chat)}
+                      sx={{ width: 40, height: 40 }}
+                    />
+                  </ListItemAvatar>
+                  <ListItemText
+                    style={{marginLeft: "10px" }}
+                    primary={
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography fontWeight="bold">{chat.name}</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
+                        </Typography>
+                      </Box>
+                    }
+                    secondary={
+                      <Typography 
+                        component="span" 
+                        variant="body2" 
+                        color="textSecondary"
                         sx={{
-                          display: 'inline-flex',
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          borderRadius: '50%',
-                          width: 20,
-                          height: 20,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.75rem',
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
-                        {chat.unreadCount}
-                      </Box>
-                    )
-                  }
-                >
-                  <ListItemButton 
-                    onClick={() => selectChat(chat)}
-                    selected={currentChat?.id === chat.id}
-                    sx={{
-                      '&.Mui-selected': {
-                        backgroundColor: '#e3f2fd',
-                      },
-                      '&:hover': {
-                        backgroundColor: '#f5f5f5',
-                      },
-                    }}
-                  >
-                    <ListItemAvatar sx={{ minWidth: 40 }}>
-                      <Avatar 
-                        alt={chat.name}
-                        src={getChatAvatar(chat)}
-                        sx={{ width: 40, height: 40 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      style={{marginLeft: "10px" }}
-                      primary={
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography fontWeight="bold">{chat.name}</Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <Typography 
-                          component="span" 
-                          variant="body2" 
-                          color="textSecondary"
-                          sx={{
-                            display: 'block',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {getLastMessagePreview(chat)}
-                        </Typography>
-                      }
-                      secondaryTypographyProps={{ component: 'div' }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-                <Divider component="li" />
-              </React.Fragment>
-            ))}
+                        {getLastMessagePreview(chat)}
+                      </Typography>
+                    }
+                    secondaryTypographyProps={{ component: 'div' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <Divider component="li" />
+            </React.Fragment>
+          ))}
 
-            {/* Затем чат компании */}
-            {chats.filter(chat => chat.type === 'company').map(chat => (
-              <React.Fragment key={chat.id}>
-                <ListItem 
-                  disablePadding
-                  secondaryAction={
-                    chat.unreadCount > 0 && (
-                      <Box 
+          {/* Затем чат компании */}
+          {chats.filter(chat => chat.type === 'company').map(chat => (
+            <React.Fragment key={chat.id}>
+              <ListItem 
+                disablePadding
+                secondaryAction={
+                  chat.unreadCount > 0 && (
+                    <Box 
+                      sx={{
+                        display: 'inline-flex',
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: 20,
+                        height: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {chat.unreadCount}
+                    </Box>
+                  )
+                }
+              >
+                <ListItemButton 
+                  onClick={() => selectChat(chat)}
+                  selected={currentChat?.id === chat.id}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: '#e3f2fd',
+                    },
+                    '&:hover': {
+                      backgroundColor: '#f5f5f5',
+                    },
+                  }}
+                >
+                  <ListItemAvatar sx={{ minWidth: 40 }}>
+                    <Avatar 
+                      alt={chat.name}
+                      src={getChatAvatar(chat)}
+                      sx={{ width: 40, height: 40 }}
+                    />
+                  </ListItemAvatar>
+                  <ListItemText
+                    style={{marginLeft: "10px" }}
+                    primary={
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography fontWeight="bold">{chat.name}</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
+                        </Typography>
+                      </Box>
+                    }
+                    secondary={
+                      <Typography 
+                        component="span" 
+                        variant="body2" 
+                        color="textSecondary"
                         sx={{
-                          display: 'inline-flex',
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          borderRadius: '50%',
-                          width: 20,
-                          height: 20,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.75rem',
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
-                        {chat.unreadCount}
-                      </Box>
-                    )
-                  }
-                >
-                  <ListItemButton 
-                    onClick={() => selectChat(chat)}
-                    selected={currentChat?.id === chat.id}
-                    sx={{
-                      '&.Mui-selected': {
-                        backgroundColor: '#e3f2fd',
-                      },
-                      '&:hover': {
-                        backgroundColor: '#f5f5f5',
-                      },
-                    }}
-                  >
-                    <ListItemAvatar sx={{ minWidth: 40 }}>
-                      <Avatar 
-                        alt={chat.name}
-                        src={getChatAvatar(chat)}
-                        sx={{ width: 40, height: 40 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      style={{marginLeft: "10px" }}
-                      primary={
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography fontWeight="bold">{chat.name}</Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <Typography 
-                          component="span" 
-                          variant="body2" 
-                          color="textSecondary"
-                          sx={{
-                            display: 'block',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {getLastMessagePreview(chat)}
-                        </Typography>
-                      }
-                      secondaryTypographyProps={{ component: 'div' }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-                <Divider component="li" />
-              </React.Fragment>
-            ))}
+                        {getLastMessagePreview(chat)}
+                      </Typography>
+                    }
+                    secondaryTypographyProps={{ component: 'div' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <Divider component="li" />
+            </React.Fragment>
+          ))}
 
-            {chats.filter(chat => chat.type === 'private').map(chat => {
-            // Для приватных чатов получаем собеседника (исключая текущего пользователя)
+          {chats.filter(chat => chat.type === 'private').map(chat => {
             const otherMember = chat.members.find(m => m.id !== currentUser?.id);
             
             return (
               <React.Fragment key={chat.id}>
                 <ListItem 
                   disablePadding
+                  onContextMenu={(e) => handleChatRightClick(e, chat)}
                   secondaryAction={
                     chat.unreadCount > 0 && (
-                      <Box sx={{ /* стили для счетчика непрочитанных */ }}>
+                      <Box sx={{ 
+                        display: 'inline-flex',
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: 20,
+                        height: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                      }}>
                         {chat.unreadCount}
                       </Box>
                     )
@@ -838,7 +871,14 @@ const renderMessageTextWithLinks = (text: string) => {
                   <ListItemButton 
                     onClick={() => selectChat(chat)}
                     selected={currentChat?.id === chat.id}
-                    sx={{ /* стили */ }}
+                    sx={{ 
+                      '&.Mui-selected': {
+                        backgroundColor: '#e3f2fd',
+                      },
+                      '&:hover': {
+                        backgroundColor: '#f5f5f5',
+                      },
+                    }}
                   >
                     <ListItemAvatar sx={{ minWidth: 40 }}>
                       <Avatar 
@@ -861,89 +901,85 @@ const renderMessageTextWithLinks = (text: string) => {
               </React.Fragment>
             );
           })}
-            {/* Добавляем разделитель перед остальными чатами */}
-            {(chats.some(chat => chat.type === 'general' || chat.type === 'company') && 
-            chats.some(chat => chat.type !== 'general' && chat.type !== 'company')) && (
-              <Divider sx={{ my: 1 }} />
-            )}
-
-            {/* Затем все остальные чаты */}
-            {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company').map(chat => (
-              <React.Fragment key={chat.id}>
-                <ListItem 
-                  disablePadding
-                  secondaryAction={
-                    chat.unreadCount > 0 && (
-                      <Box 
+          
+          {/* Затем все остальные чаты */}
+          {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company' && chat.type !== 'private').map(chat => (
+            <React.Fragment key={chat.id}>
+              <ListItem 
+                disablePadding
+                onContextMenu={(e) => handleChatRightClick(e, chat)}
+                secondaryAction={
+                  chat.unreadCount > 0 && (
+                    <Box 
+                      sx={{
+                        display: 'inline-flex',
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: 20,
+                        height: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {chat.unreadCount}
+                    </Box>
+                  )
+                }
+              >
+                <ListItemButton 
+                  onClick={() => selectChat(chat)}
+                  selected={currentChat?.id === chat.id}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: '#e3f2fd',
+                    },
+                    '&:hover': {
+                      backgroundColor: '#f5f5f5',
+                    },
+                  }}
+                >
+                  <ListItemAvatar sx={{ minWidth: 40 }}>
+                    <Avatar 
+                      alt={chat.name}
+                      src={getChatAvatar(chat)}
+                      sx={{ width: 40, height: 40 }}
+                    />
+                  </ListItemAvatar>
+                  <ListItemText
+                    style={{marginLeft: "10px" }}
+                    primary={
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography fontWeight="bold">{chat.name}</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
+                        </Typography>
+                      </Box>
+                    }
+                    secondary={
+                      <Typography 
+                        component="span" 
+                        variant="body2" 
+                        color="textSecondary"
                         sx={{
-                          display: 'inline-flex',
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          borderRadius: '50%',
-                          width: 20,
-                          height: 20,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.75rem',
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
-                        {chat.unreadCount}
-                      </Box>
-                    )
-                  }
-                >
-                  <ListItemButton 
-                    onClick={() => selectChat(chat)}
-                    selected={currentChat?.id === chat.id}
-                    sx={{
-                      '&.Mui-selected': {
-                        backgroundColor: '#e3f2fd',
-                      },
-                      '&:hover': {
-                        backgroundColor: '#f5f5f5',
-                      },
-                    }}
-                  >
-                    <ListItemAvatar sx={{ minWidth: 40 }}>
-                      <Avatar 
-                        alt={chat.name}
-                        src={getChatAvatar(chat)}
-                        sx={{ width: 40, height: 40 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      style={{marginLeft: "10px" }}
-                      primary={
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography fontWeight="bold">{chat.name}</Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {format(new Date(chat.createdAt), 'dd.MM.yyyy')}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <Typography 
-                          component="span" 
-                          variant="body2" 
-                          color="textSecondary"
-                          sx={{
-                            display: 'block',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {getLastMessagePreview(chat)}
-                        </Typography>
-                      }
-                      secondaryTypographyProps={{ component: 'div' }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-                <Divider component="li" />
-              </React.Fragment>
-            ))}
-          </List>
+                        {getLastMessagePreview(chat)}
+                      </Typography>
+                    }
+                    secondaryTypographyProps={{ component: 'div' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <Divider component="li" />
+            </React.Fragment>
+          ))}
+        </List>
       </ChatListContainer>
 
       <ChatContentContainer>
@@ -1008,66 +1044,82 @@ const renderMessageTextWithLinks = (text: string) => {
               </List>
             </MessagesContainer>
             
-              {attachments.length > 0 && renderAttachmentPreviews()}
-                <MessageInput
-                  value={messageText}
-                  onChange={handleMessageChange}
-                  onSend={handleSendMessage}
-                  onAttach={() => fileInputRef.current?.click()}
-                  onCancelEdit={() => {
-                    setEditingMessage(null);
-                    setMessageText('');
-                  }}
-                  isEditing={!!editingMessage}
-                  hasAttachments={attachments.length > 0}
-                  placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
-                  onKeyPress={handleKeyPress}
-                />
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-                multiple
-                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,video/*"
-              />
+            {attachments.length > 0 && renderAttachmentPreviews()}
+            <MessageInput
+              value={messageText}
+              onChange={handleMessageChange}
+              onSend={handleSendMessage}
+              onAttach={() => fileInputRef.current?.click()}
+              onCancelEdit={() => {
+                setEditingMessage(null);
+                setMessageText('');
+              }}
+              isEditing={!!editingMessage}
+              hasAttachments={attachments.length > 0}
+              placeholder={editingMessage ? "Редактирование сообщения..." : "Напишите сообщение..."}
+              onKeyPress={handleKeyPress}
+            />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,video/*"
+            />
           </>
         )}
       </ChatContentContainer>
 
-        {typingUsers.length > 0 && (
-          <Box sx={{ 
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            right: 0,
-            bgcolor: 'background.paper',
-            px: 2,
-            py: 1,
-            boxShadow: 1
-          }}>
-            <Typography variant="caption" color="textSecondary">
-              {typingUsers.map(u => u.name).join(', ')} печатает...
-            </Typography>
-          </Box>
-        )}
+      {typingUsers.length > 0 && (
+        <Box sx={{ 
+          position: 'absolute',
+          bottom: '100%',
+          left: 0,
+          right: 0,
+          bgcolor: 'background.paper',
+          px: 2,
+          py: 1,
+          boxShadow: 1
+        }}>
+          <Typography variant="caption" color="textSecondary">
+            {typingUsers.map(u => u.name).join(', ')} печатает...
+          </Typography>
+        </Box>
+      )}
 
-      {contextMenu && (
+      {messageContextMenu && (
         <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          x={messageContextMenu.x}
+          y={messageContextMenu.y}
+          onClose={() => setMessageContextMenu(null)}
         >
-          <MenuItem onClick={() => handleEditMessage(contextMenu.message)}>
+          <MenuItem onClick={() => handleEditMessage(messageContextMenu.message)}>
             <EditIcon fontSize="small" />
             Редактировать
           </MenuItem>
           <MenuItem 
             danger 
-            onClick={() => handleDeleteMessage(contextMenu.message)}
+            onClick={() => handleDeleteMessage(messageContextMenu.message)}
           >
             <DeleteIcon fontSize="small" />
             Удалить
+          </MenuItem>
+        </ContextMenu>
+      )}
+      
+      {chatContextMenu && (
+        <ContextMenu
+          x={chatContextMenu.x}
+          y={chatContextMenu.y}
+          onClose={() => setChatContextMenu(null)}
+        >
+          <MenuItem 
+            danger 
+            onClick={() => handleDeleteChat(chatContextMenu.chat)}
+          >
+            <DeleteIcon fontSize="small" />
+            Удалить чат
           </MenuItem>
         </ContextMenu>
       )}
