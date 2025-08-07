@@ -184,7 +184,7 @@ const ChatPage = () => {
   const { postId } = useParams<{ postId?: string }>();
   const [messagePost, setMessagePost] = useState<BlogPost | null>(null);
   const [loadingMessagePost, setLoadingMessagePost] = useState(false);
-
+  
   const currentChatFromUrl = useMemo(() => {
     return chatId ? chats.find(c => c.id.toString() === chatId) : null;
   }, [chatId, chats]);

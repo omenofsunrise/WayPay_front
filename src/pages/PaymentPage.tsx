@@ -108,7 +108,7 @@ const PaymentPage = () => {
                 transformData: (payment) => ({
                     'Договор №': payment.creditId,
                     'ФИО': payment.clientFullName,
-                    'Платёж': payment.paymentAmount,
+                    'Платёж': formatMoney(payment.paymentAmount.toString()),
                     'Дата платежа': payment.paymentDate ? formatDate(payment.paymentDate) : '',
                     'Тип платежа': payment.type === 'cash' ? 'Наличными' : 'Картой',
                     'Платёж принял': payment.investorNickname || '',

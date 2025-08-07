@@ -156,12 +156,10 @@ const InvestorPage = () => {
                 transformData: (investor) => ({
                     ID: investor.id,
                     'Никнейм': investor.nickname,
-                    'Полное имя': investor.fullName,
                     'Телефон': investor.phoneNumber,
-                    'Доля инвестора': investor.investorPie,
-                    'Сумма инвестиций': investor.investmentAmount,
-                    'Баланс': investor.balance,
-                    'Компания': investor.isCompany ? 'Да' : 'Нет'
+                    'Доля инвестора': investor.investorPie + '%',
+                    'Сумма инвестиций': formatMoney(investor.investmentAmount.toString()),
+                    'Баланс': formatMoney(investor.balance.toString()),
                 })
             });
         } catch (error) {

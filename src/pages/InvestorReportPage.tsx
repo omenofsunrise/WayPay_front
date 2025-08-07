@@ -104,257 +104,262 @@ const InvestorReportPage = () => {
         setPayoutsPage(1);
     };
 
-    const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
-        return new Promise<Blob>(async (resolve, reject) => {
-            const pdfContainer = document.createElement('div');
-            pdfContainer.style.position = 'absolute';
-            pdfContainer.style.left = '-9999px';
-            pdfContainer.style.width = '800px';
-            pdfContainer.style.padding = '20px';
-            pdfContainer.style.fontFamily = 'Arial, sans-serif';
-            pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
-            document.body.appendChild(pdfContainer);
+const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
+    return new Promise<Blob>(async (resolve, reject) => {
+        const pdfContainer = document.createElement('div');
+        pdfContainer.style.position = 'absolute';
+        pdfContainer.style.left = '-9999px';
+        pdfContainer.style.width = '800px';
+        pdfContainer.style.padding = '20px';
+        pdfContainer.style.fontFamily = 'Arial, sans-serif';
+        pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
+        document.body.appendChild(pdfContainer);
 
-            const createCard = (icon: string, value: string, label: string) => `
+        const createCard = (icon: string, value: string, label: string) => `
+            <div style="
+                background: rgba(255, 255, 255, 1);
+                border-radius: 10px;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                height: 100%;
+                flex: 1;
+                min-width: 200px;
+                margin-bottom: 16px;
+            ">
                 <div style="
-                    background: rgba(255, 255, 255, 1);
-                    border-radius: 10px;
-                    padding: 20px;
+                    width: 50px;
+                    height: 50px;
+                    background: rgba(37, 203, 161, 0.1);
+                    border-radius: 8px;
                     display: flex;
-                    flex-direction: column;
-                    align-items: flex-start;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                    height: 100%;
-                    flex: 1;
-                    min-width: 200px;
-                    margin-bottom: 16px;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 15px;
                 ">
-                    <div style="
-                        width: 50px;
-                        height: 50px;
-                        background: rgba(37, 203, 161, 0.1);
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        margin-bottom: 15px;
-                    ">
-                        <img src="${icon}" width="30" height="30" />
-                    </div>
-                    <div style="
-                        font-size: 20px;
-                        font-weight: 600;
-                        color: #111827;
-                        margin-bottom: 5px;
-                    ">${value}</div>
-                    <div style="
-                        font-size: 14px;
-                        color: #6B7280;
-                    ">${label}</div>
+                    <img src="${icon}" width="30" height="30" />
                 </div>
-            `;
-
-            pdfContainer.innerHTML = `
                 <div style="
-                    margin-bottom: 30px;
-                    background: rgba(255, 255, 255, 1);
-                    border-radius: 12px;
-                    padding: 20px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                ">
-                    <h1 style="
-                        color: rgba(0, 125, 136, 1);
-                        font-size: 24px;
-                        margin-bottom: 5px;
-                        border-bottom: 2px solid rgba(37, 203, 161, 1);
-                        padding-bottom: 10px;
-                    ">
-                        Отчёт для инвестора
-                    </h1>
-                    <p style="
-                        color: #6B7280;
-                        font-size: 14px;
-                        margin: 0;
-                    ">
-                        Дата формирования: ${formatDate(new Date().toISOString())}
-                    </p>
-                </div>
-
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #111827;
+                    margin-bottom: 5px;
+                ">${value}</div>
                 <div style="
-                    margin-bottom: 30px;
-                    background: rgba(255, 255, 255, 1);
-                    border-radius: 12px;
-                    padding: 20px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                ">
-                    <h2 style="
-                        color: rgba(0, 125, 136, 1);
-                        font-size: 18px;
-                        margin-top: 0;
-                        margin-bottom: 15px;
-                        display: flex;
-                        align-items: center;
-                    ">
-                        <span style="
-                            display: inline-block;
-                            width: 4px;
-                            height: 20px;
-                            background: rgba(37, 203, 161, 1);
-                            margin-right: 10px;
-                            border-radius: 2px;
-                        "></span>
-                        Информация об инвесторе
-                    </h2>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Имя:</strong> ${currentInvestor?.fullName || 'Не указано'}</p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber || 'Не указан'}</p>
-                        </div>
-                        <div>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 
-                                <span style="color: ${currentInvestor?.isBlocked ? '#EF4444' : 'rgba(37, 203, 161, 1)'}">
-                                    ${currentInvestor?.isBlocked ? 'Заблокирован' : 'Активен'}
-                                </span>
-                            </p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Дата регистрации инвестора:</strong> ${formatDate(report.createdAt)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="
-                    margin-bottom: 30px;
-                    background: rgba(255, 255, 255, 1);
-                    border-radius: 12px;
-                    padding: 20px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                ">
-                    <h2 style="
-                        color: rgba(0, 125, 136, 1);
-                        font-size: 18px;
-                        margin-top: 0;
-                        margin-bottom: 20px;
-                        display: flex;
-                        align-items: center;
-                    ">
-                        <span style="
-                            display: inline-block;
-                            width: 4px;
-                            height: 20px;
-                            background: rgba(37, 203, 161, 1);
-                            margin-right: 10px;
-                            border-radius: 2px;
-                        "></span>
-                        Финансовая информация
-                    </h2>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                        ${createCard(
-                            investmentSvg,
-                            formatMoney(report.investment.toString()),
-                            'Инвестиция'
-                        )}
-                        
-                        ${createCard(
-                            activeCreditsSvg,
-                            report.activeCreditsAmount.toString(),
-                            'Незакрытые договоры'
-                        )}
-                        
-                        ${report.isCompany ? 
-                            createCard(
-                                commonIncomeSvg,
-                                formatMoney((report.investorIncome + report.selfIncome).toString()),
-                                'Доход компании'
-                            ) : 
-                            createCard(
-                                shareSvg,
-                                currentInvestor?.investorPie.toString() + "%",
-                                'Доля инвестора'
-                            )
-                        }
-                        
-                        ${!report.isCompany ? createCard(
-                            investorIncomeScg,
-                            formatMoney(report.investorIncome.toString()),
-                            'Доход инвестора'
-                        ) : ''}
-                        
-                        ${createCard(
-                            balanceSvg,
-                            formatMoney(report.balance.toString()),
-                            'Касса'
-                        )}
-                    </div>
-                </div>
-
-                <div style="
-                    background: rgba(255, 255, 255, 1);
-                    border-radius: 12px;
-                    padding: 20px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                    margin-bottom: 30px;
-                ">
-                    <h2 style="
-                        color: rgba(0, 125, 136, 1);
-                        font-size: 18px;
-                        margin-top: 0;
-                        margin-bottom: 20px;
-                        display: flex;
-                        align-items: center;
-                    ">
-                        <span style="
-                            display: inline-block;
-                            width: 4px;
-                            height: 20px;
-                            background: rgba(37, 203, 161, 1);
-                            margin-right: 10px;
-                            border-radius: 2px;
-                        "></span>
-                        История выплат
-                    </h2>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background-color: rgba(0, 125, 136, 1); color: white;">
-                                <th style="padding: 12px; text-align: left; border-radius: 6px 0 0 0;">Дата выплаты</th>
-                                <th style="padding: 12px; text-align: left;">Выплатил</th>
-                                <th style="padding: 12px; text-align: right; border-radius: 0 6px 0 0;">Сумма</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${payouts.map((payout, index) => `
-                                <tr style="border-bottom: 1px solid #E5E7EB; background: ${index % 2 === 0 ? 'rgba(255, 255, 255, 1)' : 'rgba(249, 250, 250, 1)'}">
-                                    <td style="padding: 12px; color: #374151;">${formatDate(payout.payoutDate)}</td>
-                                    <td style="padding: 12px; color: #374151;">${payout.employeeFullName}</td>
-                                    <td style="padding: 12px; text-align: right; color: #374151; font-weight: 500;">${formatMoney(payout.amount.toString())}</td>
-                                </tr>
-                            `).join('')}
-                            ${payouts.length === 0 ? `
-                                <tr>
-                                    <td colspan="3" style="padding: 15px; text-align: center; color: #9CA3AF; background: rgba(255, 255, 255, 1);">
-                                        Нет данных о выплатах
-                                    </td>
-                                </tr>
-                            ` : ''}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="
-                    padding: 15px;
-                    text-align: center;
+                    font-size: 14px;
                     color: #6B7280;
-                    font-size: 12px;
-                    background: rgba(255, 255, 255, 1);
-                    border-radius: 12px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">${label}</div>
+            </div>
+        `;
+
+        pdfContainer.innerHTML = `
+            <div style="
+                margin-bottom: 30px;
+                background: rgba(255, 255, 255, 1);
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            ">
+                <h1 style="
+                    color: rgba(0, 125, 136, 1);
+                    font-size: 24px;
+                    margin-bottom: 5px;
+                    border-bottom: 2px solid rgba(37, 203, 161, 1);
+                    padding-bottom: 10px;
                 ">
-                    <p>© ${new Date().getFullYear()} WayPay. Все права защищены.</p>
+                    Отчёт для инвестора
+                </h1>
+                <p style="
+                    color: #6B7280;
+                    font-size: 14px;
+                    margin: 0;
+                ">
+                    Дата формирования: ${formatDate(new Date().toISOString())}
+                </p>
+            </div>
+
+            <div style="
+                margin-bottom: 30px;
+                background: rgba(255, 255, 255, 1);
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            ">
+                <h2 style="
+                    color: rgba(0, 125, 136, 1);
+                    font-size: 18px;
+                    margin-top: 0;
+                    margin-bottom: 15px;
+                    display: flex;
+                    align-items: center;
+                ">
+                    <span style="
+                        display: inline-block;
+                        width: 4px;
+                        height: 20px;
+                        background: rgba(37, 203, 161, 1);
+                        margin-right: 10px;
+                        border-radius: 2px;
+                    "></span>
+                    Информация об инвесторе
+                </h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
+                        <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber || 'Не указан'}</p>
+                    </div>
+                    <div>
+                        <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 
+                            <span style="color: ${currentInvestor?.isBlocked ? '#EF4444' : 'rgba(37, 203, 161, 1)'}">
+                                ${currentInvestor?.isBlocked ? 'Заблокирован' : 'Активен'}
+                            </span>
+                        </p>
+                        <p style="margin: 5px 0; color: #374151;"><strong>Дата регистрации инвестора:</strong> ${formatDate(report.createdAt)}</p>
+                    </div>
                 </div>
-            `;
+            </div>
+
+            <div style="
+                margin-bottom: 30px;
+                background: rgba(255, 255, 255, 1);
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            ">
+                <h2 style="
+                    color: rgba(0, 125, 136, 1);
+                    font-size: 18px;
+                    margin-top: 0;
+                    margin-bottom: 20px;
+                    display: flex;
+                    align-items: center;
+                ">
+                    <span style="
+                        display: inline-block;
+                        width: 4px;
+                        height: 20px;
+                        background: rgba(37, 203, 161, 1);
+                        margin-right: 10px;
+                        border-radius: 2px;
+                    "></span>
+                    Финансовая информация
+                </h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    ${createCard(
+                        investmentSvg,
+                        formatMoney(report.investment.toString()),
+                        'Инвестиция'
+                    )}
+                    
+                    ${createCard(
+                        activeCreditsSvg,
+                        report.activeCreditsAmount.toString(),
+                        'Незакрытые договоры'
+                    )}
+                    
+                    ${report.isCompany ? 
+                        createCard(
+                            commonIncomeSvg,
+                            formatMoney((report.investorIncome + report.selfIncome).toString()),
+                            'Доход компании'
+                        ) : 
+                        createCard(
+                            shareSvg,
+                            currentInvestor?.investorPie.toString() + "%",
+                            'Доля инвестора'
+                        )
+                    }
+                    
+                    ${!report.isCompany ? createCard(
+                        investorIncomeScg,
+                        formatMoney(report.investorIncome.toString()),
+                        'Доход инвестора'
+                    ) : ''}
+                    
+                    ${createCard(
+                        balanceSvg,
+                        formatMoney(report.balance.toString()),
+                        'Касса'
+                    )}
+
+                    ${createCard(
+                        debtSvg,
+                        formatMoney(report.delinquencyAmount.toString()),
+                        'Просрочки руб.'
+                    )}
+                </div>
+            </div>
+
+            <div style="
+                background: rgba(255, 255, 255, 1);
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+            ">
+                <h2 style="
+                    color: rgba(0, 125, 136, 1);
+                    font-size: 18px;
+                    margin-top: 0;
+                    margin-bottom: 20px;
+                    display: flex;
+                    align-items: center;
+                ">
+                    <span style="
+                        display: inline-block;
+                        width: 4px;
+                        height: 20px;
+                        background: rgba(37, 203, 161, 1);
+                        margin-right: 10px;
+                        border-radius: 2px;
+                    "></span>
+                    История выплат
+                </h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: rgba(0, 125, 136, 1); color: white;">
+                            <th style="padding: 12px; text-align: left; border-radius: 6px 0 0 0;">Дата выплаты</th>
+                            <th style="padding: 12px; text-align: left;">Выплатил</th>
+                            <th style="padding: 12px; text-align: right; border-radius: 0 6px 0 0;">Сумма</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${payouts.map((payout, index) => `
+                            <tr style="border-bottom: 1px solid #E5E7EB; background: ${index % 2 === 0 ? 'rgba(255, 255, 255, 1)' : 'rgba(249, 250, 250, 1)'}">
+                                <td style="padding: 12px; color: #374151;">${formatDate(payout.payoutDate)}</td>
+                                <td style="padding: 12px; color: #374151;">${payout.employeeFullName}</td>
+                                <td style="padding: 12px; text-align: right; color: #374151; font-weight: 500;">${formatMoney(payout.amount.toString())}</td>
+                            </tr>
+                        `).join('')}
+                        ${payouts.length === 0 ? `
+                            <tr>
+                                <td colspan="3" style="padding: 15px; text-align: center; color: #9CA3AF; background: rgba(255, 255, 255, 1);">
+                                    Не было выплат
+                                </td>
+                            </tr>
+                        ` : ''}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="
+                padding: 15px;
+                text-align: center;
+                color: #6B7280;
+                font-size: 12px;
+                background: rgba(255, 255, 255, 1);
+                border-radius: 12px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            ">
+                <p>© ${new Date().getFullYear()} WayPay. Все права защищены.</p>
+            </div>
+        `;
 
             try {
                 const canvas = await html2canvas(pdfContainer, {
-                    scale: 2,
+                    scale: 4,
                     logging: false,
                     useCORS: true,
                     allowTaint: true,
@@ -364,7 +369,7 @@ const InvestorReportPage = () => {
                     windowHeight: pdfContainer.scrollHeight
                 });
 
-                const imgData = canvas.toDataURL('image/png');
+                const imgData = canvas.toDataURL('image/jpeg', 0.85);
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const imgWidth = 210;
                 const pageHeight = 295;

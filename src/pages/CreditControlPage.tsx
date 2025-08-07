@@ -210,7 +210,7 @@ const CreditControlPage = () => {
             totalCount: result.totalCount || 0
           };
         },
-        fileName: 'credits_export',
+        fileName: 'credits_control_export',
         transformData: (credit) => {
           const creditDate = typeof credit.creditDate === 'string' 
             ? new Date(credit.creditDate) 

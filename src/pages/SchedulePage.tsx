@@ -15,6 +15,7 @@ import scheduleService from '../api/services/scheduleService';
 import { formatDate, parseDateInput } from '../utils/dateFormatter';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import styled from 'styled-components';
+import { formatMoney } from '../utils/formatPrice';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -163,7 +164,7 @@ const SchedulePage = () => {
                 transformData: (schedule) => ({
                     'Договор №': schedule.creditId,
                     'ФИО': schedule.clientName,
-                    'Платеж': schedule.paymentAmount,
+                    'Платеж': formatMoney(schedule.paymentAmount.toString()),
                     'Дата платежа': formatDate(schedule.paymentDate),
                     'Уведомлен': schedule.notified ? 'Да' : 'Нет'
                 })
@@ -207,14 +208,14 @@ const SchedulePage = () => {
     const tableData = scheduleData?.items.map(schedule => [
         schedule.creditId.toString(),
         schedule.clientName,
-        schedule.paymentAmount.toString(),
+        formatMoney(schedule.paymentAmount.toString()),
         formatDate(schedule.paymentDate),
         schedule.notified ? (
             <button 
                 onClick={() => sendWhatsAppMessage(
                     schedule.id,
                     schedule.clientPhone,
-                    schedule.paymentAmount.toString(),
+                    formatMoney(schedule.paymentAmount.toString()),
                     formatDate(schedule.paymentDate)
                 )}
                 style={{
@@ -232,7 +233,7 @@ const SchedulePage = () => {
                 onClick={() => sendWhatsAppMessage(
                     schedule.id,
                     schedule.clientPhone,
-                    schedule.paymentAmount.toString(),
+                    formatMoney(schedule.paymentAmount.toString()),
                     formatDate(schedule.paymentDate)
                 )}
                 style={{

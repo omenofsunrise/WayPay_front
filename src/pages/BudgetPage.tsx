@@ -49,7 +49,7 @@ interface OutcomeState {
 interface Income {
   id: number;
   amount: number;
-  createdAt: string;
+  date: string;
   comment: string;
   investorName?: string;
   investorId?: number;
@@ -58,7 +58,7 @@ interface Income {
 interface Outcome {
   id: number;
   amount: number;
-  createdAt: string;
+  date: string;
   comment: string;
 }
 
@@ -256,7 +256,7 @@ const BudgetPage = () => {
                 'Тип': 'приход',
                 'ID': income.id,
                 'Сумма': formatMoney(income.amount?.toString() || '0'),
-                'Дата': income.createdAt ? formatDate(income.createdAt) : '',
+                'Дата': income.date ? formatDate(income.date) : '',
                 'Комментарий': income.comment || '',
             }));
 
@@ -264,7 +264,7 @@ const BudgetPage = () => {
                 'Тип': 'Расход',
                 'ID': outcome.id,
                 'Сумма': formatMoney(outcome.amount?.toString() || '0'),
-                'Дата': outcome.createdAt ? formatDate(outcome.createdAt) : '',
+                'Дата': outcome.date ? formatDate(outcome.date) : '',
                 'Комментарий': outcome.comment || '',
             }));
 
@@ -316,7 +316,7 @@ const BudgetPage = () => {
             
             let date = '';
             try {
-                date = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '';
+                date = item.date ? new Date(item.date).toLocaleDateString() : '';
             } catch (e) {
                 console.error("Invalid date format:", item.createdAt);
                 date = '';

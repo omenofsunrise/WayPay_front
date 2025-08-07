@@ -245,7 +245,7 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
           windowHeight: pdfContainer.scrollHeight
         });
 
-        const imgData = canvas.toDataURL('image/png');
+        const imgData = canvas.toDataURL('image/jpeg', 0.85);
         const pdf = new jsPDF('p', 'mm', 'a4');
         const imgWidth = 210; 
         const pageHeight = 295;
