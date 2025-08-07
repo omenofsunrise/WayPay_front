@@ -138,6 +138,11 @@ class ChatService {
     return response.data;
   }
 
+  async getUnreadChatsCount(): Promise<number> {
+    const response = await socialApiClient.get<number>(`/chats/unread-count`);
+    return response.data;
+  }
+
   /**
    * Get files from chat
    * @param chatId ID of the chat

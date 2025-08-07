@@ -300,6 +300,22 @@ const useChat = () => {
     }
   }, []);
 
+  const getUnreadChatsCount = useCallback(async (): Promise<number | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await chatService.getUnreadChatsCount();
+            
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch messages';
+      setError(message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const searchMessages = useCallback(async (query: string) => {
     setMessageSearchQuery(query);
     if (currentChat) {
@@ -514,7 +530,8 @@ const useChat = () => {
     fetchChatLinks,
     notifyTyping,
     createPrivateChat,
-    deleteChat
+    deleteChat,
+    getUnreadChatsCount
   };
 };
 

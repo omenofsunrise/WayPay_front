@@ -12,6 +12,7 @@ import { useAuth } from '../../../сontext/AuthContext';
 import type { Permission, Role } from '../../../api/types/auth';
 import useTask from '../../../api/hooks/useTask';
 import { useTaskCount } from '../../../сontext/TaskCountContext';
+import useChat from '../../../api/hooks/useChat';
 
 interface MenuItem {
   id: string;
@@ -52,7 +53,9 @@ const TopMenu = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const { activeTasksCount, setActiveTasksCount } = useTaskCount();
   const { getActiveTasksCount } = useTask();
-  
+  const { getUnreadChatsCount } = useChat();
+  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+
   useEffect(() => {
     const fetchTaskCount = async () => {
       const count = await getActiveTasksCount();
@@ -66,6 +69,20 @@ const TopMenu = () => {
   const menuItems = allMenuItems.filter(item => 
     (!item.permission || hasPermission(item.permission)) && forbiddenRole(item.forbiddenRole)
   );
+
+  useEffect(() => {
+    const fetchUnreadChatsCount = async () => {
+      const count = await getUnreadChatsCount();
+      if (count !== null) {
+        setUnreadChatsCount(count);
+      }
+    };
+    
+    fetchUnreadChatsCount();
+    const interval = setInterval(fetchUnreadChatsCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, [getUnreadChatsCount]);
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
@@ -107,7 +124,7 @@ const TopMenu = () => {
     return selectedTopMenuItem === itemId || getCurrentMenuItem() === itemId;
   };
 
-  return (
+    return (
     <>
       <TopMenuContainer $collapsed={collapsed}>
         <MenuItemsWrapper>
@@ -123,6 +140,9 @@ const TopMenu = () => {
               <Text $selected={isItemSelected(item.id)}>{item.text}</Text>
               {item.id === 'todo' && activeTasksCount > 0 && (
                 <TaskCountBadge>{activeTasksCount}</TaskCountBadge>
+              )}
+              {item.id === 'chat' && unreadChatsCount > 0 && (
+                <TaskCountBadge>{unreadChatsCount}</TaskCountBadge>
               )}
             </MenuItem>
           ))}
