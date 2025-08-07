@@ -15,6 +15,7 @@ export interface Message {
   updatedAt?: string;
   isDeleted: boolean;
   chatId: number;
+  postId: number;
   sender: SimpleEmployee;
   replyTo?: Message;
   attachments: Attachment[];

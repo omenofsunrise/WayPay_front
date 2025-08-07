@@ -11,7 +11,8 @@ import {
   Avatar,
   ListItemAvatar,
   Button,
-  Chip
+  Chip,
+  CircularProgress
 } from '@mui/material';
 import useChat from '../api/hooks/useChat';
 import type { Chat, ChatMember, Message } from '../api/types/chat';
@@ -29,6 +30,10 @@ import SearchField from '../components/Chat/SearchField';
 import MessageInput from '../components/Chat/MessageInput';
 import { useSignalR } from '../api/hooks/useSignalR';
 import { useNavigate, useParams } from 'react-router-dom';
+import useBlog from '../api/hooks/useBlog';
+import type { BlogPost } from '../api/types/blog';
+import PostItem from '../components/Blog/PostItem';
+import MessageItem from '../components/Blog/MessageItem';
 
 interface ContextMenuProps {
   x: number;
@@ -86,7 +91,7 @@ const MenuContainer = styled.div`
 
 const ChatContainer = styled.div`
   display: flex;
-  height: calc(100vh - 64px); // Adjust based on your header height
+  height: calc(100vh - 64px);
   overflow: hidden;
 `;
 
@@ -129,10 +134,7 @@ const ChatPage = () => {
     chats,
     messages,
     currentChat,
-    isLoading,
     error,
-    searchQuery,
-    messageSearchQuery,
     fetchUserChats,
     fetchChatMessages,
     sendMessage,
@@ -153,6 +155,7 @@ const ChatPage = () => {
     createPrivateChat,
     deleteChat
   } = useChat();
+  const { getPostById } = useBlog();
   const { chatId } = useParams<{ chatId?: string }>();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -176,28 +179,58 @@ const ChatPage = () => {
   const [isSideOpen, setIsSideOpen] = useState(false);
   const { connection } = useSignalR();
   const [typingUsers, setTypingUsers] = useState<{id: number, name: string}[]>([]);
-  
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [loadingPost, setLoadingPost] = useState(false);
+  const { postId } = useParams<{ postId?: string }>();
+  const [messagePost, setMessagePost] = useState<BlogPost | null>(null);
+  const [loadingMessagePost, setLoadingMessagePost] = useState(false);
+
   const currentChatFromUrl = useMemo(() => {
     return chatId ? chats.find(c => c.id.toString() === chatId) : null;
   }, [chatId, chats]);
 
   useEffect(() => {
-    if (currentChat && currentChat.id.toString() !== chatId) {
-      navigate(`/chat/${currentChat.id}`, { replace: true });
+    if (messageContextMenu?.message.postId) {
+      loadMessagePost(messageContextMenu.message.postId);
     }
-  }, [currentChat, chatId, navigate]);
+  }, [messageContextMenu?.message.postId]);
 
   useEffect(() => {
-    if (currentChatFromUrl && currentChat?.id !== currentChatFromUrl.id) {
-      selectChat(currentChatFromUrl);
+    if (postId) {
+      const loadPost = async () => {
+        try {
+          setLoadingPost(true);
+          const postData = await getPostById(Number(postId));
+          setPost(postData);
+        } catch (error) {
+          console.error('Failed to load post:', error);
+        } finally {
+          setLoadingPost(false);
+        }
+      };
+      
+      loadPost();
+    } else {
+      setPost(null);
     }
-  }, [currentChatFromUrl]);
+  }, [postId, getPostById]);
+
+  useEffect(() => {
+    if (chatId) {
+      const chat = chats.find(c => c.id.toString() === chatId);
+      if (chat && (!currentChat || currentChat.id !== chat.id)) {
+        selectChat(chat);
+      }
+    } else if (currentChat) {
+    }
+  }, [chatId, chats, currentChat, selectChat]);
 
   useEffect(() => {
     if (!connection) return;
 
     connection.on('ReceiveMessage', (newMessage: Message) => {
       if (currentChat?.id === newMessage.chatId) {
+        fetchChatMessages(currentChat.id);
       }
       fetchUserChats();
     });
@@ -220,7 +253,7 @@ const ChatPage = () => {
       connection.off('ReceiveMessage');
       connection.off('UserTyping');
     };
-  }, [connection, currentChat]);
+  }, [connection, currentChat, fetchChatMessages, fetchUserChats]);
   
   useEffect(() => {
     return () => {
@@ -237,8 +270,9 @@ const ChatPage = () => {
   useEffect(() => {
     if (currentChat) {
       fetchChatMembers(currentChat.id);
+      fetchChatMessages(currentChat.id);
     }
-  }, [currentChat, fetchChatMembers]);
+  }, [currentChat, fetchChatMembers, fetchChatMessages]);
 
   useEffect(() => {
     if (messagesEndRef.current && messages.length > 0) {
@@ -256,16 +290,29 @@ const ChatPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const loadMessagePost = useCallback(async (postId: number) => {
+    try {
+      setLoadingMessagePost(true);
+      const postData = await getPostById(postId);
+      setMessagePost(postData);
+    } catch (error) {
+      console.error('Failed to load post:', error);
+      setMessagePost(null);
+    } finally {
+      setLoadingMessagePost(false);
+    }
+  }, [getPostById]);
+
   const getLastMessagePreview = (chat: Chat) => {
-      if (!chat.lastMessage) return 'Нет сообщений';
-      
-      const senderName = chat.lastMessage.sender.fullName.split(' ')[0];
-      
-      if (chat.lastMessage.text === null || chat.lastMessage.attachments.length > 0) {
-          return `${senderName}: файл`;
-      }
-      
-      return `${senderName}: ${chat.lastMessage.text.substring(0, 30)}${chat.lastMessage.text.length > 30 ? '...' : ''}`;
+    if (!chat.lastMessage) return 'Нет сообщений';
+    
+    const senderName = chat.lastMessage.sender.fullName.split(' ')[0];
+    
+    if (chat.lastMessage.text === null || chat.lastMessage.attachments.length > 0) {
+        return `${senderName}: файл`;
+    }
+    
+    return `${senderName}: ${chat.lastMessage.text.substring(0, 30)}${chat.lastMessage.text.length > 30 ? '...' : ''}`;
   };
 
   const handleSelectChat = useCallback((chat: Chat | null) => {
@@ -275,7 +322,7 @@ const ChatPage = () => {
       navigate('/chat');
     }
     selectChat(chat);
-  }, [navigate]);
+  }, [navigate, selectChat]);
 
   const handleOpenSide = () => {
     setIsSideOpen(true);
@@ -350,7 +397,10 @@ const ChatPage = () => {
     setMessageText(e.target.value);
     
     const now = Date.now();
-    notifyTyping();
+    if (now - lastTypingTimeRef.current > 3000) {
+      notifyTyping();
+      lastTypingTimeRef.current = now;
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -505,78 +555,6 @@ const ChatPage = () => {
     );
   };
 
-  const renderMessageAttachments = (message: Message) => {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 1, 
-        flexWrap: 'wrap',
-        mt: 1
-      }}>
-        {message.attachments.map((attachment, index) => {
-          let fileUrl = attachment.fileUrl;
-          
-          if (!fileUrl.startsWith('http')) {
-            if (!fileUrl.startsWith('/')) {
-              fileUrl = '/' + fileUrl;
-            }
-            fileUrl = `${SOCIAL_BASE_URL}${fileUrl}`;
-          }
-          
-          console.log(fileUrl);
-          return (
-            <Box key={index}>
-              {attachment.contentType.startsWith('image/') ? (
-                <img
-                  src={fileUrl}
-                  alt={attachment.fileName}
-                  style={{
-                    width: 200,
-                    height: 200,
-                    objectFit: 'cover',
-                    borderRadius: 4,
-                    cursor: 'pointer'
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder-image.png';
-                  }}
-                />
-              ) : attachment.contentType.startsWith('video/') ? (
-                <video
-                  controls
-                  style={{
-                    width: 200,
-                    borderRadius: 4,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <source src={fileUrl} type={attachment.contentType} />
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <Button
-                  variant="outlined"
-                  startIcon={<DocumentIcon />}
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{ 
-                    textTransform: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}
-                >
-                  {attachment.fileName}
-                </Button>
-              )}
-            </Box>
-          );
-        })}
-      </Box>
-    );
-  };
-
   const DocumentIcon = () => (
     <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="33" height="33" rx="10" fill="#C0DBE0"/>
@@ -584,90 +562,6 @@ const ChatPage = () => {
     </svg>
   );
 
-  const renderMessageTextWithLinks = (text: string) => {
-    if (!text) return null;
-
-    const urlRegex = /(https?:\/\/[^\s]+)|(^|\s)([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*)/g;
-    
-    return text.split(' ').map((word, i) => {
-      if (word.match(/^https?:\/\/[^\s]+/)) {
-        return (
-          <a key={i} href={word} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
-            {word + ' '}
-          </a>
-        );
-      }
-      else if (word.match(/^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[^\s]*/) && !word.endsWith('.')) {
-        return (
-          <a key={i} href={`https://${word}`} target="_blank" rel="noopener noreferrer" style={{ color: '#007D88' }}>
-            {word + ' '}
-          </a>
-        );
-      }
-      return word + ' ';
-    });
-  };
-
-  const renderMessageItem = (message: Message) => (
-    <ListItem 
-      key={message.id} 
-      alignItems="flex-start"
-      sx={{
-        flexDirection: message.sender.id === currentUser?.id ? 'row-reverse' : 'row',
-        px: 1,
-      }}
-      onContextMenu={(e) => handleMessageRightClick(e, message)}
-      onTouchStart={() => handleMessageTouchStart(message)}
-      onTouchEnd={handleMessageTouchEnd}
-    >
-      {message.sender.id !== currentUser?.id && (
-        <ListItemAvatar sx={{ minWidth: 40 }}>
-          <Avatar 
-            alt={message.sender.fullName} 
-            src={getUserAvatar(message.sender)}
-            sx={{ width: 32, height: 32 }}
-            onClick={() => handleOpenUserChat(message.sender.id)}
-          />
-        </ListItemAvatar>
-      )}
-      <Box 
-        sx={{
-          maxWidth: '70%',
-          bgcolor: message.sender.id === currentUser?.id ? 'rgba(0, 125, 136, 0.3)' : 'rgba(226, 227, 231, 1)',
-          color: "black",
-          borderRadius: 2,
-          p: 1.5,
-          boxShadow: 1,
-          position: 'relative',
-          paddingRight: '50px'
-        }}
-      >
-        {message.sender.id !== currentUser?.id && (
-          <Typography variant="subtitle2" sx={{ color: 'rgba(0, 125, 136, 1)', fontWeight: 550 }}>
-            {message.sender.fullName}
-          </Typography>
-        )}
-        {message.text && (
-          <Typography variant="body1" paragraph sx={{ mb: 0, wordBreak: 'break-word' }}>
-            {renderMessageTextWithLinks(message.text)}
-          </Typography>
-        )}
-        {renderMessageAttachments(message)}
-        <Typography 
-          variant="caption" 
-          color="textSecondary"
-          sx={{ 
-            position: 'absolute',
-            right: 8,
-            bottom: 8
-          }}
-        >
-          {formatMessageDate(message.sentAt)}
-        </Typography>
-      </Box>
-    </ListItem>
-  );
-  
   if (error) {
     return (
       <Box p={3}>
@@ -1024,7 +918,19 @@ const ChatPage = () => {
               <List>
                 {messages.length > 0 ? (
                   <>
-                    {messages.map(renderMessageItem)}
+                    {messages.map((message) => (
+                      <MessageItem
+                        key={message.id}
+                        message={message}
+                        currentUser={currentUser}
+                        onEdit={handleEditMessage}
+                        onDelete={handleDeleteMessage}
+                        onRightClick={handleMessageRightClick}
+                        onTouchStart={handleMessageTouchStart}
+                        onTouchEnd={handleMessageTouchEnd}
+                        onUserClick={handleOpenUserChat}
+                      />
+                    ))}
                     <div ref={messagesEndRef} />
                   </>
                 ) : (

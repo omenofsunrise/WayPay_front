@@ -17,9 +17,24 @@ interface PostItemProps {
   onDeletePost?: (postId: number) => void;
   onEditPost?: (postId: number) => void;
   onAvatarClick?: (id: number) => void;
+  backgroundColor?: string;
+  borderColor?: string;
+  hasBorder?: boolean;
+  dividerColor?: string;
+  actionsBackground?: string;
 }
 
-const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, onAvatarClick }) => {
+const PostItem: React.FC<PostItemProps> = ({
+  post, 
+  onToggleLike, 
+  onDeletePost, 
+  onAvatarClick, 
+  backgroundColor = 'white',
+  borderColor = 'rgba(209, 213, 219, 1)',
+  hasBorder = true,
+  dividerColor = '#eee',
+  actionsBackground = 'transparent'
+}) => {
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
@@ -118,7 +133,11 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, o
   };
 
   return (
-    <PostItemContainer>
+    <PostItemContainer 
+      $backgroundColor={backgroundColor}
+      $borderColor={borderColor}
+      $hasBorder={hasBorder}
+    >
       <PostHeader>
         <AuthorInfoContainer>
           <AuthorAvatar 
@@ -199,19 +218,27 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, o
         </FilesContainer>
       )}
       
-      <PostFooter>
+      <PostFooter 
+        $dividerColor={dividerColor}
+        $actionsBackground={actionsBackground}
+      >
         <LikeButton 
           isLiked={post.isLikedByCurrentUser} 
           count={post.likesCount} 
           onClick={() => onToggleLike(post.id)} 
+          $background={actionsBackground}
         />
         
         <CommentButton 
           count={post.commentsCount} 
           onClick={handleCommentsClick} 
+          $background={actionsBackground}
         />
         
-        <ShareButton onClick={handleShareClick} />
+        <ShareButton 
+          onClick={handleShareClick} 
+          $background={actionsBackground}
+        />
       </PostFooter>
       
       {isPhotoViewerOpen && post.imageUrls && (
@@ -542,12 +569,17 @@ const SuccessText = styled.p`
   margin: 0;
 `;
 
-const PostItemContainer = styled.div`
-  background: white;
+const PostItemContainer = styled.div<{ 
+  $backgroundColor?: string;
+  $borderColor?: string;
+  $hasBorder?: boolean;
+}>`
+  background: ${({ $backgroundColor }) => $backgroundColor};
   border-radius: 10px;
   padding: 20px;
   margin: 10px 0;
-  border: 1px solid rgba(209, 213, 219, 1);
+  border: ${({ $hasBorder, $borderColor }) => 
+    $hasBorder ? `1px solid ${$borderColor}` : 'none'};
   color: black;
   text-align: left;
   position: relative;
@@ -724,12 +756,20 @@ const FileItem = styled.div`
   }
 `;
 
-const PostFooter = styled.div`
+const StyledLikeButton = styled.button<{ $background?: string }>`
+  background: ${({ $background }) => $background};
+`;
+
+const PostFooter = styled.div<{
+  $dividerColor?: string;
+  $actionsBackground?: string;
+}>`
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-top: 15px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid ${({ $dividerColor }) => $dividerColor};
+  background: ${({ $actionsBackground }) => $actionsBackground};
 `;
 
 export default PostItem;
