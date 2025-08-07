@@ -17,6 +17,11 @@ class BlogService {
     return response.data;
   }
 
+  async getPostById(postId: number): Promise<BlogPost> {
+    const response = await socialApiClient.get<BlogPost>(`/Blog/${postId}`);
+    return response.data;
+  }
+
   async createPost(post: BlogPostForm): Promise<BlogPost> {
     const formData = new FormData();
     formData.append('Content', post.content);

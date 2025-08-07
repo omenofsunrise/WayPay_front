@@ -298,13 +298,9 @@ const ChatPage = () => {
   };
 
   const handleOpenUserChat = async (userId: number) => {
-    try {
-        const newChat = await createPrivateChat(userId);
-        await fetchUserChats();
-        selectChat(newChat);
-    } catch (err) {
-      console.error('Failed to open user chat:', err);
-    }
+    const newChat = await createPrivateChat(userId);
+    await fetchUserChats();
+    window.open(`/chat/${newChat.id}`, '_blank');
   };
 
   const getUserAvatar = (user: { fullName: string; photoPath?: string | null }) => {

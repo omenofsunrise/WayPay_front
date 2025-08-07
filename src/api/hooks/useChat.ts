@@ -337,7 +337,8 @@ const useChat = () => {
           fileName: file.name,
           contentType: file.type
         })) || [],
-        isRead: false
+        isRead: true,
+        postId: messageData.postId // Добавьте это
       };
       
       const result = await chatService.sendMessage(chatId, {
@@ -346,11 +347,6 @@ const useChat = () => {
       });
       
       const message = toMessage(result);
-      
-      // setMessages(prev => [
-      //   ...prev.filter(m => m.id !== tempMessage?.id),
-      //   message
-      // ]);
       
       setChats(prev => prev.map(chat => 
         chat.id === chatId ? { 

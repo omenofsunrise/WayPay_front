@@ -66,6 +66,11 @@ class ChatService {
     if (messageData.replyToId) {
       formData.append('replyToId', messageData.replyToId.toString());
     }
+
+    // Добавляем postId, если он есть
+    if (messageData.postId) {
+      formData.append('postId', messageData.postId.toString());
+    }
     
     if (messageData.attachments) {
       messageData.attachments.forEach(file => {

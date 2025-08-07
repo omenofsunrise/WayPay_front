@@ -29,6 +29,7 @@ export interface SimpleEmployee {
 export interface CreateMessageRequest {
   text: string;
   replyToId?: number;
+  postId?: number;
   attachments?: File[];
 }
 

@@ -24,6 +24,20 @@ const useBlog = () => {
     }
   }, []);
 
+  const getPostById = useCallback(async (postId: number): Promise<BlogPost | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await blogService.getPostById(postId);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
 const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<BlogPost | null> => {
   setIsLoading(true);
   setError(null);
@@ -155,7 +169,8 @@ const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<Blog
     deleteAttachment,
     setCurrentPost,
     downloadAttachment,
-    deletePost
+    deletePost,
+    getPostById
   };
 };
 

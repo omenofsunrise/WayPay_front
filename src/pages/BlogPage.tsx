@@ -12,6 +12,7 @@ import type { BlogPostForm, BlogParams } from '../api/types/blog';
 import { BlogProfile } from '../components/Blog/BlogProfile';
 import { useNavigate, useParams } from 'react-router-dom';
 import BackButton from '../components/ui/Buttons/BackButton';
+import useChat from '../api/hooks/useChat';
 
 const BlogPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -23,7 +24,6 @@ const BlogPage = () => {
     pageSize: 10,
     authorId: undefined
   });
-
   const { id: profileId } = useParams();
   const navigate = useNavigate();
   const { posts, getPosts, createPost, deletePost, toggleLike, isLoading, error } = useBlog();
@@ -57,7 +57,7 @@ const BlogPage = () => {
 
   const handleCreatePost = async (postData: BlogPostForm) => {
     await createPost(postData);
-    getPosts(filters); // Обновляем список постов
+    getPosts(filters);
   };
 
   const handleSearch = (searchValue: string) => {

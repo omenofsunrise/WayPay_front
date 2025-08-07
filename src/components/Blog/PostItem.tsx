@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import type { BlogPost, FileAttachment } from '../../api/types/blog';
 import { formatDate } from '../../utils/dateFormatter';
@@ -8,6 +8,8 @@ import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import PhotoViewerModal from '../modal/PhotoViewerModal';
 import CommentsModal from '../modal/CommentsModal';
 import { LikeButton, CommentButton, ShareButton } from '../ui/Buttons/SocialButtons';
+import useChat from '../../api/hooks/useChat';
+import Checkbox from '../ui/CheckBoxes/Checkbox';
 
 interface PostItemProps {
   post: BlogPost;
@@ -22,6 +24,21 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, o
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [selectedChats, setSelectedChats] = useState<number[]>([]);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const [shareText, setShareText] = useState('');
+  const {
+    chats,
+    fetchUserChats,
+    searchChats,
+    sendMessage
+  } = useChat();
+
+  useEffect(() => {
+    fetchUserChats();
+  }, [fetchUserChats]);
 
   const avatarSrc = post.authorAvatarPath 
     ? BASE_URL + post.authorAvatarPath 
@@ -58,15 +75,58 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, o
     setIsCommentsModalOpen(true);
   };
 
+  const handleShareClick = () => {
+    setIsShareModalOpen(true);
+    setSelectedChats([]);
+    setShareSuccess(false);
+    setShareText('');
+  };
+
+  const handleChatSelect = (chatId: number) => {
+    setSelectedChats(prev => 
+      prev.includes(chatId) 
+        ? prev.filter(id => id !== chatId) 
+        : [...prev, chatId]
+    );
+  };
+
+  const handleShareSubmit = async () => {
+    if (selectedChats.length === 0) return;
+    
+    setIsSharing(true);
+    
+    try {
+      const sharePromises = selectedChats.map(chatId => {
+        return sendMessage(chatId, {
+          text: shareText,
+          attachments: [],
+          postId: post.id
+        });
+      });
+
+      await Promise.all(sharePromises);
+      
+      setShareSuccess(true);
+      setIsShareModalOpen(false);
+      setShareSuccess(false);
+      setShareText('');
+    } catch (error) {
+      console.error('Ошибка при отправке сообщения:', error);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   return (
     <PostItemContainer>
       <PostHeader>
         <AuthorInfoContainer>
           <AuthorAvatar 
-          src={avatarSrc} 
-          alt={post.authorName}
-          onClick={() => onAvatarClick && onAvatarClick(post.authorId)}
-          style={{ cursor: onAvatarClick ? 'pointer' : 'default' }}/>
+            src={avatarSrc} 
+            alt={post.authorName}
+            onClick={() => onAvatarClick && onAvatarClick(post.authorId)}
+            style={{ cursor: onAvatarClick ? 'pointer' : 'default' }}
+          />
           <AuthorInfo>
             <AuthorName>{post.authorName}</AuthorName>
             <PostDate>{formatDate(post.createdAt)}</PostDate>
@@ -151,7 +211,7 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, o
           onClick={handleCommentsClick} 
         />
         
-        <ShareButton onClick={() => {}} />
+        <ShareButton onClick={handleShareClick} />
       </PostFooter>
       
       {isPhotoViewerOpen && post.imageUrls && (
@@ -166,13 +226,321 @@ const PostItem: React.FC<PostItemProps> = ({ post, onToggleLike, onDeletePost, o
         <CommentsModal 
           post={post}
           onClose={() => setIsCommentsModalOpen(false)}
-          onCommentAdded={() => {
-          }}
+          onCommentAdded={() => {}}
         />
+      )}
+
+      {isShareModalOpen && (
+        <ShareModalOverlay>
+          <ShareModalContainer>
+            {shareSuccess ? (
+              <SuccessMessage>
+                <SuccessIcon>
+                  <svg width="20" height="19" viewBox="0 0 20 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15.3438 2.375H4.65625C3.67249 2.375 2.875 3.17249 2.875 4.15625V14.8438C2.875 15.8275 3.67249 16.625 4.65625 16.625H15.3438C16.3275 16.625 17.125 15.8275 17.125 14.8438V4.15625C17.125 3.17249 16.3275 2.375 15.3438 2.375Z" fill="#007D88" stroke="#007D88" stroke-linejoin="round"/>
+                    <path d="M13.5625 6.53125L8.575 12.4688L6.4375 10.0938" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </SuccessIcon>
+                <SuccessText>Пост успешно отправлен в выбранные чаты!</SuccessText>
+              </SuccessMessage>
+            ) : (
+              <>
+                <ShareModalHeader>
+                  <ShareModalTitle>Поделиться постом</ShareModalTitle>
+                  <CloseButton onClick={() => setIsShareModalOpen(false)}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 6L6 18" stroke="#50555C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M6 6L18 18" stroke="#50555C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </CloseButton>
+                </ShareModalHeader>
+                
+                <ShareTextArea
+                  placeholder="Добавьте сообщение к посту (необязательно)"
+                  value={shareText}
+                  onChange={(e) => setShareText(e.target.value)}
+                  maxLength={500}
+                />
+                
+                <SearchInput 
+                  type="text" 
+                  placeholder="Поиск чатов..." 
+                  onChange={(e) => searchChats(e.target.value)}
+                />
+                
+                <ChatsList>
+                  {chats.map(chat => (
+                    <ChatItem key={chat.id} onClick={() => handleChatSelect(chat.id)}>
+                      <Checkbox
+                        checked={selectedChats.includes(chat.id)}
+                        onChange={() => {}}
+                      />
+                      <ChatAvatar 
+                        src={chat.avatarPath ? BASE_URL + chat.avatarPath : generateAvatar(getInitials(chat.name))} 
+                        alt={chat.name}
+                      />
+                      <ChatInfo>
+                        <ChatName>{chat.name}</ChatName>
+                        <ChatLastMessage>
+                          {chat.lastMessage?.text ? (
+                            chat.lastMessage.text.length > 30 
+                              ? `${chat.lastMessage.text.substring(0, 30)}...` 
+                              : chat.lastMessage.text
+                          ) : 'Нет сообщений'}
+                        </ChatLastMessage>
+                      </ChatInfo>
+                    </ChatItem>
+                  ))}
+                </ChatsList>
+                
+                <ShareModalFooter>
+                  <ShareButtonText>
+                    {selectedChats.length > 0 
+                      ? `Выбрано чатов: ${selectedChats.length}` 
+                      : 'Выберите чаты для отправки'}
+                  </ShareButtonText>
+                  <ShareSubmitButton 
+                    onClick={handleShareSubmit}
+                    disabled={selectedChats.length === 0 || isSharing}
+                  >
+                    {isSharing ? (
+                      <Spinner>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 3.5C13.5899 3.5 16.5 6.41015 16.5 10C16.5 10.4142 16.1642 10.75 15.75 10.75C15.3358 10.75 15 10.4142 15 10C15 7.23858 12.7614 5 10 5C7.23858 5 5 7.23858 5 10C5 12.7614 7.23858 15 10 15C10.4142 15 10.75 15.3358 10.75 15.75C10.75 16.1642 10.4142 16.5 10 16.5C6.41015 16.5 3.5 13.5899 3.5 10C3.5 6.41015 6.41015 3.5 10 3.5Z" fill="white"/>
+                        </svg>
+                      </Spinner>
+                    ) : 'Отправить'}
+                  </ShareSubmitButton>
+                </ShareModalFooter>
+              </>
+            )}
+          </ShareModalContainer>
+        </ShareModalOverlay>
       )}
     </PostItemContainer>
   );
 };
+
+const ShareTextArea = styled.textarea`
+  padding: 12px 16px;
+  margin: 10px 16px 0px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  resize: none;
+  min-height: 80px;
+  font-family: inherit;
+  background-color: white;
+  color: black;
+
+  &:focus {
+    border-color: #007D88;
+  }
+  
+  &::placeholder {
+    color: #9CA3AF;
+  }
+`;
+
+const ShareModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ShareModalContainer = styled.div`
+  background-color: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+const ShareModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+`;
+
+const ShareModalTitle = styled.h3`
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+`;
+
+const SearchInput = styled.input`
+  padding: 12px 16px;
+  margin: 10px 16px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: white;
+  color: black;
+
+  &:focus {
+    border-color: #007D88;
+  }
+`;
+
+const ChatsList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px;
+`;
+
+const ChatItem = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 15px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background-color: #f9fafb;
+  }
+`;
+
+const ChatAvatar = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 12px;
+  object-fit: cover;
+`;
+
+const ChatInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const ChatName = styled.div`
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const ChatLastMessage = styled.div`
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const ShareModalFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+`;
+
+const ShareButtonText = styled.span`
+  font-size: 14px;
+  color: #6b7280;
+`;
+
+const ShareSubmitButton = styled.button`
+  background-color: #007D88;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  
+  &:hover {
+    background-color: #006670;
+  }
+  
+  &:disabled {
+    background-color: #d1d5db;
+    cursor: not-allowed;
+  }
+`;
+
+const Spinner = styled.span`
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  animation: spin 1s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const SuccessMessage = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+`;
+
+const SuccessIcon = styled.div`
+  margin-bottom: 20px;
+  width: 40px; 
+  height: 40px;
+  
+  & svg {
+    width: 100%; 
+    height: 100%;
+  }
+`;
+const SuccessText = styled.p`
+  font-size: 16px;
+  font-weight: 500;
+  color: #111827;
+  margin: 0;
+`;
 
 const PostItemContainer = styled.div`
   background: white;
@@ -362,63 +730,6 @@ const PostFooter = styled.div`
   justify-content: space-between;
   padding-top: 15px;
   border-top: 1px solid #eee;
-`;
-
-const ActionButton = styled.button<{ $isLiked?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: ${({ $isLiked }) => $isLiked ? '#EF4444' : '#50555C'};
-  font-size: 14px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  transition: all 0.2s;
-  outline: none;
-
-  &:hover {
-    background: #F3F4F6;
-  }
-
-  &:focus {
-    outline: none;
-  }
-`;
-
-const ActionLabel = styled.span`
-  font-size: 14px;
-`;
-
-const LikeIcon = styled.span<{ $isLiked: boolean }>`
-  display: inline-block;
-  width: 19px;
-  height: 17px;
-  background-color: ${({ $isLiked }) => $isLiked ? '#EF4444' : '#50555C'};
-  mask-image: url("data:image/svg+xml,%3Csvg width='19' height='17' viewBox='0 0 19 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.44783 2.45625C3.30533 -0.149999 7.17721 -0.152499 9.03908 2.45125L9.32971 2.8575L9.59033 2.48688C11.4372 -0.134999 15.3153 -0.160624 17.1966 2.43625C17.8322 3.31349 18.1434 4.38424 18.0771 5.4655C18.0107 6.54676 17.5709 7.57142 16.8328 8.36438L9.79033 15.9256C9.73185 15.9885 9.66104 16.0386 9.58232 16.0729C9.50361 16.1071 9.41868 16.1248 9.33284 16.1248C9.24699 16.1248 9.16206 16.1071 9.08334 16.0729C9.00463 16.0386 8.93382 15.9885 8.87533 15.9256L1.82783 8.3375C1.09696 7.55086 0.659995 6.53606 0.590761 5.46453C0.521527 4.39299 0.824264 3.3304 1.44783 2.45625ZM8.02283 3.17813C6.65971 1.27188 3.82533 1.27438 2.46533 3.1825C2.00906 3.82235 1.78761 4.60008 1.8384 5.38431C1.88918 6.16855 2.20909 6.91122 2.74408 7.48688L9.33409 14.5813L15.9178 7.5125C16.4588 6.93157 16.7812 6.18077 16.8299 5.38846C16.8785 4.59615 16.6505 3.81154 16.1847 3.16875C14.8066 1.26625 11.9653 1.28563 10.6122 3.20625L9.84409 4.29625C9.7866 4.37773 9.71046 4.44428 9.62202 4.49033C9.53357 4.53638 9.43539 4.5606 9.33568 4.56097C9.23596 4.56133 9.13761 4.53784 9.04883 4.49244C8.96004 4.44704 8.88341 4.38106 8.82533 4.3L8.02283 3.17813Z' fill='%2350555C'/%3E%3C/svg%3E");
-  mask-repeat: no-repeat;
-  mask-position: center;
-`;
-
-const CommentIcon = styled.span`
-  display: inline-block;
-  width: 17px;
-  height: 17px;
-  background-color: #50555C;
-  mask-image: url("data:image/svg+xml,%3Csvg width='17' height='17' viewBox='0 0 17 17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.87532 13C2.15703 13 1.46816 12.7147 0.960244 12.2067C0.452333 11.6988 0.166992 11.01 0.166992 10.2917V3.20833C0.166992 2.49004 0.452333 1.80116 0.960244 1.29325C1.46816 0.785341 2.15703 0.5 2.87532 0.5H14.1253C14.481 0.5 14.8332 0.570053 15.1618 0.70616C15.4903 0.842266 15.7889 1.04176 16.0404 1.29325C16.2919 1.54474 16.4914 1.84331 16.6275 2.1719C16.7636 2.50049 16.8337 2.85267 16.8337 3.20833V10.2917C16.8337 10.6473 16.7636 10.9995 16.6275 11.3281C16.4914 11.6567 16.2919 11.9553 16.0404 12.2067C15.7889 12.4582 15.4903 12.6577 15.1618 12.7938C14.8332 12.9299 14.481 13 14.1253 13H9.34366L5.16699 16.125C5.01223 16.2408 4.82829 16.3113 4.63575 16.3286C4.44321 16.3458 4.24967 16.3091 4.07679 16.2226C3.90391 16.1362 3.7585 16.0033 3.65684 15.8389C3.55518 15.6744 3.50127 15.485 3.50116 15.2917V13H2.87532ZM8.92866 11.75H14.1253C14.5121 11.75 14.883 11.5964 15.1565 11.3229C15.43 11.0494 15.5837 10.6784 15.5837 10.2917V3.20833C15.5837 2.82156 15.43 2.45063 15.1565 2.17714C14.883 1.90365 14.5121 1.75 14.1253 1.75H2.87532C2.48855 1.75 2.11762 1.90365 1.84413 2.17714C1.57064 2.45063 1.41699 2.82156 1.41699 3.20833V10.2917C1.41699 11.0967 2.07033 11.75 2.87532 11.75H4.74949V14.875L8.92866 11.75Z' fill='%2350555C'/%3E%3C/svg%3E");
-  mask-repeat: no-repeat;
-  mask-position: center;
-`;
-
-const ShareIcon = styled.span`
-  display: inline-block;
-  width: 15px;
-  height: 14px;
-  background-color: #50555C;
-  mask-image: url("data:image/svg+xml,%3Csvg width='15' height='14' viewBox='0 0 15 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.16603 2.50216C9.16599 1.91022 9.37583 1.33743 9.75826 0.885601C10.1407 0.43377 10.6709 0.132162 11.2547 0.0343785C11.8385 -0.0634049 12.4381 0.0489702 12.9469 0.351533C13.4557 0.654095 13.8407 1.12725 14.0335 1.6869C14.2264 2.24655 14.2146 2.85645 14.0002 3.4082C13.7858 3.95995 13.3827 4.41782 12.8626 4.70044C12.3424 4.98305 11.739 5.0721 11.1594 4.95176C10.5798 4.83141 10.0617 4.50948 9.69703 4.04316L5.08103 6.35116C5.19513 6.77597 5.19513 7.22336 5.08103 7.64816L9.69903 9.95816C10.0818 9.47098 10.6318 9.14326 11.2424 9.03854C11.853 8.93382 12.4808 9.05956 13.0039 9.39139C13.5271 9.72321 13.9085 10.2375 14.074 10.8345C14.2396 11.4315 14.1776 12.0687 13.9 12.6226C13.6224 13.1765 13.1491 13.6076 12.5718 13.8323C11.9944 14.057 11.3542 14.0594 10.7752 13.8389C10.1962 13.6184 9.71976 13.1908 9.43814 12.6389C9.15653 12.0871 9.08985 11.4504 9.25103 10.8522L4.63303 8.54216C4.31204 8.95136 3.87142 9.25027 3.37254 9.39725C2.87366 9.54423 2.34136 9.53196 1.84979 9.36216C1.35821 9.19236 0.931823 8.87348 0.630018 8.44992C0.328213 8.02637 0.166016 7.51924 0.166016 6.99916C0.166016 6.47908 0.328213 5.97195 0.630018 5.5484C0.931823 5.12485 1.35821 4.80596 1.84979 4.63616C2.34136 4.46636 2.87366 4.45409 3.37254 4.60107C3.87142 4.74805 4.31204 5.04696 4.63303 5.45616L9.25103 3.14916C9.19455 2.93813 9.16597 2.72062 9.16603 2.50216ZM11.668 1.00016C11.2698 1.00016 10.8879 1.15835 10.6063 1.43994C10.3247 1.72153 10.1665 2.10344 10.1665 2.50166C10.1665 2.89988 10.3247 3.2818 10.6063 3.56338C10.8879 3.84497 11.2698 4.00316 11.668 4.00316C12.0663 4.00316 12.4482 3.84497 12.7298 3.56338C13.0113 3.2818 13.1695 2.89988 13.1695 2.50166C13.1695 2.10344 13.0113 1.72153 12.7298 1.43994C12.4482 1.15835 12.0663 1.00016 11.668 1.00016ZM11.666 10.0002C11.2682 10.0002 10.8867 10.1582 10.6054 10.4395C10.3241 10.7208 10.166 11.1023 10.166 11.5002C10.166 11.898 10.3241 12.2795 10.6054 12.5608C10.8867 12.8421 11.2682 13.0002 11.666 13.0002C12.0639 13.0002 12.4454 12.8421 12.7267 12.5608C13.008 12.2795 13.166 11.898 13.166 11.5002C13.166 11.1023 13.008 10.7208 12.7267 10.4395C12.4454 10.1582 12.0639 10.0002 11.666 10.0002ZM1.16603 7.00016C1.16603 7.19714 1.20483 7.3922 1.28021 7.57419C1.35559 7.75617 1.46608 7.92153 1.60537 8.06082C1.74466 8.20011 1.91002 8.3106 2.09201 8.38598C2.27399 8.46136 2.46905 8.50016 2.66603 8.50016C2.86301 8.50016 3.05807 8.46136 3.24006 8.38598C3.42204 8.3106 3.5874 8.20011 3.72669 8.06082C3.86598 7.92153 3.97647 7.75617 4.05185 7.57419C4.12723 7.3922 4.16603 7.19714 4.16603 7.00016C4.16603 6.60234 4.008 6.22081 3.72669 5.9395C3.44539 5.6582 3.06386 5.50016 2.66603 5.50016C2.26821 5.50016 1.88668 5.6582 1.60537 5.9395C1.32407 6.22081 1.16603 6.60234 1.16603 7.00016Z' fill='%2350555C'/%3E%3C/svg%3E");
-  mask-repeat: no-repeat;
-  mask-position: center;
 `;
 
 export default PostItem;

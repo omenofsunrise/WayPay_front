@@ -69,6 +69,11 @@ const TopMenu = () => {
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
+    
+    if (currentPath.startsWith('/chat/')) {
+      return 'chat';
+    }
+    
     return pathToMenuItemMap[currentPath] || null;
   };
 

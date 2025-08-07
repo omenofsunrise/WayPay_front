@@ -9,6 +9,7 @@ import { API_BASE_URL, BASE_URL } from '../../api/client';
 import CustomInput from '../ui/fields/CustomInput';
 import type { Profile, Employee } from '../../api/types/employee';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
+import useChat from '../../api/hooks/useChat';
 
 interface BlogProfileProps {
   employeeId?: number;
@@ -33,7 +34,7 @@ export const BlogProfile = ({ employeeId, onAvatarClick }: BlogProfileProps) => 
     updateProfile,
     fetchEmployeeById
   } = useEmployee();
-  
+  const { createPrivateChat } = useChat();
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState('');
   const [currentProfile, setCurrentProfile] = useState<CombinedProfile>({
@@ -77,6 +78,11 @@ export const BlogProfile = ({ employeeId, onAvatarClick }: BlogProfileProps) => 
     
     loadProfile();
     }, [profileId, fetchProfile, fetchEmployeeById, authInfo]);
+
+  const handleOpenUserChat = async ()=> {
+    const newChat = await createPrivateChat(currentProfile.id);
+    window.open(`/chat/${newChat.id}`, '_blank');
+  };
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -182,7 +188,7 @@ export const BlogProfile = ({ employeeId, onAvatarClick }: BlogProfileProps) => 
         </StatsContainer>
         
         {!isOwnProfile && (
-          <DarkCyanButton style={{width: "100%"}}>
+          <DarkCyanButton style={{width: "100%"}} onClick={handleOpenUserChat}>
             Отправить сообщение
           </DarkCyanButton>
         )}
