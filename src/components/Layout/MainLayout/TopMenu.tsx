@@ -29,7 +29,7 @@ const allMenuItems: MenuItem[] = [
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
-  { id: 'blog', icon: BlogIcon, text: 'Блог', path: '/blog' }
+  { id: 'blog', icon: BlogIcon, text: 'Лента', path: '/blog' }
 ];
 
 export const pathToMenuItemMap: Record<string, string> = {
