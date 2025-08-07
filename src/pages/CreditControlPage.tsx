@@ -126,12 +126,12 @@ const CreditControlPage = () => {
 
   const handleDeleteCredit = async (rowData: any[]) => {
     const [_, id] = rowData;
-    if (window.confirm('Вы уверены, что хотите удалить этот кредит?')) {
+    if (window.confirm('Вы уверены, что хотите удалить этот договор?')) {
       try {
         await creditService.deleteCredit(Number(id));
         loadCredits();
       } catch (err) {
-        console.error('Ошибка при удалении кредита:', err);
+        console.error('Ошибка при удалении договора:', err);
       }
     }
   };

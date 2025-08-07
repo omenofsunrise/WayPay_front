@@ -52,7 +52,7 @@ const useExport = <T, C = any>() => {
           setExportProgress(progress);
           
           currentPage++;
-          hasMoreData = currentPage * pageSize < totalCount;
+          hasMoreData = (currentPage - 1) * pageSize < totalCount
         }
       }
 
