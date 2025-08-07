@@ -10,6 +10,7 @@ import CommentsModal from '../modal/CommentsModal';
 import { LikeButton, CommentButton, ShareButton } from '../ui/Buttons/SocialButtons';
 import useChat from '../../api/hooks/useChat';
 import Checkbox from '../ui/CheckBoxes/Checkbox';
+import type { Chat } from '../../api/types/chat';
 
 interface PostItemProps {
   post: BlogPost;
@@ -103,6 +104,18 @@ const PostItem: React.FC<PostItemProps> = ({
         ? prev.filter(id => id !== chatId) 
         : [...prev, chatId]
     );
+  };
+
+  const getChatAvatar = (chat: Chat) => {
+    if (chat.type === 'general') {
+      return '/WayPay.png';
+    }
+    
+    if (chat.avatarPath) {
+      return BASE_URL + chat.avatarPath;
+    }
+    
+    return generateAvatar(getInitials(chat.name));
   };
 
   const handleShareSubmit = async () => {
@@ -303,7 +316,7 @@ const PostItem: React.FC<PostItemProps> = ({
                         onChange={() => {}}
                       />
                       <ChatAvatar 
-                        src={chat.avatarPath ? BASE_URL + chat.avatarPath : generateAvatar(getInitials(chat.name))} 
+                        src={getChatAvatar(chat)} 
                         alt={chat.name}
                       />
                       <ChatInfo>
