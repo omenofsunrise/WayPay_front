@@ -216,40 +216,40 @@ const handlePeriodChange = (period: string, startDate?: string, endDate?: string
             changeValue={analyticData?.activeCreditsDiffrence}
           />
         </AnalyticsContainer>
-            <ChartSection>
-              <ScatterPlot
-                title="Динамика продаж, покупок и остатка в кассе"
-                data={scatterPlotData}
-                xAxisLabel=""
-                yAxisLabel="Сумма (руб)"
-                maxX={maxX}
-                maxY={maxY}
-                minY={minY}
-                yStep={maxY / 1}
-                xStep={1}
-                showLegend={true}
-                xAxisCustomLabels={sellInfoData?.sellsSum.periods.map(p => p.periodName)}
-                titleFontSize="20px"
-              />
-            </ChartSection>
-            <ChartSection>
-              <ColumnChart
-                title="Динамика инвестиций"
-                data={investmentData}
-                maxValue={investmentMaxValue}
-                step={Math.ceil(investmentMaxValue / 5)}
-                titleFontSize="20px"
-              />
-            </ChartSection>
-            <ChartSection>
-              <ColumnChart
-                title="Исполнение финансовых обязательств"
-                data={financialObligationsData}
-                maxValue={debtMaxValue}
-                step={Math.ceil(debtMaxValue / 5)}
-                titleFontSize="20px"
-              />
-            </ChartSection>
+        <ChartSection>
+          <ScatterPlot
+            title="Динамика продаж, покупок и остатка в кассе"
+            data={scatterPlotData}
+            xAxisLabel=""
+            yAxisLabel="Сумма (руб)"
+            maxX={maxX}
+            maxY={maxY}
+            minY={minY}
+            yStep={maxY / 1}
+            xStep={1}
+            showLegend={true}
+            xAxisCustomLabels={sellInfoData?.sellsSum.periods.map(p => p.periodName)}
+            titleFontSize="20px"
+          />
+        </ChartSection>
+        <ChartSection>
+          <ColumnChart
+            title="Динамика инвестиций"
+            data={investmentData}
+            maxValue={investmentMaxValue}
+            step={Math.ceil(investmentMaxValue / 5)}
+            titleFontSize="20px"
+          />
+        </ChartSection>
+        <ChartSection>
+          <ColumnChart
+            title="Исполнение финансовых обязательств"
+            data={financialObligationsData}
+            maxValue={debtMaxValue}
+            step={Math.ceil(debtMaxValue / 5)}
+            titleFontSize="20px"
+          />
+        </ChartSection>
         <ChartsContainer>
           <PieChartsContainer>
             <MiniPieChart
@@ -284,7 +284,7 @@ const AnalyticsContainer = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
   width: 100%;
-  padding: 20px 80px;
+  padding: 0px 80px;
   background-color: white;
   border-radius: 8px;
   border: 1px solid rgba(209, 213, 219, 1);

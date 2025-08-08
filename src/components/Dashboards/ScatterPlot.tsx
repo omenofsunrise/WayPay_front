@@ -53,8 +53,11 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const plotAreaRef = useRef<HTMLDivElement>(null);
 
+  // Calculate the actual max X value from data or use provided maxX
+  const actualMaxX = Math.max(...data.map(point => point.x), maxX);
+
   const xAxisValues = [];
-  for (let i = 0; i <= maxX; i += xStep) {
+  for (let i = 0; i <= actualMaxX; i += xStep) {
     xAxisValues.push(i);
   }
 
@@ -83,7 +86,7 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
   });
 
   const calculateXPosition = (x: number) => {
-    return (x / maxX) * 100;
+    return (x / actualMaxX) * 100;
   };
 
   const calculateYPosition = (y: number) => {
@@ -205,7 +208,8 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
 
       <XAxis>
         {xLabels.map((label, index) => {
-          const position = (index / (xLabels.length - 1)) * 100;
+          const value = xAxisValues[index];
+          const position = (value / actualMaxX) * 100;
           return (
             <XAxisLabel 
               key={index} 
@@ -223,7 +227,6 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
     </ChartContainer>
   );
 };
-
 const ChartContainer = styled.div`
   background-color: white;
   border-radius: 10px;
@@ -344,6 +347,7 @@ const XAxis = styled.div`
   position: relative;
   height: 20px;
   margin-top: 10px;
+  margin-left: 40px;
 `;
 
 const XAxisLabel = styled.span`
