@@ -64,8 +64,15 @@ const PaymentIncomePage = () => {
     };
     
     const handleInvestorChange = (name: string, id?: number) => {
+        console.log(id);
         setInvestorName(name);
         setSelectedInvestorId(id || null);
+        setCurrentPage(1);
+    };
+
+    const clearInvestorFilter = () => {
+        setInvestorName('');
+        setSelectedInvestorId(null);
         setCurrentPage(1);
     };
 
@@ -108,7 +115,7 @@ const PaymentIncomePage = () => {
         }
 
         await getPayments(params);
-    }, [currentPage, fullnameFilter, sortConfig, selectedMonth, selectedYear, selectedInvestorId, getPayments]);
+    }, [currentPage, fullnameFilter, sortConfig, selectedMonth, selectedYear, investorName, getPayments]);
     
     useEffect(() => {
         loadPayments();
@@ -288,9 +295,14 @@ const PaymentIncomePage = () => {
                 <InvestorSelect
                     placeholder="Инвестор"
                     value={investorName}
-                    onChange={handleInvestorChange}
+                    onChange={(value) => {
+                        // Обработка ручного ввода или очистки
+                        
+                            setInvestorName(value);
+                            setCurrentPage(1);
+                    }}
                     onInvestorSelect={(investor) => {
-                        handleInvestorChange(investor.name, investor.id);
+                        // handleInvestorChange(investor.name, investor.id);
                     }}
                 />
             </FilterField>
