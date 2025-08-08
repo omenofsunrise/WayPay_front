@@ -126,11 +126,10 @@ const Title = styled.h1`
 `;
 
 const InfoCard = styled.div`
-  background: rgba(245, 250, 249, 1);
   border-radius: 12px;
   padding: 25px;
   margin-bottom: 30px;
-  border: 1px solid rgba(0, 125, 136, 0.1);
+  border: 1px solid rgba(209, 213, 219, 1);
 `;
 
 const InfoItem = styled.div`
