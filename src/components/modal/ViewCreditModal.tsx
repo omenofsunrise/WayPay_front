@@ -195,7 +195,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
             formatMoney(payment.paymentAmount?.toString() || '0'),
             payment.paymentDate ? formatDate(payment.paymentDate) : '',
             payment.type === 'cash' ? 'Наличными' : 'Картой',
-            payment.investorNickname || '',
+            payment.employeeFullName || '',
             payment.accepted ? 'Да' : 'Нет'
         ]);
     };
@@ -345,6 +345,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           <NoteModalWrapper>
             <CustomTitle style={{ marginTop: 0 }}>Заметка</CustomTitle>
             <NoteInput 
+              style={{background: "white", color: "black"}}
               value={newNoteContent}
               onChange={(e) => setNewNoteContent(e.target.value)}
               placeholder="Введите текст заметки..."

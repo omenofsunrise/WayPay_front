@@ -6,6 +6,7 @@ import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
 import type { Investor } from '../../../api/types/investor';
 import { formatMoney, parseMoney } from '../../../utils/formatPrice';
+import { useAuth } from '../../../сontext/AuthContext';
 
 type InvestorModalProps = {
   mode: ModalMode;
@@ -64,6 +65,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     investmentAmount: false,
     balance: false
   });
+  const { hasRole } = useAuth();
   
   const validatePhone = async (phone: string) => {
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
@@ -368,6 +370,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputContainer>
           </InputRow>
           
+          {(hasRole("директор") || hasRole("суперадмин")) && (
             <InputRow>
               <InputLabel>{formData.isCompany ? 'В лице:' : 'ФИО:'}</InputLabel>
               <InputContainer>
@@ -383,6 +386,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
                 />
               </InputContainer>
             </InputRow>
+          )}
 
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
