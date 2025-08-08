@@ -140,7 +140,7 @@ const PaymentPage = () => {
                     'Платёж': formatMoney(payment.paymentAmount.toString()),
                     'Дата платежа': payment.paymentDate ? formatDate(payment.paymentDate) : '',
                     'Тип платежа': payment.type === 'cash' ? 'Наличными' : 'Картой',
-                    'Платёж принял': payment.investorNickname || '',
+                    'Платёж принял': payment.employeeFullName || '',
                     'Подтверждён': payment.accepted ? 'Да' : 'Нет'
                 })
             });
@@ -158,7 +158,7 @@ const PaymentPage = () => {
             formatMoney(payment.paymentAmount?.toString() || '0'),
             payment.paymentDate ? formatDate(payment.paymentDate) : '',
             payment.type === 'cash' ? 'Наличными' : 'Картой',
-            payment.investorNickname || '',
+            payment.employeeFullName || '',
             payment.accepted ? 'Да' : 'Нет'
         ]);
     };

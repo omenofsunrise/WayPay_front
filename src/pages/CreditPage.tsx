@@ -353,6 +353,33 @@ const CreditPage = () => {
         </InputWrapper>
         
         <InputWrapper>
+          <CustomInput 
+            style={{ marginRight: "auto", display: "flex"}}
+            inputType="fullname"
+            placeholder="ФИО"
+            value={clientFullName}
+            onChange={(e) => {
+              setClientFullName(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
+
+        <InputWrapper>
+          <InvestorSelect 
+            placeholder="Инвестор"
+            value={investorName}
+            onChange={(name) => {
+              setInvestorName(name);
+              setCurrentPage(1);
+            }}
+            onInvestorSelect={(investor) => {
+              console.log('Selected investor:', investor);
+            }}
+          />
+        </InputWrapper>
+
+        <InputWrapper>
           <CustomCalendar 
             prefix="от:"
             value={fromDate}
@@ -373,33 +400,7 @@ const CreditPage = () => {
             }}
           />
         </InputWrapper>
-        
-        <InputWrapper>
-          <InvestorSelect 
-            placeholder="Инвестор"
-            value={investorName}
-            onChange={(name) => {
-              setInvestorName(name);
-              setCurrentPage(1);
-            }}
-            onInvestorSelect={(investor) => {
-              console.log('Selected investor:', investor);
-            }}
-          />
-        </InputWrapper>
 
-        <InputWrapper>
-          <CustomInput 
-            style={{ marginRight: "auto", display: "flex"}}
-            inputType="fullname"
-            placeholder="ФИО"
-            value={clientFullName}
-            onChange={(e) => {
-              setClientFullName(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
       </FilterField>
 
       <SecondRaw style={{ color: "white" }}>
