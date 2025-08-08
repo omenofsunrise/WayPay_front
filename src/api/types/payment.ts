@@ -1,4 +1,4 @@
-import type { PaginationParams } from './common';
+import type { PaginatedResponse, PaginationParams } from './common';
 
 export interface Payment {
     id: number;
@@ -31,4 +31,9 @@ export interface CreatePaymentRequest {
     paymentAmount: number;
     datePayment: string;
     type: 'cash' | 'card';
+}
+
+export interface PaymentResponse extends PaginatedResponse<Payment> {
+    totalPayments: number;
+    totalIncome: number;
 }

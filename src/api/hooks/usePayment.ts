@@ -6,9 +6,9 @@ import type { PaginatedResponse } from '../types/common';
 const usePayment = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<PaginatedResponse<Payment> | null>(null);
+  const [data, setData] = useState<PaymentResponse | null>(null);
 
-  const getPayments = useCallback(async (params?: PaymentParams): Promise<PaginatedResponse<Payment> | null> => {
+  const getPayments = useCallback(async (params?: PaymentParams): Promise<PaymentResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {

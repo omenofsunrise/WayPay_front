@@ -16,8 +16,12 @@ import type { Payment, PaymentParams } from '../api/types/payment';
 import { formatDate } from '../utils/dateFormatter';
 import { formatMoney } from '../utils/formatPrice';
 import { useAuth } from '../сontext/AuthContext';
+import CustomSelect from '../components/ui/fields/CustomSelect';
+import InvestorSelect from '../components/ui/fields/InvestorSelect';
+import { TableTitle } from './BudgetPage';
 
 const PaymentIncomePage = () => {
+    const currentDate = new Date();
     const [fullnameFilter, setFullnameFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [sortConfig, setSortConfig] = useState<{
@@ -26,7 +30,32 @@ const PaymentIncomePage = () => {
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
     const { authInfo } = useAuth();
-    
+    const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+    const [investorName, setInvestorName] = useState('');
+    const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(null);
+
+    const months = [
+        { value: "1", label: "Январь" },
+        { value: "2", label: "Февраль" },
+        { value: "3", label: "Март" },
+        { value: "4", label: "Апрель" },
+        { value: "5", label: "Май" },
+        { value: "6", label: "Июнь" },
+        { value: "7", label: "Июль" },
+        { value: "8", label: "Август" },
+        { value: "9", label: "Сентябрь" },
+        { value: "10", label: "Октябрь" },
+        { value: "11", label: "Ноябрь" },
+        { value: "12", label: "Декабрь" }
+    ];
+
+    const currentYear = currentDate.getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => {
+        const year = currentYear - 2 + i;
+        return { value: year.toString(), label: year.toString() };
+    });
+
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditId',
         1: 'clientFullname',
@@ -34,6 +63,12 @@ const PaymentIncomePage = () => {
         3: 'paymentDate'
     };
     
+    const handleInvestorChange = (name: string, id?: number) => {
+        setInvestorName(name);
+        setSelectedInvestorId(id || null);
+        setCurrentPage(1);
+    };
+
     const { exportData, isExporting, exportProgress } = useExport<Payment>();
 
     const { 
@@ -45,11 +80,26 @@ const PaymentIncomePage = () => {
         deletePayment
     } = usePayment();
     
+    const getDateRangeForMonth = (month: number, year: number) => {
+        const dateFrom = new Date(year, month - 1, 1);
+        const dateTo = new Date(year, month, 0); // Последний день месяца
+        
+        return {
+            dateFrom,
+            dateTo
+        };
+    };
+    
     const loadPayments = useCallback(async () => {
+        const { dateFrom, dateTo } = getDateRangeForMonth(selectedMonth, selectedYear);
+        
         const params: PaymentParams = {
             page: currentPage,
             pageSize,
-            clientFullname: fullnameFilter || undefined
+            clientFullname: fullnameFilter || undefined,
+            investorNickname: investorName || undefined,
+            dateFrom,
+            dateTo
         };
 
         if (sortConfig.key !== null) {
@@ -58,11 +108,11 @@ const PaymentIncomePage = () => {
         }
 
         await getPayments(params);
-    }, [currentPage, fullnameFilter, sortConfig, getPayments]);
+    }, [currentPage, fullnameFilter, sortConfig, selectedMonth, selectedYear, selectedInvestorId, getPayments]);
     
     useEffect(() => {
         loadPayments();
-    }, [currentPage, fullnameFilter, sortConfig, loadPayments]);
+    }, [currentPage, fullnameFilter, sortConfig, selectedMonth, selectedYear, selectedInvestorId, loadPayments]);
 
     const handleFilterChange = (value: string) => {
         setFullnameFilter(value);
@@ -88,12 +138,17 @@ const PaymentIncomePage = () => {
 
     const handleExport = async () => {
         try {
+            const { dateFrom, dateTo } = getDateRangeForMonth(selectedMonth, selectedYear);
+            
             await exportData({
                 fetchData: async (page, pageSize) => {
                     const params: PaymentParams = {
                         page,
                         pageSize,
                         clientFullname: fullnameFilter || undefined,
+                        investorNickname: investorName || undefined,
+                        dateFrom,
+                        dateTo,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
@@ -198,13 +253,15 @@ const PaymentIncomePage = () => {
 
     return (
         <PageLayout>
-            <TitleField>
+            <TitleField style={{gap: "35px"}}>
                 <CustomTitle>Доходы по платежам</CustomTitle>
                 {/* <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
                     exportProgress={exportProgress}
                 /> */}
+                <TableTitle>Всего доход: {formatMoney(paymentsData?.totalIncome?.toString() || '0')}</TableTitle>
+                <TableTitle>Всего выплат: {formatMoney(paymentsData?.totalPayments?.toString() || '0')}</TableTitle>
             </TitleField>
             
             <FilterField>
@@ -213,6 +270,28 @@ const PaymentIncomePage = () => {
                     placeholder="ФИО"
                     value={fullnameFilter}
                     onChange={(e) => handleFilterChange(e.target.value)}
+                />
+                <CustomSelect
+                    placeholder="Месяц"
+                    value={selectedMonth.toString()}
+                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                    options={months}
+                    style={{ flex: "0 1 200px" }}
+                />
+                <CustomSelect
+                    placeholder="Год"
+                    value={selectedYear.toString()}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    options={years}
+                    style={{ flex: "0 1 150px" }}
+                />
+                <InvestorSelect
+                    placeholder="Инвестор"
+                    value={investorName}
+                    onChange={handleInvestorChange}
+                    onInvestorSelect={(investor) => {
+                        handleInvestorChange(investor.name, investor.id);
+                    }}
                 />
             </FilterField>
             

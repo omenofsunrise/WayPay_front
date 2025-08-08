@@ -3,8 +3,8 @@ import type { Payment, PaymentParams, CreatePaymentRequest, PaymentByCreditParam
 import type { PaginatedResponse } from '../types/common';
 
 class PaymentService {
-  async getPayments(params?: PaymentParams): Promise<PaginatedResponse<Payment>> {
-    const response = await apiClient.get<PaginatedResponse<Payment>>('/Payment', { params });
+  async getPayments(params?: PaymentParams): Promise<PaymentResponse> {
+    const response = await apiClient.get<PaymentResponse>('/Payment', { params });
     return response.data;
   }
 

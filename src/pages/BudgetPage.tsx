@@ -590,7 +590,7 @@ const TableHeader = styled.div`
     margin-bottom: 10px;
 `;
 
-const TableTitle = styled.h3`
+export const TableTitle = styled.h3`
     font-size: 22px;
     font-weight: 500;
     margin: 0;

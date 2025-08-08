@@ -7,6 +7,7 @@ const FilterField = styled.div`
     text-align: left;
     color: black;
     background-color: rgba(249, 250, 250, 1);
+    gap: 15px;
 `;
 
 export default FilterField; 
