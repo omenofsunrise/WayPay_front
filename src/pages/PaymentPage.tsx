@@ -63,8 +63,8 @@ const PaymentPage = () => {
         const params: PaymentParams = {
             page: currentPage,
             pageSize,
-            clientFullname: fullnameFilter || undefined,
-            investorNickname: investorName || undefined,
+            clientFullname: fullnameFilter.trim() || undefined,
+            investorNickname: investorName.trim() || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
         };
@@ -75,14 +75,23 @@ const PaymentPage = () => {
         }
 
         await getPayments(params);
-    }, [currentPage, fullnameFilter, sortConfig, getPayments]);
+    }, [currentPage, fullnameFilter, investorName, dateFromFilter, dateToFilter, sortConfig, getPayments]);
     
     useEffect(() => {
-        loadPayments();
+        const timer = setTimeout(() => {
+            loadPayments();
+        }, 500);
+
+        return () => clearTimeout(timer);
     }, [currentPage, fullnameFilter, investorName, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
 
     const handleFilterChange = (value: string) => {
         setFullnameFilter(value);
+        setCurrentPage(1);
+    };
+
+    const handleInvestorChange = (name: string) => {
+        setInvestorName(name);
         setCurrentPage(1);
     };
 
@@ -110,7 +119,10 @@ const PaymentPage = () => {
                     const params: PaymentParams = {
                         page,
                         pageSize,
-                        clientFullname: fullnameFilter || undefined,
+                        clientFullname: fullnameFilter.trim() || undefined,
+                        investorNickname: investorName.trim() || undefined,
+                        dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
+                        dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
@@ -146,7 +158,7 @@ const PaymentPage = () => {
             formatMoney(payment.paymentAmount?.toString() || '0'),
             payment.paymentDate ? formatDate(payment.paymentDate) : '',
             payment.type === 'cash' ? 'Наличными' : 'Картой',
-            payment.employeeFullName || '',
+            payment.investorNickname || '',
             payment.accepted ? 'Да' : 'Нет'
         ]);
     };
@@ -224,7 +236,7 @@ const PaymentPage = () => {
                 />
             </TitleField>
             
-            <FilterField>
+            <FilterField style={{gap: "15px"}}>
                 <CustomInput 
                     inputType="text"
                     placeholder="Клиент"
@@ -234,10 +246,7 @@ const PaymentPage = () => {
                 <InvestorSelect
                     placeholder="Инвестор"
                     value={investorName}
-                    onChange={(name) => {
-                    setInvestorName(name);
-                    setCurrentPage(1);
-                    }}
+                    onChange={handleInvestorChange}
                     onInvestorSelect={(investor) => {
                         console.log('Selected investor:', investor);
                     }}

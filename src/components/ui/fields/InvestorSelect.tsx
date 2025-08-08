@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useInvestor from '../../../api/hooks/useInvestor';
 import Portal from '../../../utils/Portal';
 import InvestorSelectModal from '../../modal/CrudInherited/InvestorSelectModal';
+import { FaTimes } from 'react-icons/fa';
 
 interface InvestorSelectProps {
   value: string;
@@ -101,6 +102,21 @@ const InvestorSelect = ({
     setIsDropdownOpen(false);
   };
 
+  const handleClearSelection = () => {
+    onChange('');
+    if (onInvestorSelect) {
+      onInvestorSelect({
+        id: 0,
+        nickname: '',
+        fullName: '',
+        phoneNumber: '',
+        investorPie: 0,
+        investmentAmount: 0,
+        balance: 0
+      });
+    }
+  };
+
   const handleShowAllInvestors = () => {
     setShowInvestorModal(true);
     setIsDropdownOpen(false);
@@ -131,18 +147,25 @@ const InvestorSelect = ({
   return (
     <>
       <InputContainer>
-        <StyledInput
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={handleInputChange}
-          onFocus={handleFocus}
-          onKeyDown={handleKeyDown}
-          placeholder={customPlaceholder && !value ? '' : placeholder}
-          hasError={hasError}
-          disabled={disabled || isLoading}
-          {...props}
-        />
+        <InputWrapper>
+          <StyledInput
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={handleInputChange}
+            onFocus={handleFocus}
+            onKeyDown={handleKeyDown}
+            placeholder={customPlaceholder && !value ? '' : placeholder}
+            hasError={hasError}
+            disabled={disabled || isLoading}
+            {...props}
+          />
+          {value && !disabled && (
+            <ClearButton onClick={handleClearSelection}>
+              <FaTimes size={14} />
+            </ClearButton>
+          )}
+        </InputWrapper>
         
         {customPlaceholder && !value && (
           <PlaceholderLabel isVisible={true}>
@@ -216,6 +239,12 @@ const InputContainer = styled.div`
   margin-right: auto;
 `;
 
+const InputWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+  width: 100%;
+`;
+
 const StyledInput = styled.input<{ hasError?: boolean }>`
   padding: 10px 12px;
   border: 1px solid ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(209, 213, 219, 1)'};
@@ -232,6 +261,7 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
   color: black;
   padding: 5px;
   padding-left: 15px;
+  padding-right: 30px;
 
   &:hover {
     border-color: ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(0, 125, 136, 1)'};
@@ -249,6 +279,27 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
   &:disabled {
     background-color: #f3f4f6;
     cursor: not-allowed;
+  }
+`;
+
+const ClearButton = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+
+  &:hover {
+    color: #666;
   }
 `;
 

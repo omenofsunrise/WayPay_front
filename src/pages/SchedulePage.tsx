@@ -16,6 +16,7 @@ import { formatDate, parseDateInput } from '../utils/dateFormatter';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import styled from 'styled-components';
 import { formatMoney } from '../utils/formatPrice';
+import InvestorSelect from '../components/ui/fields/InvestorSelect';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -269,14 +270,17 @@ const SchedulePage = () => {
                             placeholder="Клиент"
                             value={clientNameFilter}
                             onChange={(e) => handleClientNameFilterChange(e.target.value)}
+                            
                         />
                     </InputWrapper>
                     <InputWrapper>
-                        <CustomInput 
-                            inputType="text"
+                        <InvestorSelect
                             placeholder="Инвестор"
                             value={investorFilter}
-                            onChange={(e) => handleInvestorFilterChange(e.target.value)}
+                            onChange={(value) => handleInvestorFilterChange(value)}
+                            onInvestorSelect={(investor) => {
+                                console.log('Selected investor:', investor);
+                            }}
                         />
                     </InputWrapper>
                     <DateInputWrapper>
