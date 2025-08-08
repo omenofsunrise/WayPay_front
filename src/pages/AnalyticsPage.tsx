@@ -284,12 +284,11 @@ const AnalyticsContainer = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
   width: 100%;
-  padding: 0px 80px;
+  padding: 10px 80px;
   background-color: white;
   border-radius: 8px;
   border: 1px solid rgba(209, 213, 219, 1);
   box-sizing: border-box;
-  margin-bottom: 24px;
 `;
 
 const ChartsContainer = styled.div`
