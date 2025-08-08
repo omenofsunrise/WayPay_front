@@ -1,5 +1,5 @@
 import apiClient, { API_BASE_URL, BASE_URL } from '../client';
-import type { Company } from '../types/company';
+import type { CommonInfo, Company } from '../types/company';
 
 class CompanyService {
   async getCompany(): Promise<Company> {
@@ -9,6 +9,11 @@ class CompanyService {
 
   async getCompanyById(id: number): Promise<Company> {
     const response = await apiClient.get<Company>(`/Company/${id}`);
+    return response.data;
+  }
+
+  async getCommonInfo(): Promise<CommonInfo> {
+    const response = await apiClient.get<CommonInfo>(`/Company/common-info`);
     return response.data;
   }
 

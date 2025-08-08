@@ -23,3 +23,8 @@ export interface CompanyListItem {
   phone: string;
   photoPath?: string;
 }
+
+export interface CommonInfo {
+  id: number;
+  licenceDate: Date;
+}

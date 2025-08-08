@@ -1,15 +1,52 @@
 import React from 'react';
 import styled from 'styled-components';
+import useCompany from '../api/hooks/useCompany';
+import type { CommonInfo } from '../api/types/company';
 
 const AboutPage: React.FC = () => {
-  const handlePhoneClick = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText('89957022304');
-    }
-    if ('ontouchstart' in window) {
-      window.location.href = 'tel:+79957022304';
+  const { getCommonInfo } = useCompany();
+  const [commonInfo, setCommonInfo] = React.useState<CommonInfo | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getCommonInfo();
+        setCommonInfo(data);
+      } catch (err) {
+        setError('Не удалось загрузить информацию о компании');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [getCommonInfo]);
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('ru-RU');
+  };
+
+  const handlePhoneClick = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText('89957022304');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+      if ('ontouchstart' in window) {
+        window.location.href = 'tel:+79957022304';
+      }
+    } catch (err) {
+      console.error('Failed to copy number', err);
     }
   };
+
+  if (loading) return <div>Загрузка...</div>;
+  if (error) return <div>{error}</div>;
 
   return (
     <Container>
@@ -29,12 +66,17 @@ const AboutPage: React.FC = () => {
 
           <InfoItem>
             <Label>Телефон:</Label>
-            <PhoneValue onClick={handlePhoneClick}>8 (995) 702-23-04</PhoneValue>
+            <PhoneContainer>
+              <PhoneValue onClick={handlePhoneClick}>8 (995) 702-23-04</PhoneValue>
+              {copied && <CopiedMessage>Скопировано!</CopiedMessage>}
+            </PhoneContainer>
           </InfoItem>
           
           <InfoItem>
             <Label>Срок лицензии:</Label>
-            <Value>12.20.2020</Value>
+            <Value>
+              {commonInfo ? formatDate(commonInfo.licenceDate) : 'Нет данных'}
+            </Value>
           </InfoItem>
         </InfoCard>
         
@@ -116,15 +158,43 @@ const Value = styled.span`
   line-height: 1.5;
 `;
 
+const PhoneContainer = styled.div`
+  position: relative;
+  display: inline-block;
+    flex: 1;
+`;
+
 const PhoneValue = styled(Value)`
   color: rgba(0, 125, 136, 1);
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
+  display: inline-block;
   
   &:hover {
     color: rgba(37, 203, 161, 1);
     text-decoration: underline;
+  }
+`;
+
+const CopiedMessage = styled.span`
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 125, 136, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  animation: fadeInOut 2s ease-in-out;
+
+  @keyframes fadeInOut {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
   }
 `;
 
