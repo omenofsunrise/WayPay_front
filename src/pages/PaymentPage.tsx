@@ -13,9 +13,11 @@ import usePayment from '../api/hooks/usePayment';
 import useExport from '../api/hooks/useExport';
 import paymentService from '../api/services/paymentService';
 import type { Payment, PaymentParams } from '../api/types/payment';
-import { formatDate } from '../utils/dateFormatter';
+import { formatDate, parseDateInput } from '../utils/dateFormatter';
 import { formatMoney } from '../utils/formatPrice';
 import { useAuth } from '../сontext/AuthContext';
+import InvestorSelect from '../components/ui/fields/InvestorSelect';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -26,14 +28,16 @@ const PaymentPage = () => {
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
     const { authInfo } = useAuth();
-    
+    const [investorName, setInvestorName] = useState('');
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditId',
         1: 'clientFullname',
         2: 'paymentAmount',
         3: 'paymentDate'
     };
-    
+    const [dateFromFilter, setDateFromFilter] = useState('');
+    const [dateToFilter, setDateToFilter] = useState('');
+
     const { exportData, isExporting, exportProgress } = useExport<Payment>();
 
     const { 
@@ -45,11 +49,24 @@ const PaymentPage = () => {
         deletePayment
     } = usePayment();
     
+    const handleDateFromFilterChange = (value: string) => {
+        setDateFromFilter(value);
+        setCurrentPage(1);
+    };
+
+    const handleDateToFilterChange = (value: string) => {
+        setDateToFilter(value);
+        setCurrentPage(1);
+    };
+
     const loadPayments = useCallback(async () => {
         const params: PaymentParams = {
             page: currentPage,
             pageSize,
-            clientFullname: fullnameFilter || undefined
+            clientFullname: fullnameFilter || undefined,
+            investorNickname: investorName || undefined,
+            dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
+            dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
         };
 
         if (sortConfig.key !== null) {
@@ -62,7 +79,7 @@ const PaymentPage = () => {
     
     useEffect(() => {
         loadPayments();
-    }, [currentPage, fullnameFilter, sortConfig, loadPayments]);
+    }, [currentPage, fullnameFilter, investorName, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
 
     const handleFilterChange = (value: string) => {
         setFullnameFilter(value);
@@ -210,9 +227,30 @@ const PaymentPage = () => {
             <FilterField>
                 <CustomInput 
                     inputType="text"
-                    placeholder="ФИО"
+                    placeholder="Клиент"
                     value={fullnameFilter}
                     onChange={(e) => handleFilterChange(e.target.value)}
+                />
+                <InvestorSelect
+                    placeholder="Инвестор"
+                    value={investorName}
+                    onChange={(name) => {
+                    setInvestorName(name);
+                    setCurrentPage(1);
+                    }}
+                    onInvestorSelect={(investor) => {
+                        console.log('Selected investor:', investor);
+                    }}
+                />
+                <CustomCalendar 
+                    prefix="От"
+                    value={dateFromFilter}
+                    onChange={handleDateFromFilterChange}
+                />
+                <CustomCalendar
+                    prefix="До"
+                    value={dateToFilter}
+                    onChange={handleDateToFilterChange}
                 />
             </FilterField>
             

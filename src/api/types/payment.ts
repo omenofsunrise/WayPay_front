@@ -17,6 +17,9 @@ export interface PaymentParams extends PaginationParams {
     clientFullname?: string;
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
+    investorNickname?: string,
+    dateFrom?: Date;
+    dateTo?: Date;
 }
 
 export interface PaymentByCreditParams extends PaginationParams {
