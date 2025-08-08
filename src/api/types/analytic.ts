@@ -10,6 +10,8 @@ export interface AnalyticResponse {
   activeCreditsDiffrence: number;
   sales: number;
   purchases: number;
+  restAmount: number;
+  restAmountDiffrence: number; 
 }
 
 export interface AnalyticParams {
