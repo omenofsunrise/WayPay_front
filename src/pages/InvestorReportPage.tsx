@@ -18,6 +18,7 @@ import debtSvg from '../assets/ui/InvestorReport/debt.svg';
 import commonIncomeSvg from '../assets/ui/InvestorReport/commonIncome.svg';
 import shareSvg from '../assets/ui/InvestorReport/share.svg';
 import balanceSvg from '../assets/ui/InvestorReport/balance.svg';
+import allSelfIncomeSvg from '../assets/ui/InvestorReport/AllSelfIncome.svg';
 import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import { useInvestorPayout } from '../api/hooks/useInvestorPayout';
@@ -288,6 +289,11 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                         debtSvg,
                         formatMoney(report.delinquencyAmount.toString()),
                         'Просрочки руб.'
+                    )}
+                    ${createCard(
+                        allSelfIncomeSvg,
+                        formatMoney(report.allSelfIncome.toString()),
+                        'Доход от инвесторов.'
                     )}
                 </div>
             </div>
@@ -677,6 +683,14 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                             </IconContainer>
                             <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
                             <ReportLabel>Просрочки руб.</ReportLabel>
+                        </ReportCard>
+
+                        <ReportCard>
+                            <IconContainer>
+                                <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
+                            </IconContainer>
+                            <ReportValue>{formatMoney(report.allSelfIncome.toString())}</ReportValue>
+                            <ReportLabel>Доход от инвесторов</ReportLabel>
                         </ReportCard>
                     </ReportDataContainer>
                 )}

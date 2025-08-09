@@ -71,6 +71,27 @@ const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<Blog
     }
   };
 
+  const updatePost = async (
+    postId: number,
+    content: string,
+    newImages?: File[],
+    newFiles?: File[],
+    params?: BlogParams
+  ): Promise<BlogPost | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedPost = await blogService.updatePost(postId, content, newImages, newFiles);
+      await getPosts(params); // Refresh the posts list with current params
+      return updatedPost;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update post');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const toggleLike = async (postId: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -170,7 +191,8 @@ const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<Blog
     setCurrentPost,
     downloadAttachment,
     deletePost,
-    getPostById
+    getPostById,
+    updatePost
   };
 };
 

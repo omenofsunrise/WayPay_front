@@ -265,9 +265,10 @@ const CreditControlPage = () => {
       credit.id.toString(),
       formatDate(credit.creditDate),
       credit.employeeName,
-      `${formatMoney(credit.accured?.toString() || '')}`,
+      `${formatMoney(credit.totalClean.toString())}`,
       `${credit.incomePercents.toString() + '%'}`,
       `${formatMoney(credit.incomeRubles.toString())}`,
+      `${formatMoney(credit.accured?.toString() || '')}`,
       credit.debt > 0,
       credit.isActive,
     ]);
@@ -435,9 +436,10 @@ const CreditControlPage = () => {
               { name: "№", isSortable: true },
               { name: "Дата договора", isSortable: true, align: "right" },
               { name: "ФИО сотрудника", align: "left" },
-              { name: "Начислено", isSortable: true, align: "right" },
+              { name: "Стоимость товара", align: "right" },
               { name: "Доход, %", isSortable: true, align: "right" },
               { name: "Доход, руб", isSortable: true, align: "right" },
+              { name: "Начислено", isSortable: true, align: "right" },
               { name: "isActive", isHidden: true },
               { name: "hasDebt", isHidden: true } 
             ]} 
