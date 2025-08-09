@@ -4,6 +4,7 @@ export interface Credit {
     id: number;
     creditDate: Date;
     totalAmount: number;
+    totalClean: number;
     isActive: boolean;
     isFavourite: boolean;
     clientId: number;
