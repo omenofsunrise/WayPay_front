@@ -8,7 +8,7 @@ import SearchField from '../components/Blog/SearchField';
 import BlogFilters from '../components/Blog/BlogFilters';
 import PostItem from '../components/Blog/PostItem';
 import useBlog from '../api/hooks/useBlog';
-import type { BlogPostForm, BlogParams } from '../api/types/blog';
+import type { BlogPostForm, BlogParams, BlogPost } from '../api/types/blog';
 import { BlogProfile } from '../components/Blog/BlogProfile';
 import { useNavigate, useParams } from 'react-router-dom';
 import BackButton from '../components/ui/Buttons/BackButton';
@@ -26,7 +26,8 @@ const BlogPage = () => {
   });
   const { id: profileId } = useParams();
   const navigate = useNavigate();
-  const { posts, getPosts, createPost, deletePost, toggleLike, isLoading, error } = useBlog();
+  const { posts, getPosts, createPost, deletePost, toggleLike, updatePost, isLoading, error } = useBlog();
+  const [postToEdit, setPostToEdit] = useState<BlogPost | null>(null);
 
   useEffect(() => {
     if (profileId) {
@@ -57,6 +58,18 @@ const BlogPage = () => {
 
   const handleCreatePost = async (postData: BlogPostForm) => {
     await createPost(postData);
+    getPosts(filters);
+  };
+
+  const handleEditPost = (post: BlogPost) => {
+    setPostToEdit(post);
+    setIsCreateModalOpen(true);
+  };
+
+  // Add this update handler
+  const handleUpdatePost = async (postId: number, postData: BlogPostForm) => {
+    await updatePost(postId, postData.content, postData.images, postData.files, filters);
+    setPostToEdit(null);
     getPosts(filters);
   };
 
@@ -125,6 +138,8 @@ const BlogPage = () => {
               isOpen={isCreateModalOpen} 
               onClose={handleCloseCreateModal}
               onSubmit={handleCreatePost}
+              postToEdit={postToEdit}
+              onUpdate={handleUpdatePost}
             />
           </>
         )}
@@ -139,6 +154,7 @@ const BlogPage = () => {
             onToggleLike={toggleLike}
             onDeletePost={handleDeletePost}
             onAvatarClick={handleAvatarClick}
+            onEditPost={handleEditPost}
           />
         ))}
 

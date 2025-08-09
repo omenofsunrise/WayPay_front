@@ -17,6 +17,35 @@ class BlogService {
     return response.data;
   }
 
+  async updatePost(
+    postId: number,
+    content: string,
+    newImages?: File[],
+    newFiles?: File[]
+  ): Promise<BlogPost> {
+    const formData = new FormData();
+    formData.append('Content', content);
+    
+    if (newImages) {
+      newImages.forEach((image) => {
+        formData.append('NewImages', image);
+      });
+    }
+    
+    if (newFiles) {
+      newFiles.forEach((file) => {
+        formData.append('NewFiles', file);
+      });
+    }
+
+    const response = await socialApiClient.put<BlogPost>(`/Blog/${postId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
   async getPostById(postId: number): Promise<BlogPost> {
     const response = await socialApiClient.get<BlogPost>(`/Blog/${postId}`);
     return response.data;

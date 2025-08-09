@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import FileRecepient from '../../Blog/FileRecepient';
 import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
@@ -12,17 +12,36 @@ interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit?: (postData: BlogPostForm) => Promise<void>;
+  postToEdit?: BlogPost | null;
+  onUpdate?: (postId: number, postData: BlogPostForm) => Promise<void>;
 }
 
-const CreatePostModal = ({ isOpen, onClose, onSubmit }: CreatePostModalProps) => {
+const CreatePostModal = ({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  postToEdit,
+  onUpdate 
+}: CreatePostModalProps) => {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
-  const { createPost, isLoading } = useBlog();
+  const { isLoading } = useBlog();
 
   const MAX_FILES = 10;
   const MAX_FILE_SIZE_MB = 10;
 
+   useEffect(() => {
+    if (postToEdit) {
+      setContent(postToEdit.content);
+      // For existing files, we would need to handle them differently
+      // since they are URLs, not File objects
+      setFiles([]);
+    } else {
+      resetForm();
+    }
+  }, [postToEdit]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -38,13 +57,15 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }: CreatePostModalProps) =>
     };
 
     try {
-      if (onSubmit) {
+      if (postToEdit && onUpdate) {
+        await onUpdate(postToEdit.id, formData);
+      } else if (onSubmit) {
         await onSubmit(formData);
       }
       resetForm();
       onClose();
     } catch (err) {
-      setError('Ошибка при создании поста');
+      setError('Ошибка при сохранении поста');
     }
   };
 
@@ -91,7 +112,9 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }: CreatePostModalProps) =>
 
   const customHeader = (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: 'calc(100% - 60px)', margin: "0 auto" }}>
-      <h2 style={{ fontSize: '30px', fontWeight: 600, color: '#000', margin: 0 }}>Создание поста</h2>
+      <h2 style={{ fontSize: '30px', fontWeight: 600, color: '#000', margin: 0 }}>
+        {postToEdit ? 'Редактирование поста' : 'Создание поста'}
+      </h2>
       <div>
         <input
           type="file"
@@ -127,8 +150,8 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit }: CreatePostModalProps) =>
         onClose();
       }}
       onSave={handleSubmit}
-      mode="create"
-      saveButtonText={isLoading ? 'Публикация...' : 'Опубликовать'}
+      mode={postToEdit ? "edit" : "create"}
+      saveButtonText={isLoading ? 'Сохранение...' : postToEdit ? 'Сохранить' : 'Опубликовать'}
       isSaveDisabled={(content.trim().length === 0 && files.length === 0) || isLoading}
     >
       <Container style={{ height: "20px" }}></Container>

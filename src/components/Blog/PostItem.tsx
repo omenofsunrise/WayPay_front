@@ -16,7 +16,7 @@ interface PostItemProps {
   post: BlogPost;
   onToggleLike: (postId: number) => void;
   onDeletePost?: (postId: number) => void;
-  onEditPost?: (postId: number) => void;
+  onEditPost?: (post: BlogPost) => void; // Updated to pass the whole post
   onAvatarClick?: (id: number) => void;
   backgroundColor?: string;
   borderColor?: string;
@@ -29,6 +29,7 @@ const PostItem: React.FC<PostItemProps> = ({
   post, 
   onToggleLike, 
   onDeletePost, 
+  onEditPost,
   onAvatarClick, 
   backgroundColor = 'white',
   borderColor = 'rgba(209, 213, 219, 1)',
@@ -67,6 +68,11 @@ const PostItem: React.FC<PostItemProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleEditClick = () => {
+    setIsContextMenuOpen(false);
+    onEditPost && onEditPost(post);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -173,11 +179,12 @@ const PostItem: React.FC<PostItemProps> = ({
               </svg>
             </ContextMenuButton>
             
-            {isContextMenuOpen && (
-              <ContextMenu>
-                <ContextMenuItem onClick={handleDeleteClick}>Удалить</ContextMenuItem>
-              </ContextMenu>
-            )}
+          {isContextMenuOpen && (
+            <ContextMenu>
+              <ContextMenuItem onClick={handleEditClick}>Редактировать</ContextMenuItem>
+              <ContextMenuItem onClick={handleDeleteClick}>Удалить</ContextMenuItem>
+            </ContextMenu>
+          )}
           </ContextMenuContainer>
         )}
       </PostHeader>
