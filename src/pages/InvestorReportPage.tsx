@@ -11,6 +11,7 @@ import { formatDate } from '../utils/dateFormatter';
 import { formatMoney } from '../utils/formatPrice';
 import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
 import investmentSvg from '../assets/ui/InvestorReport/investment.svg';
+import paymentIncomeSvg from '../assets/ui/InvestorReport/PaymentIncome.svg';
 import activeCreditsSvg from '../assets/ui/InvestorReport/credits.svg';
 import investorIncomeScg from '../assets/ui/InvestorReport/investorIncome.svg'; 
 import selfIncomeSvg from '../assets/ui/InvestorReport/selfIncome.svg';
@@ -694,6 +695,14 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                             <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
                             <ReportLabel>Просрочки руб.</ReportLabel>
                         </ReportCard>
+
+                        <ReportCard>
+                            <IconContainer>
+                                <Icon src={paymentIncomeSvg} alt="paymentIncome" />
+                            </IconContainer>
+                            <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
+                            <ReportLabel>Доходы по платежам</ReportLabel>
+                        </ReportCard>  
                     </ReportDataContainer>
                 )}
 

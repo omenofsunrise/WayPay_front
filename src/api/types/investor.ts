@@ -40,4 +40,5 @@ export interface InvestorReport {
   isCompany: boolean;
   delinquencyAmount: number;
   allSelfIncome: number;
+  paymentIncome: number;
 }
