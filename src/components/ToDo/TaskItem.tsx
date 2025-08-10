@@ -5,6 +5,9 @@ import { getInitials, generateAvatar, stringToColor } from "../../utils/avatarUt
 import { BASE_URL } from "../../api/client";
 import TaskContextMenu from "./TaskContextMenu";
 import { useAuth } from "../../сontext/AuthContext";
+import useTaskNote from "../../api/hooks/useTaskNote";
+import BaseModal from "../modal/BASE/modalCRUBase";
+import TaskComments from "./TaskComments";
 
 interface TaskItemProps {
   task: Task;
@@ -28,6 +31,17 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
   const isOverdue = new Date(task.deadline) < new Date() && task.taskStatus !== 'done';
   const canDrag = isAdmin || task.employeeId === currentUserId || task.responsibleId === currentUserId || task.createdBy === currentUserId;;
   const canDropToDone = isAdmin || task.responsibleId === currentUserId || task.createdBy === currentUserId;
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const { notes, getNotesByTaskId } = useTaskNote();
+  const [commentsCount, setCommentsCount] = useState(0);
+
+  const handleCommentsClose = async () => {
+    const notes = await getNotesByTaskId(task.id);
+    if (notes) {
+      setCommentsCount(notes.length);
+    }
+    setIsCommentsOpen(false);
+  };
 
   const handleDragStart = (e: React.DragEvent) => {
     if (disableContextMenu) return;
@@ -58,6 +72,16 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
       dragImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
       e.dataTransfer.setDragImage(dragImg, 0, 0);
   };
+
+  useEffect(() => {
+    const loadCommentsCount = async () => {
+      const notes = await getNotesByTaskId(task.id);
+      if (notes) {
+        setCommentsCount(notes.length);
+      }
+    };
+    loadCommentsCount();
+  }, [task.id, getNotesByTaskId]);
 
   const handleDrag = (e: React.DragEvent) => {
     if (e.clientX !== 0 && e.clientY !== 0) {
@@ -171,6 +195,12 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
                       </Avatar>
                       <ExecutorName>{task.employeeFullName}</ExecutorName>
                   </ExecutorInfo>
+                  <CommentsButton onClick={() => setIsCommentsOpen(true)}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 0H2C0.9 0 0.00999999 0.9 0.00999999 2L0 16L4 12H14C15.1 12 16 11.1 16 10V2C16 0.9 15.1 0 14 0Z" fill="#50555C"/>
+                    </svg>
+                    {commentsCount > 0 && <CommentsCount>{commentsCount}</CommentsCount>}
+                  </CommentsButton>
               </BottomRow>
           </Container>
 
@@ -222,9 +252,48 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
               currentUserId={currentUserId}
             />
           )}
+          {isCommentsOpen && (
+            <BaseModal
+              title={`Комментарии к задаче: ${task.title.length > 20 ? task.title.substring(0, 20) + '...' : task.title}`}
+              onClose={handleCommentsClose}
+              onCancel={handleCommentsClose}
+              width="600px"
+              hideSaveButton
+            >
+              <TaskComments 
+                taskId={task.id} 
+                onClose={handleCommentsClose} 
+              />
+            </BaseModal>
+          )}
       </div>
   );
 };
+
+const CommentsButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: auto;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const CommentsCount = styled.span`
+  font-size: 12px;
+  color: #50555C;
+`;
 
 const Placeholder = styled.div`
   position: absolute;
