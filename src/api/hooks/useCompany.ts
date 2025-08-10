@@ -112,6 +112,7 @@ const useCompany = () => {
   const createCompany = async (companyData: {
     AdminPhone: string;
     LicenceDate: Date;
+    AdminName: string;
   }): Promise<Company | null> => {
     setIsLoading(true);
     setError(null);

@@ -110,4 +110,5 @@ export interface CreditResponse extends PaginatedResponse<Credit> {
     totalPayed: number;
     totalRest: number;
     totalIncomeRubles: number;
+    totalPrice: number;
 }

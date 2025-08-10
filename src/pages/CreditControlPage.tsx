@@ -220,10 +220,10 @@ const CreditControlPage = () => {
             'Номер договора': credit.id,
             'Дата договора': creditDate ? formatDate(creditDate) : 'Нет данных',
             'ФИО сотрудника': credit.employeeName || 'Нет данных',
-            'Сумма договора': formatMoney(credit.totalAmount?.toString() || '0'),
-            'Начислено': formatMoney(credit.accured?.toString() || '0'),
+            'Стоимость товара': formatMoney(credit.totalClean?.toString() || '0'),
             'Доход в рублях': formatMoney(credit.incomeRubles?.toString() || '0'),
             'Доход в %': `${credit.incomePercents || 0}%`,
+            'Начислено': formatMoney(credit.accured?.toString() || '0'),
           };
         }
       });
@@ -279,10 +279,10 @@ const CreditControlPage = () => {
         '',
         '',
         'Итого',
-        `${formatMoney(creditsData.totalAccured.toString())}`,
+        `${formatMoney(creditsData.totalPrice.toString())}`,
         ``,
         `${formatMoney(creditsData.totalIncomeRubles.toString())}`,
-        '',
+        `${formatMoney(creditsData.totalAccured.toString())}`,
         false
       ];
       formattedData.push(totalsRow);

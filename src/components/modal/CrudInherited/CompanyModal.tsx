@@ -3,10 +3,13 @@ import styled from "styled-components";
 import BaseModal from "../BASE/modalCRUBase";
 import DateModalInput from "../../ui/fields/DateModalInput";
 import PhoneModalInput from "../../ui/fields/PhoneModalInput";
+import CustomCalendar from "../../ui/fields/CustomCalendar";
+import CustomInput from "../../ui/fields/CustomInput";
 
 export interface CompanyModalData {
   phone: string;
   licenceDate: Date;
+  chief: string;
 }
 
 const CompanyModal = ({
@@ -24,7 +27,8 @@ const CompanyModal = ({
 }) => {
   const [formData, setFormData] = useState<CompanyModalData>({
     phone: '',
-    licenceDate: new Date()
+    licenceDate: new Date(),
+    chief: ''
   });
 
   useEffect(() => {
@@ -33,7 +37,8 @@ const CompanyModal = ({
     } else {
       setFormData({
         phone: '',
-        licenceDate: new Date()
+        licenceDate: new Date(),
+        chief: ''
       });
     }
   }, [initialData]);
@@ -43,14 +48,10 @@ const CompanyModal = ({
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value.length === 10) {
-      const [day, month, year] = value.split('.');
-      const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-      if (!isNaN(date.getTime())) {
-        setFormData(prev => ({ ...prev, licenceDate: date }));
-      }
+  const handleDateChange = (dateString: string) => {
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      setFormData(prev => ({ ...prev, licenceDate: date }));
     }
   };
 
@@ -70,6 +71,16 @@ const CompanyModal = ({
     >
       <ModalFormContainer>
         <FormRow>
+          <FormLabel>Директор</FormLabel>
+          <CustomInput
+            name="chief"
+            value={formData.chief}
+            onChange={handleChange}
+            placeholder="Введите ФИО директора"
+          />
+        </FormRow>
+
+        <FormRow>
           <FormLabel>Телефон</FormLabel>
           <PhoneModalInput
             name="phone"
@@ -80,11 +91,9 @@ const CompanyModal = ({
 
         <FormRow>
           <FormLabel>Дата окончания лицензии</FormLabel>
-          <DateModalInput
-            name="licenceDate"
+          <CustomCalendar
             value={formData.licenceDate.toISOString().split('T')[0]}
             onChange={handleDateChange}
-            placeholder="дд.мм.гггг"
           />
         </FormRow>
       </ModalFormContainer>

@@ -299,6 +299,21 @@ export function useEmployee() {
       }
     }, []);
 
+    const updateDirectorFullname = useCallback(async (companyId: number, fullname: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const updatedEmployee = await EmployeeService.updateEmployeeFullname(companyId, fullname);
+        
+        return updatedEmployee;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
     const updateEmployeeMinSurcharge = useCallback(async (id: number, minSurcharge: number) => {
       try {
         setLoading(true);
@@ -513,5 +528,6 @@ export function useEmployee() {
     revokeAllSessions,
     revokeAllLoading,
     revokeAllError,
+    updateDirectorFullname
   };
 }

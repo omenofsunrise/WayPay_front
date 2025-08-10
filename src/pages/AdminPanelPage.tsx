@@ -2,7 +2,7 @@ import { useAuth } from '../сontext/AuthContext';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
-import CustomTable from '../components/ui/tables/CustomTable';
+import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
 import { useState, useCallback, useEffect } from 'react';
 import useCompany from '../api/hooks/useCompany';
 import CompanyModal, { type CompanyModalData } from '../components/modal/CrudInherited/CompanyModal';
@@ -11,6 +11,10 @@ import BaseModal from '../components/modal/BASE/modalCRUBase';
 import CustomInput from '../components/ui/fields/CustomInput';
 import DateModalInput from '../components/ui/fields/DateModalInput';
 import { formatDate } from '../utils/dateFormatter';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import { Container } from 'react-bootstrap';
+import { useEmployee } from '../api/hooks/useEmployee';
+import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 
 const AdminPanelPage = () => {
   const { hasRole } = useAuth();
@@ -24,9 +28,11 @@ const AdminPanelPage = () => {
   
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [isDirectorModalOpen, setIsDirectorModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
   const [phoneValue, setPhoneValue] = useState('');
-  const [dateValue, setDateValue] = useState<Date>(new Date());
+  const [dateValue, setDateValue] = useState<string>(formatDate(new Date()));
+  const [directorValue, setDirectorValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
   const { 
@@ -42,23 +48,24 @@ const AdminPanelPage = () => {
     changePhone
   } = useCompany();
 
+  const {
+    updateDirectorFullname
+  } = useEmployee();
+
   const loadCompanies = useCallback(async () => {
     await getAllCompanies();
   }, [getAllCompanies]);
 
   useEffect(() => {
-    if (hasRole('суперадмин')) {
-      loadCompanies();
-    } else {
-      getCompany();
-    }
+    loadCompanies();
   }, [loadCompanies, getCompany]);
 
   const handleCreateCompany = () => {
     setModalMode('create');
     setSelectedCompany({
       phone: '',
-      licenceDate: new Date()
+      licenceDate: new Date(),
+      chief: ''
     });
     setIsCompanyModalOpen(true);
   };
@@ -71,8 +78,14 @@ const AdminPanelPage = () => {
 
   const handleOpenDateEdit = (companyId: number, currentDate: Date) => {
     setEditingCompanyId(companyId);
-    setDateValue(currentDate);
+    setDateValue(formatDate(currentDate));
     setIsDateModalOpen(true);
+  };
+
+  const handleOpenDirectorEdit = (companyId: number, currentDirector: string) => {
+    setEditingCompanyId(companyId);
+    setDirectorValue(currentDirector);
+    setIsDirectorModalOpen(true);
   };
 
   const handleSavePhone = async (e: React.FormEvent) => {
@@ -102,7 +115,13 @@ const AdminPanelPage = () => {
 
     setIsSaving(true);
     try {
-      const success = await changeLicenceDate(editingCompanyId, dateValue);
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) {
+        alert('Неверный формат даты');
+        return;
+      }
+      
+      const success = await changeLicenceDate(editingCompanyId, date);
       if (success) {
         await loadCompanies();
         setIsDateModalOpen(false);
@@ -115,6 +134,34 @@ const AdminPanelPage = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSaveDirector = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCompanyId) return;
+
+    setIsSaving(true);
+    try {
+      await updateDirectorFullname(editingCompanyId, directorValue);
+      await loadCompanies();
+      setIsDirectorModalOpen(false);
+    } catch (err) {
+      console.error('Ошибка при изменении имени директора:', err);
+      alert('Произошла ошибка при сохранении');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isLicenseExpiringSoon = (licenceDate: Date | null | undefined): boolean => {
+    if (!licenceDate) return false;
+    
+    const today = new Date();
+    const licenseEnd = new Date(licenceDate);
+    const timeDiff = licenseEnd.getTime() - today.getTime();
+    const daysDiff = timeDiff / (1000 * 3600 * 24);
+    
+    return daysDiff <= 30;
   };
 
   const handleDeleteCompany = async (rowData: any[]) => {
@@ -144,7 +191,8 @@ const AdminPanelPage = () => {
       if (modalMode === 'create') {
         await createCompany({
           AdminPhone: data.phone,
-          LicenceDate: data.licenceDate
+          LicenceDate: data.licenceDate,
+          AdminName: data.chief 
         });
       }
       loadCompanies();
@@ -169,6 +217,12 @@ const AdminPanelPage = () => {
         company.id.toString(),
         company.name,
         <span 
+          onClick={() => handleOpenDirectorEdit(company.id, company.chief)}
+          style={{ cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          {company.chief}
+        </span>,
+        <span 
           onClick={() => handleOpenPhoneEdit(company.id, company.phone)}
           style={{ cursor: 'pointer', textDecoration: 'underline' }}
         >
@@ -186,6 +240,7 @@ const AdminPanelPage = () => {
           [
             company.id.toString(),
             company.name,
+            company.chief,
             company.phone,
             company.licenceDate 
               ? formatDate(company.licenceDate)
@@ -194,16 +249,35 @@ const AdminPanelPage = () => {
         ]
       : [];
 
+  const rowStyles = tableData.reduce((styles, rowData, index) => {
+    const company = paginatedCompanies[index];
+    
+    if (company && isLicenseExpiringSoon(company.licenceDate)) {
+      styles[index] = {
+        backgroundColor: '#FFEBEE',
+        color: 'black',
+        fontWeight: 'normal'
+      };
+    }
+    
+    return styles;
+  }, {} as Record<number, RowStyle>);
+
   const tableActions = hasRole('суперадмин') 
     ? [
         {
+          label: 'Изм. директора',
+          action: (rowData: any[]) => handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),
+          color: '#3B82F6'
+        },
+        {
           label: 'Изм. телефон',
-          action: (rowData: any[]) => handleOpenPhoneEdit(Number(rowData[0]), rowData[2]),
+          action: (rowData: any[]) => handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
           color: '#3B82F6'
         },
         {
           label: 'Изм. дату',
-          action: (rowData: any[]) => handleOpenDateEdit(Number(rowData[0]), rowData[3] ? new Date(rowData[3]) : new Date()),
+          action: (rowData: any[]) => handleOpenDateEdit(Number(rowData[0]), rowData[4] ? new Date(rowData[4]) : new Date()),
           color: '#3B82F6'
         },
         {
@@ -227,6 +301,7 @@ const AdminPanelPage = () => {
             columns={[
               { name: "ID" },
               { name: "Название компании", align: "left" },
+              { name: "Директор", align: "left" },
               { name: "Телефон", align: "left" },
               { name: "Лицензия заканчивается", align: "center" }
             ]} 
@@ -258,10 +333,12 @@ const AdminPanelPage = () => {
             columns={[
               { name: "ID", align: "right" },
               { name: "Название компании", align: "left" },
+              { name: "Директор", align: "left" },
               { name: "Телефон", align: "left" },
               { name: "Лицензия заканчивается", align: "right" }
             ]} 
             data={tableData}
+            rowStyles={rowStyles}
             contextMenuActions={tableActions}
           />
         </>
@@ -273,11 +350,11 @@ const AdminPanelPage = () => {
             isOpen={isCompanyModalOpen}
             onClose={() => setIsCompanyModalOpen(false)}
             onSubmit={handleSubmitCompany}
-            initialData={selectedCompany || { phone: '', licenceDate: new Date() }}
+            initialData={selectedCompany || { phone: '', licenceDate: new Date(), chief: '' }}
         />
-        )}
+      )}
 
-        {isPhoneModalOpen && (
+      {isPhoneModalOpen && (
         <BaseModal
             title="Изменение телефона"
             onClose={() => setIsPhoneModalOpen(false)}
@@ -285,32 +362,46 @@ const AdminPanelPage = () => {
             onSave={handleSavePhone}
             isSubmitting={isSaving}
         >
-            <CustomInput
+            <CustomPhoneInput
                 value={phoneValue}
-                onChange={(e) => setPhoneValue(e.target.value)}
+                onChange={(e) => setPhoneValue(e)}
             />
         </BaseModal>
-        )}
+      )}
 
-        {isDateModalOpen && (
+      {isDateModalOpen && (
         <BaseModal
-            title="Изменение даты лицензии"
-            onClose={() => setIsDateModalOpen(false)}
-            onCancel={() => setIsDateModalOpen(false)}
-            onSave={handleSaveDate}
-            isSubmitting={isSaving}
+          title="Изменение даты лицензии"
+          onClose={() => setIsDateModalOpen(false)}
+          onCancel={() => setIsDateModalOpen(false)}
+          onSave={handleSaveDate}
+          isSubmitting={isSaving}
         >
-            <DateModalInput
-            value={dateValue.toString().split('T')[0]}
-            onChange={(e) => {
-                const date = new Date(e.target.value);
-                if (!isNaN(date.getTime())) {
-                setDateValue(date);
-                }
-            }}
+          <Container style={{margin: "30px 25px"}}>
+            <CustomCalendar
+              value={dateValue}
+              onChange={(dateString) => {
+                setDateValue(dateString);
+              }}
             />
+          </Container>
         </BaseModal>
-        )}
+      )}
+
+      {isDirectorModalOpen && (
+        <BaseModal
+          title="Изменение имени директора"
+          onClose={() => setIsDirectorModalOpen(false)}
+          onCancel={() => setIsDirectorModalOpen(false)}
+          onSave={handleSaveDirector}
+          isSubmitting={isSaving}
+        >
+          <CustomInput
+            value={directorValue}
+            onChange={(e) => setDirectorValue(e.target.value)}
+          />
+        </BaseModal>
+      )}
     </PageLayout>
   );
 };

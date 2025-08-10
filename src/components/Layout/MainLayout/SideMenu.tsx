@@ -39,6 +39,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/payments-income': { mainItem: 'finance', subItems: { '/payments-income': 'payments-income' } },
   '/profile': { mainItem: 'profile' },
   '/about': { mainItem: 'about' },
+  '/admin': { mainItem: 'admin' },
 };
 
 const SideMenu = () => {

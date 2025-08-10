@@ -184,6 +184,19 @@ class EmployeeService {
     }
   }
 
+  static async updateEmployeeFullname(id: number, fullName: string): Promise<Employee> {
+    try {
+      const response = await apiClient.patch(`Employee/director/fullname/${id}`, fullName, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   static async updateEmployeeMinSurcharge(id: number, minSurcharge: number): Promise<Employee> {
     try {
       const response = await apiClient.patch(`/Employee/min-surcharge/${id}`, minSurcharge, {

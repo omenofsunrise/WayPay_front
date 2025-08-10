@@ -64,6 +64,7 @@ class CompanyService {
   async createCompany(companyData: {
     AdminPhone: string;
     LicenceDate: Date;
+    AdminName: string;
   }): Promise<Company> {
     const response = await apiClient.post<Company>('/Company', companyData);
     return response.data;
