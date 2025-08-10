@@ -624,13 +624,23 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                         </ReportCard>
 
                         {report.isCompany ? (
-                            <ReportCard>
-                                <IconContainer>
-                                    <Icon src={commonIncomeSvg} alt="Company income" />
-                                </IconContainer>
-                                <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
-                                <ReportLabel>Доход компании</ReportLabel>
-                            </ReportCard>
+                            <>
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={commonIncomeSvg} alt="Company income" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
+                                    <ReportLabel>Доход компании</ReportLabel>
+                                </ReportCard>
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney(report.allSelfIncome.toString())}</ReportValue>
+                                    <ReportLabel>Доход от инвесторов</ReportLabel>
+                                </ReportCard>
+                            </>    
                         ) : (
                             <>
                                 <ReportCard>
@@ -655,7 +665,7 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                                     </IconContainer>
                                     <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
                                     <ReportLabel>Собственный доход</ReportLabel>
-                                </ReportCard>
+                                </ReportCard>                            
                             </>
                         )}
 
@@ -683,14 +693,6 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                             </IconContainer>
                             <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
                             <ReportLabel>Просрочки руб.</ReportLabel>
-                        </ReportCard>
-
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.allSelfIncome.toString())}</ReportValue>
-                            <ReportLabel>Доход от инвесторов</ReportLabel>
                         </ReportCard>
                     </ReportDataContainer>
                 )}
