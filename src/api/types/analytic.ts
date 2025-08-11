@@ -12,6 +12,8 @@ export interface AnalyticResponse {
   purchases: number;
   restAmount: number;
   restAmountDiffrence: number; 
+  closedCreditsPerPeriod: number;
+  closedCreditsPerPeriodDiffrence: number;
 }
 
 export interface AnalyticParams {
