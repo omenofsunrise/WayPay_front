@@ -65,6 +65,7 @@ class CompanyService {
     AdminPhone: string;
     LicenceDate: Date;
     AdminName: string;
+    CompanyName: string;
   }): Promise<Company> {
     const response = await apiClient.post<Company>('/Company', companyData);
     return response.data;

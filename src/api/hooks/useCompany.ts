@@ -113,6 +113,7 @@ const useCompany = () => {
     AdminPhone: string;
     LicenceDate: Date;
     AdminName: string;
+    CompanyName: string;
   }): Promise<Company | null> => {
     setIsLoading(true);
     setError(null);

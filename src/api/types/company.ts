@@ -15,6 +15,8 @@ export interface Company {
 export interface CompanyCreateRequest {
   AdminPhone: string;
   LicenceDate: Date;
+  AdminName: string;
+  CompanyName: string;
 }
 
 export interface CompanyListItem {

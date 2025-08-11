@@ -65,7 +65,8 @@ const AdminPanelPage = () => {
     setSelectedCompany({
       phone: '',
       licenceDate: new Date(),
-      chief: ''
+      chief: '',
+      company: ''
     });
     setIsCompanyModalOpen(true);
   };
@@ -192,7 +193,8 @@ const AdminPanelPage = () => {
         await createCompany({
           AdminPhone: data.phone,
           LicenceDate: data.licenceDate,
-          AdminName: data.chief 
+          AdminName: data.chief,
+          CompanyName: data.company
         });
       }
       loadCompanies();
@@ -350,7 +352,7 @@ const AdminPanelPage = () => {
             isOpen={isCompanyModalOpen}
             onClose={() => setIsCompanyModalOpen(false)}
             onSubmit={handleSubmitCompany}
-            initialData={selectedCompany || { phone: '', licenceDate: new Date(), chief: '' }}
+            initialData={selectedCompany || { phone: '', licenceDate: new Date(), chief: '', company: '' }}
         />
       )}
 

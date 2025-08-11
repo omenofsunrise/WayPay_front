@@ -10,6 +10,7 @@ export interface CompanyModalData {
   phone: string;
   licenceDate: Date;
   chief: string;
+  company: string;
 }
 
 const CompanyModal = ({
@@ -28,7 +29,8 @@ const CompanyModal = ({
   const [formData, setFormData] = useState<CompanyModalData>({
     phone: '',
     licenceDate: new Date(),
-    chief: ''
+    chief: '',
+    company: ''
   });
 
   useEffect(() => {
@@ -38,7 +40,8 @@ const CompanyModal = ({
       setFormData({
         phone: '',
         licenceDate: new Date(),
-        chief: ''
+        chief: '',
+        company: ''
       });
     }
   }, [initialData]);
@@ -77,6 +80,16 @@ const CompanyModal = ({
             value={formData.chief}
             onChange={handleChange}
             placeholder="Введите ФИО директора"
+          />
+        </FormRow>
+
+        <FormRow>
+          <FormLabel>Компания</FormLabel>
+          <CustomInput
+            name="company"
+            value={formData.company}
+            onChange={handleChange}
+            placeholder="Введите название компании"
           />
         </FormRow>
 
