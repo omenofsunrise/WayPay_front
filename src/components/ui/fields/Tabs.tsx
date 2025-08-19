@@ -1,33 +1,47 @@
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 import styled from 'styled-components';
 
 interface Tab {
   id: string;
   label: string;
+  content?: ReactNode;
 }
 
 interface TabsProps<T extends string> {
   tabs: Tab[];
   activeTab: T;
   onChange: (tabId: T) => void;
+  addButton?: ReactNode;
 }
 
-const Tabs = <T extends string>({ tabs, activeTab, onChange }: TabsProps<T>) => {
+const Tabs = <T extends string>({ tabs, activeTab, onChange, addButton }: TabsProps<T>) => {
+  const activeTabContent = tabs.find(tab => tab.id === activeTab)?.content;
+
   return (
-    <TabsContainer>
-      <TabsList>
-        {tabs.map((tab) => (
-          <TabItem 
-            key={tab.id}
-            $isActive={activeTab === tab.id}
-            onClick={() => onChange(tab.id as T)}
-          >
-            {tab.label}
-            {activeTab === tab.id && <ActiveTabIndicator />}
-          </TabItem>
-        ))}
-      </TabsList>
-    </TabsContainer>
+    <>
+      <TabsContainer>
+        <TabsList>
+          {tabs.map((tab) => (
+            <TabItem 
+              key={tab.id}
+              $isActive={activeTab === tab.id}
+              onClick={() => onChange(tab.id as T)}
+            >
+              {tab.label}
+              {activeTab === tab.id && <ActiveTabIndicator />}
+            </TabItem>
+          ))}
+          {addButton && <AddButtonContainer>{addButton}</AddButtonContainer>}
+        </TabsList>
+      </TabsContainer>
+      
+      {/* Отображение контента активного таба */}
+      {activeTabContent && (
+        <TabContentContainer>
+          {activeTabContent}
+        </TabContentContainer>
+      )}
+    </>
   );
 };
 
@@ -43,6 +57,7 @@ const TabsList = styled.ul`
   padding: 0;
   margin: 0;
   gap: 24px;
+  align-items: center;
 `;
 
 const TabItem = styled.li<{ $isActive: boolean }>`
@@ -67,6 +82,15 @@ const ActiveTabIndicator = styled.div`
   height: 2px;
   background-color: rgba(0, 125, 136, 1);
   border-radius: 2px 2px 0 0;
+`;
+
+const AddButtonContainer = styled.li`
+  margin-left: auto; 
+  padding: 4px 0; 
+`;
+
+const TabContentContainer = styled.div`
+  margin-top: 20px;
 `;
 
 export default Tabs;

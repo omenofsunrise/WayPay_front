@@ -40,6 +40,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/profile': { mainItem: 'profile' },
   '/about': { mainItem: 'about' },
   '/admin': { mainItem: 'admin' },
+  '/investors-pool': { mainItem: 'investors-pool' }
 };
 
 const SideMenu = () => {
@@ -344,6 +345,12 @@ const SideMenu = () => {
                 $selected={selectedSideMenuItem === 'investors-report'}
               >
                 Отчёт для инвесторов
+              </SubMenuItem>
+              <SubMenuItem 
+                onClick={() => handleSubMenuItemClick('investors-pool', '/investors-pool')}
+                $selected={selectedSideMenuItem === 'investors-pool'}
+              >
+                Пулы инвесторов
               </SubMenuItem>
             </SubMenu>
           )}

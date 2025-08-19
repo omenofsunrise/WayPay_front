@@ -45,6 +45,8 @@ interface Investor {
   investorPie: number;
   investmentAmount: number;
   balance: number;
+  isPool?: boolean;
+  poolId?: number;
 }
 
 interface Product {
@@ -62,6 +64,7 @@ const NewCreditPage = () => {
   const [client, setClient] = useState<Client | null>(null);
   const [guarantor, setGuarantor] = useState<Client | null>(null);
   const [investor, setInvestor] = useState<Investor | null>(null);
+  const [selectedPool, setSelectedPool] = useState<Investor | null>(null);
   const [modalType, setModalType] = useState<'client' | 'guarantor' | 'investor' | null>(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
@@ -81,6 +84,7 @@ const NewCreditPage = () => {
   const { autoSelectInvestor } = useInvestor();
   const { authInfo } = useEmployee();
   const minSurcharge = authInfo?.employee.minSurcharge || 0;
+  const [viewModalData, setViewModalData] = useState<Investor | null>(null);
 
   const formatAmount = useCallback((value: number): string => {
     return value.toLocaleString('ru-RU') + '₽';
@@ -90,12 +94,18 @@ const NewCreditPage = () => {
     return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
   }, []);
 
+  const handleViewInvestor = () => {
+    if (investor || selectedPool) {
+      setViewModalData(investor || selectedPool);
+      setIsViewInvestorModalOpen(true);
+    }
+  };
+
   const handleCreateCredit = useCallback(async () => {
-    if (!client || !contractDate || !investor) return;
+    if (!client || !contractDate || (!investor && !selectedPool)) return;
 
     const creditData: CreateCreditRequest = {
       clientId: client.id,
-      investorId: investor.id,
       creditDate: new Date(contractDate),
       firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
       termMonths: parseInt(months),
@@ -109,6 +119,14 @@ const NewCreditPage = () => {
         })),
       ...(guarantor && { guarantorId: guarantor.id })
     };
+    
+    if (selectedPool) {
+      creditData.poolId = selectedPool.poolId || selectedPool.id;
+    }
+
+    if (investor) {
+      creditData.investorId = investor.id;
+    }
 
     const createdCredit = await createCredit(creditData);
     if (createdCredit) {
@@ -118,6 +136,7 @@ const NewCreditPage = () => {
     client,
     contractDate,
     investor,
+    selectedPool,
     guarantor,
     initialPaymentAmount,
     months,
@@ -147,6 +166,7 @@ const NewCreditPage = () => {
         investmentAmount: 0,
         balance: selectedInvestor.balance
       });
+      setSelectedPool(null);
     }
   };
 
@@ -298,8 +318,44 @@ const NewCreditPage = () => {
     }
   };
 
-  const handleSelectInvestor = (selectedInvestor: Investor) => {
-    setInvestor(selectedInvestor);
+  const handleSelectInvestor = (selectedEntity: { 
+    id: number; 
+    nickname?: string; 
+    name?: string;
+    fullName?: string; 
+    phoneNumber?: string;
+    investorPie?: number;
+    pie?: number;
+    investmentAmount?: number;
+    balance?: number;
+    type: 'investor' | 'pool';
+  }) => {
+    if (selectedEntity.type === 'pool') {
+      setSelectedPool({
+        id: selectedEntity.id,
+        nickname: selectedEntity.name || selectedEntity.nickname || '',
+        fullName: selectedEntity.fullName || selectedEntity.name || '',
+        phoneNumber: selectedEntity.phoneNumber || '',
+        investorPie: selectedEntity.pie || 0,
+        investmentAmount: selectedEntity.investmentAmount || 0,
+        balance: selectedEntity.balance || 0,
+        isPool: true
+      });
+      setInvestor(null);
+    
+    } else {
+      setInvestor({
+        id: selectedEntity.id,
+        nickname: selectedEntity.nickname || '',
+        fullName: selectedEntity.fullName || '',
+        phoneNumber: selectedEntity.phoneNumber || '',
+        investorPie: selectedEntity.investorPie || 0,
+        investmentAmount: selectedEntity.investmentAmount || 0,
+        balance: selectedEntity.balance || 0,
+        isPool: false
+      });
+      setSelectedPool(null);
+    }
     setIsInvestorModalOpen(false);
   };
 
@@ -320,6 +376,23 @@ const NewCreditPage = () => {
     } else if (numericValue < 1) {
       setMonths('1');
     }
+  };
+
+  const getSelectedEntityDisplayName = () => {
+    if (investor) return investor.nickname;
+    if (selectedPool) return selectedPool.nickname;
+    return '';
+  };
+
+  const getSelectedEntityPhone = () => {
+    if (investor) return investor.phoneNumber;
+    if (selectedPool) return selectedPool.phoneNumber;
+    return '';
+  };
+
+  const clearSelectedEntity = () => {
+    setInvestor(null);
+    setSelectedPool(null);
   };
 
   return (
@@ -343,17 +416,20 @@ const NewCreditPage = () => {
           </FieldGroup>
         
           <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
-            <Label>Инвестор</Label>
+            <Label>Инвестор / Пул</Label>
             <EntitySelectWrapper>
               <EntitySelectContainer
                 mode="create"
-                primaryValue={investor?.nickname || ''}
-                secondaryValue={investor?.phoneNumber}
-                placeholder="Выберите инвестора"
+                primaryValue={getSelectedEntityDisplayName()}
+                secondaryValue={getSelectedEntityPhone()}
+                placeholder="Выберите инвестора или пул"
                 onSelect={openInvestorModal}
-                onClear={() => setInvestor(null)}
+                onClear={clearSelectedEntity}
               />
-              <ViewButton onClick={() => investor && setIsViewInvestorModalOpen(true)} disabled={!investor} />
+              <ViewButton 
+                onClick={handleViewInvestor} 
+                disabled={!investor && !selectedPool} 
+              />
               <AutoSelectButton onClick={handleAutoSelectInvestor} disabled={totalSum <= 0}>
                 <svg width="23" height="7" viewBox="0 0 23 7" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M19.8429 0.462891C18.3527 0.462891 17.3131 1.80373 17.3131 3.72363C17.3131 5.58303 18.3218 6.87943 19.7664 6.87943C21.0257 6.87943 22.2962 5.86824 22.2962 3.61005C22.2962 1.72719 21.3085 0.462891 19.8429 0.462891ZM21.2899 3.64462C21.2899 4.76198 20.8245 5.96331 19.8083 5.96331C18.8391 5.96331 18.3267 4.82742 18.3267 3.70635C18.3267 2.54823 18.786 1.37901 19.8083 1.37901C20.7825 1.37901 21.2899 2.52478 21.2899 3.64462ZM11.8732 1.50248H13.8696V6.78313H15.0364V1.50248H17.0427V0.559194H11.8732V1.50248ZM10.2953 4.2175C10.2953 5.37561 9.81004 5.96331 8.85195 5.96331C7.96546 5.96331 7.47777 5.34598 7.47777 4.2175V0.559194H6.31225V4.20021C6.26092 4.54943 6.28907 4.90572 6.39458 5.24255C6.50009 5.57938 6.68025 5.88806 6.92164 6.14558C7.16302 6.40311 7.45941 6.60284 7.78871 6.7299C8.11801 6.85696 8.47175 6.90808 8.82355 6.87943C9.18497 6.91195 9.54909 6.86336 9.88934 6.73719C10.2296 6.61103 10.5374 6.41047 10.7902 6.15018C11.043 5.88988 11.2346 5.57641 11.3508 5.23265C11.467 4.88888 11.505 4.5235 11.462 4.16317V0.559194H10.2953V4.2175ZM3.65279 0.559194H2.41195L0.0722656 6.78313H1.2773L1.96006 4.91755H4.06887L4.77015 6.78313H6.00482L3.68982 0.656733L3.65279 0.559194ZM3.78242 4.02736H2.2428L2.81445 2.50255C2.87989 2.31735 2.93792 2.12228 3.00829 1.90498C3.06756 2.10005 3.13176 2.3013 3.21325 2.5149L3.78242 4.02736Z" fill="#50555C"/>
@@ -466,7 +542,7 @@ const NewCreditPage = () => {
                 </GrayButton>
                 <DarkCyanButton 
                   style={{ marginRight: 'auto' }}
-                  disabled={!client || !contractDate || !investor || isScheduleLoading || isCreditLoading}
+                  disabled={!client || !contractDate || (!investor && !selectedPool) || isScheduleLoading || isCreditLoading}
                   onClick={handleCreateCredit}
                 >
                   {isScheduleLoading || isCreditLoading ? 'Загрузка...' : 'Создать договор'}
@@ -491,6 +567,7 @@ const NewCreditPage = () => {
         isOpen={isInvestorModalOpen}
         onClose={() => setIsInvestorModalOpen(false)}
         onSubmit={handleSelectInvestor}
+        includePools={true}
       />
 
       <ClientModal
@@ -532,16 +609,19 @@ const NewCreditPage = () => {
       <InvestorModal
         mode="view"
         isOpen={isViewInvestorModalOpen}
-        onClose={() => setIsViewInvestorModalOpen(false)}
+        onClose={() => {
+          setIsViewInvestorModalOpen(false);
+          setViewModalData(null);
+        }}
         onSubmit={async () => false}
-        initialData={investor ? {
-          id: investor.id,
-          nickname: investor.nickname,
-          fullName: investor.fullName,
-          phoneNumber: investor.phoneNumber,
-          investorPie: investor.investorPie,
-          investmentAmount: investor.investmentAmount,
-          balance: investor.balance,
+        initialData={viewModalData ? {
+          id: viewModalData.id,
+          nickname: viewModalData.nickname,
+          fullName: viewModalData.fullName,
+          phoneNumber: viewModalData.phoneNumber,
+          investorPie: viewModalData.investorPie || 0,
+          investmentAmount: viewModalData.investmentAmount || 0,
+          balance: viewModalData.balance || 0,
           isCompany: false,
           isBlocked: false
         } : undefined}

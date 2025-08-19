@@ -33,6 +33,7 @@ import { createRoot } from 'react-dom/client';
 import LicenseOutPage from './pages/LicenseOutPage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import InvestorsPoolPage from './pages/InvestorsPoolPage';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 
@@ -135,7 +136,6 @@ function App() {
           apiClient.get<AuthInfo>('/Auth/info')
             .then(response => {
               setAuthInfo(response.data);
-              // При первой загрузке проверяем, нужно ли показать пин-код
               const savedActivity = sessionStorage.getItem('lastActivity');
               if (!savedActivity || (savedActivity && Date.now() - parseInt(savedActivity, 10) > INACTIVITY_TIMEOUT)) {
                 setShowPinModal(true);
@@ -282,6 +282,12 @@ function App() {
             <Route path="investors-report" element={
                 <MainLayout>
                   <InvestorReportPage />
+                </MainLayout>
+            } />
+
+            <Route path="investors-pool" element={
+                <MainLayout>
+                  <InvestorsPoolPage />
                 </MainLayout>
             } />
 

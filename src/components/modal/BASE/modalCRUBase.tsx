@@ -2,7 +2,7 @@ import React, { type ReactNode, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 
-export type ModalMode = 'create' | 'edit' | 'view';
+export type ModalMode = 'create' | 'edit' | 'view' | 'create-pool' | 'edit-pool';
 
 interface ModalProps {
   title?: string;

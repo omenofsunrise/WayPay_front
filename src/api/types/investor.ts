@@ -10,10 +10,12 @@ export interface Investor {
   balance: number;
   isCompany: boolean;
   isBlocked: boolean;
+  poolId?: number;
 }
 
 export interface InvestorParams extends PaginationParams {
   name?: string;
+  poolId?: number;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }

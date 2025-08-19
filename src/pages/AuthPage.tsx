@@ -75,7 +75,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             verifyAuth(phone, id);
         }, 3000);
     };
-
+    
     const verifyAuth = async (phone: string, id: string) => {
         if (isVerifying) return;
         
@@ -84,6 +84,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             const response = await apiClient.post('/Auth/confirm', {
                 phone: phone,
                 checkId: id,
+                userType: 'user'
             });
             
             if (response.data.accessToken && response.data.refreshToken) {
