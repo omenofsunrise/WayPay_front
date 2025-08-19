@@ -40,6 +40,7 @@ import type { InvestorPool } from '../api/types/investorPool';
 import InputModal from '../components/modal/InputModal';
 import EditButton from '../components/ui/Buttons/EditButton';
 import AddButton from '../components/ui/Buttons/AddButton';
+import DeleteButton from '../components/ui/Buttons/DeleteButton';
 
 const InvestorsPoolPage = () => {
     const { 
@@ -60,8 +61,8 @@ const InvestorsPoolPage = () => {
     } = useInvestorPayout();
     
     const { 
-        investorCredits, 
-        getCreditsByInvestorId, 
+        data, 
+        getCredits,
         isLoading: isCreditsLoading 
     } = useCredit();
     
@@ -70,7 +71,6 @@ const InvestorsPoolPage = () => {
         createInvestorPool,
         updateInvestorPoolName,
         deleteInvestorPool,
-        currentPool,
         data: poolsData
     } = useInvestorPool();
 
@@ -112,7 +112,11 @@ const InvestorsPoolPage = () => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                await getInvestorPools();
+                const pools = await getInvestorPools();
+                
+                if (pools?.items && pools.items.length > 0) {
+                    setSelectedPoolId(pools.items[0].id.toString());
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -125,12 +129,14 @@ const InvestorsPoolPage = () => {
             const fetchReportData = async () => {
                 setIsLoading(true);
                 try {
-                    // Здесь нужно будет загружать данные для выбранного пула
-                    // Пока используем старый код для примера
                     const reportData = await getInvestorReport(Number(selectedPoolId));
                     setReport(reportData);
                     fetchPayouts(Number(selectedPoolId));
-                    getCreditsByInvestorId(Number(selectedPoolId), creditsPage, pageSize);
+                    getCredits({
+                        investorPoolId: Number(selectedPoolId),
+                        page: creditsPage,
+                        pageSize: pageSize
+                    });
                 } finally {
                     setIsLoading(false);
                 }
@@ -653,11 +659,7 @@ const InvestorsPoolPage = () => {
         formatDate(payout.payoutDate),
         payout.employeeFullName,
         formatMoney(payout.amount.toString()),
-        <DeleteButton onClick={() => handleDeletePayout(payout.id)}>
-            <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0.949286 13.7822C0.949286 14.7298 1.80364 15.505 2.84786 15.505H10.4421C11.4864 15.505 12.3407 14.7298 12.3407 13.7822V3.44556H0.949286V13.7822ZM13.29 0.861389H9.9675L9.01821 0H4.27179L3.3225 0.861389H0V2.58417H13.29V0.861389Z" fill="#50555C"/>
-            </svg>
-        </DeleteButton>
+        <DeleteButton onClick={() => handleDeletePayout(payout.id)}></DeleteButton>
     ]);
 
     const poolTabs = poolsData?.items.map(pool => ({
@@ -665,7 +667,6 @@ const InvestorsPoolPage = () => {
         label: pool.name,
         content: (
             <PoolTabContent>
-                <span>{pool.name}</span>
                 <PoolActions>
                     <EditButton 
                         onClick={(e) => {
@@ -689,7 +690,7 @@ const InvestorsPoolPage = () => {
         )
     })) || [];
 
-    const creditsTableData = investorCredits?.items.map((credit: Credit) => {
+    const creditsTableData = data?.items.map((credit: Credit) => {
         const hasDebt = credit.debt > 0;
         const isActive = credit.isActive;
         
@@ -706,7 +707,7 @@ const InvestorsPoolPage = () => {
         ];
     }) || [];
 
-    const rowStyles = investorCredits?.items.reduce((styles, credit, index) => {
+    const rowStyles = data?.items.reduce((styles, credit, index) => {
         const style: RowStyle = {};
         
         if (credit.debt > 0) {
@@ -729,44 +730,55 @@ const InvestorsPoolPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>Пулы инвесторов</CustomTitle>
-                <ExportButton 
-                    onClick={() => report && currentInvestor && exportToPdf(report, currentInvestor, payouts)} 
-                    disabled={!report}
-                />
-                <ExportButton
-                    children={"Поделиться"}
-                    icon={<ShareIcon />}
-                    onClick={handleShareClick} 
-                    disabled={!report}
-                />
             </TitleField>
 
             <ContentContainer>
                 <PoolTabsContainer>
-                    <Tabs
-                        tabs={poolTabs}
-                        activeTab={selectedPoolId}
-                        onChange={(poolId) => setSelectedPoolId(poolId)}
-                        addButton={
-                            <AddButton 
-                                onClick={() => setIsCreatePoolModalOpen(true)}
-                                tooltip="Добавить пул"
-                            />
-                        }
-                    />
+                    <PoolTabsHeader>
+                        <PoolTabsList>
+                            {poolsData?.items.map(pool => (
+                                <PoolTabItem 
+                                    key={pool.id}
+                                    $isActive={selectedPoolId === pool.id.toString()}
+                                    onClick={() => setSelectedPoolId(pool.id.toString())}
+                                >
+                                    {pool.name}
+                                    {selectedPoolId === pool.id.toString() && <ActiveTabIndicator />}
+                                    
+                                    <PoolActions>
+                                        <EditButton 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setNewPoolName(pool.name);
+                                                setSelectedPoolId(pool.id.toString());
+                                                setIsEditPoolModalOpen(true);
+                                            }} 
+                                        />
+                                        <DeleteButton 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm(`Удалить пул "${pool.name}"?`)) {
+                                                    setSelectedPoolId(pool.id.toString());
+                                                    handleDeletePool();
+                                                }
+                                            }} 
+                                        />
+                                    </PoolActions>
+                                </PoolTabItem>
+                            ))}
+                        </PoolTabsList>
+                        <AddButton 
+                            onClick={() => setIsCreatePoolModalOpen(true)}
+                            tooltip="Добавить пул"
+                        />
+                    </PoolTabsHeader>
+                    
                     {report && (
                         <CreationDate>
                             Пул создан {formatDate(report.createdAt)}
                         </CreationDate>
                     )}
                 </PoolTabsContainer>
-
-                <ModalInfoTitle>Общие данные</ModalInfoTitle>
-                {report && (
-                    <ReportDataContainer>
-
-                    </ReportDataContainer>
-                )}
 
                 <TabsContainer>
                 <Tabs<'payouts' | 'credits' | 'investors'>
@@ -810,28 +822,30 @@ const InvestorsPoolPage = () => {
                 
                 {activeTab === 'credits' && (
                     <>
-                        <CustomTable 
-                            columns={[
-                                { name: "Дата договора", isSortable: true },
-                                { name: "Клиент", align: "left" },
-                                { name: "Телефон", align: "left" },
-                                { name: "Начислено", isSortable: true, align: "left" },
-                                { name: "Уплачено", align: "left" },
-                                { name: "Остаток", align: "left" },
-                                { name: "Долг", align: "left" },
-                                { name: "Долг", align: "left", isHidden: true },
-                                { name: "Долг", align: "left", isHidden: true },
-                            ]} 
-                            data={creditsTableData}
-                            isLoading={isCreditsLoading}
-                            rowStyles={rowStyles}
-                        />
+                        {isCreditsLoading ? (
+                            <div>Загрузка договоров...</div>
+                        ) : (
+                            <CustomTable 
+                                columns={[
+                                    { name: "Дата договора", isSortable: true },
+                                    { name: "Клиент", align: "left" },
+                                    { name: "Телефон", align: "left" },
+                                    { name: "Начислено", isSortable: true, align: "left" },
+                                    { name: "Уплачено", align: "left" },
+                                    { name: "Остаток", align: "left" },
+                                    { name: "Долг", align: "left" },
+                                ]} 
+                                data={creditsTableData}
+                                isLoading={isCreditsLoading}
+                                rowStyles={rowStyles}
+                            />
+                        )}
                         <PaginationLayout>
                             <CountInfoTitle 
-                                total={investorCredits?.totalCount || 0} 
+                                total={data?.totalCount || 0} 
                             />
                             <Pagination
-                                total={investorCredits?.totalCount || 0}
+                                total={data?.totalCount || 0}
                                 current={creditsPage}
                                 onChange={(page) => setCreditsPage(page)}
                                 itemsPerPage={pageSize}
@@ -938,6 +952,50 @@ const PoolTabsContainer = styled.div`
     margin-bottom: 24px;
 `;
 
+const PoolTabItem = styled.li<{ $isActive: boolean }>`
+    position: relative;
+    padding: 12px 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: ${props => props.$isActive ? '600' : '400'};
+    color: ${props => props.$isActive ? 'rgba(0, 125, 136, 1)' : 'rgba(107, 114, 128, 1)'};
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &:hover {
+        color: rgba(0, 125, 136, 0.8);
+    }
+`;
+
+const ActiveTabIndicator = styled.div`
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: rgba(0, 125, 136, 1);
+    border-radius: 2px 2px 0 0;
+`;
+
+const PoolTabsHeader = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid rgba(209, 213, 219, 1);
+    padding-bottom: 8px;
+`;
+
+const PoolTabsList = styled.ul`
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 24px;
+    flex: 1;
+`;
+
 const PoolTabContent = styled.div`
     display: flex;
     align-items: center;
@@ -949,35 +1007,18 @@ const PoolActions = styled.div`
     gap: 4px;
     opacity: 0;
     transition: opacity 0.2s;
-
-    ${PoolTabContent}:hover & {
+    
+    ${PoolTabItem}:hover & {
+        opacity: 1;
+    }
+    
+    ${PoolTabItem}[$isActive="true"] & {
         opacity: 1;
     }
 `;
 
 const TabsContainer = styled.div`
     margin: 30px 0 20px;
-`;
-
-const DeleteButton = styled.button`
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    padding: 8px;
-    
-    &:hover {
-        opacity: 0.8;
-    }
-    
-    svg {
-        display: block;
-    }
 `;
 
 const ContentContainer = styled.div`

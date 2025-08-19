@@ -31,21 +31,19 @@ const EditButton: React.FC<EditButtonProps> = ({ onClick, tooltip, size = 32 }) 
 };
 
 const EditButtonContainer = styled.button<{ size: number }>`
-  width: ${props => props.size}px;
-  height: ${props => props.size}px;
-  border-radius: 50%;
-  background-color: white;
-  border: 1px solid rgba(209, 213, 219, 1);
+  background-color: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
+  box-sizing: border-box;
 
   &:hover {
-    background-color: rgba(249, 250, 250, 1);
     transform: scale(1.05);
+    outline: none;
+    border-color: transparent;
   }
 
   &:active {

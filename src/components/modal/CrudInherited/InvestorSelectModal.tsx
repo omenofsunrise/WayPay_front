@@ -142,8 +142,11 @@ const InvestorSelectModal = ({
       if (pool) {
         setSelectedEntity({
           id: pool.id,
+          nickname: pool.name, // Используем name как nickname
           name: pool.name,
+          fullName: pool.name, // Для пула fullName тоже name
           pie: pool.pie,
+          balance: pool.balance || 0, // Добавляем баланс если есть
           type: 'pool'
         });
       }

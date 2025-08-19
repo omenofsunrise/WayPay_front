@@ -22,7 +22,7 @@ class InvestorPoolService {
   }
 
   async updateInvestorPoolName(id: number, newName: string): Promise<InvestorPool> {
-    const response = await apiClient.put<InvestorPool>(`/InvestorPool/${id}/name`, { newName });
+    const response = await apiClient.put<InvestorPool>(`/InvestorPool/${id}/name`, newName);
     return response.data;
   }
 
