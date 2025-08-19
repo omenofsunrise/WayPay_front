@@ -12,7 +12,6 @@ interface AuthPageProps {
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
-    const [userType, setUserType] = useState<'user' | 'client'>('user');
     const [isLoading, setIsLoading] = useState(false);
     const [rawPhone, setRawPhone] = useState('');
     const [showCallModal, setShowCallModal] = useState(false);
@@ -47,7 +46,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         try {
             const response = await apiClient.post('/Auth/start', {
                 phone: rawPhone,
-                userType: userType,
+                userType: 'employee',
             });
             
             setCheckId(response.data.checkId);
@@ -56,7 +55,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             startVerificationPolling(rawPhone, response.data.checkId);
         } catch (error: any) {
             console.error('Auth error:', error);
-            if (error.response?.status === 400 && userType === 'user') {
+            if (error.response?.status === 400) {
                 alert(error.response.data);
             } else {
                 alert('Произошла ошибка при авторизации');
@@ -84,7 +83,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             const response = await apiClient.post('/Auth/confirm', {
                 phone: phone,
                 checkId: id,
-                userType: 'user'
+                userType: 'employee'
             });
             
             if (response.data.accessToken && response.data.refreshToken) {
@@ -105,17 +104,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    const completeAuth = () => {
-        setAuthCompleted(true);
-        onLoginSuccess(authStorage.getAccessToken()!);
-        window.location.href = userType === 'user' ? '/credits' : '/client';
-    };
-
     const handlePinSuccess = () => {
         setShowPinModal(false);
         setAuthCompleted(true);
         onLoginSuccess(authStorage.getAccessToken()!);
-        window.location.href = userType === 'user' ? '/credits' : '/client';
+        window.location.href = '/credits';
     };
     
     return (
@@ -137,32 +130,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                             />
                         </InputContainer>
                     </FormGroup>
-
-                    <RadioGroup>
-                        <RadioOption active={userType === 'user'} onClick={() => setUserType('user')}>
-                            <RadioInput
-                                type="radio"
-                                id="user"
-                                name="userType"
-                                value="user"
-                                checked={userType === 'user'}
-                                onChange={() => {}}
-                            />
-                            <RadioLabel htmlFor="user">Я пользователь</RadioLabel>
-                        </RadioOption>
-
-                        <RadioOption active={userType === 'client'} onClick={() => setUserType('client')}>
-                            <RadioInput
-                                type="radio"
-                                id="client"
-                                name="userType"
-                                value="client"
-                                checked={userType === 'client'}
-                                onChange={() => {}}
-                            />
-                            <RadioLabel htmlFor="client">Я клиент</RadioLabel>
-                        </RadioOption>
-                    </RadioGroup>
 
                     <SubmitButton type="submit" disabled={isLoading}>
                         {isLoading ? (
