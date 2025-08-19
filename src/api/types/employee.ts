@@ -50,6 +50,7 @@ export interface EmployeeExistsResponse {
 export interface EmployeeFullnames {
   id: number;
   fullName: string;
+  photoPath: string;
 }
 
 export interface Profile {

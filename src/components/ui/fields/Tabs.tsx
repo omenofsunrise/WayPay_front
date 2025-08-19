@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 import styled from 'styled-components';
 
 interface Tab {
   id: string;
   label: string;
+  content?: ReactNode; // Добавляем необязательное поле content
 }
 
 interface TabsProps<T extends string> {
   tabs: Tab[];
   activeTab: T;
   onChange: (tabId: T) => void;
+  addButton?: ReactNode; // Добавляем опциональный пропс для кнопки добавления
 }
 
-const Tabs = <T extends string>({ tabs, activeTab, onChange }: TabsProps<T>) => {
+const Tabs = <T extends string>({ tabs, activeTab, onChange, addButton }: TabsProps<T>) => {
   return (
     <TabsContainer>
       <TabsList>
@@ -26,6 +28,7 @@ const Tabs = <T extends string>({ tabs, activeTab, onChange }: TabsProps<T>) => 
             {activeTab === tab.id && <ActiveTabIndicator />}
           </TabItem>
         ))}
+        {addButton && <AddButtonContainer>{addButton}</AddButtonContainer>}
       </TabsList>
     </TabsContainer>
   );
@@ -43,6 +46,7 @@ const TabsList = styled.ul`
   padding: 0;
   margin: 0;
   gap: 24px;
+  align-items: center; // Выравниваем элементы по центру
 `;
 
 const TabItem = styled.li<{ $isActive: boolean }>`
@@ -67,6 +71,11 @@ const ActiveTabIndicator = styled.div`
   height: 2px;
   background-color: rgba(0, 125, 136, 1);
   border-radius: 2px 2px 0 0;
+`;
+
+const AddButtonContainer = styled.li`
+  margin-left: auto; // Размещаем кнопку справа
+  padding: 4px 0; // Добавляем отступы для выравнивания
 `;
 
 export default Tabs;
