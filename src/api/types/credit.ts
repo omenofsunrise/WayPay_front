@@ -8,7 +8,8 @@ export interface Credit {
     isActive: boolean;
     isFavourite: boolean;
     clientId: number;
-    investorId: number;
+    investorId?: number;
+    poolId?: number;
     termMonths: number;
     clientFullName: string;
     clientPhone: string;
@@ -28,7 +29,8 @@ export interface Credit {
 export interface CreateCreditRequest {
     clientId: number;
     guarantorId?: number;
-    investorId: number;
+    investorId?: number;
+    poolId?: number;
     creditDate: Date;
     firstPayment: number;
     termMonths: number;

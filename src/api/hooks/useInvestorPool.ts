@@ -4,8 +4,6 @@ import type {
   InvestorPool, 
   InvestorPoolRequest, 
   InvestorPoolParams,
-  UpdateNameRequest,
-  UpdatePieRequest
 } from '../types/investorPool';
 import type { PaginatedResponse } from '../types/common';
 

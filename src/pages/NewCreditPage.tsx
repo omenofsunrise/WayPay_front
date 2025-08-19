@@ -491,6 +491,7 @@ const NewCreditPage = () => {
         isOpen={isInvestorModalOpen}
         onClose={() => setIsInvestorModalOpen(false)}
         onSubmit={handleSelectInvestor}
+        includePools={true}
       />
 
       <ClientModal

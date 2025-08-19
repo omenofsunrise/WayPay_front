@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
 import CustomTable from '../../ui/tables/CustomTable';
-import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 import useInvestor from '../../../api/hooks/useInvestor';
+import useInvestorPool from '../../../api/hooks/useInvestorPool';
 import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
 import { formatMoney } from '../../../utils/formatPrice';
@@ -11,23 +11,28 @@ import { formatMoney } from '../../../utils/formatPrice';
 interface InvestorSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (investor: { 
+  onSubmit: (entity: { 
     id: number; 
-    nickname: string; 
-    fullName: string; 
-    phoneNumber: string;
-    investorPie: number;
-    investmentAmount: number;
-    balance: number;
+    nickname?: string; 
+    name?: string;
+    fullName?: string; 
+    phoneNumber?: string;
+    investorPie?: number;
+    pie?: number;
+    investmentAmount?: number;
+    balance?: number;
+    type: 'investor' | 'pool';
   }) => void;
   width?: string;
+  includePools?: boolean;
 }
 
 const InvestorSelectModal = ({ 
   isOpen, 
   onClose, 
   onSubmit, 
-  width = "1000px" 
+  width = "1000px",
+  includePools = false
 }: InvestorSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,32 +40,45 @@ const InvestorSelectModal = ({
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'asc' });
-  const [selectedInvestor, setSelectedInvestor] = useState<{
+  const [selectedEntity, setSelectedEntity] = useState<{
     id: number;
-    nickname: string;
-    fullName: string;
-    phoneNumber: string;
-    investorPie: number;
-    investmentAmount: number;
-    balance: number;
+    nickname?: string;
+    name?: string;
+    fullName?: string;
+    phoneNumber?: string;
+    investorPie?: number;
+    pie?: number;
+    investmentAmount?: number;
+    balance?: number;
+    type: 'investor' | 'pool';
   } | null>(null);
   
   const pageSize = 8;
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
-    3: 'investor_pie',
+    3: includePools ? 'pie' : 'investor_pie',
     4: 'balance'
   };
   
   const { 
-    isLoading, 
-    error, 
+    isLoading: isLoadingInvestors, 
+    error: investorsError, 
     data: investorsData, 
     getInvestors
   } = useInvestor();
   
-  const loadInvestors = useCallback(async () => {
+  const { 
+    isLoading: isLoadingPools, 
+    error: poolsError, 
+    data: poolsData, 
+    getInvestorPools
+  } = useInvestorPool();
+  
+  const isLoading = isLoadingInvestors || (includePools && isLoadingPools);
+  const error = investorsError || (includePools && poolsError);
+  
+  const loadEntities = useCallback(async () => {
     const params: any = {
       page: currentPage,
       pageSize,
@@ -72,15 +90,24 @@ const InvestorSelectModal = ({
       params.sortDirection = sortConfig.direction;
     }
 
-    await getInvestors(params);
-  }, [currentPage, nameFilter, sortConfig, getInvestors]);
+    if (includePools) {
+      // Загружаем и инвесторов и пулы
+      await Promise.all([
+        getInvestors(params),
+        getInvestorPools(params)
+      ]);
+    } else {
+      // Загружаем только инвесторов
+      await getInvestors(params);
+    }
+  }, [currentPage, nameFilter, sortConfig, getInvestors, getInvestorPools, includePools]);
   
   useEffect(() => {
     if (isOpen) {
-      loadInvestors();
-      setSelectedInvestor(null);
+      loadEntities();
+      setSelectedEntity(null);
     }
-  }, [isOpen, currentPage, nameFilter, sortConfig, loadInvestors]);
+  }, [isOpen, currentPage, nameFilter, sortConfig, loadEntities]);
 
   const handleFilterChange = (value: string) => {
     setNameFilter(value);
@@ -105,45 +132,79 @@ const InvestorSelectModal = ({
   };
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
-    const investor = investorsData?.items[rowIndex];
-    if (investor) {
-      setSelectedInvestor({
-        id: investor.id,
-        nickname: investor.nickname,
-        fullName: investor.fullName,
-        phoneNumber: investor.phoneNumber,
-        investorPie: investor.investorPie,
-        investmentAmount: investor.investmentAmount,
-        balance: investor.balance
-      });
+    // Определяем, является ли строка инвестором или пулом
+    const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
+    
+    if (isPool) {
+      // Это пул
+      const poolIndex = rowIndex - (investorsData?.items?.length || 0);
+      const pool = poolsData?.items[poolIndex];
+      if (pool) {
+        setSelectedEntity({
+          id: pool.id,
+          name: pool.name,
+          pie: pool.pie,
+          type: 'pool'
+        });
+      }
+    } else {
+      // Это инвестор
+      const investor = investorsData?.items[rowIndex];
+      if (investor) {
+        setSelectedEntity({
+          id: investor.id,
+          nickname: investor.nickname,
+          fullName: investor.fullName,
+          phoneNumber: investor.phoneNumber,
+          investorPie: investor.investorPie,
+          investmentAmount: investor.investmentAmount,
+          balance: investor.balance,
+          type: 'investor'
+        });
+      }
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedInvestor) {
-      onSubmit(selectedInvestor);
+    if (selectedEntity) {
+      onSubmit(selectedEntity);
       onClose();
     }
   };
 
-  const tableData = investorsData?.items?.map(investor => [
+  // Подготавливаем данные для таблицы
+  const investorsTableData = investorsData?.items?.map(investor => [
     investor.id.toString(),
     investor.nickname,
     investor.phoneNumber,
     investor.investorPie.toString() + "%",
     formatMoney(investor.balance.toString()),
+    'investor' // Добавляем тип для отладки
   ]) || [];
+
+  const poolsTableData = includePools 
+    ? poolsData?.items?.map(pool => [
+        pool.id.toString(),
+        pool.name,
+        '—', // Пулы не имеют телефона
+        pool.pie.toString() + "%",
+        '—', // Пулы не имеют баланса
+        'pool' // Добавляем тип для отладки
+      ]) || []
+    : [];
+
+  const tableData = [...investorsTableData, ...poolsTableData];
 
   if (!isOpen) return null;
 
   return (
     <BaseModal
-      title="Выбор инвестора"
+      title="Выбор инвестора/пула"
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
-      isSaveDisabled={!selectedInvestor}
+      isSaveDisabled={!selectedEntity}
       saveButtonText="Выбрать"
       width={width}
     >
@@ -152,13 +213,13 @@ const InvestorSelectModal = ({
           <CustomInput 
             style={{ maxWidth: "none" }}
             inputType="fullname"
-            placeholder="Поиск по никнейму"
+            placeholder="Поиск по никнейму или названию пула"
             value={nameFilter}
             onChange={(e) => handleFilterChange(e.target.value)}
           />
         </FilterContainer>
         
-        {isLoading && <LoadingMessage>Загрузка инвесторов...</LoadingMessage>}
+        {isLoading && <LoadingMessage>Загрузка...</LoadingMessage>}
         {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
         
         {!isLoading && !error && (
@@ -167,7 +228,7 @@ const InvestorSelectModal = ({
               <CustomTable 
                 columns={[
                   { name: "ID", isSortable: true, align: "left" },
-                  { name: "Никнейм", align: "left" },
+                  { name: includePools ? "Никнейм/Название" : "Никнейм", align: "left" },
                   { name: "Телефон", align: "left" },
                   { name: "Доля", align: "left", isSortable: true },
                   { name: "Касса", isSortable: true, align: "right" },
@@ -176,13 +237,13 @@ const InvestorSelectModal = ({
                 onRowClick={handleRowClick}
                 onSort={handleSort}
                 sortConfig={sortConfig}
-                selectedRow={selectedInvestor ? tableData.findIndex(row => row[0] === selectedInvestor.id.toString()) : -1}
+                selectedRow={selectedEntity ? tableData.findIndex(row => row[0] === selectedEntity.id.toString()) : -1}
               />
             </TableContainer>
             
             <PaginationContainer>
               <Pagination
-                total={investorsData?.totalCount || 0}
+                total={(investorsData?.totalCount || 0) + (includePools ? (poolsData?.totalCount || 0) : 0)}
                 current={currentPage}
                 onChange={setCurrentPage}
                 itemsPerPage={pageSize}

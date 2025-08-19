@@ -24,7 +24,7 @@ const emptyInvestor: Omit<Investor, 'id'> = {
   investmentAmount: 0,
   balance: 0,
   isCompany: false,
-  isBlocked: false
+  isBlocked: false,
 };
 
 const InvestorModal: React.FC<InvestorModalProps> = ({
@@ -45,7 +45,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Investor, 'id'>>(
-    mode === 'create' ? emptyInvestor : {
+    mode === 'create' || mode === 'create-pool' ? emptyInvestor : {
       nickname: initialData?.nickname || '',
       fullName: initialData?.fullName || '',
       phoneNumber: initialData?.phoneNumber || '',
@@ -122,7 +122,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setFormData(
-        mode === 'create' ? emptyInvestor : {
+        mode === 'create' || mode === 'create-pool' ? emptyInvestor : {
           nickname: initialData?.nickname || '',
           fullName: initialData?.fullName || '',
           phoneNumber: initialData?.phoneNumber || '',
@@ -160,7 +160,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       });
       setApiError('');
     }
-  }, [initialData, isOpen, mode]);
+  }, [isOpen, mode]);
 
   useEffect(() => {
     if (mode === 'view') return;
@@ -175,8 +175,10 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
         balance: ''
       };
 
-      if (formData.nickname.trim().length === 0) {
-        newErrorMessages.nickname = 'Поле обязательно для заполнения';
+      if (mode !== 'create-pool' && mode !== 'edit-pool') {
+        if (formData.nickname.trim().length === 0) {
+          newErrorMessages.nickname = 'Поле обязательно для заполнения';
+        }
       }
 
       if (formData.fullName.trim().length === 0) {
@@ -208,6 +210,15 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
         );
       }
 
+      if (mode === 'create-pool') {
+        newErrorMessages.investmentAmount = validateNumber(
+          formData.investmentAmount, 
+          'Сумма инвестиций', 
+          0, 
+          1000000000
+        );
+      }
+
       setErrorMessages(newErrorMessages);
 
       const errors = {
@@ -231,12 +242,12 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     const hasErrors = Object.values(validationErrors).some(Boolean);
     if (hasErrors) return true;
 
-    if (mode === 'edit') {
+    if (mode === 'edit' || mode === 'edit-pool') {
       const isChanged = (
-        formData.nickname !== initialData.nickname ||
         formData.fullName !== initialData.fullName ||
         formData.phoneNumber !== initialData.phoneNumber ||
-        formData.isCompany !== initialData.isCompany
+        formData.isCompany !== initialData.isCompany ||
+        (mode === 'edit' && formData.nickname !== initialData.nickname)
       );
       return !isChanged;
     }
@@ -265,10 +276,20 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     try {
       const submitData = {
         ...formData,
+        // For pool modes, ensure these fields are not included
+        ...(mode === 'create-pool' || mode === 'edit-pool' ? {
+          investorPie: 0,
+          balance: 0,
+          nickname: ''
+        } : {}),
+        // For edit modes, preserve original financial data
         ...(mode === 'edit' ? {
           investorPie: initialData.investorPie,
           investmentAmount: initialData.investmentAmount,
           balance: initialData.balance
+        } : {}),
+        ...(mode === 'edit-pool' ? {
+          investmentAmount: initialData.investmentAmount
         } : {})
       };
 
@@ -308,7 +329,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (mode !== 'create' && ['investorPie', 'investmentAmount', 'balance'].includes(name)) {
+    if ((mode !== 'create' && mode !== 'create-pool') && ['investorPie', 'investmentAmount', 'balance'].includes(name)) {
       return;
     }
     
@@ -328,6 +349,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       case 'create': return formData.isCompany ? 'Создание компании' : 'Создание инвестора';
       case 'edit': return formData.isCompany ? 'Редактирование компании' : 'Редактирование инвестора';
       case 'view': return formData.isCompany ? 'Просмотр компании' : 'Просмотр инвестора';
+      case 'create-pool': return 'Создание инвестора для пула';
+      case 'edit-pool': return 'Редактирование инвестора для пула';
       default: return formData.isCompany ? 'Компания' : 'Инвестор';
     }
   };
@@ -354,21 +377,23 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
           
-          <InputRow>
-            <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
-            <InputContainer >
-              <CustomInput
-                name="nickname"
-                inputType="text"
-                placeholder={formData.isCompany ? "Название компании" : "Никнейм"}
-                value={formData.nickname}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.nickname && validationErrors.nickname}
-                errorMessage={touchedFields.nickname ? errorMessages.nickname : undefined}
-              />
-            </InputContainer>
-          </InputRow>
+          {(mode !== 'create-pool' && mode !== 'edit-pool') && (
+            <InputRow>
+              <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
+              <InputContainer >
+                <CustomInput
+                  name="nickname"
+                  inputType="text"
+                  placeholder={formData.isCompany ? "Название компании" : "Никнейм"}
+                  value={formData.nickname}
+                  onChange={handleInputChange}
+                  disabled={mode === 'view'}
+                  hasError={touchedFields.nickname && validationErrors.nickname}
+                  errorMessage={touchedFields.nickname ? errorMessages.nickname : undefined}
+                />
+              </InputContainer>
+            </InputRow>
+          )}
           
           {(hasRole("директор") || hasRole("суперадмин")) && (
             <InputRow>
@@ -403,25 +428,29 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputContainer>
           </InputRow>
           
-          <ModalInfoTitle>Финансовая информация</ModalInfoTitle>
-        
-          <InputRow>
-            <InputLabel>Доля инвестора (%):</InputLabel>
-            <InputContainer >
-              <CustomInput
-                name="investorPie"
-                inputType="number"
-                placeholder="0-100"
-                value={formData.investorPie.toString()}
-                onChange={handleNumberChange}
-                disabled={mode !== 'create'}
-                hasError={touchedFields.investorPie && validationErrors.investorPie}
-                errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
-              />
-            </InputContainer>
-          </InputRow>
+          {(mode !== 'create-pool' && mode !== 'edit-pool') && (
+            <>
+              <ModalInfoTitle>Финансовая информация</ModalInfoTitle>
+            
+              <InputRow>
+                <InputLabel>Доля инвестора (%):</InputLabel>
+                <InputContainer >
+                  <CustomInput
+                    name="investorPie"
+                    inputType="number"
+                    placeholder="0-100"
+                    value={formData.investorPie.toString()}
+                    onChange={handleNumberChange}
+                    disabled={mode !== 'create'}
+                    hasError={touchedFields.investorPie && validationErrors.investorPie}
+                    errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
+                  />
+                </InputContainer>
+              </InputRow>
+            </>
+          )}
 
-          {mode === 'create' && (
+          {(mode === 'create' || mode === 'create-pool') && (
             <InputRow>
               <InputLabel>Инвестиция:</InputLabel>
               <InputContainer>
@@ -437,7 +466,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputRow>
           )}
 
-          {mode === 'view' && (
+          {(mode === 'view' && mode !== 'edit-pool') && (
             <InputRow>
               <InputLabel>Касса:</InputLabel>
               <InputContainer>
@@ -451,7 +480,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputRow>
           )}
 
-          {mode === 'view' && (
+          {(mode === 'view') && (
             <InputRow>
                 <InputLabel>Заблокирован:</InputLabel>
                 <InputContainer>

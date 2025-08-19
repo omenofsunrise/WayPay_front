@@ -75,7 +75,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             verifyAuth(phone, id);
         }, 3000);
     };
-
+    
     const verifyAuth = async (phone: string, id: string) => {
         if (isVerifying) return;
         
