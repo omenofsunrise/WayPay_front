@@ -176,35 +176,59 @@ const InvestorsPoolPage = () => {
     };
 
     const handleInvestorSubmit = async (investorData: Partial<Investor>) => {
-    try {
-        if (currentInvestor) {
-        const updatedInvestor = await updateInvestor(currentInvestor.id, investorData);
-        if (updatedInvestor) {
-            setInvestors(investors.map(inv => 
-            inv.id === currentInvestor.id ? updatedInvestor : inv
-            ));
+        try {
+            if (currentInvestor) {
+            const updatedInvestor = await updateInvestor(currentInvestor.id, investorData);
+            if (updatedInvestor) {
+                setInvestors(investors.map(inv => 
+                inv.id === currentInvestor.id ? updatedInvestor : inv
+                ));
+            }
+            } else {
+            const newInvestor = await createInvestor({
+                ...investorData,
+                poolId: Number(selectedPoolId)
+            } as Omit<Investor, 'id'>);
+            if (newInvestor) {
+                setInvestors([...investors, newInvestor]);
+            }
+            }
+            setIsInvestorModalOpen(false);
+            
+            await reloadData();
+        } catch (error) {
+            console.error('Error saving investor:', error);
         }
-        } else {
-        const newInvestor = await createInvestor({
-            ...investorData,
-            poolId: Number(selectedPoolId)
-        } as Omit<Investor, 'id'>);
-        if (newInvestor) {
-            setInvestors([...investors, newInvestor]);
+    };
+
+    const reloadData = async () => {
+        if (selectedPoolId) {
+            try {
+            // Перезагружаем инвесторов
+            const result = await getInvestors({ poolId: Number(selectedPoolId) });
+            if (result) {
+                setInvestors(result.items);
+            }
+            
+            // Перезагружаем отчет
+            const reportData = await getInvestorPoolReport(Number(selectedPoolId));
+            setReport(reportData);
+            
+            // Перезагружаем выплаты
+            await fetchPoolPayouts(Number(selectedPoolId));
+            
+            } catch (error) {
+            console.error('Error reloading data:', error);
+            }
         }
-        }
-        setIsInvestorModalOpen(false);
-    } catch (error) {
-        console.error('Error saving investor:', error);
-    }
     };
 
     const investorsTableData = investors.map((investor: Investor) => [
-        investor.fullName || '-',
-        investor.phoneNumber || '-',
-        formatMoney(investor.investmentAmount.toString()),
-        `${investor.investorPie}%`,
-        formatMoney(investor.income.toString()),
+        investor.fullName ?? '-',
+        investor.phoneNumber ?? '-',
+        investor.investmentAmount ? formatMoney(investor.investmentAmount.toString()) : '-',
+        investor.investorPie !== null && investor.investorPie !== undefined ? `${investor.investorPie}%` : '-',
+        investor.income ? formatMoney(investor.income.toString()) : '-',
         <EditButton onClick={() => handleEditInvestor(investor)} />,
         <DeleteButton onClick={() => handleDeleteInvestor(investor.id)} />,
         <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
@@ -605,26 +629,23 @@ const InvestorsPoolPage = () => {
     };
 
     const handlePayoutSubmit = async () => {
-    if (!selectedInvestorForPayout || !payoutAmount || !report) return;
-    
-    const numericAmount = Number(payoutAmount.replace(/\D/g, ''));
-    
-    try {
-        await addPayout({
-        investorId: selectedInvestorForPayout.id,
-        amount: numericAmount
-        });
-        setIsPayoutModalOpen(false);
-        setPayoutAmount('');
+        if (!selectedInvestorForPayout || !payoutAmount || !report) return;
         
-        if (selectedPoolId) {
-        const reportData = await getInvestorPoolReport(Number(selectedPoolId));
-        setReport(reportData);
-        fetchPoolPayouts(Number(selectedPoolId));
+        const numericAmount = Number(payoutAmount.replace(/\D/g, ''));
+        
+        try {
+            await addPayout({
+            investorId: selectedInvestorForPayout.id,
+            amount: numericAmount
+            });
+            setIsPayoutModalOpen(false);
+            setPayoutAmount('');
+            
+            await reloadData();
+            
+        } catch (error) {
+            console.error('Payout error:', error);
         }
-    } catch (error) {
-        console.error('Payout error:', error);
-    }
     };
 
     const tabs = [
