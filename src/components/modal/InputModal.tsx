@@ -8,10 +8,13 @@ interface InputModalProps {
   onClose: () => void;
   title: string;
   value: string;
+  pieValue?: number;
   onChange: (value: string) => void;
+  onPieChange?: (value: number) => void;
   onSubmit: () => void;
   submitText?: string;
   placeholder?: string;
+  showPieField?: boolean;
   width?: string;
 }
 
@@ -20,18 +23,23 @@ const InputModal: React.FC<InputModalProps> = ({
   onClose,
   title,
   value,
+  pieValue = 0,
   onChange,
+  onPieChange,
   onSubmit,
   submitText = 'Сохранить',
   placeholder = '',
+  showPieField = false,
   width = '562px'
 }) => {
   const [inputValue, setInputValue] = useState(value);
+  const [pieInputValue, setPieInputValue] = useState(pieValue.toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setInputValue(value);
-  }, [value]);
+    setPieInputValue(pieValue.toString());
+  }, [value, pieValue]);
 
   if (!isOpen) return null;
 
@@ -48,7 +56,17 @@ const InputModal: React.FC<InputModalProps> = ({
 
   const handleCancel = () => {
     setInputValue(value);
+    setPieInputValue(pieValue.toString());
     onClose();
+  };
+
+  const handlePieChange = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    const pieNumber = numericValue ? parseInt(numericValue) : 0;
+    setPieInputValue(numericValue);
+    if (onPieChange) {
+      onPieChange(pieNumber);
+    }
   };
 
   return (
@@ -57,21 +75,38 @@ const InputModal: React.FC<InputModalProps> = ({
       onClose={onClose}
       onCancel={handleCancel}
       onSave={handleSubmit}
-      isSaveDisabled={!inputValue.trim()}
+      isSaveDisabled={!inputValue.trim() || (showPieField && !pieInputValue)}
       isSubmitting={isSubmitting}
       width={width}
       saveButtonText={submitText}
     >
       <InputContainer>
-        <CustomInput
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            onChange(e.target.value);
-          }}
-          placeholder={placeholder}
-          autoFocus
-        />
+        <InputWrapper>
+          <Label>Название пула</Label>
+          <CustomInput
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              onChange(e.target.value);
+            }}
+            placeholder={placeholder}
+            autoFocus
+          />
+        </InputWrapper>
+        
+        {showPieField && (
+          <InputWrapper>
+            <Label>Доля пула (%)</Label>
+            <CustomInput
+              value={pieInputValue}
+              onChange={(e) => handlePieChange(e.target.value)}
+              placeholder="0"
+              type="number"
+              min="0"
+              max="100"
+            />
+          </InputWrapper>
+        )}
       </InputContainer>
     </BaseModal>
   );
@@ -80,6 +115,18 @@ const InputModal: React.FC<InputModalProps> = ({
 const InputContainer = styled.div`
   padding: 0 30px;
   margin-bottom: 20px;
+`;
+
+const InputWrapper = styled.div`
+  margin-bottom: 20px;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  text-align: left;
 `;
 
 export default InputModal;

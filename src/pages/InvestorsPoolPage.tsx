@@ -6,10 +6,8 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from '../api/types/investor';
 import useInvestor from '../api/hooks/useInvestor';
-import CustomSelect from '../components/ui/fields/CustomSelect';
 import { formatDate } from '../utils/dateFormatter';
 import { formatMoney } from '../utils/formatPrice';
-import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
 import investmentSvg from '../assets/ui/InvestorReport/investment.svg';
 import paymentIncomeSvg from '../assets/ui/InvestorReport/PaymentIncome.svg';
 import activeCreditsSvg from '../assets/ui/InvestorReport/credits.svg';
@@ -21,11 +19,9 @@ import shareSvg from '../assets/ui/InvestorReport/share.svg';
 import balanceSvg from '../assets/ui/InvestorReport/balance.svg';
 import allSelfIncomeSvg from '../assets/ui/InvestorReport/AllSelfIncome.svg';
 import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
-import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import { useInvestorPayout } from '../api/hooks/useInvestorPayout';
 import type { InvestorPayout } from '../api/types/investorPayout';
 import PayoutModal from '../components/modal/PayoutModal';
-import ViewButton from '../components/ui/Buttons/ViewButton';
 import InvestorModal from '../components/modal/CrudInherited/InvestorModal';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -36,17 +32,17 @@ import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import Pagination from '../components/ui/fields/CustomPagination';
 import Tabs from '../components/ui/fields/Tabs';
 import useInvestorPool from '../api/hooks/useInvestorPool';
-import type { InvestorPool } from '../api/types/investorPool';
 import InputModal from '../components/modal/InputModal';
 import EditButton from '../components/ui/Buttons/EditButton';
 import AddButton from '../components/ui/Buttons/AddButton';
 import DeleteButton from '../components/ui/Buttons/DeleteButton';
+import type { InvestorPool } from '../api/types/investorPool';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 
 const InvestorsPoolPage = () => {
     const { 
         getInvestors, 
         getInvestorById, 
-        getInvestorReport,
         deleteInvestor,
         createInvestor,
         updateInvestor
@@ -55,7 +51,7 @@ const InvestorsPoolPage = () => {
     const { 
         payouts, 
         isLoading: isPayoutsLoading, 
-        fetchPayouts, 
+        fetchPoolPayouts, 
         addPayout, 
         removePayout 
     } = useInvestorPayout();
@@ -70,7 +66,10 @@ const InvestorsPoolPage = () => {
         getInvestorPools,
         createInvestorPool,
         updateInvestorPoolName,
+        updateInvestorPoolPie,
         deleteInvestorPool,
+        getInvestorPoolReport,
+        reportData,
         data: poolsData
     } = useInvestorPool();
 
@@ -81,8 +80,6 @@ const InvestorsPoolPage = () => {
     const [selectedPoolId, setSelectedPoolId] = useState<string>('');
     const [report, setReport] = useState<InvestorReport | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
-    const [payoutAmount, setPayoutAmount] = useState<string>('');
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'payouts' | 'credits' | 'investors'>('investors');
     const [creditsPage, setCreditsPage] = useState(1);
@@ -91,6 +88,11 @@ const InvestorsPoolPage = () => {
     const [isEditPoolModalOpen, setIsEditPoolModalOpen] = useState(false);
     const [newPoolName, setNewPoolName] = useState('');
     const pageSize = 10;
+    const [pools, setPools] = useState<InvestorPool[]>([]);
+    const [newPoolPie, setNewPoolPie] = useState<number>(0);
+    const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
+    const [payoutAmount, setPayoutAmount] = useState<string>('');
+    const [selectedInvestorForPayout, setSelectedInvestorForPayout] = useState<Investor | null>(null);
 
     useEffect(() => {
         if (selectedPoolId) {
@@ -113,9 +115,11 @@ const InvestorsPoolPage = () => {
             setIsLoading(true);
             try {
                 const pools = await getInvestorPools();
-                
-                if (pools?.items && pools.items.length > 0) {
-                    setSelectedPoolId(pools.items[0].id.toString());
+                if (pools?.items) {
+                    setPools(pools.items);
+                    if (pools.items.length > 0) {
+                        setSelectedPoolId(pools.items[0].id.toString());
+                    }
                 }
             } finally {
                 setIsLoading(false);
@@ -129,9 +133,9 @@ const InvestorsPoolPage = () => {
             const fetchReportData = async () => {
                 setIsLoading(true);
                 try {
-                    const reportData = await getInvestorReport(Number(selectedPoolId));
+                    const reportData = await getInvestorPoolReport(Number(selectedPoolId));
                     setReport(reportData);
-                    fetchPayouts(Number(selectedPoolId));
+                    fetchPoolPayouts(Number(selectedPoolId));
                     getCredits({
                         investorPoolId: Number(selectedPoolId),
                         page: creditsPage,
@@ -145,14 +149,19 @@ const InvestorsPoolPage = () => {
         }
     }, [selectedPoolId, creditsPage, payoutsPage]);
 
+    const handlePayoutClick = (investor: Investor) => {
+    setSelectedInvestorForPayout(investor);
+    setIsPayoutModalOpen(true);
+    };
+
     const handleAddInvestor = () => {
-    setCurrentInvestor(null);
-    setIsInvestorModalOpen(true);
+        setCurrentInvestor(null);
+        setIsInvestorModalOpen(true);
     };
 
     const handleEditInvestor = (investor: Investor) => {
-    setCurrentInvestor(investor);
-    setIsInvestorModalOpen(true);
+        setCurrentInvestor(investor);
+        setIsInvestorModalOpen(true);
     };
 
     const handleDeleteInvestor = async (id: number) => {
@@ -169,7 +178,6 @@ const InvestorsPoolPage = () => {
     const handleInvestorSubmit = async (investorData: Partial<Investor>) => {
     try {
         if (currentInvestor) {
-        // Update existing investor
         const updatedInvestor = await updateInvestor(currentInvestor.id, investorData);
         if (updatedInvestor) {
             setInvestors(investors.map(inv => 
@@ -177,7 +185,6 @@ const InvestorsPoolPage = () => {
             ));
         }
         } else {
-        // Create new investor
         const newInvestor = await createInvestor({
             ...investorData,
             poolId: Number(selectedPoolId)
@@ -197,25 +204,34 @@ const InvestorsPoolPage = () => {
         investor.phoneNumber || '-',
         formatMoney(investor.investmentAmount.toString()),
         `${investor.investorPie}%`,
-        <div style={{ display: 'flex', gap: '8px' }}>
-            <EditButton onClick={() => handleEditInvestor(investor)} />
-            <DeleteButton onClick={() => handleDeleteInvestor(investor.id)} />
-        </div>
+        formatMoney(investor.income.toString()),
+        <EditButton onClick={() => handleEditInvestor(investor)} />,
+        <DeleteButton onClick={() => handleDeleteInvestor(investor.id)} />,
+        <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
+            Выплатить
+        </DarkCyanButton>
     ]);
 
     const handleCreatePool = async () => {
-        if (!newPoolName.trim()) return;
+    if (!newPoolName.trim()) return;
+    
+    try {
+        const newPool = await createInvestorPool({
+        name: newPoolName,
+        pie: newPoolPie
+        }, Number(selectedInvestorId));
         
-        try {
-            await createInvestorPool({
-                name: newPoolName,
-                pie: 50
-            }, Number(selectedInvestorId));
-            setIsCreatePoolModalOpen(false);
-            setNewPoolName('');
-        } catch (error) {
-            console.error('Error creating pool:', error);
+        if (newPool) {
+        setPools(prevPools => [...prevPools, newPool]);
+        setSelectedPoolId(newPool.id.toString());
         }
+        
+        setIsCreatePoolModalOpen(false);
+        setNewPoolName('');
+        setNewPoolPie(0);
+    } catch (error) {
+        console.error('Error creating pool:', error);
+    }
     };
 
     const handleUpdatePoolName = async () => {
@@ -223,8 +239,19 @@ const InvestorsPoolPage = () => {
         
         try {
             await updateInvestorPoolName(Number(selectedPoolId), newPoolName);
+            await updateInvestorPoolPie((Number(selectedPoolId)), newPoolPie);
+
+            setPools(prevPools => 
+                prevPools.map(pool => 
+                    pool.id === Number(selectedPoolId) 
+                    ? { ...pool, name: newPoolName, pie: newPoolPie }
+                    : pool
+                )
+            );
+            
             setIsEditPoolModalOpen(false);
             setNewPoolName('');
+            setNewPoolPie(0);
         } catch (error) {
             console.error('Error updating pool:', error);
         }
@@ -235,12 +262,21 @@ const InvestorsPoolPage = () => {
         
         try {
             await deleteInvestorPool(Number(selectedPoolId));
-            setSelectedPoolId('');
+            
+            setPools(prevPools => 
+                prevPools.filter(pool => pool.id !== Number(selectedPoolId))
+            );
+            
+            setSelectedPoolId(prevId => {
+                const remainingPools = pools.filter(pool => pool.id !== Number(prevId));
+                return remainingPools.length > 0 
+                    ? remainingPools[0].id.toString() 
+                    : '';
+            });
         } catch (error) {
             console.error('Error deleting pool:', error);
         }
     };
-
     const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
         return new Promise<Blob>(async (resolve, reject) => {
             const pdfContainer = document.createElement('div');
@@ -599,37 +635,26 @@ const InvestorsPoolPage = () => {
     };
 
     const handlePayoutSubmit = async () => {
-        if (!selectedInvestorId || !payoutAmount || !currentInvestor || !report) return;
+    if (!selectedInvestorForPayout || !payoutAmount || !report) return;
+    
+    const numericAmount = Number(payoutAmount.replace(/\D/g, ''));
+    
+    try {
+        await addPayout({
+        investorId: selectedInvestorForPayout.id,
+        amount: numericAmount
+        });
+        setIsPayoutModalOpen(false);
+        setPayoutAmount('');
         
-        const numericAmount = Number(payoutAmount.replace(/\D/g, ''));
-        let maxAllowedAmount = 0;
-
-        if (currentInvestor.isBlocked) {
-            maxAllowedAmount = report.balance;
-        } else {
-            maxAllowedAmount = report.isCompany 
-                ? report.investorIncome + report.selfIncome 
-                : report.investorIncome;
+        if (selectedPoolId) {
+        const reportData = await getInvestorPoolReport(Number(selectedPoolId));
+        setReport(reportData);
+        fetchPoolPayouts(Number(selectedPoolId));
         }
-
-        if (numericAmount > maxAllowedAmount) {
-            alert(`Нельзя выплатить больше чем ${formatMoney(maxAllowedAmount.toString())}`);
-            return;
-        }
-
-        try {
-            await addPayout({
-                investorId: Number(selectedInvestorId),
-                amount: numericAmount
-            });
-            setIsPayoutModalOpen(false);
-            setPayoutAmount('');
-            
-            const updatedReport = await getInvestorReport(Number(selectedInvestorId));
-            setReport(updatedReport);
-        } catch (error) {
-            console.error('Payout error:', error);
-        }
+    } catch (error) {
+        console.error('Payout error:', error);
+    }
     };
 
     const tabs = [
@@ -642,18 +667,13 @@ const InvestorsPoolPage = () => {
         try {
             await removePayout(id);
             if (selectedInvestorId) {
-                const updatedReport = await getInvestorReport(Number(selectedInvestorId));
+                const updatedReport = await getInvestorPoolReport(Number(selectedInvestorId));
                 setReport(updatedReport);
             }
         } catch (error) {
             console.error('Delete payout error:', error);
         }
     };
-
-    const investorOptions = investors.map(investor => ({
-        value: investor.id.toString(),
-        label: investor.nickname || `Investor ${investor.id}`
-    }));
 
     const payoutTableData = payouts.map((payout: InvestorPayout) => [
         formatDate(payout.payoutDate),
@@ -662,7 +682,7 @@ const InvestorsPoolPage = () => {
         <DeleteButton onClick={() => handleDeletePayout(payout.id)}></DeleteButton>
     ]);
 
-    const poolTabs = poolsData?.items.map(pool => ({
+    const poolTabs = pools.map(pool => ({
         id: pool.id.toString(),
         label: pool.name,
         content: (
@@ -688,7 +708,7 @@ const InvestorsPoolPage = () => {
                 </PoolActions>
             </PoolTabContent>
         )
-    })) || [];
+    }));
 
     const creditsTableData = data?.items.map((credit: Credit) => {
         const hasDebt = credit.debt > 0;
@@ -736,7 +756,7 @@ const InvestorsPoolPage = () => {
                 <PoolTabsContainer>
                     <PoolTabsHeader>
                         <PoolTabsList>
-                            {poolsData?.items.map(pool => (
+                            {pools.map(pool => (
                                 <PoolTabItem 
                                     key={pool.id}
                                     $isActive={selectedPoolId === pool.id.toString()}
@@ -749,8 +769,9 @@ const InvestorsPoolPage = () => {
                                         <EditButton 
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setNewPoolName(pool.name);
-                                                setSelectedPoolId(pool.id.toString());
+                                                const currentPool = pools.find(pool => pool.id === Number(selectedPoolId));
+                                                setNewPoolName(currentPool?.name || '');
+                                                setNewPoolPie(currentPool?.pie || 0);
                                                 setIsEditPoolModalOpen(true);
                                             }} 
                                         />
@@ -774,24 +795,100 @@ const InvestorsPoolPage = () => {
                     </PoolTabsHeader>
                     
                     {report && (
-                        <CreationDate>
-                            Пул создан {formatDate(report.createdAt)}
-                        </CreationDate>
+                        <>
+                            <CreationDate>
+                                Пул создан {formatDate(report.createdAt)}
+                            </CreationDate>
+
+                            <ReportDataContainer>
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={investmentSvg} alt="Investment" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
+                                    <ReportLabel>Инвестиция</ReportLabel>
+                                </ReportCard>
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={activeCreditsSvg} alt="Active credits" />
+                                    </IconContainer>
+                                    <ReportValue>{report.activeCreditsAmount}</ReportValue>
+                                    <ReportLabel>Незакрытые договоры</ReportLabel>
+                                </ReportCard>
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={shareSvg} alt="Total income" />
+                                    </IconContainer>
+                                    <ReportValue>{pools.find(pool => pool.id === Number(selectedPoolId))?.pie.toString() || '0'}%</ReportValue>
+                                    <ReportLabel>Доля пула</ReportLabel>
+                                </ReportCard>
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={investorIncomeScg} alt="Investor income" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
+                                    <ReportLabel>Доход инвестора</ReportLabel>
+                                </ReportCard>
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={selfIncomeSvg} alt="Self income" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
+                                    <ReportLabel>Собственный доход</ReportLabel>
+                                </ReportCard>                            
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={commonIncomeSvg} alt="Total income" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
+                                    <ReportLabel>Общий доход</ReportLabel>
+                                </ReportCard>
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={balanceSvg} alt="Balance" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+                                    <ReportLabel>Касса</ReportLabel>
+                                </ReportCard>
+                                
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={debtSvg} alt="Debt" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
+                                    <ReportLabel>Просрочки руб.</ReportLabel>
+                                </ReportCard>
+
+                                <ReportCard>
+                                    <IconContainer>
+                                        <Icon src={paymentIncomeSvg} alt="paymentIncome" />
+                                    </IconContainer>
+                                    <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
+                                    <ReportLabel>Доходы по платежам в текущем месяце</ReportLabel>
+                                </ReportCard>  
+                            </ReportDataContainer>
+                        </>
                     )}
                 </PoolTabsContainer>
 
                 <TabsContainer>
-                <Tabs<'payouts' | 'credits' | 'investors'>
-                    tabs={tabs}
-                    activeTab={activeTab}
-                    onChange={(tabId) => setActiveTab(tabId)}
-                    addButton={activeTab === 'investors' ? (
-                    <AddButton 
-                        onClick={handleAddInvestor}
-                        tooltip="Добавить инвестора"
+                    <Tabs<'payouts' | 'credits' | 'investors'>
+                        tabs={tabs}
+                        activeTab={activeTab}
+                        onChange={(tabId) => setActiveTab(tabId)}
+                        addButton={activeTab === 'investors' && pools.length > 0 ? (
+                        <AddButton 
+                            onClick={handleAddInvestor}
+                            tooltip="Добавить инвестора"
+                        />
+                        ) : null}
                     />
-                    ) : null}
-                />
                 </TabsContainer>
 
                 {activeTab === 'payouts' && (
@@ -800,6 +897,7 @@ const InvestorsPoolPage = () => {
                             columns={[
                                 { name: "Дата выплаты", isSortable: true },
                                 { name: "Выплатил", align: "left" },
+                                { name: "Инвестор", align: "left" },
                                 { name: "Выплата, руб", isSortable: true, align: "left" },
                                 { name: "", align: "center" }
                             ]} 
@@ -862,6 +960,9 @@ const InvestorsPoolPage = () => {
                             { name: "Телефон", align: "left" },
                             { name: "Инвестиция", align: "left" },
                             { name: "Доля", align: "left" },
+                            { name: "Доход", align: "left" },
+                            { name: "", align: "center" },
+                            { name: "", align: "center" },
                             { name: "", align: "center" }
                         ]} 
                         data={investorsTableData}
@@ -929,9 +1030,12 @@ const InvestorsPoolPage = () => {
                     onClose={() => setIsCreatePoolModalOpen(false)}
                     title="Создать новый пул"
                     value={newPoolName}
+                    pieValue={newPoolPie}
                     onChange={setNewPoolName}
+                    onPieChange={setNewPoolPie}
                     onSubmit={handleCreatePool}
                     submitText="Создать"
+                    showPieField={true}
                 />
 
                 <InputModal
@@ -939,9 +1043,27 @@ const InvestorsPoolPage = () => {
                     onClose={() => setIsEditPoolModalOpen(false)}
                     title="Редактировать пул"
                     value={newPoolName}
+                    pieValue={newPoolPie}
                     onChange={setNewPoolName}
+                    onPieChange={setNewPoolPie}
                     onSubmit={handleUpdatePoolName}
                     submitText="Сохранить"
+                    showPieField={true}
+                />
+
+                <PayoutModal
+                    isOpen={isPayoutModalOpen}
+                    onClose={() => {
+                        setIsPayoutModalOpen(false);
+                        setPayoutAmount('');
+                        setSelectedInvestorForPayout(null);
+                    }}
+                    amount={payoutAmount}
+                    onAmountChange={setPayoutAmount}
+                    onSubmit={handlePayoutSubmit}
+                    maxAmount={selectedInvestorForPayout?.income || 0}
+                    balance={report?.balance || 0}
+                    isLoading={isPayoutsLoading}
                 />
             </ContentContainer>
         </PageLayout>

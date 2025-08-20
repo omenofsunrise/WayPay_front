@@ -7,6 +7,7 @@ import {
   createInvestorPayout,
   deleteInvestorPayout,
   getInvestorPayouts,
+  getPoolPayouts
 } from '../services/investorPayoutService';
 
 export const useInvestorPayout = () => {
@@ -14,11 +15,24 @@ export const useInvestorPayout = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPayouts = async (investorId: number) => {
+  const fetchInvestorPayouts = async (investorId: number) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await getInvestorPayouts(investorId);
+      setPayouts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchPoolPayouts = async (poolId: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getPoolPayouts(poolId);
       setPayouts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -60,7 +74,8 @@ export const useInvestorPayout = () => {
     payouts,
     isLoading,
     error,
-    fetchPayouts,
+    fetchPayouts: fetchInvestorPayouts,
+    fetchPoolPayouts,
     addPayout,
     removePayout,
   };

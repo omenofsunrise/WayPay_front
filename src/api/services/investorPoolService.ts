@@ -7,10 +7,16 @@ import type {
   UpdatePieRequest
 } from '../types/investorPool';
 import type { PaginatedResponse } from '../types/common';
+import type { InvestorReport } from '../types/investor';
 
 class InvestorPoolService {
   async getInvestorPools(params?: InvestorPoolParams): Promise<PaginatedResponse<InvestorPool>> {
     const response = await apiClient.get<PaginatedResponse<InvestorPool>>('/InvestorPool', { params });
+    return response.data;
+  }
+
+  async getInvestorPoolReport(id: number): Promise<InvestorReport> {
+    const response = await apiClient.get(`/InvestorPool/report/${id}`);
     return response.data;
   }
 
@@ -27,7 +33,7 @@ class InvestorPoolService {
   }
 
   async updateInvestorPoolPie(id: number, newPie: number): Promise<InvestorPool> {
-    const response = await apiClient.put<InvestorPool>(`/InvestorPool/${id}/pie`, { newPie });
+    const response = await apiClient.put<InvestorPool>(`/InvestorPool/${id}/pie`, newPie);
     return response.data;
   }
 

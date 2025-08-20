@@ -26,3 +26,12 @@ export const getInvestorPayouts = async (investorId: number): Promise<InvestorPa
     throw new Error('Failed to fetch investor payouts');
   }
 };
+
+export const getPoolPayouts = async (poolId: number): Promise<InvestorPayout[]> => {
+  try {
+    const response = await apiClient.get<InvestorPayout[]>(`/InvestorPayouts/pool/${poolId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to fetch investor payouts');
+  }
+};

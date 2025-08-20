@@ -6,12 +6,14 @@ import type {
   InvestorPoolParams,
 } from '../types/investorPool';
 import type { PaginatedResponse } from '../types/common';
+import type { InvestorReport } from '../types/investor';
 
 const useInvestorPool = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<InvestorPool> | null>(null);
   const [currentPool, setCurrentPool] = useState<InvestorPool | null>(null);
+  const [reportData, setReportData] = useState<any>(null);
 
   const getInvestorPools = useCallback(async (params?: InvestorPoolParams): Promise<PaginatedResponse<InvestorPool> | null> => {
     setIsLoading(true);
@@ -26,6 +28,21 @@ const useInvestorPool = () => {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const getInvestorPoolReport = useCallback(async (id: number): Promise<InvestorReport> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await investorPoolService.getInvestorPoolReport(id);
+        setReportData(result);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
   }, []);
 
   const createInvestorPool = async (request: InvestorPoolRequest, companyId: number): Promise<InvestorPool | null> => {
@@ -117,6 +134,8 @@ const useInvestorPool = () => {
     updateInvestorPoolName,
     updateInvestorPoolPie,
     deleteInvestorPool,
+    reportData,
+    getInvestorPoolReport
   };
 };
 
