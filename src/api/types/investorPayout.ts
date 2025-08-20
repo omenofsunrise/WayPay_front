@@ -1,5 +1,7 @@
 export interface InvestorPayout {
   id: number;
+  investorId: number;
+  investorFullName: string;
   employeeFullName: string;
   amount: number;
   payoutDate: string;

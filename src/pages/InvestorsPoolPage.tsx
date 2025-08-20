@@ -277,6 +277,7 @@ const InvestorsPoolPage = () => {
             console.error('Error deleting pool:', error);
         }
     };
+
     const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
         return new Promise<Blob>(async (resolve, reject) => {
             const pdfContainer = document.createElement('div');
@@ -678,6 +679,7 @@ const InvestorsPoolPage = () => {
     const payoutTableData = payouts.map((payout: InvestorPayout) => [
         formatDate(payout.payoutDate),
         payout.employeeFullName,
+        payout.investorFullName,
         formatMoney(payout.amount.toString()),
         <DeleteButton onClick={() => handleDeletePayout(payout.id)}></DeleteButton>
     ]);
