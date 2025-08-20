@@ -278,7 +278,7 @@ const InvestorsPoolPage = () => {
         }
     };
 
-    const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
+    const generatePoolPdf = async (report: InvestorReport, pool: InvestorPool | undefined, payouts: InvestorPayout[], credits: Credit[]) => {
         return new Promise<Blob>(async (resolve, reject) => {
             const pdfContainer = document.createElement('div');
             pdfContainer.style.position = 'absolute';
@@ -343,7 +343,7 @@ const InvestorsPoolPage = () => {
                         border-bottom: 2px solid rgba(37, 203, 161, 1);
                         padding-bottom: 10px;
                     ">
-                        Отчёт для инвестора
+                        Отчёт по пулу инвесторов: ${pool?.name || 'Неизвестный пул'}
                     </h1>
                     <p style="
                         color: #6B7280;
@@ -365,47 +365,6 @@ const InvestorsPoolPage = () => {
                         color: rgba(0, 125, 136, 1);
                         font-size: 18px;
                         margin-top: 0;
-                        margin-bottom: 15px;
-                        display: flex;
-                        align-items: center;
-                    ">
-                        <span style="
-                            display: inline-block;
-                            width: 4px;
-                            height: 20px;
-                            background: rgba(37, 203, 161, 1);
-                            margin-right: 10px;
-                            border-radius: 2px;
-                        "></span>
-                        Информация об инвесторе
-                    </h2>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber || 'Не указан'}</p>
-                        </div>
-                        <div>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 
-                                <span style="color: ${currentInvestor?.isBlocked ? '#EF4444' : 'rgba(37, 203, 161, 1)'}">
-                                    ${currentInvestor?.isBlocked ? 'Заблокирован' : 'Активен'}
-                                </span>
-                            </p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Дата регистрации инвестора:</strong> ${formatDate(report.createdAt)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="
-                    margin-bottom: 30px;
-                    background: rgba(255, 255, 255, 1);
-                    border-radius: 12px;
-                    padding: 20px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                ">
-                    <h2 style="
-                        color: rgba(0, 125, 136, 1);
-                        font-size: 18px;
-                        margin-top: 0;
                         margin-bottom: 20px;
                         display: flex;
                         align-items: center;
@@ -418,13 +377,13 @@ const InvestorsPoolPage = () => {
                             margin-right: 10px;
                             border-radius: 2px;
                         "></span>
-                        Финансовая информация
+                        Финансовая информация пула
                     </h2>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                         ${createCard(
                             investmentSvg,
                             formatMoney(report.investment.toString()),
-                            'Инвестиция'
+                            'Общая инвестиция'
                         )}
                         
                         ${createCard(
@@ -433,46 +392,46 @@ const InvestorsPoolPage = () => {
                             'Незакрытые договоры'
                         )}
                         
-                        ${report.isCompany ? 
-                            createCard(
-                                commonIncomeSvg,
-                                formatMoney((report.investorIncome + report.selfIncome).toString()),
-                                'Доход компании'
-                            ) : 
-                            createCard(
-                                shareSvg,
-                                currentInvestor?.investorPie.toString() + "%",
-                                'Доля инвестора'
-                            )
-                        }
+                        ${createCard(
+                            shareSvg,
+                            (pool?.pie || 0).toString() + "%",
+                            'Доля пула'
+                        )}
                         
-                        ${!report.isCompany ? createCard(
+                        ${createCard(
                             investorIncomeScg,
                             formatMoney(report.investorIncome.toString()),
-                            'Доход инвестора'
-                        ) : ''}
+                            'Доход инвесторов'
+                        )}
                         
+                        ${createCard(
+                            selfIncomeSvg,
+                            formatMoney(report.selfIncome.toString()),
+                            'Собственный доход'
+                        )}                            
+
+                        ${createCard(
+                            commonIncomeSvg,
+                            formatMoney((report.investorIncome + report.selfIncome).toString()),
+                            'Общий доход'
+                        )}
+
                         ${createCard(
                             balanceSvg,
                             formatMoney(report.balance.toString()),
                             'Касса'
                         )}
-
+                        
                         ${createCard(
                             debtSvg,
                             formatMoney(report.delinquencyAmount.toString()),
                             'Просрочки руб.'
                         )}
                         ${createCard(
-                            allSelfIncomeSvg,
-                            formatMoney(report.allSelfIncome.toString()),
-                            'Доход от инвесторов.'
-                        )}
-                        ${createCard(
                             paymentIncomeSvg,
                             formatMoney(report.paymentIncome.toString()),
                             'Доходы по платежам в текущем месяце'
-                        )}
+                        )}  
                     </div>
                 </div>
 
@@ -499,7 +458,7 @@ const InvestorsPoolPage = () => {
                             margin-right: 10px;
                             border-radius: 2px;
                         "></span>
-                        История выплат
+                        История выплат пула
                     </h2>
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -582,14 +541,19 @@ const InvestorsPoolPage = () => {
         });
     };
 
-    const exportToPdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
+    const exportPoolToPdf = async () => {
+        if (!report || !selectedPoolId) return;
+        
         try {
-            const pdfBlob = await generatePdf(report, currentInvestor, payouts);
+            const currentPool = pools.find(pool => pool.id === Number(selectedPoolId));
+            const credits = data?.items || [];
+            
+            const pdfBlob = await generatePoolPdf(report, currentPool, payouts, credits);
             const pdfUrl = URL.createObjectURL(pdfBlob);
             
             const downloadLink = document.createElement('a');
             downloadLink.href = pdfUrl;
-            downloadLink.download = `Отчет_инвестора_${currentInvestor?.nickname || currentInvestor?.fullName || 'Без_названия'}_${formatDate(new Date().toISOString())}.pdf`;
+            downloadLink.download = `Отчет_пула_${currentPool?.name || 'Без_названия'}_${formatDate(new Date().toISOString())}.pdf`;
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
@@ -602,21 +566,26 @@ const InvestorsPoolPage = () => {
     };
 
     const handleShareClick = async () => {
-        if (!report || !currentInvestor) return;
+        if (!report || !selectedPoolId) return;
         
         try {
-            const pdfBlob = await generatePdf(report, currentInvestor, payouts);
+            const currentPool = pools.find(pool => pool.id === Number(selectedPoolId));
+            const credits = data?.items || [];
             
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], `Отчет_инвестора_${currentInvestor.nickname || currentInvestor.fullName}.pdf`, { type: 'application/pdf' })] })) {
+            const pdfBlob = await generatePoolPdf(report, currentPool, payouts, credits);
+            
+            if (navigator.share && navigator.canShare && navigator.canShare({ 
+                files: [new File([pdfBlob], `Отчет_пула_${currentPool?.name || 'Без_названия'}.pdf`, { type: 'application/pdf' })] 
+            })) {
                 await navigator.share({
-                    title: `Отчёт инвестора ${currentInvestor.nickname || currentInvestor.fullName}`,
-                    text: `Финансовый отчет по инвестору ${currentInvestor.nickname || currentInvestor.fullName}`,
-                    files: [new File([pdfBlob], `Отчет_инвестора_${currentInvestor.nickname || currentInvestor.fullName}.pdf`, { type: 'application/pdf' })]
+                    title: `Отчёт пула ${currentPool?.name || 'Без названия'}`,
+                    text: `Финансовый отчет по пулу инвесторов ${currentPool?.name}`,
+                    files: [new File([pdfBlob], `Отчет_пула_${currentPool?.name || 'Без_названия'}.pdf`, { type: 'application/pdf' })]
                 });
             } else if (navigator.share) {
                 await navigator.share({
-                    title: `Отчёт инвестора ${currentInvestor.nickname || currentInvestor.fullName}`,
-                    text: `Финансовый отчет по инвестору ${currentInvestor.nickname || currentInvestor.fullName}. Инвестиция: ${formatMoney(report.investment.toString())}, Доход: ${formatMoney(report.investorIncome.toString())}`,
+                    title: `Отчёт пула ${currentPool?.name || 'Без названия'}`,
+                    text: `Финансовый отчет по пулу инвесторов ${currentPool?.name}. Инвестиция: ${formatMoney(report.investment.toString())}, Общий доход: ${formatMoney((report.investorIncome + report.selfIncome).toString())}`,
                     url: window.location.href,
                 });
             } else {
@@ -752,6 +721,15 @@ const InvestorsPoolPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>Пулы инвесторов</CustomTitle>
+                <ExportButton 
+                    onClick={exportPoolToPdf}
+                />
+                <ExportButton
+                    children={"Поделиться"}
+                    icon={<ShareIcon />}
+                    onClick={handleShareClick} 
+                    disabled={!report}
+                />
             </TitleField>
 
             <ContentContainer>
