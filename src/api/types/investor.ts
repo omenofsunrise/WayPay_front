@@ -8,6 +8,7 @@ export interface Investor {
   investorPie: number;
   investmentAmount: number;
   balance: number;
+  activeUntil: string;
   isCompany: boolean;
   isBlocked: boolean;
   poolId?: number;
@@ -23,12 +24,14 @@ export interface InvestorParams extends PaginationParams {
 
 export interface AutoSelectInvestorRequest {
   totalProductAmount: number;
+  months: number;
 }
 
 export interface AutoSelectInvestorResponse {
   id: number;
   nickname: string;
   balance: number;
+  activeUntil: string;
 }
 
 export interface InvestorReport {

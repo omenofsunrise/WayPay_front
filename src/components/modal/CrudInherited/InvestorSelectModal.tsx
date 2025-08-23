@@ -7,6 +7,7 @@ import useInvestorPool from '../../../api/hooks/useInvestorPool';
 import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
 import { formatMoney } from '../../../utils/formatPrice';
+import { formatDate } from '../../../utils/dateFormatter';
 
 interface InvestorSelectModalProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ const InvestorSelectModal = ({
     pie?: number;
     investmentAmount?: number;
     balance?: number;
+    activeUntil?: string;
     type: 'investor' | 'pool';
   } | null>(null);
   
@@ -91,13 +93,11 @@ const InvestorSelectModal = ({
     }
 
     if (includePools) {
-      // Загружаем и инвесторов и пулы
       await Promise.all([
         getInvestors(params),
         getInvestorPools(params)
       ]);
     } else {
-      // Загружаем только инвесторов
       await getInvestors(params);
     }
   }, [currentPage, nameFilter, sortConfig, getInvestors, getInvestorPools, includePools]);
@@ -132,26 +132,23 @@ const InvestorSelectModal = ({
   };
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
-    // Определяем, является ли строка инвестором или пулом
     const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
     
     if (isPool) {
-      // Это пул
       const poolIndex = rowIndex - (investorsData?.items?.length || 0);
       const pool = poolsData?.items[poolIndex];
       if (pool) {
         setSelectedEntity({
           id: pool.id,
-          nickname: pool.name, // Используем name как nickname
+          nickname: pool.name,
           name: pool.name,
-          fullName: pool.name, // Для пула fullName тоже name
+          fullName: pool.name,
           pie: pool.pie,
-          balance: pool.balance || 0, // Добавляем баланс если есть
+          balance: pool.balance || 0,
           type: 'pool'
         });
       }
     } else {
-      // Это инвестор
       const investor = investorsData?.items[rowIndex];
       if (investor) {
         setSelectedEntity({
@@ -162,7 +159,8 @@ const InvestorSelectModal = ({
           investorPie: investor.investorPie,
           investmentAmount: investor.investmentAmount,
           balance: investor.balance,
-          type: 'investor'
+          type: 'investor',
+          activeUntil: investor.activeUntil
         });
       }
     }
@@ -171,29 +169,29 @@ const InvestorSelectModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedEntity) {
+      console.log(selectedEntity);
       onSubmit(selectedEntity);
       onClose();
     }
   };
 
-  // Подготавливаем данные для таблицы
   const investorsTableData = investorsData?.items?.map(investor => [
     investor.id.toString(),
     investor.nickname,
     investor.phoneNumber,
     investor.investorPie.toString() + "%",
     formatMoney(investor.balance.toString()),
-    'investor' // Добавляем тип для отладки
+    formatDate(investor.activeUntil ?? new Date()),
   ]) || [];
 
   const poolsTableData = includePools 
     ? poolsData?.items?.map(pool => [
         pool.id.toString(),
         pool.name,
-        '—', // Пулы не имеют телефона
+        '—', 
         pool.pie.toString() + "%",
-        '—', // Пулы не имеют баланса
-        'pool' // Добавляем тип для отладки
+        '—', 
+        '-'
       ]) || []
     : [];
 
@@ -235,6 +233,7 @@ const InvestorSelectModal = ({
                   { name: "Телефон", align: "left" },
                   { name: "Доля", align: "left", isSortable: true },
                   { name: "Касса", isSortable: true, align: "right" },
+                  { name: "Дата окончания инвестора", align: "left" },
                 ]} 
                 data={tableData}
                 onRowClick={handleRowClick}

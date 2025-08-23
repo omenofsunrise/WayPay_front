@@ -51,6 +51,7 @@ const useCredit = () => {
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create credit');
+      console.log(err);
       return null;
     } finally {
       setIsLoading(false);

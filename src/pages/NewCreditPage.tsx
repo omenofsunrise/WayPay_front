@@ -24,6 +24,8 @@ import useInvestor from '../api/hooks/useInvestor';
 import ViewButton from '../components/ui/Buttons/ViewButton';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useEmployee } from '../api/hooks/useEmployee';
+import type { Investor } from '../api/types/investor';
+import { formatDate } from '../utils/dateFormatter';
 
 interface Client {
   id: number;
@@ -35,18 +37,6 @@ interface Client {
   docIssueYear?: number; 
   registrationAddress?: string;
   secondPhone?: string;
-}
-
-interface Investor {
-  id: number;
-  nickname: string;
-  fullName: string;
-  phoneNumber: string;
-  investorPie: number;
-  investmentAmount: number;
-  balance: number;
-  isPool?: boolean;
-  poolId?: number;
 }
 
 interface Product {
@@ -85,14 +75,93 @@ const NewCreditPage = () => {
   const { authInfo } = useEmployee();
   const minSurcharge = authInfo?.employee.minSurcharge || 0;
   const [viewModalData, setViewModalData] = useState<Investor | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const formatAmount = useCallback((value: number): string => {
     return value.toLocaleString('ru-RU') + '₽';
   }, []);
 
+  const formatActiveUntilDate = useCallback((dateString: string | Date | undefined): string => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    return `Активен до: ${date.toLocaleDateString('ru-RU')}`;
+  } catch {
+    return '';
+  }
+}, []);
+
   const parseAmount = useCallback((formatted: string): number => {
     return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
   }, []);
+
+  const validateInvestorActivePeriod = useCallback((): boolean => {
+    if (!contractDate || !months || parseInt(months) <= 0 || (!investor && !selectedPool)) {
+      setValidationError(null);
+      return true;
+    }
+
+    const selectedInvestor = investor || selectedPool;
+    
+    if (!selectedInvestor?.activeUntil) {
+      setValidationError(null);
+      return true;
+    }
+
+    try {
+      const contractDateObj = new Date(contractDate);
+      
+      if (isNaN(contractDateObj.getTime())) {
+        setValidationError(null);
+        return true;
+      }
+
+      const monthsValue = parseInt(months);
+      
+      if (isNaN(monthsValue) || monthsValue <= 0) {
+        setValidationError(null);
+        return true;
+      }
+
+      const lastPaymentDate = new Date(contractDateObj);
+      lastPaymentDate.setMonth(lastPaymentDate.getMonth() + monthsValue);
+      
+      const paymentDay = parseInt(paymentDue);
+      
+      const tempDate = new Date(lastPaymentDate.getFullYear(), lastPaymentDate.getMonth(), paymentDay);
+      
+      if (tempDate.getMonth() !== lastPaymentDate.getMonth()) {
+        tempDate.setDate(0);
+      }
+      
+      const investorActiveUntil = new Date(selectedInvestor.activeUntil);
+      
+      if (isNaN(investorActiveUntil.getTime())) {
+        setValidationError(null);
+        return true;
+      }
+
+      if (investorActiveUntil < tempDate) {
+        const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
+        setValidationError(errorMessage);
+        return false;
+      }
+
+      setValidationError(null);
+      return true;
+    } catch (error) {
+      setValidationError(null);
+      return true;
+    }
+  }, [contractDate, months, paymentDue, investor, selectedPool]);
+
+  useEffect(() => {
+    console.log('useEffect валидации вызван');
+    validateInvestorActivePeriod();
+  }, [contractDate, months, paymentDue, investor, selectedPool, validateInvestorActivePeriod]);
 
   const handleViewInvestor = () => {
     if (investor || selectedPool) {
@@ -102,7 +171,27 @@ const NewCreditPage = () => {
   };
 
   const handleCreateCredit = useCallback(async () => {
-    if (!client || !contractDate || (!investor && !selectedPool)) return;
+    console.log('handleCreateCredit вызвана');
+    console.log('client:', client);
+    console.log('contractDate:', contractDate);
+    console.log('investor:', investor);
+    console.log('selectedPool:', selectedPool);
+    
+    if (!client || !contractDate || (!investor && !selectedPool)) {
+      console.log('Условие не выполнено - выход из функции');
+      return;
+    }
+    
+    console.log('test');
+    validateInvestorActivePeriod();
+    if (!validateInvestorActivePeriod()) {
+      return;
+    }
+
+    // Проверяем валидацию перед созданием договора
+    if (!validateInvestorActivePeriod()) {
+      return;
+    }
 
     const creditData: CreateCreditRequest = {
       clientId: client.id,
@@ -144,18 +233,30 @@ const NewCreditPage = () => {
     products,
     parseAmount,
     createCredit,
-    navigate
+    navigate,
+    validateInvestorActivePeriod
   ]);
 
   const handleAutoSelectInvestor = async () => {
-    if (totalSum <= 0) return;
+    if (totalSum <= 0 || !months || !contractDate) return;
     
     const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
     const amountToFinance = totalSum - initialPayment;
     
     if (amountToFinance <= 0) return;
     
-    const selectedInvestor = await autoSelectInvestor(amountToFinance);
+    const contractDateObj = new Date(contractDate);
+    const lastPaymentDate = new Date(contractDateObj);
+    lastPaymentDate.setMonth(lastPaymentDate.getMonth() + parseInt(months));
+    
+    const paymentDay = parseInt(paymentDue);
+    const tempDate = new Date(lastPaymentDate.getFullYear(), lastPaymentDate.getMonth(), paymentDay);
+    
+    if (tempDate.getMonth() !== lastPaymentDate.getMonth()) {
+      tempDate.setDate(0);
+    }
+    
+    const selectedInvestor = await autoSelectInvestor(amountToFinance, tempDate);
     if (selectedInvestor) {
       setInvestor({
         id: selectedInvestor.id,
@@ -164,9 +265,13 @@ const NewCreditPage = () => {
         phoneNumber: '',
         investorPie: 0,
         investmentAmount: 0,
-        balance: selectedInvestor.balance
+        balance: selectedInvestor.balance,
+        activeUntil: selectedInvestor.activeUntil,
+        isBlocked: false,
+        isCompany: false
       });
       setSelectedPool(null);
+      setValidationError(null);
     }
   };
 
@@ -180,7 +285,11 @@ const NewCreditPage = () => {
       
       setPaymentDue(nextDay.getDate().toString());
     }
-  }, []);
+    
+    setTimeout(() => {
+      validateInvestorActivePeriod();
+    }, 0);
+  }, [validateInvestorActivePeriod]);
 
   const generateSchedulePreview = useCallback(async () => {
     if (!contractDate || !months || !paymentDue || totalSum <= 0) return;
@@ -329,6 +438,7 @@ const NewCreditPage = () => {
     investmentAmount?: number;
     balance?: number;
     type: 'investor' | 'pool';
+    activeUntil?: string;
   }) => {
     if (selectedEntity.type === 'pool') {
       setSelectedPool({
@@ -352,12 +462,26 @@ const NewCreditPage = () => {
         investorPie: selectedEntity.investorPie || 0,
         investmentAmount: selectedEntity.investmentAmount || 0,
         balance: selectedEntity.balance || 0,
+        activeUntil: selectedEntity.activeUntil,
         isPool: false
       });
       setSelectedPool(null);
     }
     setIsInvestorModalOpen(false);
+    setValidationError(null);
   };
+
+  useEffect(() => {
+    console.log('Параметры изменились, запускаем валидацию:', {
+      contractDate,
+      months,
+      paymentDue,
+      investor: investor?.id,
+      selectedPool: selectedPool?.id
+    });
+    
+    validateInvestorActivePeriod();
+  }, [contractDate, months, paymentDue, investor?.id, selectedPool?.id]);
 
   const openClientModal = (type: 'client' | 'guarantor') => {
     setModalType(type);
@@ -376,6 +500,11 @@ const NewCreditPage = () => {
     } else if (numericValue < 1) {
       setMonths('1');
     }
+    
+    // Вызываем валидацию после изменения срока
+    setTimeout(() => {
+      validateInvestorActivePeriod();
+    }, 0);
   };
 
   const getSelectedEntityDisplayName = () => {
@@ -393,6 +522,7 @@ const NewCreditPage = () => {
   const clearSelectedEntity = () => {
     setInvestor(null);
     setSelectedPool(null);
+    setValidationError(null); // Сбрасываем ошибку при очистке выбора
   };
 
   return (
@@ -418,27 +548,30 @@ const NewCreditPage = () => {
           <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
             <Label>Инвестор / Пул</Label>
             <EntitySelectWrapper>
-              <EntitySelectContainer
-                mode="create"
-                primaryValue={getSelectedEntityDisplayName()}
-                secondaryValue={getSelectedEntityPhone()}
-                placeholder="Выберите инвестора или пул"
-                onSelect={openInvestorModal}
-                onClear={clearSelectedEntity}
-              />
+                <EntitySelectContainer
+                  mode="create"
+                  primaryValue={getSelectedEntityDisplayName()}
+                  secondaryValue={getSelectedEntityPhone()}
+                  placeholder="Выберите инвестора или пул"
+                  onSelect={openInvestorModal}
+                  onClear={clearSelectedEntity}
+                />
               <ViewButton 
                 onClick={handleViewInvestor} 
                 disabled={!investor && !selectedPool} 
               />
-              <AutoSelectButton onClick={handleAutoSelectInvestor} disabled={totalSum <= 0}>
+              <AutoSelectButton onClick={handleAutoSelectInvestor} disabled={totalSum <= 0 || !months}>
                 <svg width="23" height="7" viewBox="0 0 23 7" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M19.8429 0.462891C18.3527 0.462891 17.3131 1.80373 17.3131 3.72363C17.3131 5.58303 18.3218 6.87943 19.7664 6.87943C21.0257 6.87943 22.2962 5.86824 22.2962 3.61005C22.2962 1.72719 21.3085 0.462891 19.8429 0.462891ZM21.2899 3.64462C21.2899 4.76198 20.8245 5.96331 19.8083 5.96331C18.8391 5.96331 18.3267 4.82742 18.3267 3.70635C18.3267 2.54823 18.786 1.37901 19.8083 1.37901C20.7825 1.37901 21.2899 2.52478 21.2899 3.64462ZM11.8732 1.50248H13.8696V6.78313H15.0364V1.50248H17.0427V0.559194H11.8732V1.50248ZM10.2953 4.2175C10.2953 5.37561 9.81004 5.96331 8.85195 5.96331C7.96546 5.96331 7.47777 5.34598 7.47777 4.2175V0.559194H6.31225V4.20021C6.26092 4.54943 6.28907 4.90572 6.39458 5.24255C6.50009 5.57938 6.68025 5.88806 6.92164 6.14558C7.16302 6.40311 7.45941 6.60284 7.78871 6.7299C8.11801 6.85696 8.47175 6.90808 8.82355 6.87943C9.18497 6.91195 9.54909 6.86336 9.88934 6.73719C10.2296 6.61103 10.5374 6.41047 10.7902 6.15018C11.043 5.88988 11.2346 5.57641 11.3508 5.23265C11.467 4.88888 11.505 4.5235 11.462 4.16317V0.559194H10.2953V4.2175ZM3.65279 0.559194H2.41195L0.0722656 6.78313H1.2773L1.96006 4.91755H4.06887L4.77015 6.78313H6.00482L3.68982 0.656733L3.65279 0.559194ZM3.78242 4.02736H2.2428L2.81445 2.50255C2.87989 2.31735 2.93792 2.12228 3.00829 1.90498C3.06756 2.10005 3.13176 2.3013 3.21325 2.5149L3.78242 4.02736Z" fill="#50555C"/>
                 </svg>
               </AutoSelectButton>
             </EntitySelectWrapper>
           </FieldGroup>
+            {validationError && (
+              <ValidationError>{validationError}</ValidationError>
+            )}
         </FormRow>
-
+                
         <ModalInfoTitle>Сведения о покупателе</ModalInfoTitle>
         <FormRow>
           <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
@@ -540,13 +673,13 @@ const NewCreditPage = () => {
                 <GrayButton onClick={() => navigate(-1)}>
                   Отменить
                 </GrayButton>
-                <DarkCyanButton 
-                  style={{ marginRight: 'auto' }}
-                  disabled={!client || !contractDate || (!investor && !selectedPool) || isScheduleLoading || isCreditLoading}
-                  onClick={handleCreateCredit}
-                >
-                  {isScheduleLoading || isCreditLoading ? 'Загрузка...' : 'Создать договор'}
-                </DarkCyanButton>
+                  <DarkCyanButton 
+                    style={{ marginRight: 'auto' }}
+                    disabled={!client || !contractDate || (!investor && !selectedPool) || isScheduleLoading || isCreditLoading || !!validationError}
+                    onClick={handleCreateCredit}
+                  >
+                    {isScheduleLoading || isCreditLoading ? 'Загрузка...' : 'Создать договор'}
+                  </DarkCyanButton>
               </ButtonWrapper>
             </InputGroup>
           </PaymentScheduleInputs>
@@ -623,7 +756,8 @@ const NewCreditPage = () => {
           investmentAmount: viewModalData.investmentAmount || 0,
           balance: viewModalData.balance || 0,
           isCompany: false,
-          isBlocked: false
+          isBlocked: false,
+          activeUntil: viewModalData.activeUntil || new Date()
         } : undefined}
       />
     </PageLayout>
@@ -632,6 +766,13 @@ const NewCreditPage = () => {
 
 const ContentWrapper = styled.div`
   margin-bottom: 20px;
+`;
+
+const InvestorActiveUntil = styled.div`
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  text-align: left;
 `;
 
 const ProductsTableWrapper = styled.div`
@@ -645,6 +786,19 @@ const EntitySelectWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+`;
+
+const ValidationError = styled.div`
+  color: #d32f2f;
+  font-size: 12px;
+  background-color: #ffebee;
+  border-radius: 4px;
+  border: 1px solid #ffcdd2;
+  padding: 8px 12px;
+  text-align: center;
+  max-width: 300px;
+  margin: 0 auto 0 0;
+  box-sizing: border-box;
 `;
 
 const DateInputWrapper = styled.div`

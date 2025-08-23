@@ -35,7 +35,7 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import InvestorsPoolPage from './pages/InvestorsPoolPage';
 
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
+const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
