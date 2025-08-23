@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import investorService from '../services/investorService';
 import type { AutoSelectInvestorResponse, Investor, InvestorParams, InvestorReport } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
+import { number } from 'framer-motion';
 
 const useInvestor = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -118,11 +119,11 @@ const useInvestor = () => {
     }
   };
 
-  const autoSelectInvestor = async (totalProductAmount: number): Promise<AutoSelectInvestorResponse | null> => {
+  const autoSelectInvestor = async (totalProductAmount: number, lastPaymentDay: Date): Promise<AutoSelectInvestorResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const selectedInvestor = await investorService.autoSelectInvestor(totalProductAmount);
+      const selectedInvestor = await investorService.autoSelectInvestor(totalProductAmount, lastPaymentDay);
       return selectedInvestor;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');

@@ -32,10 +32,10 @@ class ProductService {
     return response.data;
   }
 
-  async autoSelectInvestor(totalProductAmount: number): Promise<AutoSelectInvestorResponse> {
+  async autoSelectInvestor(totalProductAmount: number, lastPaymentDay: Date): Promise<AutoSelectInvestorResponse> {
     const response = await apiClient.post<AutoSelectInvestorResponse>(
       '/Investor/auto-select',
-      { totalProductAmount }
+      { totalProductAmount, lastPaymentDay }
     );
     return response.data;
   }

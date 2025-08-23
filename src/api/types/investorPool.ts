@@ -5,6 +5,7 @@ export interface InvestorPool {
   name: string;
   pie: number;
   createdAt: Date;
+  balance: number;
 }
 
 export interface InvestorPoolRequest {

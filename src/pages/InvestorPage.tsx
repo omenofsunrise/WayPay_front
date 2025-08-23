@@ -19,6 +19,7 @@ import { formatMoney, parseMoney } from '../utils/formatPrice';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
 import { useAuth } from '../сontext/AuthContext';
+import { formatDate } from '../utils/dateFormatter';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -182,7 +183,8 @@ const InvestorPage = () => {
             investmentAmount: 0,
             balance: 0,
             isCompany: false,
-            isBlocked: false
+            isBlocked: false,
+            activeUntil: new Date().toISOString().split('T')[0]
         });
         setIsModalOpen(true);
     };
@@ -287,7 +289,8 @@ const InvestorPage = () => {
             `${investor.investorPie || 0}%`,
             formatMoney((investor.investmentAmount || 0).toString()),
             formatMoney((investor.balance || 0).toString()),
-            investor.isBlocked?.toString() || 'false'
+            formatDate(investor.activeUntil),
+            investor.isBlocked?.toString() || 'false',
         ];
     }) ?? [];
 
@@ -408,7 +411,8 @@ const InvestorPage = () => {
         { name: "Доля инвестора", isSortable: true, align: "right" },
         { name: "Инвестиция", isSortable: true, align: "right" },
         { name: "Касса", isSortable: true, align: "right" },
-        { name: "isBlocked", isHidden: true }
+        { name: "Дата окончания договора" },
+        { name: "isBlocked", isHidden: true },
     ];
 
     return (
@@ -441,7 +445,7 @@ const InvestorPage = () => {
                     <CustomTable 
                         columns={columns} 
                         data={tableData}
-                        rowStyles={rowStyles} // Add this prop
+                        rowStyles={rowStyles}
                         onRowDoubleClick={handleRowDoubleClick}
                         contextMenuActions={(rowData) => tableActions(rowData)}
                         onSort={handleSort}
@@ -477,7 +481,8 @@ const InvestorPage = () => {
                     investmentAmount: 0,
                     balance: 0,
                     isCompany: false,
-                    isBlocked: false
+                    isBlocked: false,
+                    activeUntil: new Date().toISOString().split('T')[0]
                 }}
             />
 

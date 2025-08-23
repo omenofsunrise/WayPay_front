@@ -7,6 +7,7 @@ import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComp
 import type { Investor } from '../../../api/types/investor';
 import { formatMoney, parseMoney } from '../../../utils/formatPrice';
 import { useAuth } from '../../../сontext/AuthContext';
+import CustomCalendar from '../../ui/fields/CustomCalendar';
 
 type InvestorModalProps = {
   mode: ModalMode;
@@ -25,6 +26,7 @@ const emptyInvestor: Omit<Investor, 'id'> = {
   balance: 0,
   isCompany: false,
   isBlocked: false,
+  activeUntil: new Date().toISOString().split('T')[0]
 };
 
 const InvestorModal: React.FC<InvestorModalProps> = ({
@@ -41,7 +43,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     investmentAmount: 0,
     balance: 0,
     isCompany: false,
-    isBlocked: false
+    isBlocked: false,
+    activeUntil: new Date().toISOString().split('T')[0] // Исправлено: используем строку вместо Date.now()
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Investor, 'id'>>(
@@ -53,7 +56,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       investmentAmount: initialData?.investmentAmount || 0,
       balance: initialData?.balance || 0,
       isCompany: initialData?.isCompany || false,
-      isBlocked: initialData?.isBlocked || false
+      isBlocked: initialData?.isBlocked || false,
+      activeUntil: initialData?.activeUntil || new Date().toISOString().split('T')[0]
     }
   );
   const [displaySum, setDisplaySum] = useState<string>(initialData.investmentAmount.toString());
@@ -66,7 +70,33 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     balance: false
   });
   const { hasRole } = useAuth();
-  
+
+  // Функция для преобразования даты в строку формата YYYY-MM-DD
+  const formatDateToString = (date: string | number | Date): string => {
+    if (typeof date === 'number') {
+      return new Date(date).toISOString().split('T')[0];
+    }
+    if (date instanceof Date) {
+      return date.toISOString().split('T')[0];
+    }
+    return date;
+  };
+
+  const [displayActiveUntil, setDisplayActiveUntil] = useState<string>(
+    formatDateToString(initialData.activeUntil)
+  );
+
+  const handleDateChange = (dateString: string) => {
+    if (!dateString) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      activeUntil: dateString
+    }));
+    
+    setDisplayActiveUntil(dateString);
+  };
+
   const validatePhone = async (phone: string) => {
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
     
@@ -121,6 +151,8 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      const initialActiveUntil = formatDateToString(initialData.activeUntil);
+      
       setFormData(
         mode === 'create' || mode === 'create-pool' ? emptyInvestor : {
           nickname: initialData?.nickname || '',
@@ -130,10 +162,12 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           investmentAmount: initialData?.investmentAmount || 0,
           balance: initialData?.balance || 0,
           isCompany: initialData?.isCompany || false,
-          isBlocked: initialData?.isBlocked || false
+          isBlocked: initialData?.isBlocked || false,
+          activeUntil: initialActiveUntil
         }
       );
       setDisplaySum(initialData.investmentAmount.toString());
+      setDisplayActiveUntil(initialActiveUntil);
       setValidationErrors({
         nickname: false,
         fullName: false,
@@ -160,7 +194,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       });
       setApiError('');
     }
-  }, [isOpen, mode]);
+  }, [isOpen, mode, initialData]);
 
   useEffect(() => {
     if (mode === 'view') return;
@@ -243,10 +277,13 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     if (hasErrors) return true;
 
     if (mode === 'edit' || mode === 'edit-pool') {
+      const initialActiveUntil = formatDateToString(initialData.activeUntil);
+      
       const isChanged = (
         formData.fullName !== initialData.fullName ||
         formData.phoneNumber !== initialData.phoneNumber ||
         formData.isCompany !== initialData.isCompany ||
+        formData.activeUntil !== initialActiveUntil || // Добавлено сравнение даты
         (mode === 'edit' && formData.nickname !== initialData.nickname)
       );
       return !isChanged;
@@ -282,7 +319,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           balance: 0,
           nickname: ''
         } : {}),
-        // For edit modes, preserve original financial data
+        // For edit modes, preserve original financial data but keep the changed date
         ...(mode === 'edit' ? {
           investorPie: initialData.investorPie,
           investmentAmount: initialData.investmentAmount,
@@ -293,10 +330,14 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
         } : {})
       };
 
-      await onSubmit(submitData);
+      const success = await onSubmit(submitData);
       
-      setIsSubmitting(false);
-      onClose();
+      if (success) {
+        setIsSubmitting(false);
+        onClose();
+      } else {
+        setIsSubmitting(false);
+      }
     } catch (error: any) {
       console.error('Ошибка при сохранении инвестора:', error);
       setApiError(error.message || 'Произошла ошибка при сохранении инвестора');
@@ -412,6 +453,17 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
               </InputContainer>
             </InputRow>
           )}
+
+          <InputRow>
+            <InputLabel>Дата окончания договора:</InputLabel>
+            <InputContainer>
+              <CustomCalendar
+                value={displayActiveUntil}
+                onChange={handleDateChange}
+                disabled={mode === 'view'}
+              />
+            </InputContainer>
+          </InputRow>
 
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
