@@ -985,7 +985,8 @@ const InvestorsPoolPage = () => {
                             balance: currentInvestor.balance,
                             isCompany: currentInvestor.isCompany,
                             isBlocked: currentInvestor.isBlocked,
-                            poolId: currentInvestor.poolId
+                            poolId: currentInvestor.poolId,
+                            activeUntil: currentInvestor.activeUntil
                         } : undefined}
                     />
                 </>

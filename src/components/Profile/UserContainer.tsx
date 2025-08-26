@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
-import { BASE_URL } from "../../api/client";
+import { FILE_BASE_URL } from "../../api/client";
 import { getInitials, generateAvatar } from "../../utils/avatarUtils";
 import type { Employee } from "../../api/types/employee";
 
@@ -188,7 +188,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     }
     
     const avatarSrc = employee?.photoPath 
-        ? `${BASE_URL}${employee.photoPath}?${Date.now()}`
+        ? `${FILE_BASE_URL}${employee.photoPath}?${Date.now()}`
         : generateAvatar(getInitials(employee?.fullName || ''), 100);
         
     return (
