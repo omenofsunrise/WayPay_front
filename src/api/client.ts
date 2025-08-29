@@ -3,6 +3,7 @@ import { authStorage } from './utils/auth-storage';
 
 export const BASE_URL = import.meta.env.VITE_BASE_URL || 'https://web.waypay.one:5001/';
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://web.waypay.one:5001/api';
+export const FILE_BASE_URL = import.meta.env.VITE_FILE_BASE_URL || 'https://web.waypay.one';
 
 export const PIN_REQUIRED_EVENT = 'pin-required';
 

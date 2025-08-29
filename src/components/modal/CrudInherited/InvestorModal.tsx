@@ -44,7 +44,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     balance: 0,
     isCompany: false,
     isBlocked: false,
-    activeUntil: new Date().toISOString().split('T')[0] // Исправлено: используем строку вместо Date.now()
+    activeUntil: new Date().toISOString().split('T')[0]
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Investor, 'id'>>(
@@ -71,7 +71,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
   });
   const { hasRole } = useAuth();
 
-  // Функция для преобразования даты в строку формата YYYY-MM-DD
   const formatDateToString = (date: string | number | Date): string => {
     if (typeof date === 'number') {
       return new Date(date).toISOString().split('T')[0];
@@ -194,7 +193,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       });
       setApiError('');
     }
-  }, [isOpen, mode, initialData]);
+  }, [isOpen, mode]);
 
   useEffect(() => {
     if (mode === 'view') return;
@@ -319,7 +318,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           balance: 0,
           nickname: ''
         } : {}),
-        // For edit modes, preserve original financial data but keep the changed date
         ...(mode === 'edit' ? {
           investorPie: initialData.investorPie,
           investmentAmount: initialData.investmentAmount,

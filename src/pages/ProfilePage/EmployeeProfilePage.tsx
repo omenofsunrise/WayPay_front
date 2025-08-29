@@ -14,7 +14,6 @@ import type { Employee } from '../../api/types/employee';
 import { useAuth } from '../../сontext/AuthContext';
 import Checkbox from '../../components/ui/CheckBoxes/Checkbox';
 import { useNavigate } from 'react-router-dom';
-import { authStorage } from '../../api/utils/auth-storage';
 
 interface EmployeeProfilePageProps {
     employeeId?: number;

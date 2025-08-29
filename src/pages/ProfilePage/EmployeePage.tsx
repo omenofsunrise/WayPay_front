@@ -14,7 +14,7 @@ import { useEmployee } from "../../api/hooks/useEmployee";
 import type { Employee, EmployeeFilterRequest } from '../../api/types/employee';
 import CustomSelect from '../../components/ui/fields/CustomSelect';
 import Avatar from '../../components/Profile/Avatar';
-import { BASE_URL } from '../../api/client';
+import { FILE_BASE_URL } from '../../api/client';
 import { useAuth } from '../../сontext/AuthContext';
 import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import { EditOutlined } from '@ant-design/icons';
@@ -314,7 +314,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         employee.id.toString(),
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Avatar 
-            src={employee.photoPath ? BASE_URL + employee.photoPath : null} 
+            src={employee.photoPath ? FILE_BASE_URL + employee.photoPath : null} 
             name={employee.fullName}
             />
             {employee.fullName}
