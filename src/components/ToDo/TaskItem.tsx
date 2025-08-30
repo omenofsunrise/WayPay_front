@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import type { Task } from "../../api/types/task";
 import { getInitials, generateAvatar, stringToColor } from "../../utils/avatarUtils";
-import { BASE_URL } from "../../api/client";
+import { FILE_BASE_URL } from "../../api/client";
 import TaskContextMenu from "./TaskContextMenu";
 import { useAuth } from "../../сontext/AuthContext";
 import useTaskNote from "../../api/hooks/useTaskNote";
@@ -143,9 +143,6 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
   };
 
   const initials = getInitials(task.employeeFullName);
-  const avatarUrl = task.employeePhotoPath 
-    ? `${BASE_URL}${task.employeePhotoPath}`
-    : generateAvatar(initials);
 
   return (
       <div ref={taskRef}>
@@ -188,7 +185,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
                   <ExecutorInfo>
                       <Avatar>
                           {task.employeePhotoPath ? (
-                              <img src={`${BASE_URL}${task.employeePhotoPath}`} alt={initials} />
+                              <img src={`${FILE_BASE_URL}${task.employeePhotoPath}`} alt={initials} />
                           ) : (
                               <img src={generateAvatar(initials)} alt={initials} />
                           )}
@@ -230,7 +227,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
                       <ExecutorInfo>
                           <Avatar>
                               {task.employeePhotoPath ? (
-                                  <img src={`${BASE_URL}${task.employeePhotoPath}`} alt={initials} />
+                                  <img src={`${FILE_BASE_URL}${task.employeePhotoPath}`} alt={initials} />
                               ) : (
                                   <img src={generateAvatar(initials)} alt={initials} />
                               )}

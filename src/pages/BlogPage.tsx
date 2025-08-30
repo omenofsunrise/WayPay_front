@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import BlogLayout from "../components/Blog/BlogLayout";
 import WhiteButton from "../components/ui/Buttons/WhiteButton";
 import PageLayout from "../components/ui/Layouts/PageLayout";
@@ -12,7 +12,6 @@ import type { BlogPostForm, BlogParams, BlogPost } from '../api/types/blog';
 import { BlogProfile } from '../components/Blog/BlogProfile';
 import { useNavigate, useParams } from 'react-router-dom';
 import BackButton from '../components/ui/Buttons/BackButton';
-import useChat from '../api/hooks/useChat';
 
 const BlogPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -66,7 +65,6 @@ const BlogPage = () => {
     setIsCreateModalOpen(true);
   };
 
-  // Add this update handler
   const handleUpdatePost = async (postId: number, postData: BlogPostForm) => {
     await updatePost(postId, postData.content, postData.images, postData.files, filters);
     setPostToEdit(null);

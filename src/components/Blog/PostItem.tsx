@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import type { BlogPost, FileAttachment } from '../../api/types/blog';
 import { formatDate } from '../../utils/dateFormatter';
-import { BASE_URL } from '../../api/client';
+import { FILE_BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import PhotoViewerModal from '../modal/PhotoViewerModal';
@@ -16,7 +16,7 @@ interface PostItemProps {
   post: BlogPost;
   onToggleLike: (postId: number) => void;
   onDeletePost?: (postId: number) => void;
-  onEditPost?: (post: BlogPost) => void; // Updated to pass the whole post
+  onEditPost?: (post: BlogPost) => void;
   onAvatarClick?: (id: number) => void;
   backgroundColor?: string;
   borderColor?: string;
@@ -58,7 +58,7 @@ const PostItem: React.FC<PostItemProps> = ({
   }, [fetchUserChats]);
 
   const avatarSrc = post.authorAvatarPath 
-    ? BASE_URL + post.authorAvatarPath 
+    ? FILE_BASE_URL + post.authorAvatarPath 
     : generateAvatar(getInitials(post.authorName));
 
   const handleFileDownload = (file: FileAttachment) => {
@@ -118,7 +118,7 @@ const PostItem: React.FC<PostItemProps> = ({
     }
     
     if (chat.avatarPath) {
-      return BASE_URL + chat.avatarPath;
+      return FILE_BASE_URL + chat.avatarPath;
     }
     
     return generateAvatar(getInitials(chat.name));

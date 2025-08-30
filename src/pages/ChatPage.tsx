@@ -10,18 +10,14 @@ import {
   IconButton,
   Avatar,
   ListItemAvatar,
-  Button,
   Chip,
-  CircularProgress
 } from '@mui/material';
 import useChat from '../api/hooks/useChat';
-import type { Chat, ChatMember, Message } from '../api/types/chat';
+import type { Chat, Message } from '../api/types/chat';
 import { format } from 'date-fns';
 import { useEmployee } from '../api/hooks/useEmployee';
 import { getInitials, generateAvatar } from '../utils/avatarUtils';
-import { BASE_URL } from '../api/client';
 import CloseIcon from '@mui/icons-material/Close';
-import { SOCIAL_BASE_URL } from '../api/socialApiClient';
 import styled from "styled-components";
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -32,8 +28,8 @@ import { useSignalR } from '../api/hooks/useSignalR';
 import { useNavigate, useParams } from 'react-router-dom';
 import useBlog from '../api/hooks/useBlog';
 import type { BlogPost } from '../api/types/blog';
-import PostItem from '../components/Blog/PostItem';
-import MessageItem from '../components/Blog/MessageItem';
+import MessageItem from '../components/Chat/MessageItem';
+import { FILE_BASE_URL } from '../api/client';
 
 interface ContextMenuProps {
   x: number;
@@ -338,7 +334,7 @@ const ChatPage = () => {
     }
     
     if (chat.avatarPath) {
-      return BASE_URL + chat.avatarPath;
+      return FILE_BASE_URL + chat.avatarPath;
     }
     
     return generateAvatar(getInitials(chat.name));
@@ -348,13 +344,6 @@ const ChatPage = () => {
     const newChat = await createPrivateChat(userId);
     await fetchUserChats();
     window.open(`/chat/${newChat.id}`, '_blank');
-  };
-
-  const getUserAvatar = (user: { fullName: string; photoPath?: string | null }) => {
-    if (user.photoPath) {
-      return BASE_URL + user.photoPath;
-    }
-    return generateAvatar(getInitials(user.fullName));
   };
 
   const handleSendMessage = async () => {
@@ -778,7 +767,7 @@ const ChatPage = () => {
                     <ListItemAvatar sx={{ minWidth: 40 }}>
                       <Avatar 
                         alt={otherMember?.fullName || 'Unknown'}
-                        src={otherMember?.photoPath ? BASE_URL + otherMember.photoPath : generateAvatar(getInitials(otherMember?.fullName || '??'))}
+                        src={otherMember?.photoPath ? FILE_BASE_URL + otherMember.photoPath : generateAvatar(getInitials(otherMember?.fullName || '??'))}
                         sx={{ width: 40, height: 40 }}
                       />
                     </ListItemAvatar>

@@ -11,13 +11,13 @@ import {
   Alert
 } from '@mui/material';
 import { format } from 'date-fns';
-import { BASE_URL } from '../../api/client';
+import { FILE_BASE_URL } from '../../api/client';
 import useBlog from '../../api/hooks/useBlog';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import type { BlogPost } from '../../api/types/blog';
 import type { Message } from '../../api/types/chat';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
-import PostItem from './PostItem';
+import PostItem from '../Blog/PostItem';
 
 interface MessageItemProps {
   message: Message;
@@ -83,15 +83,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
         };
       });
 
-      // Реальный вызов API
       await toggleLike(postId);
       
-      // Синхронизируем с сервером (если нужно)
       const updatedPost = await getPostById(postId);
       setLocalPostData(updatedPost);
     } catch (err) {
       setError('Не удалось поставить лайк');
-      // Откатываем оптимистичное обновление
       setLocalPostData(postData);
     } finally {
       setLiking(false);
@@ -100,7 +97,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const getUserAvatar = (user: { fullName: string; photoPath?: string | null }) => {
     if (user.photoPath) {
-      return BASE_URL + user.photoPath;
+      return FILE_BASE_URL + user.photoPath;
     }
     return generateAvatar(getInitials(user.fullName));
   };

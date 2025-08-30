@@ -18,7 +18,6 @@ import {
   ListItemAvatar,
   Link as MuiLink,
   Skeleton,
-  Modal,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -30,12 +29,11 @@ import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import LinkIcon from '@mui/icons-material/Link';
 import DownloadIcon from '@mui/icons-material/Download';
 import { format } from 'date-fns';
-import type { Chat, ChatMember, MessageAttachmentResponse, ChatLinkResponse } from '../../api/types/chat';
-import { BASE_URL } from '../../api/client';
+import type { Chat, MessageAttachmentResponse, ChatLinkResponse } from '../../api/types/chat';
+import { FILE_BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import useChat from '../../api/hooks/useChat';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
-import type { Employee } from '../../api/types/employee';
 
 interface ChatSideProps {
   chat: Chat | null;
@@ -79,7 +77,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
     }
     
     if (chat.avatarPath) {
-      return BASE_URL + chat.avatarPath;
+      return FILE_BASE_URL + chat.avatarPath;
     }
     
     const initials = getInitials(chat.name);
@@ -313,7 +311,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
                 onClick={() => onUserClick(member.id)}
                 key={member.id} sx={{ px: 0 }}>
                   <Avatar 
-                    src={member.photoPath ? BASE_URL + member.photoPath : generateAvatar(getInitials(member.fullName))}
+                    src={member.photoPath ? FILE_BASE_URL + member.photoPath : generateAvatar(getInitials(member.fullName))}
                     sx={{ width: 40, height: 40, mr: 2 }}
                   />
                   <ListItemText

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { formatDate } from '../../utils/dateFormatter';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
-import { BASE_URL } from '../../api/client';
+import { FILE_BASE_URL } from '../../api/client';
 import useBlogComment from '../../api/hooks/useBlogComment';
 import type { BlogPost } from '../../api/types/blog';
 import type { BlogCommentForm, BlogComment } from '../../api/types/blogComment';
@@ -262,7 +262,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
         <CommentHeader>
           <AuthorAvatar 
             src={comment.authorPhotoPath 
-              ? BASE_URL + comment.authorPhotoPath 
+              ? FILE_BASE_URL + comment.authorPhotoPath 
               : generateAvatar(getInitials(comment.authorName))} 
             alt={comment.authorName}
           />
@@ -383,7 +383,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
             <CommentInputContainer>
               <AuthorAvatar 
                 src={authInfo?.employee.photoPath 
-                  ? BASE_URL + authInfo.employee.photoPath 
+                  ? FILE_BASE_URL + authInfo.employee.photoPath 
                   : generateAvatar(getInitials(authInfo?.employee.fullName || 'U'))} 
                 alt={authInfo?.employee.fullName || 'User'}
               />
