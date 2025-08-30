@@ -1,4 +1,4 @@
-import apiClient, { API_BASE_URL, BASE_URL } from '../client';
+import apiClient, { FILE_BASE_URL } from '../client';
 import type { CommonInfo, Company } from '../types/company';
 
 class CompanyService {
@@ -58,7 +58,7 @@ class CompanyService {
 
   getCompanyPhotoUrl(photoPath?: string): string | null {
     if (!photoPath) return null;
-    return `${BASE_URL}${photoPath}`;
+    return `${FILE_BASE_URL}${photoPath}`;
   }
 
   async createCompany(companyData: {
