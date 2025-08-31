@@ -20,9 +20,11 @@ interface ProductsTableProps {
   products: Product[];
   onProductsChange: (products: Product[]) => void;
   onTotalSumChange?: (sum: number) => void;
+  markupType: 'percent' | 'fixed';
+  onMarkupTypeChange: (type: 'percent' | 'fixed') => void;
 }
 
-const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: ProductsTableProps) => {
+const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupType, onMarkupTypeChange }: ProductsTableProps) => {
   const { authInfo } = useAuth();
   const { data: productsData, getProducts } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,15 +120,45 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
     });
   };
 
+  const handleMarkupTypeChange = (id: number, type: 'percent' | 'fixed') => {
+    const updatedProducts = products.map(product => {
+      if (product.id === id) {
+        const updatedProduct = {
+          ...product,
+          markupType: type,
+          markup: 0 // Сбрасываем значение при смене типа
+        };
+        
+        // Пересчитываем totalPrice
+        if (type === 'percent') {
+          updatedProduct.totalPrice = roundTo50(
+            updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100)
+          );
+        } else {
+          updatedProduct.totalPrice = roundTo50(
+            (updatedProduct.price + updatedProduct.markup) * updatedProduct.quantity
+          );
+        }
+        
+        return updatedProduct;
+      }
+      return product;
+    });
+    
+    onProductsChange(updatedProducts);
+  };
+
   const handleMarkupBlur = (id: number, value: string) => {
-    console.log("мяу");
     const numericValue = Number(value) || 0;
-    if (numericValue < minMarkup) {
+    
+    if (markupType === 'percent' && numericValue < minMarkup) {
       handleInputChange(id, 'markup', minMarkup.toString());
+    } else if (markupType === 'fixed' && numericValue < 0) {
+      handleInputChange(id, 'markup', '0');
     }
   };
 
-  const handleInputChange = (id: number, field: keyof Product, value: string ) => {
+  const handleInputChange = (id: number, field: keyof Product, value: string) => {
     const updatedProducts = products.map(product => {
       if (product.id === id) {
         let numericValue: number;
@@ -143,7 +175,17 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
         };
         
         if (['price', 'quantity', 'markup'].includes(field)) {
-          updatedProduct.totalPrice = roundTo50(updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100));
+          // Расчет в зависимости от глобального типа надбавки
+          if (markupType === 'percent') {
+            updatedProduct.totalPrice = roundTo50(
+              updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100)
+            );
+          } else {
+            // Фиксированная надбавка в рублях
+            updatedProduct.totalPrice = roundTo50(
+              (updatedProduct.price + updatedProduct.markup) * updatedProduct.quantity
+            );
+          }
         }
         
         return updatedProduct;
@@ -152,18 +194,6 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
     });
 
     onProductsChange(updatedProducts);
-
-    const editedProduct = updatedProducts.find(p => p.id === id);
-    if (editedProduct && id === products[products.length - 1].id) {
-      const isNotEmpty = editedProduct.name.trim() !== '' || 
-                        editedProduct.price > 0 || 
-                        editedProduct.quantity > 1 || 
-                        editedProduct.markup > 0;
-      
-      if (isNotEmpty) {
-        addNewRow();
-      }
-    }
   };
 
   const roundTo50 = (value: number): number => {
@@ -217,16 +247,19 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
       <TableContainer>
         <StyledTable>
           <TableHeader>
-            <TableRow>
-              <HeaderCell>№</HeaderCell>
-              <HeaderCell>Название</HeaderCell>
-              <HeaderCell>Стоимость</HeaderCell>
-              <HeaderCell>Количество</HeaderCell>
-              <HeaderCell>Надбавка</HeaderCell>
-              <HeaderCell>Цена</HeaderCell>
-              <HeaderCell></HeaderCell>
-            </TableRow>
-          </TableHeader>
+          <TableRow>
+            <HeaderCell>№</HeaderCell>
+            <HeaderCell>Название</HeaderCell>
+            <HeaderCell>Стоимость</HeaderCell>
+            <HeaderCell>Количество</HeaderCell>
+            <HeaderCell>
+              Надбавка
+              {markupType === 'percent' ? ' (%)' : ' (₽)'}
+            </HeaderCell>
+            <HeaderCell>Цена</HeaderCell>
+            <HeaderCell></HeaderCell>
+          </TableRow>
+        </TableHeader>
           <TableBody>
             <AnimatePresence>
               {products.map((product, index) => (
@@ -374,6 +407,34 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange }: Product
   );
 };
 
+const MarkupTypeToggle = styled.button<{ active: boolean }>`
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  background: ${props => props.active ? '#007d88' : 'white'};
+  color: ${props => props.active ? 'white' : '#333'};
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 4px;
+  
+  &:first-child {
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+  }
+  
+  &:last-child {
+    border-radius: 0 4px 4px 0;
+  }
+  
+  &:hover {
+    background: ${props => props.active ? '#007d88' : '#f7fafc'};
+  }
+`;
+
+const ToggleContainer = styled.div`
+  display: flex;
+  margin-bottom: 4px;
+`;
+
 const TableContainer = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -422,6 +483,12 @@ const TableBody = styled.tbody`
   tr {
     border-bottom: 1px solid #edf2f7;
   }
+`;
+
+const MinMarkupHint = styled.div`
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
 `;
 
 const TableRow = styled(motion.tr)`

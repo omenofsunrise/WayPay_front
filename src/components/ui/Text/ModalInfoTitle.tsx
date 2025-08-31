@@ -1,6 +1,7 @@
 import styled from "styled-components";
 
 const ModalInfoTitle = styled.h1`
+    display: flex;
     margin-right: auto;
     text-align: left;
     font-size: 16px;
