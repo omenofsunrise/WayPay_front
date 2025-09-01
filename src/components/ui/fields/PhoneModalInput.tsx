@@ -6,6 +6,7 @@ interface PhoneInputProps {
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+    onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void; // Добавлено
     placeholder?: string;
     tabIndex?: number;
     disabled?: boolean;
@@ -19,6 +20,7 @@ const PhoneModalInput: React.FC<PhoneInputProps> = ({
     value, 
     onChange, 
     onBlur,
+    onKeyPress, // Добавлено
     placeholder = '8 (999) 500-50-50', 
     customPlaceholder,
     tabIndex, 
@@ -79,6 +81,12 @@ const PhoneModalInput: React.FC<PhoneInputProps> = ({
         }
     };
 
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (onKeyPress) {
+            onKeyPress(e);
+        }
+    };
+
     return (
         <InputContainer>
             <StyledInput
@@ -87,6 +95,7 @@ const PhoneModalInput: React.FC<PhoneInputProps> = ({
                 type="tel"
                 value={value}
                 onChange={handleChange}
+                onKeyPress={handleKeyPress} // Добавлено
                 placeholder={showCustomPlaceholder ? '' : placeholder}
                 maxLength={18}
                 tabIndex={tabIndex}

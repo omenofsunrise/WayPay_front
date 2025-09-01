@@ -1,13 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../components/ui/fields/CustomInput";
-import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable, { type RowStyle } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
-import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
-import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import ClientModal from "../components/modal/CrudInherited/ClientModal";
 import useClients from "../api/hooks/useClient";
@@ -15,6 +11,97 @@ import type { ClientForm } from '../api/types/client';
 import { formatDate } from '../utils/dateFormatter';
 import PhoneModalInput from '../components/ui/fields/PhoneModalInput';
 import { Container } from 'react-bootstrap';
+import styled from 'styled-components';
+import ClientCard from '../components/ui/cards/ClientCard';
+
+const TitleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const ClientCount = styled.span`
+  font-size: 16px;
+  color: #6B7280;
+  font-weight: 500;
+`;
+
+const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #6B7280;
+`;
+
+const EmptyStateIcon = styled.div`
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+`;
+
+const EmptyStateTitle = styled.h3`
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+`;
+
+const EmptyStateText = styled.p`
+  font-size: 16px;
+  margin-bottom: 24px;
+  max-width: 500px;
+  line-height: 1.5;
+`;
+
+const SearchTips = styled.div`
+  background-color: #F9FAFB;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 24px;
+  text-align: left;
+  max-width: 500px;
+`;
+
+const SearchTipsTitle = styled.h4`
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+`;
+
+const SearchTipsList = styled.ul`
+  font-size: 14px;
+  padding-left: 20px;
+  margin: 0;
+`;
+
+const SearchTipsItem = styled.li`
+  margin-bottom: 4px;
+  line-height: 1.4;
+`;
+
+const ResetButton = styled.button`
+  background: none;
+  border: none;
+  color: #6B7280;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+  margin-left: 16px;
+  
+  &:hover {
+    color: #374151;
+  }
+`;
+
+const FilterControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
 
 interface Client {
   id: number;
@@ -26,20 +113,23 @@ interface Client {
   docIssueDate: Date | null;
   docIssueYear: number;
   registrationAddress: string | null;
+  creditIds?: string[];
+  creditRestTerms?: string[];
 }
+
 const ClientPage = () => {
     const [nameFilter, setNameFilter] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
     const [sortConfig, setSortConfig] = useState<{
         key: number | null;
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
-    const pageSize = 10;
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [phoneFilter, setPhoneFilter] = useState('');
+    const [searchTriggered, setSearchTriggered] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
 
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -58,10 +148,28 @@ const ClientPage = () => {
         checkClientCredits
     } = useClients();
     
+    // Функция сброса всех фильтров
+    const resetFilters = useCallback(() => {
+        setNameFilter('');
+        setPhoneFilter('');
+        setSearchTriggered(false);
+        setHasSearched(false);
+        setSortConfig({ key: null, direction: 'asc' });
+    }, []);
+
     const loadClients = useCallback(async () => {
+        const shouldSearch = searchTriggered && (
+            nameFilter.length >= 5 || 
+            (phoneFilter.replace(/\D/g, '').length >= 11 && phoneFilter.replace(/\D/g, '').length <= 15)
+        );
+
+        if (!shouldSearch && searchTriggered) {
+            return;
+        }
+
         const params: any = {
-            page: currentPage,
-            pageSize,
+            page: 1,
+            pageSize: 1000,
             FullName: nameFilter || undefined,
             Phone: phoneFilter || undefined
         };
@@ -72,37 +180,43 @@ const ClientPage = () => {
         }
 
         await getClients(params);
-    }, [currentPage, nameFilter, phoneFilter, sortConfig, getClients]);
+        setHasSearched(true);
+    }, [nameFilter, phoneFilter, sortConfig, getClients, searchTriggered]);
     
     const handlePhoneFilterChange = (value: string) => {
         setPhoneFilter(value);
-        setCurrentPage(1);
+        setSearchTriggered(false);
+        
+        // Автоматический сброс поиска при очистке всех полей
+        if (!value && !nameFilter) {
+            resetFilters();
+        }
     };
 
     useEffect(() => {
-        loadClients();
-    }, [currentPage, nameFilter, sortConfig, loadClients]);
+        if (searchTriggered) {
+            loadClients();
+        }
+    }, [searchTriggered, loadClients]);
 
     const handleFilterChange = (value: string) => {
         setNameFilter(value);
-        setCurrentPage(1);
+        setSearchTriggered(false);
+        
+        // Автоматический сброс поиска при очистке всех полей
+        if (!value && !phoneFilter) {
+            resetFilters();
+        }
     };
 
-    const handleSort = (columnIndex: number) => {
-        if (!columnToApiSortMap[columnIndex]) return;
-        
-        setSortConfig(prev => {
-            if (prev.key === columnIndex) {
-                return {
-                    key: columnIndex,
-                    direction: prev.direction === 'asc' ? 'desc' : 'asc'
-                };
-            }
-            return {
-                key: columnIndex,
-                direction: 'asc'
-            };
-        });
+    const handleSearch = () => {
+        setSearchTriggered(true);
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
     };
 
     const handleCreateClient = () => {
@@ -127,18 +241,15 @@ const ClientPage = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteClient = async (rowData: any[]) => {
-        const [id] = rowData;
-
-        if (await checkClientCredits(Number(id)))
-        {
+    const handleDeleteClient = async (client: Client) => {
+        if (await checkClientCredits(client.id)) {
             alert('Нельзя удалить клиента, привязанного к договору');
             return;
         }
 
         if (window.confirm('Вы уверены, что хотите удалить этого клиента?')) {
             try {
-                await deleteClient(Number(id));
+                await deleteClient(client.id);
                 loadClients();
             } catch (err) {
                 console.error('Ошибка при удалении клиента:', err);
@@ -181,128 +292,111 @@ const ClientPage = () => {
         }
     };
 
-    const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
-        const client = clientsData?.items[rowIndex];
-        if (client) {
-            handleEditClient(client);
+    // Функция для отображения состояния
+    const renderContent = () => {
+        if (isLoading) {
+            return <div>Загрузка...</div>;
         }
+
+        if (error) {
+            return <div>{error}</div>;
+        }
+
+        if (!hasSearched) {
+            return (
+                <EmptyStateContainer>
+                    <EmptyStateIcon>👥</EmptyStateIcon>
+                    <EmptyStateTitle>Начните поиск клиентов</EmptyStateTitle>
+                    <EmptyStateText>
+                        Введите ФИО клиента (минимум 5 символов) или полный номер телефона для поиска в базе данных.
+                    </EmptyStateText>
+                </EmptyStateContainer>
+            );
+        }
+
+        if (clientsData && clientsData.items.length === 0) {
+            return (
+                <EmptyStateContainer>
+                    <EmptyStateIcon>🔍</EmptyStateIcon>
+                    <EmptyStateTitle>Клиент не найден</EmptyStateTitle>
+                    <EmptyStateText>
+                        По вашему запросу "{nameFilter || phoneFilter}" ничего не найдено. 
+                        Попробуйте изменить критерии поиска или добавьте нового клиента.
+                    </EmptyStateText>
+                    <DarkCyanButton onClick={handleCreateClient}>
+                        + Добавить нового клиента
+                    </DarkCyanButton>
+                    <ResetButton onClick={resetFilters} style={{ marginTop: '16px' }}>
+                        Сбросить фильтры
+                    </ResetButton>
+                </EmptyStateContainer>
+            );
+        }
+
+        return (
+            <div>
+                <FilterControls>
+                    {hasSearched && (
+                        <ResetButton onClick={resetFilters}>
+                            Сбросить фильтры
+                        </ResetButton>
+                    )}
+                </FilterControls>
+                {clientsData?.items.map((client) => (
+                    <ClientCard 
+                        key={client.id} 
+                        client={client}
+                        onEdit={handleEditClient}
+                        onDelete={handleDeleteClient}
+                    />
+                ))}
+            </div>
+        );
     };
-
-    const tableData = clientsData?.items?.map(client => [
-        client.id.toString(),
-        client.fullName,
-        client.phone,
-        client.secondPhone,
-        formatDate(client.birthdate),
-        Array.isArray(client.creditIds) && client.creditIds.length > 0 
-            ? client.creditIds.join(', ') 
-            : '-',
-        Array.isArray(client.creditRestTerms) && client.creditRestTerms.length > 0
-            ? client.creditRestTerms.join(', ')
-            : '-'
-    ]) || [];
-
-    const rowStyles = tableData.reduce((styles, rowData, index) => {
-        const contracts = rowData[5];
-        
-        if (Array.isArray(contracts) && contracts.length === 0) {
-            styles[index] = {
-                backgroundColor: '#C8E6C9',
-                color: 'black',          
-                fontWeight: 'normal'
-            };
-        }
-        else if (contracts === '-') {
-            styles[index] = {
-                backgroundColor: '#C8E6C9',
-                color: 'black',
-                fontWeight: 'normal'
-            };
-        }
-        else {
-            styles[index] = {
-                backgroundColor: '#FFEBEE',
-                color: 'black',
-                fontWeight: 'normal'
-            };
-        }
-        
-        return styles;
-    }, {} as Record<number, RowStyle>);
-
-    const tableActions = [
-        {
-            label: 'Удалить',
-            action: handleDeleteClient,
-            color: '#EF4444'
-        }
-    ];
 
     return (
         <PageLayout>
             <TitleField>
-                <CustomTitle>Клиенты</CustomTitle>
+                <TitleContainer>
+                    <CustomTitle>Клиенты</CustomTitle>
+                    {clientsData && clientsData.items.length > 0 && (
+                        <ClientCount>({clientsData.totalCount})</ClientCount>
+                    )}
+                </TitleContainer>
             </TitleField>
             
             <FilterField>
                 <Container style={{display: "flex", flexDirection: "row", width: "40vw", gap: "15px" }}>
                     <CustomInput 
                         inputType="fullname"
-                        placeholder="ФИО клиента"
+                        placeholder="ФИО клиента (минимум 5 символов)"
                         value={nameFilter}
                         onChange={(e) => handleFilterChange(e.target.value)}
+                        onKeyPress={handleKeyPress}
                     />
                     <PhoneModalInput 
-                        placeholder="Телефон"
+                        placeholder="Телефон (полный номер)"
                         value={phoneFilter}
-                        onChange={(e) => handlePhoneFilterChange(e.target.value)} name={''}/>
+                        onChange={(e) => handlePhoneFilterChange(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        name="phone"
+                    />
+                    <DarkCyanButton 
+                        onClick={handleSearch}
+                        disabled={!(nameFilter.length >= 5 || phoneFilter.replace(/\D/g, '').length >= 11)}
+                    >
+                        Поиск
+                    </DarkCyanButton>
                 </Container>
                 <DarkCyanButton 
-                    style={{ width: "15vw", marginLeft: "auto" }}
+                    style={{ width: "25vw", marginLeft: "auto" }}
                     onClick={handleCreateClient}
                 >
                     + Добавить
                 </DarkCyanButton>
             </FilterField>
             
-            {isLoading && <div>Загрузка...</div>}
-            {error && <div>{error}</div>}
-            
-            {!isLoading && !error && (
-                <>
-                    <CustomTable 
-                        columns={[
-                            { name: "ID", isSortable: true, align: "left" },
-                            { name: "ФИО", isSortable: true, align: "left" },
-                            { name: "Телефон", align: "left" },
-                            { name: "WhatsApp", align: "left" },
-                            { name: "Дата рождения", isSortable: false, align: "right" },
-                            { name: "№ договоров", align: "right" },
-                            { name: "Остатки мес.", align: "right" }
-                        ]} 
-                        rowStyles={rowStyles}
-                        data={tableData}
-                        onRowDoubleClick={handleRowDoubleClick}
-                        contextMenuActions={tableActions}
-                        selectedRow={selectedRow}
-                        onSort={handleSort}
-                        sortConfig={sortConfig}
-                    />
-                    
-                    <PaginationLayout>
-                        <CountInfoTitle 
-                            total={clientsData?.totalCount || 0} 
-                        />
-                        
-                        <Pagination
-                            total={clientsData?.totalCount || 0}
-                            current={currentPage}
-                            onChange={setCurrentPage}
-                            itemsPerPage={pageSize}
-                        />
-                    </PaginationLayout>
-                </>
-            )}
+            {renderContent()}
             
             <ClientModal
                 mode={modalMode}
