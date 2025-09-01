@@ -109,46 +109,20 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     showContextMenu(event, rowIndex);
   };
 
-  const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: number) => {
-    if (contextMenuActions.length === 0) return;
-    
-    if (tableRef.current) {
-      const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
-      const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-      
-      const rect = tableRef.current.getBoundingClientRect();
-      const menuWidth = 200;
-      const menuItemHeight = 40;
-      const menuHeight = (typeof contextMenuActions === 'function' 
-        ? contextMenuActions(data[rowIndex]).length 
-        : contextMenuActions.length) * menuItemHeight;
-      
-      let x = clientX - rect.left;
-      let y = clientY - rect.top;
-      
-      if (x + menuWidth > rect.width) {
-        x = rect.width - menuWidth;
-      }
-      
-      if (y + menuHeight > rect.height) {
-        y = rect.height - menuHeight;
-      }
-      
-      if (y < 0) {
-        y = 0;
-      }
-      
-      if (x < 0) {
-        x = 0;
-      }
-
-      setContextMenu({
-        x,
-        y,
-        rowIndex
-      });
-    }
-  };
+const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: number) => {
+  if (contextMenuActions.length === 0) return;
+  
+  event.preventDefault();
+  
+  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+  
+  setContextMenu({
+    x: clientX,
+    y: clientY,
+    rowIndex
+  });
+};
 
   const handleTouchStart = (event: React.TouchEvent, rowIndex: number) => {
     if (contextMenuActions.length === 0) return;
@@ -337,49 +311,50 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         
 
       <AnimatePresence>
-        {contextMenu && contextMenuActions.length > 0 && (() => {
-          const filteredActions = (typeof contextMenuActions === 'function' 
-            ? contextMenuActions(data[contextMenu.rowIndex!]) 
-            : contextMenuActions
-          ).filter(action => 
-            typeof action === 'object' && 
-            (typeof action.shouldShow !== 'function' || 
-            action.shouldShow(data[contextMenu.rowIndex!]))
-          );
+            {contextMenu && contextMenuActions.length > 0 && (() => {
+              const filteredActions = (typeof contextMenuActions === 'function' 
+                ? contextMenuActions(data[contextMenu.rowIndex!]) 
+                : contextMenuActions
+              ).filter(action => 
+                typeof action === 'object' && 
+                (typeof action.shouldShow !== 'function' || 
+                action.shouldShow(data[contextMenu.rowIndex!]))
+              );
 
-          if (filteredActions.length === 0) return null;
+              if (filteredActions.length === 0) return null;
 
-          return (
-            <ContextMenuWrapper
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              style={{
-                position: 'absolute',
-                left: contextMenu.x,
-                top: contextMenu.y,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ContextMenu
-                items={filteredActions.map(action => ({
-                  label: action.label,
-                  action: () => {
-                    action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
-                    closeContextMenu();
-                  },
-                  color: action.color
-                }))}
-                onClose={closeContextMenu} 
-                x={0} 
-                y={0}
-              />
-            </ContextMenuWrapper>
-          );
-        })()}
-      </AnimatePresence>
-      </>
+              return (
+                <ContextMenuWrapper
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  style={{
+                    position: 'fixed', // Используем fixed вместо absolute
+                    left: contextMenu.x, // Фиксированные координаты
+                    top: contextMenu.y,
+                    zIndex: 1000
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ContextMenu
+                    items={filteredActions.map(action => ({
+                      label: action.label,
+                      action: () => {
+                        action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
+                        closeContextMenu();
+                      },
+                      color: action.color
+                    }))}
+                    onClose={closeContextMenu} 
+                    x={0} // Передаем 0, так как позиционируем через wrapper
+                    y={0}
+                  />
+                </ContextMenuWrapper>
+              );
+            })()}
+          </AnimatePresence>
+        </>
       )}
     </TableContainer>
   );
@@ -446,6 +421,7 @@ const StyledTable = styled.table`
 
 const ContextMenuWrapper = styled(motion.div)`
   z-index: 1000;
+  pointer-events: auto;
 `;
 
 const TableHeader = styled.thead`

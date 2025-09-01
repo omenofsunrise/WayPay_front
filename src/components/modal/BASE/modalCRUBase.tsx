@@ -61,7 +61,7 @@ const BaseModal: React.FC<ModalProps> = ({
   }, [onClose]);
 
   return (
-    <ModalBackdrop onClick={handleBackdropClick}>
+    <ModalBackdrop>
       <ModalContainer width={width} ref={modalRef}>
         <CloseButton onClick={onClose}>&times;</CloseButton>
         <ModalHeader>

@@ -2,12 +2,10 @@ import styled from 'styled-components';
 import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import WhiteButton from '../ui/Buttons/WhiteButton';
 import { useEmployee } from '../../api/hooks/useEmployee';
-import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
-import { API_BASE_URL, BASE_URL } from '../../api/client';
+import { FILE_BASE_URL } from '../../api/client';
 import CustomInput from '../ui/fields/CustomInput';
-import type { Profile, Employee } from '../../api/types/employee';
+import type { Employee } from '../../api/types/employee';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import useChat from '../../api/hooks/useChat';
 
@@ -131,7 +129,7 @@ export const BlogProfile = ({ employeeId, onAvatarClick }: BlogProfileProps) => 
       <AvatarSection onClick={handleAvatarClick} style={{ cursor: onAvatarClick ? 'pointer' : 'default' }}>
         <Avatar 
           src={currentProfile.photoPath 
-            ? BASE_URL + currentProfile.photoPath 
+            ? FILE_BASE_URL + currentProfile.photoPath 
             : generateAvatar(getInitials(currentProfile.fullName))} 
           alt="User Avatar" 
         />

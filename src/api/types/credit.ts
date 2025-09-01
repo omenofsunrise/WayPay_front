@@ -38,7 +38,8 @@ export interface CreateCreditRequest {
     products: Array<{
         name: string;
         price: number;
-        surcharge: number;
+        surcharge?: number;
+        surchargeAmount?: number;
     }>;
 }
 

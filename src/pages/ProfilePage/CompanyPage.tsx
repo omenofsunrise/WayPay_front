@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
@@ -8,7 +8,7 @@ import GrayButton from "../../components/ui/Buttons/GrayButton";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import useCompany from "../../api/hooks/useCompany";
 import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
-import { FiCamera, FiTrash2, FiUpload, FiEdit2 } from "react-icons/fi";
+import { FiCamera, FiTrash2, FiEdit2 } from "react-icons/fi";
 
 const CompanyPage = () => {
     const { 

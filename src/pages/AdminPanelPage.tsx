@@ -9,12 +9,15 @@ import CompanyModal, { type CompanyModalData } from '../components/modal/CrudInh
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import CustomInput from '../components/ui/fields/CustomInput';
-import DateModalInput from '../components/ui/fields/DateModalInput';
 import { formatDate } from '../utils/dateFormatter';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { Container } from 'react-bootstrap';
 import { useEmployee } from '../api/hooks/useEmployee';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
+import Pagination from '../components/ui/fields/CustomPagination';
+import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
+import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
+import FilterField from '../components/ui/Layouts/FilterField';
 
 const AdminPanelPage = () => {
   const { hasRole } = useAuth();
@@ -325,7 +328,7 @@ const AdminPanelPage = () => {
           + Новая компания
         </DarkCyanButton>
       </TitleField>
-            
+                
       {isLoading && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}
       
@@ -343,6 +346,20 @@ const AdminPanelPage = () => {
             rowStyles={rowStyles}
             contextMenuActions={tableActions}
           />
+          
+          {/* Добавлена пагинация */}
+          <PaginationLayout>
+            <CountInfoTitle 
+              total={filteredCompanies.length} 
+            />
+            
+            <Pagination
+              total={filteredCompanies.length}
+              current={currentPage}
+              onChange={setCurrentPage}
+              itemsPerPage={pageSize}
+            />
+          </PaginationLayout>
         </>
       )}
 

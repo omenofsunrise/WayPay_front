@@ -25,7 +25,8 @@ import ViewButton from '../components/ui/Buttons/ViewButton';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useEmployee } from '../api/hooks/useEmployee';
 import type { Investor } from '../api/types/investor';
-import { formatDate } from '../utils/dateFormatter';
+
+const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 
 interface Client {
   id: number;
@@ -76,23 +77,21 @@ const NewCreditPage = () => {
   const minSurcharge = authInfo?.employee.minSurcharge || 0;
   const [viewModalData, setViewModalData] = useState<Investor | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [markupType, setMarkupType] = useState<'percent' | 'fixed'>(() => {
+    const savedMarkupType = localStorage.getItem(MARKUP_TYPE_STORAGE_KEY);
+    return (savedMarkupType === 'percent' || savedMarkupType === 'fixed') 
+      ? savedMarkupType 
+      : 'percent';
+  });
+
+  const handleMarkupTypeChange = useCallback((type: 'percent' | 'fixed') => {
+    setMarkupType(type);
+    localStorage.setItem(MARKUP_TYPE_STORAGE_KEY, type);
+  }, []);
 
   const formatAmount = useCallback((value: number): string => {
     return value.toLocaleString('ru-RU') + '₽';
   }, []);
-
-  const formatActiveUntilDate = useCallback((dateString: string | Date | undefined): string => {
-  if (!dateString) return '';
-  
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    
-    return `Активен до: ${date.toLocaleDateString('ru-RU')}`;
-  } catch {
-    return '';
-  }
-}, []);
 
   const parseAmount = useCallback((formatted: string): number => {
     return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
@@ -188,7 +187,6 @@ const NewCreditPage = () => {
       return;
     }
 
-    // Проверяем валидацию перед созданием договора
     if (!validateInvestorActivePeriod()) {
       return;
     }
@@ -204,7 +202,10 @@ const NewCreditPage = () => {
         .map(product => ({
           name: product.name,
           price: product.price,
-          surcharge: product.markup
+          ...(markupType === 'percent' 
+            ? { surcharge: product.markup }
+            : { surchargeAmount: product.markup }
+          )
         })),
       ...(guarantor && { guarantorId: guarantor.id })
     };
@@ -234,7 +235,8 @@ const NewCreditPage = () => {
     parseAmount,
     createCredit,
     navigate,
-    validateInvestorActivePeriod
+    validateInvestorActivePeriod,
+    markupType
   ]);
 
   const handleAutoSelectInvestor = async () => {
@@ -522,7 +524,7 @@ const NewCreditPage = () => {
   const clearSelectedEntity = () => {
     setInvestor(null);
     setSelectedPool(null);
-    setValidationError(null); // Сбрасываем ошибку при очистке выбора
+    setValidationError(null);
   };
 
   return (
@@ -605,12 +607,31 @@ const NewCreditPage = () => {
           </FieldGroup>
         </FormRow>
 
-        <ModalInfoTitle>Список товаров</ModalInfoTitle>
+        <ModalInfoTitle>
+          Список товаров
+          <MarkupTypeToggleContainer>
+            <MarkupTypeToggle
+              active={markupType === 'percent'}
+              onClick={() => handleMarkupTypeChange('percent')}
+            >
+              %
+            </MarkupTypeToggle>
+            <MarkupTypeToggle
+              active={markupType === 'fixed'}
+              onClick={() => handleMarkupTypeChange('fixed')}
+            >
+              ₽
+            </MarkupTypeToggle>
+          </MarkupTypeToggleContainer>
+        </ModalInfoTitle>
+
         <ProductsTableWrapper>
           <ProductsTable 
             products={products} 
             onProductsChange={setProducts}
             onTotalSumChange={setTotalSum}
+            markupType={markupType}
+            onMarkupTypeChange={setMarkupType}
           />
         </ProductsTableWrapper>
         <TotalSumContainer>
@@ -764,15 +785,40 @@ const NewCreditPage = () => {
   );
 };
 
-const ContentWrapper = styled.div`
-  margin-bottom: 20px;
+const MarkupTypeToggleContainer = styled.div`
+  display: flex;
+  margin-left: 16px;
+  align-items: center;
 `;
 
-const InvestorActiveUntil = styled.div`
+const MarkupTypeToggle = styled.button<{ active: boolean }>`
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  background: ${props => props.active ? '#007d88' : 'white'};
+  color: ${props => props.active ? 'white' : '#333'};
+  cursor: pointer;
   font-size: 12px;
-  color: #666;
-  margin-top: 4px;
-  text-align: left;
+  
+  &:first-child {
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+  }
+  
+  &:last-child {
+    border-radius: 0 4px 4px 0;
+  }
+  
+  &:hover {
+    background: ${props => props.active ? '#007d88' : '#f7fafc'};
+  }
+  
+  &:focus {
+    outline: none;
+  }
+`;
+
+const ContentWrapper = styled.div`
+  margin-bottom: 20px;
 `;
 
 const ProductsTableWrapper = styled.div`
