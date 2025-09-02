@@ -725,66 +725,6 @@ const ChatPage = () => {
               <Divider component="li" />
             </React.Fragment>
           ))}
-
-          {chats.filter(chat => chat.type === 'private').map(chat => {
-            const otherMember = chat.members.find(m => m.id !== currentUser?.id);
-            
-            return (
-              <React.Fragment key={chat.id}>
-                <ListItem 
-                  disablePadding
-                  onContextMenu={(e) => handleChatRightClick(e, chat)}
-                  secondaryAction={
-                    chat.unreadCount > 0 && (
-                      <Box sx={{ 
-                        display: 'inline-flex',
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: 20,
-                        height: 20,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.75rem',
-                      }}>
-                        {chat.unreadCount}
-                      </Box>
-                    )
-                  }
-                >
-                  <ListItemButton 
-                    onClick={() => handleSelectChat(chat)}
-                    selected={currentChat?.id === chat.id}
-                    sx={{ 
-                      '&.Mui-selected': {
-                        backgroundColor: '#e3f2fd',
-                      },
-                      '&:hover': {
-                        backgroundColor: '#f5f5f5',
-                      },
-                    }}
-                  >
-                    <ListItemAvatar sx={{ minWidth: 40 }}>
-                      <Avatar 
-                        alt={otherMember?.fullName || 'Unknown'}
-                        src={otherMember?.photoPath ? FILE_BASE_URL + otherMember.photoPath : generateAvatar(getInitials(otherMember?.fullName || '??'))}
-                        sx={{ width: 40, height: 40 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography fontWeight="weight">
-                          {otherMember?.fullName || 'Unknown'}
-                        </Typography>
-                      }
-                      secondary={getLastMessagePreview(chat)}
-                    />
-                  </ListItemButton>
-                </ListItem>
-                <Divider component="li" />
-              </React.Fragment>
-            );
-          })}
           
           {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company' && chat.type !== 'private').map(chat => (
             <React.Fragment key={chat.id}>

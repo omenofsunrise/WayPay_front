@@ -1,7 +1,7 @@
 export interface Chat {
   id: number;
   name: string;
-  type: 'general' | 'company' | 'private' | 'private_chat';
+  type: 'general' | 'company' | 'private_chat' | 'employee_client' | 'client_client';
   createdAt: string;
   unreadCount: number;
   lastMessage?: Message;
