@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import useChat from '../../../api/hooks/useChat';
 
 const Card = styled.div`
   background: white;
@@ -198,12 +200,27 @@ interface ClientCardProps {
 }
 
 const ClientCard: React.FC<ClientCardProps> = ({ client, onEdit, onDelete }) => {
+  const navigate = useNavigate();
+  const { createPrivateChat } = useChat();
+  
   const formatPhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 11) {
       return cleaned.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 ($2) $3-$4-$5');
     }
     return phone;
+  };
+
+  const handleMessageClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const chat = await createPrivateChat(client.id, 'client');
+      
+      navigate(`/chat/${chat.id}`);
+    } catch (error) {
+      console.error('Ошибка при создании чата:', error);
+    }
   };
 
   const formatDate = (date: Date | null): string => {
@@ -220,12 +237,9 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onEdit, onDelete }) => 
           {client.fullName}
         </CardTitle>
         
-<MessageButton onClick={(e) => {
-  e.stopPropagation();
-  console.log('Open chat with', client.fullName);
-}}>
-  <FaComment size={30} /> {/* Увеличиваем с 16px до 20px */}
-</MessageButton>
+        <MessageButton onClick={handleMessageClick}>
+          <FaComment size={30} />
+        </MessageButton>
         
         <InfoGrid>
           <InfoItem>

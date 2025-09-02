@@ -92,7 +92,6 @@ const useChat = () => {
     const formattedMessage = toMessage(newMessage);
     
     setMessages(prev => {
-      // Проверяем, нет ли уже такого сообщения
       if (prev.some(m => m.id === newMessage.id)) return prev;
       
       return [...prev, formattedMessage];
@@ -165,11 +164,11 @@ const useChat = () => {
     }
   }, []);
 
-  const createPrivateChat = useCallback(async (userId: number): Promise<Chat> => {
+  const createPrivateChat = useCallback(async (userId: number, userType?: string): Promise<Chat> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await chatService.createPrivateChat(userId);
+      const result = await chatService.createPrivateChat(userId, userType);
       
       setChats(prev => [...prev, result]);
       

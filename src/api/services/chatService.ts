@@ -204,8 +204,17 @@ class ChatService {
     return response.data;
   }
 
-  async createPrivateChat(userId: number): Promise<Chat> {
-    const response = await socialApiClient.get<Chat>(`/chats/private/${userId}`);
+  async createPrivateChat(userId: number, userType?: string): Promise<Chat> {
+    const params: Record<string, string> = {};
+    
+    if (userType) {
+      params.userType = userType;
+    }
+    
+    const response = await socialApiClient.get<Chat>(`/chats/private/${userId}`, {
+      params
+    });
+    
     return response.data;
   }
 }
