@@ -217,7 +217,7 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onEdit, onDelete }) => 
     try {
       const chat = await createPrivateChat(client.id, 'client');
       
-      navigate(`/chat/${chat.id}`);
+      window.open(`/chat/${chat.id}`, '_blank');
     } catch (error) {
       console.error('Ошибка при создании чата:', error);
     }

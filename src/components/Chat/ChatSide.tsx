@@ -272,7 +272,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
           whiteSpace: 'nowrap'
         }}
       >
-        {['Участники', 'Фото', 'Файлы', 'Видео', 'Ссылки'].map((label, index) => (
+        {['Фото', 'Файлы', 'Видео', 'Ссылки'].map((label, index) => (
           <Tab
             key={index}
             label={label}
@@ -303,7 +303,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
       </Tabs>
 
       <Box sx={{ p: 2 }}>
-        {activeTab === 0 && (
+        {activeTab === -2 && (
           <Box>
             <List dense>
               {chatMembers.map((member) => (
@@ -324,7 +324,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
           </Box>
         )}
 
-        {activeTab === 1 && (
+        {activeTab === 0 && (
           <Box>
             {isLoading ? (
               <Grid container spacing={1}>
@@ -369,7 +369,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
           </Box>
         )}
 
-        {activeTab === 2 && (
+        {activeTab === 1 && (
           <Box>
             {isLoading ? (
               <Box>
@@ -389,7 +389,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
           </Box>
         )}
 
-        {activeTab === 3 && (
+        {activeTab === 2 && (
           <Box>
             {isLoading ? (
               <Box>
@@ -409,7 +409,7 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
           </Box>
         )}
 
-        {activeTab === 4 && (
+        {activeTab === 3 && (
           <Box>
             {isLoading ? (
               <Box>
