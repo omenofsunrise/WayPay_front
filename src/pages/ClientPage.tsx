@@ -59,7 +59,7 @@ const EmptyStateText = styled.p`
 const StickyFilterField = styled(FilterField)`
   position: sticky;
   top: 50px;
-  z-index: 1000;
+  z-index: 10;
   padding: 16px 0;
   background: none;
 `;
