@@ -197,10 +197,15 @@ interface ClientCardProps {
   client: Client;
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
+  onRightClick: (e: React.MouseEvent, client: Client) => void;
 }
 
-const ClientCard: React.FC<ClientCardProps> = ({ client, onEdit, onDelete }) => {
-  const navigate = useNavigate();
+const ClientCard: React.FC<ClientCardProps> = ({ 
+  client, 
+  onEdit, 
+  onDelete, 
+  onRightClick 
+}) => {
   const { createPrivateChat } = useChat();
   
   const formatPhone = (phone: string) => {
@@ -231,7 +236,11 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onEdit, onDelete }) => 
   const hasContracts = client.creditIds && client.creditIds.length > 0;
 
   return (
-    <Card key={client.id} onClick={() => onEdit(client)}>
+    <Card 
+      key={client.id} 
+      onClick={() => onEdit(client)}
+      onContextMenu={(e) => onRightClick(e, client)}
+    >
       <CardContent>
         <CardTitle>
           {client.fullName}

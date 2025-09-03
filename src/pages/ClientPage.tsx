@@ -56,51 +56,63 @@ const EmptyStateText = styled.p`
   line-height: 1.5;
 `;
 
-const SearchTips = styled.div`
-  background-color: #F9FAFB;
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 24px;
-  text-align: left;
-  max-width: 500px;
-`;
-
-const SearchTipsTitle = styled.h4`
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #374151;
-`;
-
-const SearchTipsList = styled.ul`
-  font-size: 14px;
-  padding-left: 20px;
-  margin: 0;
-`;
-
-const SearchTipsItem = styled.li`
-  margin-bottom: 4px;
-  line-height: 1.4;
+const StickyFilterField = styled(FilterField)`
+  position: sticky;
+  top: 50px;
+  z-index: 1000;
+  padding: 16px 0;
+  background: none;
 `;
 
 const ResetButton = styled.button`
   background: none;
-  border: none;
-  color: #6B7280;
+  border: 10px;
+  color: black;
   cursor: pointer;
   font-size: 14px;
   text-decoration: underline;
   margin-left: 16px;
-  
+  height: 40px;
+  padding: 0;
+  width: 100px;
+
   &:hover {
     color: #374151;
   }
 `;
 
-const FilterControls = styled.div`
+const ContextMenu = styled.div<{ x: number; y: number }>`
+  position: fixed;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  min-width: 160px;
+  padding: 4px 0;
+  left: ${props => props.x}px;
+  top: ${props => props.y}px;
+`;
+
+const MenuItem = styled.div<{ danger?: boolean }>`
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  color: ${props => props.danger ? '#ff4d4f' : '#333'};
+  
+  &:hover {
+    background-color: #f5f5f5;
+  }
+`;
+
+const Backdrop = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
 `;
 
 interface Client {
@@ -148,7 +160,6 @@ const ClientPage = () => {
         checkClientCredits
     } = useClients();
     
-    // Функция сброса всех фильтров
     const resetFilters = useCallback(() => {
         setNameFilter('');
         setPhoneFilter('');
@@ -183,11 +194,54 @@ const ClientPage = () => {
         setHasSearched(true);
     }, [nameFilter, phoneFilter, sortConfig, getClients, searchTriggered]);
     
+    const [contextMenu, setContextMenu] = useState<{
+        x: number;
+        y: number;
+        client: Client | null;
+    } | null>(null);
+
+    const handleCardRightClick = useCallback((e: React.MouseEvent, client: Client) => {
+        e.preventDefault();
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            client
+        });
+    }, []);
+
+    const handleContextMenuAction = useCallback((action: 'edit' | 'delete') => {
+        if (!contextMenu?.client) return;
+
+        if (action === 'edit') {
+            handleEditClient(contextMenu.client);
+        } else if (action === 'delete') {
+            handleDeleteClient(contextMenu.client);
+        }
+
+        setContextMenu(null);
+    }, [contextMenu]);
+
+    const closeContextMenu = useCallback(() => {
+        setContextMenu(null);
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (contextMenu) {
+                closeContextMenu();
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [contextMenu]);
+
     const handlePhoneFilterChange = (value: string) => {
         setPhoneFilter(value);
         setSearchTriggered(false);
         
-        // Автоматический сброс поиска при очистке всех полей
         if (!value && !nameFilter) {
             resetFilters();
         }
@@ -203,7 +257,6 @@ const ClientPage = () => {
         setNameFilter(value);
         setSearchTriggered(false);
         
-        // Автоматический сброс поиска при очистке всех полей
         if (!value && !phoneFilter) {
             resetFilters();
         }
@@ -292,7 +345,6 @@ const ClientPage = () => {
         }
     };
 
-    // Функция для отображения состояния
     const renderContent = () => {
         if (isLoading) {
             return <div>Загрузка...</div>;
@@ -335,19 +387,13 @@ const ClientPage = () => {
 
         return (
             <div>
-                <FilterControls>
-                    {hasSearched && (
-                        <ResetButton onClick={resetFilters}>
-                            Сбросить фильтры
-                        </ResetButton>
-                    )}
-                </FilterControls>
                 {clientsData?.items.map((client) => (
                     <ClientCard 
                         key={client.id} 
                         client={client}
                         onEdit={handleEditClient}
                         onDelete={handleDeleteClient}
+                        onRightClick={handleCardRightClick}
                     />
                 ))}
             </div>
@@ -355,8 +401,8 @@ const ClientPage = () => {
     };
 
     return (
-        <PageLayout>
-            <TitleField>
+        <PageLayout onClick={closeContextMenu}>
+            <TitleField style={{ position: "sticky"}}>
                 <TitleContainer>
                     <CustomTitle>Клиенты</CustomTitle>
                     {clientsData && clientsData.items.length > 0 && (
@@ -365,8 +411,8 @@ const ClientPage = () => {
                 </TitleContainer>
             </TitleField>
             
-            <FilterField>
-                <Container style={{display: "flex", flexDirection: "row", width: "40vw", gap: "15px" }}>
+            <StickyFilterField>
+                <Container style={{display: "flex", flexDirection: "row", width: "50vw", gap: "15px" }}>
                     <CustomInput 
                         inputType="fullname"
                         placeholder="ФИО клиента (минимум 5 символов)"
@@ -381,6 +427,9 @@ const ClientPage = () => {
                         onKeyPress={handleKeyPress}
                         name="phone"
                     />
+                    <ResetButton onClick={resetFilters}>
+                        Сбросить фильтры
+                    </ResetButton>
                     <DarkCyanButton 
                         onClick={handleSearch}
                         disabled={!(nameFilter.length >= 5 || phoneFilter.replace(/\D/g, '').length >= 11)}
@@ -394,7 +443,7 @@ const ClientPage = () => {
                 >
                     + Добавить
                 </DarkCyanButton>
-            </FilterField>
+            </StickyFilterField>
             
             {renderContent()}
             
@@ -415,6 +464,23 @@ const ClientPage = () => {
                     registrationAddress: ''
                 }}
             />
+
+            {contextMenu && (
+                <>
+                    <Backdrop onClick={closeContextMenu} />
+                    <ContextMenu x={contextMenu.x} y={contextMenu.y}>
+                        <MenuItem onClick={() => handleContextMenuAction('edit')}>
+                            Редактировать клиента
+                        </MenuItem>
+                        <MenuItem 
+                            danger 
+                            onClick={() => handleContextMenuAction('delete')}
+                        >
+                            Удалить клиента
+                        </MenuItem>
+                    </ContextMenu>
+                </>
+            )}
         </PageLayout>
     );
 };

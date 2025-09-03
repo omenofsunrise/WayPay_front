@@ -119,39 +119,44 @@ function App() {
     };
   }, []);
 
+  const updateAuthStatus = useCallback(() => {
+    const authenticated = authStorage.isAuthenticated();
+    setIsAuthenticated(authenticated);
+    return authenticated;
+  }, []);
+
   useEffect(() => {
-      const checkAuth = () => {
-        const authenticated = authStorage.isAuthenticated();
-        setIsAuthenticated(authenticated);
-        
-        if (authenticated && window.location.pathname === '/auth') {
-          window.location.href = '/credits';
-        }
-        
-        if (!authenticated && window.location.pathname !== '/auth') {
-          window.location.href = '/auth';
-        }
-
-        if (authenticated) {
-          apiClient.get<AuthInfo>('/Auth/info')
-            .then(response => {
-              setAuthInfo(response.data);
-              const savedActivity = sessionStorage.getItem('lastActivity');
-              if (!savedActivity || (savedActivity && Date.now() - parseInt(savedActivity, 10) > INACTIVITY_TIMEOUT)) {
-                setShowPinModal(true);
-              }
-            })
-            .catch(() => setAuthInfo(null));
-        }
-      };
-
-      checkAuth();
+    const checkAuth = () => {
+      const authenticated = updateAuthStatus();
       
-      const handleStorageChange = () => checkAuth();
-      window.addEventListener('storage', handleStorageChange);
+      if (authenticated && window.location.pathname === '/auth') {
+        window.location.href = '/credits';
+      }
       
-      return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
+      if (!authenticated && window.location.pathname !== '/auth') {
+        window.location.href = '/auth';
+      }
+
+      if (authenticated) {
+        apiClient.get<AuthInfo>('/Auth/info')
+          .then(response => {
+            setAuthInfo(response.data);
+            const savedActivity = sessionStorage.getItem('lastActivity');
+            if (!savedActivity || (savedActivity && Date.now() - parseInt(savedActivity, 10) > INACTIVITY_TIMEOUT)) {
+              setShowPinModal(true);
+            }
+          })
+          .catch(() => setAuthInfo(null));
+      }
+    };
+
+    checkAuth();
+    
+    const handleStorageChange = () => checkAuth();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [updateAuthStatus]);
 
   const handlePinSuccess = useCallback(() => {
     setShowPinModal(false);
