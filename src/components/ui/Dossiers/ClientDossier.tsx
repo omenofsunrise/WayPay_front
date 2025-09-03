@@ -389,7 +389,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
       </DossierHeader>
 
       <DossierGrid>
-        {/* Основная информация */}
         <Section>
           <SectionTitle>Контактная информация</SectionTitle>
           <InfoGrid>
@@ -412,7 +411,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
           </InfoGrid>
         </Section>
 
-        {/* Паспортные данные */}
         <Section>
           <SectionTitle>
             <FaPassport />
@@ -459,7 +457,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
           </PassportPhotoSection>
         </Section>
 
-        {/* Комментарии */}
         <CommentsSection>
           <SectionTitle>
             <FaComment />
@@ -490,7 +487,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
           </CommentList>
         </CommentsSection>
 
-        {/* История рассрочек */}
         <InstallmentHistorySection>
           <SectionTitle>
             <FaHistory />
@@ -525,7 +521,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
         </InstallmentHistorySection>
       </DossierGrid>
 
-      {/* Модальное окно для просмотра паспорта */}
       {showPassportModal && client.passportPhoto && (
         <div style={{
           position: 'fixed',
