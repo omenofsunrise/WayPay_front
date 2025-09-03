@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
 import useChat from '../../../api/hooks/useChat';
 
 const Card = styled.div`
@@ -174,11 +173,6 @@ const ContractsHeader = styled.div`
   margin-bottom: 8px;
 `;
 
-const ContractCount = styled.span`
-  font-size: 12px;
-  color: rgba(107, 114, 128, 1);
-`;
-
 export interface Client {
   id: number;
   fullName: string;
@@ -198,13 +192,15 @@ interface ClientCardProps {
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
   onRightClick: (e: React.MouseEvent, client: Client) => void;
+  onOpenDossier: (client: Client) => void;
 }
 
-const ClientCard: React.FC<ClientCardProps> = ({ 
+const ClientCard : React.FC<ClientCardProps> = ({ 
   client, 
   onEdit, 
   onDelete, 
-  onRightClick 
+  onRightClick,
+  onOpenDossier
 }) => {
   const { createPrivateChat } = useChat();
   
@@ -238,7 +234,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
   return (
     <Card 
       key={client.id} 
-      onClick={() => onEdit(client)}
+      onClick={() => onOpenDossier(client)}
       onContextMenu={(e) => onRightClick(e, client)}
     >
       <CardContent>

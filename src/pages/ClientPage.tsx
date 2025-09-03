@@ -8,11 +8,11 @@ import CustomTitle from "../components/ui/Text/CustomTitle";
 import ClientModal from "../components/modal/CrudInherited/ClientModal";
 import useClients from "../api/hooks/useClient";
 import type { ClientForm } from '../api/types/client';
-import { formatDate } from '../utils/dateFormatter';
 import PhoneModalInput from '../components/ui/fields/PhoneModalInput';
 import { Container } from 'react-bootstrap';
 import styled from 'styled-components';
 import ClientCard from '../components/ui/cards/ClientCard';
+import ClientDossier from '../components/ui/Dossiers/ClientDossier';
 
 const TitleContainer = styled.div`
   display: flex;
@@ -142,6 +142,7 @@ const ClientPage = () => {
     const [phoneFilter, setPhoneFilter] = useState('');
     const [searchTriggered, setSearchTriggered] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [selectedClientDossier, setSelectedClientDossier] = useState<Client | null>(null);
 
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -167,6 +168,10 @@ const ClientPage = () => {
         setHasSearched(false);
         setSortConfig({ key: null, direction: 'asc' });
     }, []);
+
+    const handleCardClick = (client: Client) => {
+        setSelectedClientDossier(client);
+    };
 
     const loadClients = useCallback(async () => {
         const shouldSearch = searchTriggered && (
@@ -310,6 +315,10 @@ const ClientPage = () => {
         }
     };
 
+    const handleOpenDossier = useCallback((client: Client) => {
+        setSelectedClientDossier(client);
+    }, []);
+
     const handleSubmitClient = async (
         clientData: Omit<ClientForm, 'doc' | 'docIssueDate'> | ClientForm
     ): Promise<boolean> => {
@@ -394,6 +403,7 @@ const ClientPage = () => {
                         onEdit={handleEditClient}
                         onDelete={handleDeleteClient}
                         onRightClick={handleCardRightClick}
+                        onOpenDossier={handleOpenDossier}
                     />
                 ))}
             </div>
@@ -402,6 +412,17 @@ const ClientPage = () => {
 
     return (
         <PageLayout onClick={closeContextMenu}>
+            {selectedClientDossier ? (
+            <ClientDossier
+                client={selectedClientDossier}
+                comments={[]}
+                installments={[]}
+                onBack={() => setSelectedClientDossier(null)}
+                onAddComment={(comment) => console.log('Add comment:', comment)}
+                onUploadPassport={(file) => console.log('Upload passport:', file)}
+            />
+            ) : (
+            <>
             <TitleField style={{ position: "sticky"}}>
                 <TitleContainer>
                     <CustomTitle>Клиенты</CustomTitle>
@@ -480,6 +501,8 @@ const ClientPage = () => {
                         </MenuItem>
                     </ContextMenu>
                 </>
+            )}
+                        </>
             )}
         </PageLayout>
     );

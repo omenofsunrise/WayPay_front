@@ -67,7 +67,7 @@ const StickyFilterField = styled(FilterField)`
 const ResetButton = styled.button`
   background: none;
   border: none;
-  color: #6B7280;
+  color: black;
   cursor: pointer;
   font-size: 14px;
   text-decoration: underline;
@@ -305,7 +305,7 @@ const BlacklistPage = () => {
             return (
                 <EmptyStateContainer>
                     <EmptyStateIcon>🔍</EmptyStateIcon>
-                    <EmptyStateTitle>Клиенты не найдены</EmptyStateTitle>
+                    <EmptyStateTitle>Клиент в чёрном списке не найден</EmptyStateTitle>
                     <EmptyStateText>
                         По вашему запросу "{nameFilter || phoneFilter}" ничего не найдено в чёрном списке.
                     </EmptyStateText>
