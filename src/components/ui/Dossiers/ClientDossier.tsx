@@ -1,13 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaArrowLeft, FaPassport, FaComment, FaUpload, FaEye, FaHistory } from 'react-icons/fa';
+import { FaArrowLeft, FaPassport, FaComment, FaUpload, FaEye, FaHistory, FaPaperclip, FaTrash, FaDownload, FaTimes, FaMinus, FaPlus } from 'react-icons/fa';
+import useNotes from '../../../api/hooks/useNote';
+import type { NoteableType } from '../../../api/types/note';
+import { generateAvatar, getInitials, stringToColor } from '../../../utils/avatarUtils';
+import { FILE_BASE_URL } from '../../../api/client';
+import { useAuth } from '../../../сontext/AuthContext';
+
+const TabsContainer = styled.div`
+  width: 100%;
+  border-bottom: 1px solid rgba(209, 213, 219, 1);
+  margin-bottom: 20px;
+`;
+
+const TabsList = styled.ul`
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 24px;
+  align-items: center;
+`;
+
+const TabItem = styled.li<{ $isActive: boolean }>`
+  position: relative;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: ${props => props.$isActive ? '600' : '400'};
+  color: ${props => props.$isActive ? 'rgba(0, 125, 136, 1)' : 'rgba(107, 114, 128, 1)'};
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: rgba(0, 125, 136, 0.8);
+  }
+`;
+
+const ActiveTabIndicator = styled.div`
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: rgba(0, 125, 136, 1);
+  border-radius: 2px 2px 0 0;
+`;
+
+const AddButtonContainer = styled.li`
+  margin-left: auto; 
+  padding: 4px 0; 
+`;
+
+const TabContentContainer = styled.div`
+  margin-top: 20px;
+`;
 
 const DossierContainer = styled.div`
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  padding: 24px;
-  margin-bottom: 16px;
+  background: none;
+  padding: 12px;
   position: relative;
 `;
 
@@ -181,6 +231,29 @@ const ViewText = styled.span`
 
 const CommentsSection = styled(Section)`
   grid-column: 1 / -1;
+  position: relative;
+`;
+
+const ExpandButton = styled.button`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #007D88;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: #006670;
+  }
 `;
 
 const CommentForm = styled.form`
@@ -192,6 +265,8 @@ const CommentForm = styled.form`
 
 const CommentTextarea = styled.textarea`
   border: 1px solid #d1d5db;
+  background: white;
+  color: black;
   border-radius: 6px;
   padding: 12px;
   font-size: 14px;
@@ -201,6 +276,70 @@ const CommentTextarea = styled.textarea`
   &:focus {
     outline: none;
     border-color: #007D88;
+  }
+`;
+
+const FileUploadSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FileInputLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: #007D88;
+    color: #007D88;
+  }
+`;
+
+const FileInput = styled.input`
+  display: none;
+`;
+
+const SelectedFilesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const SelectedFileItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 4px;
+  font-size: 12px;
+`;
+
+const FileName = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const RemoveFileButton = styled.button`
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 12px;
+
+  &:hover {
+    color: #dc2626;
   }
 `;
 
@@ -214,6 +353,9 @@ const SubmitButton = styled.button`
   align-self: flex-end;
   font-size: 14px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 
   &:hover:not(:disabled) {
     background: #006670;
@@ -236,33 +378,137 @@ const CommentItem = styled.div`
   border-radius: 8px;
   padding: 16px;
   background: white;
+  position: relative;
 `;
 
 const CommentHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 8px;
-`;
-
-const CommentAuthor = styled.span`
-  font-weight: 600;
-  color: #374151;
 `;
 
 const CommentDate = styled.span`
   font-size: 12px;
   color: #6b7280;
+  display: block;
+  margin-top: 4px;
 `;
 
 const CommentContent = styled.p`
-  margin: 0;
+  margin: 0 0 12px 0;
   color: #4b5563;
   line-height: 1.5;
+  font-size: 14px;
+  white-space: pre-wrap;
 `;
 
-const InstallmentHistorySection = styled(Section)`
-  grid-column: 1 / -1;
+const CommentFiles = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+`;
+
+const CommentFileItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+  }
+`;
+
+const FileDownloadButton = styled.button`
+  background: none;
+  border: none;
+  color: #007D88;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    color: #006670;
+  }
+`;
+
+const DeleteButton = styled.button`
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 12px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  &:hover {
+    color: #dc2626;
+    background: #fef2f2;
+    border-radius: 4px;
+  }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+`;
+
+const ModalContent = styled.div`
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+`;
+
+const ModalImage = styled.img`
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  
+  &:hover {
+    color: #e5e7eb;
+  }
+`;
+
+const ImageCaption = styled.div`
+  color: white;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 14px;
 `;
 
 const HistoryTable = styled.table`
@@ -291,11 +537,46 @@ const TableRow = styled.tr`
   }
 `;
 
-interface Comment {
+const Avatar = styled.div<{ src?: string; color?: string }>`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: ${props => props.src ? 'transparent' : (props.color || '#007D88')};
+  background-image: ${props => props.src ? `url(${props.src})` : 'none'};
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 500;
+  font-size: 16px;
+  flex-shrink: 0;
+`;
+
+const CommentAuthorInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const AuthorDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const AuthorName = styled.span`
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+`;
+
+interface CommentFile {
   id: number;
-  author: string;
-  date: Date;
-  content: string;
+  name: string;
+  size: number;
+  url: string;
+  type: string;
 }
 
 interface Installment {
@@ -320,30 +601,105 @@ interface ClientDossierProps {
     registrationAddress: string | null;
     passportPhoto?: string;
   };
-  comments: Comment[];
   installments: Installment[];
   onBack: () => void;
-  onAddComment: (comment: string) => void;
   onUploadPassport: (file: File) => void;
+  canDeleteComments?: boolean;
 }
+
+type TabType = 'comments' | 'history';
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_FILES_PER_COMMENT = 1;
 
 const ClientDossier: React.FC<ClientDossierProps> = ({
   client,
-  comments,
   installments,
   onBack,
-  onAddComment,
-  onUploadPassport
+  onUploadPassport,
 }) => {
   const [newComment, setNewComment] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showPassportModal, setShowPassportModal] = useState(false);
+  const [modalImage, setModalImage] = useState<{src: string, name: string} | null>(null);
+  const [isCommentFormVisible, setIsCommentFormVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('comments');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { hasRole } = useAuth();
+  
+  const {
+    notes: comments,
+    isLoading: isCommentsLoading,
+    error: commentsError,
+    getClientNotes,
+    createNote,
+    deleteNote,
+    downloadFile
+  } = useNotes();
+  
+  useEffect(() => {
+    getClientNotes(client.id);
+  }, [client.id, getClientNotes]);
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newComment.trim()) {
-      onAddComment(newComment.trim());
-      setNewComment('');
+  const avatarCache = useRef<Map<string, string>>(new Map());
+
+  const getAvatar = (name: string, avatarUrl?: string) => {
+    if (avatarUrl) return FILE_BASE_URL + avatarUrl;
+    
+    if (avatarCache.current.has(name)) {
+      return avatarCache.current.get(name);
     }
+    
+    const initials = getInitials(name);
+    const generatedAvatar = generateAvatar(initials);
+    avatarCache.current.set(name, generatedAvatar);
+    
+    return generatedAvatar;
+  };
+  
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newComment.trim() || selectedFiles.length > 0) {
+      try {
+        await createNote({
+          noteableType: 'client' as NoteableType,
+          noteableId: client.id,
+          content: newComment.trim(),
+          file: selectedFiles.length > 0 ? selectedFiles[0] : undefined
+        });
+        
+        setNewComment('');
+        setSelectedFiles([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        
+        getClientNotes(client.id);
+      } catch (error) {
+        console.error('Error adding comment:', error);
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    if (selectedFiles.length + files.length > MAX_FILES_PER_COMMENT) {
+      alert(`Можно прикрепить не более ${MAX_FILES_PER_COMMENT} файла`);
+      return;
+    }
+    
+    const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      alert(`Файл "${oversizedFiles[0].name}" превышает максимальный размер ${formatFileSize(MAX_FILE_SIZE)}`);
+      return;
+    }
+    
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handlePassportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -353,9 +709,27 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
     }
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const formatDate = (date: Date | null): string => {
     if (!date) return 'Не указана';
     return new Date(date).toLocaleDateString('ru-RU');
+  };
+
+  const formatDateTime = (date: Date): string => {
+    return new Date(date).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const formatCurrency = (amount: number): string => {
@@ -373,6 +747,246 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
       default: return '#6b7280';
     }
   };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (window.confirm('Вы уверены, что хотите удалить этот комментарий?')) {
+      try {
+        await deleteNote(commentId);
+        getClientNotes(client.id);
+      } catch (error) {
+        console.error('Error deleting comment:', error);
+      }
+    }
+  };
+
+  const getFileUrlFromBase64 = (base64String: string, fileName: string): string => {
+    try {
+      let mimeType = 'application/octet-stream';
+      
+      const mimeMatch = base64String.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,/);
+      if (mimeMatch && mimeMatch[1]) {
+        mimeType = mimeMatch[1];
+      } else {
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        const mimeTypes: { [key: string]: string } = {
+          'png': 'image/png',
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'gif': 'image/gif',
+          'pdf': 'application/pdf',
+          'doc': 'application/msword',
+          'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'xls': 'application/vnd.ms-excel',
+          'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'txt': 'text/plain',
+        };
+        if (extension && mimeTypes[extension]) {
+          mimeType = mimeTypes[extension];
+        }
+      }
+      
+      return `data:${mimeType};base64,${base64String}`;
+    } catch (error) {
+      console.error('Error creating URL from base64:', error);
+      return '';
+    }
+  };
+
+  const renderFile = (comment: any) => {
+    if (!comment.fileName || !comment.fileBase64) return null;
+
+    const fileUrl = getFileUrlFromBase64(comment.fileBase64, comment.fileName);
+    const isImage = comment.fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i);
+
+    if (isImage) {
+      return (
+        <div style={{ marginTop: '12px' }}>
+          <img 
+            onClick={() => setModalImage({src: fileUrl, name: comment.fileName})}
+            src={fileUrl} 
+            alt={comment.fileName}
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '200px', 
+              borderRadius: '4px',
+              border: '1px solid #e5e7eb'
+            }}
+          />
+        </div>
+      );
+    } else {
+      return (
+        <CommentFiles>
+          <CommentFileItem>
+            <FaPaperclip size={12} color='black'/>
+            <span style={{ flex: 1, fontSize: '12px', color: "black" }}>
+              {comment.fileName}
+            </span>
+            <FileDownloadButton
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = fileUrl;
+                link.download = comment.fileName!;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              title="Скачать файл"
+            >
+              <FaDownload size={12} />
+              Скачать
+            </FileDownloadButton>
+          </CommentFileItem>
+        </CommentFiles>
+      );
+    }
+  };
+
+  const commentsContent = (
+    <>
+      {isCommentFormVisible && (hasRole('админ') || hasRole('директор')) && (
+        <CommentForm onSubmit={handleCommentSubmit}>
+          <CommentTextarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Добавьте комментарий о клиенте..."
+          />
+          
+          <FileUploadSection>
+            <FileInputLabel>
+              <FaPaperclip />
+              Прикрепить файл (макс. {formatFileSize(MAX_FILE_SIZE)})
+              <FileInput
+                ref={fileInputRef}
+                type="file"
+                multiple={false}
+                onChange={handleFileSelect}
+                accept="*/*"
+              />
+            </FileInputLabel>
+            
+            {selectedFiles.length > 0 && (
+              <SelectedFilesList>
+                {selectedFiles.map((file, index) => (
+                  <SelectedFileItem key={index}>
+                    <FileName>
+                      <FaPaperclip size={10} />
+                      {file.name} ({formatFileSize(file.size)})
+                    </FileName>
+                    <RemoveFileButton
+                      onClick={() => handleRemoveFile(index)}
+                      title="Удалить файл"
+                    >
+                      <FaTrash size={10} />
+                    </RemoveFileButton>
+                  </SelectedFileItem>
+                ))}
+              </SelectedFilesList>
+            )}
+          </FileUploadSection>
+          <SubmitButton
+            type="submit"
+            disabled={isCommentsLoading || (!newComment.trim()) || selectedFiles.some(file => file.size > MAX_FILE_SIZE)}
+            title={selectedFiles.some(file => file.size > MAX_FILE_SIZE) ? `Размер файла превышает ${formatFileSize(MAX_FILE_SIZE)}` : ''}
+          >
+            {isCommentsLoading ? 'Добавление...' : 'Добавить комментарий'}
+            {selectedFiles.some(file => file.size > MAX_FILE_SIZE) && ' (Файл слишком большой)'}
+          </SubmitButton>
+        </CommentForm>
+      )}
+
+      {isCommentsLoading ? (
+        <div>Загрузка комментариев...</div>
+      ) : (
+        <CommentList>
+          {comments.map((comment) => {
+            const avatarSrc = getAvatar(comment.employeeName, comment.employeeAvatar);
+            const initials = getInitials(comment.employeeName);
+            const bgColor = stringToColor(comment.employeeName);
+            
+            return (
+              <CommentItem key={comment.id}>
+                <CommentHeader>
+                  <CommentAuthorInfo>
+                    <Avatar 
+                      src={avatarSrc} 
+                      color={bgColor}
+                      title={comment.employeeName}
+                    >
+                      {!avatarSrc && initials}
+                    </Avatar>
+                    <AuthorDetails>
+                      <AuthorName>{comment.employeeName}</AuthorName>
+                      <CommentDate>{formatDateTime(new Date(comment.createdAt))}</CommentDate>
+                    </AuthorDetails>
+                  </CommentAuthorInfo>
+                  
+                    <DeleteButton
+                      onClick={() => handleDeleteComment(comment.id)}
+                      title="Удалить комментарий"
+                    >
+                      <FaTrash size={12} />
+                    </DeleteButton>
+                </CommentHeader>
+                
+                {comment.content && (
+                  <CommentContent>{comment.content}</CommentContent>
+                )}
+                
+                {comment.fileName && comment.fileBase64 && (
+                  <CommentFiles>
+                    {renderFile(comment)}
+                  </CommentFiles>
+                )}
+              </CommentItem>
+            );
+          })}
+        </CommentList>
+      )}
+    </>
+  );
+
+  const historyContent = (
+    <HistoryTable>
+      <thead>
+        <tr>
+          <TableHeader>Договор</TableHeader>
+          <TableHeader>Сумма</TableHeader>
+          <TableHeader>Дата</TableHeader>
+          <TableHeader>Статус</TableHeader>
+          <TableHeader>Остаток</TableHeader>
+        </tr>
+      </thead>
+      <tbody>
+        {installments.map((installment) => (
+          <TableRow key={installment.id}>
+            <TableCell>{installment.contractNumber}</TableCell>
+            <TableCell>{formatCurrency(installment.amount)}</TableCell>
+            <TableCell>{formatDate(installment.date)}</TableCell>
+            <TableCell style={{ color: getStatusColor(installment.status) }}>
+              {installment.status === 'paid' && 'Оплачен'}
+              {installment.status === 'pending' && 'Ожидает оплаты'}
+              {installment.status === 'overdue' && 'Просрочен'}
+            </TableCell>
+            <TableCell>{formatCurrency(installment.remainingAmount)}</TableCell>
+          </TableRow>
+        ))}
+      </tbody>
+    </HistoryTable>
+  );
+
+  const tabs = [
+    {
+      id: 'comments',
+      label: 'Комментарии',
+      content: commentsContent
+    },
+    {
+      id: 'history',
+      label: 'История',
+      content: historyContent
+    }
+  ];
 
   return (
     <DossierContainer>
@@ -408,15 +1022,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
               <InfoLabel>Адрес регистрации</InfoLabel>
               <InfoValue>{client.registrationAddress || 'Не указан'}</InfoValue>
             </InfoItem>
-          </InfoGrid>
-        </Section>
-
-        <Section>
-          <SectionTitle>
-            <FaPassport />
-            Паспортные данные
-          </SectionTitle>
-          <InfoGrid>
             <InfoItem>
               <InfoLabel>Серия и номер</InfoLabel>
               <InfoValue>{client.doc || 'Не указаны'}</InfoValue>
@@ -426,9 +1031,11 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
               <InfoValue>{client.docIssueYear || 'Не указан'}</InfoValue>
             </InfoItem>
           </InfoGrid>
+        </Section>
 
+        <Section>
+          <SectionTitle>Паспорт</SectionTitle>
           <PassportPhotoSection>
-            <InfoLabel>Фотография паспорта</InfoLabel>
             {client.passportPhoto ? (
               <PassportPhoto onClick={() => setShowPassportModal(true)}>
                 <PassportImage src={client.passportPhoto} alt="Паспорт" />
@@ -459,66 +1066,47 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
 
         <CommentsSection>
           <SectionTitle>
-            <FaComment />
-            Комментарии
+            {activeTab === 'comments' ? <FaComment /> : <FaHistory />}
+            {activeTab === 'comments' ? 'Комментарии' : 'История'}
+            {isCommentsLoading && activeTab === 'comments' && <span> (Загрузка...)</span>}
           </SectionTitle>
-          <CommentForm onSubmit={handleCommentSubmit}>
-            <CommentTextarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Добавьте комментарий о клиенте..."
-            />
-            <SubmitButton type="submit" disabled={!newComment.trim()}>
-              Добавить комментарий
-            </SubmitButton>
-          </CommentForm>
-          <CommentList>
-            {comments.map((comment) => (
-              <CommentItem key={comment.id}>
-                <CommentHeader>
-                  <CommentAuthor>{comment.author}</CommentAuthor>
-                  <CommentDate>
-                    {new Date(comment.date).toLocaleDateString('ru-RU')}
-                  </CommentDate>
-                </CommentHeader>
-                <CommentContent>{comment.content}</CommentContent>
-              </CommentItem>
-            ))}
-          </CommentList>
-        </CommentsSection>
+          
+          {(hasRole('админ') || hasRole('директор')) && (
+            <ExpandButton 
+              onClick={() => setIsCommentFormVisible(!isCommentFormVisible)}
+              title={isCommentFormVisible ? 'Свернуть форму' : 'Добавить комментарий'}
+              style={{ display: activeTab === 'comments' ? 'flex' : 'none' }}
+            >
+              {isCommentFormVisible ? <FaMinus size={10}/> : <FaPlus size={10}/>}
+            </ExpandButton>
+          )}
 
-        <InstallmentHistorySection>
-          <SectionTitle>
-            <FaHistory />
-            История рассрочек
-          </SectionTitle>
-          <HistoryTable>
-            <thead>
-              <tr>
-                <TableHeader>Договор</TableHeader>
-                <TableHeader>Сумма</TableHeader>
-                <TableHeader>Дата</TableHeader>
-                <TableHeader>Статус</TableHeader>
-                <TableHeader>Остаток</TableHeader>
-              </tr>
-            </thead>
-            <tbody>
-              {installments.map((installment) => (
-                <TableRow key={installment.id}>
-                  <TableCell>{installment.contractNumber}</TableCell>
-                  <TableCell>{formatCurrency(installment.amount)}</TableCell>
-                  <TableCell>{formatDate(installment.date)}</TableCell>
-                  <TableCell style={{ color: getStatusColor(installment.status) }}>
-                    {installment.status === 'paid' && 'Оплачен'}
-                    {installment.status === 'pending' && 'Ожидает оплаты'}
-                    {installment.status === 'overdue' && 'Просрочен'}
-                  </TableCell>
-                  <TableCell>{formatCurrency(installment.remainingAmount)}</TableCell>
-                </TableRow>
+          {commentsError && activeTab === 'comments' && (
+            <div style={{ color: 'red', marginBottom: '16px' }}>
+              Ошибка загрузки комментариев: {commentsError}
+            </div>
+          )}
+          
+          {/* Табы */}
+          <TabsContainer>
+            <TabsList>
+              {tabs.map((tab) => (
+                <TabItem 
+                  key={tab.id}
+                  $isActive={activeTab === tab.id}
+                  onClick={() => setActiveTab(tab.id as TabType)}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && <ActiveTabIndicator />}
+                </TabItem>
               ))}
-            </tbody>
-          </HistoryTable>
-        </InstallmentHistorySection>
+            </TabsList>
+          </TabsContainer>
+          
+          <TabContentContainer>
+            {activeTab === 'comments' ? commentsContent : historyContent}
+          </TabContentContainer>
+        </CommentsSection>
       </DossierGrid>
 
       {showPassportModal && client.passportPhoto && (
@@ -541,6 +1129,21 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {modalImage && (
+        <ModalOverlay onClick={() => setModalImage(null)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <CloseButton onClick={() => setModalImage(null)}>
+              <FaTimes />
+            </CloseButton>
+            <ModalImage
+              src={modalImage.src}
+              alt={modalImage.name}
+            />
+            <ImageCaption>{modalImage.name}</ImageCaption>
+          </ModalContent>
+        </ModalOverlay>
       )}
     </DossierContainer>
   );

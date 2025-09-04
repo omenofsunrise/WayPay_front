@@ -19,6 +19,7 @@ import InvestorModal from './CrudInherited/InvestorModal';
 import useInvestor from '../../api/hooks/useInvestor';
 import type { Payment, PaymentByCreditParams, PaymentParams } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
+import { NOTEABLE_TYPES } from '../../api/types/note';
 
 interface ViewCreditModalProps {
   id: number;
@@ -31,7 +32,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const { notes, isLoading: isNotesLoading, error: notesError, getNotes, createNote, deleteNote } = useNotes();
+  const { notes, isLoading: isNotesLoading, error: notesError, getCreditNotes, createNote, deleteNote } = useNotes();
   const { getCredits, isLoading: isCreditLoading, error: creditError } = useCredit();
   const { getClientById } = useClient();
   const [creditData, setCreditData] = useState<Credit | null>(null);
@@ -104,9 +105,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       };
 
       fetchData();
-      getNotes(Number(id));
+      // Используем новый метод для кредитных записок
+      getCreditNotes(Number(id));
     }
-  }, [isOpen, id, getNotes, getCredits, getClientById, getInvestorById]);
+  }, [isOpen, id, getCreditNotes, getCredits, getClientById, getInvestorById]);
 
   const notesColumns = [
     { name: 'Дата' },
@@ -116,7 +118,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
   const handleDeleteNote = async (noteId: number) => {
     await deleteNote(noteId);
-    getNotes(Number(id));
+    getCreditNotes(Number(id));
   };
 
   const formatNotesData = () => {
@@ -139,14 +141,15 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
 
   const handleCreateNote = async () => {
-    if (newNoteContent.trim()) {
+    if (newNoteContent.trim() && id) {
       await createNote({
-        creditId: Number(id),
+        noteableType: NOTEABLE_TYPES.CREDIT,
+        noteableId: Number(id),
         content: newNoteContent
       });
       setNewNoteContent('');
       setIsNoteModalOpen(false);
-      getNotes(Number(id));
+      getCreditNotes(Number(id));
     }
   };
 
@@ -360,7 +363,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     </>
   );
 };
-
 
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
