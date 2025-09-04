@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import clientService from '../services/clientService';
+import clientService, { PassportPhotoResponse, UploadPassportPhotoRequest } from '../services/clientService';
 import type { Client, ClientParams } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 
@@ -8,6 +8,7 @@ const useClient = () => {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<Client> | null>(null);
   const [currentClient, setCurrentClient] = useState<Client | null>(null);
+  const [passportPhoto, setPassportPhoto] = useState<PassportPhotoResponse | null>(null);
 
   const getClients = useCallback(async (params?: ClientParams): Promise<PaginatedResponse<Client> | null> => {
     setIsLoading(true);
@@ -150,16 +151,61 @@ const useClient = () => {
       return result;
     }
     catch (err) {
-    }
-    finally {
+      return false;
     }
   }
+
+  // Новые методы для работы с фотографиями паспорта
+  const uploadPassportPhoto = async (id: number, file: File): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await clientService.uploadPassportPhoto(id, file);
+      // После загрузки обновляем информацию о фото
+      await getPassportPhoto(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getPassportPhoto = async (id: number): Promise<PassportPhotoResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await clientService.getPassportPhoto(id);
+      setPassportPhoto(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deletePassportPhoto = async (id: number): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await clientService.deletePassportPhoto(id);
+      setPassportPhoto(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
     
   return {
     isLoading,
     error,
     data,
     currentClient,
+    passportPhoto,
     getClients,
     createClient,
     updateClient,
@@ -168,7 +214,10 @@ const useClient = () => {
     updateClientDoc,
     updateClientDocIssueDate,
     checkClientExists,
-    checkClientCredits
+    checkClientCredits,
+    uploadPassportPhoto,
+    getPassportPhoto,
+    deletePassportPhoto
   };
 };
 

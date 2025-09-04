@@ -12,6 +12,7 @@ export interface Client {
   creditRestTerms: number[];
   registrationAddress: string;
   secondPhone?: string;
+  HasPassportPhoto?: boolean;
 }
 
 export interface ClientParams extends PaginationParams {
@@ -39,4 +40,15 @@ export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {
 
 export interface ClientExistsResponse {
   exists: boolean;
+}
+
+export interface UploadPassportPhotoRequest {
+  file: File;
+}
+
+export interface PassportPhotoResponse {
+  hasPhoto: boolean;
+  photoBase64?: string;
+  contentType?: string;
+  fileName?: string;
 }

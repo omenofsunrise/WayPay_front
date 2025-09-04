@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { Client, ClientExistsResponse, ClientParams } from '../types/client';
+import type { Client, ClientExistsResponse, ClientParams, PassportPhotoResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 
 class ClientService {
@@ -45,6 +45,26 @@ class ClientService {
   async CheckClientCredits(id: number): Promise<boolean> {
     const result = await apiClient.get(`/Client/have_credits/${id}`);
     return result.data;
+  }
+
+  async uploadPassportPhoto(id: number, file: File): Promise<void> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    await apiClient.post(`/Client/${id}/passport-photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
+  async getPassportPhoto(id: number): Promise<PassportPhotoResponse> {
+    const response = await apiClient.get<PassportPhotoResponse>(`/Client/${id}/passport-photo`);
+    return response.data;
+  }
+
+  async deletePassportPhoto(id: number): Promise<void> {
+    await apiClient.delete(`/Client/${id}/passport-photo`);
   }
 }
 
