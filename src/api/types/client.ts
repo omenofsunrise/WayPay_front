@@ -12,7 +12,7 @@ export interface Client {
   creditRestTerms: number[];
   registrationAddress: string;
   secondPhone?: string;
-  HasPassportPhoto?: boolean;
+  hasPassportPhoto?: boolean;
 }
 
 export interface ClientParams extends PaginationParams {

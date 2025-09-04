@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import clientService, { PassportPhotoResponse, UploadPassportPhotoRequest } from '../services/clientService';
-import type { Client, ClientParams } from '../types/client';
+import type { Client, ClientParams, PassportPhotoResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
+import clientService from '../services/clientService';
 
 const useClient = () => {
   const [isLoading, setIsLoading] = useState(false);

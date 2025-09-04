@@ -127,6 +127,7 @@ interface Client {
   registrationAddress: string | null;
   creditIds?: string[];
   creditRestTerms?: string[];
+  hasPassportPhoto?: boolean;
 }
 
 const ClientPage = () => {

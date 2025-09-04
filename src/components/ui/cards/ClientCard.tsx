@@ -185,6 +185,7 @@ export interface Client {
   registrationAddress: string | null;
   creditIds?: string[];
   creditRestTerms?: string[];
+  hasPassportPhoto?: boolean;
 }
 
 interface ClientCardProps {
