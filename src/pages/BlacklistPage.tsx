@@ -13,6 +13,7 @@ import { Container } from 'react-bootstrap';
 import styled from 'styled-components';
 import ClientCard from '../components/ui/cards/ClientCard';
 import PhoneModalInput from '../components/ui/fields/PhoneModalInput';
+import ClientDossier from '../components/ui/Dossiers/ClientDossier';
 
 const TitleContainer = styled.div`
   display: flex;
@@ -130,6 +131,14 @@ interface BlacklistClient {
   phone: string;
   birthdate: Date | null;
   debt: number;
+  secondPhone?: string;
+  doc?: string;
+  docIssueDate?: Date | null;
+  docIssueYear?: number;
+  registrationAddress?: string | null;
+  creditIds?: string[];
+  creditRestTerms?: string[];
+  hasPassportPhoto?: boolean;
 }
 
 const BlacklistPage = () => {
@@ -139,6 +148,7 @@ const BlacklistPage = () => {
     const [hasSearched, setHasSearched] = useState(false);
     const { hasRole } = useAuth();
     const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
+    const [selectedClientDossier, setSelectedClientDossier] = useState<BlacklistClient | null>(null);
     
     const { 
         isLoading, 
@@ -164,7 +174,7 @@ const BlacklistPage = () => {
 
     const loadBlacklist = useCallback(async () => {
         const shouldSearch = searchTriggered && (
-            nameFilter.length >= 3 || 
+            nameFilter.length >= 5 || 
             (phoneFilter.replace(/\D/g, '').length >= 11 && phoneFilter.replace(/\D/g, '').length <= 15)
         );
 
@@ -280,6 +290,14 @@ const BlacklistPage = () => {
         }
     };
 
+    const handleOpenDossier = useCallback((client: BlacklistClient) => {
+        setSelectedClientDossier(client);
+    }, []);
+
+    const handleCardClick = (client: BlacklistClient) => {
+        setSelectedClientDossier(client);
+    };
+
     const renderContent = () => {
         if (isLoading) {
             return <div>Загрузка...</div>;
@@ -295,7 +313,7 @@ const BlacklistPage = () => {
                     <EmptyStateIcon>🚫</EmptyStateIcon>
                     <EmptyStateTitle>Поиск в чёрном списке</EmptyStateTitle>
                     <EmptyStateText>
-                        Введите ФИО клиента (минимум 3 символа) или полный номер телефона для поиска в чёрном списке.
+                        Введите ФИО клиента (минимум 5 символов) или полный номер телефона для поиска в чёрном списке.
                     </EmptyStateText>
                 </EmptyStateContainer>
             );
@@ -326,16 +344,19 @@ const BlacklistPage = () => {
                         key={client.id} 
                         client={{
                             ...client,
-                            secondPhone: '',
-                            doc: '',
-                            docIssueDate: null,
-                            docIssueYear: 0,
-                            registrationAddress: '',
-                            birthdate: client.birthdate || null
+                            secondPhone: client.secondPhone || '',
+                            doc: client.doc || '',
+                            docIssueDate: client.docIssueDate || null,
+                            docIssueYear: client.docIssueYear || 0,
+                            registrationAddress: client.registrationAddress || '',
+                            birthdate: client.birthdate || null,
+                            creditIds: client.creditIds || [],
+                            creditRestTerms: client.creditRestTerms || []
                         }}
                         onEdit={() => {}}
                         onDelete={() => handleDeleteFromBlacklist(client)}
                         onRightClick={(e) => handleCardRightClick(e, client)}
+                        onOpenDossier={handleOpenDossier}
                         additionalInfo={
                             <DebtBadge>
                                 Просрочка: {client.debt?.toLocaleString('ru-RU')} ₽
@@ -349,69 +370,82 @@ const BlacklistPage = () => {
 
     return (
         <PageLayout onClick={closeContextMenu}>
-            <TitleField style={{ position: "sticky"}}>
-                <TitleContainer>
-                    <CustomTitle>Чёрный список</CustomTitle>
-                    {blacklistData && blacklistData.items.length > 0 && (
-                        <ClientCount>({blacklistData.totalCount})</ClientCount>
-                    )}
-                </TitleContainer>
-            </TitleField>
-            
-            <StickyFilterField>
-                <Container style={{display: "flex", flexDirection: "row", width: "50vw", gap: "15px" }}>
-                    <CustomInput 
-                        inputType="fullname"
-                        placeholder="ФИО клиента (минимум 3 символа)"
-                        value={nameFilter}
-                        onChange={(e) => handleFilterChange(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                    />
-                    <PhoneModalInput 
-                        placeholder="Телефон (полный номер)"
-                        value={phoneFilter}
-                        onChange={(e) => handlePhoneFilterChange(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        name="phone"
-                    />
-                    <ResetButton onClick={resetFilters}>
-                        Сбросить фильтры
-                    </ResetButton>
-                    <DarkCyanButton 
-                        onClick={handleSearch}
-                        disabled={!(nameFilter.length >= 3 || phoneFilter.replace(/\D/g, '').length >= 11)}
-                    >
-                        Поиск
-                    </DarkCyanButton>
-                </Container>
-                <DarkCyanButton 
-                    style={{ width: "25vw", marginLeft: "auto" }}
-                    onClick={handleAddToBlacklist}
-                >
-                    + Добавить
-                </DarkCyanButton>
-            </StickyFilterField>
-            
-            {renderContent()}
-            
-            <ClientSelectModal
-                isOpen={isSelectModalOpen}
-                onClose={() => setIsSelectModalOpen(false)}
-                onSubmit={handleClientSelect}
-                width="900px"
-            />
-
-            {contextMenu && hasRole('суперадмин') && (
+            {selectedClientDossier ? (
+                <ClientDossier
+                    client={selectedClientDossier}
+                    comments={[]}
+                    installments={[]}
+                    onBack={() => setSelectedClientDossier(null)}
+                    onAddComment={(comment) => console.log('Add comment:', comment)}
+                    onUploadPassport={(file) => console.log('Upload passport:', file)}
+                />
+            ) : (
                 <>
-                    <Backdrop onClick={closeContextMenu} />
-                    <ContextMenu x={contextMenu.x} y={contextMenu.y}>
-                        <MenuItem 
-                            danger 
-                            onClick={() => handleContextMenuAction('delete')}
+                    <TitleField style={{ position: "sticky"}}>
+                        <TitleContainer>
+                            <CustomTitle>Чёрный список</CustomTitle>
+                            {blacklistData && blacklistData.items.length > 0 && (
+                                <ClientCount>({blacklistData.totalCount})</ClientCount>
+                            )}
+                        </TitleContainer>
+                    </TitleField>
+                    
+                    <StickyFilterField>
+                        <Container style={{display: "flex", flexDirection: "row", width: "50vw", gap: "15px" }}>
+                            <CustomInput 
+                                inputType="fullname"
+                                placeholder="ФИО клиента (минимум 5 символов)"
+                                value={nameFilter}
+                                onChange={(e) => handleFilterChange(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                            />
+                            <PhoneModalInput 
+                                placeholder="Телефон (полный номер)"
+                                value={phoneFilter}
+                                onChange={(e) => handlePhoneFilterChange(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                name="phone"
+                            />
+                            <ResetButton onClick={resetFilters}>
+                                Сбросить фильтры
+                            </ResetButton>
+                            <DarkCyanButton 
+                                onClick={handleSearch}
+                                disabled={!(nameFilter.length >= 5 || phoneFilter.replace(/\D/g, '').length >= 11)}
+                            >
+                                Поиск
+                            </DarkCyanButton>
+                        </Container>
+                        <DarkCyanButton 
+                            style={{ width: "25vw", marginLeft: "auto" }}
+                            onClick={handleAddToBlacklist}
                         >
-                            Удалить из чёрного списка
-                        </MenuItem>
-                    </ContextMenu>
+                            + Добавить
+                        </DarkCyanButton>
+                    </StickyFilterField>
+                    
+                    {renderContent()}
+                    
+                    <ClientSelectModal
+                        isOpen={isSelectModalOpen}
+                        onClose={() => setIsSelectModalOpen(false)}
+                        onSubmit={handleClientSelect}
+                        width="900px"
+                    />
+
+                    {contextMenu && hasRole('суперадмин') && (
+                        <>
+                            <Backdrop onClick={closeContextMenu} />
+                            <ContextMenu x={contextMenu.x} y={contextMenu.y}>
+                                <MenuItem 
+                                    danger 
+                                    onClick={() => handleContextMenuAction('delete')}
+                                >
+                                    Удалить из чёрного списка
+                                </MenuItem>
+                            </ContextMenu>
+                        </>
+                    )}
                 </>
             )}
         </PageLayout>

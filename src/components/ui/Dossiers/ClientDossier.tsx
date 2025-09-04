@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { FaArrowLeft, FaPassport, FaComment, FaUpload, FaEye, FaHistory, FaPaperclip, FaTrash, FaDownload, FaTimes, FaMinus, FaPlus, FaEyeSlash } from 'react-icons/fa';
 import useNotes from '../../../api/hooks/useNote';
@@ -7,6 +7,11 @@ import { generateAvatar, getInitials, stringToColor } from '../../../utils/avata
 import { FILE_BASE_URL } from '../../../api/client';
 import { useAuth } from '../../../сontext/AuthContext';
 import useClient from '../../../api/hooks/useClient';
+import useCredit from '../../../api/hooks/useCredit';
+import { formatMoney } from '../../../utils/formatPrice';
+import Pagination from '../fields/CustomPagination';
+import CustomTable from '../tables/CustomTable';
+import ViewCreditModal from '../../modal/ViewCreditModal';
 
 const TabsContainer = styled.div`
   width: 100%;
@@ -45,11 +50,6 @@ const ActiveTabIndicator = styled.div`
   height: 2px;
   background-color: rgba(0, 125, 136, 1);
   border-radius: 2px 2px 0 0;
-`;
-
-const AddButtonContainer = styled.li`
-  margin-left: auto; 
-  padding: 4px 0; 
 `;
 
 const TabContentContainer = styled.div`
@@ -402,6 +402,7 @@ const CommentContent = styled.p`
   line-height: 1.5;
   font-size: 14px;
   white-space: pre-wrap;
+  text-align: left;
 `;
 
 const CommentFiles = styled.div`
@@ -447,7 +448,7 @@ const FileDownloadButton = styled.button`
 const DeleteButton = styled.button`
   background: none;
   border: none;
-  color: #ef4444;
+  color: rgba(80, 85, 92, 1);
   cursor: pointer;
   padding: 4px;
   font-size: 12px;
@@ -724,7 +725,61 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
   const [isPassportVisible, setIsPassportVisible] = useState(false);
   const [hasPassport, setHasPassport] = useState(client.hasPassportPhoto || false);
   const [passportPhotoData, setPassportPhotoData] = useState<string | null>(null);
+  const [creditHistoryPage, setCreditHistoryPage] = useState(1);
+  const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
+  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
+  const itemsPerPage = 10;
+
+  const {
+    isLoading: isCreditHistoryLoading,
+    error: creditHistoryError,
+    data: creditHistoryData,
+    getCredits
+  } = useCredit();
   
+  const loadCreditHistory = useCallback(async () => {
+    if (activeTab === 'history') {
+      await getCredits({
+        page: creditHistoryPage,
+        pageSize: itemsPerPage,
+        clientFullname: client.fullName,
+        includeAllStates: true
+      });
+    }
+  }, [activeTab, creditHistoryPage, client.fullName, getCredits]);
+
+  useEffect(() => {
+    loadCreditHistory();
+  }, [loadCreditHistory]);
+
+  const formatCreditData = (credits: any[] | undefined) => {
+    if (!credits) return [];
+    
+    return credits.map(credit => {
+      let status = 'pending';
+      if (credit.rest <= 0) {
+        status = 'paid';
+      } else if (credit.debt > 0) {
+        status = 'overdue';
+      }
+            
+      return [
+        credit.id.toString(),
+        formatDate(credit.creditDate),
+        credit.termMonths ? `${credit.termMonths} мес.` : 'Не указан',
+        `${formatMoney(credit.accured?.toString() || '')}`,
+        `${formatMoney(credit.payed.toString())}`,
+        `${formatMoney(credit.rest.toString())}`,
+        `${formatMoney(credit.debt.toString())}`,
+        status,
+      ];
+    });
+  };
+
+  const handleCreditPageChange = (page: number) => {
+    setCreditHistoryPage(page);
+  };
+
   const {
     getPassportPhoto,
     uploadPassportPhoto,
@@ -880,22 +935,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB'
-    }).format(amount);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return '#10b981';
-      case 'pending': return '#f59e0b';
-      case 'overdue': return '#ef4444';
-      default: return '#6b7280';
-    }
   };
 
   const handleDeleteComment = async (commentId: number) => {
@@ -1097,32 +1136,39 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
   );
 
   const historyContent = (
-    <HistoryTable>
-      <thead>
-        <tr>
-          <TableHeader>Договор</TableHeader>
-          <TableHeader>Сумма</TableHeader>
-          <TableHeader>Дата</TableHeader>
-          <TableHeader>Статус</TableHeader>
-          <TableHeader>Остаток</TableHeader>
-        </tr>
-      </thead>
-      <tbody>
-        {installments.map((installment) => (
-          <TableRow key={installment.id}>
-            <TableCell>{installment.contractNumber}</TableCell>
-            <TableCell>{formatCurrency(installment.amount)}</TableCell>
-            <TableCell>{formatDate(installment.date)}</TableCell>
-            <TableCell style={{ color: getStatusColor(installment.status) }}>
-              {installment.status === 'paid' && 'Оплачен'}
-              {installment.status === 'pending' && 'Ожидает оплаты'}
-              {installment.status === 'overdue' && 'Просрочен'}
-            </TableCell>
-            <TableCell>{formatCurrency(installment.remainingAmount)}</TableCell>
-          </TableRow>
-        ))}
-      </tbody>
-    </HistoryTable>
+    <>
+      {isCreditHistoryLoading ? (
+        <div>Загрузка истории кредитов...</div>
+      ) : creditHistoryError ? (
+        <div>Ошибка загрузки истории: {creditHistoryError}</div>
+      ) : (
+        <>
+          <CustomTable 
+            columns={[
+              { name: "№ Договора", isSortable: true },
+              { name: "Дата договора", isSortable: true, align: "right" },
+              { name: "Срок", isSortable: true, align: "right" },
+              { name: "Начислено", isSortable: true, align: "right" },
+              { name: "Уплачено", isSortable: true, align: "right" },
+              { name: "Остаток", isSortable: true, align: "right" },
+              { name: "Долг", isSortable: true, align: "right" },
+              { name: "status", isHidden: true },
+              { name: "color", isHidden: true } 
+            ]} 
+            data={formatCreditData(creditHistoryData?.items)}
+          />
+          
+          {creditHistoryData && creditHistoryData.totalCount > itemsPerPage && (
+            <Pagination
+              total={creditHistoryData.totalCount}
+              current={creditHistoryPage}
+              onChange={handleCreditPageChange}
+              itemsPerPage={itemsPerPage}
+            />
+          )}
+        </>
+      )}
+    </>
   );
 
   const tabs = [
@@ -1202,7 +1248,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
                         style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
                       >
                         <FaTrash />
-                        Удалить фото
+                        Удалить
                       </UploadButton>
                       <HidePassportButton style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }} onClick={handleHidePassport}>
                         <FaEyeSlash />
@@ -1210,7 +1256,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
                       </HidePassportButton>
                       <UploadButton as="label">
                         <FaUpload />
-                        Заменить фото
+                        Заменить
                         <input
                           type="file"
                           accept="image/*"
@@ -1233,7 +1279,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
                         style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
                       >
                         <FaTrash />
-                        Удалить фото
+                        Удалить 
                       </UploadButton>
                       <ViewPassportButton style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }} onClick={handleViewPassport}>
                         <FaEye />
@@ -1241,7 +1287,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
                       </ViewPassportButton>
                       <UploadButton as="label">
                         <FaUpload />
-                        Заменить фото
+                        Заменить
                         <input
                           type="file"
                           accept="image/*"
@@ -1344,6 +1390,12 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
           </ModalContent>
         </ModalOverlay>
       )}
+
+      <ViewCreditModal
+        id={viewingCreditId || 0}
+        isOpen={isCreditModalOpen}
+        onClose={() => setIsCreditModalOpen(false)}
+      />
     </DossierContainer>
   );
 };

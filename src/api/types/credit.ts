@@ -58,6 +58,8 @@ export interface CreditParams extends PaginationParams {
     clientFullname?: string;
     isFavourite?: boolean;
     isActive?: boolean;
+    clientId?: number;
+    includeAllStates?: boolean;
 }
 
 export interface CreditDocs {
