@@ -15,7 +15,6 @@ export default defineConfig({
     sourcemap: false,
   },
   esbuild: {
-    // Игнорировать ошибки TS
     legalComments: 'none',
     logOverride: { 'this-is-undefined-in-esm': 'silent' },
   },
