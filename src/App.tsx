@@ -34,15 +34,27 @@ import LicenseOutPage from './pages/LicenseOutPage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import InvestorsPoolPage from './pages/InvestorsPoolPage';
+import { DesktopOnlyContent } from './components/DesktopOnly';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
+
+const isMobileDevice = (): boolean => {
+  const screenWidthCheck = window.innerWidth <= 768;
+  
+  return screenWidthCheck;
+};
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [showPinModal, setShowPinModal] = useState(false);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
+
   const updateActivity = useCallback(() => {
     setLastActivity(Date.now());
   }, []);
@@ -163,6 +175,10 @@ function App() {
     updateActivity();
     sessionStorage.setItem('lastActivity', Date.now().toString());
   }, [updateActivity]);
+
+  if (isMobile) {
+    return <DesktopOnlyContent />;
+  }
 
   if (isAuthenticated && authInfo?.hasPin === false) {
     return (

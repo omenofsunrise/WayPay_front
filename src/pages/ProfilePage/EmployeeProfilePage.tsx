@@ -269,7 +269,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                     isCurrentUser={!employeeId}
                 />
                 
-                <ChartWrapper>
+                <ChartWrapper style={{ height: "100%" }}>
                     <ColumnChart 
                         height={220}
                         title="Статистика платежей" 
@@ -372,7 +372,7 @@ const ProfileContent = styled.div`
     display: flex;
     gap: 15px;
     margin: 10px 0;
-    
+
     @media (max-width: 1200px) {
         flex-direction: column;
     }
