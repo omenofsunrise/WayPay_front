@@ -58,7 +58,7 @@ const ProfilePage = () => {
         switch (activeTab) {
             case "Мой профиль":
                 return <EmployeeProfilePage />;
-            case "Список пользователей":
+            case "Сотрудники":
                 return <EmployeePage onViewEmployee={handleViewEmployee} />;
             case "Данные компании":
                 return <CompanyPage />;

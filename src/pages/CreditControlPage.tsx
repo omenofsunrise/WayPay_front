@@ -422,9 +422,12 @@ const CreditControlPage = () => {
           />
         </IncomeContainer>
       </SecondRaw>
-
-      <CreditTypes onTabChange={handleTabChange} />
-
+      <SecondRaw>
+        <CreditTypes onTabChange={handleTabChange} />
+        <CountInfoTitle 
+          total={creditsData?.totalCount || 0} 
+        />
+      </SecondRaw>
       {isLoading && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}
       
@@ -452,11 +455,7 @@ const CreditControlPage = () => {
             debtChecker={(row) => row[row.length - 2] === true}
           />
 
-          <PaginationLayout>
-            <CountInfoTitle 
-              total={creditsData?.totalCount || 0} 
-            />
-            
+          <PaginationLayout>           
             <Pagination
               total={creditsData?.totalCount || 0}
               current={currentPage}
@@ -501,10 +500,10 @@ const InputWrapper = styled.div`
 
 const SecondRaw = styled.div`
   display: flex;
-  width: auto;
-  margin: 15px 0;
-  gap: 16px;
-  align-items: left;
+  margin: 15px 0 0;
+  background-color: transparent;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const StarIcon = styled.div`

@@ -404,17 +404,11 @@ const CreditPage = () => {
       </FilterField>
 
       <SecondRaw style={{ color: "white" }}>
-        {/* {hasPermission('CREATE_CREDITS') && (
-          <DarkCyanButton 
-            style={{ marginLeft: "auto", width: "15vw" }}
-            onClick={() => navigate('/new-credit')}
-          >
-            + Новый договор
-          </DarkCyanButton>
-        )} */}
+        <CreditTypes onTabChange={handleTabChange} />
+        <CountInfoTitle 
+          total={creditsData?.totalCount || 0} 
+        />
       </SecondRaw>
-
-      <CreditTypes onTabChange={handleTabChange} />
 
       {isLoading && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}
@@ -445,10 +439,6 @@ const CreditPage = () => {
           />
 
           <PaginationLayout>
-            <CountInfoTitle 
-              total={creditsData?.totalCount || 0} 
-            />
-            
             <Pagination
               total={creditsData?.totalCount || 0}
               current={currentPage}
@@ -500,9 +490,11 @@ const InputWrapper = styled.div`
 
 const SecondRaw = styled.div`
   display: flex;
-  width: 100%;
-  margin: 15px 0;
+  height: 60px;
+  margin: 15px 0 0;
   background-color: transparent;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const StarIcon = styled.div`

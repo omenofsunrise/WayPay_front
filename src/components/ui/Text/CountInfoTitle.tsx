@@ -16,9 +16,10 @@ const CountInfoTitle = ({ total }: CountInfoTitleProps) => {
 const Paragraph = styled.p`
   display: flex;
   align-items: center;
+  color: black;
   justify-content: center;
-  height: 40px; 
-  margin-top: 30px;
+  align-items: center;
+  font-size: 20px;
 `;
 
 export default CountInfoTitle;
