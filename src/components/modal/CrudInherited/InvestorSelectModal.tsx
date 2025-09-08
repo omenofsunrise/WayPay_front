@@ -55,7 +55,7 @@ const InvestorSelectModal = ({
     type: 'investor' | 'pool';
   } | null>(null);
   
-  const pageSize = 8;
+  const pageSize = 4;
   
   const columnToApiSortMap: Record<number, string> = {
     0: 'id',
@@ -228,10 +228,10 @@ const InvestorSelectModal = ({
             <TableContainer>
               <CustomTable 
                 columns={[
-                  { name: "ID", isSortable: true, align: "left" },
+                  { name: "ID", isSortable: true, align: "left", isHidden: true },
                   { name: includePools ? "Никнейм/Название" : "Никнейм", align: "left" },
-                  { name: "Телефон", align: "left" },
-                  { name: "Доля", align: "left", isSortable: true },
+                  { name: "Телефон", align: "left", isHidden: true },
+                  { name: "Доля", align: "left", isSortable: true, isHidden: true },
                   { name: "Касса", isSortable: true, align: "right" },
                   { name: "Дата окончания инвестора", align: "left" },
                 ]} 

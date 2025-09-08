@@ -72,7 +72,7 @@ const CreditPage = () => {
     }
   };
 
-  const handlePrintOptionSelect = async (option: 'sale' | 'guarantee' | 'guaranteeConsent') => {
+  const handlePrintOptionSelect = async (option: 'sale' | 'schedules' | 'guaranteeConsent') => {
     if (!selectedCreditForPrint) return;
     
     try {
@@ -80,10 +80,10 @@ const CreditPage = () => {
       
       if (option === 'sale') {
         await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
-      } else if (option === 'guarantee') {
+      } else if (option === 'schedules') {
         await docxGenerator.generateFromCreditData(
           selectedCreditForPrint.id,
-          '/Docs/guaranteeContract.docx'
+          '/Docs/schedules.docx'
         );
       } else if (option === 'guaranteeConsent') {
         await docxGenerator.generateFromCreditData(
@@ -330,13 +330,13 @@ const CreditPage = () => {
         >
           Печать
         </ExportButton>
-          <ExportButton 
-            onClick={handleExport}
-            isExporting={isExporting}
-            exportProgress={exportProgress}
-          >
-            Экспорт
-          </ExportButton>
+        <ExportButton 
+          onClick={handleExport}
+          isExporting={isExporting}
+          exportProgress={exportProgress}
+        >
+          Экспорт
+        </ExportButton>
       </TitleField>
 
       <FilterField>

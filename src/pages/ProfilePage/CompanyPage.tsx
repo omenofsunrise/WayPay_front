@@ -254,7 +254,7 @@ const CompanyPage = () => {
                     
                     <InputContainer>
                         <InputGroup>
-                            <Label>ИНН</Label>
+                            <Label>Банк</Label>
                             <StyledInput 
                                 name="inn"
                                 value={formData.inn}
@@ -274,7 +274,7 @@ const CompanyPage = () => {
                     
                     <InputContainer>
                         <InputGroup>
-                            <Label>Рассчётный счёт</Label>
+                            <Label>Телефон привязанный к карточке</Label>
                             <StyledInput 
                                 name="bank"
                                 value={formData.bank}

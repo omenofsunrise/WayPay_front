@@ -35,6 +35,7 @@ import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import Pagination from '../components/ui/fields/CustomPagination';
 import Tabs from '../components/ui/fields/Tabs';
+import { useAuth } from '../сontext/AuthContext';
 
 const InvestorReportPage = () => {
     const { getInvestors, currentInvestor, getInvestorById, getInvestorReport } = useInvestor();
@@ -50,7 +51,7 @@ const InvestorReportPage = () => {
         getCreditsByInvestorId, 
         isLoading: isCreditsLoading 
     } = useCredit();
-    
+    const { authInfo, hasRole } = useAuth();
     const [investors, setInvestors] = useState<Investor[]>([]);
     const [selectedInvestorId, setSelectedInvestorId] = useState<string>('');
     const [report, setReport] = useState<InvestorReport | null>(null);
@@ -82,6 +83,8 @@ const InvestorReportPage = () => {
         fetchInvestors();
     }, [getInvestors]);
 
+    const isSuperUser = hasRole('директор') || hasRole('суперадмин');
+    
     useEffect(() => {
         if (selectedInvestorId) {
             const fetchReportData = async () => {
@@ -566,16 +569,20 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
         <PageLayout>
             <TitleField>
                 <CustomTitle>Отчёт для инвесторов</CustomTitle>
-                <ExportButton 
-                    onClick={() => report && currentInvestor && exportToPdf(report, currentInvestor, payouts)} 
-                    disabled={!report}
-                />
-                <ExportButton
-                    children={"Поделиться"}
-                    icon={<ShareIcon />}
-                    onClick={handleShareClick} 
-                    disabled={!report}
-                />
+                {isSuperUser && (
+                    <>
+                        <ExportButton 
+                            onClick={() => report && currentInvestor && exportToPdf(report, currentInvestor, payouts)} 
+                            disabled={!report}
+                        />
+                        <ExportButton
+                            children={"Поделиться"}
+                            icon={<ShareIcon />}
+                            onClick={handleShareClick} 
+                            disabled={!report}
+                        />
+                    </>
+                )}
             </TitleField>
 
             <ContentContainer>
@@ -597,10 +604,12 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                                 disabled={isLoading}
                             />
                         </SelectWrapper>
-                        <ViewButton 
-                            onClick={() => setIsViewInvestorModalOpen(true)} 
-                            disabled={!selectedInvestorId}
-                        />
+                        {isSuperUser && (
+                            <ViewButton 
+                                onClick={() => setIsViewInvestorModalOpen(true)} 
+                                disabled={!selectedInvestorId}
+                            />
+                        )}
                     </SelectWithViewWrapper>
                     <DarkCyanButton 
                         onClick={() => setIsPayoutModalOpen(true)}

@@ -271,13 +271,13 @@ const InvestorPage = () => {
         if (!investor || investor.id === undefined || investor.id === null) {
             return [
                 '',
-                '',
+                ...(canEdit ? [''] : []),
                 ...(canEdit ? [''] : []),
                 '',
-                '0%',
+                ...(canEdit ? [''] : []),
                 formatMoney('0'),
                 formatMoney('0'),
-                'false'
+                ...(canEdit ? [''] : []),
             ];
         }
 
@@ -285,9 +285,9 @@ const InvestorPage = () => {
             investor.id.toString(),
             investor.nickname || '',
             ...(canEdit? [investor.fullName || ''] : []),
-            investor.phoneNumber || '',
-            `${investor.investorPie || 0}%`,
-            formatMoney((investor.investmentAmount || 0).toString()),
+            ...(canEdit? [investor.phoneNumber || ''] : []),
+            ...(canEdit? [investor.investorPie || ''] : []),
+            ...(canEdit? [formatMoney((investor.investmentAmount || 0).toString()) || ''] : []),
             formatMoney((investor.balance || 0).toString()),
             formatDate(investor.activeUntil),
             investor.isBlocked?.toString() || 'false',
@@ -407,9 +407,15 @@ const InvestorPage = () => {
         ...(canEdit)
             ? [{ name: "ФИО (видно только директору)", isSortable: true, align: "left" } as Column]
             : [],
-        { name: "Телефон", align: "left" },
-        { name: "Доля инвестора", isSortable: true, align: "right" },
-        { name: "Инвестиция", isSortable: true, align: "right" },
+        ...(canEdit)
+            ? [{ name: "Телефон", align: "left" } as Column]
+            : [],
+        ...(canEdit)
+            ? [{ name: "Доля инвестора", isSortable: true, align: "right" } as Column]
+            : [],
+        ...(canEdit)
+            ? [{ name: "Инвестиция", isSortable: true, align: "right" } as Column]
+            : [],
         { name: "Касса", isSortable: true, align: "right" },
         { name: "Дата окончания договора" },
         { name: "isBlocked", isHidden: true },

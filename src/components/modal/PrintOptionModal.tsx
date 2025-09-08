@@ -1,16 +1,15 @@
 import styled from "styled-components";
 import type { Credit } from "../../api/types/credit";
-import { useState } from "react";
 
 interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: 'sale' | 'guaranteeConsent') => void;
+  onSelect: (option: 'sale' | 'guaranteeConsent' | 'schedules') => void;
   selectedCredit: Credit | null;
 }
 
 const PrintOptionModal = ({ isOpen, onClose, onSelect, selectedCredit }: PrintOptionModalProps) => {
-  const handleSelect = (option: 'sale' | 'guaranteeConsent') => {
+  const handleSelect = (option: 'sale' | 'guaranteeConsent' | 'schedules') => {
     if (selectedCredit) {
       onSelect(option);
     } else {
@@ -29,6 +28,9 @@ const PrintOptionModal = ({ isOpen, onClose, onSelect, selectedCredit }: PrintOp
           </PrintOption>
           <PrintOption onClick={() => handleSelect('guaranteeConsent')}>
             Договор поручительства
+          </PrintOption>
+          <PrintOption onClick={() => handleSelect('schedules')}>
+            График платежей
           </PrintOption>
         </PrintOptions>
       </ModalContent>

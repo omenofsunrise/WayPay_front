@@ -234,9 +234,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           readOnly
                         />
                       </InputContainer>
-                      <ViewButtonContainer>
+                      {/* <ViewButtonContainer>
                         <ViewButton onClick={handleOpenInvestorModal} />
-                      </ViewButtonContainer>
+                      </ViewButtonContainer> */}
                     </HorizontalContainer>
                     <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
                     <HorizontalContainer>
@@ -247,9 +247,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           readOnly
                         />
                       </InputContainer>
-                      <ViewButtonContainer>
+                      {/* <ViewButtonContainer>
                         <ViewButton onClick={handleOpenClientModal} />
-                      </ViewButtonContainer>
+                      </ViewButtonContainer> */}
                       <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
                         <InputTitle>Первоначальный взнос, руб</InputTitle>
                         <CustomInput 
