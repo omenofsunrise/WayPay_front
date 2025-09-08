@@ -97,7 +97,8 @@ export interface CreditDocs {
     firstPayment?: string;
     restAmount?: string;
     product?: string;
-
+    
+    soldProducts?: SoldProductItem[];
     paymentSchedule?: PaymentScheduleItem[];
     
     [key: string]: any;
@@ -108,6 +109,14 @@ export interface PaymentScheduleItem {
     balance: string;    
     payment: string;    
     note?: string;      
+}
+
+export interface SoldProductItem {
+    name: string;
+    price: string;
+    surcharge?: string;
+    surchargeAmount?: string;
+    totalAmount: string;
 }
 
 export interface CreditResponse extends PaginatedResponse<Credit> {

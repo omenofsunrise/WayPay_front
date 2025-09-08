@@ -1,6 +1,7 @@
 import { saveAs } from 'file-saver';
 import { TemplateHandler } from 'easy-template-x';
-import type { CreditDocs, PaymentScheduleItem } from '../api/types/credit';
+import type { CreditDocs, PaymentScheduleItem, SoldProductItem } from '../api/types/credit';
+import { formatMoney } from './formatPrice';
 
 class DocxGenerator {
   private templateUrl: string;
@@ -27,7 +28,6 @@ class DocxGenerator {
         throw new Error('Не удалось получить данные для документа');
       }
       
-      // Форматируем данные для шаблона
       const templateData = this.prepareTemplateData(docsData);
       
       const templateFile = await this.loadTemplate(templateUrl);
@@ -47,28 +47,63 @@ class DocxGenerator {
   }
 
   /**
-   * Подготавливает данные для шаблона, включая таблицу платежей
+   * Подготавливает данные для шаблона, включая таблицы платежей и продуктов
    */
   private prepareTemplateData(docsData: CreditDocs): any {
-      if (!docsData.paymentSchedule || docsData.paymentSchedule.length === 0) {
-          return docsData;
-      }
-      
-      const paymentTable = docsData.paymentSchedule.map((item, index) => ({
-          index: (index + 1).toString(),
-          date: item.date,
-          balance: item.balance,
-          payment: item.payment,
-          note: item.note || ''
+    const result: any = { ...docsData };
+    
+    if (docsData.paymentSchedule && docsData.paymentSchedule.length > 0) {
+      result.paymentTable = docsData.paymentSchedule.map((item, index) => ({
+        index: (index + 1).toString(),
+        date: item.date,
+        balance: item.balance,
+        payment: item.payment,
+        note: item.note || ''
+      }));
+    }
+
+    if (docsData.soldProducts && docsData.soldProducts.length > 0) {
+      result.productsTable = docsData.soldProducts.map((product, index) => ({
+        index: (index + 1).toString(),
+        name: product.name,
+        price: formatMoney(product.price.toString()),
       }));
 
-      const hasGuarantor = !!docsData.guarantorName;
-      
-      return {
-          ...docsData,
-          paymentTable,
-          hasGuarantor
-      };
+      result.totalProductsPrice = this.calculateTotal(docsData.soldProducts, 'price');
+      result.totalSurchargeAmount = this.calculateTotal(docsData.soldProducts, 'surchargeAmount');
+      result.totalProductsAmount = this.calculateTotal(docsData.soldProducts, 'totalAmount');
+    }
+
+    result.hasGuarantor = !!docsData.guarantorName;
+    result.hasProducts = !!docsData.soldProducts && docsData.soldProducts.length > 0;
+    
+    return result;
+  }
+
+  /**
+   * Вычисляет общую сумму для указанного поля в массиве продуктов
+   */
+  private calculateTotal(products: SoldProductItem[], field: keyof SoldProductItem): string {
+    let total = 0;
+    
+    products.forEach(product => {
+      const value = product[field];
+      if (value && typeof value === 'string') {
+        const numericValue = parseFloat(value.replace(/\s/g, '').replace(',', '.'));
+        if (!isNaN(numericValue)) {
+          total += numericValue;
+        }
+      }
+    });
+    
+    return this.formatNumberWithSpaces(total);
+  }
+
+  /**
+   * Форматирует число с пробелами тысяч
+   */
+  private formatNumberWithSpaces(num: number): string {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
   private async loadTemplate(url: string): Promise<Blob> {
@@ -93,14 +128,23 @@ class DocxGenerator {
       ? docsData.clientName.split(' ')[0] 
       : 'клиент';
     
+    // Определяем тип документа на основе пути к шаблону
     let docType = 'Договор';
-    if (templateUrl.includes('guaranteeContract')) {
+    
+    if (templateUrl.includes('schedules.docx')) {
+      docType = 'График_платежей';
+    } else if (templateUrl.includes('guaranteeContract')) {
       docType = 'Договор_поручительства';
     } else if (templateUrl.includes('guaranteeandConsentAgreement')) {
       docType = 'Договор_поручительства_и_согласие';
+    } else if (templateUrl.includes('salesContract')) {
+      docType = 'Договор_купли_продажи';
     }
     
-    return `${docType}_${docsData.contractNumber}_${clientName}.docx`;
+    // Добавляем номер договора, если он есть
+    const contractNumber = docsData.contractNumber ? `_${docsData.contractNumber}` : '';
+    
+    return `${docType}${contractNumber}_${clientName}.docx`;
   }
 
   private async verifyDocxSignature(blob: Blob): Promise<boolean> {
