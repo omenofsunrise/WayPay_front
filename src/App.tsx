@@ -62,7 +62,7 @@ function App() {
   // Обработчик комбинации клавиш Ctrl + Alt + W
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     // Проверяем комбинацию Ctrl + Alt + W
-    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'l') {
+    if ((event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'l') || (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'д')) {
       event.preventDefault();
       
       // Показываем модальное окно пинкода только если пользователь аутентифицирован
