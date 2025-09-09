@@ -11,7 +11,7 @@ const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
         const savedEmployeeId = localStorage.getItem('viewingEmployeeId');
         if (savedEmployeeId) {
-            return "Список пользователей";
+            return "Сотрудники";
         }
         return localStorage.getItem('profileActiveTab') || "Мой профиль";
     });
@@ -35,12 +35,12 @@ const ProfilePage = () => {
 
     const handleViewEmployee = (id: number) => {
         setViewingEmployeeId(id);
-        setActiveTab("Список пользователей");
+        setActiveTab("Сотрудники");
     };
 
     const handleBackToList = () => {
         setViewingEmployeeId(null);
-        setActiveTab("Список пользователей");
+        setActiveTab("Сотрудники");
     };
 
     const renderTabContent = () => {

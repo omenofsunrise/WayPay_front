@@ -119,16 +119,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                                 setNewIncome(prev => ({...prev, investorId: ''}));
                             }}
                         />
-                        <ViewButton 
-                            onClick={() => currentInvestor && setIsViewInvestorModalOpen(true)} 
-                            disabled={!currentInvestor} 
-                        />
                     </div>
-                    <CustomInput
-                        value={newIncome.comment}
-                        onChange={(e) => setNewIncome({...newIncome, comment: e.target.value})}
-                        placeholder="Введите комментарий"
-                    />
                 </div>
             </BaseModal>
 
@@ -137,26 +128,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                 onClose={() => setIsInvestorModalOpen(false)}
                 onSubmit={handleSelectInvestor}
             />
-
-            {currentInvestor && (
-                <InvestorModal
-                    mode="view"
-                    isOpen={isViewInvestorModalOpen}
-                    onClose={() => setIsViewInvestorModalOpen(false)}
-                    onSubmit={async () => false}
-                    initialData={{
-                        id: currentInvestor.id,
-                        nickname: currentInvestor.nickname,
-                        fullName: currentInvestor.fullName,
-                        phoneNumber: currentInvestor.phoneNumber,
-                        investorPie: currentInvestor.investorPie,
-                        investmentAmount: currentInvestor.investmentAmount,
-                        balance: currentInvestor.balance,
-                        isCompany: false,
-                        isBlocked: false
-                    }}
-                />
-            )}
         </>
     );
 };

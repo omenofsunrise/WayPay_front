@@ -17,6 +17,7 @@ import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import styled from 'styled-components';
 import { formatMoney } from '../utils/formatPrice';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
+import useCompany from '../api/hooks/useCompany';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -41,6 +42,7 @@ const SchedulePage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
+    const { getAccountDetails } = useCompany();
     
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditid',
@@ -187,8 +189,16 @@ const SchedulePage = () => {
 
     const sendWhatsAppMessage = async (scheduleId: number, phone: string, amount: string, date: string) => {
         try {
+            // Получаем данные компании через хук
+            const companyData = await getAccountDetails();
+            
+            if (!companyData) {
+                console.error('Не удалось получить данные компании');
+                return;
+            }
+
             const cleanedPhone = formatPhoneNumber(phone);
-            const message = `Напоминание о платеже:\nСумма: ${amount}\nДата: ${date}`;
+            const message = `Напоминаем о платеже в компании ${companyData.company} в размере ${amount}, ${date}.\nДля перевода: ${companyData.accountDetails}`;
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
             

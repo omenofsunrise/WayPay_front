@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import companyService from '../services/companyService';
-import type { CommonInfo, Company } from '../types/company';
+import type { CommonInfo, CompaneAccountDetails, Company } from '../types/company';
 
 const useCompany = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +42,20 @@ const useCompany = () => {
     setError(null);
     try {
       const result = await companyService.getCommonInfo();
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getAccountDetails = useCallback(async (): Promise<CompaneAccountDetails | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await companyService.getAccountDetails();
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -207,7 +221,8 @@ const useCompany = () => {
     updateCompanyPhoto,
     deleteCompanyPhoto,
     getCompanyPhotoUrl,
-    getCommonInfo
+    getCommonInfo,
+    getAccountDetails
   };
 };
 

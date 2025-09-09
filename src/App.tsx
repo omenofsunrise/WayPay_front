@@ -59,13 +59,10 @@ function App() {
     setLastActivity(Date.now());
   }, []);
 
-  // Обработчик комбинации клавиш Ctrl + Alt + W
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // Проверяем комбинацию Ctrl + Alt + W
     if ((event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'l') || (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'д')) {
       event.preventDefault();
       
-      // Показываем модальное окно пинкода только если пользователь аутентифицирован
       if (isAuthenticated && authInfo?.hasPin && !showPinModal) {
         setShowPinModal(true);
         sessionStorage.removeItem('lastActivity');
@@ -74,11 +71,9 @@ function App() {
   }, [isAuthenticated, authInfo?.hasPin, showPinModal]);
 
   useEffect(() => {
-    // Добавляем обработчик события клавиатуры
     window.addEventListener('keydown', handleKeyDown);
     
     return () => {
-      // Убираем обработчик при размонтировании
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [handleKeyDown]);

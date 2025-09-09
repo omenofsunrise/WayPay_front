@@ -30,3 +30,8 @@ export interface CommonInfo {
   id: number;
   licenceDate: Date;
 }
+
+export interface CompaneAccountDetails {
+  company: string;
+  accountDetails: string;
+}

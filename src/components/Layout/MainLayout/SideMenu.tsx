@@ -49,7 +49,6 @@ const SideMenu = () => {
     toggleCollapsed,
     selectedSideMenuItem,
     setSelectedSideMenuItem,
-    setSelectedTopMenuItem
   } = useContext(SideMenuContext);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -123,7 +122,7 @@ const SideMenu = () => {
       
       
       <MenuList $collapsed={collapsed}>
-        {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
+        {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин')) && (
           <MenuItem 
             onClick={() => handleMenuItemClick('analytics', '/analytics')}
             $collapsed={collapsed}

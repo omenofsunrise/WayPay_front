@@ -328,7 +328,7 @@ const BudgetPage = () => {
                 item.id || '',
                 amount,
                 date,
-                comment
+                item.investorNickname
             ];
         }).filter(row => row !== null);
     };
@@ -453,7 +453,7 @@ const BudgetPage = () => {
                             { name: "id" },
                             { name: "Сумма", align: "left" },
                             { name: "Дата", isSortable: true, align: "left" },
-                            { name: "Комментарий", align: "left" },
+                            { name: "Инвестора никнейм", align: "left" },
                         ]} 
                         data={prepareTableData(incomes?.items)}
                         contextMenuActions={incomeContextMenuActions}

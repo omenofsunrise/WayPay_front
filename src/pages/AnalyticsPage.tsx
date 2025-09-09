@@ -38,7 +38,7 @@ const AnalyticsPage = () => {
     getDebtDynamic,
     debtDynamicData
   } = useAnalytic();
-  
+
   useEffect(() => {
     getAnalyticItems({ predefinedPeriod: period });
     getSellInfo({ predefinedPeriod: period });

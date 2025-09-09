@@ -35,22 +35,46 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         togglePermission,
         revokeSession
     } = useEmployee();
-    const { hasPermission, hasRole } = useAuth();
-    const [isUpdatingPermissions, setIsUpdatingPermissions] = useState(false);
-    const navigate = useNavigate();
+    const { hasRole } = useAuth();
+    const [ setIsUpdatingPermissions] = useState(false);
+    const employeePermissions = useMemo(() => [
+        {
+            code: 'CREATE_CREDITS',
+            label: 'Создание договоров',
+            roles: ['сотрудник', 'бухгалтер']
+        },
+        {
+            code: 'DELETE_CREDITS',
+            label: 'Удаление договоров',
+            roles: ['сотрудник', 'бухгалтер']
+        }
+    ], []);
+
+    const adminPermissions = useMemo(() => [
+        {
+            code: 'VIEW_ANALYTIC',
+            label: 'Просмотр аналитики',
+            roles: ['админ']
+        }
+    ], []);
     
+    const canEditProfile = useMemo(() => {
+        if (!employeeId) {
+            return hasRole('директор') || hasRole('суперадмин') || hasRole('админ');
+        } else {
+            return hasRole('директор') || hasRole('суперадмин');
+        }
+    }, [employeeId, hasRole]);
+
     const handleTogglePermission = async (permissionCode: string) => {
-        if (!employeeId || !employee) return;
         
         try {
-            setIsUpdatingPermissions(true);
             await togglePermission(employeeId, permissionCode);
             const updatedEmployee = await fetchEmployeeById(employeeId);
             setEmployee(updatedEmployee);
         } catch (error) {
             console.error('Error updating permission:', error);
         } finally {
-            setIsUpdatingPermissions(false);
         }
     };
     
@@ -89,6 +113,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     const paymentsToUse = employeeId ? employeePaymentsStats : paymentsStats;
     const [employee, setEmployee] = useState<Employee | null>(null);
     
+    const canSetEmployeePermissions = employee && 
+        (employee.role === 'сотрудник' || employee.role === 'бухгалтер');
+    
+    const canSetAdminPermissions = employee && 
+        (employee.role === 'админ');
+
     const scatterPlotData = useMemo(() => {
         if (!statsToUse || statsToUse.length === 0) return [];
         
@@ -121,9 +151,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     [paymentsToUse]);
 
     const showPermissionsPanel = employeeId && 
-                                authInfo?.employee.id !== employeeId && 
-                                (employee?.role === 'сотрудник' || employee?.role === 'бухгалтер') &&
-                                (hasRole('админ') || hasRole('суперадмин') || hasRole('директор'));
+                            authInfo?.employee.id !== employeeId && 
+                            (hasRole('суперадмин') || hasRole('директор') || 
+                             (hasRole('админ') && employee?.role === 'сотрудник')) &&
+                            (employee?.role === 'сотрудник' || 
+                             employee?.role === 'бухгалтер' || 
+                             employee?.role === 'админ');
 
     const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {
         const now = new Date();
@@ -267,6 +300,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                 <UserContainer 
                     employee={employeeId ? employee : authInfo?.employee} 
                     isCurrentUser={!employeeId}
+                    allowEdit={canEditProfile}
                 />
                 
                 <ChartWrapper style={{ height: "100%" }}>
@@ -316,27 +350,50 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
             {showPermissionsPanel && (
                 <PermissionsSection>
                     <ModalInfoTitle>Права пользователя</ModalInfoTitle>
-                    <PermissionsGrid>
-                        <PermissionItem>
-                            <Checkbox 
-                                checked={employee?.permissions?.some(p => p.code === 'CREATE_CREDITS') || false}
-                                onChange={() => handleTogglePermission('CREATE_CREDITS')}
-                            />
-                            <PermissionLabel>Создание договоров</PermissionLabel>
-                        </PermissionItem>
-                        <PermissionItem>
-                            <Checkbox 
-                                checked={employee?.permissions?.some(p => p.code === 'DELETE_CREDITS') || false}
-                                onChange={() => handleTogglePermission('DELETE_CREDITS')}
-                            />
-                            <PermissionLabel>Удаление договоров</PermissionLabel>
-                        </PermissionItem>
-                    </PermissionsGrid>
+                    
+                    {canSetEmployeePermissions && (
+                        <>
+                            <PermissionsGrid>
+                                {employeePermissions.map(permission => (
+                                    <PermissionItem key={permission.code}>
+                                        <Checkbox 
+                                            checked={employee?.permissions?.some(p => p.code === permission.code) || false}
+                                            onChange={() => handleTogglePermission(permission.code)}
+                                        />
+                                        <PermissionLabel>{permission.label}</PermissionLabel>
+                                    </PermissionItem>
+                                ))}
+                            </PermissionsGrid>
+                        </>
+                    )}
+                    
+                    {canSetAdminPermissions && (
+                        <>
+                            <PermissionsGrid>
+                                {adminPermissions.map(permission => (
+                                    <PermissionItem key={permission.code}>
+                                        <Checkbox 
+                                            checked={employee?.permissions?.some(p => p.code === permission.code) || false}
+                                            onChange={() => handleTogglePermission(permission.code)}
+                                        />
+                                        <PermissionLabel>{permission.label}</PermissionLabel>
+                                    </PermissionItem>
+                                ))}
+                            </PermissionsGrid>
+                        </>
+                    )}
                 </PermissionsSection>
             )}
         </PageLayout>
     );
 };
+
+const PermissionGroupTitle = styled.h4`
+    margin: 15px 0 10px 0;
+    color: #374151;
+    font-size: 16px;
+    font-weight: 600;
+`;
 
 const HeaderContainer = styled.div`
     display: flex;

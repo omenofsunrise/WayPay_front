@@ -8,7 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  hasPermission: (permission: Permission) => boolean;
+  hasPermission: (permission: Permission, checkAdmins?: boolean) => boolean;
   hasRole: (role: Role) => boolean;
   forbiddenRole: (role: Role) => boolean;
 }
@@ -16,6 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SUPER_ROLES: Role[] = ['админ', 'суперадмин', 'директор'];
+const ALWAYS_TRUE_ROLES: Role[] = ['суперадмин', 'директор']; // Роли, которые всегда имеют все разрешения
 
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
@@ -45,10 +46,14 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     fetchAuthInfo();
   }, []);
 
-  const hasPermission = (permission: Permission): boolean => {
+  const hasPermission = (permission: Permission, checkAdmins: boolean = false): boolean => {
     if (!authInfo) return false;
     
-    if (SUPER_ROLES.includes(authInfo.employee.role)) {
+    if (ALWAYS_TRUE_ROLES.includes(authInfo.employee.role)) {
+      return true;
+    }
+    
+    if (!checkAdmins && SUPER_ROLES.includes(authInfo.employee.role)) {
       return true;
     }
     

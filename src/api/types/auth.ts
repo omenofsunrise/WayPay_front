@@ -2,6 +2,7 @@ export type Permission =
   | 'CREATE_CREDITS'
   | 'DELETE_CREDITS'
   | 'VIEW_CREDITS'
+  | 'VIEW_ANALYTIC'
 ;
 
 export type Role = 'админ' | 'сотрудник' | 'директор' | 'суперадмин' | 'бухгалтер';

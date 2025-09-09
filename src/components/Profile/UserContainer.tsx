@@ -10,9 +10,10 @@ import type { Employee } from "../../api/types/employee";
 interface UserContainerProps {
     employee?: Employee;
     isCurrentUser?: boolean;
+    allowEdit?: boolean;
 }
 
-const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserContainerProps) => {
+const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit = true }: UserContainerProps) => {
     const { authInfo, loading, error, updateEmployee, updateEmployeePhoto, refresh, deletePhoto } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
@@ -51,7 +52,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     }, [isContextMenuOpen]);
 
     const handleEditClick = () => {
-        if (!isCurrentUser) return;
+        if (!allowEdit) return;
         setIsModalOpen(true);
     };
 
@@ -68,7 +69,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
         phone: string;
         minSurcharge: number;
     }) => {        
-        if (!employee?.id || !isCurrentUser) return;
+        if (!employee?.id) return;
         
         try {
             const result = await updateEmployee({
@@ -194,7 +195,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
     return (
         <>
             <Container>
-                {isCurrentUser && (
+                {allowEdit && (
                     <EditIcon onClick={handleEditClick}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M3 17.2498V20.9998H6.75L17.81 9.93984L14.06 6.18984L3 17.2498ZM21.41 6.33984L17.66 2.58984L15.13 5.12984L18.88 8.87984L21.41 6.33984Z" fill="#50555C"/>
@@ -280,7 +281,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true }: UserCon
                 </ContactInfo>
             </Container>
 
-            {isCurrentUser && (
+            {(
                 <EmployeeModal
                     mode="edit"
                     isOpen={isModalOpen}
