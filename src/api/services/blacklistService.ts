@@ -18,6 +18,29 @@ class BlacklistService {
     const response = await apiClient.put(`Client/${id}/from_blacklist`);
     return response.data;
   }
+
+
+
+
+  async getBlackCatalog(params?: BlacklistParams): Promise<PaginatedResponse<Blacklist>> {
+    const response = await apiClient.get<PaginatedResponse<Blacklist>>('/BlackList', { params });
+    return response.data;
+  }
+
+  async addBlackCatalog(clientData: Partial<Blacklist>) {
+    const response = await apiClient.post(`/Blacklist`, clientData);
+    return response.data;
+  }
+
+  async updateBlackCatalog(id: number) {
+    const response = await apiClient.put(`/BlackList/${id}`);
+    return response.data;
+  }
+
+  async deleteFromBlackCatalog(id: number) {
+    const response = await apiClient.put(`BlackList/${id}`);
+    return response.data;
+  }
 }
 
 export default new BlacklistService();

@@ -40,7 +40,8 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/profile': { mainItem: 'profile' },
   '/about': { mainItem: 'about' },
   '/admin': { mainItem: 'admin' },
-  '/investors-pool': { mainItem: 'investors-pool' }
+  '/investors-pool': { mainItem: 'investors-pool' },
+  '/black-catalog': { mainItem: 'references', subItems: { '/black-catalog': 'black-catalog' } }
 };
 
 const SideMenu = () => {
@@ -393,7 +394,14 @@ const SideMenu = () => {
               >
                 Товары
               </SubMenuItem>
+              <SubMenuItem 
+                onClick={() => handleSubMenuItemClick('black-catalog', '/black-catalog')}
+                $selected={selectedSideMenuItem === 'black-catalog'}
+              >
+                Чёрный справочник
+              </SubMenuItem>
             </SubMenu>
+            
           )}
           
           {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (

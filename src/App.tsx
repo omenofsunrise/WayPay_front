@@ -35,6 +35,7 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import InvestorsPoolPage from './pages/InvestorsPoolPage';
 import { DesktopOnlyContent } from './components/DesktopOnly';
+import BlackCatalogPage from './pages/BlackCatalog';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -286,6 +287,12 @@ function App() {
             <Route path="blacklist" element={
                 <MainLayout>
                   <BlacklistPage />
+                </MainLayout>
+            } />
+
+            <Route path="black-catalog" element={
+                <MainLayout>
+                  <BlackCatalogPage />
                 </MainLayout>
             } />
 

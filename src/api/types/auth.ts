@@ -16,6 +16,7 @@ export interface AuthInfo {
     role: Role;
     permissions: Permission[];
     minSurcharge: number;
+    companyId: number;
   };
 }
 

@@ -5,7 +5,9 @@ export interface Blacklist {
     fullName: string,
     phone: string,
     birthdate: Date,
+    document: string,
     docIssueDate: Date,
+    address: string,
     debt: number,
 }
 

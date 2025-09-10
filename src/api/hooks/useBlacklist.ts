@@ -49,13 +49,79 @@ const useClient = () => {
     }
   };
 
+
+
+
+
+
+
+
+
+  const getBlackCatalog = useCallback(async (params?: BlacklistParams): Promise<PaginatedResponse<Blacklist> | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await blacklistService.getBlackCatalog(params);
+      setData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const addBlackCatalog = async (clientData: Partial<Blacklist>) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await blacklistService.addBlackCatalog(clientData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateBlackCatalog = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await blacklistService.updateBlackCatalog(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteFromBlackCatalog = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await blacklistService.deleteFromBlackCatalog(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
     data,
     getBlacklist,
     addBlacklist,
-    deleteFromBlacklist
+    deleteFromBlacklist,
+    getBlackCatalog,
+    addBlackCatalog,
+    updateBlackCatalog,
+    deleteFromBlackCatalog
   };
 };
 
