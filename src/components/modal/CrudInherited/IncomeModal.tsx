@@ -45,21 +45,42 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     const [isInvestorModalOpen, setIsInvestorModalOpen] = React.useState(false);
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = React.useState(false);
     const [selectedInvestor, setSelectedInvestor] = React.useState<Investor | null>(null);
-    const [formattedAmount, setFormattedAmount] = React.useState('');
+    const [displayAmount, setDisplayAmount] = React.useState('');
 
     React.useEffect(() => {
         if (show) {
-            setFormattedAmount(newIncome.amount ? formatMoney(newIncome.amount) : '');
+            // При открытии модального окна форматируем сумму для отображения
+            const numericValue = newIncome.amount.replace(/\D/g, '');
+            if (numericValue) {
+                const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
+                setDisplayAmount(formatted);
+            } else {
+                setDisplayAmount('');
+            }
         } else {
-            setFormattedAmount('');
+            setDisplayAmount('');
         }
-    }, [show]);
+    }, [show, newIncome.amount]);
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        const rawValue = value.replace(/\D/g, '');
-        setNewIncome(prev => ({...prev, amount: rawValue}));
-        setFormattedAmount(formatMoney(rawValue));
+        
+        // Удаляем все нецифровые символы, кроме запятых и точек (для разделителей тысяч)
+        const cleanedValue = value.replace(/[^\d,.]/g, '');
+        
+        // Удаляем все разделители тысяч, чтобы получить чистое число
+        const numericValue = cleanedValue.replace(/[.,]/g, '');
+        
+        // Сохраняем числовое значение в состоянии
+        setNewIncome(prev => ({...prev, amount: numericValue}));
+        
+        // Форматируем значение для отображения с разделителями тысяч
+        if (numericValue) {
+            const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
+            setDisplayAmount(formatted);
+        } else {
+            setDisplayAmount('');
+        }
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -74,7 +95,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
             await onSave(e);
             setNewIncome({ amount: '', comment: '', investorId: '' });
             setSelectedInvestor(null);
-            setFormattedAmount('');
+            setDisplayAmount('');
         } catch (error) {
             console.error('Ошибка при сохранении:', error);
         }
@@ -102,9 +123,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
                     <CustomInput
                         type="text"
-                        value={formattedAmount}
+                        value={displayAmount}
                         onChange={handleAmountChange}
                         placeholder="Введите сумму"
+                        inputType="text" // Используем обычный текст вместо rubles
                         required
                     />
                     <div style={{ margin: "0 10px", display: 'flex', gap: '8px', alignItems: 'center' }}>

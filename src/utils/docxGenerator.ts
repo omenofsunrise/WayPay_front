@@ -128,7 +128,6 @@ class DocxGenerator {
       ? docsData.clientName.split(' ')[0] 
       : 'клиент';
     
-    // Определяем тип документа на основе пути к шаблону
     let docType = 'Договор';
     
     if (templateUrl.includes('schedules.docx')) {
@@ -141,7 +140,6 @@ class DocxGenerator {
       docType = 'Договор_купли_продажи';
     }
     
-    // Добавляем номер договора, если он есть
     const contractNumber = docsData.contractNumber ? `_${docsData.contractNumber}` : '';
     
     return `${docType}${contractNumber}_${clientName}.docx`;

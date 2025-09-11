@@ -42,7 +42,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [remainingDebt, setRemainingDebt] = useState<number>(currentDebt);
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
 
-  // Сброс состояния при открытии модального окна
   useEffect(() => {
     if (isOpen) {
       setPaymentDate('');

@@ -328,7 +328,7 @@ const BudgetPage = () => {
                 item.id || '',
                 amount,
                 date,
-                item.investorNickname
+                item.investorNickname || item.comment
             ];
         }).filter(row => row !== null);
     };

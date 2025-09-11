@@ -1,7 +1,6 @@
 import React from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
-import { formatMoney } from '../../../utils/formatPrice';
 
 interface OutcomeModalProps {
     show: boolean;
@@ -24,21 +23,42 @@ const OutcomeModal: React.FC<OutcomeModalProps> = ({
     newOutcome,
     setNewOutcome
 }) => {
-    const [formattedAmount, setFormattedAmount] = React.useState('');
+    const [displayAmount, setDisplayAmount] = React.useState('');
 
     React.useEffect(() => {
         if (show) {
-            setFormattedAmount(newOutcome.amount ? formatMoney(newOutcome.amount) : '');
+            // При открытии модального окна форматируем сумму для отображения
+            const numericValue = newOutcome.amount.replace(/\D/g, '');
+            if (numericValue) {
+                const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
+                setDisplayAmount(formatted);
+            } else {
+                setDisplayAmount('');
+            }
         } else {
-            setFormattedAmount('');
+            setDisplayAmount('');
         }
-    }, [show]);
+    }, [show, newOutcome.amount]);
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        const rawValue = value.replace(/\D/g, '');
-        setNewOutcome(prev => ({...prev, amount: rawValue}));
-        setFormattedAmount(formatMoney(rawValue));
+        
+        // Удаляем все нецифровые символы, кроме запятых и точек (для разделителей тысяч)
+        const cleanedValue = value.replace(/[^\d,.]/g, '');
+        
+        // Удаляем все разделители тысяч, чтобы получить чистое число
+        const numericValue = cleanedValue.replace(/[.,]/g, '');
+        
+        // Сохраняем числовое значение в состоянии
+        setNewOutcome(prev => ({...prev, amount: numericValue}));
+        
+        // Форматируем значение для отображения с разделителями тысяч
+        if (numericValue) {
+            const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
+            setDisplayAmount(formatted);
+        } else {
+            setDisplayAmount('');
+        }
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -52,7 +72,7 @@ const OutcomeModal: React.FC<OutcomeModalProps> = ({
         try {
             await onSave(e);
             setNewOutcome({ amount: '', comment: '' });
-            setFormattedAmount('');
+            setDisplayAmount('');
         } catch (error) {
             console.error('Ошибка при сохранении:', error);
         }
@@ -71,9 +91,10 @@ const OutcomeModal: React.FC<OutcomeModalProps> = ({
             <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
                 <CustomInput
                     type="text"
-                    value={formattedAmount}
+                    value={displayAmount}
                     onChange={handleAmountChange}
                     placeholder="Введите сумму"
+                    inputType="text" // Используем обычный текст вместо rubles
                     required
                 />
                 <CustomInput
