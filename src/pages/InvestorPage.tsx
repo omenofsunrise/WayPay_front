@@ -277,7 +277,7 @@ const InvestorPage = () => {
                 ...(canEdit ? [''] : []),
                 formatMoney('0'),
                 formatMoney('0'),
-                ...(canEdit ? [''] : []),
+                '',
             ];
         }
 
@@ -295,7 +295,8 @@ const InvestorPage = () => {
     }) ?? [];
 
     const rowStyles = tableData.reduce((styles, rowData, index) => {
-        const isBlocked = rowData[7] === 'true';
+        const isBlockedIndex = canEdit ? 8 : 4;
+        const isBlocked = rowData[isBlockedIndex] === 'true';
         
         if (isBlocked) {
             styles[index] = {
