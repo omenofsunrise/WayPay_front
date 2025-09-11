@@ -85,11 +85,11 @@ const useClient = () => {
     }
   };
 
-  const updateBlackCatalog = async (id: number) => {
+  const updateBlackCatalog = async (id: number, updateData: Partial<Blacklist>) => {
     setIsLoading(true);
     setError(null);
     try {
-      await blacklistService.updateBlackCatalog(id);
+      await blacklistService.updateBlackCatalog(id, updateData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       return null;

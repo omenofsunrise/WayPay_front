@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
-import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
 import CustomTable from "../components/ui/tables/CustomTable";
@@ -11,8 +10,6 @@ import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import useBlacklist from "../api/hooks/useBlacklist";
 import { useAuth } from '../сontext/AuthContext';
-import useExport from '../api/hooks/useExport';
-import styled from 'styled-components';
 import { formatDate, parseDateInput } from '../utils/dateFormatter';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import BlackCatalogModal from '../components/modal/CrudInherited/BlackCatalogModal';
@@ -27,7 +24,7 @@ interface BlacklistClient {
   doc?: string;
   docIssueDate?: Date | null;
   docIssueYear?: number;
-  registrationAddress?: string | null;
+  address?: string | null;
   creditIds?: string[];
   creditRestTerms?: string[];
   hasPassportPhoto?: boolean;
@@ -44,7 +41,6 @@ const BlackCatalogPage = () => {
     const pageSize = 10;
     
     const { isSuperAdminCompany } = useAuth();
-    const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
     
     const { 
         isLoading, 
@@ -58,37 +54,37 @@ const BlackCatalogPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Partial<BlacklistClient> | null>(null);
 
-    const { exportData, isExporting, exportProgress } = useExport<BlacklistClient>();
-
-    const handleEditClient = (rowData: any[]) => {
-        const [id, fullName, phone, birthdate, address, doc, docIssueDate] = rowData;
-        setEditingClient({
-            id: parseInt(id),
-            fullName,
-            phone,
-            birthdate: parseDateInput(birthdate),
-            registrationAddress: address,
-            doc,
-            docIssueDate: parseDateInput(docIssueDate)
-        });
+    const handleAddToBlacklist = () => {
+        setEditingClient(null);
         setIsModalOpen(true);
     };
+
+const handleEditClient = (rowData: any[]) => {
+    const [id, fullName, phone, birthdate, address, doc, docIssueDate] = rowData;
+    setEditingClient({
+        id: parseInt(id),
+        fullName,
+        phone,
+        birthdate: birthdate,
+        address: address,
+        doc,
+        docIssueDate: docIssueDate
+    });
+    setIsModalOpen(true);
+};
 
     const handleSaveClient = async (clientData: Partial<BlacklistClient>) => {
         try {
             if (editingClient?.id) {
-            await updateBlackCatalog(editingClient.id, clientData);
+                await updateBlackCatalog(editingClient.id, clientData);
             } else {
                 await addBlackCatalog(clientData);
             }
             loadBlacklist();
-            setIsModalOpen(false);
-            setEditingClient(null);
         } catch (err) {
-            console.error('Ошибка при сохранении:', err);
+            console.error('Ошибка при сохранении клиента:', err);
         }
     };
-
 
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -122,11 +118,6 @@ const BlackCatalogPage = () => {
         setCurrentPage(1);
     };
 
-    const handlePhoneFilterChange = (value: string) => {
-        setPhoneFilter(value);
-        setCurrentPage(1);
-    };
-
     const handleSort = (columnIndex: number) => {
         if (!columnToApiSortMap[columnIndex]) return;
         
@@ -156,39 +147,22 @@ const BlackCatalogPage = () => {
         }
     };
 
-    const handleAddToBlacklist = () => {
-        if (isSuperAdminCompany()) {
-            setIsSelectModalOpen(true);
-        }
-    };
-
-    const handleClientSelect = async (client: { id: number; fullName: string; phone: string }) => {
-        try {
-            await addBlackCatalog();
-            loadBlacklist();
-            setIsSelectModalOpen(false);
-        } catch (err) {
-            console.error('Ошибка при добавлении в черный список:', err);
-        }
-    };
-
-    const resetFilters = useCallback(() => {
-        setNameFilter('');
-        setPhoneFilter('');
-        setCurrentPage(1);
-    }, []);
-
     const tableData = blacklistData?.items.map(client => [
         client.id.toString(),
         client.fullName,
         client.phone,
         formatDate(client.birthdate),
         client.address,
-        client.document,
-        client.docIssueDate,
+        client.doc,
+        formatDate(client.docIssueDate),
     ]) || [];
 
     const tableActions = isSuperAdminCompany() ? [
+        {
+            label: 'Редактировать',
+            action: handleEditClient,
+            color: '#3B82F6'
+        },
         {
             label: 'Удалить',
             action: handleDeleteFromBlackCatalog,
@@ -255,7 +229,7 @@ const BlackCatalogPage = () => {
                 </>
             )}
             
-            {/* {isSuperAdminCompany() && (
+            {isSuperAdminCompany() && (
                 <BlackCatalogModal
                     mode={editingClient?.id ? 'edit' : 'create'}
                     isOpen={isModalOpen}
@@ -266,7 +240,7 @@ const BlackCatalogPage = () => {
                     onSubmit={handleSaveClient}
                     initialData={editingClient || undefined}
                 />
-            )} */}
+            )}
         </PageLayout>
     );
 };

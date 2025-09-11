@@ -32,8 +32,8 @@ class BlacklistService {
     return response.data;
   }
 
-  async updateBlackCatalog(id: number) {
-    const response = await apiClient.put(`/BlackList/${id}`);
+  async updateBlackCatalog(id: number, updateData: Partial<Blacklist>) {
+    const response = await apiClient.put(`/BlackList/${id}`, updateData);
     return response.data;
   }
 
