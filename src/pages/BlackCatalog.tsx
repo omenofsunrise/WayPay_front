@@ -9,41 +9,13 @@ import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
-import ClientSelectModal from "../components/modal/CrudInherited/ClientSelectModal";
 import useBlacklist from "../api/hooks/useBlacklist";
 import { useAuth } from '../сontext/AuthContext';
-import PhoneModalInput from '../components/ui/fields/PhoneModalInput';
 import useExport from '../api/hooks/useExport';
 import styled from 'styled-components';
 import { formatDate, parseDateInput } from '../utils/dateFormatter';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import BlackCatalogModal from '../components/modal/CrudInherited/BlackCatalogModal';
-
-const DebtBadge = styled.span`
-  background-color: #EF4444;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-`;
-
-const ResetButton = styled.button`
-  background: none;
-  border: none;
-  color: black;
-  cursor: pointer;
-  font-size: 14px;
-  text-decoration: underline;
-  margin-left: 16px;
-  height: 40px;
-  padding: 0;
-  width: 100px;
-
-  &:hover {
-    color: #374151;
-  }
-`;
 
 interface BlacklistClient {
   id: number;
@@ -283,7 +255,7 @@ const BlackCatalogPage = () => {
                 </>
             )}
             
-            {isSuperAdminCompany() && (
+            {/* {isSuperAdminCompany() && (
                 <BlackCatalogModal
                     mode={editingClient?.id ? 'edit' : 'create'}
                     isOpen={isModalOpen}
@@ -294,7 +266,7 @@ const BlackCatalogPage = () => {
                     onSubmit={handleSaveClient}
                     initialData={editingClient || undefined}
                 />
-            )}
+            )} */}
         </PageLayout>
     );
 };

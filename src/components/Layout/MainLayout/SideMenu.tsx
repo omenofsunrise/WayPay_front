@@ -35,13 +35,13 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
   '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
+  '/black-catalog': { mainItem: 'references', subItems: { '/black-catalog': 'black-catalog' } },
   '/budget': { mainItem: 'finance', subItems: { '/budget': 'budget' } },
   '/payments-income': { mainItem: 'finance', subItems: { '/payments-income': 'payments-income' } },
   '/profile': { mainItem: 'profile' },
   '/about': { mainItem: 'about' },
   '/admin': { mainItem: 'admin' },
   '/investors-pool': { mainItem: 'investors-pool' },
-  '/black-catalog': { mainItem: 'references', subItems: { '/black-catalog': 'black-catalog' } }
 };
 
 const SideMenu = () => {
@@ -398,7 +398,7 @@ const SideMenu = () => {
                 onClick={() => handleSubMenuItemClick('black-catalog', '/black-catalog')}
                 $selected={selectedSideMenuItem === 'black-catalog'}
               >
-                Чёрный справочник
+                Чёрный каталог
               </SubMenuItem>
             </SubMenu>
             
