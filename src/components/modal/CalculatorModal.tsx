@@ -114,16 +114,17 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
     lastPaymentMonth: '',
   });
 
+  
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         onClose();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
 
@@ -543,13 +544,19 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
     calculateResults();
   }, [formData, selectedMode]);
 
+  const handleCancel = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onClose();
+  };
+
   const handleModeSelect = (option: any) => {
     setSelectedMode(option.value as CalculationMode);
   };
 
   return createPortal(
-    <ModalOverlay onClick={onClose}>
+    <ModalOverlay>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
+        <CancelButton onClick={handleCancel} />
         <TitleField style={{ marginTop: 0, padding: "0 24px 0 24px" }}>
             <CustomTitle style={{ marginBottom: "0", marginLeft: 0 }}>Калькулятор</CustomTitle>
             <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
@@ -696,6 +703,49 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
   );
 };
 
+const CancelButton = styled.button`
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0;
+  z-index: 10;
+  
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 2px;
+    background-color: black;
+    border-radius: 1px;
+  }
+
+  &::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+
+  &::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+
+  &:hover::before,
+  &:hover::after {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+
+  &:active::before,
+  &:active::after {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+`;
+
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -710,6 +760,7 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContainer = styled.div`
+  position: relative;
   background-color: white;
   border-radius: 8px;
   width: auto;

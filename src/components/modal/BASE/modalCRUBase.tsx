@@ -41,12 +41,6 @@ const BaseModal: React.FC<ModalProps> = ({
     onCancel();
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-      onClose();
-    }
-  };
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
