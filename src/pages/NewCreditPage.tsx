@@ -497,13 +497,12 @@ const NewCreditPage = () => {
 
   const handleMonthsBlur = (value: string) => {
     const numericValue = Number(value) || 0;
-    if (numericValue > 50) {
-      setMonths('50');
+    if (numericValue > 180) {
+      setMonths('180');
     } else if (numericValue < 1) {
       setMonths('1');
     }
     
-    // Вызываем валидацию после изменения срока
     setTimeout(() => {
       validateInvestorActivePeriod();
     }, 0);
