@@ -10,6 +10,8 @@ export interface Company {
   inn?: string;
   email?: string;
   photoPath?: string;
+  lastActive?: Date;
+  createdCreditsCount?: number; 
 }
 
 export interface CompanyCreateRequest {

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
-import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment } from 'react-icons/fa';
+import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV } from 'react-icons/fa';
 import useChat from '../../../api/hooks/useChat';
 
 const Card = styled.div`
@@ -173,6 +173,56 @@ const ContractsHeader = styled.div`
   margin-bottom: 8px;
 `;
 
+const MenuButton = styled.button`
+  background: transparent;
+  color: rgba(107, 114, 128, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: absolute;
+  top: 15px;
+  right: 90px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+
+const ContextMenu = styled.div<{ $isVisible: boolean }>`
+  position: absolute;
+  top: 70px;
+  right: 90px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  z-index: 100;
+  display: ${props => props.$isVisible ? 'block' : 'none'};
+  min-width: 150px;
+`;
+
+const MenuItem = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+
 export interface Client {
   id: number;
   fullName: string;
@@ -204,7 +254,22 @@ const ClientCard : React.FC<ClientCardProps> = ({
   onOpenDossier
 }) => {
   const { createPrivateChat } = useChat();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const formatPhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 11) {
@@ -230,6 +295,24 @@ const ClientCard : React.FC<ClientCardProps> = ({
     return new Date(date).toLocaleDateString('ru-RU');
   };
 
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    onEdit(client);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    onDelete(client);
+  };
+
+
   const hasContracts = client.creditIds && client.creditIds.length > 0;
 
   return (
@@ -243,6 +326,15 @@ const ClientCard : React.FC<ClientCardProps> = ({
           {client.fullName}
         </CardTitle>
         
+        <MenuButton onClick={handleMenuClick}>
+          <FaEllipsisV size={16} />
+        </MenuButton>
+
+        <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
+          <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
+          <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem>
+        </ContextMenu>
+
         <MessageButton onClick={handleMessageClick}>
           <FaComment size={30} />
         </MessageButton>

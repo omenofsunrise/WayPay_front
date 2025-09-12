@@ -17,7 +17,6 @@ import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
-import FilterField from '../components/ui/Layouts/FilterField';
 
 const AdminPanelPage = () => {
   const { hasRole } = useAuth();
@@ -168,6 +167,17 @@ const AdminPanelPage = () => {
     return daysDiff <= 30;
   };
 
+  const isLicenseExpired = (licenceDate: Date | null | undefined): boolean => {
+    if (!licenceDate) return false;
+    
+    const today = new Date();
+    const licenseEnd = new Date(licenceDate);
+    const timeDiff = licenseEnd.getTime() - today.getTime();
+    const daysDiff = timeDiff / (1000 * 3600 * 24);
+    
+    return daysDiff <= 0;
+  };
+
   const handleDeleteCompany = async (rowData: any[]) => {
     const [id, name] = rowData;
     
@@ -238,7 +248,16 @@ const AdminPanelPage = () => {
           style={{ cursor: 'pointer', textDecoration: 'underline' }}
         >
           {company.licenceDate ? formatDate(company.licenceDate) : 'Нет данных'}
-        </span>
+        </span>,
+        company.createdCreditsCount,
+        new Date(company.lastActive).toLocaleString('ru-RU', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
       ])
     : company
       ? [
@@ -262,6 +281,14 @@ const AdminPanelPage = () => {
         backgroundColor: '#FFEBEE',
         color: 'black',
         fontWeight: 'normal'
+      };
+    }
+
+    if (company && isLicenseExpired(company.licenceDate)) {
+        styles[index] = {
+        backgroundColor: 'rgba(145, 104, 104, 1)',
+        // color: 'white',
+        fontWeight: 'normal',
       };
     }
     
@@ -308,7 +335,7 @@ const AdminPanelPage = () => {
               { name: "Название компании", align: "left" },
               { name: "Директор", align: "left" },
               { name: "Телефон", align: "left" },
-              { name: "Лицензия заканчивается", align: "center" }
+              { name: "Лицензия заканчивается", align: "center" },
             ]} 
             data={tableData}
           />
@@ -340,7 +367,9 @@ const AdminPanelPage = () => {
               { name: "Название компании", align: "left" },
               { name: "Директор", align: "left" },
               { name: "Телефон", align: "left" },
-              { name: "Лицензия заканчивается", align: "right" }
+              { name: "Лицензия заканчивается", align: "right" },
+              { name: "Договоров за последние 10 дней", align: "right" },
+              { name: "Последний заход в сеть", align: "right" },
             ]} 
             data={tableData}
             rowStyles={rowStyles}
