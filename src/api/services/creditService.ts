@@ -28,14 +28,14 @@ class CreditService {
   async createCredit(creditData: CreateCreditRequest): Promise<Credit> {
     try {
       const response = await apiClient.post<Credit>('/Credit', creditData);
-      console.log(response);
+      // console.log(response);
       return response.data;
     }
     catch (err: any) {
-      console.log('Full error:', err);
-      console.log('Error response:', err?.response?.data);
-      console.log('Status code:', err?.response?.status);
-      console.log('Headers:', err?.response?.headers);
+      // console.log('Full error:', err);
+      // console.log('Error response:', err?.response?.data);
+      // console.log('Status code:', err?.response?.status);
+      // console.log('Headers:', err?.response?.headers);
       throw err;
     }
   }

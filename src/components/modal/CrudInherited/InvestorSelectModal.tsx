@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
-import CustomTable from '../../ui/tables/CustomTable';
+import CustomTable, { type RowStyle } from '../../ui/tables/CustomTable';
 import useInvestor from '../../../api/hooks/useInvestor';
 import useInvestorPool from '../../../api/hooks/useInvestorPool';
 import Pagination from '../../ui/fields/CustomPagination';
@@ -180,6 +180,7 @@ const InvestorSelectModal = ({
     investor.nickname,
     investor.phoneNumber,
     investor.investorPie.toString() + "%",
+    investor.isBlocked?.toString() || 'false',
     formatMoney(investor.balance.toString()),
     formatDate(investor.activeUntil ?? new Date()),
   ]) || [];
@@ -191,11 +192,33 @@ const InvestorSelectModal = ({
         '—', 
         pool.pie.toString() + "%",
         '—', 
+        '—',
         '-'
       ]) || []
     : [];
 
   const tableData = [...investorsTableData, ...poolsTableData];
+
+  const rowStyles = tableData.reduce((styles, rowData, index) => {
+          const isBlockedIndex = 4;
+          const isBlocked = rowData[isBlockedIndex] === 'true';
+          
+          if (isBlocked) {
+              styles[index] = {
+                  backgroundColor: '#FFEBEE',
+                  color: 'black',
+                  fontWeight: 'normal'
+              };
+          } else {
+              styles[index] = {
+                  backgroundColor: 'white',
+                  color: 'black',
+                  fontWeight: 'normal'
+              };
+          }
+          
+          return styles;
+    }, {} as Record<number, RowStyle>);
 
   if (!isOpen) return null;
 
@@ -232,6 +255,7 @@ const InvestorSelectModal = ({
                   { name: includePools ? "Никнейм/Название" : "Никнейм", align: "left" },
                   { name: "Телефон", align: "left", isHidden: true },
                   { name: "Доля", align: "left", isSortable: true, isHidden: true },
+                  { name: "заблокирован", isHidden: true },
                   { name: "Касса", isSortable: true, align: "right" },
                   { name: "Дата окончания инвестора", align: "left" },
                 ]} 
@@ -239,6 +263,7 @@ const InvestorSelectModal = ({
                 onRowClick={handleRowClick}
                 onSort={handleSort}
                 sortConfig={sortConfig}
+                rowStyles={rowStyles}
                 selectedRow={selectedEntity ? tableData.findIndex(row => row[0] === selectedEntity.id.toString()) : -1}
               />
             </TableContainer>

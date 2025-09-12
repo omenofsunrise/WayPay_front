@@ -71,7 +71,7 @@ const NewCreditPage = () => {
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
   const { getClientById } = useClient();
-  const { createCredit, isLoading: isCreditLoading } = useCredit();
+  const { createCredit, isLoading: isCreditLoading, error } = useCredit();
   const { autoSelectInvestor } = useInvestor();
   const { authInfo } = useEmployee();
   const minSurcharge = authInfo?.employee.minSurcharge || 0;
@@ -169,19 +169,12 @@ const NewCreditPage = () => {
     }
   };
 
-  const handleCreateCredit = useCallback(async () => {
-    console.log('handleCreateCredit вызвана');
-    console.log('client:', client);
-    console.log('contractDate:', contractDate);
-    console.log('investor:', investor);
-    console.log('selectedPool:', selectedPool);
-    
+  const handleCreateCredit = useCallback(async () => {   
     if (!client || !contractDate || (!investor && !selectedPool)) {
       console.log('Условие не выполнено - выход из функции');
       return;
     }
     
-    console.log('test');
     validateInvestorActivePeriod();
     if (!validateInvestorActivePeriod()) {
       return;
@@ -222,6 +215,7 @@ const NewCreditPage = () => {
     if (createdCredit) {
       navigate('/credits');
     }
+    else window.alert(`${error.response.data}`);
   }, [
     client,
     contractDate,

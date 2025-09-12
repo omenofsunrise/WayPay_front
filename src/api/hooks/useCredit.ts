@@ -5,7 +5,7 @@ import type { PaginatedResponse } from '../types/common';
 
 const useCredit = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null | Error>(null);
   const [data, setData] = useState<CreditResponse | null>(null);
   const [investorCredits, setInvestorCredits] = useState<PaginatedResponse<Credit> | null>(null);
 
@@ -50,7 +50,7 @@ const useCredit = () => {
       const result = await creditService.createCredit(creditData);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create credit');
+      setError(err instanceof Error ? err : 'Failed to create credit');
       console.log(err);
       return null;
     } finally {
