@@ -1,17 +1,41 @@
 import styled from "styled-components";
 import type { Credit } from "../../api/types/credit";
 
+export interface PrintOption {
+  key: string;
+  label: string;
+  enabled?: boolean;
+}
+
 interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: 'sale' | 'guaranteeConsent' | 'schedules') => void;
+  onSelect: (option: string) => void;
   selectedCredit: Credit | null;
+  printOptions?: PrintOption[];
+  modalTitle?: string;
 }
 
-const PrintOptionModal = ({ isOpen, onClose, onSelect, selectedCredit }: PrintOptionModalProps) => {
-  const handleSelect = (option: 'sale' | 'guaranteeConsent' | 'schedules') => {
+const PrintOptionModal = ({ 
+  isOpen, 
+  onClose, 
+  onSelect, 
+  selectedCredit, 
+  printOptions, 
+  modalTitle = "Выберите тип договора" 
+}: PrintOptionModalProps) => {
+  
+  const defaultOptions: PrintOption[] = [
+    { key: 'sale', label: 'Договор купли-продажи', enabled: true },
+    { key: 'guaranteeConsent', label: 'Договор поручительства', enabled: true },
+    { key: 'schedules', label: 'График платежей', enabled: true }
+  ];
+  
+  const options = printOptions || defaultOptions;
+
+  const handleSelect = (optionKey: string) => {
     if (selectedCredit) {
-      onSelect(option);
+      onSelect(optionKey);
     } else {
       console.error('No credit selected');
       onClose();
@@ -21,17 +45,18 @@ const PrintOptionModal = ({ isOpen, onClose, onSelect, selectedCredit }: PrintOp
   return (
     <ModalOverlay isOpen={isOpen} onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <ModalTitle>Выберите тип договора</ModalTitle>
+        <ModalTitle>{modalTitle}</ModalTitle>
         <PrintOptions>
-          <PrintOption onClick={() => handleSelect('sale')}>
-            Договор купли-продажи
-          </PrintOption>
-          <PrintOption onClick={() => handleSelect('guaranteeConsent')}>
-            Договор поручительства
-          </PrintOption>
-          <PrintOption onClick={() => handleSelect('schedules')}>
-            График платежей
-          </PrintOption>
+          {options.map(option => (
+            option.enabled !== false && (
+              <PrintOption 
+                key={option.key} 
+                onClick={() => handleSelect(option.key)}
+              >
+                {option.label}
+              </PrintOption>
+            )
+          ))}
         </PrintOptions>
       </ModalContent>
     </ModalOverlay>

@@ -20,6 +20,8 @@ import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
 import { useAuth } from '../сontext/AuthContext';
 import { formatDate } from '../utils/dateFormatter';
+import PrintOptionModal from '../components/modal/PrintOptionModal';
+import PrintIcon from '../assets/ui/print.svg?react';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -33,6 +35,10 @@ const InvestorPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
+    
+    // Состояния для печати договоров
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [investorForPrint, setInvestorForPrint] = useState<Investor | null>(null);
     
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -267,6 +273,30 @@ const InvestorPage = () => {
         }
     };
 
+    const handlePrintContract = async (option: string, investor: Investor) => {
+        try {
+            
+        } catch (error) {
+            console.error('Ошибка при печати договора:', error);
+            alert('Произошла ошибка при печати договора');
+        }
+    };
+
+    const handlePrintOptionSelect = (option: string) => {
+        if (investorForPrint) {
+            handlePrintContract(option, investorForPrint);
+        }
+        setIsPrintModalOpen(false);
+    };
+
+    const handleRowClick = (rowData: any[], rowIndex: number) => {
+        const [id] = rowData;
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        if (investor) {
+            setInvestorForPrint(investor);
+        }
+    };
+
     const tableData = investorsData?.items?.map(investor => {
         if (!investor || investor.id === undefined || investor.id === null) {
             return [
@@ -316,50 +346,66 @@ const InvestorPage = () => {
     }, {} as Record<number, RowStyle>);
     
     const tableActions = (rowData: any[]): TableAction[] => {
-        if (!canEdit) return [];
-        
         const [id] = rowData;
         const investor = investorsData?.items.find(i => i.id === Number(id));
         const isBlocked = investor?.isBlocked || false;
 
-        if (isBlocked) {
-            return [
-                {
-                    label: 'Разблокировать инвестора',
-                    action: (rowData) => handleBlockInvestor(rowData),
-                    color: '#F59E0B'
+        const actions: TableAction[] = [
+            {
+                label: 'Печать договора',
+                action: (rowData) => {
+                    const [id] = rowData;
+                    const investor = investorsData?.items.find(i => i.id === Number(id));
+                    if (investor) {
+                        setInvestorForPrint(investor);
+                        setIsPrintModalOpen(true);
+                    }
                 },
-                {
-                    label: 'Аннулировать инвестора',
-                    action: (rowData) => handleClearInvestor(rowData),
-                    color: 'rgba(255, 158, 66, 1)'
-                },
-                {
-                    label: 'Удалить',
-                    action: (rowData) => handleDeleteInvestor(rowData),
-                    color: '#EF4444'
-                },
-            ];
-        } 
-        else {
-            return [
-                {
-                    label: 'Добавить инвестицию',
-                    action: (rowData) => handleAddInvestment(rowData),
-                    color: '#10B981'
-                },
-                {
-                    label: 'Удалить',
-                    action: (rowData) => handleDeleteInvestor(rowData),
-                    color: '#EF4444'
-                },
-                {
-                    label: 'Заблокировать инвестора',
-                    action: (rowData) => handleBlockInvestor(rowData),
-                    color: '#F59E0B'
-                }
-            ];
+                color: '#3B82F6'
+            }
+        ];
+
+        if (canEdit) {
+            if (isBlocked) {
+                actions.push(
+                    {
+                        label: 'Разблокировать инвестора',
+                        action: (rowData) => handleBlockInvestor(rowData),
+                        color: '#F59E0B'
+                    },
+                    {
+                        label: 'Аннулировать инвестора',
+                        action: (rowData) => handleClearInvestor(rowData),
+                        color: 'rgba(255, 158, 66, 1)'
+                    },
+                    {
+                        label: 'Удалить',
+                        action: (rowData) => handleDeleteInvestor(rowData),
+                        color: '#EF4444'
+                    }
+                );
+            } else {
+                actions.push(
+                    {
+                        label: 'Добавить инвестицию',
+                        action: (rowData) => handleAddInvestment(rowData),
+                        color: '#10B981'
+                    },
+                    {
+                        label: 'Удалить',
+                        action: (rowData) => handleDeleteInvestor(rowData),
+                        color: '#EF4444'
+                    },
+                    {
+                        label: 'Заблокировать инвестора',
+                        action: (rowData) => handleBlockInvestor(rowData),
+                        color: '#F59E0B'
+                    }
+                );
+            }
         }
+
+        return actions;
     };
 
     const handleBlockInvestor = async (rowData: any[]) => {
@@ -430,7 +476,9 @@ const InvestorPage = () => {
                     onClick={handleExport}
                     isExporting={isExporting}
                     exportProgress={exportProgress}
-                />
+                >
+                    Экспорт
+                </ExportButton>
             </TitleField>
             
             {canEdit && (
@@ -454,6 +502,8 @@ const InvestorPage = () => {
                         data={tableData}
                         rowStyles={rowStyles}
                         onRowDoubleClick={handleRowDoubleClick}
+                        onRowClick={handleRowClick}
+                        selectedRow={investorForPrint ? investorsData?.items.findIndex(i => i.id === investorForPrint.id) : null}
                         contextMenuActions={(rowData) => tableActions(rowData)}
                         onSort={handleSort}
                         sortConfig={sortConfig}
@@ -518,6 +568,17 @@ const InvestorPage = () => {
                     </form>
                 </BaseModal>
             )}
+
+            <PrintOptionModal
+                isOpen={isPrintModalOpen}
+                onClose={() => setIsPrintModalOpen(false)}
+                onSelect={handlePrintOptionSelect}
+                selectedCredit={null}
+                printOptions={[
+                    { key: 'investorContract', label: 'Договор с инвестором', enabled: true }
+                ]}
+                modalTitle="Выберите тип договора для печати"
+            />
         </PageLayout>
     );
 };

@@ -144,6 +144,8 @@ const ClientPage = () => {
     const [searchTriggered, setSearchTriggered] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const [selectedClientDossier, setSelectedClientDossier] = useState<Client | null>(null);
+    const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+    const [longPressClient, setLongPressClient] = useState<Client | null>(null);
 
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -162,6 +164,51 @@ const ClientPage = () => {
         checkClientCredits
     } = useClients();
     
+    const handleCardMouseDown = useCallback((client: Client) => {
+        const timer = setTimeout(() => {
+            setLongPressClient(client);
+        }, 500);
+        setLongPressTimer(timer);
+    }, []);
+
+    const handleCardMouseUp = useCallback(() => {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            setLongPressTimer(null);
+        }
+    }, [longPressTimer]);
+
+    const handleCardTouchStart = useCallback((client: Client) => {
+    const timer = setTimeout(() => {
+        setLongPressClient(client);
+    }, 500); // 500ms для long press
+    setLongPressTimer(timer);
+    }, []);
+
+    const handleCardTouchEnd = useCallback(() => {
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        setLongPressTimer(null);
+    }
+    }, [longPressTimer]);
+
+    // Добавьте этот useEffect для обработки long press
+    useEffect(() => {
+    if (longPressClient) {
+        // Позиционируем меню рядом с элементом
+        const element = document.getElementById(`client-card-${longPressClient.id}`);
+        if (element) {
+        const rect = element.getBoundingClientRect();
+        setContextMenu({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+            client: longPressClient
+        });
+        }
+        setLongPressClient(null);
+    }
+    }, [longPressClient]);
+
     const resetFilters = useCallback(() => {
         setNameFilter('');
         setPhoneFilter('');
@@ -405,6 +452,12 @@ const ClientPage = () => {
                         onDelete={handleDeleteClient}
                         onRightClick={handleCardRightClick}
                         onOpenDossier={handleOpenDossier}
+                        onMouseDown={() => handleCardMouseDown(client)}
+                        onMouseUp={handleCardMouseUp}
+                        onMouseLeave={handleCardMouseUp}
+                        onTouchStart={() => handleCardTouchStart(client)}
+                        onTouchEnd={handleCardTouchEnd}
+                        onTouchCancel={handleCardTouchEnd}
                     />
                 ))}
             </div>

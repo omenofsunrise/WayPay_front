@@ -69,7 +69,7 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
       });
       setValidationErrors({});
     }
-  }, [isOpen, initialData]);
+  }, [isOpen]);
 
   useEffect(() => {
     validateForm();
