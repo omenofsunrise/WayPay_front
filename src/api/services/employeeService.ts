@@ -159,6 +159,14 @@ class EmployeeService {
     }
   }
 
+  static async toggleEmployeeBlock(id: number): Promise<void> {
+    try {
+      await apiClient.patch(`/Employee/toggle-block/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  }
+
   static async checkEmployeeExists(phone: string): Promise<boolean> {
     const response = await apiClient.get<ClientExistsResponse>('/Employee/exists', { 
       params: { phone } 

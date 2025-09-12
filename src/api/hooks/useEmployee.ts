@@ -243,6 +243,25 @@ export function useEmployee() {
     }
   }, [employees, fetchEmployees]);
 
+  const toggleEmployeeBlock = useCallback(async (id: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await EmployeeService.toggleEmployeeBlock(id);
+      if (employees) {
+        await fetchEmployees({
+          page: employees.page,
+          pageSize: employees.pageSize,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [employees, fetchEmployees]);
+
   const checkEmployeeExists = useCallback(async (phone: string): Promise<boolean> => {
       setLoading(true);
       setError(null);
@@ -515,6 +534,7 @@ export function useEmployee() {
     fetchEmployeeFullnames,
     profile,
     profileLoading,
+    toggleEmployeeBlock,
     profileError,
     fetchProfile,
     updateProfile,

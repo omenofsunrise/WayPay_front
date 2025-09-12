@@ -16,6 +16,7 @@ export interface Employee {
   permissions: Permission[] | null;
   minSurcharge: number;
   photoPath: string;
+  isBlocked: boolean;
 }
 
 export interface EmployeeFilterRequest extends PaginationParams{

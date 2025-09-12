@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import Pagination from "../../components/ui/fields/CustomPagination";
-import CustomTable from "../../components/ui/tables/CustomTable";
+import CustomTable, { type RowStyle } from "../../components/ui/tables/CustomTable";
 import FilterField from "../../components/ui/Layouts/FilterField";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../../components/ui/Layouts/PaginationLayout";
@@ -68,17 +68,18 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         role: 'сотрудник',
         permissions: null,
         minSurcharge: 0,
-        photoPath: ''
+        photoPath: '',
+        isBlocked: false
     };
 
     const { 
-        error,
         employeesLoading, 
         employeesError, 
         fetchEmployees,
         updateEmployee,
         createEmployee,
         deleteEmployee,
+        toggleEmployeeBlock,
         updateEmployeeMinSurcharge,
         updateEmployeePhone,
         updateEmployeeRole
@@ -168,6 +169,10 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         return false;
     };
 
+    const isEmployeeBlocked = (employee: Employee): boolean => {
+        return employee.isBlocked === true;
+    };
+
     const handleSort = (columnIndex: number) => {
         if (!columnToApiSortMap[columnIndex]) return;
         
@@ -224,20 +229,56 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             }
         }
     };
-
-    const handleBlockEmployee = async () => {
-        if (!employeeToBlock) return;
+    
+    const handleBlockEmployee = async (rowData: any[]) => {
+        const [id] = rowData;
+        const employeeId = Number(id);
+        const employee = localEmployees.find(e => e.id === employeeId);
         
-        try {
-            await toggleEmployeeBlock(employeeToBlock.id, 'заблокирован');
-            
-            message.success('Сотрудник заблокирован');
-            setIsBlockModalOpen(false);
-            setEmployeeToBlock(null);
-            await loadEmployees();
-        } catch (error) {
-            console.error('Ошибка при блокировке сотрудника:', error);
-            message.error('Не удалось заблокировать сотрудника');
+        if (!employee) return;
+        
+        if (!canDeleteEmployee(employee)) {
+            if (employee.id === authInfo?.employee.id) {
+                message.error('Нельзя заблокировать самого себя');
+            } else {
+                message.error('Недостаточно прав для блокирования этого сотрудника');
+            }
+            return;
+        }
+
+        if (window.confirm('Вы уверены, что хотите заблокировать этого сотрудника?')) {
+            try {
+                await toggleEmployeeBlock(employeeId);
+                message.success('Сотрудник успешно заблокирован');
+                await loadEmployees();
+            } catch (err: any) {
+                console.error('Ошибка при блокировке сотрудника:', err);
+                message.error('Не удалось заблокировать сотрудника');
+            }
+        }
+    };
+
+    const handleUnblockEmployee = async (rowData: any[]) => {
+        const [id] = rowData;
+        const employeeId = Number(id);
+        const employee = localEmployees.find(e => e.id === employeeId);
+        
+        if (!employee) return;
+        
+        if (!canDeleteEmployee(employee)) {
+            message.error('Недостаточно прав для разблокирования этого сотрудника');
+            return;
+        }
+
+        if (window.confirm('Вы уверены, что хотите разблокировать этого сотрудника?')) {
+            try {
+                await toggleEmployeeBlock(employeeId);
+                message.success('Сотрудник успешно разблокирован');
+                await loadEmployees();
+            } catch (err: any) {
+                console.error('Ошибка при разблокировке сотрудника:', err);
+                message.error('Не удалось разблокировать сотрудника');
+            }
         }
     };
 
@@ -368,7 +409,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         }
     };
 
-    // Фильтруем действия контекстного меню в зависимости от прав
     const getTableActions = (rowData: any[]) => {
         const [id] = rowData;
         const employeeId = Number(id);
@@ -378,7 +418,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         
         const actions = [];
         
-        // Добавляем действие удаления только если есть права
         if (canDeleteEmployee(employee)) {
             actions.push({
                 label: 'Удалить',
@@ -387,10 +426,18 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             });
         }
         
+        if (canDeleteEmployee(employee)) {
+            actions.push({
+                label: employee.isBlocked ? 'Разблокировать' : 'Заблокировать',
+                action: employee.isBlocked ? handleUnblockEmployee : handleBlockEmployee,
+                color: employee.isBlocked ? '#10B981' : '#EF4444'
+            });
+        }
+        
         return actions;
     };
 
-    const tableData = localEmployees.map(employee => [
+    const tableData = localEmployees.map((employee, index) => [
         employee.id.toString(),
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Avatar 
@@ -459,6 +506,15 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         employee.address || '-',
     ]);
 
+    const rowStyles: { [rowIndex: number]: RowStyle } = {};
+        localEmployees.forEach((employee, index) => {
+            if (isEmployeeBlocked(employee)) {
+                rowStyles[index] = {
+                    backgroundColor: 'rgba(254, 202, 202, 0.3)',
+                };
+            }
+    });
+
     return (
         <PageLayout>
             <TitleField style={{marginTop: 0 }}>
@@ -507,6 +563,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                         contextMenuActions={getTableActions}
                         onSort={handleSort}
                         sortConfig={sortConfig}
+                        rowStyles={rowStyles}
                     />
                     
                     <PaginationLayout>
