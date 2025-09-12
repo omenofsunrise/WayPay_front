@@ -250,6 +250,7 @@ const AdminPanelPage = () => {
           {company.licenceDate ? formatDate(company.licenceDate) : 'Нет данных'}
         </span>,
         company.createdCreditsCount,
+        company.totalCredits,
         new Date(company.lastActive).toLocaleString('ru-RU', {
           year: 'numeric',
           month: '2-digit',
@@ -369,6 +370,7 @@ const AdminPanelPage = () => {
               { name: "Телефон", align: "left" },
               { name: "Лицензия заканчивается", align: "right" },
               { name: "Договоров за последние 10 дней", align: "right" },
+              { name: "Договоров всего", align: "right" },
               { name: "Последний заход в сеть", align: "right" },
             ]} 
             data={tableData}

@@ -12,6 +12,7 @@ export interface Company {
   photoPath?: string;
   lastActive?: Date;
   createdCreditsCount?: number; 
+  totalCredits?: number;
 }
 
 export interface CompanyCreateRequest {
