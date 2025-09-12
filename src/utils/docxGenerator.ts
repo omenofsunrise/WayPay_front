@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver';
 import { TemplateHandler } from 'easy-template-x';
-import type { CreditDocs, PaymentScheduleItem, SoldProductItem } from '../api/types/credit';
+import type { CreditDocs, SoldProductItem } from '../api/types/credit';
 import { formatMoney } from './formatPrice';
 
 class DocxGenerator {

@@ -281,7 +281,6 @@ const CreditPage = () => {
       credit.id.toString(),
       formatDate(credit.creditDate),
       credit.clientFullName,
-      credit.clientPhone || 'Нет данных',
       `${formatMoney(credit.accured?.toString() || '')}`,
       `${formatMoney(credit.payed.toString())}`,
       `${formatMoney(credit.rest.toString())}`,
@@ -291,7 +290,6 @@ const CreditPage = () => {
 
     if (credits.length > 0) {
       const totalsRow = [
-        '',
         '',
         '',
         '',
@@ -421,7 +419,6 @@ const CreditPage = () => {
               { name: "№", isSortable: true },
               { name: "Дата договора", isSortable: true, align: "right" },
               { name: "ФИО покупателя", isSortable: true, align: "left" },
-              { name: "Телефон", align: "left" },
               { name: "Начислено", isSortable: true, align: "right" },
               { name: "Уплачено", isSortable: true, align: "right" },
               { name: "Остаток", isSortable: true, align: "right" },

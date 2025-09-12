@@ -48,3 +48,14 @@ export interface InvestorReport {
   allSelfIncome: number;
   paymentIncome: number;
 }
+
+export interface InvestorAgreementResponse {
+  city: string;
+  investorDate: string;
+  investorName: string;
+  investment: string;
+  investorPie: string;
+  companyPie: string;
+  investorMonths: string;
+  directorName: string;
+}

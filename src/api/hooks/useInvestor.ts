@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import investorService from '../services/investorService';
-import type { AutoSelectInvestorResponse, Investor, InvestorParams, InvestorReport } from '../types/investor';
+import type { AutoSelectInvestorResponse, Investor, InvestorAgreementResponse, InvestorParams, InvestorReport } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
 import { number } from 'framer-motion';
 
@@ -148,6 +148,21 @@ const useInvestor = () => {
     }
   }, []);
 
+  const getInvestorAgreement = useCallback(async (id: number): Promise<InvestorAgreementResponse> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await investorService.getInvestorAgreement(id);
+      setReportData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const checkInvestorCredits = async (id: number): Promise<boolean> => {
     try {
       const result = await investorService.CheckInvestorCredits(id);
@@ -205,7 +220,8 @@ const useInvestor = () => {
     getInvestorReport,
     checkInvestorCredits,
     blockInvestor,
-    clearInvestor
+    clearInvestor,
+    getInvestorAgreement
   };
 };
 

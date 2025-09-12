@@ -144,13 +144,13 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 12px;
+  font-size: 15px;
   color: #6b7280;
   margin-bottom: 4px;
 `;
 
 const InfoValue = styled.span`
-  font-size: 14px;
+  font-size: 18px;
   color: #111827;
   font-weight: 500;
 `;
@@ -1200,7 +1200,6 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
 
       <DossierGrid>
         <Section>
-          <SectionTitle>Контактная информация</SectionTitle>
           <InfoGrid>
             <InfoItem>
               <InfoLabel>Телефон</InfoLabel>

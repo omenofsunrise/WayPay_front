@@ -22,6 +22,7 @@ import { useAuth } from '../сontext/AuthContext';
 import { formatDate } from '../utils/dateFormatter';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import PrintIcon from '../assets/ui/print.svg?react';
+import InvestorDocxGenerator from '../utils/investorDocxGenerator';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -35,8 +36,7 @@ const InvestorPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
-    
-    // Состояния для печати договоров
+    const investorDocGenerator = new InvestorDocxGenerator();
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [investorForPrint, setInvestorForPrint] = useState<Investor | null>(null);
     
@@ -64,7 +64,8 @@ const InvestorPage = () => {
         addInvestment,
         checkInvestorCredits,
         blockInvestor,
-        clearInvestor
+        clearInvestor,
+        getInvestorAgreement
     } = useInvestor();
     
     const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
@@ -275,10 +276,19 @@ const InvestorPage = () => {
 
     const handlePrintContract = async (option: string, investor: Investor) => {
         try {
+        if (option === 'investorContract') {
+            // Получаем данные для договора
+            const agreementData = await getInvestorAgreement(investor.id);
             
+            // Генерируем документ
+            await investorDocGenerator.generateInvestorContract(
+            agreementData,
+            investor.nickname || investor.fullName || 'Инвестор'
+            );
+        }
         } catch (error) {
-            console.error('Ошибка при печати договора:', error);
-            alert('Произошла ошибка при печати договора');
+        console.error('Ошибка при печати договора:', error);
+        alert('Произошла ошибка при печати договора');
         }
     };
 
@@ -574,8 +584,9 @@ const InvestorPage = () => {
                 onClose={() => setIsPrintModalOpen(false)}
                 onSelect={handlePrintOptionSelect}
                 selectedCredit={null}
+                selectedInvestor={investorForPrint}
                 printOptions={[
-                    { key: 'investorContract', label: 'Договор с инвестором', enabled: true }
+                { key: 'investorContract', label: 'Договор с инвестором', enabled: true }
                 ]}
                 modalTitle="Выберите тип договора для печати"
             />

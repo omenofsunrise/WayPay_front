@@ -18,6 +18,7 @@ import { FILE_BASE_URL } from '../../api/client';
 import { useAuth } from '../../сontext/AuthContext';
 import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import { EditOutlined } from '@ant-design/icons';
+import { message } from 'antd';
 
 interface EmployeePageProps {
     onViewEmployee: (id: number) => void;
@@ -50,6 +51,8 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     const [roleValue, setRoleValue] = useState('');
     const [currentRoleEmployeeId, setCurrentRoleEmployeeId] = useState<number | null>(null);
     const [isSavingRole, setIsSavingRole] = useState(false);
+    const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+    const [employeeToBlock, setEmployeeToBlock] = useState<Employee | null>(null);
 
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -69,7 +72,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     };
 
     const { 
-        employees,
+        error,
         employeesLoading, 
         employeesError, 
         fetchEmployees,
@@ -126,8 +129,10 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             await updateEmployeeRole(currentRoleEmployeeId, roleValue);
             await loadEmployees();
             setIsRoleModalOpen(false);
+            message.success('Роль успешно обновлена');
         } catch (error) {
             console.error('Ошибка при сохранении роли:', error);
+            message.error('Не удалось обновить роль');
         } finally {
             setIsSavingRole(false);
         }
@@ -142,8 +147,21 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         }
         
         if (hasRole('админ')) {
-            // Админ может редактировать только сотрудников и бухгалтеров
-            // и не может повышать их до админов
+            return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
+        }
+        
+        return false;
+    };
+
+    const canDeleteEmployee = (employee: Employee): boolean => {
+        if (!authInfo) return false;
+        if (employee.id === authInfo.employee.id) return false;
+        
+        if (hasRole('суперадмин') || hasRole('директор')) {
+            return true;
+        }
+        
+        if (hasRole('админ')) {
             return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
         }
         
@@ -175,18 +193,51 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
 
     const handleDeleteEmployee = async (rowData: any[]) => {
         const [id] = rowData;
+        const employeeId = Number(id);
+        const employee = localEmployees.find(e => e.id === employeeId);
+        
+        if (!employee) return;
+        
+        if (!canDeleteEmployee(employee)) {
+            if (employee.id === authInfo?.employee.id) {
+                message.error('Нельзя удалить самого себя');
+            } else {
+                message.error('Недостаточно прав для удаления этого сотрудника');
+            }
+            return;
+        }
+
         if (window.confirm('Вы уверены, что хотите удалить этого сотрудника?')) {
             try {
-                setLocalEmployees(prev => prev.filter(e => e.id !== Number(id)));
+                setLocalEmployees(prev => prev.filter(e => e.id !== employeeId));
                 setTotalCount(prev => prev - 1);
                 
-                await deleteEmployee(Number(id));
+                await deleteEmployee(employeeId);
+                message.success('Сотрудник успешно удален');
                 
                 await loadEmployees();
-            } catch (err) {
+            } catch (err: any) {
                 console.error('Ошибка при удалении сотрудника:', err);
                 loadEmployees();
+                
+                window.alert('Нельзя удалить сотрудника создавшего договор(ы). Вы можете заблокировать сотрудника чтобы ограничить доступ к программе.')
             }
+        }
+    };
+
+    const handleBlockEmployee = async () => {
+        if (!employeeToBlock) return;
+        
+        try {
+            await toggleEmployeeBlock(employeeToBlock.id, 'заблокирован');
+            
+            message.success('Сотрудник заблокирован');
+            setIsBlockModalOpen(false);
+            setEmployeeToBlock(null);
+            await loadEmployees();
+        } catch (error) {
+            console.error('Ошибка при блокировке сотрудника:', error);
+            message.error('Не удалось заблокировать сотрудника');
         }
     };
 
@@ -216,6 +267,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                         e.id === newEmployee.id ? createdEmployee : e
                     )
                 );
+                message.success('Сотрудник успешно создан');
             } else if (modalMode === 'edit' && selectedEmployee?.id) {
                 setLocalEmployees(prev => 
                     prev.map(e => 
@@ -231,11 +283,13 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                     address: employeeData.address,
                     phone: employeeData.phone || '',
                 });
+                message.success('Данные сотрудника обновлены');
             }
             
             setIsModalOpen(false);
         } catch (err) {
             console.error('Ошибка при сохранении сотрудника:', err);
+            message.error('Не удалось сохранить данные сотрудника');
             loadEmployees();
             throw err;
         }
@@ -287,12 +341,14 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             await updateEmployeePhone(currentPhoneEmployeeId, phoneValue);
             await loadEmployees();
             setIsPhoneModalOpen(false);
+            message.success('Телефон успешно обновлен');
         } catch (error) {
             console.error('Ошибка при сохранении телефона:', error);
+            message.error('Не удалось обновить телефон');
         } finally {
             setIsSavingPhone(false);
         }
-        };
+    };
 
     const handleSaveSurcharge = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -303,96 +359,105 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             await updateEmployeeMinSurcharge(currentSurchargeEmployeeId, surchargeValue);
             await loadEmployees();
             setIsSurchargeModalOpen(false);
+            message.success('Надбавка успешно обновлена');
         } catch (error) {
             console.error('Ошибка при сохранении надбавки:', error);
+            message.error('Не удалось обновить надбавку');
         } finally {
             setIsSavingSurcharge(false);
         }
+    };
+
+    // Фильтруем действия контекстного меню в зависимости от прав
+    const getTableActions = (rowData: any[]) => {
+        const [id] = rowData;
+        const employeeId = Number(id);
+        const employee = localEmployees.find(e => e.id === employeeId);
+        
+        if (!employee) return [];
+        
+        const actions = [];
+        
+        // Добавляем действие удаления только если есть права
+        if (canDeleteEmployee(employee)) {
+            actions.push({
+                label: 'Удалить',
+                action: handleDeleteEmployee,
+                color: '#EF4444'
+            });
+        }
+        
+        return actions;
     };
 
     const tableData = localEmployees.map(employee => [
         employee.id.toString(),
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Avatar 
-            src={employee.photoPath ? FILE_BASE_URL + employee.photoPath : null} 
-            name={employee.fullName}
+                src={employee.photoPath ? FILE_BASE_URL + employee.photoPath : null} 
+                name={employee.fullName}
             />
             {employee.fullName}
         </div>,
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {employee.role}
             {canEditEmployee(employee) && (
-            <button 
-                onClick={(e) => {
-                e.stopPropagation();
-                handleOpenRoleModal(employee, e);
-                }}
-                style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: '#1890ff', 
-                cursor: 'pointer' 
-                }}
-            >
-                <EditOutlined />
-            </button>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenRoleModal(employee, e);
+                    }}
+                    style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#1890ff', 
+                        cursor: 'pointer' 
+                    }}
+                >
+                    <EditOutlined />
+                </button>
             )}
         </div>,
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {employee.minSurcharge}
             {canEditSurcharge(employee) && (
-            <button 
-                onClick={(e) => {
-                e.stopPropagation();
-                handleOpenSurchargeModal(employee, e);
-                }}
-                style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: '#1890ff', 
-                cursor: 'pointer' 
-                }}
-            >
-                <EditOutlined />
-            </button>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenSurchargeModal(employee, e);
+                    }}
+                    style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#1890ff', 
+                        cursor: 'pointer' 
+                    }}
+                >
+                    <EditOutlined />
+                </button>
             )}
         </div>,
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {employee.phone}
             {canEditEmployee(employee) && (
-            <button 
-                onClick={(e) => {
-                e.stopPropagation();
-                handleOpenPhoneModal(employee, e);
-                }}
-                style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: '#1890ff', 
-                cursor: 'pointer' 
-                }}
-            >
-                <EditOutlined />
-            </button>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenPhoneModal(employee, e);
+                    }}
+                    style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: '#1890ff', 
+                        cursor: 'pointer' 
+                    }}
+                >
+                    <EditOutlined />
+                </button>
             )}
         </div>,
         employee.address || '-',
     ]);
-
-    const tableActions = [
-        {
-            label: 'Удалить',
-            action: handleDeleteEmployee,
-            color: '#EF4444'
-        }
-    ];
-
-    const roleOptions = [
-        { value: '', label: 'Все роли' },
-        { value: 'админ', label: 'Администратор' },
-        { value: 'бухгалтер', label: 'Бухгалтер' },
-        { value: 'сотрудник', label: 'Сотрудник' },
-    ];
 
     return (
         <PageLayout>
@@ -439,7 +504,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                         ]} 
                         data={tableData}
                         onRowDoubleClick={handleRowDoubleClick}
-                        contextMenuActions={tableActions}
+                        contextMenuActions={getTableActions}
                         onSort={handleSort}
                         sortConfig={sortConfig}
                     />
@@ -468,38 +533,38 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             />
 
             {isPhoneModalOpen && (
-            <BaseModal
-                title="Изменение телефона"
-                onClose={() => setIsPhoneModalOpen(false)}
-                onCancel={() => setIsPhoneModalOpen(false)}
-                onSave={handleSavePhone}
-                isSubmitting={isSavingPhone}
-            >
-                <CustomInput
-                inputType="text"
-                value={phoneValue}
-                onChange={(e) => setPhoneValue(e.target.value)}
-                placeholder="Введите новый телефон"
-                />
-            </BaseModal>
+                <BaseModal
+                    title="Изменение телефона"
+                    onClose={() => setIsPhoneModalOpen(false)}
+                    onCancel={() => setIsPhoneModalOpen(false)}
+                    onSave={handleSavePhone}
+                    isSubmitting={isSavingPhone}
+                >
+                    <CustomInput
+                        inputType="text"
+                        value={phoneValue}
+                        onChange={(e) => setPhoneValue(e.target.value)}
+                        placeholder="Введите новый телефон"
+                    />
+                </BaseModal>
             )}
             
             {isSurchargeModalOpen && (
-            <BaseModal
-                title="Изменение минимальной надбавки"
-                onClose={() => setIsSurchargeModalOpen(false)}
-                onCancel={() => setIsSurchargeModalOpen(false)}
-                onSave={handleSaveSurcharge}
-                isSubmitting={isSavingSurcharge}
-            >
-                <CustomInput
-                inputType="number"
-                value={surchargeValue.toString()}
-                onChange={(e) => setSurchargeValue(Number(e.target.value))}
-                placeholder="Введите новую надбавку"
-                min={0}
-                />
-            </BaseModal>
+                <BaseModal
+                    title="Изменение минимальной надбавки"
+                    onClose={() => setIsSurchargeModalOpen(false)}
+                    onCancel={() => setIsSurchargeModalOpen(false)}
+                    onSave={handleSaveSurcharge}
+                    isSubmitting={isSavingSurcharge}
+                >
+                    <CustomInput
+                        inputType="number"
+                        value={surchargeValue.toString()}
+                        onChange={(e) => setSurchargeValue(Number(e.target.value))}
+                        placeholder="Введите новую надбавку"
+                        min={0}
+                    />
+                </BaseModal>
             )}
 
             {isRoleModalOpen && (
@@ -511,7 +576,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                     isSubmitting={isSavingRole}
                 >
                     <CustomSelect
-                    style={{marginLeft: "25px"}}
+                        style={{marginLeft: "25px"}}
                         value={roleValue}
                         onChange={(e) => setRoleValue(e.target.value)}
                         options={[
@@ -521,6 +586,22 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                         ]}
                         placeholder="Выберите роль"
                     />
+                </BaseModal>
+            )}
+
+            {isBlockModalOpen && employeeToBlock && (
+                <BaseModal
+                    title="Нельзя удалить сотрудника"
+                    onClose={() => setIsBlockModalOpen(false)}
+                    onCancel={() => setIsBlockModalOpen(false)}
+                    onSave={handleBlockEmployee}
+                    isSubmitting={false}
+                >
+                    <div style={{ padding: '16px' }}>
+                        <p>Нельзя удалить сотрудника, у которого есть активные договоры.</p>
+                        <p>Вместо удаления предлагаем заблокировать доступ сотрудника.</p>
+                        <p>Заблокировать сотрудника <strong>{employeeToBlock.fullName}</strong>?</p>
+                    </div>
                 </BaseModal>
             )}
 

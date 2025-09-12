@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { AutoSelectInvestorResponse, Investor, InvestorParams, InvestorReport } from '../types/investor';
+import type { AutoSelectInvestorResponse, Investor, InvestorAgreementResponse, InvestorParams, InvestorReport } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
 
 class ProductService {
@@ -42,6 +42,11 @@ class ProductService {
 
   async getInvestorReport(id: number): Promise<InvestorReport> {
     const response = await apiClient.get(`/Investor/report/${id}`);
+    return response.data;
+  }
+
+  async getInvestorAgreement(id: number): Promise<InvestorAgreementResponse> {
+    const response = await apiClient.get(`/Investor/agreement/${id}`);
     return response.data;
   }
 

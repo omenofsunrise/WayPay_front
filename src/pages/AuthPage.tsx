@@ -143,6 +143,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                         )}
                     </SubmitButton>
                 </AuthForm>
+                <InfoText>
+                    Хотите получить доступ к нашим продуктам?<br />
+                    Обратитесь по номеру <InfoPhone href="tel:89899242424">8 989 924 24 24</InfoPhone><br />
+                    или оставьте заявку на <InfoLink href="https://waypay.one" target="_blank">waypay.one</InfoLink>
+                </InfoText>
             </AuthCard>
 
             <AuthCallModal
@@ -162,6 +167,36 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         </AuthContainer>
     );
 };
+
+const InfoText = styled.div`
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+`;
+
+const InfoPhone = styled.a`
+    color: rgba(0, 125, 136, 1);
+    text-decoration: none;
+    font-weight: 500;
+    
+    &:hover {
+        text-decoration: underline;
+    }
+`;
+
+const InfoLink = styled.a`
+    color: rgba(0, 125, 136, 1);
+    text-decoration: none;
+    font-weight: 500;
+    
+    &:hover {
+        text-decoration: underline;
+    }
+`;
 
 const AuthContainer = styled.div`
     display: flex;

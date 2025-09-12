@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import type { Credit } from "../../api/types/credit";
+import type { Investor } from "../../api/types/investor";
 
 export interface PrintOption {
   key: string;
@@ -12,6 +13,7 @@ interface PrintOptionModalProps {
   onClose: () => void;
   onSelect: (option: string) => void;
   selectedCredit: Credit | null;
+  selectedInvestor?: Investor | null;
   printOptions?: PrintOption[];
   modalTitle?: string;
 }
@@ -22,19 +24,21 @@ const PrintOptionModal = ({
   onSelect, 
   selectedCredit, 
   printOptions, 
+  selectedInvestor,
   modalTitle = "Выберите тип договора" 
 }: PrintOptionModalProps) => {
   
   const defaultOptions: PrintOption[] = [
     { key: 'sale', label: 'Договор купли-продажи', enabled: true },
     { key: 'guaranteeConsent', label: 'Договор поручительства', enabled: true },
-    { key: 'schedules', label: 'График платежей', enabled: true }
+    { key: 'schedules', label: 'График платежей', enabled: true },
+    { key: 'investorContract', label: 'Договор с инвестором', enabled: !!selectedInvestor }
   ];
   
   const options = printOptions || defaultOptions;
 
   const handleSelect = (optionKey: string) => {
-    if (selectedCredit) {
+    if (selectedCredit || selectedInvestor) {
       onSelect(optionKey);
     } else {
       console.error('No credit selected');
