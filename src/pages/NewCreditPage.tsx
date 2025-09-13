@@ -925,7 +925,7 @@ const ContextMenu = styled.div`
   top: ${350}px;
   left: ${1000}px;
   
-  pointer-events: auto; /* чтобы меню было кликабельным */
+  pointer-events: auto;
 `;
 
 const ContextMenuItem = styled.button`
