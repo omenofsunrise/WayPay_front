@@ -36,6 +36,7 @@ export interface Credit {
 
 export interface CreateCreditRequest {
   clientId: number;
+  GuarantorClientId: number;
   guarantor?: {
     fullName: string;
     phone: string;
@@ -43,6 +44,7 @@ export interface CreateCreditRequest {
     address?: string;
     doc?: string;
   };
+  
   investorId?: number;
   poolId?: number;
   creditDate: Date;

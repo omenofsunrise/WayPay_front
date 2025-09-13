@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { useEffect, useState, type ChangeEvent, useCallback } from 'react';
+import { useEffect, useState, type ChangeEvent, useCallback, useRef } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import PageLayout from '../components/ui/Layouts/PageLayout';
@@ -56,11 +56,13 @@ const NewCreditPage = () => {
   const [contractDate, setContractDate] = useState<string | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [guarantor, setGuarantor] = useState<Guarantor | null>(null);
+  const [guarantorClient, setGuarantorClient] = useState<Client | null>(null);
   const [investor, setInvestor] = useState<Investor | null>(null);
   const [selectedPool, setSelectedPool] = useState<Investor | null>(null);
-  const [modalType, setModalType] = useState<'client' | 'guarantor' | 'investor' | null>(null);
+  const [modalType, setModalType] = useState<'client' | 'guarantor' | 'guarantorClient' | 'investor' | null>(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isGuarantorModalOpen, setIsGuarantorModalOpen] = useState(false);
+  const [isGuarantorClientModalOpen, setIsGuarantorClientModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [totalSum, setTotalSum] = useState(0);
@@ -79,6 +81,8 @@ const NewCreditPage = () => {
   const { authInfo } = useEmployee();
   const minSurcharge = authInfo?.employee.minSurcharge || 0;
   const [viewModalData, setViewModalData] = useState<Investor | null>(null);
+  const [guarantorMenuOpen, setGuarantorMenuOpen] = useState(false);
+  const guarantorMenuRef = useRef<HTMLDivElement>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [markupType, setMarkupType] = useState<'percent' | 'fixed'>(() => {
     const savedMarkupType = localStorage.getItem(MARKUP_TYPE_STORAGE_KEY);
@@ -99,6 +103,33 @@ const NewCreditPage = () => {
   const parseAmount = useCallback((formatted: string): number => {
     return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (guarantorMenuRef.current && !guarantorMenuRef.current.contains(event.target as Node)) {
+        setGuarantorMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const openGuarantorSelectionMenu = () => {
+    setGuarantorMenuOpen(true);
+  };
+
+  const handleSelectExistingClient = () => {
+    setGuarantorMenuOpen(false);
+    openClientModal('guarantorClient');
+  };
+
+  const handleCreateNewGuarantor = () => {
+    setGuarantorMenuOpen(false);
+    openGuarantorModal();
+  };
 
   const validateInvestorActivePeriod = useCallback((): boolean => {
     if (!contractDate || !months || parseInt(months) <= 0 || (!investor && !selectedPool)) {
@@ -180,14 +211,10 @@ const NewCreditPage = () => {
       return;
     }
 
-    // Prepare guarantor data if it exists
-    const guarantorData = guarantor ? {
-      fullName: guarantor.fullName,
-      phone: guarantor.phone,
-      birthdate: guarantor.birthdate ? new Date(guarantor.birthdate) : undefined,
-      address: guarantor.address,
-      doc: guarantor.doc
-    } : undefined;
+    if (guarantorClient && guarantorClient.id === client.id) {
+      window.alert("Клиент не может быть одновременно и поручителем");
+      return;
+    }
 
     const creditData: CreateCreditRequest = {
       clientId: client.id,
@@ -205,8 +232,19 @@ const NewCreditPage = () => {
             : { surchargeAmount: product.markup }
           )
         })),
-      ...(guarantorData && { guarantor: guarantorData })
     };
+    
+    if (guarantorClient) {
+      creditData.GuarantorClientId = guarantorClient.id;
+    } else if (guarantor) {
+      creditData.guarantor = {
+        fullName: guarantor.fullName,
+        phone: guarantor.phone,
+        birthdate: guarantor.birthdate ? new Date(guarantor.birthdate) : undefined,
+        address: guarantor.address,
+        doc: guarantor.doc
+      };
+    }
     
     if (selectedPool) {
       creditData.poolId = selectedPool.poolId || selectedPool.id;
@@ -228,6 +266,7 @@ const NewCreditPage = () => {
     investor,
     selectedPool,
     guarantor,
+    guarantorClient,
     initialPaymentAmount,
     months,
     paymentDue,
@@ -409,17 +448,12 @@ const NewCreditPage = () => {
   const handleSelectClient = (client: Client) => {
     if (modalType === 'client') {
       setClient(client);
-    } else if (modalType === 'guarantor') {
-      setGuarantor({
-        id: client.id,
-        fullName: client.fullName,
-        phone: client.phone || '',
-        doc: client.doc,
-        birthdate: client.birthdate,
-        address: client.registrationAddress
-      });
+    } else if (modalType === 'guarantorClient') {
+      setGuarantorClient(client);
+      setGuarantor(null);
     }
     setIsClientModalOpen(false);
+    setIsGuarantorClientModalOpen(false);
   };
 
   const handleViewClient = async () => {
@@ -435,6 +469,9 @@ const NewCreditPage = () => {
   const handleViewGuarantor = () => {
     if (guarantor) {
       setIsViewGuarantorModalOpen(true);
+    } else if (guarantorClient) {
+      setClient(guarantorClient);
+      setIsViewClientModalOpen(true);
     }
   };
 
@@ -482,9 +519,13 @@ const NewCreditPage = () => {
     setValidationError(null);
   };
 
-  const openClientModal = (type: 'client' | 'guarantor') => {
+  const openClientModal = (type: 'client' | 'guarantorClient') => {
     setModalType(type);
-    setIsClientModalOpen(true);
+    if (type === 'client') {
+      setIsClientModalOpen(true);
+    } else {
+      setIsGuarantorClientModalOpen(true);
+    }
   };
 
   const openGuarantorModal = () => {
@@ -522,6 +563,7 @@ const NewCreditPage = () => {
       };
       
       setGuarantor(newGuarantor);
+      setGuarantorClient(null);
       setIsGuarantorModalOpen(false);
       return true;
     } catch (error) {
@@ -547,6 +589,34 @@ const NewCreditPage = () => {
     setSelectedPool(null);
     setValidationError(null);
   };
+
+  const getGuarantorDisplayInfo = () => {
+    if (guarantorClient) {
+      return {
+        primaryValue: guarantorClient.fullName,
+        secondaryValue: guarantorClient.phone,
+        type: 'client'
+      };
+    } else if (guarantor) {
+      return {
+        primaryValue: guarantor.fullName,
+        secondaryValue: guarantor.phone,
+        type: 'custom'
+      };
+    }
+    return {
+      primaryValue: '',
+      secondaryValue: '',
+      type: null
+    };
+  };
+
+  const clearGuarantor = () => {
+    setGuarantor(null);
+    setGuarantorClient(null);
+  };
+
+  const guarantorInfo = getGuarantorDisplayInfo();
 
   return (
     <PageLayout>
@@ -613,24 +683,51 @@ const NewCreditPage = () => {
           </FieldGroup>
 
           <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
-            <Label>Поручитель</Label>
-            <EntitySelectWrapper>
-              <EntitySelectContainer
-                mode="create"
-                primaryValue={guarantor?.fullName || ''}
-                secondaryValue={guarantor?.phone}
-                placeholder="Выберите поручителя"
-                onSelect={openGuarantorModal}
-                onClear={() => setGuarantor(null)}
-                customIcon={
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" stroke-width="1.5" stroke-linecap="round"/>
+                      <Label>Поручитель</Label>
+          <EntitySelectWrapper>
+            <EntitySelectContainer
+              mode="create"
+              primaryValue={guarantorInfo.primaryValue}
+              secondaryValue={guarantorInfo.secondaryValue}
+              placeholder="Выберите поручителя"
+              onSelect={openGuarantorSelectionMenu}
+              onClear={clearGuarantor}
+              customIcon={
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              }
+            />
+            <ViewButton 
+              onClick={handleViewGuarantor} 
+              disabled={!guarantor && !guarantorClient} 
+            />
+          </EntitySelectWrapper>
+
+          {/* Контекстное меню */}
+          {guarantorMenuOpen && (
+            <ContextMenu ref={guarantorMenuRef}>
+              <ContextMenuItem onClick={handleSelectExistingClient}>
+                <UserIcon>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 8C10.2091 8 12 6.20914 12 4C12 1.79086 10.2091 0 8 0C5.79086 0 4 1.79086 4 4C4 6.20914 5.79086 8 8 8Z" fill="#50555C"/>
+                    <path d="M8 9.5C4.96243 9.5 2.5 11.9624 2.5 15C2.5 15.2761 2.72386 15.5 3 15.5H13C13.2761 15.5 13.5 15.2761 13.5 15C13.5 11.9624 11.0376 9.5 8 9.5Z" fill="#50555C"/>
                   </svg>
-                }
-              />
-            </EntitySelectWrapper>
-          </FieldGroup>
-        </FormRow>
+                </UserIcon>
+                Выбрать из существующих клиентов
+              </ContextMenuItem>
+              <ContextMenuItem onClick={handleCreateNewGuarantor}>
+                <PlusIcon>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 1V15M1 8H15" stroke="#50555C" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </PlusIcon>
+                Создать нового поручителя
+              </ContextMenuItem>
+            </ContextMenu>
+          )}
+        </FieldGroup>
+      </FormRow>
 
         <ModalInfoTitle>
           Список товаров
@@ -739,7 +836,14 @@ const NewCreditPage = () => {
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
         onSubmit={handleSelectClient}
-        title={modalType === 'client' ? 'Выбор покупателя' : 'Выбор поручителя'}
+        title={modalType === 'client' ? 'Выбор покупателя' : 'Выбор поручителя из клиентов'}
+      />
+
+      <ClientSelectModal
+        isOpen={isGuarantorClientModalOpen}
+        onClose={() => setIsGuarantorClientModalOpen(false)}
+        onSubmit={handleSelectClient}
+        title="Выбор поручителя из клиентов"
       />
 
       <GuarantorModal
@@ -807,6 +911,61 @@ const NewCreditPage = () => {
     </PageLayout>
   );
 };
+
+const ContextMenu = styled.div`
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+  min-width: 250px;
+  
+  position: fixed;
+  top: ${350}px;
+  left: ${1000}px;
+  
+  pointer-events: auto; /* чтобы меню было кликабельным */
+`;
+
+const ContextMenuItem = styled.button`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  text-align: left;
+  gap: 12px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #f7fafc;
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #e2e8f0;
+  }
+`;
+
+const UserIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+`;
+
+const PlusIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+`;
 
 const MarkupTypeToggleContainer = styled.div`
   display: flex;
