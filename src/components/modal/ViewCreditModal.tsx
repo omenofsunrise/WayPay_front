@@ -11,15 +11,18 @@ import useNotes from '../../api/hooks/useNote';
 import { formatDate } from '../../utils/dateFormatter';
 import useCredit from '../../api/hooks/useCredit';
 import useClient from '../../api/hooks/useClient';
-import type { Credit } from '../../api/types/credit';
+import type { Credit, GuarantorType } from '../../api/types/credit';
 import type { Client } from '../../api/types/client';
 import { formatMoney } from '../../utils/formatPrice';
 import ClientModal from './CrudInherited/ClientModal';
 import InvestorModal from './CrudInherited/InvestorModal';
 import useInvestor from '../../api/hooks/useInvestor';
-import type { Payment, PaymentByCreditParams, PaymentParams } from '../../api/types/payment';
+import type { Payment, PaymentByCreditParams } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
 import { NOTEABLE_TYPES } from '../../api/types/note';
+import useGuarantor from '../../api/hooks/useGuarantor';
+import type { Guarantor } from '../../api/types/client';
+import GuarantorModal from './CrudInherited/GuarantorModal';
 
 interface ViewCreditModalProps {
   id: number;
@@ -35,8 +38,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const { notes, isLoading: isNotesLoading, error: notesError, getCreditNotes, createNote, deleteNote } = useNotes();
   const { getCredits, isLoading: isCreditLoading, error: creditError } = useCredit();
   const { getClientById } = useClient();
+  const { getGuarantorById } = useGuarantor();
   const [creditData, setCreditData] = useState<Credit | null>(null);
-  const [guarantorData, setGuarantorData] = useState<Client | null>(null);
+  const [guarantorData, setGuarantorData] = useState<Client | Guarantor | null>(null);
+  const [guarantorType, setGuarantorType] = useState<GuarantorType | null>(null);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const { 
@@ -77,6 +82,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           setCurrentClient(null);
           setGuarantorData(null);
           setCurrentInvestor(null);
+          setGuarantorType(null);
           
           const creditResult = await getCredits({ creditId: id, pageSize: 1 });
           if (creditResult?.items?.length) {
@@ -88,9 +94,18 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               setCurrentClient(client);
             }
             
-            if (credit.guarantorId) {
-              const guarantor = await getClientById(credit.guarantorId);
-              setGuarantorData(guarantor);
+            if (credit.guarantorId && credit.guarantorType) {
+              setGuarantorType(credit.guarantorType);
+              
+              if (credit.guarantorType === 'Client') {
+                // Загрузка клиента как поручителя
+                const guarantor = await getClientById(credit.guarantorId);
+                setGuarantorData(guarantor);
+              } else if (credit.guarantorType === 'Guarantor') {
+                // Загрузка отдельного поручителя
+                const guarantor = await getGuarantorById(credit.guarantorId);
+                setGuarantorData(guarantor);
+              }
             }
             
             if (credit.investorId) {
@@ -108,7 +123,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       // Используем новый метод для кредитных записок
       getCreditNotes(Number(id));
     }
-  }, [isOpen, id, getCreditNotes, getCredits, getClientById, getInvestorById]);
+  }, [isOpen, id, getCreditNotes, getCredits, getClientById, getInvestorById, getGuarantorById]);
 
   const notesColumns = [
     { name: 'Дата' },
@@ -234,9 +249,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           readOnly
                         />
                       </InputContainer>
-                      {/* <ViewButtonContainer>
-                        <ViewButton onClick={handleOpenInvestorModal} />
-                      </ViewButtonContainer> */}
+
                     </HorizontalContainer>
                     <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
                     <HorizontalContainer>
@@ -247,9 +260,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           readOnly
                         />
                       </InputContainer>
-                      {/* <ViewButtonContainer>
+                      <ViewButtonContainer>
                         <ViewButton onClick={handleOpenClientModal} />
-                      </ViewButtonContainer> */}
+                      </ViewButtonContainer>
                       <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
                         <InputTitle>Первоначальный взнос, руб</InputTitle>
                         <CustomInput 
@@ -323,13 +336,23 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         />
       )}
 
-      {guarantorData && (
+      {guarantorData && guarantorType === 'Client' && (
         <ClientModal
           mode="view"
           isOpen={isGuarantorModalOpen}
           onClose={() => setIsGuarantorModalOpen(false)}
           onSubmit={async () => false}
-          initialData={guarantorData}
+          initialData={guarantorData as Client}
+        />
+      )}
+
+      {guarantorData && guarantorType === 'Guarantor' && (
+        <GuarantorModal
+          mode="view"
+          isOpen={isGuarantorModalOpen}
+          onClose={() => setIsGuarantorModalOpen(false)}
+          onSubmit={async () => false}
+          initialData={guarantorData as Guarantor}
         />
       )}
 
