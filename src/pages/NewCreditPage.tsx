@@ -25,6 +25,8 @@ import ViewButton from '../components/ui/Buttons/ViewButton';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useEmployee } from '../api/hooks/useEmployee';
 import type { Investor } from '../api/types/investor';
+import GuarantorModal, { type Guarantor } from '../components/modal/CrudInherited/GuarantorModal';
+import type { GuarantorForm } from '../api/types/client';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 
@@ -53,11 +55,12 @@ const NewCreditPage = () => {
   const navigate = useNavigate();
   const [contractDate, setContractDate] = useState<string | null>(null);
   const [client, setClient] = useState<Client | null>(null);
-  const [guarantor, setGuarantor] = useState<Client | null>(null);
+  const [guarantor, setGuarantor] = useState<Guarantor | null>(null);
   const [investor, setInvestor] = useState<Investor | null>(null);
   const [selectedPool, setSelectedPool] = useState<Investor | null>(null);
   const [modalType, setModalType] = useState<'client' | 'guarantor' | 'investor' | null>(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isGuarantorModalOpen, setIsGuarantorModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [totalSum, setTotalSum] = useState(0);
@@ -158,7 +161,6 @@ const NewCreditPage = () => {
   }, [contractDate, months, paymentDue, investor, selectedPool]);
 
   useEffect(() => {
-    console.log('useEffect валидации вызван');
     validateInvestorActivePeriod();
   }, [contractDate, months, paymentDue, investor, selectedPool, validateInvestorActivePeriod]);
 
@@ -171,18 +173,21 @@ const NewCreditPage = () => {
 
   const handleCreateCredit = useCallback(async () => {   
     if (!client || !contractDate || (!investor && !selectedPool)) {
-      console.log('Условие не выполнено - выход из функции');
       return;
     }
     
-    validateInvestorActivePeriod();
     if (!validateInvestorActivePeriod()) {
       return;
     }
 
-    if (!validateInvestorActivePeriod()) {
-      return;
-    }
+    // Prepare guarantor data if it exists
+    const guarantorData = guarantor ? {
+      fullName: guarantor.fullName,
+      phone: guarantor.phone,
+      birthdate: guarantor.birthdate ? new Date(guarantor.birthdate) : undefined,
+      address: guarantor.address,
+      doc: guarantor.doc
+    } : undefined;
 
     const creditData: CreateCreditRequest = {
       clientId: client.id,
@@ -200,7 +205,7 @@ const NewCreditPage = () => {
             : { surchargeAmount: product.markup }
           )
         })),
-      ...(guarantor && { guarantorId: guarantor.id })
+      ...(guarantorData && { guarantor: guarantorData })
     };
     
     if (selectedPool) {
@@ -214,8 +219,9 @@ const NewCreditPage = () => {
     const createdCredit = await createCredit(creditData);
     if (createdCredit) {
       navigate('/credits');
+    } else {
+      window.alert(`${error?.response?.data}`);
     }
-    else window.alert(`${error.response.data}`);
   }, [
     client,
     contractDate,
@@ -230,7 +236,8 @@ const NewCreditPage = () => {
     createCredit,
     navigate,
     validateInvestorActivePeriod,
-    markupType
+    markupType,
+    error
   ]);
 
   const handleAutoSelectInvestor = async () => {
@@ -364,6 +371,11 @@ const NewCreditPage = () => {
     }
   }, [totalSum, formatAmount]);
 
+  const openInvestorModal = () => {
+    setModalType('investor');
+    setIsInvestorModalOpen(true);
+  };
+
   const handleAmountChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
@@ -398,7 +410,14 @@ const NewCreditPage = () => {
     if (modalType === 'client') {
       setClient(client);
     } else if (modalType === 'guarantor') {
-      setGuarantor(client);
+      setGuarantor({
+        id: client.id,
+        fullName: client.fullName,
+        phone: client.phone || '',
+        doc: client.doc,
+        birthdate: client.birthdate,
+        address: client.registrationAddress
+      });
     }
     setIsClientModalOpen(false);
   };
@@ -413,13 +432,9 @@ const NewCreditPage = () => {
     }
   };
 
-  const handleViewGuarantor = async () => {
+  const handleViewGuarantor = () => {
     if (guarantor) {
-      const fullGuarantorData = await getClientById(guarantor.id);
-      if (fullGuarantorData) {
-        setGuarantor(fullGuarantorData);
-        setIsViewGuarantorModalOpen(true);
-      }
+      setIsViewGuarantorModalOpen(true);
     }
   };
 
@@ -467,26 +482,19 @@ const NewCreditPage = () => {
     setValidationError(null);
   };
 
-  useEffect(() => {
-    console.log('Параметры изменились, запускаем валидацию:', {
-      contractDate,
-      months,
-      paymentDue,
-      investor: investor?.id,
-      selectedPool: selectedPool?.id
-    });
-    
-    validateInvestorActivePeriod();
-  }, [contractDate, months, paymentDue, investor?.id, selectedPool?.id]);
-
   const openClientModal = (type: 'client' | 'guarantor') => {
     setModalType(type);
     setIsClientModalOpen(true);
   };
 
-  const openInvestorModal = () => {
-    setModalType('investor');
-    setIsInvestorModalOpen(true);
+  const openGuarantorModal = () => {
+    if (guarantor) {
+      setModalType('guarantor');
+      setIsGuarantorModalOpen(true);
+    } else {
+      setModalType('guarantor');
+      setIsGuarantorModalOpen(true);
+    }
   };
 
   const handleMonthsBlur = (value: string) => {
@@ -500,6 +508,26 @@ const NewCreditPage = () => {
     setTimeout(() => {
       validateInvestorActivePeriod();
     }, 0);
+  };
+
+  const handleCreateGuarantor = async (guarantorData: Omit<GuarantorForm, 'doc'>): Promise<boolean> => {
+    try {
+      const newGuarantor: Guarantor = {
+        id: Date.now(),
+        fullName: guarantorData.fullName,
+        phone: guarantorData.phone,
+        doc: guarantorData.doc,
+        birthdate: guarantorData.birthdate,
+        address: guarantorData.address
+      };
+      
+      setGuarantor(newGuarantor);
+      setIsGuarantorModalOpen(false);
+      return true;
+    } catch (error) {
+      console.error('Ошибка при создании поручителя:', error);
+      return false;
+    }
   };
 
   const getSelectedEntityDisplayName = () => {
@@ -592,10 +620,14 @@ const NewCreditPage = () => {
                 primaryValue={guarantor?.fullName || ''}
                 secondaryValue={guarantor?.phone}
                 placeholder="Выберите поручителя"
-                onSelect={() => openClientModal('guarantor')}
+                onSelect={openGuarantorModal}
                 onClear={() => setGuarantor(null)}
+                customIcon={
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                }
               />
-              <ViewButton onClick={handleViewGuarantor} disabled={!guarantor} />
             </EntitySelectWrapper>
           </FieldGroup>
         </FormRow>
@@ -710,6 +742,14 @@ const NewCreditPage = () => {
         title={modalType === 'client' ? 'Выбор покупателя' : 'Выбор поручителя'}
       />
 
+      <GuarantorModal
+        mode={guarantor ? 'edit' : 'create'}
+        isOpen={isGuarantorModalOpen}
+        onClose={() => setIsGuarantorModalOpen(false)}
+        onSubmit={handleCreateGuarantor}
+        initialData={guarantor || undefined}
+      />
+
       <InvestorSelectModal
         isOpen={isInvestorModalOpen}
         onClose={() => setIsInvestorModalOpen(false)}
@@ -735,22 +775,12 @@ const NewCreditPage = () => {
         } : undefined}
       />
 
-      <ClientModal
+      <GuarantorModal
         mode="view"
         isOpen={isViewGuarantorModalOpen}
         onClose={() => setIsViewGuarantorModalOpen(false)}
         onSubmit={async () => false}
-        initialData={guarantor ? {
-          id: guarantor.id,
-          fullName: guarantor.fullName,
-          phone: guarantor.phone || '',
-          doc: guarantor.doc || '',
-          birthdate: guarantor.birthdate instanceof Date ? guarantor.birthdate.toISOString() : guarantor.birthdate,
-          docIssueDate: guarantor.docIssueDate instanceof Date ? guarantor.docIssueDate.toISOString() : guarantor.docIssueDate,
-          docIssueYear: guarantor.docIssueYear,
-          registrationAddress: guarantor.registrationAddress,
-          secondPhone: guarantor.secondPhone || ''
-        } : undefined}
+        initialData={guarantor || undefined}
       />
 
       <InvestorModal

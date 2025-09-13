@@ -34,8 +34,8 @@ export interface ClientForm {
 
 export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {
   id: number;
-  birthdate: Date;
-  docIssueDate: Date;
+  birthdate: Date | string;
+  docIssueDate: Date | string;
 }
 
 export interface ClientExistsResponse {
@@ -51,4 +51,21 @@ export interface PassportPhotoResponse {
   photoBase64?: string;
   contentType?: string;
   fileName?: string;
+}
+
+export interface Guarantor {
+  id: number;
+  fullName: string;
+  phone: string;
+  doc?: string;
+  birthdate?: Date | null | string;
+  address?: string;
+}
+
+export interface GuarantorForm {
+  fullName: string;
+  phone: string;
+  doc: string;
+  birthdate: string;
+  address: string;
 }

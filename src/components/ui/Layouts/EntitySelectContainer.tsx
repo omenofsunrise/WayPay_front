@@ -11,6 +11,7 @@ interface EntitySelectContainerProps {
   disabled?: boolean;
   hasError?: boolean;
   errorMessage?: string;
+  customIcon?: React.ReactNode; // Новый пропс для кастомной иконки
 }
 
 const EntitySelectContainer: React.FC<EntitySelectContainerProps> = ({
@@ -23,7 +24,18 @@ const EntitySelectContainer: React.FC<EntitySelectContainerProps> = ({
   disabled = false,
   hasError = false,
   errorMessage = '',
+  customIcon, // Получаем кастомную иконку из пропсов
 }) => {
+  // Стандартная иконка по умолчанию
+  const defaultIcon = (
+    <svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2.915 0C1.31175 0 0 1.31175 0 2.915C0 4.51825 1.31175 5.83 2.915 5.83C4.51825 5.83 5.83 4.51825 5.83 2.915C5.83 1.31175 4.51825 0 2.915 0ZM23.32 0C21.7167 0 20.405 1.31175 20.405 2.915C20.405 4.51825 21.7167 5.83 23.32 5.83C24.9233 5.83 26.235 4.51825 26.235 2.915C26.235 1.31175 24.9233 0 23.32 0ZM13.1175 0C11.5142 0 10.2025 1.31175 10.2025 2.915C10.2025 4.51825 11.5142 5.83 13.1175 5.83C14.7207 5.83 16.0325 4.51825 16.0325 2.915C16.0325 1.31175 14.7207 0 13.1175 0Z" fill="#50555C"/>
+    </svg>
+  );
+
+  // Используем кастомную иконку если предоставлена, иначе стандартную
+  const icon = customIcon || defaultIcon;
+
   if (mode === 'view') {
     return (
       <ViewContainer>
@@ -60,9 +72,7 @@ const EntitySelectContainer: React.FC<EntitySelectContainerProps> = ({
           onClick={onSelect}
           aria-label="Выбрать"
         >
-          <svg width="27" height="6" viewBox="0 0 27 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M2.915 0C1.31175 0 0 1.31175 0 2.915C0 4.51825 1.31175 5.83 2.915 5.83C4.51825 5.83 5.83 4.51825 5.83 2.915C5.83 1.31175 4.51825 0 2.915 0ZM23.32 0C21.7167 0 20.405 1.31175 20.405 2.915C20.405 4.51825 21.7167 5.83 23.32 5.83C24.9233 5.83 26.235 4.51825 26.235 2.915C26.235 1.31175 24.9233 0 23.32 0ZM13.1175 0C11.5142 0 10.2025 1.31175 10.2025 2.915C10.2025 4.51825 11.5142 5.83 13.1175 5.83C14.7207 5.83 16.0325 4.51825 16.0325 2.915C16.0325 1.31175 14.7207 0 13.1175 0Z" fill="#50555C"/>
-          </svg>
+          {icon}
         </SelectButton>
       )}
       {hasError && errorMessage && (

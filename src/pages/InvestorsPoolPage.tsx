@@ -42,12 +42,6 @@ import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
 import CustomInput from '../components/ui/fields/CustomInput';
 
-interface TableAction {
-  label: string;
-  action: (rowData: any[]) => void;
-  color?: string;
-}
-
 const InvestorsPoolPage = () => {
     const { 
         getInvestors, 

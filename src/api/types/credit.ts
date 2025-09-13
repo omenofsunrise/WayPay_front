@@ -1,5 +1,12 @@
 import type { PaginationParams, PaginatedResponse } from './common';
 
+export type GuarantorType = 'Guarantor' | 'Client';
+
+export const NOTEABLE_TYPES = {
+  CREDIT: 'Guarantor' as GuarantorType,
+  CLIENT: 'Client' as GuarantorType,
+};
+
 export interface Credit {
     id: number;
     creditDate: Date;
@@ -14,7 +21,8 @@ export interface Credit {
     clientFullName: string;
     clientPhone: string;
     investorNickname: string;
-    guarantorId: number;
+    guarantorId?: number;
+    guarantorType?: GuarantorType;
     firstPayment: number;
     accured: number;
     payed: number;
@@ -27,20 +35,26 @@ export interface Credit {
 }
 
 export interface CreateCreditRequest {
-    clientId: number;
-    guarantorId?: number;
-    investorId?: number;
-    poolId?: number;
-    creditDate: Date;
-    firstPayment: number;
-    termMonths: number;
-    paymentDay: number;
-    products: Array<{
-        name: string;
-        price: number;
-        surcharge?: number;
-        surchargeAmount?: number;
-    }>;
+  clientId: number;
+  guarantor?: {
+    fullName: string;
+    phone: string;
+    birthdate?: Date;
+    address?: string;
+    doc?: string;
+  };
+  investorId?: number;
+  poolId?: number;
+  creditDate: Date;
+  firstPayment: number;
+  termMonths: number;
+  paymentDay: number;
+  products: Array<{
+    name: string;
+    price: number;
+    surcharge?: number;
+    surchargeAmount?: number;
+  }>;
 }
 
 export interface CreditParams extends PaginationParams {

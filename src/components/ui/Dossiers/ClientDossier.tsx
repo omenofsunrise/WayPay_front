@@ -1033,7 +1033,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
 
   const commentsContent = (
     <>
-      {isCommentFormVisible && (hasRole('админ') || hasRole('директор')) && (
+      {isCommentFormVisible && (hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
         <CommentForm onSubmit={handleCommentSubmit}>
           <CommentTextarea
             value={newComment}
@@ -1322,7 +1322,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
             {isCommentsLoading && activeTab === 'comments' && <span> (Загрузка...)</span>}
           </SectionTitle>
           
-          {(hasRole('админ') || hasRole('директор')) && (
+          {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
             <ExpandButton 
               onClick={() => setIsCommentFormVisible(!isCommentFormVisible)}
               title={isCommentFormVisible ? 'Свернуть форму' : 'Добавить комментарий'}
