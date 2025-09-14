@@ -27,8 +27,10 @@ import { useEmployee } from '../api/hooks/useEmployee';
 import type { Investor } from '../api/types/investor';
 import GuarantorModal, { type Guarantor } from '../components/modal/CrudInherited/GuarantorModal';
 import type { GuarantorForm } from '../api/types/client';
+import Checkbox from '../components/ui/CheckBoxes/Checkbox';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
+const NEXT_MONTH_START_STORAGE_KEY = 'credit_next_month_start';
 
 interface Client {
   id: number;
@@ -90,10 +92,19 @@ const NewCreditPage = () => {
       ? savedMarkupType 
       : 'percent';
   });
+  const [nextMonthStart, setNextMonthStart] = useState<boolean>(() => {
+    const savedNextMonthStart = localStorage.getItem(NEXT_MONTH_START_STORAGE_KEY);
+    return savedNextMonthStart === 'true';
+  });
 
   const handleMarkupTypeChange = useCallback((type: 'percent' | 'fixed') => {
     setMarkupType(type);
     localStorage.setItem(MARKUP_TYPE_STORAGE_KEY, type);
+  }, []);
+
+  const handleNextMonthStartChange = useCallback((checked: boolean) => {
+    setNextMonthStart(checked);
+    localStorage.setItem(NEXT_MONTH_START_STORAGE_KEY, checked.toString());
   }, []);
 
   const formatAmount = useCallback((value: number): string => {
@@ -222,6 +233,7 @@ const NewCreditPage = () => {
       firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
       termMonths: parseInt(months),
       paymentDay: parseInt(paymentDue),
+      nextMonthStart: nextMonthStart,
       products: products
         .filter(product => product.name.trim() !== '' && product.price > 0)
         .map(product => ({
@@ -270,6 +282,7 @@ const NewCreditPage = () => {
     initialPaymentAmount,
     months,
     paymentDue,
+    nextMonthStart,
     products,
     parseAmount,
     createCredit,
@@ -344,14 +357,15 @@ const NewCreditPage = () => {
         creditDate: new Date(contractDate),
         termMonths: parseInt(months),
         paymentDay: parseInt(paymentDue),
-        totalAmount: creditAmount
+        totalAmount: creditAmount,
+        nextMonthStart: nextMonthStart,
       };
 
       await getPreview(previewParams);
     } catch (error) {
       console.error('Failed to generate schedule preview:', error);
     }
-  }, [contractDate, months, paymentDue, totalSum, initialPaymentAmount, parseAmount, getPreview]);
+  }, [contractDate, months, paymentDue, totalSum, initialPaymentAmount, nextMonthStart, parseAmount, getPreview]);
 
   useEffect(() => {
     if (previewData) {
@@ -390,7 +404,7 @@ const NewCreditPage = () => {
     if (contractDate && months && paymentDue && totalSum > 0) {
       generateSchedulePreview();
     }
-  }, [contractDate, months, paymentDue, totalSum, generateSchedulePreview]);
+  }, [contractDate, months, paymentDue, totalSum, nextMonthStart, generateSchedulePreview]);
 
   const handlePercentChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -760,7 +774,15 @@ const NewCreditPage = () => {
           Итого товаров на сумму: {totalSum.toLocaleString('ru-RU')} ₽
         </TotalSumContainer>
 
-        <ModalInfoTitle>График выплат</ModalInfoTitle>
+        <CheckboxContainer>
+          <ModalInfoTitle style={{marginRight: '32px'}}>График выплат</ModalInfoTitle>
+          <Checkbox 
+            checked={nextMonthStart} 
+            onChange={handleNextMonthStartChange} 
+          />
+          <CheckboxLabel>Начинать выплаты со следующего месяца</CheckboxLabel>
+        </CheckboxContainer>
+
         <PaymentScheduleContainer>
           <PaymentScheduleInputs>
             <InputGroup>
@@ -1178,6 +1200,19 @@ const AutoSelectButton = styled.button`
     width: 23px;
     height: 7px;
   }
+`;
+
+const CheckboxContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
+const CheckboxLabel = styled.span`
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
 `;
 
 export default NewCreditPage;

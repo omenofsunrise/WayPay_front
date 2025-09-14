@@ -51,6 +51,7 @@ export interface CreateCreditRequest {
   firstPayment: number;
   termMonths: number;
   paymentDay: number;
+  nextMonthStart: boolean;
   products: Array<{
     name: string;
     price: number;

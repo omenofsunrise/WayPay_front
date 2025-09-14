@@ -11,6 +11,7 @@ export interface SchedulePreviewParams {
     termMonths: number;
     paymentDay: number;
     totalAmount: number;
+    nextMonthStart: boolean;
 }
 
 export interface ScheduleParams extends PaginationParams {
