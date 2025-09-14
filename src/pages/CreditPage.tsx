@@ -39,6 +39,8 @@ const CreditPage = () => {
   const [clientFullName, setClientFullName] = useState('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [objectType, setObjectType] = useState<string>('');
+  const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
@@ -109,13 +111,14 @@ const CreditPage = () => {
           investorNickname: investorName || undefined,
           dateFrom: fromDate ? new Date(fromDate) : undefined,
           dateTo: toDate ? new Date(toDate) : undefined,
+          creditTypeId: creditTypeId || undefined,
           sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
           sortDirection: sortConfig.direction,
           ...filters
       };
 
       await getCredits(params);
-  }, [currentPage, clientFullName, investorName, fromDate, toDate, sortConfig, filters, contractNumber]);
+  }, [currentPage, clientFullName, investorName, fromDate, toDate, creditTypeId, sortConfig, filters, contractNumber]);
 
   useEffect(() => {
     loadCredits();
@@ -215,6 +218,7 @@ const CreditPage = () => {
             investorNickname: investorName || undefined,
             dateFrom: fromDate ? new Date(fromDate) : undefined,
             dateTo: toDate ? new Date(toDate) : undefined,
+            creditTypeId: creditTypeId || undefined,
             sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
             sortDirection: sortConfig.direction,
             ...filters
@@ -313,6 +317,27 @@ const CreditPage = () => {
     setIsViewModalOpen(true);
   };
 
+  const handleObjectTypeChange = (value: string) => {
+    setObjectType(value);
+    setCurrentPage(1);
+  };
+
+  const handleObjectTypeSelect = (objectType: { 
+    id: number; 
+    name: string; 
+    entityType: string;
+  }) => {
+    setCreditTypeId(objectType.id);
+    setObjectType(objectType.name);
+    setCurrentPage(1);
+  };
+
+  const handleClearObjectType = () => {
+    setObjectType('');
+    setCreditTypeId(null);
+    setCurrentPage(1);
+  };
+
   return (
     <PageLayout>
       <TitleField>
@@ -401,9 +426,18 @@ const CreditPage = () => {
         </InputWrapper>
         
         <InputWrapper>
-          <ObjectTypeSelect value={''} onChange={function (value: string): void {
-            throw new Error('Function not implemented.');
-          } } />
+          <ObjectTypeSelect 
+            value={objectType}
+            onChange={handleObjectTypeChange}
+            onObjectTypeSelect={handleObjectTypeSelect}
+            placeholder="Тип объекта"
+            customPlaceholder="Тип объекта"
+          />
+          {objectType && (
+            <ClearFilterButton onClick={handleClearObjectType}>
+              ×
+            </ClearFilterButton>
+          )}
         </InputWrapper>
         
       </FilterField>
@@ -485,11 +519,13 @@ const FilterField = styled.div`
   display: flex;
   gap: 12px;
   width: 100%;
+  position: relative;
 `;
 
 const InputWrapper = styled.div`
   flex: 1;  
   min-width: 0;
+  position: relative;
 `;
 
 const SecondRaw = styled.div`
@@ -533,6 +569,28 @@ const EmptyStarIcon = styled.div<EmptyStarIconProps>`
     path {
       stroke: #50555C;
     }
+  }
+`;
+
+const ClearFilterButton = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  z-index: 10;
+
+  &:hover {
+    color: #666;
   }
 `;
 

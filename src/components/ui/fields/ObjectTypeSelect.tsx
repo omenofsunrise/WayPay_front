@@ -159,7 +159,12 @@ const ObjectTypeSelect = ({
 
   const handleDelete = async (id: number, name: string) => {
     if (window.confirm(`Вы уверены, что хотите удалить тип "${name}"?`)) {
-      await deleteObjectType(id);
+      try {
+        await deleteObjectType(id);
+      }
+      catch {
+        window.alert("Невозможно удалить категорию к которой привязаны договоры");
+      }
     }
   };
 
