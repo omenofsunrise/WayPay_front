@@ -28,6 +28,8 @@ import type { Investor } from '../api/types/investor';
 import GuarantorModal, { type Guarantor } from '../components/modal/CrudInherited/GuarantorModal';
 import type { GuarantorForm } from '../api/types/client';
 import Checkbox from '../components/ui/CheckBoxes/Checkbox';
+import type { EntityType } from '../api/types/objectType';
+import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 const NEXT_MONTH_START_STORAGE_KEY = 'credit_next_month_start';
@@ -51,6 +53,12 @@ interface Product {
   quantity: number;
   markup: number;
   totalPrice: number;
+}
+
+interface SelectedObjectType {
+  id: number;
+  name: string;
+  entityType: EntityType;
 }
 
 const NewCreditPage = () => {
@@ -87,6 +95,8 @@ const NewCreditPage = () => {
   const [guarantorMenuOpen, setGuarantorMenuOpen] = useState(false);
   const guarantorMenuRef = useRef<HTMLDivElement>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [objectTypeName, setObjectTypeName] = useState<string>('');
+  const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType | null>(null);
   const [markupType, setMarkupType] = useState<'percent' | 'fixed'>(() => {
     const savedMarkupType = localStorage.getItem(MARKUP_TYPE_STORAGE_KEY);
     return (savedMarkupType === 'percent' || savedMarkupType === 'fixed') 
@@ -127,6 +137,18 @@ const NewCreditPage = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  const handleObjectTypeSelect = useCallback((objectType: SelectedObjectType) => {
+    setSelectedObjectType(objectType);
+    setObjectTypeName(objectType.name);
+  }, []);
+
+  const handleObjectTypeNameChange = useCallback((value: string) => {
+    setObjectTypeName(value);
+    if (!value) {
+      setSelectedObjectType(null);
+    }
   }, []);
 
   const openGuarantorSelectionMenu = () => {
@@ -248,6 +270,10 @@ const NewCreditPage = () => {
         })),
     };
     
+    if (selectedObjectType && selectedObjectType.id) {
+      creditData.creditTypeId = selectedObjectType.id;
+    }
+    
     if (guarantorClient) {
       creditData.GuarantorClientId = guarantorClient.id;
     } else if (guarantor) {
@@ -291,7 +317,9 @@ const NewCreditPage = () => {
     navigate,
     validateInvestorActivePeriod,
     markupType,
-    error
+    error,
+    selectedObjectType,
+    creditName
   ]);
 
   const handleAutoSelectInvestor = async () => {
@@ -645,18 +673,6 @@ const NewCreditPage = () => {
         
         <FormRow>
           <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
-            <Label>Имя договора</Label>
-            <DateInputWrapper>
-              <CustomInput 
-                inputType="text"
-                placeholder="Имя договора" 
-                value={creditName}
-                onChange={(e) => setCreditName(e.target.value)}
-              />
-            </DateInputWrapper>
-          </FieldGroup>
-
-          <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
             <Label>Дата</Label>
             <DateInputWrapper>
               <CustomCalendar 
@@ -691,8 +707,31 @@ const NewCreditPage = () => {
             {validationError && (
               <ValidationError>{validationError}</ValidationError>
             )}
+
+          <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
+            <Label>Имя договора (необязательно)</Label>
+            <DateInputWrapper>
+              <CustomInput 
+                inputType="text"
+                placeholder="Имя договора" 
+                value={creditName}
+                onChange={(e) => setCreditName(e.target.value)}
+              />
+            </DateInputWrapper>
+          </FieldGroup>
+
+          <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
+            <Label>Тип договора (необязательно)</Label>
+            <ObjectTypeSelect
+              value={objectTypeName}
+              onChange={handleObjectTypeNameChange}
+              onObjectTypeSelect={handleObjectTypeSelect}
+              placeholder="Выберите тип договора"
+              entityType="credit"
+            />
+          </FieldGroup>
         </FormRow>
-                
+            
         <ModalInfoTitle>Сведения о покупателе</ModalInfoTitle>
         <FormRow>
           <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
@@ -711,7 +750,7 @@ const NewCreditPage = () => {
           </FieldGroup>
 
           <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
-                      <Label>Поручитель</Label>
+          <Label>Поручитель (не обязательно)</Label>
           <EntitySelectWrapper>
             <EntitySelectContainer
               mode="create"

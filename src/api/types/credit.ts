@@ -10,6 +10,8 @@ export const NOTEABLE_TYPES = {
 export interface Credit {
     id: number;
     name: string;
+    creditTypeId: number;
+    creditTypeName: string;
     creditDate: Date;
     totalAmount: number;
     totalClean: number;
@@ -38,6 +40,8 @@ export interface Credit {
 export interface CreateCreditRequest {
   clientId: number;
   name: string;
+  creditTypeId: number;
+  
   GuarantorClientId: number;
   guarantor?: {
     fullName: string;
@@ -65,6 +69,7 @@ export interface CreateCreditRequest {
 export interface CreditParams extends PaginationParams {
     creditId?: string;
     investorPoolId?: number;
+    creditTypeId: number;
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
     dateFrom?: Date;

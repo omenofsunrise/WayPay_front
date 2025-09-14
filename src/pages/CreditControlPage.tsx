@@ -68,7 +68,7 @@ const CreditControlPage = () => {
     const params = {
       page: currentPage,
       pageSize: itemsPerPage,
-      creditId: contractNumber ? Number(contractNumber) : undefined,
+      creditId: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
       investorNickname: investorName || undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
@@ -190,7 +190,7 @@ const CreditControlPage = () => {
           const params = {
             page,
             pageSize,
-            creditId: contractNumber ? Number(contractNumber) : undefined,
+            creditId: contractNumber || undefined,
             clientFullname: clientFullName || undefined,
             investorNickname: investorName || undefined,
             dateFrom: fromDate ? new Date(fromDate) : undefined,
@@ -316,7 +316,7 @@ const CreditControlPage = () => {
       <FilterField>
         <InputWrapper>
           <CustomInput
-            inputType="number"
+            inputType="text"
             placeholder="№ Договора"
             value={contractNumber}
             onChange={(e) => {

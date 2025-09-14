@@ -26,6 +26,7 @@ import { useAuth } from '../сontext/AuthContext';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import DocxGenerator from '../utils/docxGenerator';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
+import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -398,7 +399,13 @@ const CreditPage = () => {
             }}
           />
         </InputWrapper>
-
+        
+        <InputWrapper>
+          <ObjectTypeSelect value={''} onChange={function (value: string): void {
+            throw new Error('Function not implemented.');
+          } } />
+        </InputWrapper>
+        
       </FilterField>
 
       <SecondRaw style={{ color: "white" }}>

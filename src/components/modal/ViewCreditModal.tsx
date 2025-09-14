@@ -247,6 +247,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           readOnly
                         />
                       </InputContainer>
+
                       <InputContainer style={{ width: "260px"}}>
                         <InputTitle>Инвестор</InputTitle>
                         <CustomInput 
@@ -254,7 +255,15 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           readOnly
                         />
                       </InputContainer>
-
+                      {creditData?.creditTypeName && 
+                        <InputContainer style={{ marginLeft: "20px"}}>
+                          <InputTitle>Категория</InputTitle>
+                          <CustomInput 
+                            value={creditData?.creditTypeName || ''}
+                            readOnly
+                          />
+                        </InputContainer>
+                      }
                     </HorizontalContainer>
                     <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
                     <HorizontalContainer>
