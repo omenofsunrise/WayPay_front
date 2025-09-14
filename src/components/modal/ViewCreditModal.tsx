@@ -227,8 +227,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           <ModalWrapper>
             <CloseButton onClick={onClose}>&times;</CloseButton>
             <TitleField>
-              <CustomTitle style={{ marginTop: 0 }}>Договор №{id}</CustomTitle>
+              <CustomTitle style={{ marginTop: 0 }}>
+                Договор №{id}
+              </CustomTitle>
             </TitleField>
+              <CustomTitle style={{ marginTop: 0 }}>
+                {creditData?.name ? `Название договора ${creditData.name}` : ''}
+              </CustomTitle>
             
              <div>
                 <HorizontalContainer style={{ marginBottom: '30px' }}>

@@ -71,6 +71,7 @@ const NewCreditPage = () => {
   const [initialPaymentPercent, setInitialPaymentPercent] = useState<string>('');
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
   const [months, setMonths] = useState<string>('');
+  const [creditName, setCreditName] = useState<string>('');
   const [paymentDue, setPaymentDue] = useState<string>('1');
   const [isViewClientModalOpen, setIsViewClientModalOpen] = useState(false);
   const [isViewGuarantorModalOpen, setIsViewGuarantorModalOpen] = useState(false);
@@ -229,6 +230,7 @@ const NewCreditPage = () => {
 
     const creditData: CreateCreditRequest = {
       clientId: client.id,
+      name: creditName,
       creditDate: new Date(contractDate),
       firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
       termMonths: parseInt(months),
@@ -643,6 +645,18 @@ const NewCreditPage = () => {
         
         <FormRow>
           <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
+            <Label>Имя договора</Label>
+            <DateInputWrapper>
+              <CustomInput 
+                inputType="text"
+                placeholder="Имя договора" 
+                value={creditName}
+                onChange={(e) => setCreditName(e.target.value)}
+              />
+            </DateInputWrapper>
+          </FieldGroup>
+
+          <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
             <Label>Дата</Label>
             <DateInputWrapper>
               <CustomCalendar 
@@ -991,7 +1005,7 @@ const PlusIcon = styled.span`
 
 const MarkupTypeToggleContainer = styled.div`
   display: flex;
-  margin-left: 16px;
+  margin: 0 0 0 16px;
   align-items: center;
 `;
 
@@ -1002,6 +1016,7 @@ const MarkupTypeToggle = styled.button<{ active: boolean }>`
   color: ${props => props.active ? 'white' : '#333'};
   cursor: pointer;
   font-size: 12px;
+  margin: 0;
   
   &:first-child {
     border-radius: 4px 0 0 4px;
