@@ -857,7 +857,7 @@ const InvestorsPoolPage = () => {
                                         <Icon src={investorIncomeScg} alt="Investor income" />
                                     </IconContainer>
                                     <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
-                                    <ReportLabel>Доход инвестора</ReportLabel>
+                                    <ReportLabel>Доход пула</ReportLabel>
                                 </ReportCard>
 
                                 <ReportCard>

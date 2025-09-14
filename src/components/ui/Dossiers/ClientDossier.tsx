@@ -721,7 +721,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
   const [isCommentFormVisible, setIsCommentFormVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('comments');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { hasRole } = useAuth();
+  const { hasRole, authInfo } = useAuth();
   const [isPassportVisible, setIsPassportVisible] = useState(false);
   const [hasPassport, setHasPassport] = useState(client.hasPassportPhoto || false);
   const [passportPhotoData, setPassportPhotoData] = useState<string | null>(null);
@@ -1109,13 +1109,14 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
                       <CommentDate>{formatDateTime(new Date(comment.createdAt))}</CommentDate>
                     </AuthorDetails>
                   </CommentAuthorInfo>
-                  
+                  {(comment.employeeId === authInfo?.employee.id || hasRole('суперадмин')) && (
                     <DeleteButton
                       onClick={() => handleDeleteComment(comment.id)}
                       title="Удалить комментарий"
                     >
                       <FaTrash size={12} />
                     </DeleteButton>
+                  )}
                 </CommentHeader>
                 
                 {comment.content && (
