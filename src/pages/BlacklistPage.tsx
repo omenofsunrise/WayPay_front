@@ -7,7 +7,6 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import ClientSelectModal from "../components/modal/CrudInherited/ClientSelectModal";
 import useBlacklist from "../api/hooks/useBlacklist";
-import { formatDate } from '../utils/dateFormatter';
 import { useAuth } from '../сontext/AuthContext';
 import { Container } from 'react-bootstrap';
 import styled from 'styled-components';
@@ -356,6 +355,7 @@ const BlacklistPage = () => {
                         onEdit={() => {}}
                         onDelete={() => handleDeleteFromBlacklist(client)}
                         onRightClick={(e) => handleCardRightClick(e, client)}
+                        showMenu={false} 
                         onOpenDossier={handleOpenDossier}
                         additionalInfo={
                             <DebtBadge>

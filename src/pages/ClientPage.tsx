@@ -13,6 +13,7 @@ import { Container } from 'react-bootstrap';
 import styled from 'styled-components';
 import ClientCard from '../components/ui/cards/ClientCard';
 import ClientDossier from '../components/ui/Dossiers/ClientDossier';
+import { useAuth } from '../сontext/AuthContext';
 
 const TitleContainer = styled.div`
   display: flex;
@@ -146,7 +147,8 @@ const ClientPage = () => {
     const [selectedClientDossier, setSelectedClientDossier] = useState<Client | null>(null);
     const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
     const [longPressClient, setLongPressClient] = useState<Client | null>(null);
-
+    const { hasRole, authInfo } = useAuth();
+    
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'fullName',
@@ -181,7 +183,7 @@ const ClientPage = () => {
     const handleCardTouchStart = useCallback((client: Client) => {
     const timer = setTimeout(() => {
         setLongPressClient(client);
-    }, 500); // 500ms для long press
+    }, 500);
     setLongPressTimer(timer);
     }, []);
 
@@ -348,6 +350,8 @@ const ClientPage = () => {
     };
 
     const handleDeleteClient = async (client: Client) => {
+        if (!hasRole('суперадмин') && client.employeeId)
+
         if (await checkClientCredits(client.id)) {
             alert('Нельзя удалить клиента, привязанного к договору');
             return;

@@ -244,6 +244,7 @@ interface ClientCardProps {
   onDelete: (client: Client) => void;
   onRightClick: (e: React.MouseEvent, client: Client) => void;
   onOpenDossier: (client: Client) => void;
+  showMenu?: boolean; 
 }
 
 const ClientCard : React.FC<ClientCardProps> = ({ 
@@ -251,7 +252,8 @@ const ClientCard : React.FC<ClientCardProps> = ({
   onEdit, 
   onDelete, 
   onRightClick,
-  onOpenDossier
+  onOpenDossier,
+  showMenu = true
 }) => {
   const { createPrivateChat } = useChat();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -326,9 +328,18 @@ const ClientCard : React.FC<ClientCardProps> = ({
           {client.fullName}
         </CardTitle>
         
-        <MenuButton onClick={handleMenuClick}>
-          <FaEllipsisV size={16} />
-        </MenuButton>
+        {showMenu && (
+          <>
+            <MenuButton onClick={handleMenuClick}>
+              <FaEllipsisV size={16} />
+            </MenuButton>
+
+            <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
+              <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
+              <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem>
+            </ContextMenu>
+          </>
+        )}
 
         <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
           <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
