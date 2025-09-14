@@ -10,6 +10,7 @@ import { formatDate } from '../../../utils/dateFormatter';
 import ClientModal from './ClientModal';
 import { useAuth } from '../../../сontext/AuthContext';
 import type { Client } from '../../../api/types/client';
+import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ const ClientSelectModal = ({
   title,
 }: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
+  const [phoneFilter, setPhoneFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
@@ -39,6 +41,7 @@ const ClientSelectModal = ({
   } | null>(null);
   const [creatingClient, setCreatingClient] = useState<Client | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTriggered, setSearchTriggered] = useState(false);
   const pageSize = 5;
   
   const columnToApiSortMap: Record<number, string> = {
@@ -56,10 +59,20 @@ const ClientSelectModal = ({
   } = useClients();
   
   const loadClients = useCallback(async () => {
+    const shouldSearch = searchTriggered && (
+      nameFilter.length >= 5 || 
+      (phoneFilter.replace(/\D/g, '').length >= 11 && phoneFilter.replace(/\D/g, '').length <= 15)
+    );
+
+    if (!shouldSearch && searchTriggered) {
+      return;
+    }
+
     const params: any = {
       page: currentPage,
       pageSize,
-      FullName: nameFilter || undefined
+      FullName: nameFilter || undefined,
+      Phone: phoneFilter || undefined
     };
 
     if (sortConfig.key !== null) {
@@ -68,18 +81,45 @@ const ClientSelectModal = ({
     }
 
     await getClients(params);
-  }, [currentPage, nameFilter, sortConfig, getClients]);
+  }, [currentPage, nameFilter, phoneFilter, sortConfig, getClients, searchTriggered]);
   
   useEffect(() => {
     if (isOpen) {
-      loadClients();
+      if (searchTriggered) {
+        loadClients();
+      }
       setSelectedClient(null);
     }
-  }, [isOpen, currentPage, nameFilter, sortConfig, loadClients]);
+  }, [isOpen, currentPage, searchTriggered, sortConfig, loadClients]);
+
+  // Сброс фильтров при очистке полей
+  useEffect(() => {
+    if (nameFilter === '' && phoneFilter === '' && searchTriggered) {
+      setSearchTriggered(false);
+      setCurrentPage(1);
+    }
+  }, [nameFilter, phoneFilter, searchTriggered]);
 
   const handleFilterChange = (value: string) => {
     setNameFilter(value);
     setCurrentPage(1);
+    setSearchTriggered(false);
+  };
+
+  const handlePhoneFilterChange = (value: string) => {
+    setPhoneFilter(value);
+    setCurrentPage(1);
+    setSearchTriggered(false);
+  };
+
+  const handleSearch = () => {
+    setSearchTriggered(true);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   const handleSort = (columnIndex: number) => {
@@ -179,10 +219,26 @@ const ClientSelectModal = ({
             <CustomInput 
               style={{ maxWidth: "none" }}
               inputType="fullname"
-              placeholder="Поиск по ФИО"
+              placeholder="Поиск по ФИО (минимум 5 символов)"
               value={nameFilter}
               onChange={(e) => handleFilterChange(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
+            <PhoneModalInput 
+              placeholder="Телефон (полный номер)"
+              value={phoneFilter}
+              onChange={(e) => handlePhoneFilterChange(e.target.value)}
+              onKeyPress={handleKeyPress}
+              name="phone"
+              style={{ marginLeft: '16px', maxWidth: "none" }}
+            />
+            <DarkCyanButton 
+              style={{ marginLeft: '16px', width: "auto" }}
+              onClick={handleSearch}
+              disabled={!(nameFilter.length >= 5 || phoneFilter.replace(/\D/g, '').length >= 11)}
+            >
+              Поиск
+            </DarkCyanButton>
             <DarkCyanButton 
               style={{ marginLeft: '16px', width: "auto" }}
               onClick={handleCreateClient}
@@ -196,30 +252,42 @@ const ClientSelectModal = ({
           
           {!isLoading && !error && (
             <>
-              <TableContainer>
-                <CustomTable 
-                  columns={[
-                    { name: "ID", isSortable: true, align: "left" },
-                    { name: "ФИО", isSortable: true, align: "left" },
-                    { name: "Телефон", align: "left" },
-                    { name: "Дата рождения", isSortable: true, align: "right" },
-                  ]} 
-                  data={tableData}
-                  onRowClick={handleRowClick}
-                  onSort={handleSort}
-                  sortConfig={sortConfig}
-                  selectedRow={selectedClient ? tableData.findIndex(row => row[0] === selectedClient.id.toString()) : -1}
-                />
-              </TableContainer>
-              
-              <PaginationContainer>
-                <Pagination
-                  total={clientsData?.totalCount || 0}
-                  current={currentPage}
-                  onChange={setCurrentPage}
-                  itemsPerPage={pageSize}
-                />
-              </PaginationContainer>
+              {!searchTriggered ? (
+                <SearchPrompt>
+                  <SearchIcon>🔍</SearchIcon>
+                  <SearchText>Введите данные для поиска клиента</SearchText>
+                  <SearchHint>Для поиска введите минимум 5 символов в поле ФИО или полный номер телефона</SearchHint>
+                </SearchPrompt>
+              ) : (
+                <>
+                  <TableContainer>
+                    <CustomTable 
+                      columns={[
+                        { name: "ID", isSortable: true, align: "left" },
+                        { name: "ФИО", isSortable: true, align: "left" },
+                        { name: "Телефон", align: "left" },
+                        { name: "Дата рождения", isSortable: true, align: "right" },
+                      ]} 
+                      data={tableData}
+                      onRowClick={handleRowClick}
+                      onSort={handleSort}
+                      sortConfig={sortConfig}
+                      selectedRow={selectedClient ? tableData.findIndex(row => row[0] === selectedClient.id.toString()) : -1}
+                    />
+                  </TableContainer>
+                  
+                  {clientsData && clientsData.totalCount > 0 && (
+                    <PaginationContainer>
+                      <Pagination
+                        total={clientsData.totalCount}
+                        current={currentPage}
+                        onChange={setCurrentPage}
+                        itemsPerPage={pageSize}
+                      />
+                    </PaginationContainer>
+                  )}
+                </>
+              )}
             </>
           )}
         </ModalContent>
@@ -255,6 +323,7 @@ const FilterContainer = styled.div`
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+  gap: 10px;
 `;
 
 const TableContainer = styled.div`
@@ -277,6 +346,32 @@ const ErrorMessage = styled.div`
   padding: 20px;
   text-align: center;
   color: #ff0000;
+`;
+
+const SearchPrompt = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #666;
+`;
+
+const SearchIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 16px;
+`;
+
+const SearchText = styled.div`
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+`;
+
+const SearchHint = styled.div`
+  font-size: 14px;
+  color: #888;
 `;
 
 export default ClientSelectModal;

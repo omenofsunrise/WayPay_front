@@ -25,6 +25,7 @@ import { Container } from 'react-bootstrap';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useAuth } from '../сontext/AuthContext';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
+import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -52,6 +53,8 @@ const CreditControlPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
   const { createPayment } = usePayment();
+  const [objectType, setObjectType] = useState<string>('');
+  const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'date',
@@ -69,6 +72,7 @@ const CreditControlPage = () => {
       page: currentPage,
       pageSize: itemsPerPage,
       creditId: contractNumber || undefined,
+      creditTypeId: creditTypeId || undefined, 
       clientFullname: clientFullName || undefined,
       investorNickname: investorName || undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
@@ -95,7 +99,7 @@ const CreditControlPage = () => {
   }, [
     currentPage, contractNumber, clientFullName, investorName, 
     fromDate, toDate, rublesIncomeFrom, rublesIncomeTo, 
-    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters
+    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters, creditTypeId
   ]);
 
   useEffect(() => {
@@ -121,6 +125,27 @@ const CreditControlPage = () => {
 
   const handleTabChange = (newFilters: { isFavourite?: boolean; isActive?: boolean }) => {
     setFilters(newFilters);
+    setCurrentPage(1);
+  };
+
+  const handleObjectTypeChange = (value: string) => {
+    setObjectType(value);
+    setCurrentPage(1);
+  };
+
+  const handleObjectTypeSelect = (objectType: { 
+    id: number; 
+    name: string; 
+    entityType: string;
+  }) => {
+    setCreditTypeId(objectType.id);
+    setObjectType(objectType.name);
+    setCurrentPage(1);
+  };
+
+  const handleClearObjectType = () => {
+    setObjectType('');
+    setCreditTypeId(null);
     setCurrentPage(1);
   };
 
@@ -349,7 +374,7 @@ const CreditControlPage = () => {
         </InputWrapper>
         
         <InputWrapper style={{ minWidth: "500px" }}>
-                    <InvestorSelect 
+          <InvestorSelect 
             placeholder="Инвестор"
             value={investorName}
             onChange={(name) => {
@@ -374,6 +399,20 @@ const CreditControlPage = () => {
             setCurrentPage(1);
           }}
         />
+
+        <ObjectTypeSelect 
+          value={objectType}
+          onChange={handleObjectTypeChange}
+          onObjectTypeSelect={handleObjectTypeSelect}
+          placeholder="Тип объекта"
+          customPlaceholder="Тип объекта"
+        />
+        {objectType && (
+          <ClearFilterButton onClick={handleClearObjectType}>
+            ×
+          </ClearFilterButton>
+        )}
+
         <IncomeContainer>
           <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitle>
           <CustomInput 
@@ -501,6 +540,7 @@ const InputWrapper = styled.div`
 const SecondRaw = styled.div`
   display: flex;
   margin: 15px 0 0;
+  gap: 15px;
   background-color: transparent;
   justify-content: space-between;
   align-items: center;
@@ -554,6 +594,28 @@ const IncomeContainer = styled.div`
   max-width: 600px;
   align-items: center;
   flex-grow: 1;
+`;
+
+const ClearFilterButton = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  z-index: 10;
+
+  &:hover {
+    color: #666;
+  }
 `;
 
 export default CreditControlPage;
