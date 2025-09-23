@@ -39,18 +39,18 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, ...prop
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
 
-    const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
+    console.log(` y: ${scrollY}`);
 
-    let adjustedX = x + scrollX;
-    let adjustedY = y + scrollY;
+    let adjustedX = x;
+    let adjustedY = y;
 
-    if (adjustedX + menuWidth > windowWidth + scrollX) {
-      adjustedX = x + scrollX - menuWidth;
+    if (adjustedX + menuWidth > windowWidth) {
+      adjustedX = x - menuWidth;
     }
 
-    if (adjustedY + menuHeight > windowHeight + scrollY) {
-      adjustedY = y + scrollY - menuHeight;
+    if (adjustedY + menuHeight > windowHeight) {
+      adjustedY = y - menuHeight;
     }
 
     return { x: adjustedX, y: adjustedY };
