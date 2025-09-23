@@ -4,6 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import logoImage from '../assets/logos/logo.svg';
 
 export const DesktopOnlyContent = () => {
+    const navigate = useNavigate();
+
+    const handleGoHome = () => {
+        navigate('/');
+    };
 
     return (
         <DesktopOnlyWrapper>
@@ -13,6 +18,9 @@ export const DesktopOnlyContent = () => {
                 К сожалению, наш сайт недоступен для использования с мобильных устройств. 
                 Пожалуйста, откройте его с компьютера или ноутбука для полноценной работы.
             </Description>
+            <HomeButton onClick={handleGoHome}>
+                Вернуться на главную
+            </HomeButton>
         </DesktopOnlyWrapper>
     );
 };
@@ -27,12 +35,22 @@ const DesktopOnlyWrapper = styled.div`
     background-color: rgba(249, 250, 250, 1);
     width: 100%;
     padding: 20px;
+    
+    @media (max-width: 768px) {
+        padding: 15px;
+    }
 `;
 
 const Logo = styled.img`
     width: 120px;
     height: 120px;
     margin-bottom: 30px;
+    
+    @media (max-width: 768px) {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+    }
 `;
 
 const Title = styled.h1`
@@ -40,6 +58,15 @@ const Title = styled.h1`
     margin-bottom: 20px;
     color: #333;
     font-weight: 600;
+    
+    @media (max-width: 768px) {
+        font-size: 22px;
+        margin-bottom: 15px;
+    }
+    
+    @media (max-width: 480px) {
+        font-size: 20px;
+    }
 `;
 
 const Description = styled.p`
@@ -48,6 +75,17 @@ const Description = styled.p`
     margin-bottom: 40px;
     line-height: 1.6;
     max-width: 500px;
+    
+    @media (max-width: 768px) {
+        font-size: 16px;
+        margin-bottom: 30px;
+        padding: 0 10px;
+    }
+    
+    @media (max-width: 480px) {
+        font-size: 14px;
+        line-height: 1.5;
+    }
 `;
 
 const HomeButton = styled.button`
@@ -68,5 +106,17 @@ const HomeButton = styled.button`
     
     &:active {
         transform: translateY(0);
+    }
+    
+    @media (max-width: 768px) {
+        padding: 14px 28px;
+        font-size: 15px;
+    }
+    
+    @media (max-width: 480px) {
+        padding: 12px 24px;
+        font-size: 14px;
+        width: 100%;
+        max-width: 280px;
     }
 `;

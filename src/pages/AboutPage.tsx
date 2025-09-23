@@ -45,6 +45,19 @@ const AboutPage: React.FC = () => {
     }
   };
 
+  const getDaysRemaining = (dateString: string): string => {
+    const targetDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 0) return `Осталось ${diffDays} дней`;
+    if (diffDays === 0) return 'Срок истекает сегодня';
+    return `Просрочено на ${Math.abs(diffDays)} дней`;
+  };
+
   if (loading) return <div>Загрузка...</div>;
   if (error) return <div>{error}</div>;
 
@@ -75,7 +88,9 @@ const AboutPage: React.FC = () => {
           <InfoItem>
             <Label>Срок лицензии:</Label>
             <Value>
-              {commonInfo ? formatDate(commonInfo.licenceDate) : 'Нет данных'}
+              {commonInfo ? (
+                `${formatDate(commonInfo.licenceDate)} (${getDaysRemaining(commonInfo.licenceDate)})`
+              ) : 'Нет данных'}
             </Value>
           </InfoItem>
         </InfoCard>
@@ -84,15 +99,40 @@ const AboutPage: React.FC = () => {
           <PolicyLink href="/privacy-policy">Политика конфиденциальности</PolicyLink>
         </LinksContainer>
       </Content>
+
+      <Content>
+        <Title>Оплата</Title>
+        <QrCode src="/paymentQr.jpg" alt="QR код для оплаты" />
+        <InstructionTitle>Для продления подписки в сообщении <strong>Обязательно укажите ФИО директора</strong></InstructionTitle>
+      </Content>
     </Container>
   );
 };
 
+const InstructionTitle = styled.h3`
+  color: rgba(0, 125, 136, 1);
+  font-size: 18px;
+  margin-bottom: 10px;
+  font-weight: 600;
+`;
+
+
+const QrCode = styled.img`
+  width: 350px;
+  height: 350px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 10px;
+  background: white;
+`;
+
 const Container = styled.div`
+  display: flex;
+  gap: 20px;
   padding: 20px;
-  max-width: 800px;
+  flex-direction: row;
+  max-width: 1100px;
   margin: 0 auto;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 `;
 
 const Content = styled.div`
@@ -101,6 +141,8 @@ const Content = styled.div`
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   margin-top: 40px;
+  flex: 1;
+  min-width: 0;
 `;
 
 const Title = styled.h1`
@@ -145,10 +187,11 @@ const InfoItem = styled.div`
 
 const Label = styled.span`
   font-weight: 600;
-  min-width: 140px;
+  max-width: 160px;
   color: rgba(0, 125, 136, 0.9);
-  margin-right: 15px;
+  margin-right: 20px;
   margin-bottom: 5px;
+  text-align: left;
 `;
 
 const Value = styled.span`
