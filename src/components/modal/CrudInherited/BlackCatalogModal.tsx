@@ -107,7 +107,7 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
         formData.address !== initialData.address ||
         formData.secondPhone !== initialData.secondPhone;
       
-      setIsSaveDisabled(!isChanged);
+      // setIsSaveDisabled(!isChanged);
     } else if (mode === 'view') {
       setIsSaveDisabled(true);
     }
