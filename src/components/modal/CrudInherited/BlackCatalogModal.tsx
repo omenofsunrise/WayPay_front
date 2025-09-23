@@ -54,7 +54,7 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
   });
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [isSaveDisabled, setIsSaveDisabled] = useState(true);
+  const [isSaveDisabled, setIsSaveDisabled] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -97,7 +97,7 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
     }
    
     if (mode === 'create') {
-      setIsSaveDisabled(true);
+      setIsSaveDisabled(false);
     } else if (mode === 'edit') {
       const isChanged = 
         formData.fullName !== initialData.fullName ||
@@ -109,9 +109,9 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
         formData.secondPhone !== initialData.secondPhone;
       
       // setIsSaveDisabled(!isChanged);
-      setIsSaveDisabled(true);
+      setIsSaveDisabled(false);
     } else if (mode === 'view') {
-      setIsSaveDisabled(true);
+      setIsSaveDisabled(false);
     }
   };
 
@@ -167,7 +167,6 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
     }
   };
 
-  // Важное исправление: возвращаем null если модальное окно закрыто
   if (!isOpen) return null;
 
   return (
