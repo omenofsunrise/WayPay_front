@@ -33,6 +33,7 @@ export interface CommonInfo {
   id: number;
   licenceDate: Date;
   directorFullname: string;
+  phone: string;
 }
 
 export interface CompaneAccountDetails {

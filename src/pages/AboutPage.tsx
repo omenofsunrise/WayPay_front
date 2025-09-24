@@ -80,7 +80,7 @@ const AboutPage: React.FC = () => {
           <InfoItem>
             <Label>Телефон:</Label>
             <PhoneContainer>
-              <PhoneValue onClick={handlePhoneClick}>8 (995) 702-23-04</PhoneValue>
+              <PhoneValue onClick={handlePhoneClick}>{commonInfo.phone}</PhoneValue>
               {copied && <CopiedMessage>Скопировано!</CopiedMessage>}
             </PhoneContainer>
           </InfoItem>
