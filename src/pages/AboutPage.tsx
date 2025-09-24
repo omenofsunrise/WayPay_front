@@ -74,7 +74,7 @@ const AboutPage: React.FC = () => {
           
           <InfoItem>
             <Label>Владелец:</Label>
-            <Value>Элипханов Ибрахим Султанович</Value>
+            <Value>{commonInfo.directorFullname}</Value>
           </InfoItem>
 
           <InfoItem>
@@ -89,7 +89,7 @@ const AboutPage: React.FC = () => {
             <Label>Срок лицензии:</Label>
             <Value>
               {commonInfo ? (
-                `${formatDate(commonInfo.licenceDate)} (${getDaysRemaining(commonInfo.licenceDate)})`
+                `${formatDate(commonInfo.licenceDate)} (${getDaysRemaining(commonInfo.licenceDate.toString())})`
               ) : 'Нет данных'}
             </Value>
           </InfoItem>

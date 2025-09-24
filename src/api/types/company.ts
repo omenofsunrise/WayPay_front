@@ -32,6 +32,7 @@ export interface CompanyListItem {
 export interface CommonInfo {
   id: number;
   licenceDate: Date;
+  directorFullname: string;
 }
 
 export interface CompaneAccountDetails {
