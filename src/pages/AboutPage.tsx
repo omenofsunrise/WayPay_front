@@ -103,7 +103,7 @@ const AboutPage: React.FC = () => {
       <Content>
         <Title>Оплата</Title>
         <QrCode src="/paymentQr.jpg" alt="QR код для оплаты" />
-        <InstructionTitle>Для продления подписки в сообщении <strong>Обязательно укажите ФИО директора</strong></InstructionTitle>
+        <InstructionTitle>Для продления подписки в сообщении <strong>Обязательно укажите ФИО директора и его номер телефона</strong></InstructionTitle>
       </Content>
     </Container>
   );
