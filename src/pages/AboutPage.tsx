@@ -73,7 +73,7 @@ const AboutPage: React.FC = () => {
           </InfoItem>
           
           <InfoItem>
-            <Label>Владелец:</Label>
+            <Label>Директор:</Label>
             <Value>{commonInfo.directorFullname}</Value>
           </InfoItem>
 
