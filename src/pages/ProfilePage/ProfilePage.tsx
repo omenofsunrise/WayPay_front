@@ -6,6 +6,7 @@ import EmployeeProfilePage from './EmployeeProfilePage';
 import SessionsPage from './SessionsPage';
 import { useEffect, useState } from 'react';
 import BackButtonComponent from '../../components/ui/Buttons/BackButton';
+import BranchPage from './BranchPage';
 
 const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -64,6 +65,8 @@ const ProfilePage = () => {
                 return <CompanyPage />;
             case "Активные сессии":
                 return <SessionsPage />;
+            case "Отделения":
+                return <BranchPage />;
             default:
                 return <EmployeeProfilePage />;
         }

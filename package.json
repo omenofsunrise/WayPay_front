@@ -32,6 +32,7 @@
     "framer-motion": "^12.12.1",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.544.0",
     "pizzip": "^3.2.0",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
@@ -46,7 +47,8 @@
     "react-toastify": "^11.0.5",
     "rollup-plugin-visualizer": "^5.14.0",
     "styled-components": "^6.1.19",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "yandex-maps": "^0.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
