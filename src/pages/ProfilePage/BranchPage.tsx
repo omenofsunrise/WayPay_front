@@ -56,11 +56,11 @@ const BranchPage = () => {
   };
 
   const columns: Column[] = [
-    { name: 'Название', isSortable: true, align: 'left' },
-    { name: 'Адрес', isSortable: true, align: 'left' },
-    { name: 'Телефон', isSortable: true, align: 'center' },
-    { name: 'Координаты', isSortable: false, align: 'center' },
-    { name: 'Режим работы', isSortable: false, align: 'center' }
+    { name: 'Название', align: 'left' },
+    { name: 'Адрес', align: 'left' },
+    { name: 'Телефон', align: 'center' },
+    // { name: 'Координаты', align: 'center' },
+    // { name: 'Режим работы', align: 'center' }
   ];
 
   // Преобразование данных для таблицы
@@ -68,8 +68,8 @@ const BranchPage = () => {
     branch.name,
     branch.address,
     branch.phone,
-    `${branch.latitude.toFixed(6)}, ${branch.longitude.toFixed(6)}`,
-    formatSchedule(branch.schedules)
+    // `${branch.latitude.toFixed(6)}, ${branch.longitude.toFixed(6)}`,
+    // formatSchedule(branch.schedules)
   ]);
 
   // Форматирование расписания для отображения
@@ -421,6 +421,7 @@ const TableContainer = styled.div`
 
 const FormContainer = styled.div`
   display: flex;
+  padding: 0 25px;
   flex-direction: column;
   gap: 24px;
 `;
