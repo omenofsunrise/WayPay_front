@@ -519,19 +519,6 @@ const NewCreditPage = () => {
     }
   };
 
-  const hasEmptyProductNames = products.some(product => 
-    product.name.trim() === ''
-  );
-
-  const isFormValid = 
-    client && 
-    contractDate && 
-    (investor || selectedPool) && 
-    !validationError &&
-    !hasEmptyProductNames &&
-    products.length > 0 &&
-    products.some(product => product.name.trim() !== '' && product.price > 0);
-
   const handleSelectInvestor = (selectedEntity: { 
     id: number; 
     nickname?: string; 
@@ -906,7 +893,7 @@ const NewCreditPage = () => {
                 </GrayButton>
                   <DarkCyanButton 
                     style={{ marginRight: 'auto' }}
-                    disabled={!isFormValid || isScheduleLoading || isCreditLoading}
+                    disabled={!client || !contractDate || (!investor && !selectedPool) || isScheduleLoading || isCreditLoading || !!validationError}
                     onClick={handleCreateCredit}
                   >
                     {isScheduleLoading || isCreditLoading ? 'Загрузка...' : 'Создать договор'}
