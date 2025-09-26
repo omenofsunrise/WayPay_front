@@ -11,12 +11,106 @@ import BaseModal from '../components/modal/BASE/modalCRUBase';
 import CustomInput from '../components/ui/fields/CustomInput';
 import { formatDate } from '../utils/dateFormatter';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
-import { Container } from 'react-bootstrap';
+import { Container, Tabs } from 'react-bootstrap';
 import { useEmployee } from '../api/hooks/useEmployee';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
+import useAdminPanel from '../api/hooks/useAdminPanel';
+import { NotificationType, type SendNotificationRequest } from '../api/types/notification';
+import styled from 'styled-components';
+
+interface Tab {
+  id: string;
+  label: string;
+  content?: React.ReactNode;
+}
+
+interface TabsProps {
+  tabs: Tab[];
+  activeTab: string;
+  onChange: (tabId: string) => void;
+  addButton?: React.ReactNode;
+}
+
+const LocalTabs = ({ tabs, activeTab, onChange, addButton }: TabsProps) => {
+  const activeTabContent = tabs.find(tab => tab.id === activeTab)?.content;
+
+  return (
+    <>
+      <TabsContainer>
+        <TabsList>
+          {tabs.map((tab) => (
+            <TabItem 
+              key={tab.id}
+              $isActive={activeTab === tab.id}
+              onClick={() => onChange(tab.id)}
+            >
+              {tab.label}
+              {activeTab === tab.id && <ActiveTabIndicator />}
+            </TabItem>
+          ))}
+          {addButton && <AddButtonContainer>{addButton}</AddButtonContainer>}
+        </TabsList>
+      </TabsContainer>
+      
+      {activeTabContent && (
+        <TabContentContainer>
+          {activeTabContent}
+        </TabContentContainer>
+      )}
+    </>
+  );
+};
+
+const TabsContainer = styled.div`
+  width: 100%;
+  border-bottom: 1px solid rgba(209, 213, 219, 1);
+  margin-bottom: 20px;
+`;
+
+const TabsList = styled.ul`
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 24px;
+  align-items: center;
+`;
+
+const TabItem = styled.li<{ $isActive: boolean }>`
+  position: relative;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: ${props => props.$isActive ? '600' : '400'};
+  color: ${props => props.$isActive ? 'rgba(0, 125, 136, 1)' : 'rgba(107, 114, 128, 1)'};
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: rgba(0, 125, 136, 0.8);
+  }
+`;
+
+const ActiveTabIndicator = styled.div`
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: rgba(0, 125, 136, 1);
+  border-radius: 2px 2px 0 0;
+`;
+
+const AddButtonContainer = styled.li`
+  margin-left: auto; 
+  padding: 4px 0; 
+`;
+
+const TabContentContainer = styled.div`
+  margin-top: 20px;
+`;
 
 const AdminPanelPage = () => {
   const { hasRole } = useAuth();
@@ -24,6 +118,10 @@ const AdminPanelPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   
+  // Состояния для табов
+  const [activeTab, setActiveTab] = useState<'companies' | 'notifications'>('companies');
+  
+  // Состояния для компаний
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedCompany, setSelectedCompany] = useState<CompanyModalData | null>(null);
@@ -37,6 +135,13 @@ const AdminPanelPage = () => {
   const [directorValue, setDirectorValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
+  // Состояния для рассылки
+  const [notificationType, setNotificationType] = useState<NotificationType>(NotificationType.AllUsers);
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [targetId, setTargetId] = useState<string>('');
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
+
   const { 
     isLoading, 
     error, 
@@ -54,14 +159,23 @@ const AdminPanelPage = () => {
     updateDirectorFullname
   } = useEmployee();
 
+  const {
+    sendNotification,
+    isLoading: isNotificationLoading,
+    error: notificationError
+  } = useAdminPanel();
+
   const loadCompanies = useCallback(async () => {
     await getAllCompanies();
   }, [getAllCompanies]);
 
   useEffect(() => {
-    loadCompanies();
-  }, [loadCompanies, getCompany]);
+    if (activeTab === 'companies') {
+      loadCompanies();
+    }
+  }, [loadCompanies, activeTab]);
 
+  // Обработчики для компаний
   const handleCreateCompany = () => {
     setModalMode('create');
     setSelectedCompany({
@@ -217,6 +331,42 @@ const AdminPanelPage = () => {
     }
   };
 
+  // Обработчики для рассылки
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!notificationTitle.trim() || !notificationMessage.trim()) {
+      alert('Заполните заголовок и сообщение');
+      return;
+    }
+
+    setIsSendingNotification(true);
+    try {
+      const notificationData: SendNotificationRequest = {
+        type: notificationType,
+        title: notificationTitle,
+        message: notificationMessage,
+        employeeId: notificationType === NotificationType.Single && targetId ? parseInt(targetId) : null,
+        clientId: null,
+        deviceToken: null,
+        avatarPath: null
+      };
+
+      await sendNotification(notificationData);
+      alert('Рассылка отправлена успешно!');
+      
+      // Очистка формы после успешной отправки
+      setNotificationTitle('');
+      setNotificationMessage('');
+      setTargetId('');
+    } catch (err) {
+      console.error('Ошибка при отправке рассылки:', err);
+      alert('Произошла ошибка при отправке рассылки');
+    } finally {
+      setIsSendingNotification(false);
+    }
+  };
+
   const filteredCompanies = companies?.filter(company => 
     company.name.toLowerCase().includes(nameFilter.toLowerCase()) ||
     company.phone.includes(nameFilter)
@@ -288,7 +438,6 @@ const AdminPanelPage = () => {
     if (company && isLicenseExpired(company.licenceDate)) {
         styles[index] = {
         backgroundColor: 'rgba(145, 104, 104, 1)',
-        // color: 'white',
         fontWeight: 'normal',
       };
     }
@@ -321,6 +470,144 @@ const AdminPanelPage = () => {
       ]
     : [];
 
+  const companiesContent = (
+    <>
+      {!isLoading && !error && (
+        <>
+          <CustomTable 
+            columns={[
+              { name: "ID", align: "right" },
+              { name: "Название компании", align: "left" },
+              { name: "Директор", align: "left" },
+              { name: "Телефон", align: "left" },
+              { name: "Лицензия заканчивается", align: "right" },
+              { name: "Договоров за последние 10 дней", align: "right" },
+              { name: "Договоров всего", align: "right" },
+              { name: "Последний заход в сеть", align: "right" },
+            ]} 
+            data={tableData}
+            rowStyles={rowStyles}
+            contextMenuActions={tableActions}
+          />
+          
+          <PaginationLayout>
+            <CountInfoTitle 
+              total={filteredCompanies.length} 
+            />
+            
+            <Pagination
+              total={filteredCompanies.length}
+              current={currentPage}
+              onChange={setCurrentPage}
+              itemsPerPage={pageSize}
+            />
+          </PaginationLayout>
+        </>
+      )}
+    </>
+  );
+
+  // Контент для таба рассылки
+  const notificationsContent = (
+    <div style={{ padding: '20px', maxWidth: '600px' }}>
+      <form onSubmit={handleSendNotification}>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black', textAlign: 'left' }}>
+            Тип рассылки:
+          </label>
+          <select 
+            value={notificationType}
+            onChange={(e) => setNotificationType(parseInt(e.target.value) as NotificationType)}
+            style={{ 
+              width: '100%', 
+              padding: '10px', 
+              border: '1px solid #ccc', 
+              backgroundColor: 'white',
+              color: 'black',
+              borderRadius: '4px' 
+            }}
+          >
+            <option value={NotificationType.AllUsers}>Всем пользователям</option>
+            <option value={NotificationType.Clients}>Клиентам</option>
+            <option value={NotificationType.Employees}>Сотрудникам</option>
+          </select>
+        </div>
+
+        <div style={{ margin: '0px', padding: '0' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black', textAlign: 'left' }}>
+            Заголовок уведомления:
+          </label>
+          <CustomInput
+            value={notificationTitle}
+            onChange={(e) => setNotificationTitle(e.target.value)}
+            placeholder="Введите заголовок"
+            required
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black', textAlign: 'left' }}>
+            Сообщение:
+          </label>
+          <textarea
+            value={notificationMessage}
+            onChange={(e) => setNotificationMessage(e.target.value)}
+            placeholder="Введите текст сообщения"
+            style={{ 
+              width: '100%', 
+              minHeight: '120px', 
+              padding: '10px', 
+              border: '1px solid #ccc', 
+              borderRadius: '4px',
+              resize: 'vertical',
+              color: 'black',
+              backgroundColor: 'white'
+            }}
+            required
+          />
+        </div>
+
+        <DarkCyanButton 
+          type="submit"
+          disabled={isSendingNotification}
+          style={{ width: '200px' }}
+        >
+          {isSendingNotification ? 'Отправка...' : 'Отправить рассылку'}
+        </DarkCyanButton>
+
+        {notificationError && (
+          <div style={{ color: 'red', marginTop: '10px' }}>
+            Ошибка: {notificationError}
+          </div>
+        )}
+      </form>
+    </div>
+  );
+
+  // Табы для страницы
+  const tabs = [
+    {
+      id: 'companies',
+      label: 'Компании',
+      content: companiesContent
+    },
+    {
+      id: 'notifications',
+      label: 'Рассылка',
+      content: notificationsContent
+    }
+  ];
+
+  // Кнопка добавления компании (только для таба компаний)
+  const addButton = activeTab === 'companies' && hasRole('суперадмин') ? (
+    <DarkCyanButton 
+      style={{ width: "15vw", maxHeight: "50px" }}
+      onClick={handleCreateCompany}
+    >
+      + Новая компания
+    </DarkCyanButton>
+  ) : null;
+
   if (!hasRole('суперадмин')) {
     return (
       <PageLayout>
@@ -349,51 +636,19 @@ const AdminPanelPage = () => {
     <PageLayout>
       <TitleField>
         <CustomTitle>Управление лицензиями</CustomTitle>
-        <DarkCyanButton 
-          style={{ width: "15vw", maxHeight: "50px" }}
-          onClick={handleCreateCompany}
-        >
-          + Новая компания
-        </DarkCyanButton>
       </TitleField>
-                
-      {isLoading && <div>Загрузка...</div>}
-      {error && <div>Ошибка: {error}</div>}
       
-      {!isLoading && !error && (
-        <>
-          <CustomTable 
-            columns={[
-              { name: "ID", align: "right" },
-              { name: "Название компании", align: "left" },
-              { name: "Директор", align: "left" },
-              { name: "Телефон", align: "left" },
-              { name: "Лицензия заканчивается", align: "right" },
-              { name: "Договоров за последние 10 дней", align: "right" },
-              { name: "Договоров всего", align: "right" },
-              { name: "Последний заход в сеть", align: "right" },
-            ]} 
-            data={tableData}
-            rowStyles={rowStyles}
-            contextMenuActions={tableActions}
-          />
-          
-          {/* Добавлена пагинация */}
-          <PaginationLayout>
-            <CountInfoTitle 
-              total={filteredCompanies.length} 
-            />
-            
-            <Pagination
-              total={filteredCompanies.length}
-              current={currentPage}
-              onChange={setCurrentPage}
-              itemsPerPage={pageSize}
-            />
-          </PaginationLayout>
-        </>
-      )}
+      <LocalTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab} // Теперь это будет работать
+        addButton={addButton}
+      />
+                
+      {isLoading && activeTab === 'companies' && <div>Загрузка...</div>}
+      {error && activeTab === 'companies' && <div>Ошибка: {error}</div>}
 
+      {/* Модальные окна для компаний */}
       {isCompanyModalOpen && (
         <CompanyModal
             mode={modalMode}
