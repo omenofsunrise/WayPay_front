@@ -59,20 +59,14 @@ const BranchPage = () => {
     { name: 'Название', align: 'left' },
     { name: 'Адрес', align: 'left' },
     { name: 'Телефон', align: 'center' },
-    // { name: 'Координаты', align: 'center' },
-    // { name: 'Режим работы', align: 'center' }
   ];
 
-  // Преобразование данных для таблицы
   const tableData = myBranches.map(branch => [
     branch.name,
     branch.address,
     branch.phone,
-    // `${branch.latitude.toFixed(6)}, ${branch.longitude.toFixed(6)}`,
-    // formatSchedule(branch.schedules)
   ]);
 
-  // Форматирование расписания для отображения
   function formatSchedule(schedules: WorkScheduleRequest[]) {
     const workingDays = schedules.filter(s => s.isWorking);
     if (workingDays.length === 0) return 'Не работает';
@@ -83,7 +77,6 @@ const BranchPage = () => {
     return `${firstDay.dayOfWeek}-${lastDay.dayOfWeek} ${firstDay.openTime.slice(0, 5)}-${firstDay.closeTime.slice(0, 5)}`;
   }
 
-  // Действия контекстного меню
   const contextMenuActions: TableAction[] = [
     {
       label: 'Редактировать',
@@ -97,12 +90,10 @@ const BranchPage = () => {
     }
   ];
 
-  // Загрузка данных при монтировании
   useEffect(() => {
     getMyBranches();
   }, [getMyBranches]);
 
-  // Инициализация расписания по умолчанию
   useEffect(() => {
     if (modalMode === 'create' && formData.schedules.length === 0) {
       const defaultSchedules = daysOfWeek.map(day => ({
@@ -272,8 +263,8 @@ const BranchPage = () => {
                       <Checkbox
                         checked={schedule.isWorking}
                         onChange={(e) => handleScheduleChange(index, 'isWorking', e)}
+                        label={getDayName(schedule.dayOfWeek)} 
                       />
-                      {getDayName(schedule.dayOfWeek)}
                     </DayLabel>
                     
                     <TimeInputs>
