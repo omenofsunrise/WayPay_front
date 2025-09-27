@@ -35,7 +35,6 @@ const Tabs = <T extends string>({ tabs, activeTab, onChange, addButton }: TabsPr
         </TabsList>
       </TabsContainer>
       
-      {/* Отображение контента активного таба */}
       {activeTabContent && (
         <TabContentContainer>
           {activeTabContent}

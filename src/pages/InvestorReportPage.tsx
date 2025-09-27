@@ -59,7 +59,11 @@ const InvestorReportPage = () => {
     const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
     const [payoutAmount, setPayoutAmount] = useState<string>('');
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'payouts' | 'credits'>('payouts');
+    
+    // Разделяем табы на два независимых состояния
+    const [dataTab, setDataTab] = useState<'general' | 'expected' | 'current'>('general');
+    const [operationsTab, setOperationsTab] = useState<'payouts' | 'credits'>('payouts');
+    
     const [creditsPage, setCreditsPage] = useState(1);
     const [payoutsPage, setPayoutsPage] = useState(1);
     const pageSize = 10;
@@ -109,308 +113,308 @@ const InvestorReportPage = () => {
         setPayoutsPage(1);
     };
 
-const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
-    return new Promise<Blob>(async (resolve, reject) => {
-        const pdfContainer = document.createElement('div');
-        pdfContainer.style.position = 'absolute';
-        pdfContainer.style.left = '-9999px';
-        pdfContainer.style.width = '800px';
-        pdfContainer.style.padding = '20px';
-        pdfContainer.style.fontFamily = 'Arial, sans-serif';
-        pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
-        document.body.appendChild(pdfContainer);
+    const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
+        return new Promise<Blob>(async (resolve, reject) => {
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.width = '800px';
+            pdfContainer.style.padding = '20px';
+            pdfContainer.style.fontFamily = 'Arial, sans-serif';
+            pdfContainer.style.backgroundColor = 'rgba(249, 250, 250, 1)';
+            document.body.appendChild(pdfContainer);
 
-        const createCard = (icon: string, value: string, label: string) => `
-            <div style="
-                background: rgba(255, 255, 255, 1);
-                border-radius: 10px;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                height: 100%;
-                flex: 1;
-                min-width: 200px;
-                margin-bottom: 16px;
-            ">
+            const createCard = (icon: string, value: string, label: string) => `
                 <div style="
-                    width: 50px;
-                    height: 50px;
-                    background: rgba(37, 203, 161, 0.1);
-                    border-radius: 8px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 10px;
+                    padding: 20px;
                     display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-bottom: 15px;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                    height: 100%;
+                    flex: 1;
+                    min-width: 200px;
+                    margin-bottom: 16px;
                 ">
-                    <img src="${icon}" width="30" height="30" />
-                </div>
-                <div style="
-                    font-size: 20px;
-                    font-weight: 600;
-                    color: #111827;
-                    margin-bottom: 5px;
-                ">${value}</div>
-                <div style="
-                    font-size: 14px;
-                    color: #6B7280;
-                ">${label}</div>
-            </div>
-        `;
-
-        pdfContainer.innerHTML = `
-            <div style="
-                margin-bottom: 30px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <h1 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 24px;
-                    margin-bottom: 5px;
-                    border-bottom: 2px solid rgba(37, 203, 161, 1);
-                    padding-bottom: 10px;
-                ">
-                    Отчёт для инвестора
-                </h1>
-                <p style="
-                    color: #6B7280;
-                    font-size: 14px;
-                    margin: 0;
-                ">
-                    Дата формирования: ${formatDate(new Date().toISOString())}
-                </p>
-            </div>
-
-            <div style="
-                margin-bottom: 30px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <h2 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 18px;
-                    margin-top: 0;
-                    margin-bottom: 15px;
-                    display: flex;
-                    align-items: center;
-                ">
-                    <span style="
-                        display: inline-block;
-                        width: 4px;
-                        height: 20px;
-                        background: rgba(37, 203, 161, 1);
-                        margin-right: 10px;
-                        border-radius: 2px;
-                    "></span>
-                    Информация об инвесторе
-                </h2>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber || 'Не указан'}</p>
+                    <div style="
+                        width: 50px;
+                        height: 50px;
+                        background: rgba(37, 203, 161, 0.1);
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-bottom: 15px;
+                    ">
+                        <img src="${icon}" width="30" height="30" />
                     </div>
-                    <div>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 
-                            <span style="color: ${currentInvestor?.isBlocked ? '#EF4444' : 'rgba(37, 203, 161, 1)'}">
-                                ${currentInvestor?.isBlocked ? 'Заблокирован' : 'Активен'}
-                            </span>
-                        </p>
-                        <p style="margin: 5px 0; color: #374151;"><strong>Дата регистрации инвестора:</strong> ${formatDate(report.createdAt)}</p>
+                    <div style="
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: #111827;
+                        margin-bottom: 5px;
+                    ">${value}</div>
+                    <div style="
+                        font-size: 14px;
+                        color: #6B7280;
+                    ">${label}</div>
+                </div>
+            `;
+
+            pdfContainer.innerHTML = `
+                <div style="
+                    margin-bottom: 30px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">
+                    <h1 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 24px;
+                        margin-bottom: 5px;
+                        border-bottom: 2px solid rgba(37, 203, 161, 1);
+                        padding-bottom: 10px;
+                    ">
+                        Отчёт для инвестора
+                    </h1>
+                    <p style="
+                        color: #6B7280;
+                        font-size: 14px;
+                        margin: 0;
+                    ">
+                        Дата формирования: ${formatDate(new Date().toISOString())}
+                    </p>
+                </div>
+
+                <div style="
+                    margin-bottom: 30px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">
+                    <h2 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 18px;
+                        margin-top: 0;
+                        margin-bottom: 15px;
+                        display: flex;
+                        align-items: center;
+                    ">
+                        <span style="
+                            display: inline-block;
+                            width: 4px;
+                            height: 20px;
+                            background: rgba(37, 203, 161, 1);
+                            margin-right: 10px;
+                            border-radius: 2px;
+                        "></span>
+                        Информация об инвесторе
+                    </h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber || 'Не указан'}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 
+                                <span style="color: ${currentInvestor?.isBlocked ? '#EF4444' : 'rgba(37, 203, 161, 1)'}">
+                                    ${currentInvestor?.isBlocked ? 'Заблокирован' : 'Активен'}
+                                </span>
+                            </p>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Дата регистрации инвестора:</strong> ${formatDate(report.createdAt)}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div style="
-                margin-bottom: 30px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <h2 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 18px;
-                    margin-top: 0;
-                    margin-bottom: 20px;
-                    display: flex;
-                    align-items: center;
+                <div style="
+                    margin-bottom: 30px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
                 ">
-                    <span style="
-                        display: inline-block;
-                        width: 4px;
-                        height: 20px;
-                        background: rgba(37, 203, 161, 1);
-                        margin-right: 10px;
-                        border-radius: 2px;
-                    "></span>
-                    Финансовая информация
-                </h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                    ${createCard(
-                        investmentSvg,
-                        formatMoney(report.investment.toString()),
-                        'Инвестиция'
-                    )}
-                    
-                    ${createCard(
-                        activeCreditsSvg,
-                        report.activeCreditsAmount.toString(),
-                        'Незакрытые договоры'
-                    )}
-                    
-                    ${report.isCompany ? 
-                        createCard(
-                            commonIncomeSvg,
-                            formatMoney((report.investorIncome + report.selfIncome).toString()),
-                            'Доход компании'
-                        ) : 
-                        createCard(
-                            shareSvg,
-                            currentInvestor?.investorPie.toString() + "%",
-                            'Доля инвестора'
-                        )
-                    }
-                    
-                    ${!report.isCompany ? createCard(
-                        investorIncomeScg,
-                        formatMoney(report.investorIncome.toString()),
-                        'Доход инвестора'
-                    ) : ''}
-                    
-                    ${createCard(
-                        balanceSvg,
-                        formatMoney(report.balance.toString()),
-                        'Касса'
-                    )}
+                    <h2 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 18px;
+                        margin-top: 0;
+                        margin-bottom: 20px;
+                        display: flex;
+                        align-items: center;
+                    ">
+                        <span style="
+                            display: inline-block;
+                            width: 4px;
+                            height: 20px;
+                            background: rgba(37, 203, 161, 1);
+                            margin-right: 10px;
+                            border-radius: 2px;
+                        "></span>
+                        Финансовая информация
+                    </h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                        ${createCard(
+                            investmentSvg,
+                            formatMoney(report.investment.toString()),
+                            'Инвестиция'
+                        )}
+                        
+                        ${createCard(
+                            activeCreditsSvg,
+                            report.activeCreditsAmount.toString(),
+                            'Незакрытые договоры'
+                        )}
+                        
+                        ${report.isCompany ? 
+                            createCard(
+                                commonIncomeSvg,
+                                formatMoney((report.investorIncome + report.selfIncome).toString()),
+                                'Доход компании'
+                            ) : 
+                            createCard(
+                                shareSvg,
+                                currentInvestor?.investorPie.toString() + "%",
+                                'Доля инвестора'
+                            )
+                        }
+                        
+                        ${!report.isCompany ? createCard(
+                            investorIncomeScg,
+                            formatMoney(report.investorIncome.toString()),
+                            'Доход инвестора'
+                        ) : ''}
+                        
+                        ${createCard(
+                            balanceSvg,
+                            formatMoney(report.balance.toString()),
+                            'Касса'
+                        )}
 
-                    ${createCard(
-                        debtSvg,
-                        formatMoney(report.delinquencyAmount.toString()),
-                        'Просрочки руб.'
-                    )}
-                    ${createCard(
-                        allSelfIncomeSvg,
-                        formatMoney(report.allSelfIncome.toString()),
-                        'Доход от инвесторов.'
-                    )}
-                    ${createCard(
-                        paymentIncomeSvg,
-                        formatMoney(report.paymentIncome.toString()),
-                        'Доходы по платежам в текущем месяце'
-                    )}
+                        ${createCard(
+                            debtSvg,
+                            formatMoney(report.delinquencyAmount.toString()),
+                            'Просрочки руб.'
+                        )}
+                        ${createCard(
+                            allSelfIncomeSvg,
+                            formatMoney(report.allSelfIncome.toString()),
+                            'Доход от инвесторов.'
+                        )}
+                        ${createCard(
+                            paymentIncomeSvg,
+                            formatMoney(report.paymentIncome.toString()),
+                            'Доходы по платежам в текущем месяце'
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            <div style="
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                margin-bottom: 30px;
-            ">
-                <h2 style="
-                    color: rgba(0, 125, 136, 1);
-                    font-size: 18px;
-                    margin-top: 0;
-                    margin-bottom: 20px;
-                    display: flex;
-                    align-items: center;
+                <div style="
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                    margin-bottom: 30px;
                 ">
-                    <span style="
-                        display: inline-block;
-                        width: 4px;
-                        height: 20px;
-                        background: rgba(37, 203, 161, 1);
-                        margin-right: 10px;
-                        border-radius: 2px;
-                    "></span>
-                    История выплат
-                </h2>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background-color: rgba(0, 125, 136, 1); color: white;">
-                            <th style="padding: 12px; text-align: left; border-radius: 6px 0 0 0;">Дата выплаты</th>
-                            <th style="padding: 12px; text-align: left;">Выплатил</th>
-                            <th style="padding: 12px; text-align: right; border-radius: 0 6px 0 0;">Сумма</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${payouts.map((payout, index) => `
-                            <tr style="border-bottom: 1px solid #E5E7EB; background: ${index % 2 === 0 ? 'rgba(255, 255, 255, 1)' : 'rgba(249, 250, 250, 1)'}">
-                                <td style="padding: 12px; color: #374151;">${formatDate(payout.payoutDate)}</td>
-                                <td style="padding: 12px; color: #374151;">${payout.employeeFullName}</td>
-                                <td style="padding: 12px; text-align: right; color: #374151; font-weight: 500;">${formatMoney(payout.amount.toString())}</td>
+                    <h2 style="
+                        color: rgba(0, 125, 136, 1);
+                        font-size: 18px;
+                        margin-top: 0;
+                        margin-bottom: 20px;
+                        display: flex;
+                        align-items: center;
+                    ">
+                        <span style="
+                            display: inline-block;
+                            width: 4px;
+                            height: 20px;
+                            background: rgba(37, 203, 161, 1);
+                            margin-right: 10px;
+                            border-radius: 2px;
+                        "></span>
+                        История выплат
+                    </h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: rgba(0, 125, 136, 1); color: white;">
+                                <th style="padding: 12px; text-align: left; border-radius: 6px 0 0 0;">Дата выплаты</th>
+                                <th style="padding: 12px; text-align: left;">Выплатил</th>
+                                <th style="padding: 12px; text-align: right; border-radius: 0 6px 0 0;">Сумма</th>
                             </tr>
-                        `).join('')}
-                        ${payouts.length === 0 ? `
-                            <tr>
-                                <td colspan="3" style="padding: 15px; text-align: center; color: #9CA3AF; background: rgba(255, 255, 255, 1);">
-                                    Не было выплат
-                                </td>
-                            </tr>
-                        ` : ''}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            ${payouts.map((payout, index) => `
+                                <tr style="border-bottom: 1px solid #E5E7EB; background: ${index % 2 === 0 ? 'rgba(255, 255, 255, 1)' : 'rgba(249, 250, 250, 1)'}">
+                                    <td style="padding: 12px; color: #374151;">${formatDate(payout.payoutDate)}</td>
+                                    <td style="padding: 12px; color: #374151;">${payout.employeeFullName}</td>
+                                    <td style="padding: 12px; text-align: right; color: #374151; font-weight: 500;">${formatMoney(payout.amount.toString())}</td>
+                                </tr>
+                            `).join('')}
+                            ${payouts.length === 0 ? `
+                                <tr>
+                                    <td colspan="3" style="padding: 15px; text-align: center; color: #9CA3AF; background: rgba(255, 255, 255, 1);">
+                                        Не было выплат
+                                    </td>
+                                </tr>
+                            ` : ''}
+                        </tbody>
+                    </table>
+                </div>
 
-            <div style="
-                padding: 15px;
-                text-align: center;
-                color: #6B7280;
-                font-size: 12px;
-                background: rgba(255, 255, 255, 1);
-                border-radius: 12px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            ">
-                <p>© ${new Date().getFullYear()} WayPay. Все права защищены.</p>
-            </div>
-        `;
+                <div style="
+                    padding: 15px;
+                    text-align: center;
+                    color: #6B7280;
+                    font-size: 12px;
+                    background: rgba(255, 255, 255, 1);
+                    border-radius: 12px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">
+                    <p>© ${new Date().getFullYear()} WayPay. Все права защищены.</p>
+                </div>
+            `;
 
-            try {
-                const canvas = await html2canvas(pdfContainer, {
-                    scale: 4,
-                    logging: false,
-                    useCORS: true,
-                    allowTaint: true,
-                    width: pdfContainer.offsetWidth,
-                    height: pdfContainer.scrollHeight,
-                    windowWidth: pdfContainer.scrollWidth,
-                    windowHeight: pdfContainer.scrollHeight
-                });
+                try {
+                    const canvas = await html2canvas(pdfContainer, {
+                        scale: 4,
+                        logging: false,
+                        useCORS: true,
+                        allowTaint: true,
+                        width: pdfContainer.offsetWidth,
+                        height: pdfContainer.scrollHeight,
+                        windowWidth: pdfContainer.scrollWidth,
+                        windowHeight: pdfContainer.scrollHeight
+                    });
 
-                const imgData = canvas.toDataURL('image/jpeg', 0.85);
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const imgWidth = 210;
-                const pageHeight = 295;
-                const imgHeight = canvas.height * imgWidth / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 0;
+                    const imgData = canvas.toDataURL('image/jpeg', 0.85);
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgWidth = 210;
+                    const pageHeight = 295;
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 0;
 
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
                     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
                     heightLeft -= pageHeight;
+
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+
+                    document.body.removeChild(pdfContainer);
+
+                    const pdfBlob = pdf.output('blob');
+                    resolve(pdfBlob);
+                } catch (error) {
+                    document.body.removeChild(pdfContainer);
+                    reject(error);
                 }
-
-                document.body.removeChild(pdfContainer);
-
-                const pdfBlob = pdf.output('blob');
-                resolve(pdfBlob);
-            } catch (error) {
-                document.body.removeChild(pdfContainer);
-                reject(error);
-            }
-        });
+            });
     };
 
     const exportToPdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
@@ -565,6 +569,161 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
         return styles;
     }, {} as { [key: number]: RowStyle });
 
+    // Функции для рендеринга карточек в зависимости от активной вкладки данных
+    const renderGeneralCards = () => (
+        <>
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={investmentSvg} alt="Investment" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
+                <ReportLabel>Инвестиция</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={activeCreditsSvg} alt="Active credits" />
+                </IconContainer>
+                <ReportValue>{report.activeCreditsAmount}</ReportValue>
+                <ReportLabel>Незакрытые договоры</ReportLabel>
+            </ReportCard>
+
+            {report.isCompany ? (
+                <>
+                </>    
+            ) : (
+                <>
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={shareSvg} alt="Total income" />
+                        </IconContainer>
+                        <ReportValue>{currentInvestor?.investorPie.toString() + "%"}</ReportValue>
+                        <ReportLabel>Доля инвестора</ReportLabel>
+                    </ReportCard>                         
+                </>
+            )}
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={balanceSvg} alt="Balance" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+                <ReportLabel>Касса</ReportLabel>
+            </ReportCard>
+            
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={debtSvg} alt="Debt" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
+                <ReportLabel>Просрочки руб.</ReportLabel>
+            </ReportCard>
+        </>
+    );
+
+    const renderExpectedIncomeCards = () => (
+        <>
+            {report.isCompany ? (
+                <>
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={commonIncomeSvg} alt="Company income" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney((report.allSelfIncome).toString())}</ReportValue>
+                        <ReportLabel>Доход компании</ReportLabel>
+                    </ReportCard>
+
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
+                        <ReportLabel>Доход от инвесторов</ReportLabel>
+                    </ReportCard>
+                </>    
+            ) : (
+                <>
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={investorIncomeScg} alt="Investor income" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
+                        <ReportLabel>Доход инвестора</ReportLabel>
+                    </ReportCard>
+
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={selfIncomeSvg} alt="Self income" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
+                        <ReportLabel>Собственный доход</ReportLabel>
+                    </ReportCard>                            
+                </>
+            )}
+
+            {!report.isCompany && (
+                <ReportCard>
+                    <IconContainer>
+                        <Icon src={commonIncomeSvg} alt="Total income" />
+                    </IconContainer>
+                    <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
+                    <ReportLabel>Общий доход</ReportLabel>
+                </ReportCard>
+            )}
+        </>
+    );
+
+    const renderCurrentIncomeCards = () => (
+        <>
+            {report.isCompany ? (
+                <>
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={paymentIncomeSvg} alt="paymentIncome" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
+                        <ReportLabel>Текущий доход </ReportLabel>
+                    </ReportCard>
+
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.investorPaymentIncome.toString())}</ReportValue>
+                        <ReportLabel>Доход от инвесторов</ReportLabel>
+                    </ReportCard>
+                </>    
+            ) : (
+                <>
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={investorIncomeScg} alt="Investor income" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.investorPaymentIncome.toString())}</ReportValue>
+                        <ReportLabel>Текущий доход инвестора</ReportLabel>
+                    </ReportCard>
+
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={commonIncomeSvg} alt="Company income" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.selfPaymentIncome.toString())}</ReportValue>
+                        <ReportLabel>Текущий собственный доход </ReportLabel>
+                    </ReportCard>
+
+                    <ReportCard>
+                        <IconContainer>
+                            <Icon src={selfIncomeSvg} alt="Self income" />
+                        </IconContainer>
+                        <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
+                        <ReportLabel>Текущий общий доход </ReportLabel>
+                    </ReportCard>
+
+                </>
+            )}
+        </>
+    );
+
     return (
         <PageLayout>
             <TitleField>
@@ -619,119 +778,42 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                     </DarkCyanButton>
                 </InvestorInfoContainer>
 
-                <ModalInfoTitle>Общие данные</ModalInfoTitle>
+                {/* Верхние табы для данных */}
+                <TabsContainer>
+                    <Tabs<'general' | 'expected' | 'current'>
+                        tabs={[
+                            { id: 'general', label: 'Общие данные' },
+                            { id: 'expected', label: 'Ожидаемый доход' },
+                            { id: 'current', label: 'Текущий доход' }
+                        ]}
+                        activeTab={dataTab}
+                        onChange={(tabId) => setDataTab(tabId)}
+                    />
+                </TabsContainer>
+
                 {report && (
                     <ReportDataContainer>
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={investmentSvg} alt="Investment" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
-                            <ReportLabel>Инвестиция</ReportLabel>
-                        </ReportCard>
-
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={activeCreditsSvg} alt="Active credits" />
-                            </IconContainer>
-                            <ReportValue>{report.activeCreditsAmount}</ReportValue>
-                            <ReportLabel>Незакрытые договоры</ReportLabel>
-                        </ReportCard>
-
-                        {report.isCompany ? (
-                            <>
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={commonIncomeSvg} alt="Company income" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
-                                    <ReportLabel>Доход компании</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.allSelfIncome.toString())}</ReportValue>
-                                    <ReportLabel>Доход от инвесторов</ReportLabel>
-                                </ReportCard>
-                            </>    
-                        ) : (
-                            <>
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={shareSvg} alt="Total income" />
-                                    </IconContainer>
-                                    <ReportValue>{currentInvestor?.investorPie.toString() + "%"}</ReportValue>
-                                    <ReportLabel>Доля инвестора</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={investorIncomeScg} alt="Investor income" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
-                                    <ReportLabel>Доход инвестора</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={selfIncomeSvg} alt="Self income" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
-                                    <ReportLabel>Собственный доход</ReportLabel>
-                                </ReportCard>                            
-                            </>
-                        )}
-
-                        {!report.isCompany && (
-                            <ReportCard>
-                                <IconContainer>
-                                    <Icon src={commonIncomeSvg} alt="Total income" />
-                                </IconContainer>
-                                <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
-                                <ReportLabel>Общий доход</ReportLabel>
-                            </ReportCard>
-                        )}
-
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={balanceSvg} alt="Balance" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
-                            <ReportLabel>Касса</ReportLabel>
-                        </ReportCard>
-                        
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={debtSvg} alt="Debt" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
-                            <ReportLabel>Просрочки руб.</ReportLabel>
-                        </ReportCard>
-
-                        <ReportCard>
-                            <IconContainer>
-                                <Icon src={paymentIncomeSvg} alt="paymentIncome" />
-                            </IconContainer>
-                            <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
-                            <ReportLabel>Доходы по платежам в текущем месяце</ReportLabel>
-                        </ReportCard>  
+                        {dataTab === 'general' && renderGeneralCards()}
+                        {dataTab === 'expected' && renderExpectedIncomeCards()}
+                        {dataTab === 'current' && renderCurrentIncomeCards()}
                     </ReportDataContainer>
                 )}
 
+                <ModalInfoTitle>История операций</ModalInfoTitle>
+
+                {/* Нижние табы для операций */}
                 <TabsContainer>
                     <Tabs<'payouts' | 'credits'>
                         tabs={[
                             { id: 'payouts', label: 'История выплат' },
                             { id: 'credits', label: 'Договоры' }
                         ]}
-                        activeTab={activeTab}
-                        onChange={(tabId) => setActiveTab(tabId)}
+                        activeTab={operationsTab}
+                        onChange={(tabId) => setOperationsTab(tabId)}
                     />
                 </TabsContainer>
 
-                {activeTab === 'payouts' ? (
+                {operationsTab === 'payouts' ? (
                     <>
                         <CustomTable 
                             columns={[
@@ -797,11 +879,22 @@ const generatePdf = async (report: InvestorReport, currentInvestor: Investor | n
                         currentInvestor?.isBlocked 
                         ? report?.balance || 0 
                         : report?.isCompany 
-                            ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
-                            : report?.investorIncome || 0
+                        ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
+                        : report?.investorIncome || 0
                     }
                     balance={report?.balance || 0}
                     isLoading={isPayoutsLoading}
+                    currentIncome={
+                        report?.isCompany 
+                        ? report?.paymentIncome || 0
+                        : report?.investorPaymentIncome || 0
+                    }
+                    expectedIncome={
+                        report?.isCompany 
+                        ? (report?.allSelfIncome || 0)
+                        : report?.investorIncome || 0
+                    }
+                    isCompany={report?.isCompany || false}
                 />
 
                 <InvestorModal
@@ -891,6 +984,7 @@ const ReportDataContainer = styled.div`
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
     width: 100%;
+    margin-bottom: 32px;
 `;
 
 const ReportCard = styled.div`

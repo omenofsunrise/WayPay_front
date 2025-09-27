@@ -47,6 +47,8 @@ export interface InvestorReport {
   delinquencyAmount: number;
   allSelfIncome: number;
   paymentIncome: number;
+  investorPaymentIncome: number;
+  selfPaymentIncome: number;
 }
 
 export interface InvestorAgreementResponse {
