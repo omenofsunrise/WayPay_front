@@ -843,10 +843,10 @@ const NewCreditPage = () => {
         <CheckboxContainer>
           <ModalInfoTitle style={{marginRight: '32px'}}>График выплат</ModalInfoTitle>
           <Checkbox 
+            label='Начинать выплаты со следующего месяца'
             checked={nextMonthStart} 
             onChange={handleNextMonthStartChange} 
           />
-          <CheckboxLabel>Начинать выплаты со следующего месяца</CheckboxLabel>
         </CheckboxContainer>
 
         <PaymentScheduleContainer>

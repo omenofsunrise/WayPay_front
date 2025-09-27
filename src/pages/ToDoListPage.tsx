@@ -281,10 +281,10 @@ const ToDoListPage = () => {
                 />
                 <ToggleContainer>
                     <Checkbox
+                        label="Только свои"
                         checked={filters.onlyMine || false}
                         onChange={(checked) => handleFilterChange({ onlyMine: checked })}
                     />
-                    <ToggleLabel>Только свои</ToggleLabel>
                 </ToggleContainer>
             </FilterField>
             <TaskListContainersWrapper>

@@ -88,9 +88,10 @@ const CheckboxContainer = styled.div<{ checked: boolean; isFocused: boolean }>`
 `;
 
 const Label = styled.span`
-  font-size: 14px;
+  font-size: 16px;
   color: #333;
   user-select: none;
+  white-space: nowrap;
 `;
 
 const Checkmark = styled.svg`

@@ -87,7 +87,6 @@ const ObjectTypeSelect = ({
   };
 
   const handleFocus = () => {
-    // Блокируем фокус для запрета ввода
     if (inputRef.current) {
       inputRef.current.blur();
     }

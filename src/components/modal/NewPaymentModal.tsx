@@ -220,19 +220,20 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                   <InputLabel>Способ оплаты</InputLabel>
                   <PaymentMethodContainer>
                     <CheckboxWrapper>
-                      <Checkbox 
+                      <Checkbox
+                        label='Наличными' 
                         checked={paymentMethod === 'cash'} 
                         onChange={handleCashChange} 
                       />
-                      <PaymentMethodLabel>Наличные</PaymentMethodLabel>
                     </CheckboxWrapper>
                     
                     <CheckboxWrapper>
                       <Checkbox 
+                        label='Картой'
                         checked={paymentMethod === 'card'} 
                         onChange={handleCardChange} 
                       />
-                      <PaymentMethodLabel>Карта</PaymentMethodLabel>
+                      <PaymentMethodLabel></PaymentMethodLabel>
                     </CheckboxWrapper>
                   </PaymentMethodContainer>
                 </InputGroup>
