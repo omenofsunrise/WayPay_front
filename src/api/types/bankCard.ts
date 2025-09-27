@@ -7,8 +7,8 @@ export interface BankCard {
 }
 
 export interface BankCardRequest {
-  phone: string;
-  details: string;
+  phone?: string;
+  details?: string;
 }
 
 export interface BankCardFilters {

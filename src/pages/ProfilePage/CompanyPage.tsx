@@ -9,6 +9,7 @@ import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import useCompany from "../../api/hooks/useCompany";
 import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
 import { FiCamera, FiTrash2, FiEdit2 } from "react-icons/fi";
+import BankCardSelect from "../../components/ui/fields/BankCardSelect";
 
 const CompanyPage = () => {
     const { 
@@ -274,12 +275,10 @@ const CompanyPage = () => {
                     
                     <InputContainer>
                         <InputGroup>
-                            <Label>Телефон привязанный к карточке</Label>
-                            <StyledInput 
-                                name="bank"
-                                value={formData.bank}
-                                onChange={handleInputChange}
-                            />
+                            <Label>Текущая карточка</Label>
+                            <BankCardSelect value={""} onChange={function (value: string): void {
+                                throw new Error("Function not implemented.");
+                            } } />
                         </InputGroup>
                         <InputGroup style={{width: "100%", maxWidth: "100%" }}>
                             <Label>Телефон</Label>

@@ -6,7 +6,7 @@ import bankCardService from '../services/bankCardService';
 const useBankCards = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [objectTypes, setObjectTypes] = useState<BankCard[]>([]);
+  const [bankCards, setObjectTypes] = useState<BankCard[]>([]);
   const [pagedResult, setPagedResult] = useState<PagedResult<BankCard> | null>(null);
 
   const getAll = useCallback(async (filters?: BankCardFilters): Promise<PagedResult<BankCard> | null> => {
@@ -55,7 +55,7 @@ const useBankCards = () => {
     }
   }, []);
 
-  const deleteObjectType = useCallback(async (id: number): Promise<void> => {
+  const deleteBankCard = useCallback(async (id: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -72,12 +72,12 @@ const useBankCards = () => {
   return {
     isLoading,
     error,
-    objectTypes,
+    bankCards,
     pagedResult,
     getAll,
     create,
     update,
-    deleteObjectType,
+    deleteBankCard,
     clearError: () => setError(null),
     clearObjectTypes: () => {
       setObjectTypes([]);
