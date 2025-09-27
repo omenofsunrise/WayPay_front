@@ -36,6 +36,8 @@ import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import Pagination from '../components/ui/fields/CustomPagination';
 import Tabs from '../components/ui/fields/Tabs';
 import { useAuth } from '../сontext/AuthContext';
+import useInvestorContribution from '../api/hooks/useInvestorContribution';
+import type { InvestorContribution } from '../api/types/investorContribution';
 
 const InvestorReportPage = () => {
     const { getInvestors, currentInvestor, getInvestorById, getInvestorReport } = useInvestor();
@@ -60,13 +62,20 @@ const InvestorReportPage = () => {
     const [payoutAmount, setPayoutAmount] = useState<string>('');
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
     
-    // Разделяем табы на два независимых состояния
     const [dataTab, setDataTab] = useState<'general' | 'expected' | 'current'>('general');
     const [operationsTab, setOperationsTab] = useState<'payouts' | 'credits'>('payouts');
     
+    const { 
+        data: contributionsData, 
+        isLoading: isContributionsLoading, 
+        getProducts: getContributions 
+    } = useInvestorContribution();
+
+    const [contributionsPage, setContributionsPage] = useState(1);
+
     const [creditsPage, setCreditsPage] = useState(1);
     const [payoutsPage, setPayoutsPage] = useState(1);
-    const pageSize = 10;
+    const pageSize = 5;
 
     useEffect(() => {
         const fetchInvestors = async () => {
@@ -99,19 +108,30 @@ const InvestorReportPage = () => {
                     setReport(reportData);
                     fetchPayouts(Number(selectedInvestorId));
                     getCreditsByInvestorId(Number(selectedInvestorId), creditsPage, pageSize);
+                    
+                    getContributions(Number(selectedInvestorId), { 
+                        page: contributionsPage, 
+                        pageSize: pageSize 
+                    });
                 } finally {
                     setIsLoading(false);
                 }
             };
             fetchReportData();
         }
-    }, [selectedInvestorId, creditsPage, payoutsPage]);
+    }, [selectedInvestorId, creditsPage, payoutsPage, contributionsPage, getContributions]);
 
     const handleInvestorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedInvestorId(e.target.value);
         setCreditsPage(1);
         setPayoutsPage(1);
+        setContributionsPage(1);
     };
+
+    const contributionsTableData = contributionsData?.items.map((contribution: InvestorContribution) => [
+        formatDate(contribution.date.toString()),
+        formatMoney(contribution.amount.toString())
+    ]) || [];
 
     const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
         return new Promise<Blob>(async (resolve, reject) => {
@@ -455,7 +475,6 @@ const InvestorReportPage = () => {
                     url: window.location.href,
                 });
             } else {
-                // Fallback for browsers that don't support sharing files
                 await navigator.clipboard.writeText(window.location.href);
                 alert('Ссылка скопирована в буфер обмена');
             }
@@ -569,7 +588,6 @@ const InvestorReportPage = () => {
         return styles;
     }, {} as { [key: number]: RowStyle });
 
-    // Функции для рендеринга карточек в зависимости от активной вкладки данных
     const renderGeneralCards = () => (
         <>
             <ReportCard>
@@ -778,7 +796,6 @@ const InvestorReportPage = () => {
                     </DarkCyanButton>
                 </InvestorInfoContainer>
 
-                {/* Верхние табы для данных */}
                 <TabsContainer>
                     <Tabs<'general' | 'expected' | 'current'>
                         tabs={[
@@ -801,12 +818,12 @@ const InvestorReportPage = () => {
 
                 <ModalInfoTitle>История операций</ModalInfoTitle>
 
-                {/* Нижние табы для операций */}
                 <TabsContainer>
-                    <Tabs<'payouts' | 'credits'>
+                    <Tabs<'payouts' | 'credits' | 'contributions'>
                         tabs={[
                             { id: 'payouts', label: 'История выплат' },
-                            { id: 'credits', label: 'Договоры' }
+                            { id: 'credits', label: 'Договоры' },
+                            { id: 'contributions', label: 'История инвестиций' }
                         ]}
                         activeTab={operationsTab}
                         onChange={(tabId) => setOperationsTab(tabId)}
@@ -837,7 +854,7 @@ const InvestorReportPage = () => {
                             />
                         </PaginationLayout>
                     </>
-                ) : (
+                ) : operationsTab === 'credits' ? (
                     <>
                         <CustomTable 
                             columns={[
@@ -863,6 +880,28 @@ const InvestorReportPage = () => {
                                 total={investorCredits?.totalCount || 0}
                                 current={creditsPage}
                                 onChange={(page) => setCreditsPage(page)}
+                                itemsPerPage={pageSize}
+                            />
+                        </PaginationLayout>
+                    </>
+                ) : (
+                    <>
+                        <CustomTable 
+                            columns={[
+                                { name: "Дата", isSortable: true },
+                                { name: "Сумма инвестиции, руб", isSortable: true, align: "left" },
+                            ]} 
+                            data={contributionsTableData}
+                            isLoading={isContributionsLoading}  
+                        />
+                        <PaginationLayout>
+                            <CountInfoTitle 
+                                total={contributionsData?.totalCount || 0} 
+                            />
+                            <Pagination
+                                total={contributionsData?.totalCount || 0}
+                                current={contributionsPage}
+                                onChange={(page) => setContributionsPage(page)}
                                 itemsPerPage={pageSize}
                             />
                         </PaginationLayout>
