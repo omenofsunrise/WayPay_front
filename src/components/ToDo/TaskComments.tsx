@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../../сontext/AuthContext';
-import { BASE_URL } from '../../api/client';
+import { BASE_URL, FILE_BASE_URL } from '../../api/client';
 import { getInitials, generateAvatar } from '../../utils/avatarUtils';
 import useTaskNote from '../../api/hooks/useTaskNote';
 import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
@@ -98,7 +98,7 @@ const TaskComments = ({ taskId, onClose }: TaskCommentsProps) => {
               <CommentHeader>
                 <Avatar>
                   {note.creator.photoPath ? (
-                    <img src={`${BASE_URL}${note.creator.photoPath}`} alt={getInitials(note.creator.fullName)} />
+                    <img src={`${FILE_BASE_URL}${note.creator.photoPath}`} alt={getInitials(note.creator.fullName)} />
                   ) : (
                     <img src={generateAvatar(getInitials(note.creator.fullName))} alt={getInitials(note.creator.fullName)} />
                   )}
