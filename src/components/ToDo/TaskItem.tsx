@@ -256,6 +256,7 @@ const TaskItem = ({ task, onDragStart, onEdit, onDelete, disableContextMenu = fa
               onCancel={handleCommentsClose}
               width="600px"
               hideSaveButton
+              hideCanselButton
             >
               <TaskComments 
                 taskId={task.id} 

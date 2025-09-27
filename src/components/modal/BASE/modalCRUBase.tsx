@@ -14,6 +14,7 @@ interface ModalProps {
   isSubmitting?: boolean;
   mode?: ModalMode;
   hideSaveButton?: boolean;
+  hideCanselButton?: boolean;
   width?: string;
   saveButtonText?: string;
   customLayout?: React.ReactNode;
@@ -29,6 +30,7 @@ const BaseModal: React.FC<ModalProps> = ({
   isSubmitting = false,
   mode = 'create',
   hideSaveButton = false,
+  hideCanselButton = false,
   width = '562px',
   saveButtonText = "Сохранить",
   customLayout
@@ -68,7 +70,9 @@ const BaseModal: React.FC<ModalProps> = ({
           <ModalContent>{children}</ModalContent>
 
           <ModalFooter>
-            <CancelButton onClick={handleCancel}>Отменить</CancelButton>
+            {!hideCanselButton && (
+              <CancelButton onClick={handleCancel}>Отменить</CancelButton>
+            )}
             {!isViewMode && !hideSaveButton && (
               <DarkCyanButton 
                 style={{ minWidth: "136px", padding: "10p 20px", borderRadius: "10px", fontSize: "16px" }}
