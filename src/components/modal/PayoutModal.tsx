@@ -163,9 +163,6 @@ const PayoutModal = ({
         
         <AmountInfo>
           <MaxAmount>Можно вывести: {actualMaxAmount.toLocaleString()} ₽</MaxAmount>
-          <AmountHint>
-            Максимум: минимум из дохода ({maxAmount.toLocaleString()} ₽) и баланса ({balance.toLocaleString()} ₽)
-          </AmountHint>
         </AmountInfo>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}
