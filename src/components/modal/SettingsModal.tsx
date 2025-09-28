@@ -53,7 +53,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         <ModalBody>
           <SettingsSection>
             <Checkbox
-                label='Скрывать знак рубля (₽) в интерфейсе'
+                label='Скрыть знак рубля (₽) в интерфейсе'
                 checked={hideCurrency}
                 onChange={(e) => setHideCurrency(e)}
             />

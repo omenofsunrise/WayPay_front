@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import CustomTitle from '../ui/Text/CustomTitle';
 import TitleField from '../ui/Layouts/TitleLayout';
+import { formatMoney } from '../../utils/formatPrice';
 
 interface BarData {
   name: string;
@@ -103,10 +104,10 @@ const ColumnChart: React.FC<ColumnChartProps> = ({
                         {hoveredIndex === index && (
                         <Tooltip>
                             <TooltipContent>
-                            <TooltipTitle>Всего: {item.total.toLocaleString()} ₽</TooltipTitle>
+                            <TooltipTitle>Всего: {formatMoney(item.total.toString())}</TooltipTitle>
                             {item.bars.map((bar, barIndex) => (
                                 <TooltipItem key={barIndex}>
-                                {bar.name}: {bar.value.toLocaleString()} ₽
+                                {bar.name}: {formatMoney(bar.value.toString())}
                                 </TooltipItem>
                             ))}
                             </TooltipContent>
