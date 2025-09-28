@@ -163,7 +163,7 @@ const CompanyPage = () => {
         try {
             const updateData = {
                 ...formData,
-                currentBankCardId: currentBankCardId
+                currentBankCardId: currentBankCardId === 0 ? null : currentBankCardId
             };
             
             await updateCompany(updateData);

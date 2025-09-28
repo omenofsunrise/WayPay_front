@@ -171,6 +171,7 @@ const CreditPage = () => {
     paymentDate: string;
     principalAmount: number;
     paymentMethod: 'cash' | 'card';
+    bankCardId?: number;
   }) => {
     try {
       if (!selectedCreditForPrint) return;
@@ -179,7 +180,8 @@ const CreditPage = () => {
         creditId: selectedCreditForPrint.id,
         paymentAmount: paymentData.principalAmount,
         datePayment: paymentData.paymentDate,
-        type: paymentData.paymentMethod
+        type: paymentData.paymentMethod,
+        bankCardId: paymentData.bankCardId
       };
       
       await createPayment(paymentRequest);

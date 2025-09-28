@@ -157,7 +157,7 @@ const PaymentPage = () => {
             payment.clientFullName || '',
             formatMoney(payment.paymentAmount?.toString() || '0'),
             payment.paymentDate ? formatDate(payment.paymentDate) : '',
-            payment.type === 'cash' ? 'Наличными' : 'Картой',
+            payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
             payment.employeeFullName || '',
             payment.accepted ? 'Да' : 'Нет'
         ]);

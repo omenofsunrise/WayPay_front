@@ -7,6 +7,7 @@ import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import GrayButton from '../ui/Buttons/GrayButton';
 import Checkbox from '../ui/CheckBoxes/Checkbox';
 import CustomCalendar from '../ui/fields/CustomCalendar';
+import BankCardSelect from '../ui/fields/BankCardSelect';
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -21,7 +22,9 @@ export interface NewPaymentModalProps {
     paymentDate: string;
     principalAmount: number;
     paymentMethod: 'cash' | 'card';
+    bankCardId?: number;
   }) => void;
+  clientId?: number;
 }
 
 const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
@@ -33,11 +36,14 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   currentMonthDebt,
   isOpen,
   onClose,
-  onSubmit
+  onSubmit,
+  clientId
 }) => {
   const [paymentDate, setPaymentDate] = useState<string>('');
   const [principalAmount, setPrincipalAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>();
+  const [selectedBankCardId, setSelectedBankCardId] = useState<number>(0);
+  const [selectedBankCardDetails, setSelectedBankCardDetails] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [remainingDebt, setRemainingDebt] = useState<number>(currentDebt);
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
@@ -47,6 +53,8 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       setPaymentDate('');
       setPrincipalAmount('');
       setPaymentMethod(undefined);
+      setSelectedBankCardId(0);
+      setSelectedBankCardDetails('');
       setTotalAmount(0);
       setRemainingDebt(currentDebt);
       setIsDebtPaid(currentDebt <= 0);
@@ -86,38 +94,71 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const handleSubmit = () => {
     if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid) return;
     
-    onSubmit({
+    if (paymentMethod === 'card' && !selectedBankCardId) {
+      return;
+    }
+    
+    const paymentData = {
       paymentDate,
       principalAmount: totalAmount,
       paymentMethod
-    });
+    };
+    
+    if (paymentMethod === 'card' && selectedBankCardId) {
+      onSubmit({
+        ...paymentData,
+        bankCardId: selectedBankCardId
+      });
+    } else {
+      onSubmit(paymentData);
+    }
   };
 
   useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          onClose();
-        }
-      };
-  
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-      };
-    }, [onClose]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
     
   const handleCashChange = (checked: boolean) => {
-    setPaymentMethod(checked ? 'cash' : null);
+    if (checked) {
+      setPaymentMethod('cash');
+      setSelectedBankCardId(0);
+      setSelectedBankCardDetails('');
+    } else {
+      setPaymentMethod(null);
+    }
   };
 
   const handleCardChange = (checked: boolean) => {
-    setPaymentMethod(checked ? 'card' : null);
+    if (checked) {
+      setPaymentMethod('card');
+    } else {
+      setPaymentMethod(null);
+      setSelectedBankCardId(0);
+      setSelectedBankCardDetails('');
+    }
+  };
+
+  const handleBankCardSelect = (bankCard: { 
+    id: number; 
+    details: string;
+  }) => {
+    setSelectedBankCardId(bankCard.id);
+    setSelectedBankCardDetails(bankCard.details);
   };
 
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+    <ModalOverlay isOpen={isOpen}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalWrapper>
           <CloseButton onClick={onClose}>&times;</CloseButton>
@@ -233,11 +274,29 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                         checked={paymentMethod === 'card'} 
                         onChange={handleCardChange} 
                       />
-                      <PaymentMethodLabel></PaymentMethodLabel>
                     </CheckboxWrapper>
                   </PaymentMethodContainer>
                 </InputGroup>
               </FormRow>
+
+              {paymentMethod === 'card' && (
+                <FormRow>
+                  <InputGroup>
+                    <InputLabel>Банковская карта</InputLabel>
+                    <BankCardSelect
+                      value={selectedBankCardDetails}
+                      onChange={(details) => setSelectedBankCardDetails(details)}
+                      onBankCardSelect={handleBankCardSelect}
+                      placeholder="Выберите карту"
+                      clientId={clientId}
+                      selectedCardId={selectedBankCardId}
+                    />
+                    {paymentMethod === 'card' && !selectedBankCardId && (
+                      <ErrorText>Пожалуйста, выберите банковскую карту</ErrorText>
+                    )}
+                  </InputGroup>
+                </FormRow>
+              )}
             </>
           )}
           
@@ -248,7 +307,13 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             {!isDebtPaid && (
               <DarkCyanButton 
                 onClick={handleSubmit}
-                disabled={!paymentDate || totalAmount <= 0 || !paymentMethod || totalAmount > currentDebt}
+                disabled={
+                  !paymentDate || 
+                  totalAmount <= 0 || 
+                  !paymentMethod || 
+                  totalAmount > currentDebt ||
+                  (paymentMethod === 'card' && !selectedBankCardId)
+                }
               >
                 Создать платёж
               </DarkCyanButton>
@@ -260,6 +325,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   );
 };
 
+// Стили остаются без изменений
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
   position: fixed;

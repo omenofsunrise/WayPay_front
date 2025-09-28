@@ -166,7 +166,7 @@ const BankCardSelect = ({
         await deleteBankCard(id);
       }
       catch {
-        window.alert("Невозможно удалить карту, к которой привязаны операции");
+        window.alert("Невозможно удалить карту, к которой привязаны операции или компания");
       }
     }
   };
