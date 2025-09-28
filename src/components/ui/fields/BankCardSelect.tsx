@@ -18,11 +18,13 @@ interface BankCardSelectProps {
   errorMessage?: string;
   disabled?: boolean;
   clientId?: number;
+  selectedCardId?: number;
 }
 
 const BankCardSelect = ({
   value,
   onChange,
+  selectedCardId,
   onBankCardSelect,
   placeholder = 'Выберите карту',
   customPlaceholder,
@@ -38,7 +40,7 @@ const BankCardSelect = ({
     create, 
     update, 
     deleteBankCard,
-    isLoading 
+    isLoading,
   } = useBankCards();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -496,9 +498,8 @@ const BankCardName = styled.div`
 `;
 
 const BankCardDetails = styled.div`
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
-  opacity: 0.8;
 `;
 
 const BankCardActions = styled.div`

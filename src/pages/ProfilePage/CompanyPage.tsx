@@ -10,6 +10,7 @@ import useCompany from "../../api/hooks/useCompany";
 import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
 import { FiCamera, FiTrash2, FiEdit2 } from "react-icons/fi";
 import BankCardSelect from "../../components/ui/fields/BankCardSelect";
+import useBankCards from "../../api/hooks/useBankCard";
 
 const CompanyPage = () => {
     const { 
@@ -43,13 +44,19 @@ const CompanyPage = () => {
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const [displayBankCard, setDisplayBankCard] = useState("");
+    const { bankCards, getAll: getBankCards } = useBankCards();
+    
+    useEffect(() => {
+        getCompany();
+        getBankCards({ pageSize: 50 });
+    }, [getCompany, getBankCards]);
 
     useEffect(() => {
         getCompany();
     }, [getCompany]);
 
     useEffect(() => {
-        if (company) {
+        if (company && bankCards) {
             setFormData({
                 name: company.name || "",
                 chief: company.chief || "",
@@ -59,18 +66,41 @@ const CompanyPage = () => {
                 phone: company.phone || "",
                 inn: company.inn || "",
                 email: company.email || "",
-                currentBankCardId: company.currentBakkCardId || null
+                currentBankCardId: company.currentBankCardId || null
             });
             
-            setCurrentBankCardId(company.currentBakkCardId || undefined);
+            setCurrentBankCardId(company.currentBankCardId || undefined);
             
+            if (company.currentBankCardId) {
+                const selectedCard = bankCards.find(card => card.id === company.currentBankCardId);
+                if (selectedCard) {
+                    setDisplayBankCard(selectedCard.details);
+                }
+            }
+
             if (company.photoPath) {
                 setPreviewUrl(getCompanyPhotoUrl(company.photoPath));
             } else {
                 setPreviewUrl(null);
             }
         }
-    }, [company, getCompanyPhotoUrl]);
+    }, [company, getCompanyPhotoUrl, bankCards]);
+
+    useEffect(() => {
+        if (currentBankCardId && bankCards && bankCards.length > 0) {
+            const selectedCard = bankCards.find(card => card.id === currentBankCardId);
+            if (selectedCard) {
+                setDisplayBankCard(selectedCard.details);
+                // Также обновляем форму
+                setFormData(prev => ({
+                    ...prev,
+                    currentBankCardId: currentBankCardId
+                }));
+            }
+        } else if (!currentBankCardId) {
+            setDisplayBankCard("");
+        }
+    }, [bankCards, currentBankCardId]);
 
     useEffect(() => {
         if (!selectedFile) return;
@@ -100,6 +130,7 @@ const CompanyPage = () => {
             currentBankCardId: bankCard.id
         }));
         setDisplayBankCard(bankCard.details);
+        console.log("Selected bank card:", bankCard);
     };
 
     const handleReset = () => {
@@ -113,9 +144,17 @@ const CompanyPage = () => {
                 phone: company.phone || "",
                 inn: company.inn || "",
                 email: company.email || "",
-                currentBankCardId: company.currentBakkCardId || null
+                currentBankCardId: company.currentBankCardId || null
             });
-            setCurrentBankCardId(company.currentBakkCardId || undefined);
+            setCurrentBankCardId(company.currentBankCardId || undefined);
+            
+            if (company.currentBankCardId && bankCards) {
+                const selectedCard = bankCards.find(card => card.id === company.currentBankCardId);
+                setDisplayBankCard(selectedCard ? selectedCard.details : "");
+            } else {
+                setDisplayBankCard("");
+            }
+            
             setSelectedFile(null);
         }
     };
@@ -303,12 +342,12 @@ const CompanyPage = () => {
                         <InputGroup>
                             <Label>Текущая карточка</Label>
                             <BankCardSelect 
-                                value={displayBankCard || formData.bank || ""}
+                                value={displayBankCard}
                                 onChange={handleBankCardChange}
                                 onBankCardSelect={handleBankCardSelect}
+                                selectedCardId={currentBankCardId}
                                 placeholder="Выберите банковскую карту"
-                            />
-                        </InputGroup>
+                            />                        </InputGroup>
                         <InputGroup style={{width: "100%", maxWidth: "100%" }}>
                             <Label>Телефон</Label>
                             <PhoneModalInput 
