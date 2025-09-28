@@ -200,25 +200,39 @@ const InvestorSelectModal = ({
   const tableData = [...investorsTableData, ...poolsTableData];
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {
-          const isBlockedIndex = 4;
-          const isBlocked = rowData[isBlockedIndex] === 'true';
-          
-          if (isBlocked) {
-              styles[index] = {
-                  backgroundColor: '#FFEBEE',
-                  color: 'black',
-                  fontWeight: 'normal'
-              };
-          } else {
-              styles[index] = {
-                  backgroundColor: 'white',
-                  color: 'black',
-                  fontWeight: 'normal'
-              };
-          }
-          
-          return styles;
-    }, {} as Record<number, RowStyle>);
+    const isBlockedIndex = 4;
+    const isBlocked = rowData[isBlockedIndex] === 'true';
+    const rowId = parseInt(rowData[0]);
+    const isSelected = selectedEntity && rowId === selectedEntity.id;
+    
+    // Если строка выбрана - высший приоритет
+    if (isSelected) {
+      styles[index] = {
+        backgroundColor: '#007D88',
+        color: 'white',
+        fontWeight: 'normal'
+      };
+    } 
+    // Если строка заблокирована - средний приоритет
+    else if (isBlocked) {
+      styles[index] = {
+        backgroundColor: '#FFEBEE',
+        color: 'black',
+        fontWeight: 'normal',
+        hoverBackgroundColor: 'black'
+      };
+    } 
+    // Обычная строка - низший приоритет
+    else {
+      styles[index] = {
+        backgroundColor: 'white',
+        color: 'black',
+        fontWeight: 'normal'
+      };
+    }
+    
+    return styles;
+  }, {} as Record<number, RowStyle>);
 
   if (!isOpen) return null;
 

@@ -291,6 +291,7 @@ const CreditPage = () => {
       `${formatMoney(credit.accured?.toString() || '')}`,
       `${formatMoney(credit.payed.toString())}`,
       `${formatMoney(credit.rest.toString())}`,
+      `${formatMoney(credit.rest.toString())}`,
       `${formatMoney(credit.debt.toString())}`,
       credit.isActive
     ]);
@@ -303,6 +304,7 @@ const CreditPage = () => {
         'Итого',
         `${formatMoney(creditsData.totalAccured.toString())}`,
         `${formatMoney(creditsData.totalPayed.toString())}`,
+        `${formatMoney(creditsData.totalRest.toString())}`,
         `${formatMoney(creditsData.totalRest.toString())}`,
         `${formatMoney(creditsData.totalDebt.toString())}`,
         ''
@@ -465,8 +467,9 @@ const CreditPage = () => {
               { name: "Начислено", isSortable: true, align: "right" },
               { name: "Уплачено", isSortable: true, align: "right" },
               { name: "Остаток", isSortable: true, align: "right" },
+              { name: "Остаток", isHidden: true },
               { name: "Долг", isSortable: true, align: "right" },
-              { name: "isActive", isHidden: true, align: "right" }
+              { name: "isActive", isHidden: true, align: "right" },
             ]} 
             data={formatCreditData(creditsData?.items)}
             onSort={handleSort}

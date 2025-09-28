@@ -65,7 +65,7 @@ const DossierContainer = styled.div`
 const BackButton = styled.button`
   position: absolute;
   top: 20px;
-  right: 20px;
+  left: 0px;
   background: #007D88;
   color: white;
   border: none;
@@ -89,6 +89,7 @@ const DossierHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
+  margin-top: 60px;
   padding-right: 120px;
 `;
 

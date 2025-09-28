@@ -24,6 +24,7 @@ export interface RowStyle {
   backgroundColor?: string;
   color?: string;
   fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | number | 'initial' | 'inherit';
+  hoverBackgroundColor?: string;
 }
 
 interface CreditsTableProps {
@@ -281,13 +282,14 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
                       onTouchStart={(e) => !isTotalsRow && handleTouchStart(e, rowIndex)}
                       onTouchEnd={handleTouchEnd}
                       onTouchMove={handleTouchMove}
-                      whileHover={{
-                        backgroundColor: isTotalsRow ? 'white' : 
-                                        rowIndex === selectedRow ? '#007D88' : 
-                                        isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
-                                        row[row.length - 1] === false ? 'rgba(81, 213, 180, 0.8)' : '#F3F4F6'
-                      }}
-                    >
+                      whileHover={!isTotalsRow ? {
+                          backgroundColor: rowStyle.hoverBackgroundColor || 
+                                        (rowIndex === selectedRow ? '#007D88' : 
+                                          isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
+                                          row[row.length - 1] === false ? 'rgba(81, 213, 180, 0.8)' : '#F3F4F6'),
+                          transition: { duration: 0.15 }
+                        } : {}}
+                      >
                       {row.map((cell, cellIndex) => (
                         !columns[cellIndex]?.isHidden && (
                         <BodyCell 
@@ -330,8 +332,8 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
                   style={{
-                    position: 'fixed', // Используем fixed вместо absolute
-                    left: contextMenu.x, // Фиксированные координаты
+                    position: 'fixed', 
+                    left: contextMenu.x,
                     top: contextMenu.y,
                     zIndex: 1000
                   }}
