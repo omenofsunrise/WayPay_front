@@ -288,11 +288,12 @@ const CompanyPage = () => {
                                 onChange={handleInputChange}
                             />
                         </InputGroup>
-                        <InputGroup>
-                            <Label>ИНН</Label>
+                        <InputGroup style={{width: "100%"}}>
+                            <Label>Email</Label>
                             <StyledInput 
-                                name="inn"
-                                value={formData.inn}
+                                name="email"
+                                type="email"
+                                value={formData.email}
                                 onChange={handleInputChange}
                             />
                         </InputGroup>
@@ -317,19 +318,7 @@ const CompanyPage = () => {
                             />
                         </InputGroup>
                     </InputContainer>
-                    
-                    <InputContainer>
-                        <InputGroup style={{width: "100%"}}>
-                            <Label>Email</Label>
-                            <StyledInput 
-                                name="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
-                    </InputContainer>
-                    
+                                       
                     <ButtonsContainer>
                         <GrayButton 
                             children={"Сбросить"}
