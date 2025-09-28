@@ -31,15 +31,18 @@ const CompanyPage = () => {
         bank: "",
         phone: "",
         inn: "",
-        email: ""
+        email: "",
+        currentBankCardId: null
     });
     
+    const [currentBankCardId, setCurrentBankCardId] = useState<number | undefined>(undefined);
     const [showSuccess, setShowSuccess] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+    const [displayBankCard, setDisplayBankCard] = useState("");
 
     useEffect(() => {
         getCompany();
@@ -55,8 +58,11 @@ const CompanyPage = () => {
                 bank: company.bank || "",
                 phone: company.phone || "",
                 inn: company.inn || "",
-                email: company.email || ""
+                email: company.email || "",
+                currentBankCardId: company.currentBakkCardId || null
             });
+            
+            setCurrentBankCardId(company.currentBakkCardId || undefined);
             
             if (company.photoPath) {
                 setPreviewUrl(getCompanyPhotoUrl(company.photoPath));
@@ -83,6 +89,19 @@ const CompanyPage = () => {
         }));
     };
 
+    const handleBankCardChange = (value: string) => {
+        console.log("Bank card details changed:", value);
+    };
+
+    const handleBankCardSelect = (bankCard: { id: number; details: string }) => {
+        setCurrentBankCardId(bankCard.id);
+        setFormData(prev => ({
+            ...prev,
+            currentBankCardId: bankCard.id
+        }));
+        setDisplayBankCard(bankCard.details);
+    };
+
     const handleReset = () => {
         if (company) {
             setFormData({
@@ -93,15 +112,22 @@ const CompanyPage = () => {
                 bank: company.bank || "",
                 phone: company.phone || "",
                 inn: company.inn || "",
-                email: company.email || ""
+                email: company.email || "",
+                currentBankCardId: company.currentBakkCardId || null
             });
+            setCurrentBankCardId(company.currentBakkCardId || undefined);
             setSelectedFile(null);
         }
     };
 
     const handleSave = async () => {
         try {
-            await updateCompany(formData);
+            const updateData = {
+                ...formData,
+                currentBankCardId: currentBankCardId
+            };
+            
+            await updateCompany(updateData);
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
         } catch (err) {
@@ -257,17 +283,16 @@ const CompanyPage = () => {
                         <InputGroup>
                             <Label>Банк</Label>
                             <StyledInput 
-                                name="inn"
-                                value={formData.inn}
+                                name="bank"
+                                value={formData.bank}
                                 onChange={handleInputChange}
                             />
                         </InputGroup>
                         <InputGroup>
-                            <Label>Email</Label>
+                            <Label>ИНН</Label>
                             <StyledInput 
-                                name="email"
-                                type="email"
-                                value={formData.email}
+                                name="inn"
+                                value={formData.inn}
                                 onChange={handleInputChange}
                             />
                         </InputGroup>
@@ -276,15 +301,30 @@ const CompanyPage = () => {
                     <InputContainer>
                         <InputGroup>
                             <Label>Текущая карточка</Label>
-                            <BankCardSelect value={""} onChange={function (value: string): void {
-                                throw new Error("Function not implemented.");
-                            } } />
+                            <BankCardSelect 
+                                value={displayBankCard || formData.bank || ""}
+                                onChange={handleBankCardChange}
+                                onBankCardSelect={handleBankCardSelect}
+                                placeholder="Выберите банковскую карту"
+                            />
                         </InputGroup>
                         <InputGroup style={{width: "100%", maxWidth: "100%" }}>
                             <Label>Телефон</Label>
                             <PhoneModalInput 
                                 name="phone"
                                 value={formData.phone}
+                                onChange={handleInputChange}
+                            />
+                        </InputGroup>
+                    </InputContainer>
+                    
+                    <InputContainer>
+                        <InputGroup style={{width: "100%"}}>
+                            <Label>Email</Label>
+                            <StyledInput 
+                                name="email"
+                                type="email"
+                                value={formData.email}
                                 onChange={handleInputChange}
                             />
                         </InputGroup>

@@ -43,7 +43,6 @@ const BankCardSelect = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
   const [editDetails, setEditDetails] = useState('');
   const [newDetails, setNewDetails] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -143,13 +142,12 @@ const BankCardSelect = ({
   };
 
   const handleConfirmEdit = async (id: number) => {
-    if (editName.trim() && editDetails.trim()) {
+    if (editDetails.trim()) {
       const updated = await update(id, { 
         details: editDetails.trim()
       });
       if (updated) {
         setIsEditing(null);
-        setEditName('');
         setEditDetails('');
       }
     }
@@ -157,7 +155,6 @@ const BankCardSelect = ({
 
   const handleCancelEdit = () => {
     setIsEditing(null);
-    setEditName('');
     setEditDetails('');
   };
 
@@ -270,13 +267,6 @@ const BankCardSelect = ({
                       <BankCardItem key={bankCard.id}>
                         {isEditing === bankCard.id ? (
                           <EditContainer>
-                            <EditInput
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              placeholder="Название"
-                              autoFocus
-                            />
                             <EditInput
                               value={editDetails}
                               onChange={(e) => setEditDetails(e.target.value)}

@@ -13,6 +13,7 @@ export interface Company {
   lastActive?: Date;
   createdCreditsCount?: number; 
   totalCredits?: number;
+  currentBakkCardId?: number;
 }
 
 export interface CompanyCreateRequest {
