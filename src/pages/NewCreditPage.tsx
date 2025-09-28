@@ -30,6 +30,7 @@ import type { GuarantorForm } from '../api/types/client';
 import Checkbox from '../components/ui/CheckBoxes/Checkbox';
 import type { EntityType } from '../api/types/objectType';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
+import { formatMoney } from '../utils/formatPrice';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 const NEXT_MONTH_START_STORAGE_KEY = 'credit_next_month_start';
@@ -116,10 +117,6 @@ const NewCreditPage = () => {
   const handleNextMonthStartChange = useCallback((checked: boolean) => {
     setNextMonthStart(checked);
     localStorage.setItem(NEXT_MONTH_START_STORAGE_KEY, checked.toString());
-  }, []);
-
-  const formatAmount = useCallback((value: number): string => {
-    return value.toLocaleString('ru-RU') + '₽';
   }, []);
 
   const parseAmount = useCallback((formatted: string): number => {
@@ -448,11 +445,11 @@ const NewCreditPage = () => {
         const percent = parseInt(value);
         if (!isNaN(percent)) {
           const amount = Math.round(totalSum * percent / 100);
-          setInitialPaymentAmount(formatAmount(amount));
+          setInitialPaymentAmount(formatMoney(amount.toString()));
         }
       }
     }
-  }, [totalSum, formatAmount]);
+  }, [totalSum, formatMoney]);
 
   const openInvestorModal = () => {
     setModalType('investor');
@@ -470,7 +467,7 @@ const NewCreditPage = () => {
     
     const numericValue = parseAmount(inputValue);
     
-    const formattedValue = formatAmount(numericValue);
+    const formattedValue = formatMoney(numericValue.toString());
     
     setInitialPaymentAmount(formattedValue);
     
@@ -480,7 +477,7 @@ const NewCreditPage = () => {
     } else {
       setInitialPaymentPercent('');
     }
-  }, [totalSum, parseAmount, formatAmount]);
+  }, [totalSum, parseAmount, formatMoney]);
 
   useEffect(() => {
     if (totalSum === 0) {
@@ -837,7 +834,7 @@ const NewCreditPage = () => {
           />
         </ProductsTableWrapper>
         <TotalSumContainer>
-          Итого товаров на сумму: {totalSum.toLocaleString('ru-RU')} ₽
+          Итого товаров на сумму: {formatMoney(totalSum.toString())} 
         </TotalSumContainer>
 
         <CheckboxContainer>

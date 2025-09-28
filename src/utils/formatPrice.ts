@@ -1,3 +1,5 @@
+import { getHideCurrencySetting } from "../components/modal/SettingsModal";
+
 /**
  * Форматирует числовую строку в удобочитаемый формат с разделителями тысяч и символом рубля
  * @param {string} priceString - Строка с числом для форматирования
@@ -8,13 +10,13 @@ export function formatMoney(
   priceString: string,
   currencySymbol: string = '₽'
 ): string {
-  if (!priceString) return '0₽';
+  if (!priceString) return getHideCurrencySetting() ? '0' : '0₽';
   const numericString = priceString.replace(/[^\d-]/g, '');
 
   const number = parseInt(numericString, 10);
 
   if (isNaN(number)) {
-    return `0${currencySymbol}`;
+    return getHideCurrencySetting() ? '0' : `0${currencySymbol}`;
   }
 
   const formattedNumber = new Intl.NumberFormat('ru-RU', {
@@ -23,7 +25,11 @@ export function formatMoney(
     maximumFractionDigits: 0,
   }).format(number);
 
-  return `${formattedNumber}${currencySymbol}`;
+  const shouldShowCurrency = !getHideCurrencySetting();
+  
+  return shouldShowCurrency 
+    ? `${formattedNumber}${currencySymbol}`
+    : formattedNumber;
 }
 
 export function parseMoney(priceString: string): number {

@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { formatMoney } from '../../../utils/formatPrice';
 
 export interface PaymentScheduleItem {
   id: number;
@@ -39,8 +40,8 @@ const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps)
               $isHovered={hoveredRow === item.id}
             >
               <BodyCell>{item.date}</BodyCell>
-              <BodyCell>{item.remainingAmount.toLocaleString('ru-RU')} ₽</BodyCell>
-              <BodyCell>{item.requiredPayment.toLocaleString('ru-RU')} ₽</BodyCell>
+              <BodyCell>{formatMoney(item.remainingAmount.toString())}</BodyCell>
+              <BodyCell>{formatMoney(item.requiredPayment.toString())}</BodyCell>
               <BodyCell>{item.comment}</BodyCell>
             </StyledTableRow>
           ))}

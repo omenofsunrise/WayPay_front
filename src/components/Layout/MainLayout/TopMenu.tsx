@@ -5,9 +5,11 @@ import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
 import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
 import BlogIcon from '../../../assets/ui/TopBar/blog.svg';
 import newCreditIcon from '../../../assets/ui/TopBar/newCredit.svg';
+import SettingsIcon from '../../../assets/ui/TopBar/settings.svg';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CalculatorModal from '../../modal/CalculatorModal';
+import SettingsModal from '../../modal/SettingsModal'; // Добавлен импорт модалки настроек
 import { useAuth } from '../../../сontext/AuthContext';
 import type { Permission, Role } from '../../../api/types/auth';
 import useTask from '../../../api/hooks/useTask';
@@ -51,6 +53,7 @@ const TopMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showSettings, setShowSettings] = useState(false); // Состояние для модалки настроек
   const { activeTasksCount, setActiveTasksCount } = useTaskCount();
   const { getActiveTasksCount } = useTask();
   const { getUnreadChatsCount } = useChat();
@@ -117,6 +120,14 @@ const TopMenu = () => {
     setSelectedTopMenuItem(null);
   };
 
+  const handleSettingsClick = () => {
+    setShowSettings(true);
+  };
+
+  const handleSettingsClose = () => {
+    setShowSettings(false);
+  };
+
   const isItemSelected = (itemId: string) => {
     if (itemId === 'calculator') {
       return showCalculator || selectedTopMenuItem === 'calculator';
@@ -124,7 +135,7 @@ const TopMenu = () => {
     return selectedTopMenuItem === itemId || getCurrentMenuItem() === itemId;
   };
 
-    return (
+  return (
     <>
       <TopMenuContainer $collapsed={collapsed}>
         <MenuItemsWrapper>
@@ -147,9 +158,14 @@ const TopMenu = () => {
             </MenuItem>
           ))}
         </MenuItemsWrapper>
+        
+        <SettingsButton onClick={handleSettingsClick}>
+          <SettingsIconImg src={SettingsIcon} alt="Настройки" />
+        </SettingsButton>
       </TopMenuContainer>
       
       {showCalculator && <CalculatorModal onClose={handleCalculatorClose} />}
+      {showSettings && <SettingsModal onClose={handleSettingsClose} />}
     </>
   );
 };
@@ -251,6 +267,49 @@ const MenuItem = styled.div<MenuItemProps>`
 
   &:last-child {
     margin-right: 0;
+  }
+`;
+
+const SettingsButton = styled.button`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  outline: none;
+
+  &:hover {
+    background-color: rgba(209, 213, 219, 0.5);
+  }
+
+  &:active {
+    background-color: rgba(209, 213, 219, 0.7);
+  }
+
+  /* Кастомный фокус для доступности */
+  &:focus-visible {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+`;
+
+const SettingsIconImg = styled.img`
+  width: 20px;
+  height: 20px;
+  filter: brightness(0.7);
+  transition: filter 0.3s ease;
+  outline: none;
+
+  ${SettingsButton}:hover & {
+    filter: brightness(0);
+    outline: none;
   }
 `;
 

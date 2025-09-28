@@ -6,6 +6,7 @@ import Portal from '../../../utils/Portal';
 import CustomInput from '../fields/CustomInput';
 import ProductSelectModal from '../../modal/CrudInherited/ProductSelectModal';
 import { useAuth } from '../../../сontext/AuthContext';
+import { formatMoney } from '../../../utils/formatPrice';
 
 interface Product {
   id: number;
@@ -126,10 +127,9 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
         const updatedProduct = {
           ...product,
           markupType: type,
-          markup: 0 // Сбрасываем значение при смене типа
+          markup: 0
         };
         
-        // Пересчитываем totalPrice
         if (type === 'percent') {
           updatedProduct.totalPrice = roundTo50(
             updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100)
@@ -342,7 +342,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
                   <BodyCell>
                     <CustomInput
                       inputType="rubles"
-                      value={product.price ? `${product.price.toLocaleString('ru-RU')} ₽` : ''}
+                      value={product.price ? `${formatMoney(product.price.toString())}` : ''}
                       onChange={(e) => handlePriceChange(product.id, e)}
                       onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="0"
@@ -373,7 +373,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
                       style={{ border: 'none', padding: '0' }}
                     />
                   </BodyCell>
-                  <BodyCell>{product.totalPrice.toLocaleString('ru-RU')} ₽</BodyCell>
+                  <BodyCell>{formatMoney(product.totalPrice.toString())}</BodyCell>
                   <BodyCell>
                     {index !== products.length - 1 && (
                       <DeleteButton 
