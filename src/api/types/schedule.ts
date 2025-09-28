@@ -36,4 +36,6 @@ export interface ScheduleDetails {
     isPaid?: boolean;
     paidDate?: Date;
     clientPhone: string;
+    guarantorFullname?: string;
+    guarantorPhone?: string;
 }

@@ -43,7 +43,8 @@ const SchedulePage = () => {
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
     const { getAccountDetails } = useCompany();
-    
+    const [selectedRow, setSelectedRow] = useState<number | null>(null);
+
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditid',
         1: 'client',
@@ -61,7 +62,10 @@ const SchedulePage = () => {
         markAsNotified
     } = useSchedule();
     
-    const getRowStyles = (tableData: any[][], scheduleData?: { items: ScheduleDetails[] }): Record<number, RowStyle> => {
+const getRowStyles = (
+        tableData: any[][], 
+        scheduleData?: { items: ScheduleDetails[] }
+    ): Record<number, RowStyle> => {
         const styles: Record<number, RowStyle> = {};
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -72,10 +76,28 @@ const SchedulePage = () => {
             const paymentDate = new Date(schedule.paymentDate);
             paymentDate.setHours(0, 0, 0, 0);
 
-            if (paymentDate < today) {
+            // Если строка выбрана - высший приоритет
+            if (index === selectedRow) {
+                styles[index] = {
+                    backgroundColor: '#007D88',
+                    color: 'white',
+                    fontWeight: 'normal'
+                };
+            } 
+            // Если платеж просрочен - средний приоритет
+            else if (paymentDate < today) {
                 styles[index] = {
                     backgroundColor: '#FFEBEE',
-                    color: 'black',        
+                    color: 'black',
+                    fontWeight: 'normal'
+                };
+            }
+            // Обычная строка - низший приоритет
+            else {
+                styles[index] = {
+                    backgroundColor: 'white',
+                    color: 'black',
+                    fontWeight: 'normal'
                 };
             }
         });
@@ -83,6 +105,10 @@ const SchedulePage = () => {
         return styles;
     };
 
+    const handleRowClick = (rowData: any[], rowIndex: number) => {
+        setSelectedRow(rowIndex === selectedRow ? null : rowIndex);
+    };
+        
     const loadSchedules = useCallback(async () => {
         const params: ScheduleParams = {
             page: currentPage,
@@ -167,6 +193,9 @@ const SchedulePage = () => {
                 transformData: (schedule) => ({
                     'Договор №': schedule.creditId,
                     'ФИО': schedule.clientName,
+                    'Телефон': schedule.clientPhone,
+                    'ФИО поручителя': schedule.guarantorFullname,
+                    'Телефон поручителя': schedule.guarantorPhone,
                     'Платеж': formatMoney(schedule.paymentAmount.toString()),
                     'Дата платежа': formatDate(schedule.paymentDate),
                     'Уведомлен': schedule.notified ? 'Да' : 'Нет'
@@ -325,8 +354,10 @@ const SchedulePage = () => {
                         ]} 
                         data={tableData}
                         onSort={handleSort}
+                        onRowClick={handleRowClick}
                         sortConfig={sortConfig}
                         rowStyles={rowStyles}
+                        selectedRow={selectedRow}
                     />
                     
                     <PaginationLayout>
