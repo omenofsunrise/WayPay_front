@@ -14,17 +14,15 @@ import styled from 'styled-components';
 import ClientCard from '../components/ui/cards/ClientCard';
 import ClientDossier from '../components/ui/Dossiers/ClientDossier';
 import { useAuth } from '../сontext/AuthContext';
+import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
+import { TitleContainer } from './BlackCatalog';
 
-const TitleContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-`;
-
-const ClientCount = styled.span`
+export const ClientCount = styled.span`
   font-size: 16px;
   color: #6B7280;
   font-weight: 500;
+  text-align: left;
+  margin-right: auto;
 `;
 
 const EmptyStateContainer = styled.div`
@@ -114,6 +112,10 @@ const Backdrop = styled.div`
   right: 0;
   bottom: 0;
   z-index: 1000;
+`;
+
+export const StyledCountInfo = styled(CountInfoTitle)`
+    margin-left: auto;
 `;
 
 interface Client {
@@ -481,14 +483,17 @@ const ClientPage = () => {
             />
             ) : (
             <>
-            <TitleField style={{ position: "sticky"}}>
-                <TitleContainer>
-                    <CustomTitle>Клиенты</CustomTitle>
-                    {clientsData && clientsData.items.length > 0 && (
-                        <ClientCount>({clientsData.totalCount})</ClientCount>
-                    )}
+                <TitleContainer style={{ position: "sticky"}}>
+                    <TitleContainer style={{maxWidth: "100px"}}>
+                        <CustomTitle>Клиенты</CustomTitle>
+                        {clientsData && clientsData.items.length > 0 && (
+                            <ClientCount>({clientsData.totalItemsCount})</ClientCount>
+                        )}
+                    </TitleContainer>
+                    <StyledCountInfo
+                        total={clientsData?.totalCount || 0} 
+                    />
                 </TitleContainer>
-            </TitleField>
             
             <StickyFilterField>
                 <Container style={{display: "flex", flexDirection: "row", width: "50vw", gap: "15px" }}>

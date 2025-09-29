@@ -14,17 +14,15 @@ import PhoneModalInput from '../components/ui/fields/PhoneModalInput';
 import ClientDossier from '../components/ui/Dossiers/ClientDossier';
 import BlackCatalogModal from '../components/modal/CrudInherited/BlackCatalogModal';
 import { formatDate } from '../utils/dateFormatter';
+import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
+import { ClientCount } from './ClientPage';
 
-const TitleContainer = styled.div`
+export const TitleContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-`;
-
-const ClientCount = styled.span`
-  font-size: 16px;
-  color: #6B7280;
-  font-weight: 500;
+  width: 100%;
+  justify-content: space-between;
 `;
 
 const EmptyStateContainer = styled.div`
@@ -438,14 +436,17 @@ const BlackCatalogPage = () => {
                 />
             ) : (
                 <>
-                    <TitleField style={{ position: "sticky"}}>
-                        <TitleContainer>
+                    <TitleContainer style={{ position: "sticky"}}>
+                        <TitleContainer style={{maxWidth: "290px"}}>
                             <CustomTitle>Чёрный каталог</CustomTitle>
                             {blacklistData && blacklistData.items.length > 0 && (
-                                <ClientCount>({blacklistData.totalCount})</ClientCount>
+                                <ClientCount>({blacklistData.totalItemsCount})</ClientCount>
                             )}
                         </TitleContainer>
-                    </TitleField>
+                        <CountInfoTitle
+                            total={blacklistData?.totalCount || 0} 
+                        />
+                    </TitleContainer>
                     
                     <StickyFilterField>
                         <Container style={{display: "flex", flexDirection: "row", width: "50vw", gap: "15px" }}>

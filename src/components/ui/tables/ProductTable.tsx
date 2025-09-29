@@ -338,7 +338,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
                   <BodyCell>
                     <CustomInput
                       inputType="rubles"
-                      value={formatMoney(product.markup.toString()) || ''}
+                      value={markupType === 'fixed' ? formatMoney(product.markup.toString()) : product.markup || ''}
                       onChange={(e) => handleMarkupChange(product.id, e)}
                       onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="0"

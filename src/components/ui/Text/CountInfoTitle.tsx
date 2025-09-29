@@ -20,6 +20,7 @@ const Paragraph = styled.p`
   justify-content: center;
   align-items: center;
   font-size: 20px;
+  white-space: nowrap;
 `;
 
 export default CountInfoTitle;
