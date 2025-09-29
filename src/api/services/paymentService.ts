@@ -1,10 +1,15 @@
 import apiClient from '../client';
-import type { Payment, PaymentParams, CreatePaymentRequest, PaymentByCreditParams } from '../types/payment';
+import type { Payment, PaymentParams, CreatePaymentRequest, PaymentByCreditParams, PaymentTab } from '../types/payment';
 import type { PaginatedResponse } from '../types/common';
 
 class PaymentService {
   async getPayments(params?: PaymentParams): Promise<PaymentResponse> {
     const response = await apiClient.get<PaymentResponse>('/Payment', { params });
+    return response.data;
+  }
+
+  async getPaymentTab(paymentId: number): Promise<PaymentTab> {
+    const response = await apiClient.get<PaymentTab>(`/Payment/payment-tab/${paymentId}`);
     return response.data;
   }
 

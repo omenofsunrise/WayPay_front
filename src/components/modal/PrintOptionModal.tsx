@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import type { Credit } from "../../api/types/credit";
 import type { Investor } from "../../api/types/investor";
+import type { Payment } from "../../api/types/payment";
 
 export interface PrintOption {
   key: string;
@@ -12,7 +13,8 @@ interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (option: string) => void;
-  selectedCredit: Credit | null;
+  selectedCredit?: Credit | null;
+  selectedPayment?: Payment | null;
   selectedInvestor?: Investor | null;
   printOptions?: PrintOption[];
   modalTitle?: string;
@@ -23,40 +25,55 @@ const PrintOptionModal = ({
   onClose, 
   onSelect, 
   selectedCredit, 
-  printOptions, 
+  selectedPayment,
   selectedInvestor,
+  printOptions, 
   modalTitle = "Выберите тип договора" 
 }: PrintOptionModalProps) => {
   
   const defaultOptions: PrintOption[] = [
-    { key: 'sale', label: 'Договор купли-продажи', enabled: true },
-    { key: 'guaranteeConsent', label: 'Договор поручительства', enabled: true },
-    { key: 'schedules', label: 'График платежей', enabled: true },
-    { key: 'paymentConfirmation', label: 'Чек', enabled: true },
+    { key: 'sale', label: 'Договор купли-продажи', enabled: !!selectedCredit },
+    { key: 'guaranteeConsent', label: 'Договор поручительства', enabled: !!selectedCredit },
+    { key: 'schedules', label: 'График платежей', enabled: !!selectedCredit },
+    { key: 'paymentConfirmation', label: 'Чек', enabled: !!selectedPayment },
     { key: 'investorContract', label: 'Договор с инвестором', enabled: !!selectedInvestor }
   ];
   
   const options = printOptions || defaultOptions;
 
+  const hasSelectedItem = selectedCredit || selectedPayment || selectedInvestor;
+
   const handleSelect = (optionKey: string) => {
-    if (selectedCredit || selectedInvestor) {
+    if (hasSelectedItem) {
       onSelect(optionKey);
     } else {
-      console.error('No credit selected');
+      console.error('No item selected for printing');
       onClose();
     }
+  };
+
+  // Автоматически определяем заголовок в зависимости от типа выбранного элемента
+  const getModalTitle = () => {
+    if (modalTitle !== "Выберите тип договора") return modalTitle;
+    
+    if (selectedPayment) return "Печать документа по платежу";
+    if (selectedInvestor) return "Печать документа по инвестору";
+    if (selectedCredit) return "Выберите тип договора";
+    
+    return "Печать документа";
   };
 
   return (
     <ModalOverlay isOpen={isOpen} onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <ModalTitle>{modalTitle}</ModalTitle>
+        <ModalTitle>{getModalTitle()}</ModalTitle>
         <PrintOptions>
           {options.map(option => (
             option.enabled !== false && (
               <PrintOption 
                 key={option.key} 
                 onClick={() => handleSelect(option.key)}
+                disabled={!option.enabled}
               >
                 {option.label}
               </PrintOption>
@@ -104,19 +121,19 @@ const PrintOptions = styled.div`
   gap: 12px;
 `;
 
-const PrintOption = styled.button`
+const PrintOption = styled.button<{ disabled?: boolean }>`
   padding: 12px;
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
+  background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#f5f5f5'};
+  border: 1px solid ${({ disabled }) => disabled ? '#eee' : '#ddd'};
   border-radius: 4px;
-  cursor: pointer;
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   text-align: center;
   transition: background-color 0.2s;
-  color: black;
+  color: ${({ disabled }) => disabled ? '#999' : 'black'};
   
   &:hover {
-    background-color: #e9e9e9;
-    border-color: rgba(0, 125, 136, 1);
+    background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#e9e9e9'};
+    border-color: ${({ disabled }) => disabled ? '#eee' : 'rgba(0, 125, 136, 1)'};
   }
 `;
 

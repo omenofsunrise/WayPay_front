@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import paymentService from '../services/paymentService';
-import type { Payment, PaymentParams, CreatePaymentRequest, PaymentByCreditParams } from '../types/payment';
+import type { Payment, PaymentParams, CreatePaymentRequest, PaymentByCreditParams, PaymentTab } from '../types/payment';
 import type { PaginatedResponse } from '../types/common';
 
 const usePayment = () => {
@@ -23,12 +23,25 @@ const usePayment = () => {
     }
   }, []);
 
+  const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await paymentService.getPaymentTab(paymentId);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const getPaymentsByCreditId = useCallback(async (params: PaymentByCreditParams): Promise<PaginatedResponse<Payment> | null> => {
     setIsLoading(true);
     setError(null);
     try {
       const result = await paymentService.getPaymentsByCreditId(params);
-      setData(result);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -89,6 +102,7 @@ const usePayment = () => {
     createPayment,
     confirmPayment,
     deletePayment,
+    getPaymentTab
   };
 };
 

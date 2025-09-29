@@ -12,12 +12,14 @@ import CustomTitle from "../components/ui/Text/CustomTitle";
 import usePayment from '../api/hooks/usePayment';
 import useExport from '../api/hooks/useExport';
 import paymentService from '../api/services/paymentService';
-import type { Payment, PaymentParams } from '../api/types/payment';
+import type { Payment, PaymentParams, PaymentTab } from '../api/types/payment';
 import { formatDate, parseDateInput } from '../utils/dateFormatter';
 import { formatMoney } from '../utils/formatPrice';
 import { useAuth } from '../сontext/AuthContext';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import PrintOptionModal from '../components/modal/PrintOptionModal';
+import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -37,6 +39,9 @@ const PaymentPage = () => {
     };
     const [dateFromFilter, setDateFromFilter] = useState('');
     const [dateToFilter, setDateToFilter] = useState('');
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [selectedPaymentForPrint, setSelectedPaymentForPrint] = useState<Payment | null>(null);
+    const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
 
     const { exportData, isExporting, exportProgress } = useExport<Payment>();
 
@@ -48,6 +53,19 @@ const PaymentPage = () => {
         confirmPayment,
         deletePayment
     } = usePayment();
+
+    // Функция для получения данных платежа для документа
+    const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
+        try {
+            const result = await paymentService.getPaymentTab(paymentId);
+            return result;
+        } catch (err) {
+            console.error('Ошибка при получении данных для документа:', err);
+            return null;
+        }
+    }, []);
+
+    const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
     
     const handleDateFromFilterChange = (value: string) => {
         setDateFromFilter(value);
@@ -159,7 +177,8 @@ const PaymentPage = () => {
             payment.paymentDate ? formatDate(payment.paymentDate) : '',
             payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
             payment.employeeFullName || '',
-            payment.accepted ? 'Да' : 'Нет'
+            payment.accepted ? 'Да' : 'Нет',
+            payment.id.toString() // Добавляем ID платежа как скрытый столбец
         ]);
     };
 
@@ -200,6 +219,44 @@ const PaymentPage = () => {
         }
     };
 
+    const handlePrintPayment = async (rowData: any[]) => {
+        const paymentId = parseInt(rowData[7]); // ID находится в 8-м столбце (индекс 7)
+        const payment = paymentsData?.items.find(p => p.id === paymentId);
+        
+        if (!payment) {
+            console.error('Платёж не найден для печати');
+            return;
+        }
+        
+        setSelectedPaymentForPrint(payment);
+        setIsPrintModalOpen(true);
+    };
+
+    const handlePrintOptionSelect = async (optionKey: string) => {
+        if (!selectedPaymentForPrint) return;
+
+        try {
+            setIsGeneratingDoc(true);
+
+            if (optionKey === 'paymentConfirmation') {
+                console.log('Генерация подтверждения оплаты для платежа:', selectedPaymentForPrint);
+                
+                await paymentConfirmationGenerator.generatePaymentConfirmation(selectedPaymentForPrint.id);
+                
+                console.log('Документ успешно сгенерирован и сохранен');
+            }
+        } catch (error) {
+            console.error('Ошибка при генерации документа:', error);
+            alert(`Произошла ошибка при генерации документа: ${
+                error instanceof Error ? error.message : 'Неизвестная ошибка'
+            }`);
+        } finally {
+            setIsGeneratingDoc(false);
+            setIsPrintModalOpen(false);
+            setSelectedPaymentForPrint(null);
+        }
+    };
+
     const tableData = formatPaymentsData(paymentsData?.items);
 
     const tableActions = [
@@ -211,6 +268,16 @@ const PaymentPage = () => {
                 const rowIndex = tableData.indexOf(rowData);
                 const payment = paymentsData?.items[rowIndex];
                 return payment && !payment.accepted && authInfo?.employee.role === 'бухгалтер';
+            }
+        },
+        {
+            label: 'Печать чека',
+            action: handlePrintPayment,
+            color: '#8B5CF6',
+            shouldShow: (rowData: any[]) => {
+                const rowIndex = tableData.indexOf(rowData);
+                const payment = paymentsData?.items[rowIndex];
+                return payment;
             }
         },
         {
@@ -276,7 +343,8 @@ const PaymentPage = () => {
                             { name: "Дата платежа", isSortable: true, align: "right" },
                             { name: "Тип платежа", align: "left" },
                             { name: "Платёж принял", align: "left" },
-                            { name: "Подтверждён", align: "center" },                
+                            { name: "Подтверждён", align: "center" },    
+                            { name: "id", align: "center", isHidden: true },               
                         ]} 
                         data={tableData}
                         onSort={handleSort}
@@ -298,6 +366,24 @@ const PaymentPage = () => {
                     </PaginationLayout>
                 </>
             )}
+
+            <PrintOptionModal
+                isOpen={isPrintModalOpen}
+                onClose={() => {
+                    setIsPrintModalOpen(false);
+                    setSelectedPaymentForPrint(null);
+                }}
+                onSelect={handlePrintOptionSelect}
+                selectedPayment={selectedPaymentForPrint} // Передаем выбранный платеж
+                modalTitle="Печать чека"
+                printOptions={[
+                    { 
+                    key: 'paymentConfirmation', 
+                    label: isGeneratingDoc ? 'Генерация...' : 'Чек', 
+                    enabled: !isGeneratingDoc 
+                    }
+                ]}
+            />
         </PageLayout>
     );
 };

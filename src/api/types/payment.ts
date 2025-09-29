@@ -37,3 +37,18 @@ export interface PaymentResponse extends PaginatedResponse<Payment> {
     totalPayments: number;
     totalIncome: number;
 }
+
+export interface PaymentTab {
+    contractNumber: string;
+    contractDate: Date;
+
+    clientName: string;
+    clientAddress: string;
+    clientPhone: string;
+
+    paymentDate: Date;
+    paymentAmount: number;
+    paymentType: string; 
+
+    employeeFullname: string;
+}

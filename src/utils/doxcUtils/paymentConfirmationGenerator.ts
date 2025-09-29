@@ -1,13 +1,13 @@
 import { saveAs } from 'file-saver';
 import { TemplateHandler } from 'easy-template-x';
-import type { CreditDocs } from '../../api/types/credit';
 import { formatMoney } from '../formatPrice';
+import type { PaymentTab } from '../../api/types/payment';
 
 class PaymentConfirmationGenerator {
   private templateUrl: string = '/Docs/paymentTab.docx';
-  private getDocsData: (id: number) => Promise<CreditDocs | null>;
+  private getDocsData: (id: number) => Promise<PaymentTab | null>;
   
-  constructor(getDocsData: (id: number) => Promise<CreditDocs | null>) {
+  constructor(getDocsData: (id: number) => Promise<PaymentTab | null>) {
     this.getDocsData = getDocsData;
   }
 
@@ -42,33 +42,34 @@ class PaymentConfirmationGenerator {
   /**
    * Подготавливает данные для шаблона подтверждения оплаты
    */
-  private prepareTemplateData(docsData: CreditDocs): any {
+  private prepareTemplateData(docsData: PaymentTab): any {
     const result: any = { 
       contractNumber: docsData.contractNumber || '',
-      contractDate: docsData.contractDate || '',
+      contractDate: this.formatDate(docsData.contractDate) || '',
       clientName: docsData.clientName || '',
       clientAddress: docsData.clientAddress || '',
       clientPhone: docsData.clientPhone || '',
-      employeeFullname: docsData.employeeFullname || ''
+      employeeFullname: docsData.employeeFullname || '',
+      paymentDate: this.formatDate(docsData.paymentDate) || '',
+      paymentAmount: docsData.paymentAmount ? formatMoney(docsData.paymentAmount.toString()) : '',
+      paymentType: docsData.paymentType || 'Банковский перевод',
     };
-    
-    // Добавляем данные о последнем платеже из графика платежей
-    if (docsData.paymentSchedule && docsData.paymentSchedule.length > 0) {
-      const lastPayment = docsData.paymentSchedule[docsData.paymentSchedule.length - 1];
-      
-      result.paymentDate = lastPayment.date || '';
-      result.paymentAmount = lastPayment.payment ? formatMoney(lastPayment.payment.toString()) : '';
-      result.paymentType = 'Банковский перевод'; // Можно добавить поле в тип, если нужно
-      result.restAmount = lastPayment.balance ? formatMoney(lastPayment.balance.toString()) : '';
-    } else {
-      // Если нет графика платежей, используем основные данные
-      result.paymentDate = new Date().toLocaleDateString('ru-RU');
-      result.paymentAmount = docsData.totalAmount ? formatMoney(docsData.totalAmount.toString()) : '';
-      result.paymentType = 'Банковский перевод';
-      result.restAmount = '0';
-    }
 
     return result;
+  }
+
+  /**
+   * Форматирует дату в строку
+   */
+  private formatDate(date: Date): string {
+    if (!date) return '';
+    
+    try {
+      return new Date(date).toLocaleDateString('ru-RU');
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return '';
+    }
   }
 
   private async loadTemplate(url: string): Promise<Blob> {
@@ -92,7 +93,7 @@ class PaymentConfirmationGenerator {
     return templateFile;
   }
 
-  private generateFileName(docsData: CreditDocs): string {
+  private generateFileName(docsData: PaymentTab): string {
     const clientName = docsData.clientName 
       ? docsData.clientName.split(' ')[0] 
       : 'клиент';
