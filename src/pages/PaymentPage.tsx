@@ -219,6 +219,15 @@ const PaymentPage = () => {
         }
     };
 
+    const handleRowClick = (rowData: any[], rowIndex: number) => {
+        const id = rowData[rowData.length - 1]; // берет последний элемент "560"
+        console.log(rowData);
+        const payment = paymentsData?.items.find(c => c.id === Number(id));
+        if (payment) {
+            setSelectedPaymentForPrint(payment);
+        }
+    };
+
     const handlePrintPayment = async (rowData: any[]) => {
         const paymentId = parseInt(rowData[7]);
         const payment = paymentsData?.items.find(p => p.id === paymentId);
@@ -361,6 +370,7 @@ const PaymentPage = () => {
                         data={tableData}
                         onSort={handleSort}
                         sortConfig={sortConfig}
+                        onRowClick={handleRowClick}
                         contextMenuActions={tableActions}
                     />
                     

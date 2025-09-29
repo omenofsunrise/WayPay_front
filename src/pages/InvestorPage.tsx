@@ -39,7 +39,8 @@ const InvestorPage = () => {
     const investorDocGenerator = new InvestorDocxGenerator();
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [investorForPrint, setInvestorForPrint] = useState<Investor | null>(null);
-    
+    const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(null);
+
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'nickname',
@@ -301,11 +302,11 @@ const InvestorPage = () => {
 
     const handleRowClick = (rowData: any[], rowIndex: number) => {
         const [id] = rowData;
-        const investor = investorsData?.items.find(i => i.id === Number(id));
-        if (investor) {
-            setInvestorForPrint(investor);
-        }
+        const investorId = Number(id);
+        setSelectedInvestorId(investorId === selectedInvestorId ? null : investorId);
     };
+
+    const selectedRowIndex = investorsData?.items?.findIndex(i => i.id === selectedInvestorId) ?? -1;
 
     const tableData = investorsData?.items?.map(investor => {
         if (!investor || investor.id === undefined || investor.id === null) {
@@ -513,7 +514,7 @@ const InvestorPage = () => {
                         rowStyles={rowStyles}
                         onRowDoubleClick={handleRowDoubleClick}
                         onRowClick={handleRowClick}
-                        selectedRow={investorForPrint ? investorsData?.items.findIndex(i => i.id === investorForPrint.id) : null}
+                        selectedRow={selectedRowIndex >= 0 ? selectedRowIndex : null}
                         contextMenuActions={(rowData) => tableActions(rowData)}
                         onSort={handleSort}
                         sortConfig={sortConfig}

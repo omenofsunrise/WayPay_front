@@ -587,22 +587,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
               />
             </InputContainer>
           </InputRow>
-
-          <InputRow>
-            <InputLabel>Адрес регистрации:</InputLabel>
-            <InputContainer>
-              <CustomInput
-                name="registrationAddress"
-                inputType="text"
-                placeholder="г. Грозный, ул. Примерная, д. 1, кв. 1"
-                value={formData.registrationAddress}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.registrationAddress && validationErrors.registrationAddress}
-                errorMessage={touchedFields.registrationAddress ? errorMessages.registrationAddress : undefined}
-              />
-            </InputContainer>
-          </InputRow>
           
           <ModalInfoTitle>Паспортные данные</ModalInfoTitle>
           
@@ -666,6 +650,22 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   </>
                 )}
               </div>
+            </InputContainer>
+          </InputRow>
+
+          <InputRow>
+            <InputLabel>Адрес регистрации:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="registrationAddress"
+                inputType="text"
+                placeholder="г. Грозный, ул. Примерная, д. 1, кв. 1"
+                value={formData.registrationAddress}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.registrationAddress && validationErrors.registrationAddress}
+                errorMessage={touchedFields.registrationAddress ? errorMessages.registrationAddress : undefined}
+              />
             </InputContainer>
           </InputRow>
 

@@ -322,7 +322,7 @@ const CreditPage = () => {
       credit.isActive
     ]);
 
-    if (credits.length > 0) {
+    if (credits.length > 0 && forbiddenRole('сотрудник')) {
       const totalsRow = [
         '',
         '',
@@ -504,7 +504,7 @@ const CreditPage = () => {
             onRowClick={handleRowClick}
             selectedRow={selectedCreditForPrint ? creditsData?.items.findIndex(c => c.id === selectedCreditForPrint.id) : null}
             contextMenuActions={tableActions}
-            hasTotalsRow={true}
+            hasTotalsRow={forbiddenRole('сотрудник')}
           />
 
           <PaginationLayout>
