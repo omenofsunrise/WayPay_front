@@ -36,6 +36,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
   const minMarkup = authInfo?.employee.minSurcharge || 0;
+  const [markupInputValues, setMarkupInputValues] = useState<{[key: number]: string}>({});
 
   useEffect(() => {
     if (products.length === 0) {
@@ -75,6 +76,43 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleMarkupChange = (id: number, value: string) => {
+    // Сохраняем сырое значение для ввода
+    setMarkupInputValues(prev => ({
+      ...prev,
+      [id]: value
+    }));
+    
+    // Для обработки убираем все нецифровые символы
+    const numericValue = Number(value.replace(/[^\d]/g, '')) || 0;
+    handleInputChange(id, 'markup', numericValue.toString());
+  };
+
+  const getMarkupDisplayValue = (id: number, markup: number): string => {
+    // Если есть значение в состоянии ввода, используем его, иначе форматируем
+    if (markupInputValues[id] !== undefined) {
+      return markupInputValues[id];
+    }
+    return markupType === 'fixed' ? formatNumberWithSpaces(markup) : markup.toString();
+  };
+
+  const handleMarkupBlur = (id: number, value: string) => {
+    const numericValue = Number(value.replace(/[^\d]/g, '')) || 0;
+    
+    // Очищаем состояние ввода и устанавливаем отформатированное значение
+    setMarkupInputValues(prev => {
+      const newState = {...prev};
+      delete newState[id];
+      return newState;
+    });
+    
+    if (markupType === 'percent' && numericValue < minMarkup) {
+      handleInputChange(id, 'markup', minMarkup.toString());
+    } else if (markupType === 'fixed' && numericValue < 0) {
+      handleInputChange(id, 'markup', '0');
+    }
+  };
 
   const updateMenuPosition = (id: number) => {
     const index = products.findIndex(p => p.id === id);
@@ -148,14 +186,8 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
     onProductsChange(updatedProducts);
   };
 
-  const handleMarkupBlur = (id: number, value: string) => {
-    const numericValue = Number(value) || 0;
-    
-    if (markupType === 'percent' && numericValue < minMarkup) {
-      handleInputChange(id, 'markup', minMarkup.toString());
-    } else if (markupType === 'fixed' && numericValue < 0) {
-      handleInputChange(id, 'markup', '0');
-    }
+  const formatNumberWithSpaces = (num: number): string => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   };
 
   const handleInputChange = (id: number, field: keyof Product, value: string) => {
@@ -361,18 +393,18 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
                       style={{ border: 'none', padding: '0' }}
                     />
                   </BodyCell>
-                  <BodyCell>
-                    <CustomInput
-                      inputType="number"
-                      value={markupType === 'fixed' ? formatMoney(product.markup.toString()) : product.markup || ''}
-                      onChange={(e) => handleInputChange(product.id, 'markup', e.target.value)}
-                      onBlur={(e) => handleMarkupBlur(product.id, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, product.id)}
-                      placeholder="0"
-                      min="0"
-                      style={{ border: 'none', padding: '0' }}
-                    />
-                  </BodyCell>
+<BodyCell>
+  <CustomInput
+    inputType="number"
+    value={getMarkupDisplayValue(product.id, product.markup)}
+    onChange={(e) => handleMarkupChange(product.id, e.target.value)}
+    onBlur={(e) => handleMarkupBlur(product.id, e.target.value)}
+    onKeyDown={(e) => handleKeyDown(e, product.id)}
+    placeholder="0"
+    min="0"
+    style={{ border: 'none', padding: '0' }}
+  />
+</BodyCell>
                   <BodyCell>{formatMoney(product.totalPrice.toString())}</BodyCell>
                   <BodyCell>
                     {index !== products.length - 1 && (

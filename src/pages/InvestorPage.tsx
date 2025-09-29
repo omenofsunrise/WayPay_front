@@ -22,7 +22,7 @@ import { useAuth } from '../сontext/AuthContext';
 import { formatDate } from '../utils/dateFormatter';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import PrintIcon from '../assets/ui/print.svg?react';
-import InvestorDocxGenerator from '../utils/investorDocxGenerator';
+import InvestorDocxGenerator from '../utils/doxcUtils/investorDocxGenerator';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');

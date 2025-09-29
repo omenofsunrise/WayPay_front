@@ -24,7 +24,7 @@ import usePayment from '../api/hooks/usePayment';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useAuth } from '../сontext/AuthContext';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
-import DocxGenerator from '../utils/docxGenerator';
+import DocxGenerator from '../utils/doxcUtils/docxGenerator';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 

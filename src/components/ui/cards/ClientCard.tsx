@@ -227,19 +227,19 @@ export interface Client {
   id: number;
   fullName: string;
   phone: string;
-  secondPhone?: string;
+  secondPhone?: string | null;
   doc: string;
   birthdate: Date | null;
   docIssueDate: Date | null;
-  docIssueYear: number;
+  docIssueYear: number | null;
   registrationAddress: string | null;
-  creditIds?: string[];
-  creditRestTerms?: string[];
-  hasPassportPhoto?: boolean;
+  creditIds?: string[] | null;
+  creditRestTerms?: string[] | null;
+  hasPassportPhoto?: boolean | null;
 }
 
 interface ClientCardProps {
-  client: Client;
+  client: Client | null;
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
   onRightClick: (e: React.MouseEvent, client: Client) => void;
@@ -247,7 +247,7 @@ interface ClientCardProps {
   showMenu?: boolean;
 }
 
-const ClientCard : React.FC<ClientCardProps> = ({ 
+const ClientCard: React.FC<ClientCardProps> = ({ 
   client, 
   onEdit, 
   onDelete, 
@@ -272,7 +272,21 @@ const ClientCard : React.FC<ClientCardProps> = ({
     };
   }, []);
 
-  const formatPhone = (phone: string) => {
+  // Если клиент null, показываем заглушку
+  if (!client) {
+    return (
+      <Card>
+        <CardContent>
+          <CardTitle>Клиент не найден</CardTitle>
+          <InfoValue>Данные клиента недоступны</InfoValue>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formatPhone = (phone: string | null | undefined): string => {
+    if (!phone) return 'Не указан';
+    
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 11) {
       return cleaned.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 ($2) $3-$4-$5');
@@ -286,7 +300,9 @@ const ClientCard : React.FC<ClientCardProps> = ({
     try {
       const chat = await createPrivateChat(client.id, 'client');
       
-      window.open(`/chat/${chat.id}`, '_blank');
+      if (chat?.id) {
+        window.open(`/chat/${chat.id}`, '_blank');
+      }
     } catch (error) {
       console.error('Ошибка при создании чата:', error);
     }
@@ -294,7 +310,16 @@ const ClientCard : React.FC<ClientCardProps> = ({
 
   const formatDate = (date: Date | null): string => {
     if (!date) return 'Не указана';
-    return new Date(date).toLocaleDateString('ru-RU');
+    
+    try {
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) {
+        return 'Неверная дата';
+      }
+      return dateObj.toLocaleDateString('ru-RU');
+    } catch {
+      return 'Ошибка даты';
+    }
   };
 
   const handleMenuClick = (e: React.MouseEvent) => {
@@ -314,18 +339,27 @@ const ClientCard : React.FC<ClientCardProps> = ({
     onDelete(client);
   };
 
+  const handleCardClick = () => {
+    onOpenDossier(client);
+  };
+
+  const handleRightClick = (e: React.MouseEvent) => {
+    onRightClick(e, client);
+  };
 
   const hasContracts = client.creditIds && client.creditIds.length > 0;
+  const safeCreditIds = client.creditIds || [];
+  const safeCreditRestTerms = client.creditRestTerms || [];
 
   return (
     <Card 
       key={client.id} 
-      onClick={() => onOpenDossier(client)}
-      onContextMenu={(e) => onRightClick(e, client)}
+      onClick={handleCardClick}
+      onContextMenu={handleRightClick}
     >
       <CardContent>
         <CardTitle>
-          {client.fullName}
+          {client.fullName || 'Не указано'}
         </CardTitle>
         
         {showMenu && (
@@ -341,11 +375,6 @@ const ClientCard : React.FC<ClientCardProps> = ({
           </>
         )}
 
-        <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
-          <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
-          <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem>
-        </ContextMenu>
-
         {/* <MessageButton onClick={handleMessageClick}>
           <FaComment size={30} />
         </MessageButton> */}
@@ -356,7 +385,7 @@ const ClientCard : React.FC<ClientCardProps> = ({
               <IconWrapper><FaIdCard size={12} /></IconWrapper>
               ID клиента
             </InfoLabel>
-            <InfoValue>{client.id}</InfoValue>
+            <InfoValue>{client.id || 'Не указан'}</InfoValue>
           </InfoItem>
           
           <InfoItem>
@@ -365,9 +394,16 @@ const ClientCard : React.FC<ClientCardProps> = ({
               Телефон
             </InfoLabel>
             <InfoValue>
-              <PhoneLink href={`tel:${client.phone}`} onClick={(e) => e.stopPropagation()}>
-                {formatPhone(client.phone)}
-              </PhoneLink>
+              {client.phone ? (
+                <PhoneLink 
+                  href={`tel:${client.phone}`} 
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {formatPhone(client.phone)}
+                </PhoneLink>
+              ) : (
+                'Не указан'
+              )}
             </InfoValue>
           </InfoItem>
           
@@ -413,14 +449,14 @@ const ClientCard : React.FC<ClientCardProps> = ({
             </ContractsHeader>
             
             <ContractsGrid>
-              {client.creditIds?.map((contractId, index) => {
-                const restTerm = client.creditRestTerms?.[index] || '0';
+              {safeCreditIds.map((contractId, index) => {
+                const restTerm = safeCreditRestTerms[index] || '0';
                 const months = parseInt(restTerm) || 0;
                 const isUrgent = months > 0 && months < 3;
                 
                 return (
                   <ContractCard key={index}>
-                    <ContractNumber>{contractId}</ContractNumber>
+                    <ContractNumber>{contractId || 'Без номера'}</ContractNumber>
                     <ContractTerm>
                       Остаток: {months} мес.
                     </ContractTerm>

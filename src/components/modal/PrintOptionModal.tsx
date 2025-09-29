@@ -32,6 +32,7 @@ const PrintOptionModal = ({
     { key: 'sale', label: 'Договор купли-продажи', enabled: true },
     { key: 'guaranteeConsent', label: 'Договор поручительства', enabled: true },
     { key: 'schedules', label: 'График платежей', enabled: true },
+    { key: 'paymentConfirmation', label: 'Чек', enabled: true },
     { key: 'investorContract', label: 'Договор с инвестором', enabled: !!selectedInvestor }
   ];
   

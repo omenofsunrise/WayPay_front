@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver';
 import { TemplateHandler } from 'easy-template-x';
-import type { InvestorAgreementResponse } from '../api/types/investor';
+import type { InvestorAgreementResponse } from '../../api/types/investor';
 
 class InvestorDocxGenerator {
   private templateUrl: string = '/Docs/investor.docx';

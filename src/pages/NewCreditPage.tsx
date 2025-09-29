@@ -21,7 +21,6 @@ import useSchedule from '../api/hooks/useSchedule';
 import useCredit from '../api/hooks/useCredit';
 import type { CreateCreditRequest } from '../api/types/credit';
 import useInvestor from '../api/hooks/useInvestor';
-import ViewButton from '../components/ui/Buttons/ViewButton';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useEmployee } from '../api/hooks/useEmployee';
 import type { Investor } from '../api/types/investor';
