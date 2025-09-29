@@ -36,7 +36,6 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
   const minMarkup = authInfo?.employee.minSurcharge || 0;
-  const [markupInputValues, setMarkupInputValues] = useState<{[key: number]: string}>({});
 
   useEffect(() => {
     if (products.length === 0) {
@@ -76,43 +75,6 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleMarkupChange = (id: number, value: string) => {
-    // Сохраняем сырое значение для ввода
-    setMarkupInputValues(prev => ({
-      ...prev,
-      [id]: value
-    }));
-    
-    // Для обработки убираем все нецифровые символы
-    const numericValue = Number(value.replace(/[^\d]/g, '')) || 0;
-    handleInputChange(id, 'markup', numericValue.toString());
-  };
-
-  const getMarkupDisplayValue = (id: number, markup: number): string => {
-    // Если есть значение в состоянии ввода, используем его, иначе форматируем
-    if (markupInputValues[id] !== undefined) {
-      return markupInputValues[id];
-    }
-    return markupType === 'fixed' ? formatNumberWithSpaces(markup) : markup.toString();
-  };
-
-  const handleMarkupBlur = (id: number, value: string) => {
-    const numericValue = Number(value.replace(/[^\d]/g, '')) || 0;
-    
-    // Очищаем состояние ввода и устанавливаем отформатированное значение
-    setMarkupInputValues(prev => {
-      const newState = {...prev};
-      delete newState[id];
-      return newState;
-    });
-    
-    if (markupType === 'percent' && numericValue < minMarkup) {
-      handleInputChange(id, 'markup', minMarkup.toString());
-    } else if (markupType === 'fixed' && numericValue < 0) {
-      handleInputChange(id, 'markup', '0');
-    }
-  };
 
   const updateMenuPosition = (id: number) => {
     const index = products.findIndex(p => p.id === id);
@@ -159,35 +121,17 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
     });
   };
 
-  const handleMarkupTypeChange = (id: number, type: 'percent' | 'fixed') => {
-    const updatedProducts = products.map(product => {
-      if (product.id === id) {
-        const updatedProduct = {
-          ...product,
-          markupType: type,
-          markup: 0
-        };
-        
-        if (type === 'percent') {
-          updatedProduct.totalPrice = roundTo50(
-            updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100)
-          );
-        } else {
-          updatedProduct.totalPrice = roundTo50(
-            (updatedProduct.price + updatedProduct.markup) * updatedProduct.quantity
-          );
-        }
-        
-        return updatedProduct;
-      }
-      return product;
-    });
+  const handleMarkupChange = (id: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const cursorPosition = input.selectionStart;
     
-    onProductsChange(updatedProducts);
-  };
-
-  const formatNumberWithSpaces = (num: number): string => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    handleInputChange(id, 'markup', e.target.value);
+    
+    requestAnimationFrame(() => {
+      if (cursorPosition !== null) {
+        input.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    });
   };
 
   const handleInputChange = (id: number, field: keyof Product, value: string) => {
@@ -195,7 +139,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
       if (product.id === id) {
         let numericValue: number;
         
-        if (field === 'price') {
+        if (field === 'price' || field === 'markup') {
           numericValue = parseInt(value.replace(/[^\d]/g, ''), 10) || 0;
         } else {
           numericValue = Number(value) || 0;
@@ -207,13 +151,11 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
         };
         
         if (['price', 'quantity', 'markup'].includes(field)) {
-          // Расчет в зависимости от глобального типа надбавки
           if (markupType === 'percent') {
             updatedProduct.totalPrice = roundTo50(
               updatedProduct.price * updatedProduct.quantity * (1 + updatedProduct.markup / 100)
             );
           } else {
-            // Фиксированная надбавка в рублях
             updatedProduct.totalPrice = roundTo50(
               (updatedProduct.price + updatedProduct.markup) * updatedProduct.quantity
             );
@@ -393,18 +335,17 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
                       style={{ border: 'none', padding: '0' }}
                     />
                   </BodyCell>
-<BodyCell>
-  <CustomInput
-    inputType="number"
-    value={getMarkupDisplayValue(product.id, product.markup)}
-    onChange={(e) => handleMarkupChange(product.id, e.target.value)}
-    onBlur={(e) => handleMarkupBlur(product.id, e.target.value)}
-    onKeyDown={(e) => handleKeyDown(e, product.id)}
-    placeholder="0"
-    min="0"
-    style={{ border: 'none', padding: '0' }}
-  />
-</BodyCell>
+                  <BodyCell>
+                    <CustomInput
+                      inputType="rubles"
+                      value={formatMoney(product.markup.toString()) || ''}
+                      onChange={(e) => handleMarkupChange(product.id, e)}
+                      onKeyDown={(e) => handleKeyDown(e, product.id)}
+                      placeholder="0"
+                      min="0"
+                      style={{ border: 'none', padding: '0' }}
+                    />
+                  </BodyCell>
                   <BodyCell>{formatMoney(product.totalPrice.toString())}</BodyCell>
                   <BodyCell>
                     {index !== products.length - 1 && (
