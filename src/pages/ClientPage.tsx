@@ -151,6 +151,9 @@ const ClientPage = () => {
     const [longPressClient, setLongPressClient] = useState<Client | null>(null);
     const { hasRole, authInfo } = useAuth();
     
+    // Добавляем состояние для общего количества клиентов
+    const [totalClientsCount, setTotalClientsCount] = useState<number>(0);
+    
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'fullName',
@@ -167,7 +170,30 @@ const ClientPage = () => {
         deleteClient,
         checkClientCredits
     } = useClients();
-    
+
+    // Загружаем общее количество клиентов при инициализации
+    useEffect(() => {
+        const loadTotalClientsCount = async () => {
+            try {
+                // Делаем запрос с минимальными параметрами только для получения количества
+                const params = {
+                    page: 1,
+                    pageSize: 0, // Минимальный размер страницы, так как нам нужен только totalCount
+                    FullName: undefined,
+                    Phone: undefined
+                };
+
+                const response = await getClients(params);
+                setTotalClientsCount(response.totalCount || 0);
+            } catch (err) {
+                console.error('Ошибка при загрузке общего количества клиентов:', err);
+                setTotalClientsCount(0);
+            }
+        };
+
+        loadTotalClientsCount();
+    }, []); // Пустой массив зависимостей - выполнится только при монтировании
+
     const handleCardMouseDown = useCallback((client: Client) => {
         const timer = setTimeout(() => {
             setLongPressClient(client);
@@ -363,6 +389,8 @@ const ClientPage = () => {
             try {
                 await deleteClient(client.id);
                 loadClients();
+                // Обновляем общее количество после удаления
+                setTotalClientsCount(prev => prev - 1);
             } catch (err) {
                 console.error('Ошибка при удалении клиента:', err);
             }
@@ -396,6 +424,8 @@ const ClientPage = () => {
 
             if (modalMode === 'create') {
                 await createClient(apiData);
+                // Обновляем общее количество после создания
+                setTotalClientsCount(prev => prev + 1);
             } else if (modalMode === 'edit' && selectedClient?.id) {
                 await updateClient(selectedClient.id, apiData);
             }
@@ -491,7 +521,7 @@ const ClientPage = () => {
                         )}
                     </TitleContainer>
                     <StyledCountInfo
-                        total={clientsData?.totalCount || 0} 
+                        total={totalClientsCount} 
                     />
                 </TitleContainer>
             

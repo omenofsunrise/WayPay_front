@@ -130,6 +130,10 @@ const InfoBadge = styled.span<{ variant?: 'default' | 'warning' | 'danger' }>`
   margin-left: 8px;
 `;
 
+const StyledCountInfo = styled(CountInfoTitle)`
+    margin-left: auto;
+`;
+
 interface BlacklistClient {
   id: number;
   fullName: string;
@@ -157,6 +161,9 @@ const BlackCatalogPage = () => {
     const [editingClient, setEditingClient] = useState<Partial<BlacklistClient> | null>(null);
     const [selectedClientDossier, setSelectedClientDossier] = useState<BlacklistClient | null>(null);
     
+    // Добавляем состояние для общего количества клиентов в черном каталоге
+    const [totalBlackCatalogCount, setTotalBlackCatalogCount] = useState<number>(0);
+    
     const { 
         isLoading, 
         error, 
@@ -172,6 +179,29 @@ const BlackCatalogPage = () => {
         y: number;
         client: BlacklistClient | null;
     } | null>(null);
+
+    // Загружаем общее количество клиентов в черном каталоге при инициализации
+    useEffect(() => {
+        const loadTotalBlackCatalogCount = async () => {
+            try {
+                // Делаем запрос с минимальными параметрами только для получения количества
+                const params = {
+                    page: 1,
+                    pageSize: 0,
+                    fullName: undefined,
+                    phone: undefined
+                };
+
+                const response = await getBlackCatalog(params);
+                setTotalBlackCatalogCount(response.totalCount || 0);
+            } catch (err) {
+                console.error('Ошибка при загрузке общего количества клиентов в черном каталоге:', err);
+                setTotalBlackCatalogCount(0);
+            }
+        };
+
+        loadTotalBlackCatalogCount();
+    }, []); // Пустой массив зависимостей - выполнится только при монтировании
 
     const resetFilters = useCallback(() => {
         setNameFilter('');
@@ -291,6 +321,8 @@ const BlackCatalogPage = () => {
                 await updateBlackCatalog(editingClient.id, clientData);
             } else {
                 await addBlackCatalog(clientData);
+                // Обновляем общее количество после добавления
+                setTotalBlackCatalogCount(prev => prev + 1);
             }
             loadBlacklist();
             setIsModalOpen(false);
@@ -305,6 +337,8 @@ const BlackCatalogPage = () => {
             try {
                 await deleteFromBlackCatalog(client.id);
                 loadBlacklist();
+                // Обновляем общее количество после удаления
+                setTotalBlackCatalogCount(prev => prev - 1);
             } catch (err) {
                 console.error('Ошибка при удалении клиента:', err);
             }
@@ -443,8 +477,8 @@ const BlackCatalogPage = () => {
                                 <ClientCount>({blacklistData.totalItemsCount})</ClientCount>
                             )}
                         </TitleContainer>
-                        <CountInfoTitle
-                            total={blacklistData?.totalCount || 0} 
+                        <StyledCountInfo
+                            total={totalBlackCatalogCount} 
                         />
                     </TitleContainer>
                     

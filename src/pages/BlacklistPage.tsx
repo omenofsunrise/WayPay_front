@@ -115,6 +115,10 @@ const DebtBadge = styled.span`
   font-weight: 600;
 `;
 
+const StyledCountInfo = styled(CountInfoTitle)`
+    margin-left: auto;
+`;
+
 interface BlacklistClient {
   id: number;
   fullName: string;
@@ -140,6 +144,9 @@ const BlacklistPage = () => {
     const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
     const [selectedClientDossier, setSelectedClientDossier] = useState<BlacklistClient | null>(null);
     
+    // Добавляем состояние для общего количества клиентов в черном списке
+    const [totalBlacklistCount, setTotalBlacklistCount] = useState<number>(0);
+    
     const { 
         isLoading, 
         error, 
@@ -154,6 +161,29 @@ const BlacklistPage = () => {
         y: number;
         client: BlacklistClient | null;
     } | null>(null);
+
+    // Загружаем общее количество клиентов в черном списке при инициализации
+    useEffect(() => {
+        const loadTotalBlacklistCount = async () => {
+            try {
+                // Делаем запрос с минимальными параметрами только для получения количества
+                const params = {
+                    page: 1,
+                    pageSize: 0, // Минимальный размер страницы, так как нам нужен только totalCount
+                    fullName: undefined,
+                    phone: undefined
+                };
+
+                const response = await getBlacklist(params);
+                setTotalBlacklistCount(response.totalCount || 0);
+            } catch (err) {
+                console.error('Ошибка при загрузке общего количества клиентов в черном списке:', err);
+                setTotalBlacklistCount(0);
+            }
+        };
+
+        loadTotalBlacklistCount();
+    }, []); // Пустой массив зависимостей - выполнится только при монтировании
 
     const resetFilters = useCallback(() => {
         setNameFilter('');
@@ -260,6 +290,8 @@ const BlacklistPage = () => {
             try {
                 await deleteFromBlacklist(client.id);
                 loadBlacklist();
+                // Обновляем общее количество после удаления
+                setTotalBlacklistCount(prev => prev - 1);
             } catch (err) {
                 console.error('Ошибка при удалении клиента:', err);
             }
@@ -274,6 +306,8 @@ const BlacklistPage = () => {
         try {
             await addBlacklist(client.id);
             loadBlacklist();
+            // Обновляем общее количество после добавления
+            setTotalBlacklistCount(prev => prev + 1);
             setIsSelectModalOpen(false);
         } catch (err) {
             console.error('Ошибка при добавлении в черный список:', err);
@@ -379,8 +413,8 @@ const BlacklistPage = () => {
                                 <ClientCount>({blacklistData.totalItemsCount})</ClientCount>
                             )}
                         </TitleContainer>
-                        <CountInfoTitle 
-                            total={blacklistData?.totalCount || 0} 
+                        <StyledCountInfo 
+                            total={totalBlacklistCount} 
                         />
                     </TitleContainer>
                     
