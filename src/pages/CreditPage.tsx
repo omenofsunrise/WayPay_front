@@ -27,6 +27,9 @@ import PrintOptionModal from '../components/modal/PrintOptionModal';
 import DocxGenerator from '../utils/doxcUtils/docxGenerator';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
+import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
+import paymentService from '../api/services/paymentService';
+import type { PaymentTab } from '../api/types/payment';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -67,6 +70,18 @@ const CreditPage = () => {
   const navigate = useNavigate();
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
 
+  const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
+      try {
+          const result = await paymentService.getPaymentTab(paymentId);
+          return result;
+      } catch (err) {
+          console.error('Ошибка при получении данных для документа:', err);
+          return null;
+      }
+  }, []);
+
+  const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
+
   const handleRowClick = (rowData: any[], rowIndex: number) => {
     const [_, id] = rowData;
     const credit = creditsData?.items.find(c => c.id === Number(id));
@@ -100,6 +115,16 @@ const CreditPage = () => {
     }
     
     setIsPrintModalOpen(false);
+  };
+
+  const handlePrintReceipt = async (paymentId: number) => {
+    try {
+      await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
+      console.log('Чек успешно сгенерирован');
+    } catch (error) {
+      console.error('Ошибка при печати чека:', error);
+      alert('Платёж создан, но произошла ошибка при печати чека');
+    }
   };
 
   const loadCredits = useCallback(async () => {
@@ -184,10 +209,11 @@ const CreditPage = () => {
         bankCardId: paymentData.bankCardId
       };
       
-      await createPayment(paymentRequest);
+      const result = await createPayment(paymentRequest);
       
       await loadCredits();
       setIsPaymentModalOpen(false);
+      return result.id;
     } catch (error) {
       console.error('Ошибка при сохранении платежа:', error);
     }
@@ -502,6 +528,7 @@ const CreditPage = () => {
         clientPhone={selectedCreditForPrint?.clientPhone || ''}
         currentDebt={selectedCreditForPrint?.rest || 0}
         currentMonthDebt={selectedCreditForPrint?.currentMonthDebt || 0}
+        onPrintReceipt={handlePrintReceipt}
       />
 
       <ViewCreditModal

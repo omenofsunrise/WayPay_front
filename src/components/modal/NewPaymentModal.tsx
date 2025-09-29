@@ -23,7 +23,8 @@ export interface NewPaymentModalProps {
     principalAmount: number;
     paymentMethod: 'cash' | 'card';
     bankCardId?: number;
-  }) => void;
+  }) => Promise<number | void>; // Теперь возвращает ID созданного платежа
+  onPrintReceipt?: (paymentId: number) => void; // Новая функция для печати чека
   clientId?: number;
 }
 
@@ -37,6 +38,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  onPrintReceipt,
   clientId
 }) => {
   const [paymentDate, setPaymentDate] = useState<string>('');
@@ -47,6 +49,8 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [remainingDebt, setRemainingDebt] = useState<number>(currentDebt);
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
+  const [printReceipt, setPrintReceipt] = useState<boolean>(false); // Чекбокс печати
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Состояние отправки
 
   useEffect(() => {
     if (isOpen) {
@@ -58,6 +62,8 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       setTotalAmount(0);
       setRemainingDebt(currentDebt);
       setIsDebtPaid(currentDebt <= 0);
+      setPrintReceipt(false);
+      setIsSubmitting(false);
     }
   }, [isOpen, currentDebt]);
 
@@ -91,7 +97,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     setTotalAmount(validatedValue);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid) return;
     
     if (paymentMethod === 'card' && !selectedBankCardId) {
@@ -104,13 +110,28 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       paymentMethod
     };
     
-    if (paymentMethod === 'card' && selectedBankCardId) {
-      onSubmit({
-        ...paymentData,
-        bankCardId: selectedBankCardId
-      });
-    } else {
-      onSubmit(paymentData);
+    setIsSubmitting(true);
+    
+    try {
+      // Создаем платёж и получаем его ID
+      const paymentId = await onSubmit(
+        paymentMethod === 'card' && selectedBankCardId
+          ? { ...paymentData, bankCardId: selectedBankCardId }
+          : paymentData
+      );
+
+      // Если чекбокс печати отмечен и есть ID платежа, печатаем чек
+      if (printReceipt && paymentId && onPrintReceipt) {
+        onPrintReceipt(paymentId);
+      }
+
+      // Закрываем модальное окно только если не нужно печатать или печать завершена
+      onClose();
+      
+    } catch (error) {
+      console.error('Ошибка при создании платежа:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -153,6 +174,10 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   }) => {
     setSelectedBankCardId(bankCard.id);
     setSelectedBankCardDetails(bankCard.details);
+  };
+
+  const handlePrintReceiptChange = (checked: boolean) => {
+    setPrintReceipt(checked);
   };
 
   if (!isOpen) return null;
@@ -297,17 +322,30 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                   </InputGroup>
                 </FormRow>
               )}
+
+              <FormRow>
+                <InputGroup>
+                  <CheckboxWrapper>
+                    <Checkbox
+                      label='Распечатать чек после создания платежа'
+                      checked={printReceipt}
+                      onChange={handlePrintReceiptChange}
+                    />
+                  </CheckboxWrapper>
+                </InputGroup>
+              </FormRow>
             </>
           )}
           
           <ButtonContainer>
-            <GrayButton onClick={onClose}>
+            <GrayButton onClick={onClose} disabled={isSubmitting}>
               Отменить
             </GrayButton>
             {!isDebtPaid && (
               <DarkCyanButton 
                 onClick={handleSubmit}
                 disabled={
+                  isSubmitting ||
                   !paymentDate || 
                   totalAmount <= 0 || 
                   !paymentMethod || 
@@ -315,7 +353,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                   (paymentMethod === 'card' && !selectedBankCardId)
                 }
               >
-                Создать платёж
+                {isSubmitting ? 'Создание...' : 'Создать платёж'}
               </DarkCyanButton>
             )}
           </ButtonContainer>
@@ -325,7 +363,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   );
 };
 
-// Стили остаются без изменений
+// Стили остаются без изменений + добавляем новый стиль для подсказки
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
   position: fixed;
@@ -404,10 +442,11 @@ const CheckboxWrapper = styled.div`
   gap: 8px;
 `;
 
-const PaymentMethodLabel = styled.span`
-  font-size: 14px;
-  color: #333;
-  user-select: none;
+const CheckboxHint = styled.span`
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  margin-left: 24px;
 `;
 
 const DebtPaidMessage = styled.div`

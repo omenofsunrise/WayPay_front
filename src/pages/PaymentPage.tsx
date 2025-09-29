@@ -20,6 +20,7 @@ import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
+import PrintIcon from '../assets/ui/print.svg?react';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -54,7 +55,6 @@ const PaymentPage = () => {
         deletePayment
     } = usePayment();
 
-    // Функция для получения данных платежа для документа
     const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
         try {
             const result = await paymentService.getPaymentTab(paymentId);
@@ -178,7 +178,7 @@ const PaymentPage = () => {
             payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
             payment.employeeFullName || '',
             payment.accepted ? 'Да' : 'Нет',
-            payment.id.toString() // Добавляем ID платежа как скрытый столбец
+            payment.id.toString()
         ]);
     };
 
@@ -220,7 +220,7 @@ const PaymentPage = () => {
     };
 
     const handlePrintPayment = async (rowData: any[]) => {
-        const paymentId = parseInt(rowData[7]); // ID находится в 8-м столбце (индекс 7)
+        const paymentId = parseInt(rowData[7]);
         const payment = paymentsData?.items.find(p => p.id === paymentId);
         
         if (!payment) {
@@ -296,6 +296,18 @@ const PaymentPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>История платежей</CustomTitle>
+                <ExportButton 
+                    icon={<PrintIcon />} 
+                    onClick={() => {
+                        if (!selectedPaymentForPrint) {
+                            alert('Пожалуйста, выберите платёж в таблице (клик по строке)');
+                        return;
+                        }
+                        setIsPrintModalOpen(true);
+                    }}
+                    >
+                    Печать
+                </ExportButton>
                 <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
@@ -374,7 +386,7 @@ const PaymentPage = () => {
                     setSelectedPaymentForPrint(null);
                 }}
                 onSelect={handlePrintOptionSelect}
-                selectedPayment={selectedPaymentForPrint} // Передаем выбранный платеж
+                selectedPayment={selectedPaymentForPrint}
                 modalTitle="Печать чека"
                 printOptions={[
                     { 
