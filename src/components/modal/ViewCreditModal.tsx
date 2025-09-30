@@ -367,18 +367,34 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       <Label>Телефон</Label>
                       <Value>{creditData && creditData.clientPhone}</Value>
                       
-                      <Label>{creditData && creditData.guarantorFullname && 'Поручитель'}</Label>
-                      <Value>{creditData && creditData.guarantorFullname}</Value>
+                      {creditData && creditData.guarantorFullname && (
+                        <>
+                          <Label>{creditData && creditData.guarantorFullname && 'Поручитель'}</Label>
+                          <Value>{creditData && creditData.guarantorFullname}</Value>
+                        </>
+                      )}
 
-                      <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
-                      <Value>{creditData && creditData.guarantorPhone}</Value>
+                      {creditData && creditData.guarantorPhone && (
+                        <>
+                          <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
+                          <Value>{creditData && creditData.guarantorPhone}</Value>
+                        </>
+                      )}
 
-                      <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
-                      <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
-
-                      <Label>{creditData && creditData.debtDays && creditData.debtDays > 0 && 'Дней просрочки'}</Label>
-                      <Value>{creditData && creditData.debtDays && creditData.debtDays}</Value>
-
+                      {creditData && creditData.creditTypeName && (
+                        <>
+                          <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
+                          <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
+                        </>
+                      )}
+                      
+                      {creditData && creditData.debtDays && creditData.debtDays > 0 && (
+                        <>
+                          <Label>{creditData && creditData.debtDays && creditData.debtDays > 0 && 'Дней просрочки'}</Label>
+                          <Value>{creditData && creditData.debtDays && creditData.debtDays}</Value>
+                        </>
+                      )}
+                      
                   </VerticalContainer>
                   <VerticalContainer style={{ width: "100%", minWidth: "700px", marginLeft: "60px"}}>
                     <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
