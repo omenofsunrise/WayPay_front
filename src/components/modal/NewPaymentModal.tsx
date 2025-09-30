@@ -23,10 +23,12 @@ export interface NewPaymentModalProps {
     principalAmount: number;
     paymentMethod: 'cash' | 'card';
     bankCardId?: number;
-  }) => Promise<number | void>; // Теперь возвращает ID созданного платежа
-  onPrintReceipt?: (paymentId: number) => void; // Новая функция для печати чека
+  }) => Promise<number | void>;
+  onPrintReceipt?: (paymentId: number) => void;
   clientId?: number;
 }
+
+const PRINT_RECEIPT_STORAGE_KEY = 'new-payment-print-receipt-preference';
 
 const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   creditId,
@@ -49,8 +51,21 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [remainingDebt, setRemainingDebt] = useState<number>(currentDebt);
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
-  const [printReceipt, setPrintReceipt] = useState<boolean>(false); // Чекбокс печати
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Состояние отправки
+  const [printReceipt, setPrintReceipt] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  useEffect(() => {
+    const savedPrintPreference = localStorage.getItem(PRINT_RECEIPT_STORAGE_KEY);
+    if (savedPrintPreference) {
+      try {
+        const preference = JSON.parse(savedPrintPreference);
+        setPrintReceipt(preference === true);
+      } catch (error) {
+        console.error('Ошибка при загрузке настройки печати:', error);
+        setPrintReceipt(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -62,7 +77,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       setTotalAmount(0);
       setRemainingDebt(currentDebt);
       setIsDebtPaid(currentDebt <= 0);
-      setPrintReceipt(false);
       setIsSubmitting(false);
     }
   }, [isOpen, currentDebt]);
@@ -113,19 +127,16 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Создаем платёж и получаем его ID
       const paymentId = await onSubmit(
         paymentMethod === 'card' && selectedBankCardId
           ? { ...paymentData, bankCardId: selectedBankCardId }
           : paymentData
       );
 
-      // Если чекбокс печати отмечен и есть ID платежа, печатаем чек
       if (printReceipt && paymentId && onPrintReceipt) {
         onPrintReceipt(paymentId);
       }
 
-      // Закрываем модальное окно только если не нужно печатать или печать завершена
       onClose();
       
     } catch (error) {
@@ -178,6 +189,8 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
 
   const handlePrintReceiptChange = (checked: boolean) => {
     setPrintReceipt(checked);
+    // Сохраняем настройку в localStorage
+    localStorage.setItem(PRINT_RECEIPT_STORAGE_KEY, JSON.stringify(checked));
   };
 
   if (!isOpen) return null;
@@ -283,6 +296,18 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
               
               <FormRow>
                 <InputGroup>
+                  <CheckboxWrapper>
+                    <Checkbox
+                      label='Распечатать чек после создания платежа'
+                      checked={printReceipt}
+                      onChange={handlePrintReceiptChange}
+                    />
+                  </CheckboxWrapper>
+                </InputGroup>
+              </FormRow>
+              
+              <FormRow>
+                <InputGroup>
                   <InputLabel>Способ оплаты</InputLabel>
                   <PaymentMethodContainer>
                     <CheckboxWrapper>
@@ -322,18 +347,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                   </InputGroup>
                 </FormRow>
               )}
-
-              <FormRow>
-                <InputGroup>
-                  <CheckboxWrapper>
-                    <Checkbox
-                      label='Распечатать чек после создания платежа'
-                      checked={printReceipt}
-                      onChange={handlePrintReceiptChange}
-                    />
-                  </CheckboxWrapper>
-                </InputGroup>
-              </FormRow>
             </>
           )}
           
@@ -363,7 +376,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   );
 };
 
-// Стили остаются без изменений + добавляем новый стиль для подсказки
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
   position: fixed;
@@ -440,13 +452,6 @@ const CheckboxWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`;
-
-const CheckboxHint = styled.span`
-  font-size: 12px;
-  color: #666;
-  margin-top: 4px;
-  margin-left: 24px;
 `;
 
 const DebtPaidMessage = styled.div`

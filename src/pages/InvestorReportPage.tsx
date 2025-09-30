@@ -53,7 +53,7 @@ const InvestorReportPage = () => {
         getCreditsByInvestorId, 
         isLoading: isCreditsLoading 
     } = useCredit();
-    const { authInfo, hasRole } = useAuth();
+    const { hasRole } = useAuth();
     const [investors, setInvestors] = useState<Investor[]>([]);
     const [selectedInvestorId, setSelectedInvestorId] = useState<string>('');
     const [report, setReport] = useState<InvestorReport | null>(null);

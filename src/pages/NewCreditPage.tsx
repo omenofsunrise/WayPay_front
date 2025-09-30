@@ -162,64 +162,70 @@ const NewCreditPage = () => {
   };
 
   const validateInvestorActivePeriod = useCallback((): boolean => {
-    if (!contractDate || !months || parseInt(months) <= 0 || (!investor && !selectedPool)) {
-      setValidationError(null);
-      return true;
-    }
+  if (!contractDate || !months || parseInt(months) <= 0 || (!investor && !selectedPool)) {
+    setValidationError(null);
+    return true;
+  }
 
-    const selectedInvestor = investor || selectedPool;
+  const selectedInvestor = investor || selectedPool;
+  
+  // Если у инвестора/пула нет даты окончания, пропускаем проверку
+  if (!selectedInvestor?.activeUntil) {
+    setValidationError(null);
+    return true;
+  }
+
+  try {
+    const contractDateObj = new Date(contractDate);
     
-    if (!selectedInvestor?.activeUntil) {
+    if (isNaN(contractDateObj.getTime())) {
       setValidationError(null);
       return true;
     }
 
-    try {
-      const contractDateObj = new Date(contractDate);
-      
-      if (isNaN(contractDateObj.getTime())) {
-        setValidationError(null);
-        return true;
-      }
-
-      const monthsValue = parseInt(months);
-      
-      if (isNaN(monthsValue) || monthsValue <= 0) {
-        setValidationError(null);
-        return true;
-      }
-
-      const lastPaymentDate = new Date(contractDateObj);
-      lastPaymentDate.setMonth(lastPaymentDate.getMonth() + monthsValue);
-      
-      const paymentDay = parseInt(paymentDue);
-      
-      const tempDate = new Date(lastPaymentDate.getFullYear(), lastPaymentDate.getMonth(), paymentDay);
-      
-      if (tempDate.getMonth() !== lastPaymentDate.getMonth()) {
-        tempDate.setDate(0);
-      }
-      
-      const investorActiveUntil = new Date(selectedInvestor.activeUntil);
-      
-      if (isNaN(investorActiveUntil.getTime())) {
-        setValidationError(null);
-        return true;
-      }
-
-      if (investorActiveUntil < tempDate) {
-        const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
-        setValidationError(errorMessage);
-        return false;
-      }
-
-      setValidationError(null);
-      return true;
-    } catch (error) {
+    const monthsValue = parseInt(months);
+    
+    if (isNaN(monthsValue) || monthsValue <= 0) {
       setValidationError(null);
       return true;
     }
-  }, [contractDate, months, paymentDue, investor, selectedPool]);
+
+    const lastPaymentDate = new Date(contractDateObj);
+    lastPaymentDate.setMonth(lastPaymentDate.getMonth() + monthsValue);
+    
+    const paymentDay = parseInt(paymentDue);
+    
+    // Рассчитываем дату последнего платежа
+    const tempDate = new Date(lastPaymentDate.getFullYear(), lastPaymentDate.getMonth(), paymentDay);
+    
+    // Если день платежа превышает количество дней в месяце, используем последний день месяца
+    if (tempDate.getMonth() !== lastPaymentDate.getMonth()) {
+      tempDate.setDate(0);
+    }
+    
+    const investorActiveUntil = new Date(selectedInvestor.activeUntil);
+    
+    if (isNaN(investorActiveUntil.getTime())) {
+      setValidationError(null);
+      return true;
+    }
+
+    // Сравниваем даты
+    if (investorActiveUntil < tempDate) {
+      const entityType = investor ? 'инвестора' : 'пула';
+      const errorMessage = `Договор с ${entityType} заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
+      setValidationError(errorMessage);
+      return false;
+    }
+
+    setValidationError(null);
+    return true;
+  } catch (error) {
+    console.error('Ошибка при проверке дат:', error);
+    setValidationError(null);
+    return true;
+  }
+}, [contractDate, months, paymentDue, investor, selectedPool]);
 
   useEffect(() => {
     validateInvestorActivePeriod();
@@ -529,48 +535,49 @@ const NewCreditPage = () => {
     products.some(product => product.name.trim() !== '' && product.price > 0);
 
   const handleSelectInvestor = (selectedEntity: { 
-    id: number; 
-    nickname?: string; 
-    name?: string;
-    fullName?: string; 
-    phoneNumber?: string;
-    investorPie?: number;
-    pie?: number;
-    investmentAmount?: number;
-    balance?: number;
-    type: 'investor' | 'pool';
-    activeUntil?: string;
-  }) => {
-    if (selectedEntity.type === 'pool') {
-      setSelectedPool({
-        id: selectedEntity.id,
-        nickname: selectedEntity.name || selectedEntity.nickname || '',
-        fullName: selectedEntity.fullName || selectedEntity.name || '',
-        phoneNumber: selectedEntity.phoneNumber || '',
-        investorPie: selectedEntity.pie || 0,
-        investmentAmount: selectedEntity.investmentAmount || 0,
-        balance: selectedEntity.balance || 0,
-        isPool: true
-      });
-      setInvestor(null);
-    
-    } else {
-      setInvestor({
-        id: selectedEntity.id,
-        nickname: selectedEntity.nickname || '',
-        fullName: selectedEntity.fullName || '',
-        phoneNumber: selectedEntity.phoneNumber || '',
-        investorPie: selectedEntity.investorPie || 0,
-        investmentAmount: selectedEntity.investmentAmount || 0,
-        balance: selectedEntity.balance || 0,
-        activeUntil: selectedEntity.activeUntil,
-        isPool: false
-      });
-      setSelectedPool(null);
-    }
-    setIsInvestorModalOpen(false);
-    setValidationError(null);
-  };
+  id: number; 
+  nickname?: string; 
+  name?: string;
+  fullName?: string; 
+  phoneNumber?: string;
+  investorPie?: number;
+  pie?: number;
+  investmentAmount?: number;
+  balance?: number;
+  type: 'investor' | 'pool';
+  activeUntil?: string; // Добавьте это
+}) => {
+  if (selectedEntity.type === 'pool') {
+    setSelectedPool({
+      id: selectedEntity.id,
+      nickname: selectedEntity.name || selectedEntity.nickname || '',
+      fullName: selectedEntity.fullName || selectedEntity.name || '',
+      phoneNumber: selectedEntity.phoneNumber || '',
+      investorPie: selectedEntity.pie || 0,
+      investmentAmount: selectedEntity.investmentAmount || 0,
+      balance: selectedEntity.balance || 0,
+      activeUntil: selectedEntity.activeUntil, // Добавьте это
+      isPool: true
+    });
+    setInvestor(null);
+  
+  } else {
+    setInvestor({
+      id: selectedEntity.id,
+      nickname: selectedEntity.nickname || '',
+      fullName: selectedEntity.fullName || '',
+      phoneNumber: selectedEntity.phoneNumber || '',
+      investorPie: selectedEntity.investorPie || 0,
+      investmentAmount: selectedEntity.investmentAmount || 0,
+      balance: selectedEntity.balance || 0,
+      activeUntil: selectedEntity.activeUntil, // Убедитесь что это есть
+      isPool: false
+    });
+    setSelectedPool(null);
+  }
+  setIsInvestorModalOpen(false);
+  setValidationError(null);
+};
 
   const openClientModal = (type: 'client' | 'guarantorClient') => {
     setModalType(type);
@@ -1270,12 +1277,6 @@ const CheckboxContainer = styled.div`
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-`;
-
-const CheckboxLabel = styled.span`
-  font-size: 14px;
-  color: #333;
-  cursor: pointer;
 `;
 
 export default NewCreditPage;

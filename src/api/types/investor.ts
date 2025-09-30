@@ -1,6 +1,7 @@
 import type { PaginationParams } from './common';
 
 export interface Investor {
+  currentIncome: any;
   id: number;
   nickname: string;
   fullName: string;

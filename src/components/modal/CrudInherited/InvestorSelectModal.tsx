@@ -132,39 +132,40 @@ const InvestorSelectModal = ({
   };
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
-    const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
-    
-    if (isPool) {
-      const poolIndex = rowIndex - (investorsData?.items?.length || 0);
-      const pool = poolsData?.items[poolIndex];
-      if (pool) {
-        setSelectedEntity({
-          id: pool.id,
-          nickname: pool.name,
-          name: pool.name,
-          fullName: pool.name,
-          pie: pool.pie,
-          balance: pool.balance || 0,
-          type: 'pool'
-        });
-      }
-    } else {
-      const investor = investorsData?.items[rowIndex];
-      if (investor) {
-        setSelectedEntity({
-          id: investor.id,
-          nickname: investor.nickname,
-          fullName: investor.fullName,
-          phoneNumber: investor.phoneNumber,
-          investorPie: investor.investorPie,
-          investmentAmount: investor.investmentAmount,
-          balance: investor.balance,
-          type: 'investor',
-          activeUntil: investor.activeUntil
-        });
-      }
+  const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
+  
+  if (isPool) {
+    const poolIndex = rowIndex - (investorsData?.items?.length || 0);
+    const pool = poolsData?.items[poolIndex];
+    if (pool) {
+      setSelectedEntity({
+        id: pool.id,
+        nickname: pool.name,
+        name: pool.name,
+        fullName: pool.name,
+        pie: pool.pie,
+        balance: pool.balance || 0,
+        activeUntil: pool.activeUntil, // Убедитесь что это передается
+        type: 'pool'
+      });
     }
-  };
+  } else {
+    const investor = investorsData?.items[rowIndex];
+    if (investor) {
+      setSelectedEntity({
+        id: investor.id,
+        nickname: investor.nickname,
+        fullName: investor.fullName,
+        phoneNumber: investor.phoneNumber,
+        investorPie: investor.investorPie,
+        investmentAmount: investor.investmentAmount,
+        balance: investor.balance,
+        activeUntil: investor.activeUntil, // И это
+        type: 'investor'
+      });
+    }
+  }
+};
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,8 +193,8 @@ const InvestorSelectModal = ({
         '—', 
         pool.pie.toString() + "%",
         '—', 
-        '—',
-        '-'
+        formatMoney(pool.balance.toString()),
+        formatDate(pool.activeUntil ?? new Date())
       ]) || []
     : [];
 
@@ -205,7 +206,6 @@ const InvestorSelectModal = ({
     const rowId = parseInt(rowData[0]);
     const isSelected = selectedEntity && rowId === selectedEntity.id;
     
-    // Если строка выбрана - высший приоритет
     if (isSelected) {
       styles[index] = {
         backgroundColor: '#007D88',
@@ -213,7 +213,6 @@ const InvestorSelectModal = ({
         fontWeight: 'normal'
       };
     } 
-    // Если строка заблокирована - средний приоритет
     else if (isBlocked) {
       styles[index] = {
         backgroundColor: '#FFEBEE',
@@ -222,7 +221,6 @@ const InvestorSelectModal = ({
         hoverBackgroundColor: 'black'
       };
     } 
-    // Обычная строка - низший приоритет
     else {
       styles[index] = {
         backgroundColor: 'white',
@@ -271,7 +269,7 @@ const InvestorSelectModal = ({
                   { name: "Доля", align: "left", isSortable: true, isHidden: true },
                   { name: "заблокирован", isHidden: true },
                   { name: "Касса", isSortable: true, align: "right" },
-                  { name: "Дата окончания инвестора", align: "left" },
+                  { name: "Дата окончания инвестора/пула", align: "left" },
                 ]} 
                 data={tableData}
                 onRowClick={handleRowClick}
