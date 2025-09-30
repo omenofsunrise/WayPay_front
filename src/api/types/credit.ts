@@ -8,8 +8,6 @@ export const NOTEABLE_TYPES = {
 };
 
 export interface Credit {
-    guarantorFullname?: string;
-    guarantorPhone?: string;
     id: number;
     name: string;
     creditTypeId: number;

@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import TitleField from '../ui/Layouts/TitleLayout';
 import CustomTitle from '../ui/Text/CustomTitle';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
+import CustomInput from '../ui/fields/CustomInput';
+import ViewButton from '../ui/Buttons/ViewButton';
 import AddButtonImage from '../../assets/ui/buttons/AddButton.svg';  
 import CustomTable from '../ui/tables/CustomTable';
 import useNotes from '../../api/hooks/useNote';
@@ -14,9 +16,11 @@ import type { Client } from '../../api/types/client';
 import { formatMoney } from '../../utils/formatPrice';
 import ClientModal from './CrudInherited/ClientModal';
 import InvestorModal from './CrudInherited/InvestorModal';
+import useInvestor from '../../api/hooks/useInvestor';
 import type { Payment, PaymentByCreditParams } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
 import { NOTEABLE_TYPES } from '../../api/types/note';
+import useGuarantor from '../../api/hooks/useGuarantor';
 import type { Guarantor } from '../../api/types/client';
 import GuarantorModal from './CrudInherited/GuarantorModal';
 
@@ -32,19 +36,23 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   onClose
 }) => {
   const { notes, isLoading: isNotesLoading, error: notesError, getCreditNotes, createNote, deleteNote } = useNotes();
-  const { getCredits } = useCredit();
+  const { getCredits, isLoading: isCreditLoading, error: creditError } = useCredit();
   const { getClientById } = useClient();
+  const { getGuarantorById } = useGuarantor();
   const [creditData, setCreditData] = useState<Credit | null>(null);
   const [guarantorData, setGuarantorData] = useState<Client | Guarantor | null>(null);
   const [guarantorType, setGuarantorType] = useState<GuarantorType | null>(null);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const { 
+      isLoading: isPaymentsLoading, 
+      error: paymentsError, 
       data: paymentsData, 
       getPaymentsByCreditId
   } = usePayment();
 
   
+  const { getInvestorById } = useInvestor();
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isGuarantorModalOpen, setIsGuarantorModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
@@ -85,6 +93,25 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               const client = await getClientById(credit.clientId);
               setCurrentClient(client);
             }
+            
+            if (credit.guarantorId && credit.guarantorType) {
+              setGuarantorType(credit.guarantorType);
+              
+              if (credit.guarantorType === 'Client') {
+                // Загрузка клиента как поручителя
+                const guarantor = await getClientById(credit.guarantorId);
+                setGuarantorData(guarantor);
+              } else if (credit.guarantorType === 'Guarantor') {
+                // Загрузка отдельного поручителя
+                const guarantor = await getGuarantorById(credit.guarantorId);
+                setGuarantorData(guarantor);
+              }
+            }
+            
+            if (credit.investorId) {
+              const investor = await getInvestorById(credit.investorId);
+              setCurrentInvestor(investor);
+            }
           }
         } catch (error) {
           console.error('Error fetching data:', error);
@@ -93,9 +120,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       };
 
       fetchData();
+      // Используем новый метод для кредитных записок
       getCreditNotes(Number(id));
     }
-  }, [isOpen, id, getCreditNotes, getCredits]);
+  }, [isOpen, id, getCreditNotes, getCredits, getClientById, getInvestorById, getGuarantorById]);
 
   const notesColumns = [
     { name: 'Дата' },
@@ -145,6 +173,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     setIsNoteModalOpen(false);
   };
 
+  const handleOpenClientModal = () => {
+    if (currentClient) {
+      setIsClientModalOpen(true);
+    }
+  };
+
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -158,6 +192,18 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       };
     }, [onClose]);
     
+  const handleOpenGuarantorModal = () => {
+    if (guarantorData) {
+      setIsGuarantorModalOpen(true);
+    }
+  };
+
+  const handleOpenInvestorModal = () => {
+    if (currentInvestor) {
+      setIsInvestorModalOpen(true);
+    }
+  };
+
   const formatPaymentsData = (payments: Payment[] | undefined) => {
         if (!payments) return [];
 
@@ -179,38 +225,87 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       <ModalOverlay isOpen={isOpen} onClick={onClose}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalWrapper>
-            <TitleField style={{marginTop: 0, paddingTop: 0}}>
+            <CloseButton onClick={onClose}>&times;</CloseButton>
+            <TitleField>
               <CustomTitle style={{ marginTop: 0 }}>
                 Договор №{id}
               </CustomTitle>
             </TitleField>
-
+              <CustomTitle style={{ marginTop: 0 }}>
+                {creditData?.name ? `Название договора ${creditData.name}` : ''}
+              </CustomTitle>
+            
              <div>
                 <HorizontalContainer style={{ marginBottom: '30px' }}>
                   <VerticalContainer>
-                    <ModalInfoTitle style={{marginBottom: "5px"}}>Сведения о договоре</ModalInfoTitle>
-                      <Label>{creditData && creditData.name && 'Договор'}</Label>
-                      <Value>{creditData && creditData.name && creditData.name}</Value>
+                    <ModalInfoTitle>Общая информация</ModalInfoTitle>
+                    <HorizontalContainer>
+                      <InputContainer style={{ maxWidth: "189px", paddingRight: "20px"}}>
+                        <InputTitle>Дата</InputTitle>
+                        <CustomInput 
+                          value={creditData ? formatDate(creditData.creditDate) : ''}
+                          readOnly
+                        />
+                      </InputContainer>
 
-                      <Label>Дата</Label>
-                      <Value>{creditData && formatDate(creditData.creditDate)}</Value>
-
-                      <Label>Покупатель</Label>
-                      <Value>{creditData && creditData.clientFullName}</Value>
-
-                      <Label>Телефон</Label>
-                      <Value>{creditData && creditData.clientPhone}</Value>
-                      
-                      <Label>{creditData && creditData.guarantorFullname && 'Поручитель'}</Label>
-                      <Value>{creditData && creditData.guarantorFullname}</Value>
-
-                      <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
-                      <Value>{creditData && creditData.guarantorPhone}</Value>
-
-                      <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
-                      <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
+                      <InputContainer style={{ width: "260px"}}>
+                        <InputTitle>Инвестор</InputTitle>
+                        <CustomInput 
+                          value={creditData?.investorNickname || ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                      {creditData?.creditTypeName && 
+                        <InputContainer style={{ marginLeft: "20px"}}>
+                          <InputTitle>Категория</InputTitle>
+                          <CustomInput 
+                            value={creditData?.creditTypeName || ''}
+                            readOnly
+                          />
+                        </InputContainer>
+                      }
+                    </HorizontalContainer>
+                    <ModalInfoTitle style={{ marginTop: "30px" }}>Сведения о покупателе</ModalInfoTitle>
+                    <HorizontalContainer>
+                      <InputContainer style={{ width: "260px"}}>
+                        <InputTitle>Покупатель</InputTitle>
+                        <CustomInput 
+                          value={creditData?.clientFullName || ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                      <ViewButtonContainer>
+                        <ViewButton onClick={handleOpenClientModal} />
+                      </ViewButtonContainer>
+                      <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
+                        <InputTitle>Первоначальный взнос, руб</InputTitle>
+                        <CustomInput 
+                          value={creditData ? `${formatMoney(creditData.firstPayment.toString())}` : ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                    </HorizontalContainer>
+                    <HorizontalContainer style={{ marginTop: "10px"}}>
+                      <InputContainer style={{ width: "260px"}}>
+                        <InputTitle>Поручитель</InputTitle>
+                        <CustomInput 
+                          value={guarantorData?.fullName || 'Без поручителя'}
+                          readOnly
+                        />
+                      </InputContainer>
+                      <ViewButtonContainer>
+                        {guarantorData && <ViewButton onClick={handleOpenGuarantorModal} />}
+                      </ViewButtonContainer>
+                      <InputContainer style={{ maxWidth: "189px", paddingLeft: "20px"}}>
+                        <InputTitle>Срок, месяцев</InputTitle>
+                        <CustomInput 
+                          value={creditData?.termMonths?.toString() || ''}
+                          readOnly
+                        />
+                      </InputContainer>
+                    </HorizontalContainer>
                   </VerticalContainer>
-                  <VerticalContainer>
+                  <VerticalContainer style={{ marginLeft: "30px", width: "562px" }}>
                     <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
                       <ModalInfoTitle>Заметки</ModalInfoTitle>
                       <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
@@ -229,45 +324,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                     </TableContainer>
                   </VerticalContainer>
                 </HorizontalContainer>
-
-                <ModalInfoTitle>Товары</ModalInfoTitle>
-
-                    <CustomTable                         
-                      columns={[
-                          { name: "Договор №" },
-                          { name: "ФИО" },
-                          { name: "Платёж" },
-                          { name: "Дата платежа" },
-                          { name: "Тип платежа" },
-                          { name: "Платёж принял" },
-                          { name: "Подтверждён" },                
-                      ]} 
-                      data={formatPaymentsData(paymentsData?.items)}
-                    />
-
-                    <ModalInfoTitle>График платежей</ModalInfoTitle>
-                    <CustomTable                         
-                      columns={[
-                          { name: "Договор №" },
-                          { name: "ФИО" },
-                          { name: "Платёж" },
-                          { name: "Дата платежа" },
-                          { name: "Тип платежа" },
-                          { name: "Платёж принял" },
-                          { name: "Подтверждён" },                
-                      ]} 
-                      data={formatPaymentsData(paymentsData?.items)}
-                    />
-
-                    <Value>
-                      {creditData && `Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
-                    </Value>
-
-                    {paymentsData && (
-                      <>
-                        <ModalInfoTitle>Платежи</ModalInfoTitle>
-                        <CustomTable                         
-                          columns={[
+                <CustomTable                         columns={[
                             { name: "Договор №" },
                             { name: "ФИО" },
                             { name: "Платёж" },
@@ -275,11 +332,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                             { name: "Тип платежа" },
                             { name: "Платёж принял" },
                             { name: "Подтверждён" },                
-                          ]} 
-                          data={formatPaymentsData(paymentsData?.items)}
-                        />
-                      </>
-                    )}
+                        ]} 
+                        data={formatPaymentsData(paymentsData?.items)}
+                    />
               </div>
           </ModalWrapper>
         </ModalContent>
@@ -361,7 +416,7 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
 `;
 
 const ModalWrapper = styled.div`
-  margin: 10px;
+  margin: 40px;
 `;
 
 const VerticalContainer = styled.div`
@@ -374,6 +429,11 @@ const HorizontalContainer = styled.div`
     flex-direction: row;
 `;
 
+const InputContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+`;
+
 const ModalContent = styled.div`
   background: white;
   padding: 24px;
@@ -381,6 +441,28 @@ const ModalContent = styled.div`
   width: auto;
   overflow-y: auto;
   max-height: 90vh;
+`;
+
+const InputTitle = styled.h5`
+    font-size: 14px;
+    text-align: left;
+    font-weight: 400;
+    margin: 0;
+    margin-bottom: 10px;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+`;
+
+const ViewButtonContainer = styled.div`
+    margin-top: 40px;
 `;
 
 const AddButton = styled.img`
@@ -487,22 +569,6 @@ const DeleteIcon = styled.div`
 const Table = styled(CustomTable)`
   max-height: 260px;
   height: 100%;
-`;
-
-const Label = styled.h6`
-  color: rgba(80, 85, 92, 1);
-  font-weight: 400;
-  font-size: 16px;
-  margin: 10px 0 2px;
-  text-align: left;
-`;
-
-const Value = styled.h6`
-  color: black;
-  font-weight: 500;
-  font-size: 16px;
-  margin: 0 0;
-  text-align: left;
 `;
 
 export default ViewCreditModal;
