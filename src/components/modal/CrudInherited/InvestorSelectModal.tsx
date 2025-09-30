@@ -145,7 +145,7 @@ const InvestorSelectModal = ({
         fullName: pool.name,
         pie: pool.pie,
         balance: pool.balance || 0,
-        activeUntil: pool.activeUntil, // Убедитесь что это передается
+        activeUntil: pool.activeUntil,
         type: 'pool'
       });
     }
