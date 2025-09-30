@@ -170,7 +170,7 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
 
   const getRowStyle = (rowIndex: number, isTotalsRow: boolean, isDebtRow: boolean): RowStyle => {
     if (isTotalsRow) {
-      return { backgroundColor: 'white', color: 'black', fontWeight: 'bold' };
+      return { backgroundColor: '#FFFFFF', color: '#000000', fontWeight: 'bold' };
     }
     
     const customStyle = rowStyles[rowIndex] || {};
@@ -178,14 +178,14 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
     if (rowIndex === selectedRow) {
       return {
         backgroundColor: customStyle.backgroundColor || '#007D88',
-        color: customStyle.color || 'white',
+        color: customStyle.color || '#FFFFFF',
         fontWeight: customStyle.fontWeight || 'normal'
       };
     }
     
     if (isDebtRow) {
       return {
-        backgroundColor: customStyle.backgroundColor || 'rgba(232, 216, 216, 1)',
+        backgroundColor: customStyle.backgroundColor || '#E8D8D8',
         color: customStyle.color || 'inherit',
         fontWeight: customStyle.fontWeight || 'normal'
       };
@@ -194,17 +194,31 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
     const isActive = data[rowIndex][data[rowIndex].length - 1] === false;
     if (isActive) {
       return {
-        backgroundColor: customStyle.backgroundColor || 'rgba(37, 203, 161, 1)',
+        backgroundColor: customStyle.backgroundColor || '#25CBA1',
         color: customStyle.color || 'inherit',
         fontWeight: customStyle.fontWeight || 'normal'
       };
     }
     
     return {
-      backgroundColor: customStyle.backgroundColor || 'white',
+      backgroundColor: customStyle.backgroundColor || '#FFFFFF',
       color: customStyle.color || 'inherit',
       fontWeight: customStyle.fontWeight || 'normal'
     };
+  };
+
+  // Helper function to get hover background color
+  const getHoverBackgroundColor = (rowIndex: number, isTotalsRow: boolean, isDebtRow: boolean): string => {
+    if (isTotalsRow) return '#FFFFFF';
+    
+    const rowStyle = getRowStyle(rowIndex, isTotalsRow, isDebtRow);
+    if (rowStyle.hoverBackgroundColor) return rowStyle.hoverBackgroundColor;
+    
+    if (rowIndex === selectedRow) return '#007D88';
+    if (isDebtRow) return '#E8D8D8CC'; // Adding transparency for hover effect
+    if (data[rowIndex][data[rowIndex].length - 1] === false) return '#51D5B4CC'; // Adding transparency
+    
+    return '#F3F4F6';
   };
 
   return (
@@ -259,6 +273,7 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
                   const isTotalsRow = hasTotalsRow && rowIndex === data.length - 1;
                   const isDebtRow = !isTotalsRow && checkDebt(row);
                   const rowStyle = getRowStyle(rowIndex, isTotalsRow, isDebtRow);
+                  const hoverBackgroundColor = getHoverBackgroundColor(rowIndex, isTotalsRow, isDebtRow);
 
                   return (
                     <TableRow 
@@ -267,7 +282,7 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
                       animate={{ 
                         opacity: 1, 
                         y: 0,
-                        backgroundColor: rowStyle.backgroundColor || 'white',
+                        backgroundColor: rowStyle.backgroundColor || '#FFFFFF',
                         color: rowStyle.color || 'inherit',
                         fontWeight: rowStyle.fontWeight || 'normal'
                       }}
@@ -283,13 +298,15 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
                       onTouchEnd={handleTouchEnd}
                       onTouchMove={handleTouchMove}
                       whileHover={!isTotalsRow ? {
-                          backgroundColor: rowStyle.hoverBackgroundColor || 
-                                        (rowIndex === selectedRow ? '#007D88' : 
-                                          isDebtRow ? 'rgba(232, 216, 216, 0.8)' :
-                                          row[row.length - 1] === false ? 'rgba(81, 213, 180, 0.8)' : '#F3F4F6'),
+                          backgroundColor: hoverBackgroundColor,
                           transition: { duration: 0.15 }
                         } : {}}
-                      >
+                      style={{
+                        backgroundColor: rowStyle.backgroundColor || '#FFFFFF',
+                        color: rowStyle.color || 'inherit',
+                        fontWeight: rowStyle.fontWeight || 'normal'
+                      }}
+                    >
                       {row.map((cell, cellIndex) => (
                         !columns[cellIndex]?.isHidden && (
                         <BodyCell 
@@ -394,21 +411,21 @@ const TableContainer = styled.div`
   border-radius: 8px;
   overflow: auto;
   position: relative;
-  background-color: white;
-  color: black;
+  background-color: #FFFFFF;
+  color: #000000;
   height: 100%;
 `;
 
 const StyledTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background-color: white;
+  background-color: #FFFFFF;
   box-sizing: border-box;
   
   th, td {
     box-sizing: border-box;
     position: relative;
-    border-right: 0.5px solid rgba(209, 213, 219, 1);
+    border-right: 0.5px solid #D1D5DB;
   }
 
   th:last-child,
@@ -455,7 +472,7 @@ const TableRow = styled(motion.tr)<{
     left: 1%;
     width: 98%;
     height: 1px;
-    background: rgba(209, 213, 219, 1);
+    background: #D1D5DB;
     display: ${({ $isLast, $isTotalsRow }) => ($isLast || $isTotalsRow ? 'none' : 'block')};
   }
 `;
@@ -475,11 +492,11 @@ const HeaderCell = styled.th<{
   position: relative;
   cursor: ${({ $isSortable }) => ($isSortable ? 'pointer' : 'default')};
   transition: all 0.2s ease;
-  background-color: rgba(255, 255, 255, 1);
+  background-color: #FFFFFF;
   color: ${({ $isActive }) => ($isActive ? '#007D88' : 'inherit')};
 
   &:hover {
-    background-color: ${({ $isSortable }) => ($isSortable ? 'rgba(243, 244, 246, 1)' : 'inherit')};
+    background-color: ${({ $isSortable }) => ($isSortable ? '#F3F4F6' : 'inherit')};
   }
 `;
 
@@ -511,17 +528,7 @@ const BodyCell = styled.td<{
   text-align: ${({ $align }) => $align};
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) => 
-    ($isBeforeTotals || $isTotalsCell) ? 'none' : '0.5px solid rgba(209, 213, 219, 1)'};
-`;
-
-const TotalsRow = styled.tr`
-  background-color: #f5f5f5;
-  font-weight: bold;
-  
-  td {
-    padding: 12px 16px;
-    border-top: 2px solid #ddd;
-  }
+    ($isBeforeTotals || $isTotalsCell) ? 'none' : '0.5px solid #D1D5DB'};
 `;
 
 export default CustomTable;

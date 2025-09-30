@@ -16,6 +16,7 @@ export interface SchedulePreviewParams {
 
 export interface ScheduleParams extends PaginationParams {
     creditId?: number;
+    includePayed?: boolean;
     clientName?: string;
     investorNickname?: string;
     dateFrom?: Date;

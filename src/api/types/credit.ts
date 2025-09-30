@@ -71,7 +71,7 @@ export interface CreateCreditRequest {
 export interface CreditParams extends PaginationParams {
     creditId?: string;
     investorPoolId?: number;
-    creditTypeId: number;
+    creditTypeId?: number;
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
     dateFrom?: Date;

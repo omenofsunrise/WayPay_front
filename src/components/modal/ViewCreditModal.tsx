@@ -19,6 +19,11 @@ import usePayment from '../../api/hooks/usePayment';
 import { NOTEABLE_TYPES } from '../../api/types/note';
 import type { Guarantor } from '../../api/types/client';
 import GuarantorModal from './CrudInherited/GuarantorModal';
+import useSoldProducts from '../../api/hooks/useSoldProduct';
+import type { SoldProduct } from '../../api/types/soldProduct';
+import useSchedule from '../../api/hooks/useSchedule';
+import type { Schedule } from 'framer-motion';
+import type { ScheduleItem, ScheduleParams } from '../../api/types/schedule';
 
 interface ViewCreditModalProps {
   id: number;
@@ -44,7 +49,16 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       getPaymentsByCreditId
   } = usePayment();
 
+  const { 
+      data: soldProductsData, 
+      getSoldProducts
+  } = useSoldProducts();
   
+  const { 
+      scheduleData, 
+      getByCreditId: getSchedules
+  } = useSchedule();
+
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isGuarantorModalOpen, setIsGuarantorModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
@@ -62,9 +76,34 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       }
   }, [getPaymentsByCreditId, id]);
 
+  const loadSoldProducts = useCallback(async () => {
+      if (id) {
+          await getSoldProducts(id);
+      }
+  }, [getSoldProducts, id]);
+
+  const loadSchedules = useCallback(async () => {
+      if (id) {
+          const params: ScheduleParams = {
+              includePayed: true,
+              page: 1,
+              pageSize: 100
+          };
+          await getSchedules(id, params);
+      }
+  }, [getSchedules, id]);
+
+  useEffect(() => {
+      loadSoldProducts();
+  }, [loadSoldProducts]);
+
   useEffect(() => {
       loadPayments();
   }, [loadPayments]);
+
+  useEffect(() => {
+      loadSchedules();
+  }, [loadSchedules]);
 
   useEffect(() => {
     if (isOpen && id) {
@@ -76,7 +115,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           setCurrentInvestor(null);
           setGuarantorType(null);
           
-          const creditResult = await getCredits({ creditId: id, pageSize: 1 });
+          const creditResult = await getCredits({ creditId: id.toString(), pageSize: 1 });
           if (creditResult?.items?.length) {
             const credit = creditResult.items[0];
             setCreditData(credit);
@@ -159,19 +198,53 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }, [onClose]);
     
   const formatPaymentsData = (payments: Payment[] | undefined) => {
-        if (!payments) return [];
+      if (!payments) return [];
 
-        return payments.map(payment => [
-            payment.creditId?.toString() || '',
-            payment.clientFullName || '',
-            formatMoney(payment.paymentAmount?.toString() || '0'),
-            payment.paymentDate ? formatDate(payment.paymentDate) : '',
-            payment.type === 'cash' ? 'Наличными' : 'Картой',
-            payment.employeeFullName || '',
-            payment.accepted ? 'Да' : 'Нет'
-        ]);
-    };
+      return payments.map(payment => [
+          payment.paymentDate ? formatDate(payment.paymentDate) : '',
+          formatMoney(payment.paymentAmount?.toString() || '0'),
+          payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails ?? ""}`,
+          payment.employeeFullName || '',
+          payment.accepted ? 'Да' : 'Нет'
+      ]);
+  };
       
+  const formatSchedulesData = (schedules: ScheduleItem[] | undefined) => {
+      if (!schedules) return [];
+
+      return schedules.map(schedule => [
+          formatDate(schedule.paymentDate || ''),
+          formatMoney(schedule.paymentAmount.toString() || ''),
+          schedule.comment?.toString(),
+      ]);
+  };
+
+  const formatSoldProductsData = (soldProducts: SoldProduct[] | undefined) => {
+    if (!soldProducts) return [];
+
+    return soldProducts.map(soldProduct => {
+      let surchargeValue = 0;
+      let surchargeDisplay = '';
+      
+      if (soldProduct.surcharge) {
+        surchargeValue = (soldProduct.price * soldProduct.surcharge) / 100;
+        surchargeDisplay = `${soldProduct.surcharge}%`;
+      } else if (soldProduct.surchargeAmount) {
+        surchargeValue = soldProduct.surchargeAmount;
+        surchargeDisplay = formatMoney(soldProduct.surchargeAmount.toString());
+      }
+      
+      const finalPrice = soldProduct.price + surchargeValue;
+      
+      return [
+        soldProduct.name || '',
+        formatMoney(soldProduct.price.toString() || ''),
+        surchargeDisplay,
+        formatMoney(finalPrice.toString()),
+      ];
+    });
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -210,12 +283,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
                       <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
                   </VerticalContainer>
-                  <VerticalContainer>
+                  <VerticalContainer style={{ width: "100%", minWidth: "700px", marginLeft: "60px"}}>
                     <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
                       <ModalInfoTitle>Заметки</ModalInfoTitle>
                       <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
                     </HorizontalContainer>
-                    <TableContainer style={{ width: "562px", maxHeight: "260px" }}>
+                    <TableContainer style={{ width: "100%" }}>
                       {isNotesLoading ? (
                         <LoadingText>Загрузка заметок...</LoadingText>
                       ) : notesError ? (
@@ -232,54 +305,44 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
                 <ModalInfoTitle>Товары</ModalInfoTitle>
 
+                <CustomTable                         
+                  columns={[
+                      { name: "Название" },
+                      { name: "Стоимость", align: "right" },
+                      { name: "Надбавка", align: "right" },
+                      { name: "Цена", align: "right" },
+                  ]} 
+                  data={formatSoldProductsData(soldProductsData)}
+                />
+
+                <Value style={{margin: "10px 0 15px"}}>
+                  {creditData && `Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
+                </Value>
+                {paymentsData && (
+                  <>
+                    <ModalInfoTitle>Платежи</ModalInfoTitle>
                     <CustomTable                         
                       columns={[
-                          { name: "Договор №" },
-                          { name: "ФИО" },
-                          { name: "Платёж" },
-                          { name: "Дата платежа" },
-                          { name: "Тип платежа" },
-                          { name: "Платёж принял" },
-                          { name: "Подтверждён" },                
+                        { name: "Дата", align: "left" },
+                        { name: "Сумма", align: "right" },
+                        { name: "Тип платежа" },
+                        { name: "Платёж принял" },
+                        { name: "Подтверждён" },                
                       ]} 
                       data={formatPaymentsData(paymentsData?.items)}
                     />
+                  </>
+                )}
 
-                    <ModalInfoTitle>График платежей</ModalInfoTitle>
-                    <CustomTable                         
-                      columns={[
-                          { name: "Договор №" },
-                          { name: "ФИО" },
-                          { name: "Платёж" },
-                          { name: "Дата платежа" },
-                          { name: "Тип платежа" },
-                          { name: "Платёж принял" },
-                          { name: "Подтверждён" },                
-                      ]} 
-                      data={formatPaymentsData(paymentsData?.items)}
-                    />
-
-                    <Value>
-                      {creditData && `Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
-                    </Value>
-
-                    {paymentsData && (
-                      <>
-                        <ModalInfoTitle>Платежи</ModalInfoTitle>
-                        <CustomTable                         
-                          columns={[
-                            { name: "Договор №" },
-                            { name: "ФИО" },
-                            { name: "Платёж" },
-                            { name: "Дата платежа" },
-                            { name: "Тип платежа" },
-                            { name: "Платёж принял" },
-                            { name: "Подтверждён" },                
-                          ]} 
-                          data={formatPaymentsData(paymentsData?.items)}
-                        />
-                      </>
-                    )}
+                <ModalInfoTitle>График платежей</ModalInfoTitle>
+                <CustomTable                         
+                  columns={[
+                      { name: "Дата", align: "left" },
+                      { name: "Сумма", align: "right" },
+                      { name: "Примечание" },
+                  ]} 
+                  data={formatSchedulesData(scheduleData?.items)}
+                />
               </div>
           </ModalWrapper>
         </ModalContent>
