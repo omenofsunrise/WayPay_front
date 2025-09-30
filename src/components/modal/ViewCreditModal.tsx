@@ -8,22 +8,17 @@ import CustomTable from '../ui/tables/CustomTable';
 import useNotes from '../../api/hooks/useNote';
 import { formatDate } from '../../utils/dateFormatter';
 import useCredit from '../../api/hooks/useCredit';
-import useClient from '../../api/hooks/useClient';
-import type { Credit, GuarantorType } from '../../api/types/credit';
-import type { Client } from '../../api/types/client';
+import type { Credit } from '../../api/types/credit';
 import { formatMoney } from '../../utils/formatPrice';
-import ClientModal from './CrudInherited/ClientModal';
-import InvestorModal from './CrudInherited/InvestorModal';
 import type { Payment, PaymentByCreditParams } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
 import { NOTEABLE_TYPES } from '../../api/types/note';
-import type { Guarantor } from '../../api/types/client';
-import GuarantorModal from './CrudInherited/GuarantorModal';
 import useSoldProducts from '../../api/hooks/useSoldProduct';
 import type { SoldProduct } from '../../api/types/soldProduct';
 import useSchedule from '../../api/hooks/useSchedule';
-import type { Schedule } from 'framer-motion';
 import type { ScheduleItem, ScheduleParams } from '../../api/types/schedule';
+import CreateNoteModal from './CreateNoteModal';
+import PhotoViewerModal from './PhotoViewerModal';
 
 interface ViewCreditModalProps {
   id: number;
@@ -38,12 +33,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 }) => {
   const { notes, isLoading: isNotesLoading, error: notesError, getCreditNotes, createNote, deleteNote } = useNotes();
   const { getCredits } = useCredit();
-  const { getClientById } = useClient();
   const [creditData, setCreditData] = useState<Credit | null>(null);
-  const [guarantorData, setGuarantorData] = useState<Client | Guarantor | null>(null);
-  const [guarantorType, setGuarantorType] = useState<GuarantorType | null>(null);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [noteImages, setNoteImages] = useState<string[]>([]);
+  
   const { 
       data: paymentsData, 
       getPaymentsByCreditId
@@ -59,12 +55,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       getByCreditId: getSchedules
   } = useSchedule();
 
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  const [isGuarantorModalOpen, setIsGuarantorModalOpen] = useState(false);
-  const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
-  const [currentClient, setCurrentClient] = useState<Client | null>(null);
-  const [currentInvestor, setCurrentInvestor] = useState<any>(null);
-  
   const loadPayments = useCallback(async () => {
       if (id) {
           const params: PaymentByCreditParams = {
@@ -110,20 +100,11 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       const fetchData = async () => {
         try {
           setCreditData(null);
-          setCurrentClient(null);
-          setGuarantorData(null);
-          setCurrentInvestor(null);
-          setGuarantorType(null);
           
           const creditResult = await getCredits({ creditId: id.toString(), pageSize: 1 });
           if (creditResult?.items?.length) {
             const credit = creditResult.items[0];
-            setCreditData(credit);
-            
-            if (credit.clientId) {
-              const client = await getClientById(credit.clientId);
-              setCurrentClient(client);
-            }
+            setCreditData(credit);            
           }
         } catch (error) {
           console.error('Error fetching data:', error);
@@ -136,6 +117,34 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   }, [isOpen, id, getCreditNotes, getCredits]);
 
+  useEffect(() => {
+    if (notes && notes.length > 0) {
+      const images = notes
+        .filter(note => note.fileBase64 && isImageFile(note.fileName))
+        .map(note => `data:image/jpeg;base64,${note.fileBase64}`);
+      setNoteImages(images);
+    }
+  }, [notes]);
+
+  const isImageFile = (fileName: string | undefined): boolean => {
+    if (!fileName) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    return imageExtensions.some(ext => 
+      fileName.toLowerCase().endsWith(ext)
+    );
+  };
+
+  const downloadFile = (note: any) => {
+    if (note.fileBase64 && note.fileName) {
+      const link = document.createElement('a');
+      link.href = `data:application/octet-stream;base64,${note.fileBase64}`;
+      link.download = note.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const notesColumns = [
     { name: 'Дата' },
     { name: 'Заметка', align: 'left' as const },
@@ -147,12 +156,51 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     getCreditNotes(Number(id));
   };
 
+  const handlePhotoClick = (noteIndex: number) => {
+    let imageIndex = 0;
+    let currentCount = 0;
+    
+    for (let i = 0; i < notes.length; i++) {
+      if (notes[i].fileBase64 && isImageFile(notes[i].fileName)) {
+        if (i === noteIndex) {
+          imageIndex = currentCount;
+          break;
+        }
+        currentCount++;
+      }
+    }
+    
+    setCurrentPhotoIndex(imageIndex);
+    setIsPhotoViewerOpen(true);
+  };
+
   const formatNotesData = () => {
-    return notes.map(note => [
+    return notes.map((note, index) => [
       formatDate(note.createdAt),
-      note.content,
+      <NoteContent key={`note-${note.id}`}>
+        {note.content}
+        {note.fileBase64 && (
+          <FileContainer>
+            {isImageFile(note.fileName) ? (
+              <NoteImage 
+                src={`data:image/jpeg;base64,${note.fileBase64}`}
+                alt="Прикрепленное изображение"
+                onClick={() => handlePhotoClick(index)}
+              />
+            ) : (
+              <FileIcon onClick={() => downloadFile(note)}>
+                <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="33" height="33" rx="10" fill="#C0DBE0"/>
+                  <path d="M14.1333 7.125H11.8125C11.1909 7.125 10.5948 7.37193 10.1552 7.81147C9.71568 8.25101 9.46875 8.84715 9.46875 9.46875V23.5312C9.46875 24.1529 9.71568 24.749 10.1552 25.1885C10.5948 25.6281 11.1909 25.875 11.8125 25.875H21.1875C21.8091 25.875 22.4052 25.6281 22.8448 25.1885C23.2843 24.749 23.5312 24.1529 23.5312 23.5312V16.5M14.1333 7.125C15.4281 7.125 16.5 8.17396 16.5 9.46875V11.8125C16.5 12.4341 16.7469 13.0302 17.1865 13.4698C17.626 13.9093 18.2221 14.1562 18.8437 14.1562H21.1875C21.8091 14.1562 22.4052 14.4032 22.8448 14.8427C23.2843 15.2823 23.5312 15.8784 23.5312 16.5M14.1333 7.125C17.9771 7.125 23.5312 12.7083 23.5312 16.5" stroke="#007D88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {note.fileName && <FileName>{note.fileName}</FileName>}
+              </FileIcon>
+            )}
+          </FileContainer>
+        )}
+      </NoteContent>,
       <DeleteIcon 
-        key={note.id} 
+        key={`delete-${note.id}`} 
         onClick={() => handleDeleteNote(note.id)}
       >
         <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -166,12 +214,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     setIsNoteModalOpen(true);
   };
 
-  const handleCreateNote = async () => {
-    if (newNoteContent.trim() && id) {
+  const handleCreateNote = async (noteData: { content: string; file?: File }) => {
+    if (noteData.content.trim() && id) {
       await createNote({
         noteableType: NOTEABLE_TYPES.CREDIT,
         noteableId: Number(id),
-        content: newNoteContent
+        content: noteData.content,
+        file: noteData.file
       });
       setNewNoteContent('');
       setIsNoteModalOpen(false);
@@ -182,6 +231,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const handleCancelNote = () => {
     setNewNoteContent('');
     setIsNoteModalOpen(false);
+  };
+
+  const handleClosePhotoViewer = () => {
+    setIsPhotoViewerOpen(false);
   };
 
   useEffect(() => {
@@ -316,9 +369,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 />
 
                 <Value style={{margin: "10px 0 15px"}}>
-                  {creditData && `Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
+                  {creditData && creditData.firstPayment != 0 &&`Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
                 </Value>
-                {paymentsData && (
+                {paymentsData?.items.length > 0 && (
                   <>
                     <ModalInfoTitle>Платежи</ModalInfoTitle>
                     <CustomTable                         
@@ -348,63 +401,21 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         </ModalContent>
       </ModalOverlay>
 
-      {currentClient && (
-        <ClientModal
-          mode="view"
-          isOpen={isClientModalOpen}
-          onClose={() => setIsClientModalOpen(false)}
-          onSubmit={async () => false}
-          initialData={currentClient}
+      <CreateNoteModal
+        isOpen={isNoteModalOpen}
+        onClose={handleCancelNote}
+        onCreate={handleCreateNote}
+        noteContent={newNoteContent}
+        onNoteContentChange={setNewNoteContent}
+      />
+
+      {isPhotoViewerOpen && noteImages.length > 0 && (
+        <PhotoViewerModal
+          images={noteImages}
+          initialIndex={currentPhotoIndex}
+          onClose={handleClosePhotoViewer}
         />
       )}
-
-      {guarantorData && guarantorType === 'Client' && (
-        <ClientModal
-          mode="view"
-          isOpen={isGuarantorModalOpen}
-          onClose={() => setIsGuarantorModalOpen(false)}
-          onSubmit={async () => false}
-          initialData={guarantorData as Client}
-        />
-      )}
-
-      {guarantorData && guarantorType === 'Guarantor' && (
-        <GuarantorModal
-          mode="view"
-          isOpen={isGuarantorModalOpen}
-          onClose={() => setIsGuarantorModalOpen(false)}
-          onSubmit={async () => false}
-          initialData={guarantorData as Guarantor}
-        />
-      )}
-
-      {currentInvestor && (
-        <InvestorModal
-          mode="view"
-          isOpen={isInvestorModalOpen}
-          onClose={() => setIsInvestorModalOpen(false)}
-          onSubmit={async () => false}
-          initialData={currentInvestor}
-        />
-      )}
-
-      <ModalOverlay isOpen={isNoteModalOpen} onClick={handleCancelNote}>
-        <NoteModalContent onClick={(e) => e.stopPropagation()}>
-          <NoteModalWrapper>
-            <CustomTitle style={{ marginTop: 0 }}>Заметка</CustomTitle>
-            <NoteInput 
-              style={{background: "white", color: "black"}}
-              value={newNoteContent}
-              onChange={(e) => setNewNoteContent(e.target.value)}
-              placeholder="Введите текст заметки..."
-            />
-            <ButtonContainer>
-              <CancelButton onClick={handleCancelNote}>Отменить</CancelButton>
-              <CreateButton onClick={handleCreateNote}>Создать</CreateButton>
-            </ButtonContainer>
-          </NoteModalWrapper>
-        </NoteModalContent>
-      </ModalOverlay>
     </>
   );
 };
@@ -458,10 +469,10 @@ const AddButton = styled.img`
 const TableContainer = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  max-height: 260px;
   overflow-y: auto;
   width: 100%;
   height: 100%;
+  max-height: 500px;  
 `;
 
 const LoadingText = styled.div`
@@ -476,66 +487,6 @@ const ErrorText = styled.div`
   color: #ff0000;
 `;
 
-const NoteModalContent = styled.div`
-  background: white;
-  padding: 24px;
-  border-radius: 8px;
-  width: 500px;
-`;
-
-const NoteModalWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  margin: 20px;
-`;
-
-const NoteInput = styled.textarea`
-  width: auto;
-  height: 150px;
-  padding: 12px;
-  margin: 15px 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  resize: none;
-  font-family: inherit;
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-  }
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-`;
-
-const CancelButton = styled.button`
-  padding: 8px 16px;
-  background: rgba(209, 213, 219, 1);
-  border-radius: 10px;
-  cursor: pointer;
-  margin-right: auto;
-
-  &:hover {
-    background: #e6e6e6;
-  }
-`;
-
-const CreateButton = styled.button`
-  padding: 8px 16px;
-  background: rgba(0, 125, 136, 1);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  
-  &:hover {
-    background: rgba(0, 125, 116, 1);
-  }
-`;
-
 const DeleteIcon = styled.div`
   cursor: pointer;
   display: flex;
@@ -548,7 +499,6 @@ const DeleteIcon = styled.div`
 `;
 
 const Table = styled(CustomTable)`
-  max-height: 260px;
   height: 100%;
 `;
 
@@ -566,6 +516,55 @@ const Value = styled.h6`
   font-size: 16px;
   margin: 0 0;
   text-align: left;
+`;
+
+const NoteContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+`;
+
+const FileContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const NoteImage = styled.img`
+  max-width: 100px;
+  max-height: 100px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const FileIcon = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  
+  &:hover {
+    background-color: #e9ecef;
+  }
+`;
+
+const FileName = styled.span`
+  font-size: 14px;
+  color: #007D88;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export default ViewCreditModal;

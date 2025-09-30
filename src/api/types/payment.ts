@@ -1,6 +1,7 @@
 import type { PaginatedResponse, PaginationParams } from './common';
 
 export interface Payment {
+    bankCardDetails: string;
     id: number;
     creditId: number;
     paymentAmount: number;

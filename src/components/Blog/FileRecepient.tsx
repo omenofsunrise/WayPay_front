@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import FileItem from './FileItem';
-import { FiTrash2 } from 'react-icons/fi';
 
 interface FileRecepientProps {
   files: File[];
