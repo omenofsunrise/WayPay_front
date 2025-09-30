@@ -86,6 +86,7 @@ const InvestorsPoolPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'payouts' | 'credits' | 'investors'>('investors');
+    const [dataTab, setDataTab] = useState<'general' | 'expected' | 'current'>('general');
     const [creditsPage, setCreditsPage] = useState(1);
     const [payoutsPage, setPayoutsPage] = useState(1);
     const [isCreatePoolModalOpen, setIsCreatePoolModalOpen] = useState(false);
@@ -268,6 +269,7 @@ const InvestorsPoolPage = () => {
         investor.investmentAmount ? formatMoney(investor.investmentAmount.toString()) : '-',
         investor.investorPie !== null && investor.investorPie !== undefined ? `${investor.investorPie}%` : '-',
         investor.income ? formatMoney(investor.income.toString()) : '-',
+        investor.currentIncome ? formatMoney(investor.currentIncome.toString()) : '-',
         <EditButton onClick={() => handleEditInvestor(investor)} />,
         <DeleteButton onClick={() => handleDeleteInvestor(investor.id)} />,
         <DarkCyanButton onClick={() => handleAddInvestment([investor.id.toString()])}>
@@ -277,18 +279,6 @@ const InvestorsPoolPage = () => {
             Выплатить
         </DarkCyanButton>
     ]);
-
-    const investorColumns = [
-        { name: "id", isHidden: true },
-        { name: "ФИО", align: "left" },
-        { name: "Телефон", align: "left" },
-        { name: "Инвестиция", align: "left" },
-        { name: "Доля", align: "left" },
-        { name: "Доход", align: "left" },
-        { name: "", align: "center" },
-        { name: "", align: "center" },
-        { name: "", align: "center" }
-    ];
 
     const handleCreatePool = async () => {
         if (!newPoolName.trim()) return;
@@ -708,6 +698,12 @@ const InvestorsPoolPage = () => {
         { id: 'credits', label: 'Договоры' },
     ];
 
+    const dataTabs = [
+        { id: 'general', label: 'Общие данные' },
+        { id: 'expected', label: 'Ожидаемый доход' },
+        { id: 'current', label: 'Текущий доход' }
+    ];
+
     const handleDeletePayout = async (id: number) => {
         try {
             await removePayout(id);
@@ -763,6 +759,114 @@ const InvestorsPoolPage = () => {
         
         return styles;
     }, {} as { [key: number]: RowStyle });
+
+    const renderGeneralCards = () => (
+        <>
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={investmentSvg} alt="Investment" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
+                <ReportLabel>Инвестиция</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={activeCreditsSvg} alt="Active credits" />
+                </IconContainer>
+                <ReportValue>{report.activeCreditsAmount}</ReportValue>
+                <ReportLabel>Незакрытые договоры</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={shareSvg} alt="Total income" />
+                </IconContainer>
+                <ReportValue>{pools.find(pool => pool.id === Number(selectedPoolId))?.pie.toString() || '0'}%</ReportValue>
+                <ReportLabel>Доля пула</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={balanceSvg} alt="Balance" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+                <ReportLabel>Касса</ReportLabel>
+            </ReportCard>
+            
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={debtSvg} alt="Debt" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
+                <ReportLabel>Просрочки руб.</ReportLabel>
+            </ReportCard>
+        </>
+    );
+
+    const renderExpectedIncomeCards = () => (
+        <>
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={investorIncomeScg} alt="Investor income" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
+                <ReportLabel>Доход пула</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={selfIncomeSvg} alt="Self income" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
+                <ReportLabel>Собственный доход</ReportLabel>
+            </ReportCard>                            
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={commonIncomeSvg} alt="Total income" />
+                </IconContainer>
+                <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
+                <ReportLabel>Общий доход</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.allSelfIncome?.toString() || '0')}</ReportValue>
+                <ReportLabel>Доход от инвесторов</ReportLabel>
+            </ReportCard>
+        </>
+    );
+
+    const renderCurrentIncomeCards = () => (
+        <>
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={investorIncomeScg} alt="Investor income" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.investorPaymentIncome?.toString() || '0')}</ReportValue>
+                <ReportLabel>Текущий доход пула</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={selfIncomeSvg} alt="Self income" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.selfPaymentIncome?.toString() || '0')}</ReportValue>
+                <ReportLabel>Текущий собственный доход</ReportLabel>
+            </ReportCard>
+
+            <ReportCard>
+                <IconContainer>
+                    <Icon src={paymentIncomeSvg} alt="paymentIncome" />
+                </IconContainer>
+                <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
+                <ReportLabel>Текущий доход</ReportLabel>
+            </ReportCard>
+        </>
+    );
 
     return (
         <PageLayout>
@@ -827,78 +931,18 @@ const InvestorsPoolPage = () => {
                                 Пул создан {formatDate(report.createdAt)}
                             </CreationDate>
 
+                            <TabsContainer>
+                                <Tabs<'general' | 'expected' | 'current'>
+                                    tabs={dataTabs}
+                                    activeTab={dataTab}
+                                    onChange={(tabId) => setDataTab(tabId)}
+                                />
+                            </TabsContainer>
+
                             <ReportDataContainer>
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={investmentSvg} alt="Investment" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
-                                    <ReportLabel>Инвестиция</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={activeCreditsSvg} alt="Active credits" />
-                                    </IconContainer>
-                                    <ReportValue>{report.activeCreditsAmount}</ReportValue>
-                                    <ReportLabel>Незакрытые договоры</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={shareSvg} alt="Total income" />
-                                    </IconContainer>
-                                    <ReportValue>{pools.find(pool => pool.id === Number(selectedPoolId))?.pie.toString() || '0'}%</ReportValue>
-                                    <ReportLabel>Доля пула</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={investorIncomeScg} alt="Investor income" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.investorIncome.toString())}</ReportValue>
-                                    <ReportLabel>Доход пула</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={selfIncomeSvg} alt="Self income" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
-                                    <ReportLabel>Собственный доход</ReportLabel>
-                                </ReportCard>                            
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={commonIncomeSvg} alt="Total income" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
-                                    <ReportLabel>Общий доход</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={balanceSvg} alt="Balance" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
-                                    <ReportLabel>Касса</ReportLabel>
-                                </ReportCard>
-                                
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={debtSvg} alt="Debt" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.delinquencyAmount.toString())}</ReportValue>
-                                    <ReportLabel>Просрочки руб.</ReportLabel>
-                                </ReportCard>
-
-                                <ReportCard>
-                                    <IconContainer>
-                                        <Icon src={paymentIncomeSvg} alt="paymentIncome" />
-                                    </IconContainer>
-                                    <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
-                                    <ReportLabel>Доходы по платежам в текущем месяце</ReportLabel>
-                                </ReportCard>  
+                                {dataTab === 'general' && renderGeneralCards()}
+                                {dataTab === 'expected' && renderExpectedIncomeCards()}
+                                {dataTab === 'current' && renderCurrentIncomeCards()}
                             </ReportDataContainer>
                         </>
                     )}
@@ -986,9 +1030,10 @@ const InvestorsPoolPage = () => {
                             { name: "id", isHidden: true },
                             { name: "ФИО", align: "left" },
                             { name: "Телефон", align: "left" },
-                            { name: "Инвестиция", align: "left" },
-                            { name: "Доля", align: "left" },
-                            { name: "Доход", align: "left" },
+                            { name: "Инвестиция", align: "right" },
+                            { name: "Доля", align: "right" },
+                            { name: "Ожидаемый доход", align: "right" },
+                            { name: "Текущий доход", align: "right" },
                             { name: "", align: "center" },
                             { name: "", align: "center" },
                             { name: "", align: "center" }
@@ -1171,12 +1216,6 @@ const PoolTabsList = styled.ul`
     margin: 0;
     gap: 24px;
     flex: 1;
-`;
-
-const PoolTabContent = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 8px;
 `;
 
 const PoolActions = styled.div`
