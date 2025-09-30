@@ -37,6 +37,7 @@ export interface Credit {
     incomeRubles: number;
     incomePercents: number;
     employeeName: string;
+    debtDays?: number;
 }
 
 export interface CreateCreditRequest {

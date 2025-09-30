@@ -19,6 +19,8 @@ import useSchedule from '../../api/hooks/useSchedule';
 import type { ScheduleItem, ScheduleParams } from '../../api/types/schedule';
 import CreateNoteModal from './CreateNoteModal';
 import PhotoViewerModal from './PhotoViewerModal';
+import { FaComment } from 'react-icons/fa';
+import useChat from '../../api/hooks/useChat';
 
 interface ViewCreditModalProps {
   id: number;
@@ -39,6 +41,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [noteImages, setNoteImages] = useState<string[]>([]);
+  const { createPrivateChat } = useChat();
   
   const { 
       data: paymentsData, 
@@ -174,6 +177,26 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     setIsPhotoViewerOpen(true);
   };
 
+  const MessageButton = styled.button`
+    background: rgba(0, 125, 136, 1);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+    &:hover {
+      background: rgba(0, 100, 110, 1);
+      transform: scale(1.05);
+    }
+  `;
+
   const formatNotesData = () => {
     return notes.map((note, index) => [
       formatDate(note.createdAt),
@@ -272,6 +295,20 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       ]);
   };
 
+  const handleMessageClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const chat = await createPrivateChat(creditData.clientId, 'client');
+      
+      if (chat?.id) {
+        window.open(`/chat/${chat.id}`, '_blank');
+      }
+    } catch (error) {
+      console.error('Ошибка при создании чата:', error);
+    }
+  };
+
   const formatSoldProductsData = (soldProducts: SoldProduct[] | undefined) => {
     if (!soldProducts) return [];
 
@@ -309,6 +346,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               <CustomTitle style={{ marginTop: 0 }}>
                 Договор №{id}
               </CustomTitle>
+              {/* <MessageButton onClick={handleMessageClick}>
+                <FaComment size={260} />
+              </MessageButton> */}
             </TitleField>
 
              <div>
@@ -335,6 +375,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
                       <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
                       <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
+
+                      <Label>{creditData && creditData.debtDays && creditData.debtDays > 0 && 'Дней просрочки'}</Label>
+                      <Value>{creditData && creditData.debtDays && creditData.debtDays}</Value>
+
                   </VerticalContainer>
                   <VerticalContainer style={{ width: "100%", minWidth: "700px", marginLeft: "60px"}}>
                     <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
