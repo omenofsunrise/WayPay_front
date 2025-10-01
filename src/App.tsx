@@ -36,6 +36,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import InvestorsPoolPage from './pages/InvestorsPoolPage';
 import { DesktopOnlyContent } from './components/DesktopOnly';
 import BlackCatalogPage from './pages/BlackCatalog';
+import RegistrationRequestPage from './pages/RegistrationRequestPage';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -403,6 +404,12 @@ function App() {
             <Route path="privacy-policy" element={
                 <MainLayout>
                   <PrivacyPolicyPage />
+                </MainLayout>
+            } />
+
+            <Route path="registration-requests" element={
+                <MainLayout>
+                  <RegistrationRequestPage />
                 </MainLayout>
             } />
 

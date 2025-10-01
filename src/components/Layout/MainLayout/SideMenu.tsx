@@ -36,6 +36,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
   '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
   '/black-catalog': { mainItem: 'references', subItems: { '/black-catalog': 'black-catalog' } },
+  '/registration-requests': { mainItem: 'references', subItems: { '/registration-requests': 'registration-requests' } },
   '/budget': { mainItem: 'finance', subItems: { '/budget': 'budget' } },
   '/payments-income': { mainItem: 'finance', subItems: { '/payments-income': 'payments-income' } },
   '/profile': { mainItem: 'profile' },
@@ -54,7 +55,7 @@ const SideMenu = () => {
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole, hasPermission } = useAuth();
+  const { hasRole, hasPermission, isSuperAdminCompany } = useAuth();
   
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
@@ -400,6 +401,14 @@ const SideMenu = () => {
               >
                 Чёрный каталог
               </SubMenuItem>
+              {(isSuperAdminCompany) && (
+                <SubMenuItem 
+                  onClick={() => handleSubMenuItemClick('registration-requests', '/registration-requests')}
+                  $selected={selectedSideMenuItem === 'registration-requests'}
+                >
+                  Заявки на регистрацию
+                </SubMenuItem>
+              )}
             </SubMenu>
             
           )}
