@@ -401,7 +401,7 @@ const SideMenu = () => {
               >
                 Чёрный каталог
               </SubMenuItem>
-              {(isSuperAdminCompany) && (
+              {(isSuperAdminCompany()) && (
                 <SubMenuItem 
                   onClick={() => handleSubMenuItemClick('registration-requests', '/registration-requests')}
                   $selected={selectedSideMenuItem === 'registration-requests'}

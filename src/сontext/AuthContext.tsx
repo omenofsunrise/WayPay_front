@@ -17,7 +17,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SUPER_ROLES: Role[] = ['админ', 'суперадмин', 'директор'];
-const ALWAYS_TRUE_ROLES: Role[] = ['суперадмин', 'директор']; // Роли, которые всегда имеют все разрешения
+const ALWAYS_TRUE_ROLES: Role[] = ['суперадмин', 'директор'];
 
 export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
