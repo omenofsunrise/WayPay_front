@@ -295,6 +295,37 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       ]);
   };
 
+  // Функция для получения стилей строки расписания
+  const getScheduleRowStyle = (schedule: ScheduleItem, index: number) => {
+    const today = new Date();
+    const paymentDate = schedule.paymentDate ? new Date(schedule.paymentDate) : null;
+    
+    // Если сумма 0 - оплачено (зеленый)
+    if (schedule.paymentAmount === 0) {
+      return {
+        backgroundColor: '#E8F5E8', // светло-зеленый
+        color: '#1B5E20',
+        fontWeight: 'normal' as const
+      };
+    }
+    
+    // Если дата платежа прошла и сумма не 0 - просрочено (красный)
+    if (paymentDate && paymentDate < today && schedule.paymentAmount > 0) {
+      return {
+        backgroundColor: '#FFEBEE', // светло-красный
+        color: '#B71C1C',
+        fontWeight: 'normal' as const
+      };
+    }
+    
+    // Обычная строка
+    return {
+      backgroundColor: '#FFFFFF',
+      color: '#000000',
+      fontWeight: 'normal' as const
+    };
+  };
+
   const handleMessageClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -455,6 +486,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       { name: "Примечание" },
                   ]} 
                   data={formatSchedulesData(scheduleData?.items)}
+                  rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
+                    acc[index] = getScheduleRowStyle(schedule, index);
+                    return acc;
+                  }, {} as { [key: number]: any }) || {}}
                 />
               </div>
           </ModalWrapper>

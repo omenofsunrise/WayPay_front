@@ -10,8 +10,15 @@ export function formatMoney(
   priceString: string,
   currencySymbol: string = '₽'
 ): string {
-  if (!priceString) return getHideCurrencySetting() ? '0' : '0₽';
+  if (!priceString || priceString.trim() === '') {
+    return getHideCurrencySetting() ? '0' : `0${currencySymbol}`;
+  }
+  
   const numericString = priceString.replace(/[^\d-]/g, '');
+
+  if (!numericString || numericString === '-' || numericString === '') {
+    return getHideCurrencySetting() ? '0' : `0${currencySymbol}`;
+  }
 
   const number = parseInt(numericString, 10);
 

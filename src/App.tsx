@@ -37,6 +37,7 @@ import InvestorsPoolPage from './pages/InvestorsPoolPage';
 import { DesktopOnlyContent } from './components/DesktopOnly';
 import BlackCatalogPage from './pages/BlackCatalog';
 import RegistrationRequestPage from './pages/RegistrationRequestPage';
+import CreditApplicationPage from './pages/CreditApplicationPage';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -411,6 +412,12 @@ function App() {
                 <MainLayout>
                   <RegistrationRequestPage />
                 </MainLayout>
+            } />
+
+            <Route path="credit-application" element={
+              <MainLayout>
+                <CreditApplicationPage />
+              </MainLayout>
             } />
 
             <Route path="*" element={

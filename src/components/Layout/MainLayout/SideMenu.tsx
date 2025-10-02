@@ -29,6 +29,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/credit-control': { mainItem: 'contracts', subItems: { '/credit-control': 'contracts-control' } },
   '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
   '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
+  '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
   '/queue': { mainItem: 'clients', subItems: { '/queue': 'queue' } },
   '/schedules': { mainItem: 'payments', subItems: { '/schedules': 'pending-payments' } },
   '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
@@ -239,6 +240,14 @@ const SideMenu = () => {
               >
                 Чёрный список
               </SubMenuItem>
+              {(isSuperAdminCompany()) && (
+                <SubMenuItem 
+                  onClick={() => handleSubMenuItemClick('credit-application', '/credit-application')}
+                  $selected={selectedSideMenuItem === 'credit-application'}
+                >
+                  Заявки
+                </SubMenuItem>
+              )}
               <SubMenuItem 
                 onClick={() => handleSubMenuItemClick('queue', '/queue')}
                 $selected={selectedSideMenuItem === 'queue'}
