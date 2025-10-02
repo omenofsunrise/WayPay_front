@@ -484,7 +484,7 @@ const CreditApplicationPage: React.FC = () => {
         </ClientInfo>,
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <ActionButton
-            variant="success"
+            variant="primary"
             onClick={() => handleApprove(application.id)}
             disabled={isLoading}
             title="Одобрить заявку"
@@ -676,7 +676,7 @@ const CreditApplicationPage: React.FC = () => {
                   {isClientLoading ? 'Загрузка...' : 'Карточка клиента'}
                 </ActionButton>                
                 <ActionButton
-                  variant="success"
+                  variant="primary"
                   onClick={() => handleApprove(selectedApplication.id)}
                   disabled={isLoading}
                   style={{ flex: 1 }}
