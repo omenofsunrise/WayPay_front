@@ -10,6 +10,7 @@ import { formatMoney } from '../utils/formatPrice';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import useClient from '../api/hooks/useClient';
 import { generateAvatar, getInitials } from '../utils/avatarUtils';
+import { FILE_BASE_URL } from '../api/client';
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -466,7 +467,7 @@ const CreditApplicationPage: React.FC = () => {
 
     return data.items.map(application => {
       const initials = getInitials(application.fullname);
-      const avatarUrl = application.avatarPath ?? generateAvatar(initials, 32);
+      const avatarUrl = application.avatarPath ? FILE_BASE_URL + application.avatarPath : generateAvatar(initials, 32);
 
       return [
         application.id.toString(),
@@ -481,7 +482,7 @@ const CreditApplicationPage: React.FC = () => {
           <ClientAvatar src={avatarUrl} />
           <ClientName>{application.fullname}</ClientName>
         </ClientInfo>,
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <ActionButton
             variant="success"
             onClick={() => handleApprove(application.id)}
