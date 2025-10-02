@@ -9,7 +9,7 @@ import CustomTable from '../components/ui/tables/CustomTable';
 import { formatMoney } from '../utils/formatPrice';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import useClient from '../api/hooks/useClient';
-import { generateAvatar } from '../utils/avatarUtils';
+import { generateAvatar, getInitials } from '../utils/avatarUtils';
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -439,19 +439,6 @@ const CreditApplicationPage: React.FC = () => {
       month: '2-digit',
       year: 'numeric'
     });
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(part => part[0]).join('').toUpperCase();
-  };
-
-  const stringToColor = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = hash % 360;
-    return `hsl(${hue}, 70%, 45%)`;
   };
 
   const calculateFinancialDetails = (application: CreditApplicationResponse) => {
