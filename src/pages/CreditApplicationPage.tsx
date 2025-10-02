@@ -9,6 +9,7 @@ import CustomTable from '../components/ui/tables/CustomTable';
 import { formatMoney } from '../utils/formatPrice';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import useClient from '../api/hooks/useClient';
+import { generateAvatar } from '../utils/avatarUtils';
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -289,6 +290,7 @@ const ClientAvatar = styled.div<{ src?: string; color?: string }>`
   font-weight: 500;
   font-size: 12px;
   flex-shrink: 0;
+  border: 1px solid #e5e7eb;
 `;
 
 const ClientName = styled.span`
@@ -344,7 +346,6 @@ const CreditApplicationPage: React.FC = () => {
     approveCreditApplication
   } = useCreditApplication();
 
-  // Добавляем хук для работы с клиентом
   const {
     getClientById,
     isLoading: isClientLoading
@@ -477,33 +478,37 @@ const CreditApplicationPage: React.FC = () => {
   const formatTableData = () => {
     if (!data?.items) return [];
 
-    return data.items.map(application => [
-      application.id.toString(),
-      formatDate(application.createdDate),
-      application.productName,
-      formatMoney(application.productPrice?.toString() ?? "0"),
-      formatMoney(application.firstPayment?.toString() ?? "0"),
-      `${application.termMonths} мес.`,
-      application.region,
-      application.district,
-      <ClientInfo onClick={() => handleViewClient(application)}>
-        <ClientAvatar color={stringToColor(application.fullname)}>
-          {getInitials(application.fullname)}
-        </ClientAvatar>
-        <ClientName>{application.fullname}</ClientName>
-      </ClientInfo>,
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <ActionButton
-          variant="success"
-          onClick={() => handleApprove(application.id)}
-          disabled={isLoading}
-          title="Одобрить заявку"
-        >
-          <FaCheck />
-          Принять
-        </ActionButton>
-      </div>
-    ]);
+    return data.items.map(application => {
+      const initials = getInitials(application.fullname);
+      const avatarColor = stringToColor(application.fullname);
+      const avatarUrl = generateAvatar(initials, 32);
+
+      return [
+        application.id.toString(),
+        formatDate(application.createdDate),
+        application.productName,
+        formatMoney(application.productPrice?.toString() ?? "0"),
+        formatMoney(application.firstPayment?.toString() ?? "0"),
+        `${application.termMonths} мес.`,
+        application.region,
+        application.district,
+        <ClientInfo onClick={() => handleViewClient(application)}>
+          <ClientAvatar src={avatarUrl} />
+          <ClientName>{application.fullname}</ClientName>
+        </ClientInfo>,
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <ActionButton
+            variant="success"
+            onClick={() => handleApprove(application.id)}
+            disabled={isLoading}
+            title="Одобрить заявку"
+          >
+            <FaCheck />
+            Принять
+          </ActionButton>
+        </div>
+      ];
+    });
   };
 
   if (selectedClient) {
