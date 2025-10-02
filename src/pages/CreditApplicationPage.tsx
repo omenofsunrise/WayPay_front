@@ -454,7 +454,6 @@ const CreditApplicationPage: React.FC = () => {
     return `hsl(${hue}, 70%, 45%)`;
   };
 
-  // Calculate financial details
   const calculateFinancialDetails = (application: CreditApplicationResponse) => {
     const productPrice = application.productPrice || 0;
     const firstPayment = application.firstPayment || 0;
@@ -480,8 +479,7 @@ const CreditApplicationPage: React.FC = () => {
 
     return data.items.map(application => {
       const initials = getInitials(application.fullname);
-      const avatarColor = stringToColor(application.fullname);
-      const avatarUrl = generateAvatar(initials, 32);
+      const avatarUrl = application.avatarPath ?? generateAvatar(initials, 32);
 
       return [
         application.id.toString(),
@@ -549,7 +547,7 @@ const CreditApplicationPage: React.FC = () => {
                 { name: "ID", isSortable: false, isHidden: true },
                 { name: "Дата создания", isSortable: true, isHidden: true },
                 { name: "Товар", isSortable: false },
-                { name: "Сумма", isSortable: false, align: "right" },
+                { name: "Стоимость", isSortable: false, align: "right" },
                 { name: "Первый взнос", isSortable: false, align: "right" },
                 { name: "Срок", isSortable: false, align: "right" },
                 { name: "Регион", isSortable: false },
