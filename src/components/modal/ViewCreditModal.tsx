@@ -419,10 +419,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                         </>
                       )}
                       
-                      {creditData && creditData.debtDays && creditData.debtDays > 0 && (
+                      {creditData?.debtDays > 0 && (
                         <>
-                          <Label>{creditData && creditData.debtDays && creditData.debtDays > 0 && 'Дней просрочки'}</Label>
-                          <Value>{creditData && creditData.debtDays && creditData.debtDays}</Value>
+                          <Label>Дней просрочки</Label>
+                          <Value>{creditData.debtDays}</Value>
                         </>
                       )}
                       
