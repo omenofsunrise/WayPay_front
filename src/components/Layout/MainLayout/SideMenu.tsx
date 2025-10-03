@@ -13,6 +13,7 @@ import { useState, useContext, useEffect } from 'react';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../сontext/AuthContext';
+import { getAutoCollapseMenuSetting } from '../../modal/SettingsModal';
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -101,11 +102,19 @@ const SideMenu = () => {
   const handleMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
     navigate(path);
+    
+    if (getAutoCollapseMenuSetting() && !collapsed) {
+      toggleCollapsed();
+    }
   };
 
   const handleSubMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
     navigate(path);
+    
+    if (getAutoCollapseMenuSetting() && !collapsed) {
+      toggleCollapsed();
+    }
   };
 
   const toggleMenu = () => {

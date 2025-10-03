@@ -10,6 +10,7 @@ interface SettingsModalProps {
 }
 
 const HIDE_CURRENCY_KEY = 'hideCurrencySymbol';
+const AUTO_COLLAPSE_MENU_KEY = 'autoCollapseMenu';
 
 export const getHideCurrencySetting = (): boolean => {
   if (typeof window === 'undefined') return false;
@@ -26,16 +27,35 @@ export const setHideCurrencySetting = (value: boolean): void => {
   }
 };
 
+export const getAutoCollapseMenuSetting = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  const stored = localStorage.getItem(AUTO_COLLAPSE_MENU_KEY);
+  if (stored === null) return false;
+  
+  return stored === 'true';
+};
+
+export const setAutoCollapseMenuSetting = (value: boolean): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(AUTO_COLLAPSE_MENU_KEY, value.toString());
+  }
+};
+
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [hideCurrency, setHideCurrency] = useState(false);
+  const [autoCollapseMenu, setAutoCollapseMenu] = useState(false);
 
   useEffect(() => {
     setHideCurrency(getHideCurrencySetting());
+    setAutoCollapseMenu(getAutoCollapseMenuSetting());
   }, []);
 
   const handleSave = () => {
     console.log('Настройка "Убрать знак ₽":', hideCurrency);
+    console.log('Настройка "Сворачивать меню после выбора":', autoCollapseMenu);
     setHideCurrencySetting(hideCurrency);
+    setAutoCollapseMenuSetting(autoCollapseMenu);
     onClose();
   };
 
@@ -52,6 +72,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 label='Скрыть знак рубля (₽) в интерфейсе'
                 checked={hideCurrency}
                 onChange={(e) => setHideCurrency(e)}
+            />
+            <Checkbox
+                label='Сворачивать меню после выбора пункта'
+                checked={autoCollapseMenu}
+                onChange={(e) => setAutoCollapseMenu(e)}
             />
           </SettingsSection>
         </ModalBody>
@@ -121,6 +146,9 @@ const ModalFooter = styled.div`
 `;
 
 const SettingsSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 `;
 
 export default SettingsModal;
