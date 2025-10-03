@@ -9,8 +9,14 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
+const SIDE_MENU_COLLAPSED_KEY = 'sideMenuCollapsed';
+
 const MainLayout = ({ children }: MainLayoutProps) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    const saved = localStorage.getItem(SIDE_MENU_COLLAPSED_KEY);
+    return saved ? JSON.parse(saved) : false;
+  });
+  
   const [selectedSideMenuItem, setSelectedSideMenuItem] = useState<string | null>(null);
   const [selectedTopMenuItem, setSelectedTopMenuItem] = useState<string | null>(null);
   const location = useLocation();
@@ -25,7 +31,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   }, [location.pathname]);
 
   const toggleCollapsed = () => {
-    setCollapsed(!collapsed);
+    const newCollapsedState = !collapsed;
+    setCollapsed(newCollapsedState);
+    localStorage.setItem(SIDE_MENU_COLLAPSED_KEY, JSON.stringify(newCollapsedState));
   };
 
   return (

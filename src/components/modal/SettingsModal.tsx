@@ -9,20 +9,17 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-// Ключ для хранения настройки в localStorage
 const HIDE_CURRENCY_KEY = 'hideCurrencySymbol';
 
-// Функция для получения текущего значения настройки
 export const getHideCurrencySetting = (): boolean => {
   if (typeof window === 'undefined') return false;
   
   const stored = localStorage.getItem(HIDE_CURRENCY_KEY);
-  if (stored === null) return false; // значение по умолчанию
+  if (stored === null) return false;
   
   return stored === 'true';
 };
 
-// Функция для сохранения настройки
 export const setHideCurrencySetting = (value: boolean): void => {
   if (typeof window !== 'undefined') {
     localStorage.setItem(HIDE_CURRENCY_KEY, value.toString());
@@ -32,7 +29,6 @@ export const setHideCurrencySetting = (value: boolean): void => {
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [hideCurrency, setHideCurrency] = useState(false);
 
-  // Загружаем настройку при монтировании компонента
   useEffect(() => {
     setHideCurrency(getHideCurrencySetting());
   }, []);

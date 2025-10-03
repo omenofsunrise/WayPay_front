@@ -561,8 +561,8 @@ const CreditApplicationPage: React.FC = () => {
           )}
         </TableContainer>
 
-        <DetailPanel isOpen={!!selectedApplication}>
-          {selectedApplication && (
+        {selectedApplication && (
+          <DetailPanel isOpen={!!selectedApplication}>
             <>
               <DetailHeader>
                 <DetailTitle>Детали заявки</DetailTitle>
@@ -686,8 +686,8 @@ const CreditApplicationPage: React.FC = () => {
                 </ActionButton>
               </div>
             </>
-          )}
-        </DetailPanel>
+          </DetailPanel>
+        )}
       </MainContent>
     </PageContainer>
   );
