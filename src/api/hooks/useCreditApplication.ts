@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { PaginatedResponse, PaginationParams } from '../types/common';
-import type { CreditApplicationResponse } from '../types/creditApplication';
+import type { CreditApplicationResponse, GetCreditApplicationsQuery, SelfCreditApplicationResponse } from '../types/creditApplication';
 import creditApplicationService from '../services/creditApplicationService';
 
 const useCreditApplication = () => {
@@ -8,12 +8,26 @@ const useCreditApplication = () => {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<CreditApplicationResponse> | null>(null);
 
-  const getCreditApplications = useCallback(async (params?: PaginationParams): Promise<PaginatedResponse<CreditApplicationResponse> | null> => {
+  const getCreditApplications = useCallback(async (params?: GetCreditApplicationsQuery): Promise<PaginatedResponse<CreditApplicationResponse> | null> => {
     setIsLoading(true);
     setError(null);
     try {
       const result = await creditApplicationService.getCreditApplications(params);
       setData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getMyCompanyCreditApplications = useCallback(async (params?: PaginationParams): Promise<PaginatedResponse<SelfCreditApplicationResponse> | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await creditApplicationService.getMyCompanyCreditApplications(params);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -38,6 +52,7 @@ const useCreditApplication = () => {
     error,
     data,
     getCreditApplications,
+    getMyCompanyCreditApplications,
     approveCreditApplication,
   };
 };

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { FaEye, FaCheck, FaTimes, FaUserCircle, FaSearch, FaChevronRight, FaPercent, FaMoneyBillWave, FaCalendarAlt, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaUserCircle, FaSearch, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
 import { Pagination } from 'react-bootstrap';
 import useCreditApplication from '../api/hooks/useCreditApplication';
-import type { CreditApplicationResponse } from '../api/types/creditApplication';
+import type { CreditApplicationResponse, GetCreditApplicationsQuery } from '../api/types/creditApplication';
 import ClientDossier from '../components/ui/Dossiers/ClientDossier';
 import CustomTable from '../components/ui/tables/CustomTable';
 import { formatMoney } from '../utils/formatPrice';
@@ -11,6 +11,10 @@ import CustomTitle from '../components/ui/Text/CustomTitle';
 import useClient from '../api/hooks/useClient';
 import { generateAvatar, getInitials } from '../utils/avatarUtils';
 import { FILE_BASE_URL } from '../api/client';
+import CustomInput from '../components/ui/fields/CustomInput';
+import TitleField from '../components/ui/Layouts/TitleLayout';
+import useRegion from '../api/hooks/useRegion';
+import CustomSelect from '../components/ui/fields/CustomSelect';
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -19,51 +23,40 @@ const PageContainer = styled.div`
   position: relative;
 `;
 
-const Header = styled.div`
+const FilterField = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-`;
-
-const ControlsContainer = styled.div`
-  display: flex;
-  gap: 16px;
-  align-items: center;
-`;
-
-const SearchContainer = styled.div`
-  position: relative;
-  width: 300px;
-`;
-
-const SearchInput = styled.input`
+  gap: 12px;
   width: 100%;
-  padding: 10px 16px 10px 40px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: #007D88;
-  }
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 `;
 
-const SearchIcon = styled(FaSearch)`
+const InputWrapper = styled.div`
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+`;
+
+const ClearFilterButton = styled.button`
   position: absolute;
-  left: 12px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  z-index: 10;
+
+  &:hover {
+    color: #666;
+  }
 `;
 
 const MainContent = styled.div<{ isDetailOpen?: boolean }>`
@@ -234,34 +227,6 @@ const ActionButton = styled.button<{ variant?: 'primary' | 'success' | 'danger' 
   }
 `;
 
-const StatusBadge = styled.span<{ status: string }>`
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-
-  ${props => {
-    switch (props.status) {
-      case 'approved':
-        return `
-          background: #d1fae5;
-          color: #065f46;
-        `;
-      case 'rejected':
-        return `
-          background: #fee2e2;
-          color: #991b1b;
-        `;
-      default:
-        return `
-          background: #fef3c7;
-          color: #92400e;
-        `;
-    }
-  }}
-`;
-
 const ClientInfo = styled.div`
   display: flex;
   align-items: center;
@@ -337,6 +302,16 @@ const CreditApplicationPage: React.FC = () => {
   } | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<CreditApplicationResponse | null>(null);
 
+  const [clientName, setClientName] = useState('');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minTerm, setMinTerm] = useState<string>('');
+  const [maxTerm, setMaxTerm] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+
   const itemsPerPage = 10;
 
   const {
@@ -354,26 +329,87 @@ const CreditApplicationPage: React.FC = () => {
 
   useEffect(() => {
     loadApplications();
-  }, [currentPage]);
+  }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, selectedRegion, selectedDistrict]);
+
+  const {
+    isLoading: isRegionLoading,
+    regionData,
+    districtData,
+    getRegions,
+    getDisctricts
+  } = useRegion();
+
+  useEffect(() => {
+    getRegions();
+  }, [getRegions]);
+
+  useEffect(() => {
+    if (selectedRegion) {
+      getDisctricts(Number(selectedRegion));
+    } else {
+      setSelectedDistrict('');
+    }
+  }, [selectedRegion, getDisctricts]);
 
   const loadApplications = useCallback(async () => {
-    await getCreditApplications({
+    const params: GetCreditApplicationsQuery = {
       page: currentPage,
       pageSize: itemsPerPage,
-    });
-  }, [currentPage, getCreditApplications]);
+    };
+
+    if (minPrice) params.minPrice = Number(minPrice);
+    if (maxPrice) params.maxPrice = Number(maxPrice);
+    if (minTerm) params.minTerm = Number(minTerm);
+    if (maxTerm) params.maxTerm = Number(maxTerm);
+    if (selectedRegion) params.regionId = Number(selectedRegion);
+    if (selectedDistrict) params.districtId = Number(selectedDistrict);
+
+    await getCreditApplications(params);
+  }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, fromDate, toDate, selectedRegion, selectedDistrict, getCreditApplications]);
 
   const handleApprove = async (id: number) => {
-    if (window.confirm('Вы уверены, что хотите одобрить эту заявку?')) {
+    if (window.confirm('Стоимость одобрения заявки 3 дня лицензии! Вы уверены, что хотите одобрить эту заявку?')) {
       await approveCreditApplication(id);
       await loadApplications();
     }
   };
 
-  // Обновляем функцию для загрузки полных данных клиента
+  const handleClearFilter = (filterType: string) => {
+    switch (filterType) {
+      case 'clientName':
+        setClientName('');
+        break;
+      case 'minPrice':
+        setMinPrice('');
+        break;
+      case 'maxPrice':
+        setMaxPrice('');
+        break;
+      case 'minTerm':
+        setMinTerm('');
+        break;
+      case 'maxTerm':
+        setMaxTerm('');
+        break;
+      case 'fromDate':
+        setFromDate('');
+        break;
+      case 'toDate':
+        setToDate('');
+        break;
+      case 'region':
+        setSelectedRegion('');
+        setSelectedDistrict('');
+        break;
+      case 'district':
+        setSelectedDistrict('');
+        break;
+    }
+    setCurrentPage(1);
+  };
+
   const handleViewClient = async (application: CreditApplicationResponse) => {
     try {
-      // Загружаем полные данные клиента по ID
       const clientData = await getClientById(application.clientId);
       
       if (clientData) {
@@ -390,11 +426,10 @@ const CreditApplicationPage: React.FC = () => {
           hasPassportPhoto: clientData.hasPassportPhoto
         });
       } else {
-        // Если не удалось загрузить данные, используем данные из заявки
         const fallbackClientData = {
           id: application.clientId,
           fullName: application.fullname,
-          phone: application.phone || '',
+          phone: '',
           doc: '',
           birthdate: null,
           docIssueDate: null,
@@ -406,11 +441,10 @@ const CreditApplicationPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Ошибка при загрузке данных клиента:', error);
-      // В случае ошибки также используем данные из заявки
       const fallbackClientData = {
         id: application.clientId,
         fullName: application.fullname,
-        phone: application.phone || '',
+        phone: '',
         doc: '',
         birthdate: null,
         docIssueDate: null,
@@ -423,7 +457,11 @@ const CreditApplicationPage: React.FC = () => {
   };
 
   const handleRowClick = (application: CreditApplicationResponse) => {
-    setSelectedApplication(application);
+    if (selectedApplication && selectedApplication.id === application.id) {
+      setSelectedApplication(null);
+    } else {
+      setSelectedApplication(application);
+    }
   };
 
   const handleCloseDetails = () => {
@@ -511,15 +549,117 @@ const CreditApplicationPage: React.FC = () => {
 
   return (
     <PageContainer>
-      <Header>
-        <Title>Заявки</Title>
-      </Header>
+      <TitleField>
+        <CustomTitle>Заявки</CustomTitle>
+      </TitleField>
 
       {error && (
         <ErrorMessage>
           Ошибка загрузки заявок: {error}
         </ErrorMessage>
       )}
+
+      <FilterField>
+        <InputWrapper>
+          <CustomInput
+            inputType="number"
+            placeholder="Мин. стоимость"
+            value={minPrice}
+            onChange={(e) => {
+              setMinPrice(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          {minPrice && (
+            <ClearFilterButton onClick={() => handleClearFilter('minPrice')}>
+              ×
+            </ClearFilterButton>
+          )}
+        </InputWrapper>
+
+        <InputWrapper>
+          <CustomInput
+            inputType="number"
+            placeholder="Макс. стоимость"
+            value={maxPrice}
+            onChange={(e) => {
+              setMaxPrice(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          {maxPrice && (
+            <ClearFilterButton onClick={() => handleClearFilter('maxPrice')}>
+              ×
+            </ClearFilterButton>
+          )}
+        </InputWrapper>
+
+        <InputWrapper>
+          <CustomInput
+            inputType="number"
+            placeholder="Мин. срок (мес)"
+            value={minTerm}
+            onChange={(e) => {
+              setMinTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          {minTerm && (
+            <ClearFilterButton onClick={() => handleClearFilter('minTerm')}>
+              ×
+            </ClearFilterButton>
+          )}
+        </InputWrapper>
+
+        <InputWrapper>
+          <CustomInput
+            inputType="number"
+            placeholder="Макс. срок (мес)"
+            value={maxTerm}
+            onChange={(e) => {
+              setMaxTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          {maxTerm && (
+            <ClearFilterButton onClick={() => handleClearFilter('maxTerm')}>
+              ×
+            </ClearFilterButton>
+          )}
+        </InputWrapper>
+
+        <InputWrapper>
+          <CustomSelect
+            placeholder="Выберите регион"
+            value={selectedRegion}
+            onChange={(e) => {
+              setSelectedRegion(e.target.value);
+              setCurrentPage(1);
+            }}
+            options={regionData ? regionData.map(region => ({
+              value: region.id.toString(),
+              label: region.name
+            })) : []}
+            disabled={isRegionLoading}
+          />
+        </InputWrapper>
+
+        <InputWrapper>
+          <CustomSelect
+            placeholder="Выберите район"
+            value={selectedDistrict}
+            onChange={(e) => {
+              setSelectedDistrict(e.target.value);
+              setCurrentPage(1);
+            }}
+            options={districtData ? districtData.map(district => ({
+              value: district.id.toString(),
+              label: district.name
+            })) : []}
+            disabled={!selectedRegion || isRegionLoading}
+          />
+        </InputWrapper>
+      </FilterField>
 
       <MainContent isDetailOpen={!!selectedApplication}>
         <TableContainer>
@@ -544,13 +684,14 @@ const CreditApplicationPage: React.FC = () => {
                 { name: "", isSortable: false }
               ]}
               data={formatTableData()}
-              onRowClick={(rowData) => {
+              onRowClick={(rowData, rowIndex) => {
                 const applicationId = parseInt(rowData[0] as string);
                 const application = data.items.find(app => app.id === applicationId);
                 if (application) {
                   handleRowClick(application);
                 }
               }}
+              selectedRow={selectedApplication ? data.items.findIndex(app => app.id === selectedApplication.id) : -1}
             />
           )}
           
