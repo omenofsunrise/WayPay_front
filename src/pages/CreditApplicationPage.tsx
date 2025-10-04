@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { FaCheck, FaTimes, FaUserCircle, FaSearch, FaMoneyBillWave, FaCalendarAlt } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaUserCircle, FaSearch, FaMoneyBillWave, FaCalendarAlt, FaComment } from 'react-icons/fa';
 import { Pagination } from 'react-bootstrap';
 import useCreditApplication from '../api/hooks/useCreditApplication';
-import type { CreditApplicationResponse, GetCreditApplicationsQuery } from '../api/types/creditApplication';
+import type { CreditApplicationResponse, GetCreditApplicationsQuery, SelfCreditApplicationResponse } from '../api/types/creditApplication';
 import ClientDossier from '../components/ui/Dossiers/ClientDossier';
 import CustomTable from '../components/ui/tables/CustomTable';
 import { formatMoney } from '../utils/formatPrice';
@@ -15,6 +15,9 @@ import CustomInput from '../components/ui/fields/CustomInput';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import useRegion from '../api/hooks/useRegion';
 import CustomSelect from '../components/ui/fields/CustomSelect';
+import type { PaginatedResponse } from '../api/types/common';
+import Tabs from '../components/ui/fields/Tabs';
+import useChat from '../api/hooks/useChat';
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -241,6 +244,16 @@ const ClientInfo = styled.div`
   }
 `;
 
+const EmployeeInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+`;
+
 const ClientAvatar = styled.div<{ src?: string; color?: string }>`
   width: 32px;
   height: 32px;
@@ -286,7 +299,40 @@ const ErrorMessage = styled.div`
   margin-bottom: 16px;
 `;
 
+const StatusBadge = styled.span<{ status: number }>`
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  
+  ${props => {
+    switch (props.status) {
+      case 1: // Pending
+        return `
+          background: #fef3c7;
+          color: #d97706;
+        `;
+      case 2: // Accepted
+        return `
+          background: #d1fae5;
+          color: #059669;
+        `;
+      case 3: // Decline
+        return `
+          background: #fee2e2;
+          color: #dc2626;
+        `;
+      default:
+        return `
+          background: #f3f4f6;
+          color: #6b7280;
+        `;
+    }
+  }}
+`;
+
 const CreditApplicationPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClient, setSelectedClient] = useState<{
     id: number;
@@ -300,7 +346,7 @@ const CreditApplicationPage: React.FC = () => {
     registrationAddress: string | null;
     hasPassportPhoto?: boolean;
   } | null>(null);
-  const [selectedApplication, setSelectedApplication] = useState<CreditApplicationResponse | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<CreditApplicationResponse | SelfCreditApplicationResponse | null>(null);
 
   const [clientName, setClientName] = useState('');
   const [minPrice, setMinPrice] = useState<string>('');
@@ -311,7 +357,9 @@ const CreditApplicationPage: React.FC = () => {
   const [toDate, setToDate] = useState<string>('');
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
-
+  const [myApplicationsData, setMyApplicationsData] = useState<PaginatedResponse<SelfCreditApplicationResponse> | null>(null);
+  const [isLoadingMyApplications, setIsLoadingMyApplications] = useState(false);
+    const { createPrivateChat } = useChat();
   const itemsPerPage = 10;
 
   const {
@@ -319,6 +367,7 @@ const CreditApplicationPage: React.FC = () => {
     error,
     data,
     getCreditApplications,
+    getMyCompanyCreditApplications,
     approveCreditApplication
   } = useCreditApplication();
 
@@ -327,9 +376,10 @@ const CreditApplicationPage: React.FC = () => {
     isLoading: isClientLoading
   } = useClient();
 
+
   useEffect(() => {
     loadApplications();
-  }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, selectedRegion, selectedDistrict]);
+  }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, selectedRegion, selectedDistrict, activeTab]);
 
   const {
     isLoading: isRegionLoading,
@@ -351,21 +401,52 @@ const CreditApplicationPage: React.FC = () => {
     }
   }, [selectedRegion, getDisctricts]);
 
+  const handleMessageClick = async (e: React.MouseEvent, clientId: number) => {
+    e.stopPropagation();
+    
+    try {
+      const chat = await createPrivateChat(clientId, 'client');
+      
+      if (chat?.id) {
+        window.open(`/chat/${chat.id}`, '_blank');
+      }
+    } catch (error) {
+      console.error('Ошибка при создании чата:', error);
+    }
+  };
+
   const loadApplications = useCallback(async () => {
-    const params: GetCreditApplicationsQuery = {
-      page: currentPage,
-      pageSize: itemsPerPage,
-    };
+    if (activeTab === 'all') {
+      const params: GetCreditApplicationsQuery = {
+        page: currentPage,
+        pageSize: itemsPerPage,
+      };
 
-    if (minPrice) params.minPrice = Number(minPrice);
-    if (maxPrice) params.maxPrice = Number(maxPrice);
-    if (minTerm) params.minTerm = Number(minTerm);
-    if (maxTerm) params.maxTerm = Number(maxTerm);
-    if (selectedRegion) params.regionId = Number(selectedRegion);
-    if (selectedDistrict) params.districtId = Number(selectedDistrict);
+      if (minPrice) params.minPrice = Number(minPrice);
+      if (maxPrice) params.maxPrice = Number(maxPrice);
+      if (minTerm) params.minTerm = Number(minTerm);
+      if (maxTerm) params.maxTerm = Number(maxTerm);
+      if (selectedRegion) params.regionId = Number(selectedRegion);
+      if (selectedDistrict) params.districtId = Number(selectedDistrict);
 
-    await getCreditApplications(params);
-  }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, fromDate, toDate, selectedRegion, selectedDistrict, getCreditApplications]);
+      await getCreditApplications(params);
+    } else {
+      setIsLoadingMyApplications(true);
+      try {
+        const params = {
+          page: currentPage,
+          pageSize: itemsPerPage,
+        };
+        const result = await getMyCompanyCreditApplications(params);
+        console.log('My applications result:', result);
+        setMyApplicationsData(result);
+      } catch (error) {
+        console.error('Error loading my applications:', error);
+      } finally {
+        setIsLoadingMyApplications(false);
+      }
+    }
+  }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, fromDate, toDate, selectedRegion, selectedDistrict, activeTab, getCreditApplications, getMyCompanyCreditApplications]);
 
   const handleApprove = async (id: number) => {
     if (window.confirm('Стоимость одобрения заявки 3 дня лицензии! Вы уверены, что хотите одобрить эту заявку?')) {
@@ -408,9 +489,16 @@ const CreditApplicationPage: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const handleViewClient = async (application: CreditApplicationResponse) => {
+  const handleTabChange = (tabId: 'all' | 'my') => {
+    setActiveTab(tabId);
+    setCurrentPage(1);
+    setSelectedApplication(null);
+  };
+
+  const handleViewClient = async (application: CreditApplicationResponse | SelfCreditApplicationResponse) => {
     try {
-      const clientData = await getClientById(application.clientId);
+      const clientId = 'clientId' in application ? application.clientId : application.clientId;
+      const clientData = await getClientById(clientId);
       
       if (clientData) {
         setSelectedClient({
@@ -427,9 +515,9 @@ const CreditApplicationPage: React.FC = () => {
         });
       } else {
         const fallbackClientData = {
-          id: application.clientId,
-          fullName: application.fullname,
-          phone: '',
+          id: clientId,
+          fullName: 'fullname' in application ? application.fullname : application.clientName,
+          phone: 'clientPhone' in application ? application.clientPhone : '',
           doc: '',
           birthdate: null,
           docIssueDate: null,
@@ -442,9 +530,9 @@ const CreditApplicationPage: React.FC = () => {
     } catch (error) {
       console.error('Ошибка при загрузке данных клиента:', error);
       const fallbackClientData = {
-        id: application.clientId,
-        fullName: application.fullname,
-        phone: '',
+        id: 'clientId' in application ? application.clientId : application.clientId,
+        fullName: 'fullname' in application ? application.fullname : application.clientName,
+        phone: 'clientPhone' in application ? application.clientPhone : '',
         doc: '',
         birthdate: null,
         docIssueDate: null,
@@ -456,7 +544,7 @@ const CreditApplicationPage: React.FC = () => {
     }
   };
 
-  const handleRowClick = (application: CreditApplicationResponse) => {
+  const handleRowClick = (application: CreditApplicationResponse | SelfCreditApplicationResponse) => {
     if (selectedApplication && selectedApplication.id === application.id) {
       setSelectedApplication(null);
     } else {
@@ -480,11 +568,11 @@ const CreditApplicationPage: React.FC = () => {
     });
   };
 
-  const calculateFinancialDetails = (application: CreditApplicationResponse) => {
+  const calculateFinancialDetails = (application: CreditApplicationResponse | SelfCreditApplicationResponse) => {
     const productPrice = application.productPrice || 0;
     const firstPayment = application.firstPayment || 0;
     const loanAmount = productPrice - firstPayment;
-    const markup = application.markupAmount || 0;
+    const markup = 'markupAmount' in application ? application.markupAmount || 0 : 0;
     const totalAmount = loanAmount + markup;
     const monthlyPayment = application.monthlyPayment || 0;
     const termMonths = application.termMonths || 0;
@@ -500,7 +588,25 @@ const CreditApplicationPage: React.FC = () => {
     };
   };
 
-  const formatTableData = () => {
+  const getStatusText = (status: number | string) => {
+    const statusValue = typeof status === 'string' ? status : status.toString();
+    
+    switch (statusValue) {
+      case '1':
+      case 'Pending':
+        return 'Ожидание';
+      case '2':
+      case 'Accepted':
+        return 'Одобрено';
+      case '3':
+      case 'Declined':
+        return 'Отклонено';
+      default:
+        return 'Неизвестно';
+    }
+  };
+
+  const formatAllApplicationsTableData = () => {
     if (!data?.items) return [];
 
     return data.items.map(application => {
@@ -535,30 +641,80 @@ const CreditApplicationPage: React.FC = () => {
     });
   };
 
-  if (selectedClient) {
-    return (
-      <ClientDossier
-        client={selectedClient}
-        installments={[]}
-        onBack={handleBackFromDossier}
-        onUploadPassport={() => {}}
-        onDeletePassport={() => {}}
-      />
-    );
+const formatMyApplicationsTableData = () => {
+  if (!myApplicationsData?.items || myApplicationsData.items.length === 0) {
+    return [];
   }
 
+  return myApplicationsData.items.map(application => {
+    const employeeInitials = getInitials(application.employeeName || '');
+    const employeeAvatarUrl = application.employeeAvatar ? FILE_BASE_URL + application.employeeAvatar : generateAvatar(employeeInitials, 32);
+
+    const clientInitials = getInitials(application.clientName || '');
+    const clientAvatarUrl = generateAvatar(clientInitials, 32);
+
+    return [
+      application.id.toString(),
+      application.productName || '-',
+      formatMoney(application.productPrice?.toString() ?? "0"),
+      formatMoney(application.firstPayment?.toString() ?? "0"),
+      `${application.termMonths || 0} мес.`,
+      application.region || '-',
+      application.district || '-',
+      <ClientInfo onClick={() => handleViewClient(application)}>
+        <ClientAvatar src={clientAvatarUrl} />
+        <ClientName>{application.clientName || 'Неизвестно'}</ClientName>
+      </ClientInfo>,
+      <EmployeeInfo>
+        <ClientAvatar src={employeeAvatarUrl} />
+        <ClientName>{application.employeeName || 'Не указан'}</ClientName>
+      </EmployeeInfo>,
+      <ActionButton
+          variant="primary"
+          onClick={(e) => handleMessageClick(e, application.clientId)}
+          title="Написать клиенту"
+        >
+          <FaComment />
+          Написать
+      </ActionButton>
+    ];
+  });
+};
+
+    const MyApplicationsPagination = () => {
+    if (!myApplicationsData || myApplicationsData.totalCount <= itemsPerPage) {
+      return null;
+    }
+
+    const totalPages = Math.ceil(myApplicationsData.totalCount / itemsPerPage);
+    
   return (
-    <PageContainer>
-      <TitleField>
-        <CustomTitle>Заявки</CustomTitle>
-      </TitleField>
+    <div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
+      <Pagination>
+        <Pagination.Prev 
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+        />
+        {[...Array(totalPages)].map((_, index) => (
+          <Pagination.Item
+            key={index + 1}
+            active={index + 1 === currentPage}
+            onClick={() => setCurrentPage(index + 1)}
+          >
+            {index + 1}
+          </Pagination.Item>
+        ))}
+        <Pagination.Next 
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+        />
+      </Pagination>
+    </div>
+    );
+  };
 
-      {error && (
-        <ErrorMessage>
-          Ошибка загрузки заявок: {error}
-        </ErrorMessage>
-      )}
-
+  const renderAllApplicationsContent = () => (
+    <>
       <FilterField>
         <InputWrapper>
           <CustomInput
@@ -683,7 +839,7 @@ const CreditApplicationPage: React.FC = () => {
                 { name: "Клиент", isSortable: false },
                 { name: "", isSortable: false }
               ]}
-              data={formatTableData()}
+              data={formatAllApplicationsTableData()}
               onRowClick={(rowData, rowIndex) => {
                 const applicationId = parseInt(rowData[0] as string);
                 const application = data.items.find(app => app.id === applicationId);
@@ -702,7 +858,7 @@ const CreditApplicationPage: React.FC = () => {
           )}
         </TableContainer>
 
-        {selectedApplication && (
+        {selectedApplication && 'fullname' in selectedApplication && (
           <DetailPanel isOpen={!!selectedApplication}>
             <>
               <DetailHeader>
@@ -830,6 +986,97 @@ const CreditApplicationPage: React.FC = () => {
           </DetailPanel>
         )}
       </MainContent>
+    </>
+  );
+
+  const renderMyApplicationsContent = () => (
+    <MainContent>
+      <TableContainer>
+        {(isLoading || isLoadingMyApplications) && (
+          <LoadingOverlay>
+            <div>Загрузка заявок...</div>
+          </LoadingOverlay>
+        )}
+
+        {myApplicationsData && myApplicationsData.items && myApplicationsData.items.length > 0 ? (
+          <>
+            <CustomTable
+              columns={[
+                { name: "ID", isSortable: false, isHidden: true },
+                { name: "Товар", isSortable: false },
+                { name: "Стоимость", isSortable: false, align: "right" },
+                { name: "Первый взнос", isSortable: false, align: "right" },
+                { name: "Срок", isSortable: false, align: "right" },
+                { name: "Регион", isSortable: false },
+                { name: "Район", isSortable: false },
+                { name: "Клиент", isSortable: false },
+                { name: "Сотрудник", isSortable: false },
+              ]}
+              data={formatMyApplicationsTableData()}
+              onRowClick={(rowData, rowIndex) => {
+                const applicationId = parseInt(rowData[0] as string);
+                const application = myApplicationsData.items.find(app => app.id === applicationId);
+                if (application) {
+                  handleRowClick(application);
+                }
+              }}
+              selectedRow={selectedApplication ? myApplicationsData.items.findIndex(app => app.id === selectedApplication.id) : -1}
+            />
+            <MyApplicationsPagination />
+          </>
+        ) : (
+          !isLoadingMyApplications && (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+              Нет данных о заявках
+            </div>
+          )
+        )}
+      </TableContainer>
+    </MainContent>
+  );
+
+  if (selectedClient) {
+    return (
+      <ClientDossier
+        client={selectedClient}
+        installments={[]}
+        onBack={handleBackFromDossier}
+        onUploadPassport={() => {}}
+        onDeletePassport={() => {}}
+      />
+    );
+  }
+
+  const tabs = [
+    {
+      id: 'all',
+      label: 'Все заявки',
+      content: renderAllApplicationsContent()
+    },
+    {
+      id: 'my',
+      label: 'Свои заявки',
+      content: renderMyApplicationsContent()
+    }
+  ];
+
+  return (
+    <PageContainer>
+      <TitleField>
+        <CustomTitle>Заявки</CustomTitle>
+      </TitleField>
+
+      {error && (
+        <ErrorMessage>
+          Ошибка загрузки заявок: {error}
+        </ErrorMessage>
+      )}
+
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={handleTabChange}
+      />
     </PageContainer>
   );
 };
