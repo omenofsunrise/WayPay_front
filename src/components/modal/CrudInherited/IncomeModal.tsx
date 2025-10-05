@@ -1,11 +1,10 @@
 import React from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
-import ViewButton from '../../ui/Buttons/ViewButton';
 import EntitySelectContainer from '../../ui/Layouts/EntitySelectContainer';
-import InvestorModal from './InvestorModal';
 import InvestorSelectModal from './InvestorSelectModal';
-import { formatMoney, parseMoney } from '../../../utils/formatPrice';
+import { ProgressBar } from '../../ui/ProgressBar';
+import styled from 'styled-components';
 
 interface Investor {
   id: number;
@@ -15,6 +14,7 @@ interface Investor {
   investorPie: number;
   investmentAmount: number;
   balance: number;
+  isCompany: boolean;
 }
 
 interface IncomeModalProps {
@@ -25,14 +25,17 @@ interface IncomeModalProps {
         amount: string;
         comment: string;
         investorId: string;
+        companyShare: number;
     };
     setNewIncome: React.Dispatch<React.SetStateAction<{
         amount: string;
         comment: string;
         investorId: string;
+        companyShare: number;
     }>>;
     investors: Investor[];
 }
+
 
 const IncomeModal: React.FC<IncomeModalProps> = ({
     show,
@@ -43,13 +46,13 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     investors
 }) => {
     const [isInvestorModalOpen, setIsInvestorModalOpen] = React.useState(false);
-    const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = React.useState(false);
     const [selectedInvestor, setSelectedInvestor] = React.useState<Investor | null>(null);
     const [displayAmount, setDisplayAmount] = React.useState('');
+    const [companyPercentage, setCompanyPercentage] = React.useState('100');
+    const [investorPercentage, setInvestorPercentage] = React.useState('0');
 
     React.useEffect(() => {
         if (show) {
-            // При открытии модального окна форматируем сумму для отображения
             const numericValue = newIncome.amount.replace(/\D/g, '');
             if (numericValue) {
                 const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
@@ -57,30 +60,63 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
             } else {
                 setDisplayAmount('');
             }
+            
+            setCompanyPercentage(newIncome.companyShare.toString());
+            setInvestorPercentage((100 - newIncome.companyShare).toString());
         } else {
             setDisplayAmount('');
+            setCompanyPercentage('100');
+            setInvestorPercentage('0');
         }
-    }, [show, newIncome.amount]);
+    }, [show, newIncome.amount, newIncome.companyShare]);
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         
-        // Удаляем все нецифровые символы, кроме запятых и точек (для разделителей тысяч)
         const cleanedValue = value.replace(/[^\d,.]/g, '');
         
-        // Удаляем все разделители тысяч, чтобы получить чистое число
         const numericValue = cleanedValue.replace(/[.,]/g, '');
         
-        // Сохраняем числовое значение в состоянии
         setNewIncome(prev => ({...prev, amount: numericValue}));
         
-        // Форматируем значение для отображения с разделителями тысяч
         if (numericValue) {
             const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
             setDisplayAmount(formatted);
         } else {
             setDisplayAmount('');
         }
+    };
+
+    const handleCompanyPercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 100)) {
+            setCompanyPercentage(value);
+            if (value !== '') {
+                const companyPercent = parseInt(value);
+                const investorPercent = 100 - companyPercent;
+                setInvestorPercentage(investorPercent.toString());
+                setNewIncome(prev => ({...prev, companyShare: companyPercent}));
+            }
+        }
+    };
+
+    const handleInvestorPercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/[^0-9]/g, '');
+        if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 100)) {
+            setInvestorPercentage(value);
+            if (value !== '') {
+                const investorPercent = parseInt(value);
+                const companyPercent = 100 - investorPercent;
+                setCompanyPercentage(companyPercent.toString());
+                setNewIncome(prev => ({...prev, companyShare: companyPercent}));
+            }
+        }
+    };
+
+    const handleProgressChange = (percentage: number) => {
+        setCompanyPercentage(percentage.toString());
+        setInvestorPercentage((100 - percentage).toString());
+        setNewIncome(prev => ({...prev, companyShare: percentage}));
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -91,11 +127,18 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
             return;
         }
 
+        const isCompanyInvestor = currentInvestor?.isCompany;
+        if (isCompanyInvestor) {
+            setNewIncome(prev => ({...prev, companyShare: 100}));
+        }
+
         try {
             await onSave(e);
-            setNewIncome({ amount: '', comment: '', investorId: '' });
+            setNewIncome({ amount: '', comment: '', investorId: '', companyShare: 100 });
             setSelectedInvestor(null);
             setDisplayAmount('');
+            setCompanyPercentage('100');
+            setInvestorPercentage('0');
         } catch (error) {
             console.error('Ошибка при сохранении:', error);
         }
@@ -108,6 +151,8 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     };
 
     const currentInvestor = selectedInvestor || investors.find(i => i.id.toString() === newIncome.investorId);
+    
+    const isCompanyInvestor = currentInvestor?.isCompany;
 
     if (!show) return null;
 
@@ -126,9 +171,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                         value={displayAmount}
                         onChange={handleAmountChange}
                         placeholder="Введите сумму"
-                        inputType="text" // Используем обычный текст вместо rubles
+                        inputType="text"
                         required
                     />
+                    
                     <div style={{ margin: "0 10px", display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <EntitySelectContainer
                             mode="create"
@@ -142,6 +188,59 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                             }}
                         />
                     </div>
+
+                    {!isCompanyInvestor && (
+                        <PercentageSection>
+                            <PercentageTitle>Распределение</PercentageTitle>
+                            
+                            <PercentageInputsContainer>
+                                <PercentageInputGroup>
+                                    <PercentageLabel>Компания</PercentageLabel>
+                                    <CustomInput
+                                        type="text"
+                                        value={companyPercentage}
+                                        onChange={handleCompanyPercentageChange}
+                                        placeholder="0"
+                                        inputType="text"
+                                    />
+                                </PercentageInputGroup>
+                                
+                                <PercentageInputGroup>
+                                    <PercentageLabel>Инвестор</PercentageLabel>
+                                    <CustomInput
+                                        type="text"
+                                        value={investorPercentage}
+                                        onChange={handleInvestorPercentageChange}
+                                        placeholder="0"
+                                        inputType="text"
+                                    />
+                                </PercentageInputGroup>
+                            </PercentageInputsContainer>
+
+                            <ProgressBarContainer>
+                                <ProgressBarLabels>
+                                    <ProgressBarLabel>
+                                        <ColorSquare color="company" />
+                                        Компания: {companyPercentage}%
+                                    </ProgressBarLabel>
+                                    <ProgressBarLabel>
+                                        <ColorSquare color="investor" />
+                                        Инвестор: {investorPercentage}%
+                                    </ProgressBarLabel>
+                                </ProgressBarLabels>
+                                
+                                <ProgressBar
+                                    percentage={parseInt(companyPercentage) || 0}
+                                    onChange={handleProgressChange}
+                                    draggable={true}
+                                    colors={{
+                                        primary: '#007D88',
+                                        secondary: '#25CBA1'
+                                    }}
+                                />
+                            </ProgressBarContainer>
+                        </PercentageSection>
+                    )}
                 </div>
             </BaseModal>
 
@@ -153,5 +252,77 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
         </>
     );
 };
+
+const PercentageSection = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+`;
+
+const PercentageTitle = styled.h3`
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+`;
+
+const PercentageInputsContainer = styled.div`
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    
+    @media (max-width: 480px) {
+        flex-direction: column;
+        gap: 12px;
+    }
+`;
+
+const PercentageInputGroup = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+`;
+
+const PercentageLabel = styled.label`
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    text-align: center;
+`;
+
+const ProgressBarContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+`;
+
+const ProgressBarLabels = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+`;
+
+const ProgressBarLabel = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+`;
+
+const ColorSquare = styled.div<{ color: 'company' | 'investor' }>`
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background-color: ${props => 
+        props.color === 'company' ? '#007D88' : '#25CBA1'};
+`;
 
 export default IncomeModal;

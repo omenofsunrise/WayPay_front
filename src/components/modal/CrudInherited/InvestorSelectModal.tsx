@@ -51,6 +51,7 @@ const InvestorSelectModal = ({
     pie?: number;
     investmentAmount?: number;
     balance?: number;
+    isCompany: boolean;
     activeUntil?: string;
     type: 'investor' | 'pool';
   } | null>(null);
@@ -132,40 +133,41 @@ const InvestorSelectModal = ({
   };
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
-  const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
-  
-  if (isPool) {
-    const poolIndex = rowIndex - (investorsData?.items?.length || 0);
-    const pool = poolsData?.items[poolIndex];
-    if (pool) {
-      setSelectedEntity({
-        id: pool.id,
-        nickname: pool.name,
-        name: pool.name,
-        fullName: pool.name,
-        pie: pool.pie,
-        balance: pool.balance || 0,
-        activeUntil: pool.activeUntil,
-        type: 'pool'
-      });
+    const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
+    
+    if (isPool) {
+      const poolIndex = rowIndex - (investorsData?.items?.length || 0);
+      const pool = poolsData?.items[poolIndex];
+      if (pool) {
+        setSelectedEntity({
+          id: pool.id,
+          nickname: pool.name,
+          name: pool.name,
+          fullName: pool.name,
+          pie: pool.pie,
+          balance: pool.balance || 0,
+          activeUntil: pool.activeUntil,
+          type: 'pool'
+        });
+      }
+    } else {
+      const investor = investorsData?.items[rowIndex];
+      if (investor) {
+        setSelectedEntity({
+          id: investor.id,
+          nickname: investor.nickname,
+          fullName: investor.fullName,
+          phoneNumber: investor.phoneNumber,
+          investorPie: investor.investorPie,
+          investmentAmount: investor.investmentAmount,
+          balance: investor.balance,
+          activeUntil: investor.activeUntil,
+          isCompany: investor.isCompany,
+          type: 'investor'
+        });
+      }
     }
-  } else {
-    const investor = investorsData?.items[rowIndex];
-    if (investor) {
-      setSelectedEntity({
-        id: investor.id,
-        nickname: investor.nickname,
-        fullName: investor.fullName,
-        phoneNumber: investor.phoneNumber,
-        investorPie: investor.investorPie,
-        investmentAmount: investor.investmentAmount,
-        balance: investor.balance,
-        activeUntil: investor.activeUntil, // И это
-        type: 'investor'
-      });
-    }
-  }
-};
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

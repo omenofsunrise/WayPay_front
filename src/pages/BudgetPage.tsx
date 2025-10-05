@@ -73,7 +73,8 @@ const BudgetPage = () => {
     const [newIncome, setNewIncome] = useState({
         amount: '',
         comment: '',
-        investorId: ''
+        investorId: '',
+        companyShare: 100,
     });
     const [newOutcome, setNewOutcome] = useState({
         amount: '',
@@ -86,10 +87,6 @@ const BudgetPage = () => {
 
     const [incomes, setIncomes] = useState<IncomeState>({});
     const [outcomes, setOutcomes] = useState<OutcomeState>({});
-
-    const isCurrentMonthAndYear = 
-        selectedMonth === currentDate.getMonth() + 1 && 
-        selectedYear === currentDate.getFullYear();
 
     const { 
         getIncomes, 
@@ -344,12 +341,13 @@ const BudgetPage = () => {
             const result = await createIncome({
                 amount: parseFloat(newIncome.amount),
                 comment: newIncome.comment,
-                investorId: parseInt(newIncome.investorId)
+                investorId: parseInt(newIncome.investorId),
+                companyShare: newIncome.companyShare
             });
             
             if (result) {
                 setShowIncomeModal(false);
-                setNewIncome({ amount: '', comment: '', investorId: '' });
+                setNewIncome({ amount: '', comment: '', investorId: '', companyShare: 100 });
                 setSelectedInvestor(null);
                 await fetchData();
                 return true;

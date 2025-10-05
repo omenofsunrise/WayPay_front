@@ -19,6 +19,7 @@ export interface CreateBudgetIncomeDto {
   amount: number;
   comment: string;
   investorId: number;
+  companyShare?: number;
 }
 
 export interface CreateBudgetOutcomeDto {

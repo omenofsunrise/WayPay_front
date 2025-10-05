@@ -33,6 +33,7 @@ const CompanyPage = () => {
         phone: "",
         inn: "",
         email: "",
+        supportPhone: "",
         currentBankCardId: null
     });
     
@@ -66,6 +67,7 @@ const CompanyPage = () => {
                 phone: company.phone || "",
                 inn: company.inn || "",
                 email: company.email || "",
+                supportPhone: company.supportPhone || "",
                 currentBankCardId: company.currentBankCardId || null
             });
             
@@ -91,7 +93,6 @@ const CompanyPage = () => {
             const selectedCard = bankCards.find(card => card.id === currentBankCardId);
             if (selectedCard) {
                 setDisplayBankCard(selectedCard.details);
-                // Также обновляем форму
                 setFormData(prev => ({
                     ...prev,
                     currentBankCardId: currentBankCardId
@@ -144,6 +145,7 @@ const CompanyPage = () => {
                 phone: company.phone || "",
                 inn: company.inn || "",
                 email: company.email || "",
+                supportPhone: company.supportPhone || "",
                 currentBankCardId: company.currentBankCardId || null
             });
             setCurrentBankCardId(company.currentBankCardId || undefined);
@@ -357,7 +359,15 @@ const CompanyPage = () => {
                             />
                         </InputGroup>
                     </InputContainer>
-                                       
+                    <InputGroup style={{width: "100%"}}>
+                            <Label>Телефон поддержки</Label>
+                            <PhoneModalInput 
+                                name="supportPhone"
+                                value={formData.supportPhone}
+                                onChange={handleInputChange}
+                            />
+                    </InputGroup>
+
                     <ButtonsContainer>
                         <GrayButton 
                             children={"Сбросить"}
