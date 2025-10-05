@@ -120,7 +120,6 @@ const SelectPriority: React.FC<SelectPriorityProps> = ({
   );
 };
 
-// Анимации
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -136,7 +135,6 @@ const rotateArrowReverse = keyframes`
   to { transform: translateY(-50%) rotate(0deg); }
 `;
 
-// Стили
 const Container = styled.div`
   position: relative;
   width: 100%;

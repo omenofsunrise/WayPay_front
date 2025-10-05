@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
-import CustomSelect from "../components/ui/fields/CustomSelect";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
-import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import TaskListContainer from "../components/ToDo/TaskListContainer";
 import styled from "styled-components";
@@ -13,25 +11,26 @@ import CreateTaskModal from "../components/modal/CrudInherited/CreateTaskModal";
 import EditTaskModal from "../components/modal/CrudInherited/EditTaskModal";
 import { useAuth } from "../сontext/AuthContext";
 import SelectPriority from "../components/ui/fields/SelectPriority";
-import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Checkbox from "../components/ui/CheckBoxes/Checkbox";
 import { useEmployee } from "../api/hooks/useEmployee";
 import CompletedTasksModal from "../components/ToDo/CompletedTasksModal";
 import { useTaskCount } from "../сontext/TaskCountContext";
+import UserSelect from "../components/ui/fields/UserSelect";
+import TitleField from "../components/ui/Layouts/TitleLayout";
 
 const ToDoListPage = () => {
     const { authInfo, hasRole } = useAuth();
     const currentUserId = authInfo?.employee.id;
     const isAdmin = hasRole('админ') || hasRole('директор') || hasRole('суперадмин');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [assigneeOptions, setAssigneeOptions] = useState<{value: string, label: string}[]>([
+    const [assigneeOptions, setAssigneeOptions] = useState<{value: string, label: string, avatar?: string}[]>([
         { value: "", label: "Все исполнители" }
     ]);
     const [isCompletedModalOpen, setIsCompletedModalOpen] = useState(false);
     const [filters, setFilters] = useState<TaskParams>({
         onlyMine: false,
         includeCompleted: true,
-        priority: undefined,
+        priority: '',
         taskEmployeeId: undefined
     });
     const { setActiveTasksCount } = useTaskCount();
@@ -39,7 +38,6 @@ const ToDoListPage = () => {
     const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
     const { 
         getTasks, 
-        createTask,
         deleteTask,
         setTaskPending,
         setTaskInProgress,
@@ -67,7 +65,8 @@ const ToDoListPage = () => {
                 { value: "", label: "Все исполнители" },
                 ...fullNames.map(emp => ({
                 value: emp.id.toString(),
-                label: emp.fullName
+                label: emp.fullName,
+                avatar: emp.photoPath
                 }))
             ]);
             } catch (error) {
@@ -245,10 +244,20 @@ const ToDoListPage = () => {
     };
 
     const handleFilterChange = (newFilters: Partial<TaskParams>) => {
-        if (newFilters.priority !== undefined) {
-            newFilters.priority = newFilters.priority as 'low' | 'medium' | 'high' | undefined;
-        }
         setFilters(prev => ({ ...prev, ...newFilters }));
+    };
+
+    // Обработчик изменения чекбокса "Только свои"
+    const handleOnlyMineChange = (checked: boolean) => {
+        if (checked) {
+            // При активации "Только свои" сбрасываем фильтр по исполнителям
+            handleFilterChange({ 
+                onlyMine: checked,
+                taskEmployeeId: undefined 
+            });
+        } else {
+            handleFilterChange({ onlyMine: checked });
+        }
     };
 
     return (
@@ -264,26 +273,28 @@ const ToDoListPage = () => {
             </TitleField>
             <FilterField style={{maxWidth: "800px", gap: "16px" }}>
                 <SelectPriority
-                    value={filters.priority}
+                    value={filters.priority || ''}
                     onChange={(value) => handleFilterChange({ 
                         priority: value as 'low' | 'medium' | 'high' | undefined 
                     })}
                     className="priority-select"
                     showAnyOption={true}
                 />
-                <CustomSelect
+                <UserSelect
                     value={filters.taskEmployeeId?.toString() || ""}
                     onChange={(e) => handleFilterChange({ 
                         taskEmployeeId: e.target.value ? parseInt(e.target.value) : undefined 
                     })}
                     options={assigneeOptions}
-                    style={{ minWidth: '200px', height: "43px", margin: "0" }}
+                    placeholder="Выберите исполнителя"
+                    style={{ minWidth: '250px', height: "43px", margin: "0" }}
+                    disabled={filters.onlyMine} // Деактивируем при активации "Только свои"
                 />
                 <ToggleContainer>
                     <Checkbox
                         label="Только свои"
                         checked={filters.onlyMine || false}
-                        onChange={(checked) => handleFilterChange({ onlyMine: checked })}
+                        onChange={handleOnlyMineChange} // Используем новый обработчик
                     />
                 </ToggleContainer>
             </FilterField>
@@ -352,6 +363,7 @@ const ToDoListPage = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onTaskCreated={handleTaskCreated}
+                defaultAssigneeId={filters.taskEmployeeId}
             />
 
             <CompletedTasksModal 

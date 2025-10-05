@@ -4,23 +4,29 @@ import useTask from '../../../api/hooks/useTask';
 import { useEmployee } from '../../../api/hooks/useEmployee';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
-import CustomSelect from '../../ui/fields/CustomSelect';
 import CustomCalendar from '../../ui/fields/CustomCalendar';
 import InputTitle from '../../ui/Text/InputTitle';
 import SelectPriority from '../../ui/fields/SelectPriority';
 import { useAuth } from '../../../сontext/AuthContext';
+import UserSelect from '../../ui/fields/UserSelect';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTaskCreated: () => void;
+  defaultAssigneeId?: number; // Новый проп для дефолтного исполнителя из фильтров
 }
 
-const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTaskCreated }) => {
+const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onTaskCreated,
+  defaultAssigneeId 
+}) => {
   const { createTask } = useTask();
   const { fetchEmployeeFullnames } = useEmployee();
-  const [assigneeOptions, setAssigneeOptions] = useState<{ value: string; label: string }[]>([]);
-  const [responsibleOptions, setResponsibleOptions] = useState<{ value: string; label: string }[]>([]);
+  const [assigneeOptions, setAssigneeOptions] = useState<{ value: string; label: string; avatar?: string }[]>([]);
+  const [responsibleOptions, setResponsibleOptions] = useState<{ value: string; label: string; avatar?: string }[]>([]);
   const [formData, setFormData] = useState<TaskForm>({
     title: '',
     employeeId: 1,
@@ -41,25 +47,32 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         const fullNames = await fetchEmployeeFullnames();
         const options = fullNames.map(employee => ({
           value: employee.id.toString(),
-          label: employee.fullName
+          label: employee.fullName,
+          avatar: employee.photoPath
         }));
         
         setAssigneeOptions(options);
         setResponsibleOptions([{ value: '', label: 'Нет ответственного' }, ...options]);
         
-        if (authInfo) {
-          setFormData(prev => ({
-            ...prev,
-            employeeId: authInfo.employee.id,
-            responsibleId: null
-          }));
+        // Приоритетная логика выбора исполнителя по умолчанию:
+        // 1. Исполнитель из фильтров (defaultAssigneeId)
+        // 2. Текущий авторизованный пользователь
+        // 3. Первый сотрудник из списка
+        let defaultEmployeeId = 1;
+        
+        if (defaultAssigneeId) {
+          defaultEmployeeId = defaultAssigneeId;
+        } else if (authInfo) {
+          defaultEmployeeId = authInfo.employee.id;
         } else if (options.length > 0) {
-          setFormData(prev => ({
-            ...prev,
-            employeeId: parseInt(options[0].value),
-            responsibleId: null
-          }));
+          defaultEmployeeId = parseInt(options[0].value);
         }
+
+        setFormData(prev => ({
+          ...prev,
+          employeeId: defaultEmployeeId,
+          responsibleId: null
+        }));
       } catch (error) {
         console.error('Error fetching employee names:', error);
       } finally {
@@ -68,7 +81,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     };
 
     fetchEmployees();
-  }, [isOpen, fetchEmployeeFullnames, authInfo]);
+  }, [isOpen, fetchEmployeeFullnames, authInfo, defaultAssigneeId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -85,11 +98,19 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     }));
   };
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
     setFormData(prev => ({
       ...prev,
-      [name]: value ? parseInt(value) : null
+      employeeId: value ? parseInt(value) : 1
+    }));
+  };
+
+  const handleResponsibleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      responsibleId: value ? parseInt(value) : null
     }));
   };
 
@@ -163,22 +184,26 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         </div>
 
         <InputTitle>Исполнитель</InputTitle>
-        <CustomSelect
+        <UserSelect
           name="employeeId"
           value={formData.employeeId?.toString() || ''}
-          onChange={handleSelectChange}
+          onChange={handleAssigneeChange}
           options={assigneeOptions}
           disabled={isLoading}
+          placeholder="Выберите исполнителя"
+          style={{ width: "100%", margin: 0 }}
           required
         />
         
         <InputTitle>Ответственный</InputTitle>
-        <CustomSelect
+        <UserSelect
           name="responsibleId"
           value={formData.responsibleId?.toString() || ''}
-          onChange={handleSelectChange}
+          onChange={handleResponsibleChange}
           options={responsibleOptions}
           disabled={isLoading}
+          placeholder="Выберите ответственного"
+          style={{ width: "100%", margin: 0 }}
         />
       </div>
     </BaseModal>
