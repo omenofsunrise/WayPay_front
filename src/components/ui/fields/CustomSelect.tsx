@@ -147,7 +147,6 @@ const SelectContainer = styled.div`
 `;
 
 const StyledSelect = styled.div<{ hasError?: boolean; isOpen: boolean; disabled?: boolean }>`
-  padding: 10px 12px;
   border: 1px solid ${({ hasError, isOpen, disabled }) => 
     disabled ? 'rgba(209, 213, 219, 0.5)' : 
     hasError ? 'rgba(239, 68, 68, 1)' : 
@@ -158,17 +157,16 @@ const StyledSelect = styled.div<{ hasError?: boolean; isOpen: boolean; disabled?
   outline: none;
   transition: border-color 0.2s ease;
   height: auto;
-  min-height: 38px;
   box-sizing: border-box;
   background-color: ${({ disabled }) => disabled ? 'rgba(249, 250, 251, 1)' : 'white'};
   color: ${({ disabled }) => disabled ? 'rgba(156, 163, 175, 1)' : 'black'};
-  padding: 10px 15px; /* Упростите padding */
+  padding: 10px 15px;
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   display: flex;
   align-items: center;
-  /* Уберите justify-content: space-between */
-  justify-content: flex-start; /* Выравнивание по левому краю */
-  text-align: left; /* Выравнивание текста */
+  justify-content: flex-start;
+  text-align: left;
+  max-height: 37.5px;
 
   &:hover {
     border-color: ${({ hasError, disabled, isOpen }) => 
