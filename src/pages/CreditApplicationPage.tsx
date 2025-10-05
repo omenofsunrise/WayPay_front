@@ -661,14 +661,14 @@ const formatMyApplicationsTableData = () => {
       `${application.termMonths || 0} мес.`,
       application.region || '-',
       application.district || '-',
-      <ClientInfo onClick={() => handleViewClient(application)}>
-        <ClientAvatar src={clientAvatarUrl} />
-        <ClientName>{application.clientName || 'Неизвестно'}</ClientName>
-      </ClientInfo>,
       <EmployeeInfo>
         <ClientAvatar src={employeeAvatarUrl} />
         <ClientName>{application.employeeName || 'Не указан'}</ClientName>
       </EmployeeInfo>,
+      <ClientInfo onClick={() => handleViewClient(application)}>
+        <ClientAvatar src={clientAvatarUrl} />
+        <ClientName>{application.clientName || 'Неизвестно'}</ClientName>
+      </ClientInfo>,
       <ActionButton
           variant="primary"
           onClick={(e) => handleMessageClick(e, application.clientId)}
@@ -1009,8 +1009,8 @@ const formatMyApplicationsTableData = () => {
                 { name: "Срок", isSortable: false, align: "right" },
                 { name: "Регион", isSortable: false },
                 { name: "Район", isSortable: false },
+                { name: "Принял", isSortable: false },
                 { name: "Клиент", isSortable: false },
-                { name: "Сотрудник", isSortable: false },
               ]}
               data={formatMyApplicationsTableData()}
               onRowClick={(rowData, rowIndex) => {
