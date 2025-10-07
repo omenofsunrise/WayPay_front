@@ -55,6 +55,13 @@ const SideMenu = () => {
     setSelectedSideMenuItem,
   } = useContext(SideMenuContext);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    mainItem: string;
+  }>({ visible: false, x: 0, y: 0, mainItem: '' });
+  
   const navigate = useNavigate();
   const location = useLocation();
   const { hasRole, hasPermission, isSuperAdminCompany } = useAuth();
@@ -76,15 +83,114 @@ const SideMenu = () => {
   };
 
   useEffect(() => {
-      const currentMenuItem = getCurrentMenuItem();
-      if (currentMenuItem) {
-        setSelectedSideMenuItem(currentMenuItem);
-        const menuItem = menuItemsMap[location.pathname];
-        if (menuItem?.subItems) {
-          setExpandedItem(menuItem.mainItem);
-        }
+    const currentMenuItem = getCurrentMenuItem();
+    if (currentMenuItem) {
+      setSelectedSideMenuItem(currentMenuItem);
+      const menuItem = menuItemsMap[location.pathname];
+      if (menuItem?.subItems) {
+        setExpandedItem(menuItem.mainItem);
       }
-    }, [location.pathname, setSelectedSideMenuItem]);
+    }
+  }, [location.pathname, setSelectedSideMenuItem]);
+
+  // Закрытие контекстного меню при клике вне его
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  const handleMainMenuItemClick = (item: string, path?: string, hasSubItems?: boolean) => {
+    if (collapsed && hasSubItems) {
+      // Показываем контекстное меню для свернутого состояния
+      return;
+    }
+    
+    if (path) {
+      handleMenuItemClick(item, path);
+    } else if (hasSubItems) {
+      toggleItem(item);
+    }
+  };
+
+  const handleCollapsedMenuClick = (e: React.MouseEvent, mainItem: string, hasSubItems: boolean) => {
+    if (!collapsed) return;
+    
+    e.stopPropagation();
+    
+    if (hasSubItems) {
+      // Показываем контекстное меню
+      const rect = e.currentTarget.getBoundingClientRect();
+      setContextMenu({
+        visible: true,
+        x: rect.right + 5,
+        y: rect.top,
+        mainItem
+      });
+    } else {
+      // Для пунктов без подменю - сразу выполняем навигацию
+      const path = getPathByMainItem(mainItem);
+      if (path) {
+        handleMenuItemClick(mainItem, path);
+      }
+    }
+  };
+
+  const getPathByMainItem = (mainItem: string): string | null => {
+    const entries = Object.entries(menuItemsMap);
+    for (const [path, item] of entries) {
+      if (item.mainItem === mainItem && !item.subItems) {
+        return path;
+      }
+    }
+    return null;
+  };
+
+  const getSubItems = (mainItem: string): { key: string; label: string; path: string }[] => {
+    const subItems: { key: string; label: string; path: string }[] = [];
+    
+    Object.entries(menuItemsMap).forEach(([path, item]) => {
+      if (item.mainItem === mainItem && item.subItems) {
+        Object.entries(item.subItems).forEach(([subPath, subKey]) => {
+          // Получаем человекочитаемое название для пункта меню
+          const label = getSubItemLabel(subKey);
+          if (label) {
+            subItems.push({ key: subKey, label, path: subPath });
+          }
+        });
+      }
+    });
+    
+    return subItems;
+  };
+
+  const getSubItemLabel = (subItemKey: string): string => {
+    const labels: Record<string, string> = {
+      'contracts': 'Договоры',
+      'contracts-control': 'Контроль договоров',
+      'clients': 'Клиенты',
+      'blacklist': 'Чёрный список',
+      'credit-application': 'Заявки',
+      'queue': 'Очередь',
+      'pending-payments': 'Ожидаемые',
+      'payments-journal': 'Журнал',
+      'investors': 'Инвесторы',
+      'investors-report': 'Отчёт для инвесторов',
+      'investors-pool': 'Пулы инвесторов',
+      'products': 'Товары',
+      'black-catalog': 'Чёрный каталог',
+      'registration-requests': 'Заявки на регистрацию',
+      'budget': 'Бюджет',
+      'payments-income': 'Доходы от платежей'
+    };
+    
+    return labels[subItemKey] || subItemKey;
+  };
 
   const toggleItem = (item: string) => {
     if (collapsed) {
@@ -102,6 +208,7 @@ const SideMenu = () => {
   const handleMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
     navigate(path);
+    setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
     
     if (getAutoCollapseMenuSetting() && !collapsed) {
       toggleCollapsed();
@@ -111,6 +218,7 @@ const SideMenu = () => {
   const handleSubMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
     navigate(path);
+    setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
     
     if (getAutoCollapseMenuSetting() && !collapsed) {
       toggleCollapsed();
@@ -120,6 +228,11 @@ const SideMenu = () => {
   const toggleMenu = () => {
     toggleCollapsed();
     setExpandedItem(null);
+    setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
+  };
+
+  const handleContextMenuAction = (action: string, path: string) => {
+    handleSubMenuItemClick(action, path);
   };
 
   return (
@@ -132,24 +245,37 @@ const SideMenu = () => {
       />
       {!collapsed && <Logo src={logo} alt="logo" />}
       
-      
       <MenuList $collapsed={collapsed}>
-        {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин')) && (
+        {/* Основное меню с возможностью прокрутки */}
+        <ScrollableMenuContent>
+          {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин')) && (
+            <MenuItem 
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, 'analytics', false);
+                } else {
+                  handleMenuItemClick('analytics', '/analytics');
+                }
+              }}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === 'analytics'}
+            >
+              <Icon src={analyticsIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'analytics'} />
+              {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
+            </MenuItem>
+          )}
+          
+          {!collapsed && <Divider />}
+          
+          {/* Contracts Menu */}
           <MenuItem 
-            onClick={() => handleMenuItemClick('analytics', '/analytics')}
-            $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'analytics'}
-          >
-            <Icon src={analyticsIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'analytics'} />
-            {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
-          </MenuItem>
-        )}
-        
-        {!collapsed && <Divider />}
-        
-        <MainMenuContent>
-          <MenuItem 
-            onClick={() => toggleItem('contracts')}
+            onClick={(e) => {
+              if (collapsed) {
+                handleCollapsedMenuClick(e, 'contracts', true);
+              } else {
+                handleMainMenuItemClick('contracts', undefined, true);
+              }
+            }}
             $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'contracts' || 
                       selectedSideMenuItem === 'contracts-control'}
@@ -200,8 +326,15 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
+          {/* Clients Menu */}
           <MenuItem 
-            onClick={() => toggleItem('clients')}
+            onClick={(e) => {
+              if (collapsed) {
+                handleCollapsedMenuClick(e, 'clients', true);
+              } else {
+                handleMainMenuItemClick('clients', undefined, true);
+              }
+            }}
             $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'clients' || 
                       selectedSideMenuItem === 'blacklist' ||
@@ -234,6 +367,7 @@ const SideMenu = () => {
               </>
             )}
           </MenuItem>
+          
           {!collapsed && expandedItem === 'clients' && (
             <SubMenu>
               <SubMenuLine />
@@ -266,8 +400,15 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
+          {/* Payments Menu */}
           <MenuItem 
-            onClick={() => toggleItem('payments')}
+            onClick={(e) => {
+              if (collapsed) {
+                handleCollapsedMenuClick(e, 'payments', true);
+              } else {
+                handleMainMenuItemClick('payments', undefined, true);
+              }
+            }}
             $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'pending-payments' || 
                       selectedSideMenuItem === 'payments-journal'}
@@ -298,6 +439,7 @@ const SideMenu = () => {
               </>
             )}
           </MenuItem>
+          
           {!collapsed && expandedItem === 'payments' && (
             <SubMenu>
               <SubMenuLine />
@@ -316,9 +458,16 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
+          {/* Investors Menu */}
           {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
             <MenuItem 
-              onClick={() => toggleItem('investors')}
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, 'investors', true);
+                } else {
+                  handleMainMenuItemClick('investors', undefined, true);
+                }
+              }}
               $collapsed={collapsed}
               $selected={selectedSideMenuItem === 'investors' || 
                         selectedSideMenuItem === 'investors-report'}
@@ -350,6 +499,7 @@ const SideMenu = () => {
               )}
             </MenuItem>
           )}
+          
           {!collapsed && expandedItem === 'investors' && (
             <SubMenu>
               <SubMenuLine />
@@ -374,8 +524,15 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
+          {/* References Menu */}
           <MenuItem 
-            onClick={() => toggleItem('references')}
+            onClick={(e) => {
+              if (collapsed) {
+                handleCollapsedMenuClick(e, 'references', true);
+              } else {
+                handleMainMenuItemClick('references', undefined, true);
+              }
+            }}
             $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'products'}
           >
@@ -404,6 +561,7 @@ const SideMenu = () => {
               </>
             )}
           </MenuItem>
+          
           {!collapsed && expandedItem === 'references' && (
             <SubMenu>
               <SubMenuLine />
@@ -428,12 +586,18 @@ const SideMenu = () => {
                 </SubMenuItem>
               )}
             </SubMenu>
-            
           )}
           
+          {/* Finance Menu */}
           {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
             <MenuItem 
-              onClick={() => toggleItem('finance')}
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, 'finance', true);
+                } else {
+                  handleMainMenuItemClick('finance', undefined, true);
+                }
+              }}
               $collapsed={collapsed}
               $selected={selectedSideMenuItem === 'budget'} 
             >
@@ -463,6 +627,7 @@ const SideMenu = () => {
               )}
             </MenuItem>
           )}
+          
           {!collapsed && expandedItem === 'finance' && (
             <SubMenu>
               <SubMenuLine />
@@ -480,10 +645,20 @@ const SideMenu = () => {
               </SubMenuItem>
             </SubMenu>
           )}
-        {!collapsed && <Divider />}
-        
-                  <MenuItem 
-            onClick={() => handleMenuItemClick('profile', '/profile')}
+        </ScrollableMenuContent>
+
+        <BottomMenuSection>
+          {!collapsed && <Divider />}
+          
+          {/* Profile */}
+          <MenuItem 
+            onClick={(e) => {
+              if (collapsed) {
+                handleCollapsedMenuClick(e, 'profile', false);
+              } else {
+                handleMenuItemClick('profile', '/profile');
+              }
+            }}
             $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'profile'}
           >
@@ -491,9 +666,16 @@ const SideMenu = () => {
             {!collapsed && <MenuItemText>Профиль</MenuItemText>}
           </MenuItem>
 
+          {/* Admin Panel */}
           {hasRole('суперадмин') && (
             <MenuItem 
-              onClick={() => handleMenuItemClick('admin', '/admin')}
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, 'admin', false);
+                } else {
+                  handleMenuItemClick('admin', '/admin');
+                }
+              }}
               $collapsed={collapsed}
               $selected={selectedSideMenuItem === 'admin'}
             >
@@ -505,16 +687,43 @@ const SideMenu = () => {
               {!collapsed && <MenuItemText>Админ-панель</MenuItemText>}
             </MenuItem>
           )}
-        </MainMenuContent>
-
-        <MenuItem
-          onClick={() => handleMenuItemClick('about', '/about')}
-          $collapsed={collapsed}
-          $selected={selectedSideMenuItem === 'about'}
-        >
-          {!collapsed ? (
-            <>
-              <AboutIcon $selected={selectedSideMenuItem === 'about'}>
+        </BottomMenuSection>
+                  {/* About - всегда в самом низу */}
+          <MenuItem
+            onClick={(e) => {
+              if (collapsed) {
+                handleCollapsedMenuClick(e, 'about', false);
+              } else {
+                handleMenuItemClick('about', '/about');
+              }
+            }}
+            $collapsed={collapsed}
+            $selected={selectedSideMenuItem === 'about'}
+          >
+            {!collapsed ? (
+              <>
+                <AboutIcon $selected={selectedSideMenuItem === 'about'}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
+                          stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                          strokeWidth="1.25" 
+                          strokeLinecap="round"/>
+                    <path d="M11 12V16C11 16.5523 11.4477 17 12 17C12.5523 17 13 16.5523 13 16V12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" 
+                          fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                          stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                          strokeWidth="1.25" 
+                          strokeLinecap="round"/>
+                    <path d="M13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55229 11.4477 9 12 9C12.5523 9 13 8.55229 13 8Z" 
+                          fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                          stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                          strokeWidth="1.25" 
+                          strokeLinecap="round"/>
+                  </svg>
+                </AboutIcon>
+                <MenuItemText>О программе</MenuItemText>
+              </>
+            ) : (
+              <AboutIconCollapsed $selected={selectedSideMenuItem === 'about'}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
                         stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
@@ -531,42 +740,77 @@ const SideMenu = () => {
                         strokeWidth="1.25" 
                         strokeLinecap="round"/>
                 </svg>
-              </AboutIcon>
-              <MenuItemText>О программе</MenuItemText>
-            </>
-          ) : (
-            <AboutIconCollapsed $selected={selectedSideMenuItem === 'about'}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
-                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      strokeWidth="1.25" 
-                      strokeLinecap="round"/>
-                <path d="M11 12V16C11 16.5523 11.4477 17 12 17C12.5523 17 13 16.5523 13 16V12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" 
-                      fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      strokeWidth="1.25" 
-                      strokeLinecap="round"/>
-                <path d="M13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55229 11.4477 9 12 9C12.5523 9 13 8.55229 13 8Z" 
-                      fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      strokeWidth="1.25" 
-                      strokeLinecap="round"/>
-              </svg>
-            </AboutIconCollapsed>
-          )}
-        </MenuItem>
+              </AboutIconCollapsed>
+            )}
+          </MenuItem>
       </MenuList>
+      
+      {/* Context Menu для свернутого состояния */}
+      {contextMenu.visible && (
+        <ContextMenu
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+        >
+          {getSubItems(contextMenu.mainItem).map((item) => (
+            <ContextMenuItem
+              key={item.key}
+              onClick={() => handleContextMenuAction(item.key, item.path)}
+              $selected={selectedSideMenuItem === item.key}
+            >
+              {item.label}
+            </ContextMenuItem>
+          ))}
+        </ContextMenu>
+      )}
       
       <RightBorder $collapsed={collapsed} />
     </SideMenuContainer>
   );
 };
 
-const MainMenuContent = styled.div`
-  flex-grow: 1;
+const ContextMenu = styled.div`
+  position: fixed;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 8px;
+  z-index: 1000;
+  min-width: 180px;
+`;
+
+const ContextMenuItem = styled.div<{ $selected?: boolean }>`
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: ${({ $selected }) => ($selected ? '#000' : '#50555c')};
+  background-color: ${({ $selected }) => ($selected ? 'rgba(209, 213, 219, 1)' : 'transparent')};
+  
+  &:hover {
+    background-color: ${({ $selected }) => ($selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)')};
+    color: #000;
+  }
+`;
+
+const ScrollableMenuContent = styled.div`
   width: 100%;
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  
+  -ms-overflow-style: none;  /* IE и Edge */
+  scrollbar-width: none;  /* Firefox */
+`;
+
+const BottomMenuSection = styled.div`
+  width: 100%;
+  margin-bottom: auto;
 `;
 
 const MenuItem = styled.div<MenuItemProps>`
@@ -576,7 +820,7 @@ const MenuItem = styled.div<MenuItemProps>`
   margin-bottom: 3px;
   cursor: pointer;
   border-radius: 8px;
-  width: ${({ $collapsed }) => ($collapsed ? '45px' : '100%')};\
+  width: ${({ $collapsed }) => ($collapsed ? '45px' : '100%')};
   height: 35px;
   max-width: 100%;
   box-sizing: border-box;

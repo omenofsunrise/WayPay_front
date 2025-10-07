@@ -8,7 +8,7 @@ import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';
 import styled from 'styled-components';
-import CreditTypes from '../components/ui/fields/CreditTypes';
+import Tabs from '../components/ui/fields/Tabs';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import { useNavigate } from 'react-router-dom';
@@ -49,7 +49,7 @@ const CreditPage = () => {
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
   const itemsPerPage = 10;
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -63,12 +63,26 @@ const CreditPage = () => {
     7: 'rest',
     8: 'debt'
   };
-  const { hasPermission, forbiddenRole } = useAuth();
+  const { hasPermission, forbiddenRole, hasRole } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData } = useCredit();
   const navigate = useNavigate();
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
+
+  const shouldShowMyCreditsTab = hasRole('директор') || 
+                                hasRole('суперадмин') || 
+                                hasPermission('VIEW_ALL_CREDITS');
+
+  const tabs = [
+    { id: 'all', label: 'Все договоры' },
+    ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
+    { id: 'favourite', label: 'Важные' },
+    { id: 'debtors', label: 'Должники' },
+    { id: 'archive', label: 'В архиве' }
+  ];
+  
+  const [activeTab, setActiveTab] = useState<string>('all');
 
   const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
       try {
@@ -166,9 +180,28 @@ const CreditPage = () => {
     });
   };
 
-  const handleTabChange = (newFilters: { isFavourite?: boolean; isActive?: boolean }) => {
-      setFilters(newFilters);
-      setCurrentPage(1);
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    
+    switch (tabId) {
+      case 'my':
+        setFilters({ myCredits: true });
+        break;
+      case 'favourite':
+        setFilters({ isFavourite: true });
+        break;
+      case 'archive':
+        setFilters({ isActive: false });
+        break;
+      case 'debtors':
+        setFilters({ debt: true });
+        break;
+      default:
+        setFilters({});
+        break;
+    }
+    
+    setCurrentPage(1);
   };
 
   const handleDeleteCredit = async (rowData: any[]) => {
@@ -473,7 +506,11 @@ const CreditPage = () => {
       </FilterField>
 
       <SecondRaw style={{ color: "white" }}>
-        <CreditTypes onTabChange={handleTabChange} />
+        <Tabs 
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+        />
         <CountInfoTitle 
           total={creditsData?.totalCount || 0} 
         />

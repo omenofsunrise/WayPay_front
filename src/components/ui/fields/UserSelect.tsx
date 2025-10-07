@@ -13,6 +13,7 @@ interface CustomSelectWithAvatarProps extends Omit<React.HTMLAttributes<HTMLDivE
   onChange?: (event: { target: { value: string } }) => void;
   name?: string;
   disabled?: boolean;
+  required?: boolean; // Добавляем пропс required
 }
 
 const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
@@ -25,6 +26,7 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
   options,
   name,
   disabled = false,
+  required = false, // По умолчанию не обязательный
   ...props
 }) => {
   const [isFocused, setIsFocused] = React.useState(false);
@@ -81,7 +83,7 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
           tabIndex={disabled ? -1 : 0}
         >
           <SelectContent>
-            {selectedOption && (
+            {selectedOption && selectedOption.value !== '' && (
               <AvatarPreview 
                 src={selectedOption.avatar ? `${FILE_BASE_URL}${selectedOption.avatar}` : generateAvatar(getInitials(selectedOption.label), 24)}
                 onError={(e) => {
@@ -108,12 +110,14 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
                 $isSelected={option.value === value}
                 onClick={() => handleOptionClick(option.value)}
               >
-                <Avatar 
-                  src={option.avatar ? `${FILE_BASE_URL}${option.avatar}` : generateAvatar(getInitials(option.label), 32)}
-                  onError={(e) => {
-                    e.currentTarget.src = generateAvatar(getInitials(option.label), 32);
-                  }}
-                />
+                {option.value !== '' && (
+                  <Avatar 
+                    src={option.avatar ? `${FILE_BASE_URL}${option.avatar}` : generateAvatar(getInitials(option.label), 32)}
+                    onError={(e) => {
+                      e.currentTarget.src = generateAvatar(getInitials(option.label), 32);
+                    }}
+                  />
+                )}
                 <OptionLabel>{option.label}</OptionLabel>
                 {option.value === value && <SelectedIndicator />}
               </OptionItem>
@@ -137,7 +141,7 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
         value={value || ''}
         onChange={() => {}}
         tabIndex={-1}
-        required
+        required={required}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

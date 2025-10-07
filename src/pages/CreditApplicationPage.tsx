@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { FaCheck, FaTimes, FaUserCircle, FaSearch, FaMoneyBillWave, FaCalendarAlt, FaComment } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaUserCircle, FaSearch, FaMoneyBillWave, FaCalendarAlt, FaComment, FaFileContract } from 'react-icons/fa';
 import { Pagination } from 'react-bootstrap';
 import useCreditApplication from '../api/hooks/useCreditApplication';
 import type { CreditApplicationResponse, GetCreditApplicationsQuery, SelfCreditApplicationResponse } from '../api/types/creditApplication';
@@ -18,6 +18,7 @@ import CustomSelect from '../components/ui/fields/CustomSelect';
 import type { PaginatedResponse } from '../api/types/common';
 import Tabs from '../components/ui/fields/Tabs';
 import useChat from '../api/hooks/useChat';
+import { useNavigate } from 'react-router-dom';
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -59,6 +60,36 @@ const ClearFilterButton = styled.button`
 
   &:hover {
     color: #666;
+  }
+`;
+
+const TooltipWrapper = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const Tooltip = styled.div`
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 8px;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    border-width: 4px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
   }
 `;
 
@@ -332,6 +363,7 @@ const StatusBadge = styled.span<{ status: number }>`
 `;
 
 const CreditApplicationPage: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClient, setSelectedClient] = useState<{
@@ -359,7 +391,8 @@ const CreditApplicationPage: React.FC = () => {
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [myApplicationsData, setMyApplicationsData] = useState<PaginatedResponse<SelfCreditApplicationResponse> | null>(null);
   const [isLoadingMyApplications, setIsLoadingMyApplications] = useState(false);
-    const { createPrivateChat } = useChat();
+  const [showDistrictTooltip, setShowDistrictTooltip] = useState(false);
+  const { createPrivateChat } = useChat();
   const itemsPerPage = 10;
 
   const {
@@ -388,6 +421,24 @@ const CreditApplicationPage: React.FC = () => {
     getRegions,
     getDisctricts
   } = useRegion();
+
+  const handleProcessApplication = (application: CreditApplicationResponse | SelfCreditApplicationResponse) => {
+    const applicationData = {
+      id: application.id,
+      clientId: application.clientId,
+      clientName: 'fullname' in application ? application.fullname : application.clientName,
+      clientPhone: 'clientPhone' in application ? application.clientPhone : '',
+      productName: application.productName,
+      productPrice: application.productPrice,
+      firstPayment: application.firstPayment,
+      termMonths: application.termMonths,
+      region: application.region,
+      district: application.district,
+      percent: application.percent
+    };
+
+    navigate('/new-credit', { state: { creditApplication: applicationData } });
+  };
 
   useEffect(() => {
     getRegions();
@@ -438,7 +489,6 @@ const CreditApplicationPage: React.FC = () => {
           pageSize: itemsPerPage,
         };
         const result = await getMyCompanyCreditApplications(params);
-        console.log('My applications result:', result);
         setMyApplicationsData(result);
       } catch (error) {
         console.error('Error loading my applications:', error);
@@ -676,7 +726,15 @@ const formatMyApplicationsTableData = () => {
         >
           <FaComment />
           Написать
-      </ActionButton>
+      </ActionButton>,
+      <ActionButton
+            variant="success"
+            onClick={() => handleProcessApplication(application)}
+            title="Оформить договор"
+          >
+            <FaFileContract />
+            Оформить
+        </ActionButton>
     ];
   });
 };
@@ -801,19 +859,29 @@ const formatMyApplicationsTableData = () => {
         </InputWrapper>
 
         <InputWrapper>
-          <CustomSelect
-            placeholder="Выберите район"
-            value={selectedDistrict}
-            onChange={(e) => {
-              setSelectedDistrict(e.target.value);
-              setCurrentPage(1);
-            }}
-            options={districtData ? districtData.map(district => ({
-              value: district.id.toString(),
-              label: district.name
-            })) : []}
-            disabled={!selectedRegion || isRegionLoading}
-          />
+          <TooltipWrapper
+            onMouseEnter={() => !selectedRegion && setShowDistrictTooltip(true)}
+            onMouseLeave={() => setShowDistrictTooltip(false)}
+          >
+            <CustomSelect
+              placeholder="Выберите район"
+              value={selectedDistrict}
+              onChange={(e) => {
+                setSelectedDistrict(e.target.value);
+                setCurrentPage(1);
+              }}
+              options={districtData ? districtData.map(district => ({
+                value: district.id.toString(),
+                label: district.name
+              })) : []}
+              disabled={!selectedRegion || isRegionLoading}
+            />
+            {showDistrictTooltip && !selectedRegion && (
+              <Tooltip>
+                Сначала выберите регион
+              </Tooltip>
+            )}
+          </TooltipWrapper>
         </InputWrapper>
       </FilterField>
 

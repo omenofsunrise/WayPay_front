@@ -7,7 +7,7 @@ import CustomTable from '../components/ui/tables/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';
-import CreditTypes from '../components/ui/fields/CreditTypes';
+import Tabs from '../components/ui/fields/Tabs';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import { useNavigate } from 'react-router-dom';
@@ -47,7 +47,7 @@ const CreditControlPage = () => {
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
   const itemsPerPage = 10;
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean }>({});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -62,10 +62,25 @@ const CreditControlPage = () => {
     5: 'income_percents',
     6: 'income_rubles',
   };
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasRole } = useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
   const navigate = useNavigate();
+
+  // Определяем табы с табом "Свои"
+  const shouldShowMyCreditsTab = hasRole('директор') || 
+                                hasRole('суперадмин') || 
+                                hasPermission('VIEW_ALL_CREDITS');
+
+  const tabs = [
+    { id: 'all', label: 'Все договоры' },
+    ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
+    { id: 'favourite', label: 'Важные' },
+    { id: 'debtors', label: 'Должники' },
+    { id: 'archive', label: 'В архиве' }
+  ];
+  
+  const [activeTab, setActiveTab] = useState<string>('all');
 
   const loadCredits = useCallback(async () => {
     const params = {
@@ -123,8 +138,27 @@ const CreditControlPage = () => {
     });
   };
 
-  const handleTabChange = (newFilters: { isFavourite?: boolean; isActive?: boolean }) => {
-    setFilters(newFilters);
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    
+    switch (tabId) {
+      case 'my':
+        setFilters({ myCredits: true });
+        break;
+      case 'favourite':
+        setFilters({ isFavourite: true });
+        break;
+      case 'archive':
+        setFilters({ isActive: false });
+        break;
+      case 'debtors':
+        setFilters({ debt: true });
+        break;
+      default:
+        setFilters({});
+        break;
+    }
+    
     setCurrentPage(1);
   };
 
@@ -400,18 +434,20 @@ const CreditControlPage = () => {
           }}
         />
 
-        <ObjectTypeSelect 
-          value={objectType}
-          onChange={handleObjectTypeChange}
-          onObjectTypeSelect={handleObjectTypeSelect}
-          placeholder="Тип объекта"
-          customPlaceholder="Тип объекта"
-        />
-        {objectType && (
-          <ClearFilterButton onClick={handleClearObjectType}>
-            ×
-          </ClearFilterButton>
-        )}
+        <InputWrapper>
+          <ObjectTypeSelect 
+            value={objectType}
+            onChange={handleObjectTypeChange}
+            onObjectTypeSelect={handleObjectTypeSelect}
+            placeholder="Тип объекта"
+            customPlaceholder="Тип объекта"
+          />
+          {objectType && (
+            <ClearFilterButton onClick={handleClearObjectType}>
+              ×
+            </ClearFilterButton>
+          )}
+        </InputWrapper>
 
         <IncomeContainer>
           <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitle>
@@ -462,7 +498,11 @@ const CreditControlPage = () => {
         </IncomeContainer>
       </SecondRaw>
       <SecondRaw>
-        <CreditTypes onTabChange={handleTabChange} />
+        <Tabs 
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+        />
         <CountInfoTitle 
           total={creditsData?.totalCount || 0} 
         />
@@ -535,6 +575,7 @@ const FilterField = styled.div`
 const InputWrapper = styled.div`
   flex: 1;  
   min-width: 0;
+  position: relative;
 `;
 
 const SecondRaw = styled.div`

@@ -44,6 +44,11 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
             roles: ['сотрудник', 'бухгалтер']
         },
         {
+            code: 'VIEW_ALL_CREDITS',
+            label: 'Смотреть чужие договоры',
+            roles: ['сотрудник', 'бухгалтер', 'админ']
+        },
+        {
             code: 'DELETE_CREDITS',
             label: 'Удаление договоров',
             roles: ['сотрудник', 'бухгалтер']
@@ -55,7 +60,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
             code: 'VIEW_ANALYTIC',
             label: 'Просмотр аналитики',
             roles: ['админ']
-        }
+        },
+        {
+            code: 'VIEW_ALL_CREDITS',
+            label: 'Смотреть чужие договоры',
+            roles: ['сотрудник', 'бухгалтер', 'админ']
+        },
     ], []);
     
     const canEditProfile = useMemo(() => {
@@ -359,8 +369,8 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                                         <Checkbox 
                                             checked={employee?.permissions?.some(p => p.code === permission.code) || false}
                                             onChange={() => handleTogglePermission(permission.code)}
+                                            label={permission.label}
                                         />
-                                        <PermissionLabel>{permission.label}</PermissionLabel>
                                     </PermissionItem>
                                 ))}
                             </PermissionsGrid>
@@ -375,8 +385,8 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                                         <Checkbox 
                                             checked={employee?.permissions?.some(p => p.code === permission.code) || false}
                                             onChange={() => handleTogglePermission(permission.code)}
+                                            label={permission.label}
                                         />
-                                        <PermissionLabel>{permission.label}</PermissionLabel>
                                     </PermissionItem>
                                 ))}
                             </PermissionsGrid>
@@ -472,12 +482,14 @@ const PermissionsSection = styled.div`
     background: #FFFFFF;
     border-radius: 10px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    padding: 10px;
 `;
 
 const PermissionsGrid = styled.div`
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 15px;
+    padding: 10px;
 `;
 
 const PermissionItem = styled.div`

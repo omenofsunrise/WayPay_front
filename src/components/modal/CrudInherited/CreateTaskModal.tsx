@@ -14,7 +14,7 @@ interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTaskCreated: () => void;
-  defaultAssigneeId?: number; // Новый проп для дефолтного исполнителя из фильтров
+  defaultAssigneeId?: number; 
 }
 
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ 
@@ -54,10 +54,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         setAssigneeOptions(options);
         setResponsibleOptions([{ value: '', label: 'Нет ответственного' }, ...options]);
         
-        // Приоритетная логика выбора исполнителя по умолчанию:
-        // 1. Исполнитель из фильтров (defaultAssigneeId)
-        // 2. Текущий авторизованный пользователь
-        // 3. Первый сотрудник из списка
         let defaultEmployeeId = 1;
         
         if (defaultAssigneeId) {
@@ -192,7 +188,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           disabled={isLoading}
           placeholder="Выберите исполнителя"
           style={{ width: "100%", margin: 0 }}
-          required
         />
         
         <InputTitle>Ответственный</InputTitle>

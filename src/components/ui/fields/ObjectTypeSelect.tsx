@@ -187,7 +187,6 @@ const ObjectTypeSelect = ({
     }
   };
 
-  // Убрана фильтрация - всегда показываем все типы
   const displayObjectTypes = objectTypes;
 
   return (
@@ -198,7 +197,7 @@ const ObjectTypeSelect = ({
             ref={inputRef}
             type="text"
             value={value}
-            readOnly // Запрещаем ввод
+            readOnly
             onClick={handleInputClick}
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
@@ -357,7 +356,6 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
   height: auto;
   min-height: 38px;
   box-sizing: border-box;
-  max-width: 500px;
   background-color: white;
   color: black;
   padding: 5px;

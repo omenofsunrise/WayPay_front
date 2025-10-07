@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useEffect, useState, type ChangeEvent, useCallback, useRef } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
@@ -63,6 +63,7 @@ interface SelectedObjectType {
 
 const NewCreditPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [contractDate, setContractDate] = useState<string | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [guarantor, setGuarantor] = useState<Guarantor | null>(null);
@@ -107,6 +108,65 @@ const NewCreditPage = () => {
     const savedNextMonthStart = localStorage.getItem(NEXT_MONTH_START_STORAGE_KEY);
     return savedNextMonthStart === 'true';
   });
+
+  const creditApplicationData = location.state?.creditApplication;
+
+  useEffect(() => {
+    if (creditApplicationData) {
+      if (creditApplicationData.clientId) {
+        setClient({
+          id: creditApplicationData.clientId,
+          fullName: creditApplicationData.clientName,
+          phone: creditApplicationData.clientPhone || ''
+        });
+      }
+
+      if (creditApplicationData.productName && creditApplicationData.productPrice) {
+        setProducts([{
+          id: Date.now(),
+          name: creditApplicationData.productName,
+          price: creditApplicationData.productPrice,
+          quantity: 1,
+          markup: creditApplicationData.percent * 100,
+          totalPrice: creditApplicationData.productPrice * (1 + creditApplicationData.percent)
+        }]);
+        setTotalSum(creditApplicationData.productPrice * (1 + creditApplicationData.percent));
+      }
+
+      if (creditApplicationData.termMonths) {
+        setMonths(creditApplicationData.termMonths.toString());
+      }
+
+      if (creditApplicationData.firstPayment !== undefined && creditApplicationData.firstPayment !== null) {
+        const firstPayment = Number(creditApplicationData.firstPayment);
+        if (!isNaN(firstPayment)) {
+          const formattedAmount = formatMoney(firstPayment.toString());
+          setInitialPaymentAmount(formattedAmount);
+          handleAmountChange(null, formattedAmount);
+          
+          if (totalSum > 0) {
+            const percent = Math.round((firstPayment / totalSum) * 100);
+            setInitialPaymentPercent(percent.toString());
+          }
+        }
+      }
+
+    }
+  }, [creditApplicationData]);
+
+  // useEffect(() => {
+  //   if (creditApplicationData?.firstPayment && totalSum > 0) {
+  //     const firstPayment = Number(creditApplicationData.firstPayment);
+  //     if (!isNaN(firstPayment)) {
+  //       const percent = Math.round((firstPayment / totalSum) * 100);
+  //       setInitialPaymentPercent(percent.toString());
+  //       handlePercentChange(null, percent.toString());
+  //     }
+  //   }
+  // }, [totalSum, creditApplicationData]);
+
+  useEffect(() => {
+  }, [initialPaymentAmount]);
 
   const handleMarkupTypeChange = useCallback((type: 'percent' | 'fixed') => {
     setMarkupType(type);
@@ -210,7 +270,6 @@ const NewCreditPage = () => {
       return true;
     }
 
-    // Сравниваем даты
     if (investorActiveUntil < tempDate) {
       const entityType = investor ? 'инвестора' : 'пула';
       const errorMessage = `Договор с ${entityType} заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
@@ -438,8 +497,9 @@ const NewCreditPage = () => {
     }
   }, [contractDate, months, paymentDue, totalSum, nextMonthStart, generateSchedulePreview]);
 
-  const handlePercentChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const handlePercentChange = useCallback((e?: ChangeEvent<HTMLInputElement>, value?: string) => {
+    if (e != null)
+      value = e.target.value;
     
     if (value === '' || /^\d*$/.test(value)) {
       setInitialPaymentPercent(value);
@@ -461,10 +521,12 @@ const NewCreditPage = () => {
     setIsInvestorModalOpen(true);
   };
 
-  const handleAmountChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
+  const handleAmountChange = useCallback((e?: ChangeEvent<HTMLInputElement>, inputValue?: string) => {
+    if (e != null)
+      inputValue = e.target.value;
     
     if (inputValue === '₽' || inputValue === '') {
+      
       setInitialPaymentAmount('');
       setInitialPaymentPercent('');
       return;
@@ -483,13 +545,6 @@ const NewCreditPage = () => {
       setInitialPaymentPercent('');
     }
   }, [totalSum, parseAmount, formatMoney]);
-
-  useEffect(() => {
-    if (totalSum === 0) {
-      setInitialPaymentAmount('');
-      setInitialPaymentPercent('');
-    }
-  }, [totalSum]);
 
   const handleSelectClient = (client: Client) => {
     if (modalType === 'client') {
