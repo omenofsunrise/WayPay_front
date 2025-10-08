@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import creditService from '../services/creditService';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs } from '../types/credit';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest } from '../types/credit';
 import type { PaginatedResponse } from '../types/common';
 
 const useCredit = () => {
@@ -58,6 +58,21 @@ const useCredit = () => {
     }
   }, []);
 
+  const updateCredit = useCallback(async (creditData: UpdateCreditRequest): Promise<Credit | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await creditService.updateCredit(creditData);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : 'Failed to create credit');
+      console.log(err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const getDocsData = useCallback(async (id?: number): Promise<CreditDocs | null> => {
     if (!id) return null;
     
@@ -65,6 +80,22 @@ const useCredit = () => {
     setError(null);
     try {
       const result = await creditService.getSpaData(id);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch SPA data');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getCreateDocRequest = useCallback(async (id?: number): Promise<CreateCreditRequest | null> => {
+    if (!id) return null;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await creditService.getCreditCreateRequest(id);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch SPA data');
@@ -123,6 +154,8 @@ const useCredit = () => {
     toggleFavourite,
     deleteCredit,
     getDocsData,
+    updateCredit,
+    getCreateDocRequest
   };
 };
 

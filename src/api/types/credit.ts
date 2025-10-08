@@ -69,6 +69,10 @@ export interface CreateCreditRequest {
   }>;
 }
 
+export interface UpdateCreditRequest extends CreateCreditRequest {
+  id: number;
+}
+
 export interface CreditParams extends PaginationParams {
     creditId?: string;
     investorPoolId?: number;

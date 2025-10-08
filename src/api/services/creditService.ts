@@ -1,6 +1,6 @@
 import apiClient from '../client';
 import type { PaginatedResponse } from '../types/common';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, } from '../types/credit';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest, } from '../types/credit';
 
 class CreditService {
   async getCredits(params?: CreditParams): Promise<CreditResponse> {
@@ -35,6 +35,16 @@ class CreditService {
     }
   }
 
+  async updateCredit(creditData: UpdateCreditRequest): Promise<Credit> {
+    try {
+      const response = await apiClient.put<Credit>('/Credit', creditData);
+      return response.data;
+    }
+    catch (err: any) {
+      throw err;
+    }
+  }
+
   async toggleCredit(id: number) {
     await apiClient.put(`/Credit/${id}/toggle-favourite`);
   }
@@ -45,6 +55,11 @@ class CreditService {
 
   async getSpaData(id: number): Promise<CreditDocs> {
     const response = await apiClient.get<CreditDocs>(`/Credit/spa/${id}`);
+    return response.data;
+  }
+
+  async getCreditCreateRequest(id: number): Promise<CreateCreditRequest> {
+    const response = await apiClient.get<CreateCreditRequest>(`/Credit/create-request/${id}`);
     return response.data;
   }
 }
