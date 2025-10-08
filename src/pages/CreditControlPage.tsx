@@ -67,10 +67,9 @@ const CreditControlPage = () => {
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
   const navigate = useNavigate();
 
-  // Определяем табы с табом "Свои"
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
-                                hasPermission('VIEW_ALL_CREDITS');
+                                hasPermission('VIEW_ALL_CREDITS', true);
 
   const tabs = [
     { id: 'all', label: 'Все договоры' },

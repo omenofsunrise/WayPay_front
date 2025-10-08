@@ -72,7 +72,7 @@ const CreditPage = () => {
 
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
-                                hasPermission('VIEW_ALL_CREDITS');
+                                hasPermission('VIEW_ALL_CREDITS', true);
 
   const tabs = [
     { id: 'all', label: 'Все договоры' },
