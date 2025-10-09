@@ -66,6 +66,34 @@ const SideMenu = () => {
   const location = useLocation();
   const { hasRole, hasPermission, isSuperAdminCompany } = useAuth();
   
+  const menuItemPermissions: Record<string, () => boolean> = {
+    'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин'),
+    'contracts': () => true, // Базовый доступ к договорам
+    'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'clients': () => true, // Базовый доступ к клиентам
+    'blacklist': () => true, // Базовый доступ к черному списку
+    'credit-application': () => isSuperAdminCompany(),
+    'queue': () => true, // Базовый доступ к очереди
+    'pending-payments': () => true, // Базовый доступ к платежам
+    'payments-journal': () => true, // Базовый доступ к журналу платежей
+    'investors': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'investors-report': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'investors-pool': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'products': () => true, // Базовый доступ к товарам
+    'black-catalog': () => true, // Базовый доступ к черному каталогу
+    'registration-requests': () => isSuperAdminCompany(),
+    'budget': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'payments-income': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'profile': () => true, // Профиль доступен всем
+    'admin': () => hasRole('суперадмин'),
+    'about': () => true, // О программе доступно всем
+  };
+
+  const checkMenuItemPermission = (menuItemKey: string): boolean => {
+    const permissionCheck = menuItemPermissions[menuItemKey];
+    return permissionCheck ? permissionCheck() : true;
+  };
+
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
     const menuItem = menuItemsMap[currentPath];
@@ -157,10 +185,13 @@ const SideMenu = () => {
     Object.entries(menuItemsMap).forEach(([path, item]) => {
       if (item.mainItem === mainItem && item.subItems) {
         Object.entries(item.subItems).forEach(([subPath, subKey]) => {
-          // Получаем человекочитаемое название для пункта меню
-          const label = getSubItemLabel(subKey);
-          if (label) {
-            subItems.push({ key: subKey, label, path: subPath });
+          // Проверяем права доступа для подпункта
+          if (checkMenuItemPermission(subKey)) {
+            // Получаем человекочитаемое название для пункта меню
+            const label = getSubItemLabel(subKey);
+            if (label) {
+              subItems.push({ key: subKey, label, path: subPath });
+            }
           }
         });
       }

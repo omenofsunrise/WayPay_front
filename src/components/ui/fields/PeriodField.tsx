@@ -207,7 +207,7 @@ const handleSavePeriod = () => {
 
 const Container = styled.div`
   position: relative;
-  width: 205px;
+  width: 245px;
 `;
 
 const InputField = styled.div`
@@ -263,7 +263,7 @@ const Dropdown = styled.div`
   box-shadow: 2px 2px 25px 2px rgba(0, 0, 0, 0.25);
   border-radius: 5px;
   z-index: 100;
-  max-height: 300px;
+  max-height: 350px;
   overflow-y: auto;
 `;
 
@@ -271,7 +271,7 @@ const OptionItem = styled.div<{ $isSelected: boolean }>`
   display: flex;
   align-items: center;
   padding: 10px 12px;
-  width: 100%;
+  width: auto;
   min-height: 38px;
   background: ${({ $isSelected }) => ($isSelected ? 'rgba(232, 216, 216, 1)' : 'transparent')};
   cursor: pointer;
@@ -323,7 +323,6 @@ const CustomPeriodButton = styled.div`
   display: flex;
   flex-direction: column;
   padding: 10px 12px 0 0;
-  width: 100%;
   min-height: 38px;
   font-style: normal;
   font-weight: 400;
@@ -332,6 +331,7 @@ const CustomPeriodButton = styled.div`
   color: #007D88;
   cursor: pointer;
   text-align: center;
+  width: auto;
 
   &:hover {
     background: #f5f5f5;
