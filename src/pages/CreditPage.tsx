@@ -75,10 +75,10 @@ const CreditPage = () => {
                                 hasPermission('VIEW_ALL_CREDITS', true);
 
   const tabs = [
-    { id: 'all', label: 'Все договоры' },
+    { id: 'all', label: 'Все' },
     ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
-    { id: 'favourite', label: 'Важные' },
-    { id: 'debtors', label: 'Должники' },
+    { id: 'favourite', label: 'Избранные' },
+    { id: 'debtors', label: 'Просрочка' },
     { id: 'archive', label: 'В архиве' }
   ];
   
@@ -102,6 +102,11 @@ const CreditPage = () => {
     if (credit) {
     setSelectedCreditForPrint(credit);
     }
+  };
+
+  const handleEditCredit = (rowData: any[]) => {
+    const [_, id] = rowData;
+    navigate(`/new-credit/${id}`);
   };
 
   const handlePrintOptionSelect = async (option: 'sale' | 'schedules' | 'guaranteeConsent') => {
@@ -260,6 +265,12 @@ const CreditPage = () => {
       shouldShow: () => forbiddenRole("бухгалтер")
     },
     {
+      label: 'Редактировать',
+      action: handleEditCredit,
+      color: '#007d88',
+      shouldShow: () => (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
+    },
+    {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
@@ -305,7 +316,7 @@ const CreditPage = () => {
             'Начислено': formatMoney(credit.totalAmount?.toString() || '0'),
             'Уплачено': formatMoney(credit.payed?.toString() || '0'),
             'Остаток': formatMoney(credit.rest?.toString() || '0'),
-            'Долг': formatMoney(credit.debt?.toString() || '0')
+            'Просрочка': formatMoney(credit.debt?.toString() || '0')
           };
         }
       });
@@ -493,8 +504,8 @@ const CreditPage = () => {
             value={objectType}
             onChange={handleObjectTypeChange}
             onObjectTypeSelect={handleObjectTypeSelect}
-            placeholder="Тип объекта"
-            customPlaceholder="Тип объекта"
+            placeholder="Каталог"
+            customPlaceholder="Каталог"
           />
           {objectType && (
             <ClearFilterButton onClick={handleClearObjectType}>

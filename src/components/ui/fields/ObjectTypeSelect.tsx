@@ -26,7 +26,7 @@ const ObjectTypeSelect = ({
   value,
   onChange,
   onObjectTypeSelect,
-  placeholder = 'Выберите тип',
+  placeholder = 'Выберите каталог',
   customPlaceholder,
   hasError = false,
   errorMessage,
@@ -157,7 +157,7 @@ const ObjectTypeSelect = ({
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (window.confirm(`Вы уверены, что хотите удалить тип "${name}"?`)) {
+    if (window.confirm(`Вы уверены, что хотите удалить каталог "${name}"?`)) {
       try {
         await deleteObjectType(id);
       }
@@ -239,14 +239,14 @@ const ObjectTypeSelect = ({
               >
                 <DropdownContent>
                   {isLoading ? (
-                    <DropdownItem>Загрузка типов...</DropdownItem>
+                    <DropdownItem>Загрузка каталогов...</DropdownItem>
                   ) : isCreating ? (
                     <CreateContainer>
                       <CreateInput
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Введите название типа"
+                        placeholder="Введите название каталога"
                         autoFocus
                       />
                       <ActionButtons>
@@ -306,7 +306,7 @@ const ObjectTypeSelect = ({
                       </ObjectTypeItem>
                     ))
                   ) : (
-                    <DropdownItem>Типы не найдены</DropdownItem>
+                    <DropdownItem>Каталогы не найдены</DropdownItem>
                   )}
                 </DropdownContent>
                 
@@ -314,7 +314,7 @@ const ObjectTypeSelect = ({
                   {!isCreating && (
                     <AddButton onClick={handleCreateNew}>
                       <FaPlus size={12} />
-                      <span>Создать новый тип</span>
+                      <span>Создать новый каталог</span>
                     </AddButton>
                   )}
                 </DropdownFooter>

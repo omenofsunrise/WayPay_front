@@ -62,7 +62,7 @@ const CreditControlPage = () => {
     5: 'income_percents',
     6: 'income_rubles',
   };
-  const { hasPermission, hasRole } = useAuth();
+  const { hasPermission, hasRole, forbiddenRole } = useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
   const navigate = useNavigate();
@@ -72,14 +72,19 @@ const CreditControlPage = () => {
                                 hasPermission('VIEW_ALL_CREDITS', true);
 
   const tabs = [
-    { id: 'all', label: 'Все договоры' },
+    { id: 'all', label: 'Все' },
     ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
-    { id: 'favourite', label: 'Важные' },
-    { id: 'debtors', label: 'Должники' },
+    { id: 'favourite', label: 'Избранные' },
+    { id: 'debtors', label: 'Просрочка' },
     { id: 'archive', label: 'В архиве' }
   ];
   
   const [activeTab, setActiveTab] = useState<string>('all');
+
+  const handleEditCredit = (rowData: any[]) => {
+    const [_, id] = rowData;
+    navigate(`/new-credit/${id}`);
+  };
 
   const loadCredits = useCallback(async () => {
     const params = {
@@ -231,13 +236,20 @@ const CreditControlPage = () => {
     {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
-      color: '#008b8b'
+      color: '#008b8b',
+      shouldShow: () => forbiddenRole("бухгалтер")
+    },
+    {
+      label: 'Редактировать',
+      action: handleEditCredit,
+      color: '#007d88',
+      shouldShow: () => (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
     },
     {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
-      shouldShow: () => hasPermission('DELETE_CREDITS')
+      shouldShow: () => hasPermission('DELETE_CREDITS') && forbiddenRole("бухгалтер")
     }
   ];
 
@@ -433,20 +445,18 @@ const CreditControlPage = () => {
           }}
         />
 
-        <InputWrapper>
           <ObjectTypeSelect 
             value={objectType}
             onChange={handleObjectTypeChange}
             onObjectTypeSelect={handleObjectTypeSelect}
-            placeholder="Тип объекта"
-            customPlaceholder="Тип объекта"
+            placeholder="Каталог"
+            customPlaceholder="Каталог"
           />
           {objectType && (
             <ClearFilterButton onClick={handleClearObjectType}>
               ×
             </ClearFilterButton>
           )}
-        </InputWrapper>
 
         <IncomeContainer>
           <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitle>

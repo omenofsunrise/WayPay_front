@@ -309,6 +309,12 @@ function App() {
                   <NewCreditPage />
                 </MainLayout>
             } />
+            
+            <Route path="new-credit/:id?" element={
+                <MainLayout>
+                  <NewCreditPage />
+                </MainLayout>
+            } />
 
             <Route path="schedules" element={
                 <MainLayout> 

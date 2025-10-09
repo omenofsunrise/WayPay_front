@@ -89,7 +89,7 @@ const useCredit = () => {
     }
   }, []);
 
-  const getCreateDocRequest = useCallback(async (id?: number): Promise<CreateCreditRequest | null> => {
+  const getCreateCreditRequest = useCallback(async (id?: number): Promise<CreateCreditRequest | null> => {
     if (!id) return null;
     
     setIsLoading(true);
@@ -155,7 +155,7 @@ const useCredit = () => {
     deleteCredit,
     getDocsData,
     updateCredit,
-    getCreateDocRequest
+    getCreateCreditRequest
   };
 };
 

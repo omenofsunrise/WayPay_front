@@ -194,8 +194,8 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
     const isActive = data[rowIndex][data[rowIndex].length - 1] === false;
     if (isActive) {
       return {
-        backgroundColor: customStyle.backgroundColor || '#25CBA1',
-        color: customStyle.color || 'inherit',
+        backgroundColor: customStyle.backgroundColor || '#E8F5E8',
+        color: '#1B5E20',
         fontWeight: customStyle.fontWeight || 'normal'
       };
     }
