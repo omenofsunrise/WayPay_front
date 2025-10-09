@@ -5,7 +5,8 @@ import type {
   AnalyticResponse, 
   SellInfoResponse,
   GraphResponse,
-  DebtDynamicResponse
+  DebtDynamicResponse,
+  ScheduleAnalitycResponse
 } from '../types/analytic';
 
 const useAnalytic = () => {
@@ -95,6 +96,20 @@ const useAnalytic = () => {
     }
   }, [prepareParams]);
 
+  const getScheduleAnalityc = useCallback(async (year: number): Promise<ScheduleAnalitycResponse[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await analyticService.getScheduleAnalityc(year);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [prepareParams]);
+
   return {
     isLoading,
     error,
@@ -106,6 +121,7 @@ const useAnalytic = () => {
     getSellInfo,
     getInvestmentDynamic,
     getDebtDynamic,
+    getScheduleAnalityc
   };
 };
 

@@ -13,7 +13,7 @@ import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import { useNavigate } from 'react-router-dom';
 import useCredit from '../api/hooks/useCredit';
-import type { Credit } from '../api/types/credit';
+import { InvestmentSourceType, type Credit, type SetInvestmentSourceRequest } from '../api/types/credit';
 import useExport from '../api/hooks/useExport';
 import creditService from '../api/services/creditService';
 import { formatDate } from '../utils/dateFormatter';
@@ -30,6 +30,7 @@ import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
 import paymentService from '../api/services/paymentService';
 import type { PaymentTab } from '../api/types/payment';
+import InvestorSelectModal from '../components/modal/CrudInherited/InvestorSelectModal';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -49,7 +50,7 @@ const CreditPage = () => {
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
   const itemsPerPage = 10;
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean }>({});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -66,9 +67,11 @@ const CreditPage = () => {
   const { hasPermission, forbiddenRole, hasRole } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData } = useCredit();
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource } = useCredit();
   const navigate = useNavigate();
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
+  const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] = useState(false);
+  const [selectedCreditForFunding, setSelectedCreditForFunding] = useState<Credit | null>(null);
 
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
@@ -79,9 +82,45 @@ const CreditPage = () => {
     ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
     { id: 'favourite', label: 'Избранные' },
     { id: 'debtors', label: 'Просрочка' },
+    { id: 'inDebt', label: 'В долг' },
     { id: 'archive', label: 'В архиве' }
   ];
   
+  const handleSelectFundingSource = (rowData: any[]) => {
+    const [_, id] = rowData;
+    const credit = creditsData?.items.find(c => c.id === Number(id));
+    if (credit) {
+      setSelectedCreditForFunding(credit);
+      setIsInvestorSelectModalOpen(true);
+    }
+  };
+
+  
+  const handleFundingSourceSubmit = async (entity: { 
+    id: number; 
+    type: 'investor' | 'pool';
+  }) => {
+    if (!selectedCreditForFunding) return;
+
+    try {
+      const sourceRequest: SetInvestmentSourceRequest = {
+        sourceType: entity.type === 'investor' ? InvestmentSourceType.Investor : InvestmentSourceType.InvestorPool,
+        entityId: entity.id
+      };
+
+      await setInvestmentSource(selectedCreditForFunding.id, sourceRequest);
+      
+      await loadCredits();
+      setIsInvestorSelectModalOpen(false);
+      setSelectedCreditForFunding(null);
+      
+      alert('Источник финансирования успешно установлен');
+    } catch (error) {
+      console.error('Ошибка при установке источника финансирования:', error);
+      alert('Произошла ошибка при установке источника финансирования');
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<string>('all');
 
   const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
@@ -201,6 +240,9 @@ const CreditPage = () => {
       case 'debtors':
         setFilters({ debt: true });
         break;
+      case 'inDebt':
+        setFilters({ inDebt: true });
+        break;
       default:
         setFilters({});
         break;
@@ -263,6 +305,12 @@ const CreditPage = () => {
       action: handleOpenPaymentModal,
       color: '#008b8b',
       shouldShow: () => forbiddenRole("бухгалтер")
+    },
+    {
+      label: 'Выбрать источник финансирования',
+      action: handleSelectFundingSource,
+      color: '#007d88',
+      shouldShow: () => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
     },
     {
       label: 'Редактировать',
@@ -590,6 +638,16 @@ const CreditPage = () => {
         onClose={() => setIsPrintModalOpen(false)}
         onSelect={handlePrintOptionSelect}
         selectedCredit={selectedCreditForPrint}
+      />
+
+      <InvestorSelectModal
+        isOpen={isInvestorSelectModalOpen}
+        onClose={() => {
+          setIsInvestorSelectModalOpen(false);
+          setSelectedCreditForFunding(null);
+        }}
+        onSubmit={handleFundingSourceSubmit}
+        includePools={true}
       />
     </PageLayout>
   );

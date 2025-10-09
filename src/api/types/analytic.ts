@@ -51,3 +51,12 @@ export interface DebtDynamicResponse {
   paymentsDynamic: GraphResponse;
   debtDynamic: GraphResponse;
 }
+
+export interface ScheduleAnalitycResponse {
+  expectedIncome: number;
+  realIncome: number;
+  debt: number;
+    
+  incomePercent: number;
+  debtPercent: number;
+}

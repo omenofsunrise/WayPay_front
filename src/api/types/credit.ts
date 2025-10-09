@@ -61,6 +61,7 @@ export interface CreateCreditRequest {
   termMonths: number;
   paymentDay: number;
   nextMonthStart: boolean;
+  inDebt: boolean;
   products: Array<{
     name: string;
     price: number;
@@ -157,4 +158,16 @@ export interface CreditResponse extends PaginatedResponse<Credit> {
     totalRest: number;
     totalIncomeRubles: number;
     totalPrice: number;
+}
+
+export type InvestmentSourceType = 1 | 2;
+
+export const InvestmentSourceType = {
+  Investor: 1 as InvestmentSourceType,
+  InvestorPool: 2 as InvestmentSourceType,
+} as const;
+
+export interface SetInvestmentSourceRequest {
+  sourceType: InvestmentSourceType;
+  entityId: number;
 }

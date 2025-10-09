@@ -6,7 +6,6 @@ import CustomInput from '../components/ui/fields/CustomInput';
 import CustomTable from '../components/ui/tables/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
-import PrintIcon from '../assets/ui/print.svg?react';
 import Tabs from '../components/ui/fields/Tabs';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
@@ -47,7 +46,7 @@ const CreditControlPage = () => {
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
   const itemsPerPage = 10;
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean }>({});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>({});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -76,6 +75,7 @@ const CreditControlPage = () => {
     ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
     { id: 'favourite', label: 'Избранные' },
     { id: 'debtors', label: 'Просрочка' },
+    { id: 'inDebt', label: 'В долг' }, // Добавлена вкладка "В долг"
     { id: 'archive', label: 'В архиве' }
   ];
   
@@ -157,6 +157,9 @@ const CreditControlPage = () => {
         break;
       case 'debtors':
         setFilters({ debt: true });
+        break;
+      case 'inDebt':
+        setFilters({ inDebt: true }); // Добавлен фильтр для вкладки "В долг"
         break;
       default:
         setFilters({});

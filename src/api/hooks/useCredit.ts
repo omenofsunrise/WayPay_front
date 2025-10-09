@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import creditService from '../services/creditService';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest } from '../types/credit';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest, SetInvestmentSourceRequest } from '../types/credit';
 import type { PaginatedResponse } from '../types/common';
 
 const useCredit = () => {
@@ -143,6 +143,22 @@ const useCredit = () => {
     }
   }
 
+  const setInvestmentSource = useCallback(async (
+    creditId: number, 
+    sourceRequest: SetInvestmentSourceRequest
+  ): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await creditService.setInvestmentSource(creditId, sourceRequest);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to set investment source');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -155,7 +171,8 @@ const useCredit = () => {
     deleteCredit,
     getDocsData,
     updateCredit,
-    getCreateCreditRequest
+    getCreateCreditRequest,
+    setInvestmentSource
   };
 };
 

@@ -4,7 +4,8 @@ import type {
   AnalyticResponse, 
   SellInfoResponse,
   GraphResponse,
-  DebtDynamicResponse
+  DebtDynamicResponse,
+  ScheduleAnalitycResponse
 } from '../types/analytic';
 
 class AnalyticService {
@@ -52,6 +53,13 @@ class AnalyticService {
         end: params?.end?.toISOString(),
         predefinedPeriod: params?.predefinedPeriod
       }
+    });
+    return response.data;
+  }
+
+  async getScheduleAnalityc(year: number): Promise<ScheduleAnalitycResponse[]> {
+    const response = await apiClient.get<ScheduleAnalitycResponse[]>('/Analytic/schedules', {
+      params: { year }
     });
     return response.data;
   }
