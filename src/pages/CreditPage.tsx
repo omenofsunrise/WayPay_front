@@ -95,7 +95,6 @@ const CreditPage = () => {
     }
   };
 
-  
   const handleFundingSourceSubmit = async (entity: { 
     id: number; 
     type: 'investor' | 'pool';

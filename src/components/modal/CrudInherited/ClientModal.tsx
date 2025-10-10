@@ -136,9 +136,11 @@ const ClientModal: React.FC<ClientModalProps> = ({
     registrationAddress: false
   });
   
-  const validatePhone = async (phone: string) => {
+  const validatePhone = async (phone: string, initialPhone: string) => {
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
-    
+    if (phone === initialData.phone)
+      return '';
+
     if (!phoneRegex.test(phone.trim())) {
       return 'Введите корректный телефон';
     }
@@ -301,7 +303,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         newErrorMessages.fullName = 'Поле обязательно для заполнения';
       }
 
-      newErrorMessages.phone = await validatePhone(formData.phone);
+      newErrorMessages.phone = await validatePhone(formData.phone, initialData.phone);
       
       const birthdateValidation = validateDate(formData.birthdate.toString() || '', 18, 100, true);
       if (!birthdateValidation.isValid) {

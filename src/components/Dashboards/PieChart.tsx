@@ -1,6 +1,7 @@
 import styled, { keyframes } from 'styled-components';
 import { useEffect, useState, useRef } from 'react';
 import type { ScheduleAnalitycResponse } from '../../api/types/analytic';
+import { formatMoney } from '../../utils/formatPrice';
 
 interface PieChartProps {
   title: string;
@@ -8,14 +9,6 @@ interface PieChartProps {
   period?: string;
   showPercentages?: boolean;
 }
-
-const formatNumber = (num: number): string => {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-};
-
-const formatCurrency = (num: number): string => {
-  return `${formatNumber(num)} ₽`;
-};
 
 const PieChart = ({ title, data, period, showPercentages = true }: PieChartProps) => {
   const prevDataRef = useRef<ScheduleAnalitycResponse>(data);
@@ -49,7 +42,6 @@ const PieChart = ({ title, data, period, showPercentages = true }: PieChartProps
       if (progress < 1) {
         requestAnimationFrame(animateData);
       } else {
-        // В конце анимации устанавливаем точные проценты
         setAnimatedData(data);
       }
     };
@@ -58,24 +50,23 @@ const PieChart = ({ title, data, period, showPercentages = true }: PieChartProps
     prevDataRef.current = data;
   }, [data]);
 
-  // Подготавливаем данные для круговой диаграммы
   const chartData = [
     {
       name: 'Реальные поступления',
       value: animatedData.realIncome,
-      color: '#10B981', // зеленый
+      color: '#10B981',
       description: 'Фактически поступившие средства'
     },
     {
       name: 'Просрочка',
       value: animatedData.debt,
-      color: '#EF4444', // красный
+      color: '#EF4444',
       description: 'Задолженность'
     },
     {
       name: 'Ожидаемые поступления',
       value: Math.max(0, animatedData.expectedIncome - animatedData.realIncome),
-      color: '#6B7280', // серый
+      color: '#6B7280',
       description: 'Ожидаемые, но еще не поступившие средства'
     }
   ].filter(item => item.value > 0);
@@ -83,7 +74,6 @@ const PieChart = ({ title, data, period, showPercentages = true }: PieChartProps
   const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
   const calculatePercentage = (value: number) => totalValue > 0 ? (value / totalValue) * 100 : 0;
 
-  // Строим пути для SVG
   let cumulativePercentage = 0;
   const paths = chartData.map((item) => {
     const percentage = calculatePercentage(item.value);
@@ -153,12 +143,12 @@ const PieChart = ({ title, data, period, showPercentages = true }: PieChartProps
         <StatsContainer>
           <StatItem>
             <StatLabel>Ожидаемый доход:</StatLabel>
-            <StatValue>{formatCurrency(animatedData.expectedIncome)}</StatValue>
+            <StatValue>{formatMoney(animatedData.expectedIncome.toString())}</StatValue>
           </StatItem>
           
           <StatItem>
             <StatLabel>Реальный доход:</StatLabel>
-            <StatValue color="#10B981">{formatCurrency(animatedData.realIncome)}</StatValue>
+            <StatValue color="#10B981">{formatMoney(animatedData.realIncome.toString())}</StatValue>
             {showPercentages && (
               <StatPercent>({completionRate.toFixed(1)}% от ожидаемого)</StatPercent>
             )}
@@ -166,61 +156,25 @@ const PieChart = ({ title, data, period, showPercentages = true }: PieChartProps
           
           <StatItem>
             <StatLabel>Просрочка:</StatLabel>
-            <StatValue color="#EF4444">{formatCurrency(animatedData.debt)}</StatValue>
+            <StatValue color="#EF4444">{formatMoney(animatedData.debt.toString())}</StatValue>
             {showPercentages && (
               <StatPercent>({debtToIncomeRatio.toFixed(1)}% от реальных поступлений)</StatPercent>
             )}
           </StatItem>
         </StatsContainer>
 
-        <Legend>
-          {hasData ? (
-            paths.map((segment, index) => (
-              <LegendItem key={index}>
-                <LegendColor style={{ backgroundColor: segment.color }} />
-                <LegendText>
-                  <div>
-                    <LegendName>{segment.name}</LegendName>
-                    <LegendDescription>{segment.description}</LegendDescription>
-                  </div>
-                  <LegendValues>
-                    <AnimatedValue>{formatCurrency(segment.value)}</AnimatedValue>
-                    {showPercentages && (
-                      <LegendPercentage>({segment.percentage.toFixed(1)}%)</LegendPercentage>
-                    )}
-                  </LegendValues>
-                </LegendText>
-              </LegendItem>
-            ))
-          ) : (
-            <NoDataMessage>Данные по поступлениям отсутствуют</NoDataMessage>
-          )}
-        </Legend>
       </ChartContent>
     </ChartContainer>
   );
 };
-
-// Анимации
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
 
 const scaleIn = keyframes`
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 `;
 
-// Стилизованные компоненты
 const AnimatedPath = styled.path`
   animation: ${scaleIn} 0.5s ease-out forwards;
-`;
-
-const AnimatedValue = styled.div`
-  display: inline-block;
-  animation: ${fadeIn} 0.5s ease-out forwards;
-  font-weight: bold;
 `;
 
 const ChartContainer = styled.div`
@@ -228,7 +182,7 @@ const ChartContainer = styled.div`
   border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 12px;
   padding: 20px;
-  width: 100%;
+  width: 50%;
   font-family: sans-serif;
   color: black;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -263,14 +217,14 @@ const ChartPeriod = styled.div`
 
 const ChartContent = styled.div`
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 24px;
 `;
 
 const PieChartWrapper = styled.div`
-  display: flex;
-  justify-content: center;
+  flex-shrink: 0;
   transition: all 0.3s ease;
+  flex: 1;
 `;
 
 const StatsContainer = styled.div`
@@ -280,6 +234,8 @@ const StatsContainer = styled.div`
   padding: 16px;
   background: #F9FAFB;
   border-radius: 8px;
+  flex: 0.5;
+  margin-left: auto;  
 `;
 
 const StatItem = styled.div`
@@ -308,71 +264,6 @@ const StatPercent = styled.div`
   color: #6B7280;
   width: 100%;
   text-align: right;
-`;
-
-const Legend = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-`;
-
-const LegendItem = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  transition: all 0.3s ease;
-`;
-
-const LegendColor = styled.div`
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 2px;
-  transition: all 0.3s ease;
-`;
-
-const LegendText = styled.div`
-  font-size: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex: 1;
-  gap: 12px;
-`;
-
-const LegendName = styled.div`
-  color: #1F2937;
-  font-weight: 500;
-  margin-bottom: 2px;
-`;
-
-const LegendDescription = styled.div`
-  font-size: 12px;
-  color: #6B7280;
-`;
-
-const LegendValues = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-`;
-
-const LegendPercentage = styled.div`
-  font-size: 12px;
-  color: #6B7280;
-  margin-top: 2px;
-`;
-
-const NoDataMessage = styled.div`
-  font-size: 14px;
-  color: #999;
-  text-align: center;
-  width: 100%;
-  padding: 20px 0;
-  animation: ${fadeIn} 0.5s ease-out;
 `;
 
 export default PieChart;
