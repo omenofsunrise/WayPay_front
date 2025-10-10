@@ -870,7 +870,7 @@ const NewCreditPage = () => {
           </FieldGroup>
 
           <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
-            <Label>Тип договора (необязательно)</Label>
+            <Label>Каталог (необязательно)</Label>
             <ObjectTypeSelect
               value={objectTypeName}
               onChange={handleObjectTypeNameChange}
