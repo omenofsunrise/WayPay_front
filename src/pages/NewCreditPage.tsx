@@ -219,7 +219,7 @@ const NewCreditPage = () => {
     };
 
     loadCreditData();
-  }, [isEditMode, id, getCreateCreditRequest, totalSum]);
+  }, [isEditMode, id, getCreateCreditRequest]);
 
   useEffect(() => {
     if (creditApplicationData) {
