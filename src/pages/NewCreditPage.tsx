@@ -828,7 +828,7 @@ const NewCreditPage = () => {
             </DateInputWrapper>
           </FieldGroup>
         
-            <CheckboxContainer style={{ marginTop: '30px' }}>
+            <CheckboxContainer style={{ marginTop: '25px' }}>
               <Checkbox 
                 label='Договор в долг'
                 checked={inDebt} 
