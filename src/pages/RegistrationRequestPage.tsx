@@ -109,7 +109,6 @@ const RegistrationRequestPage = () => {
   const handleApprove = async () => {
     if (!selectedRequest) return;
     
-    // Валидация обязательных полей
     if (!passportData.series || !passportData.number || !passportData.issuedBy || 
         !passportData.issueDate || !passportData.birthDate || !passportData.birthPlace) {
       alert('Пожалуйста, заполните все поля данных паспорта');
@@ -128,8 +127,13 @@ const RegistrationRequestPage = () => {
       };
 
       await approveRegistrationRequest(approveRequest);
-      
-      // Очистка состояния после успешного подтверждения
+      if (error != null)
+      {  
+        console.error('Ошибка при подтверждении заявки:', error);
+        alert(`Произошла ошибка при подтверждении заявки ${error}`);
+        return;
+      }
+
       setSelectedRequest(null);
       setSelectedRequestFiles(null);
       setImageRotations({});
@@ -142,7 +146,6 @@ const RegistrationRequestPage = () => {
         birthPlace: '',
       });
       
-      // Перезагрузка списка заявок
       await loadRequests();
       
       alert('Заявка успешно подтверждена');
@@ -337,7 +340,7 @@ const RegistrationRequestPage = () => {
                           <FormField>
                             <Label>ФИО</Label>
                             <CustomInput
-                              inputType="text"
+                              inputType="fullname"
                               placeholder="ФИО"
                               value={passportData.issuedBy}
                               onChange={(e) => setPassportData(prev => ({...prev, issuedBy: e.target.value}))}

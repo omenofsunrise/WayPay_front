@@ -133,7 +133,7 @@ const NewCreditPage = () => {
                 investorPie: creditData.investorId || 0,
                 investmentAmount: creditData.investorId || 0,
                 balance: creditData.investorId || 0,
-                activeUntil: creditData.investorId.toString(),
+                activeUntil: creditData.investorActiveUntil,
                 isPool: false
               });
             } else if (creditData.poolId) {
@@ -145,7 +145,7 @@ const NewCreditPage = () => {
                 investorPie: creditData.poolId || 0,
                 investmentAmount: creditData.poolId || 0,
                 balance: creditData.poolId.toString() || 0,
-                activeUntil: Date.now.toString(),
+                activeUntil: creditData.investorActiveUntil,
                 isPool: true
               });
             }
@@ -327,7 +327,6 @@ const NewCreditPage = () => {
     setInDebt(checked);
     localStorage.setItem(IN_DEBT_STORAGE_KEY, checked.toString());
     
-    // При включении "В долг" очищаем выбранного инвестора/пул
     if (checked) {
       setInvestor(null);
       setSelectedPool(null);
@@ -460,7 +459,6 @@ const NewCreditPage = () => {
       };
     }
     
-    // Добавляем инвестора/пул только если не в долг
     if (!inDebt) {
       if (selectedPool) {
         creditData.poolId = selectedPool.poolId || selectedPool.id;
@@ -815,7 +813,14 @@ const NewCreditPage = () => {
       </TitleField>
 
       <ContentWrapper>
-        <ModalInfoTitle>Основная информация</ModalInfoTitle>
+        <CheckboxContainer>
+          <ModalInfoTitle>Основная информация</ModalInfoTitle>
+          <Checkbox 
+            label='Договор в долг'
+            checked={inDebt} 
+            onChange={handleInDebtChange} 
+          />
+        </CheckboxContainer>
         
         <FormRow>
           <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
@@ -827,14 +832,7 @@ const NewCreditPage = () => {
               />
             </DateInputWrapper>
           </FieldGroup>
-        
-            <CheckboxContainer style={{ marginTop: '25px' }}>
-              <Checkbox 
-                label='Договор в долг'
-                checked={inDebt} 
-                onChange={handleInDebtChange} 
-              />
-            </CheckboxContainer>
+
             {!inDebt && (
               <>
                 <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
