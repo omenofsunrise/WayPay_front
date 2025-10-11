@@ -25,6 +25,10 @@ const RegistrationRequestPage = () => {
     birthDate: '',
     birthPlace: '',
   });
+  const [validationErrors, setValidationErrors] = useState({
+    series: '',
+    number: '',
+  });
   const [rejectionComment, setRejectionComment] = useState('');
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -40,6 +44,47 @@ const RegistrationRequestPage = () => {
     approveRegistrationRequest,
     rejectRegistrationRequest
   } = useRegistrationRequest();
+
+  const validateSeries = (series: string): string => {
+    if (!series) return 'Серия обязательна для заполнения';
+    if (!/^\d+$/.test(series)) return 'Серия должна содержать только цифры';
+    if (series.length !== 4) return 'Серия должна содержать 4 цифры';
+    return '';
+  };
+
+  const validateNumber = (number: string): string => {
+    if (!number) return 'Номер обязателен для заполнения';
+    if (!/^\d+$/.test(number)) return 'Номер должен содержать только цифры';
+    if (number.length !== 6) return 'Номер должен содержать 6 цифр';
+    return '';
+  };
+
+  const isPassportDataValid = () => {
+    return !validationErrors.series && 
+           !validationErrors.number && 
+           passportData.series.length === 4 && 
+           passportData.number.length === 6 &&
+           passportData.issuedBy && 
+           passportData.issueDate && 
+           passportData.birthDate && 
+           passportData.birthPlace;
+  };
+
+  const handleSeriesChange = (value: string) => {
+    const numericValue = value.replace(/\D/g, '').slice(0, 4);
+    setPassportData(prev => ({...prev, series: numericValue}));
+    
+    const error = validateSeries(numericValue);
+    setValidationErrors(prev => ({...prev, series: error}));
+  };
+
+  const handleNumberChange = (value: string) => {
+    const numericValue = value.replace(/\D/g, '').slice(0, 6);
+    setPassportData(prev => ({...prev, number: numericValue}));
+    
+    const error = validateNumber(numericValue);
+    setValidationErrors(prev => ({...prev, number: error}));
+  };
 
   const loadRequests = useCallback(async () => {
     const params = {
@@ -58,6 +103,11 @@ const RegistrationRequestPage = () => {
     setSelectedRequest(request);
     setSelectedRequestFiles(null);
     setImageRotations({});
+    
+    setValidationErrors({
+      series: '',
+      number: '',
+    });
     
     try {
       const files = await getFilesForRegistrationRequest(request.id);
@@ -109,6 +159,18 @@ const RegistrationRequestPage = () => {
   const handleApprove = async () => {
     if (!selectedRequest) return;
     
+    const seriesError = validateSeries(passportData.series);
+    const numberError = validateNumber(passportData.number);
+    
+    if (seriesError || numberError) {
+      setValidationErrors({
+        series: seriesError,
+        number: numberError,
+      });
+      alert('Пожалуйста, исправьте ошибки в данных паспорта');
+      return;
+    }
+
     if (!passportData.series || !passportData.number || !passportData.issuedBy || 
         !passportData.issueDate || !passportData.birthDate || !passportData.birthPlace) {
       alert('Пожалуйста, заполните все поля данных паспорта');
@@ -127,13 +189,7 @@ const RegistrationRequestPage = () => {
       };
 
       await approveRegistrationRequest(approveRequest);
-      if (error != null)
-      {  
-        console.error('Ошибка при подтверждении заявки:', error);
-        alert(`Произошла ошибка при подтверждении заявки ${error}`);
-        return;
-      }
-
+      
       setSelectedRequest(null);
       setSelectedRequestFiles(null);
       setImageRotations({});
@@ -144,6 +200,10 @@ const RegistrationRequestPage = () => {
         issueDate: '',
         birthDate: '',
         birthPlace: '',
+      });
+      setValidationErrors({
+        series: '',
+        number: '',
       });
       
       await loadRequests();
@@ -171,13 +231,15 @@ const RegistrationRequestPage = () => {
 
       await rejectRegistrationRequest(rejectRequest);
       
-      // Очистка состояния после успешного отклонения
       setSelectedRequest(null);
       setSelectedRequestFiles(null);
       setImageRotations({});
       setRejectionComment('');
+      setValidationErrors({
+        series: '',
+        number: '',
+      });
       
-      // Перезагрузка списка заявок
       await loadRequests();
       
       alert('Заявка успешно отклонена');
@@ -310,27 +372,33 @@ const RegistrationRequestPage = () => {
                         <SectionTitle>Данные с паспорта</SectionTitle>
                         <FormGrid>
                           <FormField>
-                            <Label>Серия</Label>
+                            <Label>Серия *</Label>
                             <CustomInput
                               inputType="text"
                               placeholder="0000"
                               value={passportData.series}
-                              onChange={(e) => setPassportData(prev => ({...prev, series: e.target.value}))}
+                              onChange={(e) => handleSeriesChange(e.target.value)}
                               maxLength={4}
                             />
+                            {validationErrors.series && (
+                              <ErrorText>{validationErrors.series}</ErrorText>
+                            )}
                           </FormField>
                           <FormField>
-                            <Label>Номер</Label>
+                            <Label>Номер *</Label>
                             <CustomInput
                               inputType="text"
                               placeholder="000000"
                               value={passportData.number}
-                              onChange={(e) => setPassportData(prev => ({...prev, number: e.target.value}))}
+                              onChange={(e) => handleNumberChange(e.target.value)}
                               maxLength={6}
                             />
+                            {validationErrors.number && (
+                              <ErrorText>{validationErrors.number}</ErrorText>
+                            )}
                           </FormField>
                           <FormField>
-                            <Label>Дата выдачи</Label>
+                            <Label>Дата выдачи *</Label>
                             <CustomInput
                               inputType="date"
                               value={passportData.issueDate}
@@ -338,7 +406,7 @@ const RegistrationRequestPage = () => {
                             />
                           </FormField>
                           <FormField>
-                            <Label>ФИО</Label>
+                            <Label>ФИО *</Label>
                             <CustomInput
                               inputType="fullname"
                               placeholder="ФИО"
@@ -347,7 +415,7 @@ const RegistrationRequestPage = () => {
                             />
                           </FormField>
                           <FormField>
-                            <Label>Дата рождения</Label>
+                            <Label>Дата рождения *</Label>
                             <CustomInput
                               inputType="date"
                               value={passportData.birthDate}
@@ -355,7 +423,7 @@ const RegistrationRequestPage = () => {
                             />
                           </FormField>
                           <FormField fullWidth>
-                            <Label>Адрес регистрации</Label>
+                            <Label>Адрес регистрации *</Label>
                             <CustomInput
                               inputType="text"
                               placeholder="Город, страна"
@@ -392,8 +460,7 @@ const RegistrationRequestPage = () => {
                   </GrayButton>
                   <DarkCyanButton 
                     onClick={handleApprove}
-                    disabled={!passportData.series || !passportData.number || !passportData.issuedBy || 
-                             !passportData.issueDate || !passportData.birthDate || !passportData.birthPlace}
+                    disabled={!isPassportDataValid()}
                   >
                     Подтвердить регистрацию
                   </DarkCyanButton>
@@ -420,7 +487,13 @@ const RegistrationRequestPage = () => {
   );
 };
 
-// Стили остаются без изменений...
+const ErrorText = styled.div`
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: left;
+`;
+
 const Container = styled.div`
   display: grid;
   grid-template-columns: 400px 1fr;
