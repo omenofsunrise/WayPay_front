@@ -9,12 +9,14 @@ class RegistrationRequestService {
   }
 
   async getFilesForRegistrationRequest(id: number): Promise<RegistrationFilesResponse> {
-    const response = await apiClient.get<RegistrationFilesResponse>(`/RegistrationRequest/${id}/files`);
+    const response = await apiClient.get<RegistrationFilesResponse>(`/RegistrationRequest/${id}/files`, {
+      timeout: 30000
+    });
     return response.data;
   }
 
   async approveRegistrationRequest(request: RegistrationApproveRequest) {
-    await apiClient.post(`RegistrationRequest/aprrove`, request);
+    await apiClient.post(`RegistrationRequest/approve`, request);
   }
 
   async rejectRegistrationRequest(request: RegistrationRejectRequest) {
