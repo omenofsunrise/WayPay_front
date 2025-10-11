@@ -231,22 +231,42 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
         <Typography variant="h5" gutterBottom>
           {chat.name}
         </Typography>
-        <Chip 
-          label={`${chatMembers?.length ?? 0} участников`}
-          size="small"
-          sx={{ 
-            mt: 1,
-            color: 'rgba(80, 85, 92, 1)',
-            backgroundColor: 'transparent',
-            '& .MuiChip-label': {
-              px: 0.5,
-            },
-            border: 'none',
-            boxShadow: 'none',
-            fontSize: '14px',
-            margin: 0
-          }}
-        />
+
+        {chatMembers?.length > 2 ? (
+          <Chip 
+            label={`${chatMembers?.length ?? 0} участников`}
+            size="small"
+            sx={{ 
+              mt: 1,
+              color: 'rgba(80, 85, 92, 1)',
+              backgroundColor: 'transparent',
+              '& .MuiChip-label': {
+                px: 0.5,
+              },
+              border: 'none',
+              boxShadow: 'none',
+              fontSize: '14px',
+              margin: 0
+            }}
+          />
+        ) : (
+          <Chip 
+            label={chat.type === 'employee_client' ? "Клиент" : "Сотрудник"}
+            size="small"
+            sx={{ 
+              mt: 1,
+              color: 'rgba(80, 85, 92, 1)',
+              backgroundColor: 'transparent',
+              '& .MuiChip-label': {
+                px: 0.5,
+              },
+              border: 'none',
+              boxShadow: 'none',
+              fontSize: '14px',
+              margin: 0
+            }}
+          />
+        )}
       </Box>
 
       <Divider />

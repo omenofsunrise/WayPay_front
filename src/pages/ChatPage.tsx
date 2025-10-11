@@ -829,9 +829,6 @@ const ChatPage = () => {
               />
               <Box>
                 <Typography variant="h6" color='black'>{currentChat.name}</Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {chatMembers.length} участников
-                </Typography>
               </Box>
               <Box sx={{ width: "75%", margin: "0 auto" }}>
                 <SearchField

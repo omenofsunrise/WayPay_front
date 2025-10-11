@@ -45,12 +45,13 @@ const useCredit = () => {
 
   const createCredit = useCallback(async (creditData: CreateCreditRequest): Promise<Credit | null> => {
     setIsLoading(true);
-    setError(null);
+    setError(null); 
     try {
       const result = await creditService.createCredit(creditData);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : 'Failed to create credit');
+      const errorObj = err instanceof Error ? err : new Error('Failed to create credit');
+      setError(errorObj);
       console.log(err);
       return null;
     } finally {

@@ -470,6 +470,7 @@ const NewCreditPage = () => {
     }
 
     let createdCredit;
+    let currentError = null;
 
     if (isEditMode && id) {
       const updateData = {
@@ -481,11 +482,14 @@ const NewCreditPage = () => {
     } else {
     createdCredit = await createCredit(creditData as CreateCreditRequest);
     }
-    
+    currentError = error;
+
     if (createdCredit) {
       navigate('/credits');
     } else {
-      window.alert(`${error?.response?.data}`);
+      const errorMessage = (currentError as any)?.response?.data || 
+                          'Неизвестная ошибка';
+      window.alert(errorMessage);
     }
   }, [
     client,

@@ -44,7 +44,10 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/profile': { mainItem: 'profile' },
   '/about': { mainItem: 'about' },
   '/admin': { mainItem: 'admin' },
-  '/investors-pool': { mainItem: 'investors-pool' },
+  '/investors-pool': { 
+    mainItem: 'investors', 
+    subItems: { '/investors-pool': 'investors-pool' } 
+  },
 };
 
 const SideMenu = () => {
@@ -121,7 +124,6 @@ const SideMenu = () => {
     }
   }, [location.pathname, setSelectedSideMenuItem]);
 
-  // Закрытие контекстного меню при клике вне его
   useEffect(() => {
     const handleClickOutside = () => {
       setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
@@ -135,7 +137,6 @@ const SideMenu = () => {
 
   const handleMainMenuItemClick = (item: string, path?: string, hasSubItems?: boolean) => {
     if (collapsed && hasSubItems) {
-      // Показываем контекстное меню для свернутого состояния
       return;
     }
     
@@ -152,7 +153,6 @@ const SideMenu = () => {
     e.stopPropagation();
     
     if (hasSubItems) {
-      // Показываем контекстное меню
       const rect = e.currentTarget.getBoundingClientRect();
       setContextMenu({
         visible: true,
@@ -161,7 +161,6 @@ const SideMenu = () => {
         mainItem
       });
     } else {
-      // Для пунктов без подменю - сразу выполняем навигацию
       const path = getPathByMainItem(mainItem);
       if (path) {
         handleMenuItemClick(mainItem, path);
@@ -185,9 +184,7 @@ const SideMenu = () => {
     Object.entries(menuItemsMap).forEach(([path, item]) => {
       if (item.mainItem === mainItem && item.subItems) {
         Object.entries(item.subItems).forEach(([subPath, subKey]) => {
-          // Проверяем права доступа для подпункта
           if (checkMenuItemPermission(subKey)) {
-            // Получаем человекочитаемое название для пункта меню
             const label = getSubItemLabel(subKey);
             if (label) {
               subItems.push({ key: subKey, label, path: subPath });
