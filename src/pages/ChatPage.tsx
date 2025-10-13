@@ -13,7 +13,7 @@ import {
   Chip,
 } from '@mui/material';
 import useChat from '../api/hooks/useChat';
-import type { Chat, Message } from '../api/types/chat';
+import type { Attachment, Chat, Message } from '../api/types/chat';
 import { format } from 'date-fns';
 import { useEmployee } from '../api/hooks/useEmployee';
 import { getInitials, generateAvatar } from '../utils/avatarUtils';
@@ -195,7 +195,8 @@ const ChatPage = () => {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isSelectCreditModalOpen, setIsSelectCreditModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
+  const [selectedAttachmentInfo, setSelectedAttachmentInfo] = useState<Attachment | null>(null);
+
   const currentChatFromUrl = useMemo(() => {
     return chatId ? chats.find(c => c.id.toString() === chatId) : null;
   }, [chatId, chats]);
@@ -518,29 +519,21 @@ const ChatPage = () => {
   const handleMakeNote = useCallback(() => {
     if (selectedMessage && currentChat?.type === 'employee_client') {
       const hasFile = selectedMessage.attachments && selectedMessage.attachments.length > 0;
-      console.log("asd");
+      
       if (hasFile) {
         const attachment = selectedMessage.attachments[0];
-        fetch(`${SOCIAL_BASE_URL}/${attachment.fileUrl}`)
-          .then(response => response.blob())
-          .then(blob => {
-            const file = new File([blob], attachment.fileName, { 
-              type: attachment.contentType
-            });
-            
-            setNoteContent(selectedMessage.text || `Файл: ${attachment.fileName}`);
-            setSelectedFile(file);
-            setIsSelectCreditModalOpen(true);
-          })
-          .catch(error => {
-            console.error('Ошибка загрузки файла:', error);
-            setNoteContent(selectedMessage.text || '');
-            setSelectedFile(null);
-            setIsSelectCreditModalOpen(true);
-          });
+        
+        setNoteContent(selectedMessage.text || `Файл: ${attachment.fileName}`);
+        setSelectedAttachmentInfo({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          fileUrl: attachment.fileUrl,
+          contentType: attachment.contentType
+        });
+        setIsSelectCreditModalOpen(true);
       } else {
         setNoteContent(selectedMessage.text || '');
-        setSelectedFile(null);
+        setSelectedAttachmentInfo(null);
         setIsSelectCreditModalOpen(true);
       }
     }
@@ -572,16 +565,25 @@ const ChatPage = () => {
     return undefined;
   }, [currentChat]);
 
-  const handleCreateNote = useCallback(async (noteData: { content: string; file?: File }) => {
+  const handleCreateNote = useCallback(async (noteData: { content: string; file?: File; attachmentInfo?: Attachment }) => {
     if (!selectedCreditId || !noteData.content) return;
     console.log(selectedCreditId);
     
     try {
+      let fileToSend: File | undefined;
+      
+      if (noteData.attachmentInfo && !noteData.file) {
+        const file = await downloadAttachmentAsFile(noteData.attachmentInfo);
+        fileToSend = file;
+      } else {
+        fileToSend = noteData.file;
+      }
+
       const noteRequest = {
         noteableType: NOTEABLE_TYPES.CREDIT,
         noteableId: selectedCreditId,
         content: noteData.content,
-        file: noteData.file,
+        file: fileToSend,
       };
 
       const result = await createNote(noteRequest);
@@ -600,6 +602,31 @@ const ChatPage = () => {
       alert('Ошибка при создании заметки');
     }
   }, [selectedCreditId, selectedMessage]);
+
+    const downloadAttachmentAsFile = async (attachment: Attachment): Promise<File> => {
+    try {
+      const response = await fetch(SOCIAL_BASE_URL + '/' + attachment.fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      
+      const file = new File([blob], attachment.fileName, {
+        type: attachment.contentType,
+        lastModified: Date.now(),
+      });
+      
+      return file;
+    } catch (error) {
+      console.error('Error downloading attachment:', error);
+      throw new Error('Не удалось загрузить файл для заметки');
+    }
+  };
+
+  const handleCreateNoteModalCreate = useCallback((noteData: { content: string; file?: File; attachmentInfo?: Attachment }) => {
+    handleCreateNote(noteData);
+  }, [handleCreateNote]);
 
   const handleCloseCreateNoteModal = useCallback(() => {
     setIsCreateNoteModalOpen(false);
@@ -1077,10 +1104,10 @@ const ChatPage = () => {
       <CreateNoteModal
         isOpen={isCreateNoteModalOpen}
         onClose={handleCloseCreateNoteModal}
-        onCreate={handleCreateNote}
+        onCreate={handleCreateNoteModalCreate}
         noteContent={noteContent}
         onNoteContentChange={setNoteContent}
-        initialFile={selectedFile}
+        attachmentInfo={selectedAttachmentInfo}
       />
     </ChatContainer>
   );

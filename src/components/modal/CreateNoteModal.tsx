@@ -6,14 +6,17 @@ import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import AddPhotoButtonSvg from '../../assets/ui/buttons/AddPhotoButton.svg';  
 import AddFileButtonSvg from '../../assets/ui/buttons/AddFileButton.svg';
 import FileItem from '../Blog/FileItem';
+import type { Attachment } from '../../api/types/chat';
+import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 
 interface CreateNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (noteData: { content: string; file?: File }) => void;
+  onCreate: (noteData: { content: string; file?: File; attachmentInfo?: Attachment }) => void;
   noteContent: string;
   onNoteContentChange: (content: string) => void;
   initialFile?: File | null;
+  attachmentInfo?: Attachment | null;
 }
 
 const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
@@ -22,28 +25,40 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
   onCreate,
   noteContent,
   onNoteContentChange,
-  initialFile = null
+  initialFile = null,
+  attachmentInfo = null
 }) => {
   const [attachedFile, setAttachedFile] = useState<File | null>(initialFile);
+  const [attachmentData, setAttachmentData] = useState<Attachment | null>(attachmentInfo);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     if (initialFile) {
       setAttachedFile(initialFile);
+      setAttachmentData(null);
     }
   }, [initialFile]);
+
+  useEffect(() => {
+    if (attachmentInfo) {
+      setAttachmentData(attachmentInfo);
+      setAttachedFile(null);
+    }
+  }, [attachmentInfo]);
 
   const handleCreate = () => {
     onCreate({
       content: noteContent,
-      file: attachedFile || undefined
+      file: attachedFile || undefined,
+      attachmentInfo: attachmentData || undefined
     });
     handleCancel();
   };
 
   const handleCancel = () => {
     setAttachedFile(null);
+    setAttachmentData(null);
     onNoteContentChange('');
     onClose();
   };
@@ -57,6 +72,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
       }
       
       setAttachedFile(file);
+      setAttachmentData(null);
       
       event.target.value = '';
     }
@@ -72,10 +88,15 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
 
   const handleRemoveFile = () => {
     setAttachedFile(null);
+    setAttachmentData(null);
   };
 
   const getFileType = (file: File): 'image' | 'file' => {
     return file.type.startsWith('image/') ? 'image' : 'file';
+  };
+
+  const getAttachmentType = (attachment: Attachment): 'image' | 'file' => {
+    return attachment.contentType.startsWith('image/') ? 'image' : 'file';
   };
 
   if (!isOpen) return null;
@@ -116,28 +137,54 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
             onChange={handleFileSelect}
           />
 
-          {attachedFile && (
+          {(attachedFile || attachmentData) && (
             <AttachmentPreviewContainer>
-              {getFileType(attachedFile) === 'image' ? (
-                <ImagePreviewWrapper>
-                  <ImagePreviewImg 
-                    src={URL.createObjectURL(attachedFile)} 
-                    alt="Preview" 
-                    onLoad={() => URL.revokeObjectURL(URL.createObjectURL(attachedFile))}
-                  />
-                  <RemoveImageButton onClick={handleRemoveFile}>
-                    ×
-                  </RemoveImageButton>
-                </ImagePreviewWrapper>
-              ) : (
-                <FileItemWrapper>
-                  <FileItem 
-                    file={attachedFile}
-                    onRemove={handleRemoveFile}
-                    showRemoveButton={true}
-                  />
-                </FileItemWrapper>
-              )}
+              {attachedFile ? (
+                getFileType(attachedFile) === 'image' ? (
+                  <ImagePreviewWrapper>
+                    <ImagePreviewImg 
+                      src={URL.createObjectURL(attachedFile)} 
+                      alt="Preview" 
+                      onLoad={() => URL.revokeObjectURL(URL.createObjectURL(attachedFile))}
+                    />
+                    <RemoveImageButton onClick={handleRemoveFile}>
+                      ×
+                    </RemoveImageButton>
+                  </ImagePreviewWrapper>
+                ) : (
+                  <FileItemWrapper>
+                    <FileItem 
+                      file={attachedFile}
+                      onRemove={handleRemoveFile}
+                      showRemoveButton={true}
+                    />
+                  </FileItemWrapper>
+                )
+              ) : attachmentData ? (
+                getAttachmentType(attachmentData) === 'image' ? (
+                  <ImagePreviewWrapper>
+                    <ImagePreviewImg 
+                      src={SOCIAL_BASE_URL + '/' + attachmentData.fileUrl} 
+                      alt={SOCIAL_BASE_URL + attachmentData.fileUrl}
+                    />
+                    <RemoveImageButton onClick={handleRemoveFile}>
+                      ×
+                    </RemoveImageButton>
+                  </ImagePreviewWrapper>
+                ) : (
+                  <FileItemWrapper>
+                    <FileItem 
+                      file={{
+                        name: attachmentData.fileName,
+                        size: attachmentData.fileSize || 0,
+                        type: attachmentData.contentType
+                      } as File}
+                      onRemove={handleRemoveFile}
+                      showRemoveButton={true}
+                    />
+                  </FileItemWrapper>
+                )
+              ) : null}
             </AttachmentPreviewContainer>
           )}
 
@@ -159,6 +206,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
   );
 };
 
+// Стили остаются без изменений...
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
   position: fixed;
@@ -273,6 +321,7 @@ const RemoveImageButton = styled.button`
   right: -8px;
   width: 24px;
   height: 24px;
+  background: #ff4444;
   color: white;
   border: none;
   border-radius: 50%;
