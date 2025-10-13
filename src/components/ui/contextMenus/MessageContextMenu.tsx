@@ -8,7 +8,6 @@ import {
 } from '@mui/material';
 import {
   NoteAddOutlined,
-  ReplyOutlined,
   DeleteOutlined,
   ContentCopy
 } from '@mui/icons-material';
@@ -17,7 +16,6 @@ interface MessageContextMenuProps {
   contextMenu: { mouseX: number; mouseY: number } | null;
   onClose: () => void;
   onMakeNote: () => void;
-  onReply: () => void;
   onCopy: () => void;
   onDelete: () => void;
   messageType?: 'text' | 'file' | 'image';
@@ -29,7 +27,6 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   contextMenu,
   onClose,
   onMakeNote,
-  onReply,
   onCopy,
   onDelete,
   messageType = 'text',
@@ -38,11 +35,6 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
 }) => {
   const handleMakeNote = () => {
     onMakeNote();
-    onClose();
-  };
-
-  const handleReply = () => {
-    onReply();
     onClose();
   };
 
@@ -86,17 +78,6 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
           <Typography variant="body2">Сделать заметку</Typography>
         </ListItemText>
       </MenuItem>
-
-      {canReply && (
-        <MenuItem onClick={handleReply}>
-          <ListItemIcon>
-            <ReplyOutlined fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography variant="body2">Ответить</Typography>
-          </ListItemText>
-        </MenuItem>
-      )}
 
       {messageType === 'text' && (
         <MenuItem onClick={handleCopy}>

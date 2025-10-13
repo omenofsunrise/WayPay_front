@@ -19,6 +19,8 @@ import { format } from 'date-fns';
 import useCredit from '../../../api/hooks/useCredit';
 import type { CreditListResponse } from '../../../api/types/credit';
 import type { PaginatedResponse } from '../../../api/types/common';
+import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
+import GrayButton from '../../ui/Buttons/GrayButton';
 
 interface SelectCreditModalProps {
   isOpen: boolean;
@@ -107,19 +109,6 @@ const SelectCreditModal: React.FC<SelectCreditModalProps> = ({
     };
   };
 
-  const getStatusText = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'активный':
-        return 'Активный';
-      case 'просроченный':
-        return 'Просроченный';
-      case 'закрытый':
-        return 'Закрытый';
-      default:
-        return status;
-    }
-  };
-
   return (
     <Dialog
       open={isOpen}
@@ -165,7 +154,7 @@ const SelectCreditModal: React.FC<SelectCreditModalProps> = ({
                   }}
                 >
                   <ListItemAvatar>
-                    <Avatar variant="rounded" sx={{ bgcolor: 'rgba(0, 125, 136, 0.3)' }}>
+                    <Avatar variant="rounded" sx={{ bgcolor: '#C0DBE0' }}>
                         <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect width="33" height="33" rx="10" fill="#C0DBE0"/>
                             <path d="M14.1333 7.125H11.8125C11.1909 7.125 10.5948 7.37193 10.1552 7.81147C9.71568 8.25101 9.46875 8.84715 9.46875 9.46875V23.5312C9.46875 24.1529 9.71568 24.749 10.1552 25.1885C10.5948 25.6281 11.1909 25.875 11.8125 25.875H21.1875C21.8091 25.875 22.4052 25.6281 22.8448 25.1885C23.2843 24.749 23.5312 24.1529 23.5312 23.5312V16.5M14.1333 7.125C15.4281 7.125 16.5 8.17396 16.5 9.46875V11.8125C16.5 12.4341 16.7469 13.0302 17.1865 13.4698C17.626 13.9093 18.2221 14.1562 18.8437 14.1562H21.1875C21.8091 14.1562 22.4052 14.4032 22.8448 14.8427C23.2843 15.2823 23.5312 15.8784 23.5312 16.5M14.1333 7.125C17.9771 7.125 23.5312 12.7083 23.5312 16.5" stroke="#007D88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -179,17 +168,6 @@ const SelectCreditModal: React.FC<SelectCreditModalProps> = ({
                         <Typography variant="body1" fontWeight="medium">
                           Договор №{credit.id}
                         </Typography>
-                        <Chip
-                          label={getStatusText(credit.status)}
-                          size="small"
-                          sx={{
-                            backgroundColor: statusStyles.bgcolor,
-                            color: statusStyles.color,
-                            border: `1px solid ${statusStyles.borderColor}`,
-                            fontSize: '0.75rem',
-                            height: '24px'
-                          }}
-                        />
                       </Box>
                     }
                     secondary={
@@ -211,36 +189,19 @@ const SelectCreditModal: React.FC<SelectCreditModalProps> = ({
         )}
       </DialogContent>
       
-      <DialogActions sx={{ padding: 3 }}>
-        <Button 
+      <div style={{ display: "flex", padding: "5px 20px 20px" }}>
+        <GrayButton style={{marginRight: "auto", width: "150px" }} 
           onClick={handleClose}
-          sx={{ 
-            color: 'text.secondary',
-            '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-            }
-          }}
         >
           Отмена
-        </Button>
-        <Button
+        </GrayButton>
+        <DarkCyanButton style={{marginLeft: "auto", width: "150px" }}
           onClick={handleConfirm}
           disabled={!selectedCreditId}
-          variant="contained"
-          sx={{
-            backgroundColor: 'rgba(89, 212, 188, 1)',
-            color: 'common.black',
-            '&:hover': {
-              backgroundColor: 'rgba(89, 212, 188, 0.8)'
-            },
-            '&:disabled': {
-              backgroundColor: 'rgba(0, 0, 0, 0.12)'
-            }
-          }}
         >
           Выбрать
-        </Button>
-      </DialogActions>
+        </DarkCyanButton>
+      </div>
     </Dialog>
   );
 };

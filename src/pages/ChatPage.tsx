@@ -19,7 +19,6 @@ import { useEmployee } from '../api/hooks/useEmployee';
 import { getInitials, generateAvatar } from '../utils/avatarUtils';
 import CloseIcon from '@mui/icons-material/Close';
 import styled from "styled-components";
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatSide from '../components/Chat/ChatSide';
 import SearchField from '../components/Chat/SearchField';
@@ -32,6 +31,9 @@ import MessageItem from '../components/Chat/MessageItem';
 import { FILE_BASE_URL } from '../api/client';
 import MessageContextMenu from '../components/ui/contextMenus/MessageContextMenu';
 import SelectCreditModal from '../components/modal/CrudInherited/SelectCreditModal';
+import CreateNoteModal from '../components/modal/CreateNoteModal';
+import useNotes from '../api/hooks/useNote';
+import { NOTEABLE_TYPES } from '../api/types/note';
 
 interface ContextMenuProps {
   x: number;
@@ -153,6 +155,9 @@ const ChatPage = () => {
     createPrivateChat,
     deleteChat
   } = useChat();
+    const {
+    createNote
+  } = useNotes();
   const { getPostById } = useBlog();
   const { chatId } = useParams<{ chatId?: string }>();
   const navigate = useNavigate();
@@ -182,8 +187,9 @@ const ChatPage = () => {
   const { postId } = useParams<{ postId?: string }>();
   const [messagePost, setMessagePost] = useState<BlogPost | null>(null);
   const [loadingMessagePost, setLoadingMessagePost] = useState(false);
-  
-  // Новые состояния для контекстного меню и модального окна
+  const [isCreateNoteModalOpen, setIsCreateNoteModalOpen] = useState(false);
+  const [noteContent, setNoteContent] = useState('');
+  const [selectedCreditId, setSelectedCreditId] = useState<number | null>(null);  
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isSelectCreditModalOpen, setIsSelectCreditModalOpen] = useState(false);
@@ -420,7 +426,6 @@ const ChatPage = () => {
     searchMessages(localMessageSearch);
   };
 
-  // Обновленный обработчик правого клика для контекстного меню
   const handleMessageRightClick = (e: React.MouseEvent, message: Message) => {
     e.preventDefault();
     
@@ -503,7 +508,6 @@ const ChatPage = () => {
     }
   };
 
-  // Новые обработчики для контекстного меню
   const handleCloseContextMenu = useCallback(() => {
     setContextMenu(null);
     setSelectedMessage(null);
@@ -511,15 +515,10 @@ const ChatPage = () => {
 
   const handleMakeNote = useCallback(() => {
     if (selectedMessage && currentChat?.type === 'employee_client') {
+      setNoteContent(selectedMessage.text || '');
       setIsSelectCreditModalOpen(true);
     }
   }, [selectedMessage, currentChat?.type]);
-
-  const handleReply = useCallback(() => {
-    // Логика ответа на сообщение
-    console.log('Reply to message:', selectedMessage);
-    setContextMenu(null);
-  }, [selectedMessage]);
 
   const handleCopy = useCallback(() => {
     if (selectedMessage?.text) {
@@ -535,21 +534,54 @@ const ChatPage = () => {
   }, [selectedMessage]);
 
   const handleCreditSelect = useCallback((creditId: number) => {
-    console.log('Выбран договор для заметки:', creditId, 'для сообщения:', selectedMessage);
-    // Здесь будет логика создания заметки
-    // Пока просто логируем
+    setSelectedCreditId(creditId);
     setIsSelectCreditModalOpen(false);
-    setContextMenu(null);
-    setSelectedMessage(null);
-  }, [selectedMessage]);
+    setIsCreateNoteModalOpen(true);
+  }, []);
 
-  // Получение clientId для модального окна
   const getClientId = useCallback(() => {
     if (currentChat?.type === 'employee_client' && currentChat.clientId) {
       return currentChat.clientId;
     }
     return undefined;
   }, [currentChat]);
+
+  const handleCreateNote = useCallback(async (noteData: { content: string; file?: File }) => {
+    if (!selectedCreditId || !noteData.content) return;
+    console.log(selectedCreditId);
+    
+    try {
+      const noteRequest = {
+        noteableType: NOTEABLE_TYPES.CREDIT,
+        noteableId: selectedCreditId,
+        content: noteData.content,
+        file: noteData.file,
+      };
+
+      const result = await createNote(noteRequest);
+      
+      if (result) {
+        setIsCreateNoteModalOpen(false);
+        setSelectedCreditId(null);
+        setSelectedMessage(null);
+        setContextMenu(null);
+        setNoteContent('');
+        
+        console.log('Заметка успешно создана:', result);
+      }
+    } catch (error) {
+      console.error('Ошибка при создании заметки:', error);
+      alert('Ошибка при создании заметки');
+    }
+  }, [selectedCreditId, selectedMessage]);
+
+  const handleCloseCreateNoteModal = useCallback(() => {
+    setIsCreateNoteModalOpen(false);
+    setSelectedCreditId(null);
+    setSelectedMessage(null);
+    setNoteContent('');
+  }, []);
+
 
   const renderAttachmentPreviews = () => {
     return (
@@ -977,12 +1009,10 @@ const ChatPage = () => {
         </Box>
       )}
 
-      {/* Контекстное меню для сообщений */}
       <MessageContextMenu
         contextMenu={contextMenu}
         onClose={handleCloseContextMenu}
         onMakeNote={handleMakeNote}
-        onReply={handleReply}
         onCopy={handleCopy}
         onDelete={handleDelete}
         messageType={selectedMessage?.attachments && selectedMessage.attachments.length > 0 ? 'file' : 'text'}
@@ -1010,12 +1040,19 @@ const ChatPage = () => {
         <ChatSide onUserClick={handleOpenUserChat} chat={currentChat} onClose={handleCloseSide} />
       )}
 
-      {/* Модальное окно выбора договора */}
       <SelectCreditModal
         isOpen={isSelectCreditModalOpen}
         onClose={() => setIsSelectCreditModalOpen(false)}
         onSelect={handleCreditSelect}
         clientId={getClientId()}
+      />
+
+      <CreateNoteModal
+        isOpen={isCreateNoteModalOpen}
+        onClose={handleCloseCreateNoteModal}
+        onCreate={handleCreateNote}
+        noteContent={noteContent}
+        onNoteContentChange={setNoteContent}
       />
     </ChatContainer>
   );
