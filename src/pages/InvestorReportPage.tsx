@@ -38,6 +38,7 @@ import Tabs from '../components/ui/fields/Tabs';
 import { useAuth } from '../сontext/AuthContext';
 import useInvestorContribution from '../api/hooks/useInvestorContribution';
 import type { InvestorContribution } from '../api/types/investorContribution';
+import GrayButton from '../components/ui/Buttons/GrayButton';
 
 const InvestorReportPage = () => {
     const { getInvestors, currentInvestor, getInvestorById, getInvestorReport } = useInvestor();
@@ -63,16 +64,16 @@ const InvestorReportPage = () => {
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
     
     const [dataTab, setDataTab] = useState<'general' | 'expected' | 'current'>('general');
-    const [operationsTab, setOperationsTab] = useState<'payouts' | 'credits'>('payouts');
+    const [operationsTab, setOperationsTab] = useState<'payouts' | 'credits' | 'contributions'>('payouts');
     
     const { 
         data: contributionsData, 
         isLoading: isContributionsLoading, 
-        getProducts: getContributions 
+        getProducts: getContributions,
+        makeAction: makeContributionAction
     } = useInvestorContribution();
 
     const [contributionsPage, setContributionsPage] = useState(1);
-
     const [creditsPage, setCreditsPage] = useState(1);
     const [payoutsPage, setPayoutsPage] = useState(1);
     const pageSize = 5;
@@ -128,9 +129,42 @@ const InvestorReportPage = () => {
         setContributionsPage(1);
     };
 
+    const handleContributionAction = async (id: number, action: 'confirm' | 'reject') => {
+        try {
+            await makeContributionAction(id, action);
+            // Refresh contributions data after action
+            if (selectedInvestorId) {
+                getContributions(Number(selectedInvestorId), { 
+                    page: contributionsPage, 
+                    pageSize: pageSize 
+                });
+            }
+        } catch (error) {
+            console.error('Contribution action error:', error);
+        }
+    };
+
     const contributionsTableData = contributionsData?.items.map((contribution: InvestorContribution) => [
         formatDate(contribution.date.toString()),
-        formatMoney(contribution.amount.toString())
+        formatMoney(contribution.amount.toString()),
+        contribution.confirmed ? (
+            <ConfirmedBadge></ConfirmedBadge>
+        ) : (
+            <ActionButtons>
+                <DarkCyanButton style={{margin: "0 auto"}}
+                    onClick={() => handleContributionAction(contribution.id, 'confirm')}
+                    disabled={isContributionsLoading}
+                >
+                    Подтвердить
+                </DarkCyanButton>
+                <GrayButton 
+                    onClick={() => handleContributionAction(contribution.id, 'reject')}
+                    disabled={isContributionsLoading}
+                >
+                    Удалить
+                </GrayButton>
+            </ActionButtons>
+        )
     ]) || [];
 
     const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
@@ -545,11 +579,14 @@ const InvestorReportPage = () => {
         formatDate(payout.payoutDate),
         payout.employeeFullName,
         formatMoney(payout.amount.toString()),
-        <DeleteButton onClick={() => handleDeletePayout(payout.id)}>
-            <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0.949286 13.7822C0.949286 14.7298 1.80364 15.505 2.84786 15.505H10.4421C11.4864 15.505 12.3407 14.7298 12.3407 13.7822V3.44556H0.949286V13.7822ZM13.29 0.861389H9.9675L9.01821 0H4.27179L3.3225 0.861389H0V2.58417H13.29V0.861389Z" fill="#50555C"/>
-            </svg>
-        </DeleteButton>
+        <ActionButtons>
+            <GrayButton style={{margin: "0 auto"}}
+                onClick={() => handleDeletePayout(payout.id)}
+                disabled={isPayoutsLoading}
+            >
+                Удалить
+            </GrayButton>
+        </ActionButtons>
     ]);
 
     const creditsTableData = investorCredits?.items.map((credit: Credit) => {
@@ -837,7 +874,7 @@ const InvestorReportPage = () => {
                                 { name: "Дата выплаты", isSortable: true },
                                 { name: "Выплатил", align: "left" },
                                 { name: "Выплата, руб", isSortable: true, align: "left" },
-                                { name: "", align: "center" }
+                                { name: "Действия", align: "center" }
                             ]} 
                             data={payoutTableData}
                             isLoading={isPayoutsLoading}
@@ -890,6 +927,7 @@ const InvestorReportPage = () => {
                             columns={[
                                 { name: "Дата", isSortable: true },
                                 { name: "Сумма инвестиции, руб", isSortable: true, align: "left" },
+                                { name: "", align: "center" }
                             ]} 
                             data={contributionsTableData}
                             isLoading={isContributionsLoading}  
@@ -962,25 +1000,58 @@ const TabsContainer = styled.div`
     margin: 30px 0 20px;
 `;
 
-const DeleteButton = styled.button`
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
+const ActionButtons = styled.div`
     display: flex;
-    align-items: center;
+    gap: 8px;
     justify-content: center;
-    width: 100%;
-    height: 100%;
-    padding: 8px;
-    
-    &:hover {
-        opacity: 0.8;
+    align-items: center;
+`;
+
+const ConfirmButton = styled.button`
+    background: rgba(37, 203, 161, 1);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover:not(:disabled) {
+        background: rgba(29, 163, 129, 1);
     }
-    
-    svg {
-        display: block;
+
+    &:disabled {
+        background: rgba(37, 203, 161, 0.5);
+        cursor: not-allowed;
     }
+`;
+
+const RejectButton = styled.button`
+    background: rgba(239, 68, 68, 1);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover:not(:disabled) {
+        background: rgba(220, 38, 38, 1);
+    }
+
+    &:disabled {
+        background: rgba(239, 68, 68, 0.5);
+        cursor: not-allowed;
+    }
+`;
+
+const ConfirmedBadge = styled.span`
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
 `;
 
 const ContentContainer = styled.div`

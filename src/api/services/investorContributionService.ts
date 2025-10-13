@@ -9,7 +9,7 @@ class InvestorContributionService {
   }
 
   async makeAction(id: number, action: string) {
-    const response = await apiClient.patch(`/InvestmentContribution/action/${id}`, {action});
+    const response = await apiClient.patch(`/InvestmentContribution/action/${id}`, action);
     return;
   }
 }
