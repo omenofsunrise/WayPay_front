@@ -30,6 +30,8 @@ import useBlog from '../api/hooks/useBlog';
 import type { BlogPost } from '../api/types/blog';
 import MessageItem from '../components/Chat/MessageItem';
 import { FILE_BASE_URL } from '../api/client';
+import MessageContextMenu from '../components/ui/contextMenus/MessageContextMenu';
+import SelectCreditModal from '../components/modal/CrudInherited/SelectCreditModal';
 
 interface ContextMenuProps {
   x: number;
@@ -181,6 +183,11 @@ const ChatPage = () => {
   const [messagePost, setMessagePost] = useState<BlogPost | null>(null);
   const [loadingMessagePost, setLoadingMessagePost] = useState(false);
   
+  // Новые состояния для контекстного меню и модального окна
+  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [isSelectCreditModalOpen, setIsSelectCreditModalOpen] = useState(false);
+
   const currentChatFromUrl = useMemo(() => {
     return chatId ? chats.find(c => c.id.toString() === chatId) : null;
   }, [chatId, chats]);
@@ -413,14 +420,14 @@ const ChatPage = () => {
     searchMessages(localMessageSearch);
   };
 
+  // Обновленный обработчик правого клика для контекстного меню
   const handleMessageRightClick = (e: React.MouseEvent, message: Message) => {
     e.preventDefault();
-    if (message.sender.id !== currentUser?.id) return;
     
-    setMessageContextMenu({
-      message,
-      x: e.clientX,
-      y: e.clientY,
+    setSelectedMessage(message);
+    setContextMenu({
+      mouseX: e.clientX - 2,
+      mouseY: e.clientY - 4,
     });
   };
 
@@ -439,10 +446,10 @@ const ChatPage = () => {
     if (message.sender.id !== currentUser?.id) return;
     
     longPressTimerRef.current = setTimeout(() => {
-      setMessageContextMenu({
-        message,
-        x: 100,
-        y: 100,
+      setSelectedMessage(message);
+      setContextMenu({
+        mouseX: 100,
+        mouseY: 100,
       });
     }, 500);
   };
@@ -458,6 +465,7 @@ const ChatPage = () => {
     setEditingMessage(message);
     setMessageText(message.text || '');
     setMessageContextMenu(null);
+    setContextMenu(null);
     scrollToBottom();
   };
 
@@ -469,6 +477,7 @@ const ChatPage = () => {
       console.error('Failed to delete message:', err);
     } finally {
       setMessageContextMenu(null);
+      setContextMenu(null);
     }
   };
 
@@ -493,6 +502,54 @@ const ChatPage = () => {
       setChatContextMenu(null);
     }
   };
+
+  // Новые обработчики для контекстного меню
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+    setSelectedMessage(null);
+  }, []);
+
+  const handleMakeNote = useCallback(() => {
+    if (selectedMessage && currentChat?.type === 'employee_client') {
+      setIsSelectCreditModalOpen(true);
+    }
+  }, [selectedMessage, currentChat?.type]);
+
+  const handleReply = useCallback(() => {
+    // Логика ответа на сообщение
+    console.log('Reply to message:', selectedMessage);
+    setContextMenu(null);
+  }, [selectedMessage]);
+
+  const handleCopy = useCallback(() => {
+    if (selectedMessage?.text) {
+      navigator.clipboard.writeText(selectedMessage.text);
+    }
+    setContextMenu(null);
+  }, [selectedMessage]);
+
+  const handleDelete = useCallback(() => {
+    if (selectedMessage) {
+      handleDeleteMessage(selectedMessage);
+    }
+  }, [selectedMessage]);
+
+  const handleCreditSelect = useCallback((creditId: number) => {
+    console.log('Выбран договор для заметки:', creditId, 'для сообщения:', selectedMessage);
+    // Здесь будет логика создания заметки
+    // Пока просто логируем
+    setIsSelectCreditModalOpen(false);
+    setContextMenu(null);
+    setSelectedMessage(null);
+  }, [selectedMessage]);
+
+  // Получение clientId для модального окна
+  const getClientId = useCallback(() => {
+    if (currentChat?.type === 'employee_client' && currentChat.clientId) {
+      return currentChat.clientId;
+    }
+    return undefined;
+  }, [currentChat]);
 
   const renderAttachmentPreviews = () => {
     return (
@@ -726,7 +783,7 @@ const ChatPage = () => {
             </React.Fragment>
           ))}
           
-          {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company' && chat.type !== 'private').map(chat => (
+          {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company' && chat.type !== 'private_chat').map(chat => (
             <React.Fragment key={chat.id}>
               <ListItem 
                 disablePadding
@@ -920,26 +977,19 @@ const ChatPage = () => {
         </Box>
       )}
 
-      {messageContextMenu && (
-        <ContextMenu
-          x={messageContextMenu.x}
-          y={messageContextMenu.y}
-          onClose={() => setMessageContextMenu(null)}
-        >
-          <MenuItem onClick={() => handleEditMessage(messageContextMenu.message)}>
-            <EditIcon fontSize="small" />
-            Редактировать
-          </MenuItem>
-          <MenuItem 
-            danger 
-            onClick={() => handleDeleteMessage(messageContextMenu.message)}
-          >
-            <DeleteIcon fontSize="small" />
-            Удалить
-          </MenuItem>
-        </ContextMenu>
-      )}
-      
+      {/* Контекстное меню для сообщений */}
+      <MessageContextMenu
+        contextMenu={contextMenu}
+        onClose={handleCloseContextMenu}
+        onMakeNote={handleMakeNote}
+        onReply={handleReply}
+        onCopy={handleCopy}
+        onDelete={handleDelete}
+        messageType={selectedMessage?.attachments && selectedMessage.attachments.length > 0 ? 'file' : 'text'}
+        canDelete={selectedMessage?.sender.id === currentUser?.id}
+        canReply={true}
+      />
+
       {chatContextMenu && (
         <ContextMenu
           x={chatContextMenu.x}
@@ -959,6 +1009,14 @@ const ChatPage = () => {
       {isSideOpen && currentChat && (
         <ChatSide onUserClick={handleOpenUserChat} chat={currentChat} onClose={handleCloseSide} />
       )}
+
+      {/* Модальное окно выбора договора */}
+      <SelectCreditModal
+        isOpen={isSelectCreditModalOpen}
+        onClose={() => setIsSelectCreditModalOpen(false)}
+        onSelect={handleCreditSelect}
+        clientId={getClientId()}
+      />
     </ChatContainer>
   );
 };
