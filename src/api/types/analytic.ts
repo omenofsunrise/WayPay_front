@@ -53,6 +53,8 @@ export interface DebtDynamicResponse {
 }
 
 export interface ScheduleAnalitycResponse {
+  title: string;
+
   expectedIncome: number;
   realIncome: number;
   debt: number;

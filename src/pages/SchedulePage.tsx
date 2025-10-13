@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
@@ -18,6 +18,11 @@ import styled from 'styled-components';
 import { formatMoney } from '../utils/formatPrice';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import useCompany from '../api/hooks/useCompany';
+import Tabs from '../components/ui/fields/Tabs';
+import SchedulePieChart from '../components/Dashboards/SchedulePieChart';
+import type { ScheduleAnalitycResponse } from '../api/types/analytic';
+import PaginationDots from '../components/ui/Pagination/PaginationDots';
+import useAnalytic from '../api/hooks/useAnalytic';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -31,7 +36,22 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
+type TabType = 'schedule' | 'table';
+
+// Ключ для localStorage
+const ACTIVE_TAB_STORAGE_KEY = 'schedule_page_active_tab';
+
 const SchedulePage = () => {
+    // Инициализация состояния активной вкладки из localStorage
+    const [activeTab, setActiveTab] = useState<TabType>(() => {
+        // Получаем сохраненную вкладку из localStorage
+        const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
+        // Проверяем, что сохраненное значение является допустимой вкладкой
+        return savedTab && (savedTab === 'schedule' || savedTab === 'table') 
+            ? savedTab 
+            : 'schedule'; // значение по умолчанию
+    });
+    
     const [clientNameFilter, setClientNameFilter] = useState('');
     const [investorFilter, setInvestorFilter] = useState('');
     const [dateFromFilter, setDateFromFilter] = useState('');
@@ -41,9 +61,14 @@ const SchedulePage = () => {
         key: number | null;
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
+    const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const [currentChartIndex, setCurrentChartIndex] = useState(0);
+
     const pageSize = 10;
     const { getAccountDetails } = useCompany();
-    const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const { getScheduleAnalityc } = useAnalytic();
+    const [scheduleAnalytics, setScheduleAnalytics] = useState<ScheduleAnalitycResponse[]>([]);
+    const chartsContainerRef = useRef<HTMLDivElement>(null);
 
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditid',
@@ -61,8 +86,67 @@ const SchedulePage = () => {
         getList,
         markAsNotified
     } = useSchedule();
-    
-const getRowStyles = (
+
+    // Функция для сохранения активной вкладки в localStorage
+    const saveActiveTabToStorage = useCallback((tab: TabType) => {
+        localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
+    }, []);
+
+    // Обработчик изменения вкладки
+    const handleTabChange = useCallback((tab: TabType) => {
+        setActiveTab(tab);
+        saveActiveTabToStorage(tab);
+    }, [saveActiveTabToStorage]);
+
+    useEffect(() => {
+        const loadScheduleAnalytics = async () => {
+            try {
+                const currentYear = new Date().getFullYear();
+                const result = await getScheduleAnalityc(currentYear);
+                if (result) {
+                    setScheduleAnalytics(result);
+                }
+            } catch (err) {
+                console.error('Ошибка загрузки аналитики графика:', err);
+            }
+        };
+
+        if (activeTab === 'schedule') {
+            loadScheduleAnalytics();
+        }
+    }, [activeTab, getScheduleAnalityc]);
+
+    useEffect(() => {
+        const container = chartsContainerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            const scrollTop = container.scrollTop;
+            const chartHeight = container.scrollHeight / scheduleAnalytics.length;
+            const newIndex = Math.floor(scrollTop / chartHeight);
+            
+            if (newIndex !== currentChartIndex && newIndex >= 0 && newIndex < scheduleAnalytics.length) {
+                setCurrentChartIndex(newIndex);
+            }
+        };
+
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [scheduleAnalytics.length, currentChartIndex]);
+
+    const handleDotClick = (index: number) => {
+        setCurrentChartIndex(index);
+        const container = chartsContainerRef.current;
+        if (container) {
+            const chartHeight = container.scrollHeight / scheduleAnalytics.length;
+            container.scrollTo({
+                top: index * chartHeight,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    const getRowStyles = (
         tableData: any[][], 
         scheduleData?: { items: ScheduleDetails[] }
     ): Record<number, RowStyle> => {
@@ -76,7 +160,6 @@ const getRowStyles = (
             const paymentDate = new Date(schedule.paymentDate);
             paymentDate.setHours(0, 0, 0, 0);
 
-            // Если строка выбрана - высший приоритет
             if (index === selectedRow) {
                 styles[index] = {
                     backgroundColor: '#007D88',
@@ -84,7 +167,6 @@ const getRowStyles = (
                     fontWeight: 'normal'
                 };
             } 
-            // Если платеж просрочен - средний приоритет
             else if (paymentDate < today) {
                 styles[index] = {
                     backgroundColor: '#FFEBEE',
@@ -92,7 +174,6 @@ const getRowStyles = (
                     fontWeight: 'normal'
                 };
             }
-            // Обычная строка - низший приоритет
             else {
                 styles[index] = {
                     backgroundColor: 'white',
@@ -128,8 +209,10 @@ const getRowStyles = (
     }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, getList]);
     
     useEffect(() => {
-        loadSchedules();
-    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules]);
+        if (activeTab === 'table') {
+            loadSchedules();
+        }
+    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules, activeTab]);
 
     const handleClientNameFilterChange = (value: string) => {
         setClientNameFilter(value);
@@ -218,7 +301,6 @@ const getRowStyles = (
 
     const sendWhatsAppMessage = async (scheduleId: number, phone: string, amount: string, date: string) => {
         try {
-            // Получаем данные компании через хук
             const companyData = await getAccountDetails();
             
             if (!companyData) {
@@ -290,10 +372,137 @@ const getRowStyles = (
 
     const rowStyles = getRowStyles(tableData, scheduleData);
 
+    const renderAllCharts = () => {
+        if (scheduleAnalytics.length === 0) {
+            return <EmptyChart>Нет данных для отображения</EmptyChart>;
+        }
+
+        return (
+            <ChartsScrollContainer ref={chartsContainerRef}>
+                {scheduleAnalytics.map((chartData, index) => (
+                    <ChartCard key={index}>
+                        <SchedulePieChart 
+                            title={`${chartData.title}`}
+                            data={chartData}
+                        />
+                    </ChartCard>
+                ))}
+            </ChartsScrollContainer>
+        );
+    };
+
+    const tabs = [
+        {
+            id: 'schedule',
+            label: 'График',
+            content: (
+                <ScheduleContainer>
+                    <LeftContainer>
+                        <EmptyContainer>
+                            <EmptyText>В разработке</EmptyText>
+                        </EmptyContainer>
+                    </LeftContainer>
+                    <RightContainer>
+                        {renderAllCharts()}
+                        <ChartsNavigation>
+                            <PaginationDots 
+                                count={scheduleAnalytics.length} 
+                                activeIndex={currentChartIndex}
+                                onClick={handleDotClick}
+                                className="vertical"
+                            />
+                        </ChartsNavigation>
+                    </RightContainer>
+                </ScheduleContainer>
+            )
+        },
+        {
+            id: 'table',
+            label: 'Таблица',
+            content: (
+                <>
+                    <FilterContainer>
+                        <FilterField>
+                            <InputWrapper>
+                                <CustomInput
+                                    inputType="text"
+                                    placeholder="Клиент"
+                                    value={clientNameFilter}
+                                    onChange={(e) => handleClientNameFilterChange(e.target.value)}
+                                    
+                                />
+                            </InputWrapper>
+                            <InputWrapper>
+                                <InvestorSelect
+                                    placeholder="Инвестор"
+                                    value={investorFilter}
+                                    onChange={(value) => handleInvestorFilterChange(value)}
+                                    onInvestorSelect={(investor) => {
+                                        console.log('Selected investor:', investor);
+                                    }}
+                                />
+                            </InputWrapper>
+                            <DateInputWrapper>
+                                <CustomCalendar 
+                                    prefix="От"
+                                    value={dateFromFilter}
+                                    onChange={handleDateFromFilterChange}
+                                />
+                            </DateInputWrapper>
+                            <DateInputWrapper>
+                                <CustomCalendar
+                                    prefix="До"
+                                    value={dateToFilter}
+                                    onChange={handleDateToFilterChange}
+                                />
+                            </DateInputWrapper>
+                        </FilterField>
+                    </FilterContainer>
+                    
+                    {isLoading && <div>Загрузка...</div>}
+                    {error && <div>Ошибка: {error}</div>}
+                    
+                    {!isLoading && !error && (
+                        <>
+                            <CustomTable 
+                                columns={[
+                                    { name: "Договор №", isSortable: true },
+                                    { name: "ФИО", isSortable: true, align: "left" },
+                                    { name: "Платёж", isSortable: true, align: "right" },
+                                    { name: "Дата платежа", isSortable: true, align: "right" },
+                                    { name: "Уведомлён", align: "center" },
+                                ]} 
+                                data={tableData}
+                                onSort={handleSort}
+                                onRowClick={handleRowClick}
+                                sortConfig={sortConfig}
+                                rowStyles={rowStyles}
+                                selectedRow={selectedRow}
+                            />
+                            
+                            <PaginationLayout>
+                                <CountInfoTitle 
+                                    total={scheduleData?.totalCount || 0} 
+                                />
+                                
+                                <Pagination
+                                    total={scheduleData?.totalCount || 0}
+                                    current={currentPage}
+                                    onChange={setCurrentPage}
+                                    itemsPerPage={pageSize}
+                                />
+                            </PaginationLayout>
+                        </>
+                    )}
+                </>
+            )
+        }
+    ];
+
     return (
         <PageLayout>
             <TitleField>
-                <CustomTitle>График платежей</CustomTitle>
+                <CustomTitle>Ожидаемые платежи</CustomTitle>
                 <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
@@ -301,82 +510,83 @@ const getRowStyles = (
                 />
             </TitleField>
             
-            <FilterContainer>
-                <FilterField>
-                    <InputWrapper>
-                        <CustomInput
-                            inputType="text"
-                            placeholder="Клиент"
-                            value={clientNameFilter}
-                            onChange={(e) => handleClientNameFilterChange(e.target.value)}
-                            
-                        />
-                    </InputWrapper>
-                    <InputWrapper>
-                        <InvestorSelect
-                            placeholder="Инвестор"
-                            value={investorFilter}
-                            onChange={(value) => handleInvestorFilterChange(value)}
-                            onInvestorSelect={(investor) => {
-                                console.log('Selected investor:', investor);
-                            }}
-                        />
-                    </InputWrapper>
-                    <DateInputWrapper>
-                        <CustomCalendar 
-                            prefix="От"
-                            value={dateFromFilter}
-                            onChange={handleDateFromFilterChange}
-                        />
-                    </DateInputWrapper>
-                    <DateInputWrapper>
-                        <CustomCalendar
-                            prefix="До"
-                            value={dateToFilter}
-                            onChange={handleDateToFilterChange}
-                        />
-                    </DateInputWrapper>
-                </FilterField>
-            </FilterContainer>
-            
-            {isLoading && <div>Загрузка...</div>}
-            {error && <div>Ошибка: {error}</div>}
-            
-            {!isLoading && !error && (
-                <>
-                    <CustomTable 
-                        columns={[
-                            { name: "Договор №", isSortable: true },
-                            { name: "ФИО", isSortable: true, align: "left" },
-                            { name: "Платёж", isSortable: true, align: "right" },
-                            { name: "Дата платежа", isSortable: true, align: "right" },
-                            { name: "Уведомлён", align: "center" },
-                        ]} 
-                        data={tableData}
-                        onSort={handleSort}
-                        onRowClick={handleRowClick}
-                        sortConfig={sortConfig}
-                        rowStyles={rowStyles}
-                        selectedRow={selectedRow}
-                    />
-                    
-                    <PaginationLayout>
-                        <CountInfoTitle 
-                            total={scheduleData?.totalCount || 0} 
-                        />
-                        
-                        <Pagination
-                            total={scheduleData?.totalCount || 0}
-                            current={currentPage}
-                            onChange={setCurrentPage}
-                            itemsPerPage={pageSize}
-                        />
-                    </PaginationLayout>
-                </>
-            )}
+            <Tabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onChange={handleTabChange}
+            />
         </PageLayout>
     );
 };
+
+const ScheduleContainer = styled.div`
+  display: flex;
+  gap: 20px;
+  height: 600px;
+`;
+
+const LeftContainer = styled.div`
+  flex: 1;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const RightContainer = styled.div`
+  flex: 1;
+  display: flex;
+  gap: 20px;
+`;
+
+const ChartsNavigation = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ChartsScrollContainer = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  padding-right: 10px;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const ChartCard = styled.div`
+`;
+
+const EmptyContainer = styled.div`
+  text-align: center;
+`;
+
+const EmptyText = styled.p`
+  color: #999;
+  font-size: 16px;
+  margin: 0;
+`;
+
+const EmptyChart = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 16px;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+`;
 
 const FilterContainer = styled.div`
   margin-bottom: 20px;
