@@ -281,7 +281,7 @@ const createPaths = () => {
           
           {animatedData.debt > 0 && (
             <StatItem>
-              <StatLabel>Просрочка:</StatLabel>
+              <StatLabel>Остаток:</StatLabel>
               <StatValue color="rgba(255, 90, 90, 1)">
                 {formatMoney(animatedData.debt.toString())}
               </StatValue>
