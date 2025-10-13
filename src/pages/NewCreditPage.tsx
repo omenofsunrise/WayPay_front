@@ -88,6 +88,7 @@ const NewCreditPage = () => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [objectTypeName, setObjectTypeName] = useState<string>('');
   const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType | null>(null);
+  const [editMarkupType, setEditMarkupType] = useState<'percent' | 'fixed'>('percent');
   const [markupType, setMarkupType] = useState<'percent' | 'fixed'>(() => {
     const savedMarkupType = localStorage.getItem(MARKUP_TYPE_STORAGE_KEY);
     return (savedMarkupType === 'percent' || savedMarkupType === 'fixed') 
@@ -105,121 +106,151 @@ const NewCreditPage = () => {
 
   const creditApplicationData = location.state?.creditApplication;
 
-  useEffect(() => {
-    const loadCreditData = async () => {
-      if (!isEditMode || !id) return;
-      
-      try {
-        const creditData = await getCreateCreditRequest(parseInt(id));
-        if (creditData) {
-          setCreditName(creditData.name || '');
-          setContractDate(creditData.creditDate ? new Date(creditData.creditDate).toISOString().split('T')[0] : null);
-          setNextMonthStart(creditData.nextMonthStart);
-          setInDebt(creditData.inDebt || false);
+useEffect(() => {
+  const loadCreditData = async () => {
+    if (!isEditMode || !id) return;
+    
+    try {
+      const creditData = await getCreateCreditRequest(parseInt(id));
+      if (creditData) {
+        setCreditName(creditData.name || '');
+        setContractDate(creditData.creditDate ? new Date(creditData.creditDate).toISOString().split('T')[0] : null);
+        setNextMonthStart(creditData.nextMonthStart);
+        setInDebt(creditData.inDebt || false);
 
-          setClient({
-            id: creditData.clientId,
-            fullName: creditData.clientFullname,
-            phone: creditData.clientId.toString() || ''
+        // Определяем тип надбавки на основе данных
+        const firstProduct = creditData.products[0];
+        if (firstProduct) {
+          // Если есть surchargeAmount (надбавка в рублях), используем фиксированный тип
+          if (firstProduct.surchargeAmount !== undefined && firstProduct.surchargeAmount !== null) {
+            setMarkupType('fixed');
+            setEditMarkupType('fixed');
+          } else {
+            setMarkupType('percent');
+            setEditMarkupType('percent');
+          }
+        }
+        
+        setClient({
+          id: creditData.clientId,
+          fullName: creditData.clientFullname,
+          phone: creditData.clientId.toString() || ''
+        });
+        
+        if (!creditData.inDebt) {
+          if (creditData.investorId) {
+            setInvestor({
+              id: creditData.investorId,
+              nickname: creditData.investorNickname || '',
+              fullName: creditData.investorId.toString() || '',
+              phoneNumber: creditData.investorId.toString() || '',
+              investorPie: creditData.investorId || 0,
+              investmentAmount: creditData.investorId || 0,
+              balance: creditData.investorId || 0,
+              activeUntil: creditData.investorActiveUntil,
+              isPool: false
+            });
+          } else if (creditData.poolId) {
+            setSelectedPool({
+              id: creditData.poolId,
+              nickname: creditData.investorNickname || '',
+              fullName: creditData.poolId.toString() || '',
+              phoneNumber: creditData.poolId.toString() || '',
+              investorPie: creditData.poolId || 0,
+              investmentAmount: creditData.poolId || 0,
+              balance: creditData.poolId.toString() || 0,
+              activeUntil: creditData.investorActiveUntil,
+              isPool: true
+            });
+          }
+        }
+        
+        if (creditData.guarantorClientId) {
+          setGuarantorClient({
+            id: creditData.guarantorClientId,
+            fullName: creditData.guarantorFullname,
           });
+        } else if (creditData.guarantor) {
+          setGuarantor({
+            id: null,
+            fullName: creditData.guarantor.fullName,
+            phone: creditData.guarantor.phone || '',
+            doc: creditData.guarantor.doc || '',
+            birthdate: creditData.guarantor.birthdate,
+            address: creditData.guarantor.address || ''
+          });
+        }
+        
+        if (creditData.creditTypeId) {
+          setSelectedObjectType({
+            id: creditData.creditTypeId,
+            name: creditData.creditTypeName,
+            entityType: 'credit'
+          });
+          setObjectTypeName(creditData.creditTypeName);
+        }
+        
+        const formattedProducts = creditData.products.map(product => {
+          let markup = 0;
+          let totalPrice = product.price;
           
-          if (!creditData.inDebt) {
-            if (creditData.investorId) {
-              setInvestor({
-                id: creditData.investorId,
-                nickname: creditData.investorNickname || '',
-                fullName: creditData.investorId.toString() || '',
-                phoneNumber: creditData.investorId.toString() || '',
-                investorPie: creditData.investorId || 0,
-                investmentAmount: creditData.investorId || 0,
-                balance: creditData.investorId || 0,
-                activeUntil: creditData.investorActiveUntil,
-                isPool: false
-              });
-            } else if (creditData.poolId) {
-              setSelectedPool({
-                id: creditData.poolId,
-                nickname: creditData.investorNickname || '',
-                fullName: creditData.poolId.toString() || '',
-                phoneNumber: creditData.poolId.toString() || '',
-                investorPie: creditData.poolId || 0,
-                investmentAmount: creditData.poolId || 0,
-                balance: creditData.poolId.toString() || 0,
-                activeUntil: creditData.investorActiveUntil,
-                isPool: true
-              });
-            }
+          if (editMarkupType === 'percent') {
+            markup = product.surcharge || 0;
+            totalPrice = product.price * (1 + (product.surcharge || 0) / 100);
+          } else {
+            markup = product.surchargeAmount || 0;
+            totalPrice = product.price + (product.surchargeAmount || 0);
           }
           
-          if (creditData.guarantorClientId) {
-            setGuarantorClient({
-              id: creditData.guarantorClientId,
-              fullName: creditData.guarantorFullname,
-            });
-          } else if (creditData.guarantor) {
-            setGuarantor({
-              id: null,
-              fullName: creditData.guarantor.fullName,
-              phone: creditData.guarantor.phone || '',
-              doc: creditData.guarantor.doc || '',
-              birthdate: creditData.guarantor.birthdate,
-              address: creditData.guarantor.address || ''
-            });
-          }
-          
-          if (creditData.creditTypeId) {
-            setSelectedObjectType({
-              id: creditData.creditTypeId,
-              name: creditData.creditTypeName,
-              entityType: 'credit'
-            });
-            setObjectTypeName(creditData.creditTypeName);
-          }
-          
-          const formattedProducts = creditData.products.map(product => ({
-            id: 0,
+          return {
+            id: product.id || Date.now(),
             name: product.name,
             price: product.price,
             quantity: 1,
-            markup: product.surcharge || product.surchargeAmount || 0,
-            totalPrice: product.price * (1 + (product.surcharge || 0) / 100)
-          }));
-          setProducts(formattedProducts);
-          
-          if (creditData.firstPayment !== undefined && creditData.firstPayment !== null) {
-            const firstPayment = Number(creditData.firstPayment);
-            if (!isNaN(firstPayment)) {
-              const formattedAmount = formatMoney(firstPayment.toString());
-              setInitialPaymentAmount(formattedAmount);
-              
-              if (totalSum > 0) {
-                const percent = Math.round((firstPayment / totalSum) * 100);
-                setInitialPaymentPercent(percent.toString());
-              }
+            markup: markup,
+            totalPrice: totalPrice
+          };
+        });
+        
+        setProducts(formattedProducts);
+        
+        // Пересчитываем общую сумму
+        const newTotalSum = formattedProducts.reduce((sum, product) => sum + product.totalPrice, 0);
+        setTotalSum(newTotalSum);
+        
+        if (creditData.firstPayment !== undefined && creditData.firstPayment !== null) {
+          const firstPayment = Number(creditData.firstPayment);
+          if (!isNaN(firstPayment)) {
+            const formattedAmount = formatMoney(firstPayment.toString());
+            setInitialPaymentAmount(formattedAmount);
+            
+            if (newTotalSum > 0) {
+              const percent = Math.round((firstPayment / newTotalSum) * 100);
+              setInitialPaymentPercent(percent.toString());
             }
           }
-          
-          if (creditData.termMonths) {
-            setMonths(creditData.termMonths.toString());
-          }
-          
-          if (creditData.paymentDay) {
-            setPaymentDue(creditData.paymentDay.toString());
-          }
-          
-          if (creditData.nextMonthStart !== undefined) {
-            setNextMonthStart(creditData.nextMonthStart);
-          }
         }
-      } catch (error) {
-        console.error('Ошибка при загрузке данных кредита:', error);
-        window.alert('Не удалось загрузить данные кредита');
-      } finally {
+        
+        if (creditData.termMonths) {
+          setMonths(creditData.termMonths.toString());
+        }
+        
+        if (creditData.paymentDay) {
+          setPaymentDue(creditData.paymentDay.toString());
+        }
+        
+        if (creditData.nextMonthStart !== undefined) {
+          setNextMonthStart(creditData.nextMonthStart);
+        }
       }
-    };
+    } catch (error) {
+      console.error('Ошибка при загрузке данных кредита:', error);
+      window.alert('Не удалось загрузить данные кредита');
+    }
+  };
 
-    loadCreditData();
-  }, [isEditMode, id, getCreateCreditRequest]);
+  loadCreditData();
+}, [isEditMode, id, getCreateCreditRequest, editMarkupType]);
 
   useEffect(() => {
     if (creditApplicationData) {
