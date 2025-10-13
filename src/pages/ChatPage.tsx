@@ -34,6 +34,7 @@ import SelectCreditModal from '../components/modal/CrudInherited/SelectCreditMod
 import CreateNoteModal from '../components/modal/CreateNoteModal';
 import useNotes from '../api/hooks/useNote';
 import { NOTEABLE_TYPES } from '../api/types/note';
+import { SOCIAL_BASE_URL } from '../api/socialApiClient';
 
 interface ContextMenuProps {
   x: number;
@@ -193,7 +194,8 @@ const ChatPage = () => {
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isSelectCreditModalOpen, setIsSelectCreditModalOpen] = useState(false);
-
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
   const currentChatFromUrl = useMemo(() => {
     return chatId ? chats.find(c => c.id.toString() === chatId) : null;
   }, [chatId, chats]);
@@ -515,8 +517,32 @@ const ChatPage = () => {
 
   const handleMakeNote = useCallback(() => {
     if (selectedMessage && currentChat?.type === 'employee_client') {
-      setNoteContent(selectedMessage.text || '');
-      setIsSelectCreditModalOpen(true);
+      const hasFile = selectedMessage.attachments && selectedMessage.attachments.length > 0;
+      console.log("asd");
+      if (hasFile) {
+        const attachment = selectedMessage.attachments[0];
+        fetch(`${SOCIAL_BASE_URL}/${attachment.fileUrl}`)
+          .then(response => response.blob())
+          .then(blob => {
+            const file = new File([blob], attachment.fileName, { 
+              type: attachment.contentType
+            });
+            
+            setNoteContent(selectedMessage.text || `Файл: ${attachment.fileName}`);
+            setSelectedFile(file);
+            setIsSelectCreditModalOpen(true);
+          })
+          .catch(error => {
+            console.error('Ошибка загрузки файла:', error);
+            setNoteContent(selectedMessage.text || '');
+            setSelectedFile(null);
+            setIsSelectCreditModalOpen(true);
+          });
+      } else {
+        setNoteContent(selectedMessage.text || '');
+        setSelectedFile(null);
+        setIsSelectCreditModalOpen(true);
+      }
     }
   }, [selectedMessage, currentChat?.type]);
 
@@ -579,9 +605,10 @@ const ChatPage = () => {
     setIsCreateNoteModalOpen(false);
     setSelectedCreditId(null);
     setSelectedMessage(null);
+    setSelectedFile(null);
     setNoteContent('');
+    setContextMenu(null);
   }, []);
-
 
   const renderAttachmentPreviews = () => {
     return (
@@ -1053,6 +1080,7 @@ const ChatPage = () => {
         onCreate={handleCreateNote}
         noteContent={noteContent}
         onNoteContentChange={setNoteContent}
+        initialFile={selectedFile}
       />
     </ChatContainer>
   );

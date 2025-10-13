@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import CustomTitle from '../ui/Text/CustomTitle';
 import GrayButton from '../ui/Buttons/GrayButton';
@@ -13,6 +13,7 @@ interface CreateNoteModalProps {
   onCreate: (noteData: { content: string; file?: File }) => void;
   noteContent: string;
   onNoteContentChange: (content: string) => void;
+  initialFile?: File | null;
 }
 
 const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
@@ -20,11 +21,18 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
   onClose,
   onCreate,
   noteContent,
-  onNoteContentChange
+  onNoteContentChange,
+  initialFile = null
 }) => {
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(initialFile);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+    if (initialFile) {
+      setAttachedFile(initialFile);
+    }
+  }, [initialFile]);
 
   const handleCreate = () => {
     onCreate({
