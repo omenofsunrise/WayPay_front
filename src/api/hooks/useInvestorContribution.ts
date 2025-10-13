@@ -23,11 +23,24 @@ const useInvestorContribution = () => {
     }
   }, []);
 
+  const makeAction = useCallback(async (id: number, action: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await investorContributionService.makeAction(id, action);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
     data,
     getProducts,
+    makeAction
   };
 };
 

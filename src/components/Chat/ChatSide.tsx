@@ -28,12 +28,17 @@ import CloseIcon from '@mui/icons-material/Close';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import LinkIcon from '@mui/icons-material/Link';
 import DownloadIcon from '@mui/icons-material/Download';
+import DescriptionIcon from '@mui/icons-material/Description';
 import { format } from 'date-fns';
 import type { Chat, MessageAttachmentResponse, ChatLinkResponse } from '../../api/types/chat';
 import { FILE_BASE_URL } from '../../api/client';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 import useChat from '../../api/hooks/useChat';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
+import useCredit from '../../api/hooks/useCredit';
+import type { CreditListResponse } from '../../api/types/credit';
+import type { PaginatedResponse } from '../../api/types/common';
+import ViewCreditModal from '../modal/ViewCreditModal';
 
 interface ChatSideProps {
   chat: Chat | null;
@@ -41,10 +46,21 @@ interface ChatSideProps {
   onUserClick: (user: number) => void;
 }
 
+export interface PaginationParams {
+  page?: number;
+  pageSize?: number;
+  sortDirection?: 'asc' | 'desc';
+}
+
 const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
   const [activeTab, setActiveTab] = React.useState(0);
   const [openMediaModal, setOpenMediaModal] = React.useState(false);
   const [currentMedia, setCurrentMedia] = React.useState<MessageAttachmentResponse | null>(null);
+  const [credits, setCredits] = React.useState<PaginatedResponse<CreditListResponse> | null>(null);
+  const [isLoadingCredits, setIsLoadingCredits] = React.useState(false);
+  const [selectedCreditId, setSelectedCreditId] = React.useState<number | null>(null); // Добавлено состояние для выбранного договора
+  const [isCreditModalOpen, setIsCreditModalOpen] = React.useState(false); // Добавлено состояние для модального окна
+  
   const { 
     chatMembers, 
     fetchChatMembers,
@@ -58,7 +74,9 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
     fetchChatLinks,
     isLoading,
   } = useChat();
-  
+
+  const { getCreditListByClient } = useCredit();
+
   React.useEffect(() => {
     if (chat?.id) {
       fetchChatMembers(chat.id);
@@ -66,10 +84,58 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
       fetchChatFiles(chat.id);
       fetchChatVideos(chat.id);
       fetchChatLinks(chat.id);
+      
+      if (chat.type === 'employee_client') {
+        fetchClientCredits();
+      }
     }
-  }, [chat?.id]);
+  }, [chat?.id, chat.type]);
+
+  const fetchClientCredits = async () => {
+    if (!chat?.clientId) {
+      console.log('No clientId found for chat:', chat);
+      return;
+    }
+    
+    setIsLoadingCredits(true);
+    try {
+      console.log('Fetching credits for clientId:', chat.clientId);
+      const creditData = await getCreditListByClient(chat.clientId);
+      console.log('Credit data received:', creditData);
+      
+      if (creditData) {
+        setCredits(creditData);
+      } else {
+        console.log('No credit data returned');
+        setCredits(null);
+      }
+    } catch (error) {
+      console.error('Error fetching credits:', error);
+      setCredits(null);
+    } finally {
+      setIsLoadingCredits(false);
+    }
+  };
+
+  // Добавлены функции для работы с модальным окном договора
+  const handleCreditClick = (creditId: number) => {
+    setSelectedCreditId(creditId);
+    setIsCreditModalOpen(true);
+  };
+
+  const handleCloseCreditModal = () => {
+    setIsCreditModalOpen(false);
+    setSelectedCreditId(null);
+  };
 
   if (!chat) return null;
+
+  console.log('Current chat:', {
+    id: chat.id,
+    type: chat.type,
+    clientId: chat.clientId,
+    name: chat.name
+  });
 
   const getChatAvatar = () => {
     if (chat.type === 'general') {
@@ -114,15 +180,107 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
     </svg>
   );
 
-  const renderMediaItem = (item: MessageAttachmentResponse) => {
-  const isImage = item.contentType.startsWith('image/');
-  const isVideo = item.contentType.startsWith('video/');
-  
-  const fileUrl = item.fileUrl.startsWith('http') 
-    ? item.fileUrl 
-    : `${SOCIAL_BASE_URL}${item.fileUrl.startsWith('/') ? '' : '/'}${item.fileUrl}`;
+  const getStatusText = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'Активный':
+        return 'Активный';
+      case 'Просроченный':
+        return 'Просроченный';
+      case 'Закрытый':
+        return 'Закрытый';
+      default:
+        return status;
+    }
+  };
 
-  return (
+  const renderCreditItem = (credit: CreditListResponse) => {
+    const getStatusStyles = (status: string) => {
+      const statusLower = status.toLowerCase();
+      
+      if (statusLower === 'активный') {
+        return {
+          bgcolor: 'transparent',
+          color: 'common.black',
+          borderColor: 'rgba(0, 0, 0, 0.23)'
+        };
+      } else if (statusLower === 'просроченный') {
+        return {
+          bgcolor: 'rgba(232, 216, 216, 1)',
+          color: 'common.black',
+          borderColor: 'rgba(232, 216, 216, 1)'
+        };
+      } else if (statusLower === 'закрытый') {
+        return {
+          bgcolor: '#E8F5E8',
+          color: '#1B5E20',
+          borderColor: '#E8F5E8'
+        };
+      }
+      
+      return {
+        bgcolor: 'transparent',
+        color: 'common.black',
+        borderColor: 'rgba(0, 0, 0, 0.23)'
+      };
+    };
+
+    const statusStyles = getStatusStyles(credit.status);
+
+    return (
+      <ListItem 
+        style={{ 
+          margin: "10px 0", 
+          boxShadow: "4px 2px 4px 3px rgba(0, 8, 9, 0.08)", 
+          borderRadius: "10px", 
+          backgroundColor: `${statusStyles.bgcolor}`, 
+          padding: "5px 10px",
+          cursor: 'pointer',
+          transition: 'all 0.2s ease-in-out',
+          border: '2px solid transparent'
+        }} 
+        key={credit.id} 
+        sx={{ 
+          px: 0,
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '4px 4px 8px 3px rgba(0, 8, 9, 0.12)',
+            border: '2px solid rgba(0, 125, 136, 0.3)'
+          },
+          '&:active': {
+            transform: 'translateY(0)'
+          }
+        }}
+        onClick={() => handleCreditClick(credit.id)}
+      >
+        <ListItemAvatar>
+          <Avatar variant="rounded" sx={{ bgcolor: 'rgba(0, 125, 136, 0.3)' }}>
+            <DescriptionIcon sx={{ color: 'rgba(0, 125, 136, 1)' }} />
+          </Avatar>
+        </ListItemAvatar>
+        <ListItemText
+          primary={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body1" fontWeight="medium">
+                Договор №{credit.id}
+              </Typography>
+            </Box>
+          }
+          secondary={`Дата: ${format(new Date(credit.creditDate), 'dd.MM.yyyy')}`}
+          sx={{ ml: 1 }}
+      />
+      </ListItem>
+    );
+  };
+
+  const renderMediaItem = (item: MessageAttachmentResponse) => {
+    const isImage = item.contentType.startsWith('image/');
+    const isVideo = item.contentType.startsWith('video/');
+    
+    const fileUrl = item.fileUrl.startsWith('http') 
+      ? item.fileUrl 
+      : `${SOCIAL_BASE_URL}${item.fileUrl.startsWith('/') ? '' : '/'}${item.fileUrl}`;
+
+    return (
       <ListItem 
         key={item.id} 
         sx={{ px: 0, cursor: 'pointer' }}
@@ -195,273 +353,282 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
     </ListItem>
   );
 
+  const getTabs = () => {
+    const baseTabs = ['Фото', 'Файлы', 'Видео', 'Ссылки'];
+    if (chat.type === 'employee_client') {
+      return ['Договоры', ...baseTabs];
+    }
+    return baseTabs;
+  };
+
+  const tabs = getTabs();
+
   return (
-    <Paper 
-      elevation={3} 
-      sx={{
-        width: 350,
-        height: '100%',
-        overflow: 'auto',
-        position: 'relative',
-        borderRadius: 0
-      }}
-    >
-      <Box 
+    <>
+      <Paper 
+        elevation={3} 
         sx={{
-          top: 0,
-          backgroundColor: 'background.paper',
-          zIndex: 1,
-          p: 2,
-          borderColor: 'divider',
-          display: 'flex',
-          justifyContent: 'flex-end'
+          width: 350,
+          height: '100%',
+          overflow: 'auto',
+          position: 'relative',
+          borderRadius: 0
         }}
       >
-        <IconButton onClick={onClose} sx={{ position: 'absolute', left: 16, top: 16 }}>
-          <CloseIcon />
-        </IconButton>
-      </Box>
+        <Box 
+          sx={{
+            top: 0,
+            backgroundColor: 'background.paper',
+            zIndex: 1,
+            p: 2,
+            borderColor: 'divider',
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}
+        >
+          <IconButton onClick={onClose} sx={{ position: 'absolute', left: 16, top: 16 }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
 
-      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Avatar
-          src={getChatAvatar()}
-          alt={chat.name}
-          sx={{ width: 120, height: 120, mb: 2 }}
-        />
-        <Typography variant="h5" gutterBottom>
-          {chat.name}
-        </Typography>
-
-        {chatMembers?.length > 2 ? (
-          <Chip 
-            label={`${chatMembers?.length ?? 0} участников`}
-            size="small"
-            sx={{ 
-              mt: 1,
-              color: 'rgba(80, 85, 92, 1)',
-              backgroundColor: 'transparent',
-              '& .MuiChip-label': {
-                px: 0.5,
-              },
-              border: 'none',
-              boxShadow: 'none',
-              fontSize: '14px',
-              margin: 0
-            }}
+        <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Avatar
+            src={getChatAvatar()}
+            alt={chat.name}
+            sx={{ width: 120, height: 120, mb: 2 }}
           />
-        ) : (
-          <Chip 
-            label={chat.type === 'employee_client' ? "Клиент" : "Сотрудник"}
-            size="small"
-            sx={{ 
-              mt: 1,
-              color: 'rgba(80, 85, 92, 1)',
-              backgroundColor: 'transparent',
-              '& .MuiChip-label': {
-                px: 0.5,
-              },
-              border: 'none',
-              boxShadow: 'none',
-              fontSize: '14px',
-              margin: 0
-            }}
-          />
-        )}
-      </Box>
+          <Typography variant="h5" gutterBottom>
+            {chat.name}
+          </Typography>
 
-      <Divider />
-
-      <Tabs 
-        value={activeTab} 
-        onChange={handleTabChange} 
-        variant="scrollable"
-        scrollButtons="auto"
-        allowScrollButtonsMobile
-        sx={{ 
-          borderBottom: 1, 
-          borderColor: 'divider',
-          '& .MuiTabs-indicator': {
-            display: 'none'
-          },
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': {
-            display: 'none'
-          },
-          WebkitOverflowScrolling: 'touch',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        {['Фото', 'Файлы', 'Видео', 'Ссылки'].map((label, index) => (
-          <Tab
-            key={index}
-            label={label}
-            sx={{
-              color: 'common.black',
-              outline: 'none',
-              textTransform: 'none',
-              fontSize: '0.875rem',
-              borderRadius: '10px',
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(89, 212, 188, 1)',
-                color: 'common.black',
-                borderRadius: '10px',
-                mx: 0.5
-              },
-              px: 2,
-              my: 0.5,
-              transition: 'all 0.2s ease-in-out',
-              '&:focus': {
-                outline: 'none',
+          {chatMembers?.length > 2 ? (
+            <Chip 
+              label={`${chatMembers?.length ?? 0} участников`}
+              size="small"
+              sx={{ 
+                mt: 1,
+                color: 'rgba(80, 85, 92, 1)',
+                backgroundColor: 'transparent',
+                '& .MuiChip-label': {
+                  px: 0.5,
+                },
+                border: 'none',
                 boxShadow: 'none',
-              },
-              minWidth: 'auto',
-              flexShrink: 0
-            }}
-          />
-        ))}
-      </Tabs>
+                fontSize: '14px',
+                margin: 0
+              }}
+            />
+          ) : (
+            <Chip 
+              label={chat.type === 'employee_client' ? "Клиент" : "Сотрудник"}
+              size="small"
+              sx={{ 
+                mt: 1,
+                color: 'rgba(80, 85, 92, 1)',
+                backgroundColor: 'transparent',
+                '& .MuiChip-label': {
+                  px: 0.5,
+                },
+                border: 'none',
+                boxShadow: 'none',
+                fontSize: '14px',
+                margin: 0
+              }}
+            />
+          )}
+        </Box>
 
-      <Box sx={{ p: 2 }}>
-        {activeTab === -2 && (
-          <Box>
-            <List dense>
-              {chatMembers.map((member) => (
-                <ListItem 
-                onClick={() => onUserClick(member.id)}
-                key={member.id} sx={{ px: 0 }}>
-                  <Avatar 
-                    src={member.photoPath ? FILE_BASE_URL + member.photoPath : generateAvatar(getInitials(member.fullName))}
-                    sx={{ width: 40, height: 40, mr: 2 }}
-                  />
-                  <ListItemText
-                    primary={member.fullName}
-                    secondary={member.role || ''}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        )}
+        <Divider />
 
-        {activeTab === 0 && (
-          <Box>
-            {isLoading ? (
-              <Grid container spacing={1}>
-                {[...Array(4)].map((_, index) => (
-                  <Grid item xs={6} key={index}>
-                    <Skeleton variant="rectangular" width="100%" height={120} />
-                  </Grid>
-                ))}
-              </Grid>
-            ) : chatPhotos.length > 0 ? (
-              <ImageList cols={2} gap={8}>
-                {chatPhotos.map((photo) => {
-                  const photoUrl = photo.fileUrl.startsWith('http') 
-                    ? photo.fileUrl 
-                    : `${SOCIAL_BASE_URL}${photo.fileUrl.startsWith('/') ? '' : '/'}${photo.fileUrl}`;
-                  
-                  return (
-                    <ImageListItem 
-                      key={photo.id} 
-                      onClick={() => handleOpenMedia(photo)}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <img
-                        src={`${photoUrl}?w=164&h=164&fit=crop&auto=format`}
-                        srcSet={`${photoUrl}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
-                        alt={photo.fileName}
-                        loading="lazy"
-                        style={{ borderRadius: 4 }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholder-image.png';
-                        }}
-                      />
-                    </ImageListItem>
-                  );
-                })}
-              </ImageList>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Нет фотографий
-              </Typography>
-            )}
-          </Box>
-        )}
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange} 
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{ 
+            borderBottom: 1, 
+            borderColor: 'divider',
+            '& .MuiTabs-indicator': {
+              display: 'none'
+            },
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            '&::-webkit-scrollbar': {
+              display: 'none'
+            },
+            WebkitOverflowScrolling: 'touch',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {tabs.map((label, index) => (
+            <Tab
+              key={index}
+              label={label}
+              sx={{
+                color: 'common.black',
+                outline: 'none',
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                borderRadius: '10px',
+                '&.Mui-selected': {
+                  backgroundColor: 'rgba(89, 212, 188, 1)',
+                  color: 'common.black',
+                  borderRadius: '10px',
+                  mx: 0.5
+                },
+                px: 2,
+                my: 0.5,
+                transition: 'all 0.2s ease-in-out',
+                '&:focus': {
+                  outline: 'none',
+                  boxShadow: 'none',
+                },
+                minWidth: 'auto',
+                flexShrink: 0
+              }}
+            />
+          ))}
+        </Tabs>
 
-        {activeTab === 1 && (
-          <Box>
-            {isLoading ? (
-              <Box>
-                {[...Array(3)].map((_, index) => (
-                  <Skeleton key={index} variant="rectangular" width="100%" height={72} sx={{ mb: 1 }} />
-                ))}
-              </Box>
-            ) : chatFiles.length > 0 ? (
-              <List dense>
-                {chatFiles.map(renderMediaItem)}
-              </List>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Нет файлов
-              </Typography>
-            )}
-          </Box>
-        )}
+        <Box sx={{ p: 2 }}>
+          {activeTab === 0 && chat.type === 'employee_client' && (
+            <Box>
+              {isLoadingCredits ? (
+                <Box>
+                  {[...Array(3)].map((_, index) => (
+                    <Skeleton key={index} variant="rectangular" width="100%" height={72} sx={{ mb: 1 }} />
+                  ))}
+                </Box>
+              ) : credits && credits.items && credits.items.length > 0 ? (
+                <List dense>
+                  {credits.items.map(renderCreditItem)}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Нет договоров
+                </Typography>
+              )}
+            </Box>
+          )}
 
-        {activeTab === 2 && (
-          <Box>
-            {isLoading ? (
-              <Box>
-                {[...Array(3)].map((_, index) => (
-                  <Skeleton key={index} variant="rectangular" width="100%" height={72} sx={{ mb: 1 }} />
-                ))}
-              </Box>
-            ) : chatVideos.length > 0 ? (
-              <List dense>
-                {chatVideos.map(renderMediaItem)}
-              </List>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Нет видео
-              </Typography>
-            )}
-          </Box>
-        )}
+          {activeTab === (chat.type === 'employee_client' ? 1 : 0) && (
+            <Box>
+              {isLoading ? (
+                <Grid container spacing={1}>
+                  {[...Array(4)].map((_, index) => (
+                    <Grid item xs={6} key={index}>
+                      <Skeleton variant="rectangular" width="100%" height={120} />
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : chatPhotos.length > 0 ? (
+                <ImageList cols={2} gap={8}>
+                  {chatPhotos.map((photo) => {
+                    const photoUrl = photo.fileUrl.startsWith('http') 
+                      ? photo.fileUrl 
+                      : `${SOCIAL_BASE_URL}${photo.fileUrl.startsWith('/') ? '' : '/'}${photo.fileUrl}`;
+                    
+                    return (
+                      <ImageListItem 
+                        key={photo.id} 
+                        onClick={() => handleOpenMedia(photo)}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          src={`${photoUrl}?w=164&h=164&fit=crop&auto=format`}
+                          srcSet={`${photoUrl}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
+                          alt={photo.fileName}
+                          loading="lazy"
+                          style={{ borderRadius: 4 }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                          }}
+                        />
+                      </ImageListItem>
+                    );
+                  })}
+                </ImageList>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Нет фотографий
+                </Typography>
+              )}
+            </Box>
+          )}
 
-        {activeTab === 3 && (
-          <Box>
-            {isLoading ? (
-              <Box>
-                {[...Array(3)].map((_, index) => (
-                  <Skeleton key={index} variant="rectangular" width="100%" height={72} sx={{ mb: 1 }} />
-                ))}
-              </Box>
-            ) : chatLinks.length > 0 ? (
-              <List dense>
-                {chatLinks.map(renderLinkItem)}
-              </List>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Нет ссылок
-              </Typography>
-            )}
-          </Box>
-        )}
-      </Box>
+          {activeTab === (chat.type === 'employee_client' ? 2 : 1) && (
+            <Box>
+              {isLoading ? (
+                <Box>
+                  {[...Array(3)].map((_, index) => (
+                    <Skeleton key={index} variant="rectangular" width="100%" height={72} sx={{ mb: 1 }} />
+                  ))}
+                </Box>
+              ) : chatFiles.length > 0 ? (
+                <List dense>
+                  {chatFiles.map(renderMediaItem)}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Нет файлов
+                </Typography>
+              )}
+            </Box>
+          )}
 
-      <Dialog
-        open={openMediaModal}
-        onClose={handleCloseMedia}
-        maxWidth="md"
-        fullWidth
-      >
-        {currentMedia && (
-          <>
-            <DialogTitle>{currentMedia.fileName}</DialogTitle>
-            <DialogContent>
-              {currentMedia && (
-                currentMedia.contentType.startsWith('image/') ? (
+          {activeTab === (chat.type === 'employee_client' ? 3 : 2) && (
+            <Box>
+              {isLoading ? (
+                <Box>
+                  {[...Array(3)].map((_, index) => (
+                    <Skeleton key={index} variant="rectangular" width="100%" height={72} sx={{ mb: 1 }} />
+                  ))}
+                </Box>
+              ) : chatVideos.length > 0 ? (
+                <List dense>
+                  {chatVideos.map(renderMediaItem)}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Нет видео
+                </Typography>
+              )}
+            </Box>
+          )}
+
+          {activeTab === (chat.type === 'employee_client' ? 4 : 3) && (
+            <Box>
+              {isLoading ? (
+                <Box>
+                  {[...Array(3)].map((_, index) => (
+                    <Skeleton key={index} variant="rectangular" width="100%" height={72} sx={{ mb: 1 }} />
+                  ))}
+                </Box>
+              ) : chatLinks.length > 0 ? (
+                <List dense>
+                  {chatLinks.map(renderLinkItem)}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Нет ссылок
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        <Dialog
+          open={openMediaModal}
+          onClose={handleCloseMedia}
+          maxWidth="md"
+          fullWidth
+        >
+          {currentMedia && (
+            <>
+              <DialogTitle>{currentMedia.fileName}</DialogTitle>
+              <DialogContent>
+                {currentMedia.contentType.startsWith('image/') ? (
                   <img
                     src={currentMedia.fileUrl.startsWith('http') 
                       ? currentMedia.fileUrl 
@@ -492,23 +659,31 @@ const ChatSide: React.FC<ChatSideProps> = ({ chat, onClose, onUserClick }) => {
                       {(currentMedia.fileSize / 1024).toFixed(1)} KB
                     </Typography>
                   </Box>
-                )
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button 
-                onClick={() => handleDownload(currentMedia.fileUrl, currentMedia.fileName)}
-                startIcon={<DownloadIcon />}
-                sx={{ color: 'rgba(0, 125, 136, 1)' }}
-              >
-                Скачать
-              </Button>
-              <Button onClick={handleCloseMedia}>Закрыть</Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
-    </Paper>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button 
+                  onClick={() => handleDownload(currentMedia.fileUrl, currentMedia.fileName)}
+                  startIcon={<DownloadIcon />}
+                  sx={{ color: 'rgba(0, 125, 136, 1)' }}
+                >
+                  Скачать
+                </Button>
+                <Button onClick={handleCloseMedia}>Закрыть</Button>
+              </DialogActions>
+            </>
+          )}
+        </Dialog>
+      </Paper>
+
+      {selectedCreditId && (
+        <ViewCreditModal
+          id={selectedCreditId}
+          isOpen={isCreditModalOpen}
+          onClose={handleCloseCreditModal}
+        />
+      )}
+    </>
   );
 };
 

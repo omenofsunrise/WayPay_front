@@ -1,6 +1,6 @@
 import apiClient from '../client';
-import type { PaginatedResponse } from '../types/common';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest, SetInvestmentSourceRequest, } from '../types/credit';
+import type { PaginatedResponse, PaginationParams } from '../types/common';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest, SetInvestmentSourceRequest, CreditListResponse, } from '../types/credit';
 
 class CreditService {
   async getCredits(params?: CreditParams): Promise<CreditResponse> {
@@ -65,6 +65,11 @@ class CreditService {
 
   async setInvestmentSource(creditId: number, sourceRequest: SetInvestmentSourceRequest): Promise<void> {
     await apiClient.patch(`/Credit/investorment-source/${creditId}`, sourceRequest);
+  }
+
+  async getCreditListByClient(clientId: number, params?: PaginationParams): Promise<PaginatedResponse<CreditListResponse>> {
+    const response = await apiClient.get<PaginatedResponse<CreditListResponse>>(`/Credit/list/${clientId}`);
+    return response.data;
   }
 }
 

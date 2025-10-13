@@ -6,6 +6,7 @@ export interface Chat {
   unreadCount: number;
   lastMessage?: Message;
   avatarPath?: string;
+  clientId?: number;
 }
 
 export interface Message {

@@ -19,7 +19,6 @@ import useSchedule from '../../api/hooks/useSchedule';
 import type { ScheduleItem, ScheduleParams } from '../../api/types/schedule';
 import CreateNoteModal from './CreateNoteModal';
 import PhotoViewerModal from './PhotoViewerModal';
-import { FaComment } from 'react-icons/fa';
 import useChat from '../../api/hooks/useChat';
 import useCompany from '../../api/hooks/useCompany';
 
@@ -220,23 +219,25 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
 
   const MessageButton = styled.button`
-    background: rgba(0, 125, 136, 1);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      background: rgba(0, 125, 136, 1);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      min-width: 40px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      margin-left: 10px;
+      padding: 8px;
 
-    &:hover {
-      background: rgba(0, 100, 110, 1);
-      transform: scale(1.05);
-    }
+      &:hover {
+        background: rgba(0, 100, 110, 1);
+        transform: scale(1.05);
+      }
   `;
 
   const formatNotesData = () => {
@@ -373,30 +374,26 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       ]);
   };
 
-  // Функция для получения стилей строки расписания
   const getScheduleRowStyle = (schedule: ScheduleItem, index: number) => {
     const today = new Date();
     const paymentDate = schedule.paymentDate ? new Date(schedule.paymentDate) : null;
     
-    // Если сумма 0 - оплачено (зеленый)
     if (schedule.paymentAmount === 0) {
       return {
-        backgroundColor: '#E8F5E8', // светло-зеленый
+        backgroundColor: '#E8F5E8',
         color: '#1B5E20',
         fontWeight: 'normal' as const
       };
     }
     
-    // Если дата платежа прошла и сумма не 0 - просрочено (красный)
     if (paymentDate && paymentDate < today && schedule.paymentAmount > 0) {
       return {
-        backgroundColor: '#FFEBEE', // светло-красный
+        backgroundColor: '#FFEBEE',
         color: '#B71C1C',
         fontWeight: 'normal' as const
       };
     }
     
-    // Обычная строка
     return {
       backgroundColor: '#FFFFFF',
       color: '#000000',
@@ -455,9 +452,11 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               <CustomTitle style={{ marginTop: 0 }}>
                 Договор №{id}
               </CustomTitle>
-              {/* <MessageButton onClick={handleMessageClick}>
-                <FaComment size={260} />
-              </MessageButton> */}
+              <MessageButton onClick={handleMessageClick}>
+                <svg width="22" height="20" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.464 14.828C1 13.657 1 12.771 1 9C1 5.229 1 3.343 2.464 2.172C3.93 1 6.286 1 11 1C15.714 1 18.071 1 19.535 2.172C20.999 3.344 21 5.229 21 9C21 12.771 21 13.657 19.535 14.828C18.072 16 15.714 16 11 16C8.49 16 7.2 17.738 5 19V15.788C3.906 15.625 3.101 15.338 2.464 14.828Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </MessageButton>
             </TitleField>
 
              <div>

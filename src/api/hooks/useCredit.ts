@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import creditService from '../services/creditService';
-import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest, SetInvestmentSourceRequest } from '../types/credit';
-import type { PaginatedResponse } from '../types/common';
+import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest, SetInvestmentSourceRequest, CreditListResponse } from '../types/credit';
+import type { PaginatedResponse, PaginationParams } from '../types/common';
 
 const useCredit = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -160,6 +160,20 @@ const useCredit = () => {
     }
   }, []);
 
+  const getCreditListByClient = useCallback(async (id: number, params?: PaginationParams): Promise<PaginatedResponse<CreditListResponse> | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await creditService.getCreditListByClient(id, params);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch SPA data');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -173,7 +187,8 @@ const useCredit = () => {
     getDocsData,
     updateCredit,
     getCreateCreditRequest,
-    setInvestmentSource
+    setInvestmentSource,
+    getCreditListByClient
   };
 };
 

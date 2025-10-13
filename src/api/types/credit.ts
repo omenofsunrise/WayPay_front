@@ -171,3 +171,9 @@ export interface SetInvestmentSourceRequest {
   sourceType: InvestmentSourceType;
   entityId: number;
 }
+
+export interface CreditListResponse {
+  id: number;
+  status: string;
+  creditDate: Date;
+}
