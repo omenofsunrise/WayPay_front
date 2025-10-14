@@ -7,9 +7,10 @@ import { Divider } from '@mui/material';
 interface PieChartProps {
   title: string;
   data: ScheduleAnalitycResponse;
+  isMainChart?: boolean;
 }
 
-const SchedulePieChart = ({ title, data }: PieChartProps) => {
+const SchedulePieChart = ({ title, data, isMainChart = false }: PieChartProps) => {
   const prevDataRef = useRef<ScheduleAnalitycResponse>(data);
   const [animatedData, setAnimatedData] = useState<ScheduleAnalitycResponse>(data);
 
@@ -189,14 +190,18 @@ const createPaths = () => {
   const singleSegmentColor = getSingleSegmentColor();
 
   return (
-    <ChartContainer>
+    <ChartContainer $isMainChart={isMainChart}>
       <ChartHeader>
         <ChartTitle>{title}</ChartTitle>
       </ChartHeader>
       
-      <ChartContent>
-        <PieChartWrapper>
-          <svg width="260" height="200" viewBox="0 0 100 100">
+      <ChartContent $isMainChart={isMainChart}>
+        <PieChartWrapper $isMainChart={isMainChart}>
+          <svg 
+            width={isMainChart ? "720" : "280"} 
+            height={isMainChart ? "300" : "200"} 
+            viewBox="0 0 100 100"
+          >
             {hasData && hasChartData ? (
               <>
                 {paths.length > 1 ? (
@@ -264,7 +269,7 @@ const createPaths = () => {
           </svg>
         </PieChartWrapper>
 
-        <StatsContainer>
+        <StatsContainer $isMainChart={isMainChart}>
           <StatItem>
             <StatLabel>Ожидаемые платежи:</StatLabel>
             <StatValue>{formatMoney(animatedData.expectedIncome.toString())}</StatValue>
@@ -293,10 +298,20 @@ const createPaths = () => {
   );
 };
 
-const ChartContent = styled.div`
+const ChartContent = styled.div<{ $isMainChart?: boolean }>`
   display: flex;
-  align-items: center;
-  gap: 24px;
+  ${props => props.$isMainChart 
+    ? `
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      height: 100%;
+    ` 
+    : `
+      align-items: center;
+      gap: 24px;
+    `
+  }
 `;
 
 const scaleIn = keyframes`
@@ -311,7 +326,7 @@ const AnimatedPath = styled.path`
   border-radius: 10px;
 `;
 
-const ChartContainer = styled.div`
+const ChartContainer = styled.div<{ $isMainChart?: boolean }>`
   background: white;
   border-radius: 12px;
   padding: 20px;
@@ -320,6 +335,12 @@ const ChartContainer = styled.div`
   color: black;
   box-shadow: 0 4px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  ${props => props.$isMainChart && `
+    height: 100%;
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+  `}
 
   &:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -340,18 +361,29 @@ const ChartTitle = styled.h3`
   color: #1F2937;
 `;
 
-const PieChartWrapper = styled.div`
+const PieChartWrapper = styled.div<{ $isMainChart?: boolean }>`
   flex-shrink: 0;
   transition: all 0.3s ease;
   position: relative;
+  ${props => props.$isMainChart && `
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+  `}
 `;
 
-const StatsContainer = styled.div`
+const StatsContainer = styled.div<{ $isMainChart?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px;
   width: 100%;
+  ${props => props.$isMainChart && `
+    width: 100%;
+  `}
 `;
 
 const StatItem = styled.div`

@@ -122,10 +122,10 @@ const SchedulePage = () => {
 
         const handleScroll = () => {
             const scrollTop = container.scrollTop;
-            const chartHeight = container.scrollHeight / scheduleAnalytics.length;
+            const chartHeight = container.scrollHeight / (scheduleAnalytics.length - 1 || 1);
             const newIndex = Math.floor(scrollTop / chartHeight);
             
-            if (newIndex !== currentChartIndex && newIndex >= 0 && newIndex < scheduleAnalytics.length) {
+            if (newIndex !== currentChartIndex && newIndex >= 0 && newIndex < (scheduleAnalytics.length - 1 || 1)) {
                 setCurrentChartIndex(newIndex);
             }
         };
@@ -138,7 +138,7 @@ const SchedulePage = () => {
         setCurrentChartIndex(index);
         const container = chartsContainerRef.current;
         if (container) {
-            const chartHeight = container.scrollHeight / scheduleAnalytics.length;
+            const chartHeight = container.scrollHeight / (scheduleAnalytics.length - 1 || 1);
             container.scrollTo({
                 top: index * chartHeight,
                 behavior: 'smooth'
@@ -372,14 +372,36 @@ const SchedulePage = () => {
 
     const rowStyles = getRowStyles(tableData, scheduleData);
 
-    const renderAllCharts = () => {
-        if (scheduleAnalytics.length === 0) {
+    // Получаем первую диаграмму для левого контейнера
+    const mainChart = scheduleAnalytics[0];
+    
+    // Получаем остальные диаграммы для правого контейнера
+    const additionalCharts = scheduleAnalytics.slice(1);
+
+    const renderMainChart = () => {
+        if (!mainChart) {
             return <EmptyChart>Нет данных для отображения</EmptyChart>;
         }
 
         return (
+            <MainChartCard>
+                <SchedulePieChart 
+                    title={`${mainChart.title}`}
+                    data={mainChart}
+                    isMainChart={true}
+                />
+            </MainChartCard>
+        );
+    };
+
+    const renderAdditionalCharts = () => {
+        if (additionalCharts.length === 0) {
+            return <EmptyChart>Нет дополнительных данных</EmptyChart>;
+        }
+
+        return (
             <ChartsScrollContainer ref={chartsContainerRef}>
-                {scheduleAnalytics.map((chartData, index) => (
+                {additionalCharts.map((chartData, index) => (
                     <ChartCard key={index}>
                         <SchedulePieChart 
                             title={`${chartData.title}`}
@@ -398,20 +420,20 @@ const SchedulePage = () => {
             content: (
                 <ScheduleContainer>
                     <LeftContainer>
-                        <EmptyContainer>
-                            <EmptyText>В разработке</EmptyText>
-                        </EmptyContainer>
+                        {renderMainChart()}
                     </LeftContainer>
                     <RightContainer>
-                        {renderAllCharts()}
-                        <ChartsNavigation>
-                            <PaginationDots 
-                                count={scheduleAnalytics.length} 
-                                activeIndex={currentChartIndex}
-                                onClick={handleDotClick}
-                                className="vertical"
-                            />
-                        </ChartsNavigation>
+                        {renderAdditionalCharts()}
+                        {additionalCharts.length > 0 && (
+                            <ChartsNavigation>
+                                <PaginationDots 
+                                    count={additionalCharts.length} 
+                                    activeIndex={currentChartIndex}
+                                    onClick={handleDotClick}
+                                    className="vertical"
+                                />
+                            </ChartsNavigation>
+                        )}
                     </RightContainer>
                 </ScheduleContainer>
             )
@@ -563,17 +585,15 @@ const ChartsScrollContainer = styled.div`
   }
 `;
 
+const MainChartCard = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 const ChartCard = styled.div`
-`;
-
-const EmptyContainer = styled.div`
-  text-align: center;
-`;
-
-const EmptyText = styled.p`
-  color: #999;
-  font-size: 16px;
-  margin: 0;
 `;
 
 const EmptyChart = styled.div`
