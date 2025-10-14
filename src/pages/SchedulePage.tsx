@@ -38,18 +38,14 @@ const WhatsAppIcon = () => (
 
 type TabType = 'schedule' | 'table';
 
-// Ключ для localStorage
 const ACTIVE_TAB_STORAGE_KEY = 'schedule_page_active_tab';
 
 const SchedulePage = () => {
-    // Инициализация состояния активной вкладки из localStorage
     const [activeTab, setActiveTab] = useState<TabType>(() => {
-        // Получаем сохраненную вкладку из localStorage
         const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
-        // Проверяем, что сохраненное значение является допустимой вкладкой
         return savedTab && (savedTab === 'schedule' || savedTab === 'table') 
             ? savedTab 
-            : 'schedule'; // значение по умолчанию
+            : 'schedule';
     });
     
     const [clientNameFilter, setClientNameFilter] = useState('');
@@ -69,7 +65,7 @@ const SchedulePage = () => {
     const { getScheduleAnalityc } = useAnalytic();
     const [scheduleAnalytics, setScheduleAnalytics] = useState<ScheduleAnalitycResponse[]>([]);
     const chartsContainerRef = useRef<HTMLDivElement>(null);
-
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditid',
         1: 'client',
@@ -87,12 +83,10 @@ const SchedulePage = () => {
         markAsNotified
     } = useSchedule();
 
-    // Функция для сохранения активной вкладки в localStorage
     const saveActiveTabToStorage = useCallback((tab: TabType) => {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
     }, []);
 
-    // Обработчик изменения вкладки
     const handleTabChange = useCallback((tab: TabType) => {
         setActiveTab(tab);
         saveActiveTabToStorage(tab);
@@ -372,26 +366,47 @@ const SchedulePage = () => {
 
     const rowStyles = getRowStyles(tableData, scheduleData);
 
-    // Получаем первую диаграмму для левого контейнера
     const mainChart = scheduleAnalytics[0];
     
-    // Получаем остальные диаграммы для правого контейнера
     const additionalCharts = scheduleAnalytics.slice(1);
 
-    const renderMainChart = () => {
-        if (!mainChart) {
-            return <EmptyChart>Нет данных для отображения</EmptyChart>;
+    const loadScheduleAnalyticsForYear = async (year: number) => {
+        try {
+            const result = await getScheduleAnalityc(year);
+            if (result) {
+            setScheduleAnalytics(result);
+            }
+        } catch (err) {
+            console.error('Ошибка загрузки аналитики графика:', err);
         }
+    };
 
-        return (
-            <MainChartCard>
-                <SchedulePieChart 
-                    title={`${mainChart.title}`}
-                    data={mainChart}
-                    isMainChart={true}
-                />
-            </MainChartCard>
-        );
+    useEffect(() => {
+        if (activeTab === 'schedule') {
+            loadScheduleAnalyticsForYear(selectedYear);
+        }
+    }, [activeTab, selectedYear, getScheduleAnalityc]);
+
+    const renderMainChart = () => {
+    if (!mainChart) {
+        return <EmptyChart>Нет данных для отображения</EmptyChart>;
+    }
+
+    return (
+        <MainChartCard>
+        <SchedulePieChart 
+            title={`${mainChart.title}`}
+            data={mainChart}
+            isMainChart={true}
+            currentYear={selectedYear}
+            onYearChange={(year) => {
+            setSelectedYear(year);
+            // Здесь можно добавить загрузку данных для выбранного года
+            loadScheduleAnalyticsForYear(year);
+            }}
+        />
+        </MainChartCard>
+    );
     };
 
     const renderAdditionalCharts = () => {

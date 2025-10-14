@@ -8,11 +8,20 @@ interface PieChartProps {
   title: string;
   data: ScheduleAnalitycResponse;
   isMainChart?: boolean;
+  onYearChange?: (year: number) => void;
+  currentYear?: number;
 }
 
-const SchedulePieChart = ({ title, data, isMainChart = false }: PieChartProps) => {
+const SchedulePieChart = ({ 
+  title, 
+  data, 
+  isMainChart = false, 
+  onYearChange,
+  currentYear = new Date().getFullYear()
+}: PieChartProps) => {
   const prevDataRef = useRef<ScheduleAnalitycResponse>(data);
   const [animatedData, setAnimatedData] = useState<ScheduleAnalitycResponse>(data);
+  const [displayYear, setDisplayYear] = useState(currentYear);
 
   useEffect(() => {
     const duration = 1000;
@@ -51,6 +60,14 @@ const SchedulePieChart = ({ title, data, isMainChart = false }: PieChartProps) =
     prevDataRef.current = data;
   }, [data]);
 
+  const handleYearChange = (direction: 'prev' | 'next') => {
+    const newYear = direction === 'prev' ? displayYear - 1 : displayYear + 1;
+    setDisplayYear(newYear);
+    if (onYearChange) {
+      onYearChange(newYear);
+    }
+  };
+
   const chartData = [
     {
       name: 'Поступления',
@@ -68,111 +85,106 @@ const SchedulePieChart = ({ title, data, isMainChart = false }: PieChartProps) =
     }
   ];
 
-const createPaths = () => {
-  const paths = [];
-  let cumulativePercentage = 0;
+  const createPaths = () => {
+    const paths = [];
+    let cumulativePercentage = 0;
 
-  const validData = chartData.filter(item => item.percent > 0);
+    const validData = chartData.filter(item => item.percent > 0);
 
-  if (validData.length === 0) {
-    return [];
-  }
-
-  if (validData.length === 1 && validData[0].percent === 100) {
-    const item = validData[0];
-    
-    const fullCirclePath = `M 50 50 L 100 50 A 50 50 0 1 1 50 0 A 50 50 0 1 1 100 50 Z`;
-    
-    paths.push({
-      path: fullCirclePath,
-      color: item.color,
-      name: item.name,
-      value: item.value,
-      percentage: item.percent,
-      description: item.description
-    });
-    
-    return paths;
-  }
-
-  const startAngle = -120;
-  const gapSize = 1;
-  const cornerRadius = 2;
-  
-  const totalPercentage = validData.reduce((sum, item) => sum + item.percent, 0);
-  const adjustedData = validData.map(item => ({
-    ...item,
-    adjustedPercent: item.percent - (item.percent / totalPercentage) * gapSize * validData.length
-  }));
-
-  for (let i = 0; i < adjustedData.length; i++) {
-    const item = adjustedData[i];
-    
-    const startAngleDeg = startAngle + cumulativePercentage * 3.6;
-    const endAngleDeg = startAngleDeg + item.adjustedPercent * 3.6;
-    
-    const startAngleRad = (startAngleDeg * Math.PI) / 180;
-    const endAngleRad = (endAngleDeg * Math.PI) / 180;
-    
-    // Внутренний радиус (37) и внешний радиус (50)
-    const innerRadius = 37;
-    const outerRadius = 50;
-    
-    // Точки для внутренней и внешней окружности
-    const startXInner = 50 + innerRadius * Math.cos(startAngleRad);
-    const startYInner = 50 + innerRadius * Math.sin(startAngleRad);
-    const startXOuter = 50 + outerRadius * Math.cos(startAngleRad);
-    const startYOuter = 50 + outerRadius * Math.sin(startAngleRad);
-    
-    const endXInner = 50 + innerRadius * Math.cos(endAngleRad);
-    const endYInner = 50 + innerRadius * Math.sin(endAngleRad);
-    const endXOuter = 50 + outerRadius * Math.cos(endAngleRad);
-    const endYOuter = 50 + outerRadius * Math.sin(endAngleRad);
-    
-    const largeArcFlag = item.adjustedPercent > 50 ? 1 : 0;
-
-    // Создаем путь с закругленными концами
-    const path = `
-      M ${startXInner} ${startYInner}
-      L ${startXOuter} ${startYOuter}
-      A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endXOuter} ${endYOuter}
-      L ${endXInner} ${endYInner}
-      A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${startXInner} ${startYInner}
-      Z
-    `;
-
-    // Вычисляем позицию для текста процентов
-    const middleAngleDeg = (startAngleDeg + endAngleDeg) / 2;
-    const middleAngleRad = (middleAngleDeg * Math.PI) / 180;
-    
-    // Позиция текста на внешней стороне диаграммы
-    const textRadius = outerRadius + 12; // Отступ от внешнего края
-    const textX = 50 + textRadius * Math.cos(middleAngleRad);
-    const textY = 50 + textRadius * Math.sin(middleAngleRad);
-
-    paths.push({
-      path: path,
-      color: item.color,
-      name: item.name,
-      value: item.value,
-      percentage: item.percent,
-      description: item.description,
-      startAngle: startAngleDeg,
-      endAngle: endAngleDeg,
-      textX: textX,
-      textY: textY,
-      textAngle: middleAngleDeg
-    });
-    
-    cumulativePercentage += item.adjustedPercent;
-    
-    if (i < adjustedData.length - 1) {
-      cumulativePercentage += gapSize;
+    if (validData.length === 0) {
+      return [];
     }
-  }
 
-  return paths;
-};
+    if (validData.length === 1 && validData[0].percent === 100) {
+      const item = validData[0];
+      
+      const fullCirclePath = `M 50 50 L 100 50 A 50 50 0 1 1 50 0 A 50 50 0 1 1 100 50 Z`;
+      
+      paths.push({
+        path: fullCirclePath,
+        color: item.color,
+        name: item.name,
+        value: item.value,
+        percentage: item.percent,
+        description: item.description
+      });
+      
+      return paths;
+    }
+
+    const startAngle = -120;
+    const gapSize = 1;
+    const cornerRadius = 2;
+    
+    const totalPercentage = validData.reduce((sum, item) => sum + item.percent, 0);
+    const adjustedData = validData.map(item => ({
+      ...item,
+      adjustedPercent: item.percent - (item.percent / totalPercentage) * gapSize * validData.length
+    }));
+
+    for (let i = 0; i < adjustedData.length; i++) {
+      const item = adjustedData[i];
+      
+      const startAngleDeg = startAngle + cumulativePercentage * 3.6;
+      const endAngleDeg = startAngleDeg + item.adjustedPercent * 3.6;
+      
+      const startAngleRad = (startAngleDeg * Math.PI) / 180;
+      const endAngleRad = (endAngleDeg * Math.PI) / 180;
+      
+      const innerRadius = 37;
+      const outerRadius = 50;
+      
+      const startXInner = 50 + innerRadius * Math.cos(startAngleRad);
+      const startYInner = 50 + innerRadius * Math.sin(startAngleRad);
+      const startXOuter = 50 + outerRadius * Math.cos(startAngleRad);
+      const startYOuter = 50 + outerRadius * Math.sin(startAngleRad);
+      
+      const endXInner = 50 + innerRadius * Math.cos(endAngleRad);
+      const endYInner = 50 + innerRadius * Math.sin(endAngleRad);
+      const endXOuter = 50 + outerRadius * Math.cos(endAngleRad);
+      const endYOuter = 50 + outerRadius * Math.sin(endAngleRad);
+      
+      const largeArcFlag = item.adjustedPercent > 50 ? 1 : 0;
+
+      const path = `
+        M ${startXInner} ${startYInner}
+        L ${startXOuter} ${startYOuter}
+        A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endXOuter} ${endYOuter}
+        L ${endXInner} ${endYInner}
+        A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${startXInner} ${startYInner}
+        Z
+      `;
+
+      const middleAngleDeg = (startAngleDeg + endAngleDeg) / 2;
+      const middleAngleRad = (middleAngleDeg * Math.PI) / 180;
+      
+      const textRadius = outerRadius + 12;
+      const textX = 50 + textRadius * Math.cos(middleAngleRad);
+      const textY = 50 + textRadius * Math.sin(middleAngleRad);
+
+      paths.push({
+        path: path,
+        color: item.color,
+        name: item.name,
+        value: item.value,
+        percentage: item.percent,
+        description: item.description,
+        startAngle: startAngleDeg,
+        endAngle: endAngleDeg,
+        textX: textX,
+        textY: textY,
+        textAngle: middleAngleDeg
+      });
+      
+      cumulativePercentage += item.adjustedPercent;
+      
+      if (i < adjustedData.length - 1) {
+        cumulativePercentage += gapSize;
+      }
+    }
+
+    return paths;
+  };
 
   const paths = createPaths();
   const hasData = data.expectedIncome > 0 || data.realIncome > 0 || data.debt > 0;
@@ -193,6 +205,26 @@ const createPaths = () => {
     <ChartContainer $isMainChart={isMainChart}>
       <ChartHeader>
         <ChartTitle>{title}</ChartTitle>
+        {isMainChart && (
+          <YearNavigation>
+            <YearArrow 
+              onClick={() => handleYearChange('prev')}
+              aria-label="Предыдущий год"
+            >
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 1L1 7L7 13" stroke="#50555C" stroke-width="1.50532" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </YearArrow>
+            <YearArrow 
+              onClick={() => handleYearChange('next')}
+              aria-label="Следующий год"
+            >
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 13L7 7L1 1" stroke="#50555C" stroke-width="1.50532" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </YearArrow>
+          </YearNavigation>
+        )}
       </ChartHeader>
       
       <ChartContent $isMainChart={isMainChart}>
@@ -298,20 +330,34 @@ const createPaths = () => {
   );
 };
 
-const ChartContent = styled.div<{ $isMainChart?: boolean }>`
+const YearNavigation = styled.div`
   display: flex;
-  ${props => props.$isMainChart 
-    ? `
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-      height: 100%;
-    ` 
-    : `
-      align-items: center;
-      gap: 24px;
-    `
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+`;
+
+const YearArrow = styled.button`
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+  
+  &:hover {
+    background: #e9ecef;
   }
+
+  &:active {
+    background: #dee2e6;
+  }
+`;
+
+const YearDisplay = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #1F2937;
+  min-width: 40px;
+  text-align: center;
 `;
 
 const scaleIn = keyframes`
@@ -359,6 +405,22 @@ const ChartTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
   color: #1F2937;
+`;
+
+const ChartContent = styled.div<{ $isMainChart?: boolean }>`
+  display: flex;
+  ${props => props.$isMainChart 
+    ? `
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      height: 100%;
+    ` 
+    : `
+      align-items: center;
+      gap: 24px;
+    `
+  }
 `;
 
 const PieChartWrapper = styled.div<{ $isMainChart?: boolean }>`
