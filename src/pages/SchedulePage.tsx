@@ -87,6 +87,12 @@ const SchedulePage = () => {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
     }, []);
 
+    useEffect(() => {
+        if (!shouldShowScheduleTab && activeTab === 'schedule') {
+            setActiveTab('table');
+        }
+    }, [shouldShowScheduleTab, activeTab]);
+
     const handleTabChange = useCallback((tab: TabType) => {
         setActiveTab(tab);
         saveActiveTabToStorage(tab);
