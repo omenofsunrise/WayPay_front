@@ -18,7 +18,7 @@ interface InputModalProps {
   width?: string;
 }
 
-const InputModal: React.FC<InputModalProps> = ({
+const CreatePoolModal: React.FC<InputModalProps> = ({
   isOpen,
   onClose,
   title,
@@ -92,21 +92,7 @@ const InputModal: React.FC<InputModalProps> = ({
             placeholder={placeholder}
             autoFocus
           />
-        </InputWrapper>
-        
-        {showPieField && (
-          <InputWrapper>
-            <Label>Доля пула (%)</Label>
-            <CustomInput
-              value={pieInputValue}
-              onChange={(e) => handlePieChange(e.target.value)}
-              placeholder="0"
-              type="number"
-              min="0"
-              max="100"
-            />
-          </InputWrapper>
-        )}
+        </InputWrapper>        
       </InputContainer>
     </BaseModal>
   );
@@ -129,4 +115,4 @@ const Label = styled.label`
   text-align: left;
 `;
 
-export default InputModal;
+export default CreatePoolModal;

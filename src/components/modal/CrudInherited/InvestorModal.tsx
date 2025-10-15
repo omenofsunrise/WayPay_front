@@ -365,7 +365,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if ((mode !== 'create' && mode !== 'create-pool') && ['investorPie', 'investmentAmount', 'balance'].includes(name)) {
+    if ((mode !== 'create' && mode !== 'create-pool') && ['investmentAmount', 'balance'].includes(name)) {
       return;
     }
     

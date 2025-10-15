@@ -32,7 +32,6 @@ import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import Pagination from '../components/ui/fields/CustomPagination';
 import Tabs from '../components/ui/fields/Tabs';
 import useInvestorPool from '../api/hooks/useInvestorPool';
-import InputModal from '../components/modal/InputModal';
 import EditButton from '../components/ui/Buttons/EditButton';
 import AddButton from '../components/ui/Buttons/AddButton';
 import DeleteButton from '../components/ui/Buttons/DeleteButton';
@@ -41,6 +40,7 @@ import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
 import CustomInput from '../components/ui/fields/CustomInput';
+import CreatePoolModal from '../components/modal/CreatePoolModal';
 
 const InvestorsPoolPage = () => {
     const { 
@@ -267,7 +267,7 @@ const InvestorsPoolPage = () => {
         investor.fullName ?? '-',
         investor.phoneNumber ?? '-',
         investor.investmentAmount ? formatMoney(investor.investmentAmount.toString()) : '-',
-        investor.investorPie !== null && investor.investorPie !== undefined ? `${investor.investorPie}%` : '-',
+        investor.pieInPool !== null && investor.pieInPool !== undefined ? `${investor.pieInPool}%` : '-',
         investor.currentIncome ? formatMoney(investor.currentIncome.toString()) : '-',
         <EditButton onClick={() => handleEditInvestor(investor)} />,
         <DeleteButton onClick={() => handleDeleteInvestor(investor.id)} />,
@@ -1083,7 +1083,7 @@ const InvestorsPoolPage = () => {
                     } : undefined}
                 />
 
-                <InputModal
+                <CreatePoolModal
                     isOpen={isCreatePoolModalOpen}
                     onClose={() => setIsCreatePoolModalOpen(false)}
                     title="Создать новый пул"
@@ -1096,7 +1096,7 @@ const InvestorsPoolPage = () => {
                     showPieField={true}
                 />
 
-                <InputModal
+                <CreatePoolModal
                     isOpen={isEditPoolModalOpen}
                     onClose={() => setIsEditPoolModalOpen(false)}
                     title="Редактировать пул"

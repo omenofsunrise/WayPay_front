@@ -36,7 +36,6 @@ interface IncomeModalProps {
     investors: Investor[];
 }
 
-
 const IncomeModal: React.FC<IncomeModalProps> = ({
     show,
     onClose,
@@ -127,6 +126,13 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
             return;
         }
 
+        // Проверка баланса
+        const amountNumber = parseInt(newIncome.amount, 10);
+        if (currentInvestor && amountNumber > currentInvestor.balance) {
+            alert(`Нельзя вывести больше доступного баланса. Доступно: ${new Intl.NumberFormat('ru-RU').format(currentInvestor.balance)} руб.`);
+            return;
+        }
+
         const isCompanyInvestor = currentInvestor?.isCompany;
         if (isCompanyInvestor) {
             setNewIncome(prev => ({...prev, companyShare: 100}));
@@ -154,6 +160,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     
     const isCompanyInvestor = currentInvestor?.isCompany;
 
+    // Проверка превышения баланса
+    const amountNumber = parseInt(newIncome.amount, 10) || 0;
+    const isAmountExceedingBalance = currentInvestor && amountNumber > currentInvestor.balance;
+
     if (!show) return null;
 
     return (
@@ -163,17 +173,39 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                 onClose={onClose}
                 onCancel={onClose}
                 onSave={handleSave}
-                isSaveDisabled={!newIncome.amount || !newIncome.investorId}
+                isSaveDisabled={!newIncome.amount || !newIncome.investorId || isAmountExceedingBalance}
             >
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
-                    <CustomInput
-                        type="text"
-                        value={displayAmount}
-                        onChange={handleAmountChange}
-                        placeholder="Введите сумму"
-                        inputType="text"
-                        required
-                    />
+                    <div>
+                        <CustomInput
+                            type="text"
+                            value={displayAmount}
+                            onChange={handleAmountChange}
+                            placeholder="Введите сумму"
+                            inputType="text"
+                            required
+                            hasError={isAmountExceedingBalance}
+                        />
+                        
+                        {currentInvestor && (
+                            <BalanceInfo>
+                                <BalanceLabel>Доступно для вывода:</BalanceLabel>
+                                <BalanceAmount>
+                                    {new Intl.NumberFormat('ru-RU').format(currentInvestor.balance)} руб.
+                                </BalanceAmount>
+                                {isAmountExceedingBalance && (
+                                    <BalanceError>
+                                        Превышена касса на {new Intl.NumberFormat('ru-RU').format(amountNumber - currentInvestor.balance)} руб.
+                                    </BalanceError>
+                                )}
+                                {!isAmountExceedingBalance && amountNumber > 0 && (
+                                    <BalanceSuccess>
+                                        Можно вывести ещё {new Intl.NumberFormat('ru-RU').format(currentInvestor.balance - amountNumber)} руб.
+                                    </BalanceSuccess>
+                                )}
+                            </BalanceInfo>
+                        )}
+                    </div>
                     
                     <div style={{ margin: "0 10px", display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <EntitySelectContainer
@@ -323,6 +355,38 @@ const ColorSquare = styled.div<{ color: 'company' | 'investor' }>`
     border-radius: 2px;
     background-color: ${props => 
         props.color === 'company' ? '#007D88' : '#25CBA1'};
+`;
+
+const BalanceInfo = styled.div`
+    margin: 5px 0 0 0;
+    padding: 0px;
+`;
+
+const BalanceLabel = styled.div`
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+`;
+
+const BalanceAmount = styled.div`
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+`;
+
+const BalanceError = styled.div`
+    font-size: 12px;
+    color: #dc3545;
+    font-weight: 500;
+    margin-top: 4px;
+`;
+
+const BalanceSuccess = styled.div`
+    font-size: 12px;
+    color: #28a745;
+    font-weight: 500;
+    margin-top: 4px;
 `;
 
 export default IncomeModal;
