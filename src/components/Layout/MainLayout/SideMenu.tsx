@@ -656,7 +656,7 @@ const SideMenu = () => {
             </MenuItem>
           )}
           
-          {!collapsed && expandedItem === 'finance' && hasRole('директор') || hasRole('суперадмин') && (
+          {!collapsed && expandedItem === 'finance' && (hasRole('директор') || hasRole('суперадмин')) && (
             <SubMenu>
               <SubMenuLine />
               <SubMenuItem 
