@@ -26,7 +26,8 @@ const emptyInvestor: Omit<Investor, 'id'> = {
   balance: 0,
   isCompany: false,
   isBlocked: false,
-  activeUntil: new Date().toISOString().split('T')[0]
+  activeUntil: new Date().toISOString().split('T')[0],
+  currentIncome: 0
 };
 
 const InvestorModal: React.FC<InvestorModalProps> = ({
@@ -57,10 +58,10 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       balance: initialData?.balance || 0,
       isCompany: initialData?.isCompany || false,
       isBlocked: initialData?.isBlocked || false,
-      activeUntil: initialData?.activeUntil || new Date().toISOString().split('T')[0]
+      activeUntil: initialData?.activeUntil || new Date().toISOString().split('T')[0],
+      currentIncome: 0
     }
   );
-  const [displaySum, setDisplaySum] = useState<string>(initialData.investmentAmount.toString());
   const [validationErrors, setValidationErrors] = useState({
     nickname: false,
     fullName: false,
@@ -162,10 +163,10 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           balance: initialData?.balance || 0,
           isCompany: initialData?.isCompany || false,
           isBlocked: initialData?.isBlocked || false,
-          activeUntil: initialActiveUntil
+          activeUntil: initialActiveUntil,
+          currentIncome: 0
         }
       );
-      setDisplaySum(initialData.investmentAmount.toString());
       setDisplayActiveUntil(initialActiveUntil);
       setValidationErrors({
         nickname: false,
@@ -282,7 +283,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
         formData.fullName !== initialData.fullName ||
         formData.phoneNumber !== initialData.phoneNumber ||
         formData.isCompany !== initialData.isCompany ||
-        formData.activeUntil !== initialActiveUntil || // Добавлено сравнение даты
+        formData.activeUntil !== initialActiveUntil ||
         (mode === 'edit' && formData.nickname !== initialData.nickname)
       );
       return !isChanged;
@@ -312,14 +313,11 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     try {
       const submitData = {
         ...formData,
-        // For pool modes, ensure these fields are not included
         ...(mode === 'create-pool' || mode === 'edit-pool' ? {
-          investorPie: 0,
           balance: 0,
           nickname: ''
         } : {}),
         ...(mode === 'edit' ? {
-          investorPie: initialData.investorPie,
           investmentAmount: initialData.investmentAmount,
           balance: initialData.balance
         } : {}),
@@ -348,7 +346,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     
     if (name === 'investmentAmount') {
       const numericValue = parseMoney(value);
-      setDisplaySum(formatMoney(numericValue.toString())); 
       setFormData(prev => ({
         ...prev,
         [name]: numericValue
@@ -458,7 +455,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
               <CustomCalendar
                 value={displayActiveUntil}
                 onChange={handleDateChange}
-                disabled={mode === 'view'}
               />
             </InputContainer>
           </InputRow>
@@ -478,27 +474,23 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputContainer>
           </InputRow>
           
-          {(mode !== 'create-pool' && mode !== 'edit-pool') && (
-            <>
-              <ModalInfoTitle>Финансовая информация</ModalInfoTitle>
-            
-              <InputRow>
-                <InputLabel>Доля инвестора (%):</InputLabel>
-                <InputContainer >
-                  <CustomInput
-                    name="investorPie"
-                    inputType="number"
-                    placeholder="0-100"
-                    value={formData.investorPie.toString()}
-                    onChange={handleNumberChange}
-                    disabled={mode !== 'create'}
-                    hasError={touchedFields.investorPie && validationErrors.investorPie}
-                    errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
-                  />
-                </InputContainer>
-              </InputRow>
-            </>
-          )}
+          <ModalInfoTitle>Финансовая информация</ModalInfoTitle>
+        
+          <InputRow>
+            <InputLabel>Доля инвестора (%):</InputLabel>
+            <InputContainer >
+              <CustomInput
+                name="investorPie"
+                inputType="percents"
+                placeholder="0-100"
+                value={formData.investorPie.toString()}
+                onChange={handleNumberChange}
+                disabled={mode === 'view'}
+                hasError={touchedFields.investorPie && validationErrors.investorPie}
+                errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
+              />
+            </InputContainer>
+          </InputRow>
 
           {(mode === 'create' || mode === 'create-pool') && (
             <InputRow>
@@ -516,7 +508,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputRow>
           )}
 
-          {(mode === 'view' && mode !== 'edit-pool') && (
+          {(mode === 'view') && (
             <InputRow>
               <InputLabel>Касса:</InputLabel>
               <InputContainer>

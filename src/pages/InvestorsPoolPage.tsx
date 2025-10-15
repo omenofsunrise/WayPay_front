@@ -268,7 +268,6 @@ const InvestorsPoolPage = () => {
         investor.phoneNumber ?? '-',
         investor.investmentAmount ? formatMoney(investor.investmentAmount.toString()) : '-',
         investor.investorPie !== null && investor.investorPie !== undefined ? `${investor.investorPie}%` : '-',
-        investor.income ? formatMoney(investor.income.toString()) : '-',
         investor.currentIncome ? formatMoney(investor.currentIncome.toString()) : '-',
         <EditButton onClick={() => handleEditInvestor(investor)} />,
         <DeleteButton onClick={() => handleDeleteInvestor(investor.id)} />,
@@ -458,12 +457,6 @@ const InvestorsPoolPage = () => {
                             activeCreditsSvg,
                             report.activeCreditsAmount.toString(),
                             'Незакрытые договоры'
-                        )}
-                        
-                        ${createCard(
-                            shareSvg,
-                            (pool?.pie || 0).toString() + "%",
-                            'Доля пула'
                         )}
                         
                         ${createCard(
@@ -780,14 +773,6 @@ const InvestorsPoolPage = () => {
 
             <ReportCard>
                 <IconContainer>
-                    <Icon src={shareSvg} alt="Total income" />
-                </IconContainer>
-                <ReportValue>{pools.find(pool => pool.id === Number(selectedPoolId))?.pie.toString() || '0'}%</ReportValue>
-                <ReportLabel>Доля пула</ReportLabel>
-            </ReportCard>
-
-            <ReportCard>
-                <IconContainer>
                     <Icon src={balanceSvg} alt="Balance" />
                 </IconContainer>
                 <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
@@ -806,7 +791,7 @@ const InvestorsPoolPage = () => {
 
     const renderExpectedIncomeCards = () => (
         <>
-            <ReportCard>
+            {/* <ReportCard>
                 <IconContainer>
                     <Icon src={investorIncomeScg} alt="Investor income" />
                 </IconContainer>
@@ -820,7 +805,7 @@ const InvestorsPoolPage = () => {
                 </IconContainer>
                 <ReportValue>{formatMoney(report.selfIncome.toString())}</ReportValue>
                 <ReportLabel>Собственный доход</ReportLabel>
-            </ReportCard>                            
+            </ReportCard>                             */}
 
             <ReportCard>
                 <IconContainer>
@@ -830,13 +815,13 @@ const InvestorsPoolPage = () => {
                 <ReportLabel>Общий доход</ReportLabel>
             </ReportCard>
 
-            <ReportCard>
+            {/* <ReportCard>
                 <IconContainer>
                     <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
                 </IconContainer>
                 <ReportValue>{formatMoney(report.allSelfIncome?.toString() || '0')}</ReportValue>
                 <ReportLabel>Доход от инвесторов</ReportLabel>
-            </ReportCard>
+            </ReportCard> */}
         </>
     );
 
@@ -1032,7 +1017,6 @@ const InvestorsPoolPage = () => {
                             { name: "Телефон", align: "left" },
                             { name: "Инвестиция", align: "right" },
                             { name: "Доля", align: "right" },
-                            { name: "Ожидаемый доход", align: "right" },
                             { name: "Текущий доход", align: "right" },
                             { name: "", align: "center" },
                             { name: "", align: "center" },
@@ -1269,6 +1253,7 @@ const ReportCard = styled.div`
     justify-content: left;
     position: relative;
     padding-bottom: 20px;
+    max-width: 600px;
 `;
 
 const IconContainer = styled.div`

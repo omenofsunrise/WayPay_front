@@ -82,7 +82,7 @@ const SchedulePage = () => {
         getList,
         markAsNotified
     } = useSchedule();
-
+    const shouldShowScheduleTab = scheduleAnalytics.length > 0;
     const saveActiveTabToStorage = useCallback((tab: TabType) => {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
     }, []);
@@ -429,7 +429,7 @@ const SchedulePage = () => {
     };
 
     const tabs = [
-        {
+        ...(shouldShowScheduleTab ? [{
             id: 'schedule',
             label: 'График',
             content: (
@@ -452,7 +452,7 @@ const SchedulePage = () => {
                     </RightContainer>
                 </ScheduleContainer>
             )
-        },
+        }] : []),
         {
             id: 'table',
             label: 'Таблица',

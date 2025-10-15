@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import React from 'react';
 
-type InputType = 'number' | 'text' | 'fullname' | 'doc' | 'date' | 'rubles';
+type InputType = 'number' | 'text' | 'fullname' | 'doc' | 'date' | 'rubles' | 'percents';
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string;
@@ -65,106 +65,154 @@ const CustomInput: React.FC<CustomInputProps> = ({
           }
           break;
 
-          case 'fullname':
-            newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\-\s]/g, '');
-            newValue = newValue.replace(/\s{2,}/g, ' ');
+        case 'percents':
+          // Удаляем все нецифровые символы, кроме точки для десятичных значений
+          newValue = newValue.replace(/[^\d.]/g, '');
+          
+          // Убираем лишние точки (оставляем только первую)
+          const parts = newValue.split('.');
+          if (parts.length > 2) {
+            newValue = parts[0] + '.' + parts.slice(1).join('');
+          }
+          
+          // Ограничиваем до двух знаков после запятой
+          if (parts.length === 2 && parts[1].length > 2) {
+            newValue = parts[0] + '.' + parts[1].slice(0, 2);
+          }
+          
+          // Проверяем, что значение в диапазоне от 0 до 100
+          const numValue = parseFloat(newValue);
+          if (!isNaN(numValue)) {
+            if (numValue > 100) {
+              newValue = '100';
+            } else if (numValue < 0) {
+              newValue = '0';
+            }
+          }
+          
+          // Добавляем символ процента в конец
+          if (newValue && newValue !== '') {
+            newValue += ' %';
             
-            newValue = newValue.replace(/- /g, '-');
-            newValue = newValue.replace(/ -/g, ' ');
+            // Сохраняем позицию курсора перед добавлением символа процента
+            const currentCursorPos = e.target.selectionStart || 0;
+            const valueWithoutPercent = newValue.replace(' %', '');
             
-            let words = newValue.split(' ').filter(word => word.length > 0);
-            words = words.slice(0, 3);
+            e.target.value = newValue;
+            onChange(e);
             
-            newValue = words
-              .map(word => {
-                if (word.startsWith('-')) {
-                  word = word.substring(1);
-                }
-                
-                const hyphenCount = (word.match(/-/g) || []).length;
-                if (hyphenCount > 1) {
-                  const parts = word.split('-');
-                  word = parts[0] + '-' + parts.slice(1).join('');
-                }
-                
-                if (word.includes('-')) {
-                  return word.split('-')
-                    .map((part, index) => {
-                      if (part.length === 0) return '';
-                      return index > 0 
-                        ? part[0].toUpperCase() + part.slice(1).toLowerCase() 
-                        : part[0].toUpperCase() + part.slice(1).toLowerCase();
-                    })
-                    .join('-');
-                }
-                return word.length > 0 
-                  ? word[0].toUpperCase() + word.slice(1).toLowerCase() 
-                  : '';
-              })
-              .join(' ');
+            // Восстанавливаем позицию курсора (если он не в конце)
+            setTimeout(() => {
+              if (currentCursorPos < valueWithoutPercent.length) {
+                e.target.setSelectionRange(currentCursorPos, currentCursorPos);
+              }
+            }, 0);
+          } else {
+            e.target.value = newValue;
+            onChange(e);
+          }
+          break;
+
+        case 'fullname':
+          newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\-\s]/g, '');
+          newValue = newValue.replace(/\s{2,}/g, ' ');
+          
+          newValue = newValue.replace(/- /g, '-');
+          newValue = newValue.replace(/ -/g, ' ');
+          
+          let words = newValue.split(' ').filter(word => word.length > 0);
+          words = words.slice(0, 3);
+          
+          newValue = words
+            .map(word => {
+              if (word.startsWith('-')) {
+                word = word.substring(1);
+              }
               
-            if (newValue.length > 0 && newValue[newValue.length - 1] !== ' ' && 
-                e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
-              newValue += ' ';
-            }
+              const hyphenCount = (word.match(/-/g) || []).length;
+              if (hyphenCount > 1) {
+                const parts = word.split('-');
+                word = parts[0] + '-' + parts.slice(1).join('');
+              }
+              
+              if (word.includes('-')) {
+                return word.split('-')
+                  .map((part, index) => {
+                    if (part.length === 0) return '';
+                    return index > 0 
+                      ? part[0].toUpperCase() + part.slice(1).toLowerCase() 
+                      : part[0].toUpperCase() + part.slice(1).toLowerCase();
+                  })
+                  .join('-');
+              }
+              return word.length > 0 
+                ? word[0].toUpperCase() + word.slice(1).toLowerCase() 
+                : '';
+            })
+            .join(' ');
             
-            if (newValue.length > 100) {
-              newValue = newValue.slice(0, 100);
-            }
-            
-            e.target.value = newValue;
-            onChange(e);
-            break;
+          if (newValue.length > 0 && newValue[newValue.length - 1] !== ' ' && 
+              e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
+            newValue += ' ';
+          }
+          
+          if (newValue.length > 100) {
+            newValue = newValue.slice(0, 100);
+          }
+          
+          e.target.value = newValue;
+          onChange(e);
+          break;
 
-          case 'doc':
-            newValue = newValue.replace(/\D/g, '');
-            if (newValue.length > 4) {
-              newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
-            }
-            if (newValue.length > 11) {
-              newValue = newValue.slice(0, 11);
-            }
-            e.target.value = newValue;
-            onChange(e);
-            break;
+        case 'doc':
+          newValue = newValue.replace(/\D/g, '');
+          if (newValue.length > 4) {
+            newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
+          }
+          if (newValue.length > 11) {
+            newValue = newValue.slice(0, 11);
+          }
+          e.target.value = newValue;
+          onChange(e);
+          break;
 
-          case 'date':
-            newValue = newValue.replace(/\D/g, '');
-            
-            if (newValue.length > 4) {
-              newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
-            } else if (newValue.length > 2) {
-              newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
-            }
-            
-            if (newValue.length > 10) {
-              newValue = newValue.slice(0, 10);
-            }
-            
-            const isDeleting = (value as string)?.length > newValue.length;
-            if (isDeleting && [3, 6].includes(newValue.length)) {
-              newValue = newValue.slice(0, newValue.length - 1);
-            }
-            
-            e.target.value = newValue;
-            onChange(e);
-            break;
+        case 'date':
+          newValue = newValue.replace(/\D/g, '');
+          
+          if (newValue.length > 4) {
+            newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
+          } else if (newValue.length > 2) {
+            newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
+          }
+          
+          if (newValue.length > 10) {
+            newValue = newValue.slice(0, 10);
+          }
+          
+          const isDeleting = (value as string)?.length > newValue.length;
+          if (isDeleting && [3, 6].includes(newValue.length)) {
+            newValue = newValue.slice(0, newValue.length - 1);
+          }
+          
+          e.target.value = newValue;
+          onChange(e);
+          break;
 
-          default:
-            onChange(e);
-            break;
+        default:
+          onChange(e);
+          break;
     }
   };
 
   const countDigitsBeforePosition = (str: string, position: number): number => {
-  let count = 0;
-  for (let i = 0; i < Math.min(position, str.length); i++) {
-    if (/\d/.test(str[i])) {
-      count++;
+    let count = 0;
+    for (let i = 0; i < Math.min(position, str.length); i++) {
+      if (/\d/.test(str[i])) {
+        count++;
+      }
     }
-  }
-  return count;
-};
+    return count;
+  };
 
   const findCursorPositionInFormattedValue = (formattedValue: string, digitsBeforeCursor: number): number => {
     let digitsPassed = 0;
@@ -191,7 +239,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
           props.onBlur?.(e);
         }}
         onChange={handleInputChange}
-        inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' || inputType === 'rubles' ? 'numeric' : 'text'}
+        inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' || inputType === 'rubles' || inputType === 'percents' ? 'numeric' : 'text'}
         maxLength={inputType === 'doc' ? 11 : inputType === 'date' ? 10 : undefined}
         hasError={hasError}
       />
