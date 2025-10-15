@@ -1,9 +1,8 @@
-import React from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { BrowserRouter, useNavigate } from 'react-router-dom';
 import logoImage from '../assets/logos/logo.svg';
 
-export const DesktopOnlyContent = () => {
+const DesktopOnlyContentInner = () => {
     const navigate = useNavigate();
 
     const handleGoHome = () => {
@@ -12,16 +11,23 @@ export const DesktopOnlyContent = () => {
 
     return (
         <DesktopOnlyWrapper>
-            <Logo src={logoImage} alt="Логотип" />
-            <Title>Доступ только с компьютера</Title>
-            <Description>
-                К сожалению, наш сайт недоступен для использования с мобильных устройств. 
-                Пожалуйста, откройте его с компьютера или ноутбука для полноценной работы.
-            </Description>
-            <HomeButton onClick={handleGoHome}>
-                Вернуться на главную
-            </HomeButton>
+            <ContentContainer>
+                <Logo src={logoImage} alt="Логотип" />
+                <Title>Доступ только с компьютера</Title>
+                <Description>
+                    К сожалению, наш сайт недоступен для использования с мобильных устройств. 
+                    Пожалуйста, откройте его с компьютера, ноутбука или планшета для полноценной работы.
+                </Description>
+            </ContentContainer>
         </DesktopOnlyWrapper>
+    );
+};
+
+export const DesktopOnlyContent = () => {
+    return (
+        <BrowserRouter>
+            <DesktopOnlyContentInner />
+        </BrowserRouter>
     );
 };
 
@@ -30,15 +36,32 @@ const DesktopOnlyWrapper = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    min-height: 100vh;
     text-align: center;
     background-color: rgba(249, 250, 250, 1);
-    width: 100%;
-    padding: 20px;
-    
+    width: auto;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    min-width: 0;
+
     @media (max-width: 768px) {
-        padding: 15px;
+        justify-content: flex-start;
+        padding-top: 40px;
     }
+    
+    @media (max-width: 480px) {
+        padding-top: 30px;
+    }
+`;
+
+const ContentContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 200px;
+    width: 100%;
+    margin: 0;
 `;
 
 const Logo = styled.img`
@@ -47,9 +70,21 @@ const Logo = styled.img`
     margin-bottom: 30px;
     
     @media (max-width: 768px) {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 25px;
+    }
+    
+    @media (max-width: 480px) {
         width: 80px;
         height: 80px;
         margin-bottom: 20px;
+    }
+    
+    @media (max-width: 360px) {
+        width: 70px;
+        height: 70px;
+        margin-bottom: 15px;
     }
 `;
 
@@ -58,14 +93,22 @@ const Title = styled.h1`
     margin-bottom: 20px;
     color: #333;
     font-weight: 600;
+    line-height: 1.3;
     
     @media (max-width: 768px) {
-        font-size: 22px;
-        margin-bottom: 15px;
+        font-size: 24px;
+        margin-bottom: 18px;
     }
     
     @media (max-width: 480px) {
+        font-size: 22px;
+        margin-bottom: 16px;
+        padding: 0 10px;
+    }
+    
+    @media (max-width: 360px) {
         font-size: 20px;
+        margin-bottom: 14px;
     }
 `;
 
@@ -78,13 +121,21 @@ const Description = styled.p`
     
     @media (max-width: 768px) {
         font-size: 16px;
-        margin-bottom: 30px;
-        padding: 0 10px;
+        margin-bottom: 35px;
+        padding: 0 15px;
+        line-height: 1.5;
     }
     
     @media (max-width: 480px) {
+        font-size: 15px;
+        margin-bottom: 30px;
+        padding: 0 10px;
+        line-height: 1.4;
+    }
+    
+    @media (max-width: 360px) {
         font-size: 14px;
-        line-height: 1.5;
+        margin-bottom: 25px;
     }
 `;
 
@@ -92,12 +143,13 @@ const HomeButton = styled.button`
     background: linear-gradient(90deg, rgba(0, 125, 136, 1) 0%, rgba(37, 203, 161, 1) 100%);
     color: white;
     border: none;
-    padding: 16px 32px;
+    padding: 0;
     border-radius: 8px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
+    min-width: 0px;
     
     &:hover {
         transform: translateY(-2px);
@@ -108,6 +160,11 @@ const HomeButton = styled.button`
         transform: translateY(0);
     }
     
+    &:focus {
+        outline: 2px solid rgba(0, 125, 136, 0.5);
+        outline-offset: 2px;
+    }
+    
     @media (max-width: 768px) {
         padding: 14px 28px;
         font-size: 15px;
@@ -116,7 +173,14 @@ const HomeButton = styled.button`
     @media (max-width: 480px) {
         padding: 12px 24px;
         font-size: 14px;
-        width: 100%;
         max-width: 280px;
+    }
+    
+    @media (max-width: 360px) {
+        font-size: 13px;
+    }
+    
+    @media (min-height: 800px) and (max-width: 768px) {
+        margin-top: 20px;
     }
 `;
