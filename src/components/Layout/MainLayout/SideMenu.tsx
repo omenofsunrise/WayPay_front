@@ -85,7 +85,7 @@ const SideMenu = () => {
     'products': () => true, // Базовый доступ к товарам
     'black-catalog': () => true, // Базовый доступ к черному каталогу
     'registration-requests': () => isSuperAdminCompany(),
-    'budget': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'budget': () => hasRole('директор') || hasRole('суперадмин'),
     'payments-income': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'profile': () => true, // Профиль доступен всем
     'admin': () => hasRole('суперадмин'),
@@ -656,7 +656,7 @@ const SideMenu = () => {
             </MenuItem>
           )}
           
-          {!collapsed && expandedItem === 'finance' && (
+          {!collapsed && expandedItem === 'finance' && hasRole('директор') || hasRole('суперадмин') && (
             <SubMenu>
               <SubMenuLine />
               <SubMenuItem 
