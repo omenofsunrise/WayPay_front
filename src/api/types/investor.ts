@@ -13,6 +13,7 @@ export interface Investor {
   isCompany: boolean;
   isBlocked: boolean;
   poolId?: number;
+  isCompanyPool?: boolean;
 }
 
 export interface InvestorParams extends PaginationParams {

@@ -73,6 +73,7 @@ const InvestorsPoolPage = () => {
         updateInvestorPoolPie,
         deleteInvestorPool,
         getInvestorPoolReport,
+        reinvestInvestorPool,
         reportData,
         data: poolsData
     } = useInvestorPool();
@@ -201,20 +202,32 @@ const InvestorsPoolPage = () => {
         setIsInvestorModalOpen(true);
     };
 
+    const handleReinvest = () => {
+        if (window.confirm('Вы уверены, что хотите реинвестировать доходы ВСЕХ инвесторов?')) {
+            reinvestInvestorPool(Number(selectedPoolId));
+            reloadData();
+        }
+    };
+
     const handleEditInvestor = (investor: Investor) => {
         setCurrentInvestor(investor);
         setIsInvestorModalOpen(true);
     };
 
-    const handleDeleteInvestor = async (id: number) => {
-    if (window.confirm('Вы уверены, что хотите удалить этого инвестора?')) {
-        try {
-        await deleteInvestor(id);
-        setInvestors(investors.filter(investor => investor.id !== id));
-        } catch (error) {
-        console.error('Error deleting investor:', error);
+    const handleDeleteInvestor = async (investor: Investor) => {
+        if (investor.isCompanyPool)
+        {
+            window.alert('Нельзя удалить свою компанию как инвестора');
+            return;
         }
-    }
+        if (window.confirm('Вы уверены, что хотите удалить этого инвестора?')) {
+            try {
+            await deleteInvestor(investor.id);
+            setInvestors(investors.filter(investor => investor.id !== investor.id));
+            } catch (error) {
+            console.error('Error deleting investor:', error);
+            }
+        }
     };
 
     const handleInvestorSubmit = async (investorData: Partial<Investor>) => {
@@ -270,7 +283,7 @@ const InvestorsPoolPage = () => {
         investor.pieInPool !== null && investor.pieInPool !== undefined ? `${investor.pieInPool}%` : '-',
         investor.currentIncome ? formatMoney(investor.currentIncome.toString()) : '-',
         <EditButton onClick={() => handleEditInvestor(investor)} />,
-        <DeleteButton onClick={() => handleDeleteInvestor(investor.id)} />,
+        <DeleteButton onClick={() => handleDeleteInvestor(investor)} />,
         <DarkCyanButton onClick={() => handleAddInvestment([investor.id.toString()])}>
             Новая инвестиция
         </DarkCyanButton>,
@@ -330,16 +343,18 @@ const InvestorsPoolPage = () => {
         try {
             await deleteInvestorPool(Number(selectedPoolId));
             
-            setPools(prevPools => 
-                prevPools.filter(pool => pool.id !== Number(selectedPoolId))
-            );
+            const updatedPools = pools.filter(pool => pool.id !== Number(selectedPoolId));
+            setPools(updatedPools);
             
-            setSelectedPoolId(prevId => {
-                const remainingPools = pools.filter(pool => pool.id !== Number(prevId));
-                return remainingPools.length > 0 
-                    ? remainingPools[0].id.toString() 
-                    : '';
-            });
+            if (selectedPoolId === selectedPoolId.toString()) {
+                if (updatedPools.length > 0) {
+                    setSelectedPoolId(updatedPools[0].id.toString());
+                } else {
+                    setSelectedPoolId('');
+                    setInvestors([]);
+                    setReport(null);
+                }
+            }
         } catch (error) {
             console.error('Error deleting pool:', error);
         }
@@ -932,17 +947,23 @@ const InvestorsPoolPage = () => {
                         </>
                     )}
                 </PoolTabsContainer>
-
+                
                 <TabsContainer>
                     <Tabs<'payouts' | 'credits' | 'investors'>
                         tabs={tabs}
                         activeTab={activeTab}
                         onChange={(tabId) => setActiveTab(tabId)}
                         addButton={activeTab === 'investors' && pools.length > 0 ? (
-                        <AddButton 
-                            onClick={handleAddInvestor}
-                            tooltip="Добавить инвестора"
-                        />
+                            <div style={{display: "flex", gap: "20px"}}>
+                                <DarkCyanButton 
+                                    children='Реинвестировать'
+                                    onClick={handleReinvest}
+                                />
+                                <AddButton 
+                                    onClick={handleAddInvestor}
+                                    tooltip="Добавить инвестора"
+                                />
+                            </div>
                         ) : null}
                     />
                 </TabsContainer>
@@ -1053,15 +1074,10 @@ const InvestorsPoolPage = () => {
                     amount={payoutAmount}
                     onAmountChange={setPayoutAmount}
                     onSubmit={handlePayoutSubmit}
-                    maxAmount={
-                        currentInvestor?.isBlocked 
-                        ? report?.balance || 0 
-                        : report?.isCompany 
-                            ? (report?.investorIncome || 0) + (report?.selfIncome || 0)
-                            : report?.investorIncome || 0
-                    }
+                    maxAmount={selectedInvestorForPayout?.currentIncome || 0}
                     balance={report?.balance || 0}
                     isLoading={isPayoutsLoading}
+                    isCompany={false}
                 />
 
                 <InvestorModal
@@ -1107,21 +1123,6 @@ const InvestorsPoolPage = () => {
                     onSubmit={handleUpdatePoolName}
                     submitText="Сохранить"
                     showPieField={true}
-                />
-
-                <PayoutModal
-                    isOpen={isPayoutModalOpen}
-                    onClose={() => {
-                        setIsPayoutModalOpen(false);
-                        setPayoutAmount('');
-                        setSelectedInvestorForPayout(null);
-                    }}
-                    amount={payoutAmount}
-                    onAmountChange={setPayoutAmount}
-                    onSubmit={handlePayoutSubmit}
-                    maxAmount={selectedInvestorForPayout?.income || 0}
-                    balance={report?.balance || 0}
-                    isLoading={isPayoutsLoading}
                 />
 
                 {isInvestmentModalOpen && selectedInvestorForInvestment && (

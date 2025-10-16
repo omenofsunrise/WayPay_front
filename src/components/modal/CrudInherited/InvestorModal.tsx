@@ -284,6 +284,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
         formData.phoneNumber !== initialData.phoneNumber ||
         formData.isCompany !== initialData.isCompany ||
         formData.activeUntil !== initialActiveUntil ||
+        formData.investorPie !== initialData.investorPie ||
         (mode === 'edit' && formData.nickname !== initialData.nickname)
       );
       return !isChanged;

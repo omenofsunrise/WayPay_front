@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import CustomInput from '../ui/fields/CustomInput';
 import BaseModal from './BASE/modalCRUBase';
+import { formatMoney } from '../../utils/formatPrice';
 
 interface PayoutModalProps {
   isOpen: boolean;
@@ -10,10 +11,10 @@ interface PayoutModalProps {
   onAmountChange: (value: string) => void;
   onSubmit: () => void;
   maxAmount: number;
-  balance: number;
+  balance?: number | null;
   isLoading: boolean;
-  currentIncome: number; // Текущий доход
-  expectedIncome: number; // Ожидаемый доход
+  currentIncome?: number | null; 
+  expectedIncome?: number | null;
   isCompany: boolean;
 }
 
@@ -35,24 +36,24 @@ const PayoutModal = ({
   const [actualMaxAmount, setActualMaxAmount] = useState(0);
 
   useEffect(() => {
-    // Максимальная сумма - минимум из баланса и общего дохода
-    const maxAllowed = Math.min(balance, maxAmount);
-    setActualMaxAmount(maxAllowed);
-    
-    // Сбрасываем предупреждения при изменении суммы
+    if (balance != null)
+    {
+      const maxAllowed = Math.min(balance, maxAmount);
+      setActualMaxAmount(maxAllowed);
+    }
+    else {
+      setActualMaxAmount(maxAmount);
+    }
+
     setWarning('');
   }, [maxAmount, balance]);
 
-  // Функция для форматирования числа с пробелами тысяч
   const formatNumber = (num: string): string => {
     if (!num) return '';
-    // Удаляем все нецифровые символы кроме минуса
     const cleanNum = num.replace(/[^\d]/g, '');
-    // Форматируем с пробелами тысяч
     return cleanNum.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   };
 
-  // Функция для преобразования отформатированной строки обратно в число
   const parseFormattedNumber = (formatted: string): string => {
     return formatted.replace(/\s/g, '');
   };
@@ -60,10 +61,8 @@ const PayoutModal = ({
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Парсим отформатированное значение обратно в чистое число
     const cleanValue = parseFormattedNumber(value);
     
-    // Сохраняем чистое число в состоянии
     onAmountChange(cleanValue);
     setError('');
     setWarning('');
@@ -73,7 +72,6 @@ const PayoutModal = ({
     setError('');
     setWarning('');
 
-    // Базовые проверки
     if (!numericAmount) {
       setError('Введите сумму выплаты');
       return false;
@@ -84,22 +82,40 @@ const PayoutModal = ({
       return false;
     }
     
-    if (numericAmount > balance) {
-      setError(`Сумма не может превышать баланс ${balance.toLocaleString()} ₽`);
+    
+    if (balance != null && numericAmount > balance) {
+      setError(`Сумма не может превышать баланс ${formatMoney(balance.toString())}`);
       return false;
     }
 
-    // Проверка на превышение текущего дохода
-    if (numericAmount > currentIncome) {
-      if (numericAmount > expectedIncome) {
-        setError(`Сумма превышает ожидаемый доход ${expectedIncome.toLocaleString()} ₽`);
-        return false;
-      } else {
-        setWarning(
-          `Внимание: Выплата (${numericAmount.toLocaleString()} ₽) превышает текущий доход ` +
-          `(${currentIncome.toLocaleString()} ₽). Выплачивается часть ожидаемого дохода.`
-        );
+    if (expectedIncome != null && currentIncome != null) {
+      if (numericAmount > currentIncome) {
+        if (numericAmount > expectedIncome) {
+          setError(`Сумма превышает ожидаемый доход ${formatMoney(expectedIncome.toString())}`);
+          return false;
+        } else {
+          setWarning(
+            `Внимание: Выплата (${formatMoney(numericAmount.toString())}) превышает текущий доход ` +
+            `(${formatMoney(currentIncome.toString())}). Выплачивается часть ожидаемого дохода.`
+          );
+        }
       }
+    } else {
+      if (currentIncome != null)
+      {
+        if (numericAmount > currentIncome) {
+          setError(`Сумма превышает текущий доход ${formatMoney(currentIncome.toString())}`);
+          return false;
+        }
+      }
+    }
+
+    if (expectedIncome == null && currentIncome == null)
+    {
+        if (numericAmount > maxAmount) {
+          setError(`Сумма превышает текущий доход ${formatMoney(maxAmount.toString())}`);
+          return false;
+        }
     }
 
     return true;
@@ -116,7 +132,6 @@ const PayoutModal = ({
     onSubmit();
   };
 
-  // Получаем отформатированное значение для отображения в инпуте
   const formattedAmount = amount ? formatNumber(amount) : '';
 
   if (!isOpen) return null;
@@ -130,26 +145,29 @@ const PayoutModal = ({
       isSaveDisabled={!amount || isLoading}
       isSubmitting={isLoading}
       saveButtonText="Выплатить"
-      customActions={warning ? (
-        <WarningActionContainer>
-          <WarningMessage>{warning}</WarningMessage>
-        </WarningActionContainer>
-      ) : undefined}
     >
       <ModalContent>
         <IncomeInfo>
-          <IncomeItem>
-            <IncomeLabel>Текущий доход:</IncomeLabel>
-            <IncomeValue>{currentIncome.toLocaleString()} ₽</IncomeValue>
-          </IncomeItem>
-          <IncomeItem>
-            <IncomeLabel>Ожидаемый доход:</IncomeLabel>
-            <IncomeValue>{expectedIncome.toLocaleString()} ₽</IncomeValue>
-          </IncomeItem>
-          <IncomeItem>
-            <IncomeLabel>Баланс:</IncomeLabel>
-            <IncomeValue>{balance.toLocaleString()} ₽</IncomeValue>
-          </IncomeItem>
+          {(currentIncome != null || maxAmount != null) && (
+            <IncomeItem>
+              <IncomeLabel>Текущий доход:</IncomeLabel>
+              <IncomeValue>
+                {formatMoney((currentIncome ?? maxAmount)?.toString() || '0')}
+              </IncomeValue>
+            </IncomeItem>
+          )}
+          {expectedIncome != null && (
+            <IncomeItem>
+              <IncomeLabel>Ожидаемый доход:</IncomeLabel>
+              <IncomeValue>{formatMoney(expectedIncome.toLocaleString())}</IncomeValue>
+            </IncomeItem>
+          )}
+          {balance != null && (
+            <IncomeItem>
+              <IncomeLabel>Касса:</IncomeLabel>
+              <IncomeValue>{formatMoney(balance.toString())}</IncomeValue>
+            </IncomeItem>
+          )}
         </IncomeInfo>
 
         <InputContainer>
@@ -161,23 +179,8 @@ const PayoutModal = ({
           />
         </InputContainer>
         
-        <AmountInfo>
-          <MaxAmount>Можно вывести: {actualMaxAmount.toLocaleString()} ₽</MaxAmount>
-        </AmountInfo>
-
         {error && <ErrorMessage>{error}</ErrorMessage>}
         
-        {!error && amount && (
-          <ValidationInfo>
-            {Number(amount) <= currentIncome ? (
-              <SuccessMessage>✓ Сумма в пределах текущего дохода</SuccessMessage>
-            ) : Number(amount) <= expectedIncome ? (
-              <WarningMessageSmall>
-                ⚠ Выплата превышает текущий доход, вы берёте на себя риски просрочек
-              </WarningMessageSmall>
-            ) : null}
-          </ValidationInfo>
-        )}
       </ModalContent>
     </BaseModal>
   );
@@ -253,15 +256,6 @@ const SuccessMessage = styled.div`
   border-radius: 4px;
 `;
 
-const WarningMessage = styled.div`
-  color: #856404;
-  font-size: 14px;
-  padding: 12px;
-  background: #fff3cd;
-  border-radius: 4px;
-  margin: 10px 0;
-`;
-
 const WarningMessageSmall = styled.div`
   color: #856404;
   font-size: 16px;
@@ -272,11 +266,6 @@ const WarningMessageSmall = styled.div`
 
 const ValidationInfo = styled.div`
   margin: 10px 0;
-`;
-
-const WarningActionContainer = styled.div`
-  width: 100%;
-  margin-top: 10px;
 `;
 
 export default PayoutModal;

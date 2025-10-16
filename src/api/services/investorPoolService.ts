@@ -37,6 +37,11 @@ class InvestorPoolService {
     return response.data;
   }
 
+  async reinvestInvestorPool(id: number) {
+    await apiClient.patch(`/InvestorPool/reinvest/${id}`);
+    return;
+  }
+
   async deleteInvestorPool(id: number): Promise<void> {
     await apiClient.delete(`/InvestorPool/${id}`);
   }

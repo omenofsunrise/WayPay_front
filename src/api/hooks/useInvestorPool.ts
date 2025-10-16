@@ -105,6 +105,19 @@ const useInvestorPool = () => {
     }
   };
 
+  const reinvestInvestorPool = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await investorPoolService.reinvestInvestorPool(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const deleteInvestorPool = async (id: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -135,7 +148,8 @@ const useInvestorPool = () => {
     updateInvestorPoolPie,
     deleteInvestorPool,
     reportData,
-    getInvestorPoolReport
+    getInvestorPoolReport,
+    reinvestInvestorPool
   };
 };
 
