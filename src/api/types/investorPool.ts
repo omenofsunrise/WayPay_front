@@ -5,6 +5,7 @@ export interface InvestorPool {
   name: string;
   createdAt: Date;
   balance: number;
+  selfIncome?: number;
   activeUntil?: Date;
 }
 
