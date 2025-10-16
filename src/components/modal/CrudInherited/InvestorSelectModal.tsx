@@ -193,7 +193,7 @@ const InvestorSelectModal = ({
         pool.id.toString(),
         pool.name,
         '—', 
-        pool.pie.toString() + "%",
+        "",
         '—', 
         formatMoney(pool.balance.toString()),
         formatDate(pool.activeUntil ?? new Date())
