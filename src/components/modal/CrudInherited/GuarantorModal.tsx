@@ -4,7 +4,6 @@ import CustomInput from '../../ui/fields/CustomInput';
 import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
 import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
-import Button from '../../ui/Buttons/DarkCyanButton';
 import type { GuarantorForm } from '../../../api/types/client';
 
 export interface Guarantor {
@@ -501,21 +500,6 @@ const GuarantorModal: React.FC<GuarantorModalProps> = ({
               />
             </InputContainer>
           </InputRow>
-
-          <InputRow>
-            <InputLabel>Адрес:</InputLabel>
-            <InputContainer>
-              <CustomInput
-                name="address"
-                inputType="text"
-                placeholder="г. Грозный, ул. Примерная, д. 1, кв. 1"
-                value={formData.address}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                errorMessage={touchedFields.address ? errorMessages.address : undefined}
-              />
-            </InputContainer>
-          </InputRow>
           
           <ModalInfoTitle>Паспортные данные</ModalInfoTitle>
           
@@ -538,6 +522,21 @@ const GuarantorModal: React.FC<GuarantorModalProps> = ({
             </InputContainer>
           </InputRow>
 
+          <InputRow>
+            <InputLabel>Адрес:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="address"
+                inputType="text"
+                placeholder="г. Грозный, ул. Примерная, д. 1, кв. 1"
+                value={formData.address}
+                onChange={handleInputChange}
+                disabled={mode === 'view'}
+                errorMessage={touchedFields.address ? errorMessages.address : undefined}
+              />
+            </InputContainer>
+          </InputRow>
+          
           <ModalInfoTitle>Контактные данные</ModalInfoTitle>
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
