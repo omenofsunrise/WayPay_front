@@ -15,6 +15,7 @@ interface PayoutModalProps {
   isLoading: boolean;
   currentIncome?: number | null; 
   expectedIncome?: number | null;
+  investment?: number | null;
   isCompany: boolean;
 }
 
@@ -29,6 +30,7 @@ const PayoutModal = ({
   isLoading,
   currentIncome,
   expectedIncome,
+  investment,
   isCompany
 }: PayoutModalProps) => {
   const [error, setError] = useState('');
@@ -72,52 +74,67 @@ const PayoutModal = ({
     setError('');
     setWarning('');
 
-    if (!numericAmount) {
-      setError('Введите сумму выплаты');
-      return false;
-    }
-    
-    if (numericAmount <= 0) {
-      setError('Сумма должна быть больше нуля');
-      return false;
-    }
-    
-    
-    if (balance != null && numericAmount > balance) {
-      setError(`Сумма не может превышать баланс ${formatMoney(balance.toString())}`);
-      return false;
-    }
-
-    if (expectedIncome != null && currentIncome != null) {
-      if (numericAmount > currentIncome) {
-        if (numericAmount > expectedIncome) {
-          setError(`Сумма превышает ожидаемый доход ${formatMoney(expectedIncome.toString())}`);
-          return false;
-        } else {
-          setWarning(
-            `Внимание: Выплата (${formatMoney(numericAmount.toString())}) превышает текущий доход ` +
-            `(${formatMoney(currentIncome.toString())}). Выплачивается часть ожидаемого дохода.`
-          );
-        }
-      }
-    } else {
-      if (currentIncome != null)
-      {
-        if (numericAmount > currentIncome) {
-          setError(`Сумма превышает текущий доход ${formatMoney(currentIncome.toString())}`);
-          return false;
-        }
-      }
-    }
-
-    if (expectedIncome == null && currentIncome == null)
+    if(investment == null)
     {
-        if (numericAmount > maxAmount) {
-          setError(`Сумма превышает текущий доход ${formatMoney(maxAmount.toString())}`);
+      if (!numericAmount) {
+        setError('Введите сумму выплаты');
+        return false;
+      }
+      
+      if (numericAmount <= 0) {
+        setError('Сумма должна быть больше нуля');
+        return false;
+      }
+      
+      
+      if (balance != null && numericAmount > balance) {
+        setError(`Сумма не может превышать баланс ${formatMoney(balance.toString())}`);
+        return false;
+      }
+
+      if (expectedIncome != null && currentIncome != null) {
+        if (numericAmount > currentIncome) {
+          if (numericAmount > expectedIncome) {
+            setError(`Сумма превышает ожидаемый доход ${formatMoney(expectedIncome.toString())}`);
+            return false;
+          } else {
+            setWarning(
+              `Внимание: Выплата (${formatMoney(numericAmount.toString())}) превышает текущий доход ` +
+              `(${formatMoney(currentIncome.toString())}). Выплачивается часть ожидаемого дохода.`
+            );
+          }
+        }
+      } else {
+        if (currentIncome != null)
+        {
+          if (numericAmount > currentIncome) {
+            setError(`Сумма превышает текущий доход ${formatMoney(currentIncome.toString())}`);
+            return false;
+          }
+        }
+      }
+
+      if (expectedIncome == null && currentIncome == null)
+      {
+          if (numericAmount > maxAmount) {
+            setError(`Сумма превышает текущий доход ${formatMoney(maxAmount.toString())}`);
+            return false;
+          }
+      }
+    }
+    {
+      if (balance != null)
+      {
+        if (numericAmount > balance) {
+          setError(`Сумма превышает кассу ${formatMoney(balance.toString())}`);
           return false;
         }
+      }
+      if (numericAmount > investment) {
+        setError(`Сумма превышает инвестицию ${formatMoney(investment.toString())}`);
+        return false;
+      }
     }
-
     return true;
   };
 
@@ -166,6 +183,12 @@ const PayoutModal = ({
             <IncomeItem>
               <IncomeLabel>Касса:</IncomeLabel>
               <IncomeValue>{formatMoney(balance.toString())}</IncomeValue>
+            </IncomeItem>
+          )}
+          {investment != null && (
+            <IncomeItem>
+              <IncomeLabel>Инвестиция:</IncomeLabel>
+              <IncomeValue>{formatMoney(investment.toString())}</IncomeValue>
             </IncomeItem>
           )}
         </IncomeInfo>
