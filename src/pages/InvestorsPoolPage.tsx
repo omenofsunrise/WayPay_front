@@ -1078,7 +1078,7 @@ const InvestorsPoolPage = () => {
                     balance={report?.balance || 0}
                     isLoading={isPayoutsLoading}
                     isCompany={false}
-                    investment={selectedInvestorForPayout.investmentAmount}
+                    investment={selectedInvestorForPayout?.investmentAmount || 0}
                 />
 
                 <InvestorModal
