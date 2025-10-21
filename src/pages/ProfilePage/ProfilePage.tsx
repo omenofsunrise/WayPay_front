@@ -1,4 +1,3 @@
-import ProfileTabs from '../../components/Profile/ProfileTabs';
 import PageLayout from '../../components/ui/Layouts/PageLayout';
 import CompanyPage from './CompanyPage';
 import EmployeePage from './EmployeePage';
@@ -7,6 +6,9 @@ import SessionsPage from './SessionsPage';
 import { useEffect, useState } from 'react';
 import BackButtonComponent from '../../components/ui/Buttons/BackButton';
 import BranchPage from './BranchPage';
+import { useAuth } from '../../сontext/AuthContext';
+import type { Tab } from '../../components/ui/fields/Tabs';
+import Tabs from '../../components/ui/fields/Tabs';
 
 const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -21,6 +23,8 @@ const ProfilePage = () => {
         const saved = localStorage.getItem('viewingEmployeeId');
         return saved ? parseInt(saved) : null;
     });
+
+    const { hasRole } = useAuth();
 
     useEffect(() => {
         localStorage.setItem('profileActiveTab', activeTab);
@@ -43,6 +47,21 @@ const ProfilePage = () => {
         setViewingEmployeeId(null);
         setActiveTab("Сотрудники");
     };
+
+    const tabs: Tab[] = [
+        { id: "Мой профиль", label: "Мой профиль" },
+        { id: "Активные сессии", label: "Активные сессии" }
+    ];
+
+    if (hasRole('директор') || hasRole("суперадмин")) {
+        tabs.push(
+            { id: "Сотрудники", label: "Сотрудники" },
+            { id: "Данные компании", label: "Данные компании" },
+            { id: "Отделения", label: "Отделения" }
+        );
+    } else if (hasRole("админ")) {
+        tabs.push({ id: "Сотрудники", label: "Сотрудники" });
+    }
 
     const renderTabContent = () => {
         if (viewingEmployeeId) {
@@ -75,9 +94,11 @@ const ProfilePage = () => {
     return (
         <PageLayout>
             {!viewingEmployeeId && (
-                <ProfileTabs 
-                    activeTab={activeTab} 
-                    onTabChange={setActiveTab} 
+                <Tabs 
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                    fontSize={18}
                 />
             )}
             {renderTabContent()}

@@ -23,6 +23,11 @@ import SchedulePieChart from '../components/Dashboards/SchedulePieChart';
 import type { ScheduleAnalitycResponse } from '../api/types/analytic';
 import PaginationDots from '../components/ui/Pagination/PaginationDots';
 import useAnalytic from '../api/hooks/useAnalytic';
+import NewPaymentModal from '../components/modal/NewPaymentModal';
+import usePayment from '../api/hooks/usePayment';
+import creditService from '../api/services/creditService';
+import type { Credit } from '../api/types/credit';
+import { useAuth } from '../сontext/AuthContext';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -59,10 +64,15 @@ const SchedulePage = () => {
     }>({ key: null, direction: 'asc' });
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const [currentChartIndex, setCurrentChartIndex] = useState(0);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [selectedScheduleForPayment, setSelectedScheduleForPayment] = useState<ScheduleDetails | null>(null);
+    const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
+    const { hasPermission, forbiddenRole, hasRole } = useAuth();
 
     const pageSize = 10;
     const { getAccountDetails } = useCompany();
     const { getScheduleAnalityc } = useAnalytic();
+    const { createPayment } = usePayment();
     const [scheduleAnalytics, setScheduleAnalytics] = useState<ScheduleAnalitycResponse[]>([]);
     const chartsContainerRef = useRef<HTMLDivElement>(null);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -82,7 +92,7 @@ const SchedulePage = () => {
         getList,
         markAsNotified
     } = useSchedule();
-    const shouldShowScheduleTab = scheduleAnalytics.length > 0;
+    const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин');
     const saveActiveTabToStorage = useCallback((tab: TabType) => {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
     }, []);
@@ -146,6 +156,53 @@ const SchedulePage = () => {
         }
     };
 
+    // Функция для открытия модального окна платежа
+    const handleOpenPaymentModal = async (schedule: ScheduleDetails) => {
+        try {
+            // Получаем данные кредита по ID
+            const credit = await creditService.getCreditById(schedule.creditId);
+            setSelectedCredit(credit);
+            setSelectedScheduleForPayment(schedule);
+            setIsPaymentModalOpen(true);
+        } catch (error) {
+            console.error('Ошибка при загрузке данных кредита:', error);
+            alert('Не удалось загрузить данные кредита');
+        }
+    };
+
+    // Функция для сохранения платежа
+    const handleSavePayment = async (paymentData: {
+        paymentDate: string;
+        principalAmount: number;
+        paymentMethod: 'cash' | 'card';
+        bankCardId?: number;
+    }) => {
+        try {
+            if (!selectedScheduleForPayment) return;
+            
+            const paymentRequest = {
+                creditId: selectedScheduleForPayment.creditId,
+                paymentAmount: paymentData.principalAmount,
+                datePayment: paymentData.paymentDate,
+                type: paymentData.paymentMethod,
+                bankCardId: paymentData.bankCardId
+            };
+            
+            const result = await createPayment(paymentRequest);
+            
+            // Перезагружаем данные расписания
+            await loadSchedules();
+            setIsPaymentModalOpen(false);
+            setSelectedScheduleForPayment(null);
+            setSelectedCredit(null);
+            
+            return result.id;
+        } catch (error) {
+            console.error('Ошибка при сохранении платежа:', error);
+            throw error;
+        }
+    };
+
     const getRowStyles = (
         tableData: any[][], 
         scheduleData?: { items: ScheduleDetails[] }
@@ -188,6 +245,17 @@ const SchedulePage = () => {
 
     const handleRowClick = (rowData: any[], rowIndex: number) => {
         setSelectedRow(rowIndex === selectedRow ? null : rowIndex);
+    };
+
+    const handleRowDoubleClick = (rowData: any[]) => {
+        const schedule = scheduleData?.items.find(s => 
+            s.creditId.toString() === rowData[0] && 
+            s.clientName === rowData[1]
+        );
+        
+        if (schedule) {
+            handleOpenPaymentModal(schedule);
+        }
     };
         
     const loadSchedules = useCallback(async () => {
@@ -326,6 +394,24 @@ const SchedulePage = () => {
             console.error('Ошибка при отправке WhatsApp:', error);
         }
     };
+
+    // Добавляем действие для контекстного меню
+    const tableActions = [
+        {
+            label: 'Добавить платёж',
+            action: (rowData: any[]) => {
+                const schedule = scheduleData?.items.find(s => 
+                    s.creditId.toString() === rowData[0] && 
+                    s.clientName === rowData[1]
+                );
+                
+                if (schedule) {
+                    handleOpenPaymentModal(schedule);
+                }
+            },
+            color: '#008b8b'
+        }
+    ];
     
     const tableData = scheduleData?.items.map(schedule => [
         schedule.creditId.toString(),
@@ -407,7 +493,6 @@ const SchedulePage = () => {
             currentYear={selectedYear}
             onYearChange={(year) => {
             setSelectedYear(year);
-            // Здесь можно добавить загрузку данных для выбранного года
             loadScheduleAnalyticsForYear(year);
             }}
         />
@@ -518,9 +603,11 @@ const SchedulePage = () => {
                                 data={tableData}
                                 onSort={handleSort}
                                 onRowClick={handleRowClick}
+                                onRowDoubleClick={handleRowDoubleClick}
                                 sortConfig={sortConfig}
                                 rowStyles={rowStyles}
                                 selectedRow={selectedRow}
+                                contextMenuActions={tableActions}
                             />
                             
                             <PaginationLayout>
@@ -557,6 +644,23 @@ const SchedulePage = () => {
                 tabs={tabs}
                 activeTab={activeTab}
                 onChange={handleTabChange}
+            />
+
+            <NewPaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => {
+                    setIsPaymentModalOpen(false);
+                    setSelectedScheduleForPayment(null);
+                    setSelectedCredit(null);
+                }}
+                onSubmit={handleSavePayment}
+                creditId={selectedScheduleForPayment?.creditId || 0}
+                clientName={selectedScheduleForPayment?.clientName || ''}
+                investorName={selectedCredit?.investorNickname || ''}
+                clientPhone={selectedScheduleForPayment?.clientPhone || ''}
+                currentDebt={selectedCredit?.rest || 0}
+                currentMonthDebt={selectedScheduleForPayment?.paymentAmount || 0}
+                onPrintReceipt={() => {}}
             />
         </PageLayout>
     );

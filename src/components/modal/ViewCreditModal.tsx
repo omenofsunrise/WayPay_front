@@ -45,7 +45,67 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [noteImages, setNoteImages] = useState<string[]>([]);
   const { createPrivateChat } = useChat();
-  
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    rowIndex: number;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    rowIndex: -1
+  });
+
+  const handleRowContextMenu = (rowData: any[], rowIndex: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    
+    if (!scheduleData?.items?.[rowIndex]) return;
+    
+    const schedule = scheduleData.items[rowIndex];
+    const paymentDate = schedule.paymentDate ? new Date(schedule.paymentDate) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+      setContextMenu({
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+        rowIndex
+      });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        handleCloseContextMenu();
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [contextMenu.visible]);
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({
+      visible: false,
+      x: 0,
+      y: 0,
+      rowIndex: -1
+    });
+  };
+
+  const handleContextMenuAction = (rowIndex: number) => {
+    if (!scheduleData?.items?.[rowIndex]) return;
+    
+    const schedule = scheduleData.items[rowIndex];
+    setSelectedScheduleForPayment(schedule);
+    setIsPaymentModalOpen(true);
+    handleCloseContextMenu();
+  };
+
   const { 
       data: paymentsData, 
       getPaymentsByCreditId,
@@ -85,16 +145,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     {
       label: 'Добавить платёж',
       action: handleOpenPaymentFromSchedule,
-      color: '#008b8b',
-      shouldShow: (rowData: any[], rowIndex: number) => {
-        if (!scheduleData?.items?.[rowIndex]) return false;
-        const schedule = scheduleData.items[rowIndex];
-        const paymentDate = schedule.paymentDate ? new Date(schedule.paymentDate) : null;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        return paymentDate && paymentDate >= today;
-      }
+      color: '#008b8b'
     }
   ];
 
@@ -588,6 +639,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                         </>
                       )}
                       
+                      {creditData?.debtComment && (
+                        <>
+                          <Label>В долг выдал</Label>
+                          <Value>{creditData.debtComment}</Value>
+                        </>
+                      )}
+
                   </VerticalContainer>
                   <VerticalContainer style={{ width: "100%", minWidth: "700px", marginLeft: "60px"}}>
                     <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
@@ -656,6 +714,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                   }, {} as { [key: number]: any }) || {}}
                   contextMenuActions={scheduleTableActions}
                   onRowDoubleClick={handleOpenPaymentFromSchedule}
+                  onRowContextMenu={handleRowContextMenu} // Добавьте этот проп
                 />
               </div>
           </ModalWrapper>
@@ -687,6 +746,24 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         onNoteContentChange={setNewNoteContent}
       />
 
+      {contextMenu.visible && (
+        <ContextMenu
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            zIndex: 1001
+          }}
+        >
+          <ContextMenuItem 
+            onClick={() => handleContextMenuAction(contextMenu.rowIndex)}
+            style={{ color: '#008b8b' }}
+          >
+            Добавить платёж
+          </ContextMenuItem>
+        </ContextMenu>
+      )}
+
       {isPhotoViewerOpen && noteImages.length > 0 && (
         <PhotoViewerModal
           images={noteImages}
@@ -697,6 +774,25 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     </>
   );
 };
+
+const ContextMenu = styled.div`
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 150px;
+`;
+
+const ContextMenuItem = styled.div`
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  
+  &:hover {
+    background-color: #f8f9fa;
+  }
+`;
 
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};

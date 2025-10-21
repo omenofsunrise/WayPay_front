@@ -382,6 +382,21 @@ export function useEmployee() {
       }
     }, [employee]);
 
+    const updateSelfRole = useCallback(async (role: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const updatedEmployee = await EmployeeService.updateSelfRole(role);
+        
+        return updatedEmployee;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, [employee]);
+
     const updateEmployeeRole = useCallback(async (id: number, role: string) => {
       try {
         setLoading(true);
@@ -530,6 +545,7 @@ export function useEmployee() {
     updateEmployeePhone,
     updateEmployeeMinSurcharge,
     togglePermission,
+    updateSelfRole,
     updateEmployeeRole,
     fetchEmployeeFullnames,
     profile,

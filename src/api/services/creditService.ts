@@ -25,6 +25,15 @@ class CreditService {
     return response.data;
   }
 
+  async getCreditById(
+    id: number,
+  ): Promise<Credit> {
+    const response = await apiClient.get<Credit>(
+      `/Credit/${id}`
+    );
+    return response.data;
+  }
+
   async createCredit(creditData: CreateCreditRequest): Promise<Credit> {
     try {
       const response = await apiClient.post<Credit>('/Credit', creditData);

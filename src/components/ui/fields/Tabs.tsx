@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import styled from 'styled-components';
 
-interface Tab {
+export interface Tab {
   id: string;
   label: string;
   content?: ReactNode;
@@ -12,9 +12,16 @@ interface TabsProps<T extends string> {
   activeTab: T;
   onChange: (tabId: T) => void;
   addButton?: ReactNode;
+  fontSize?: number | string;
 }
 
-const Tabs = <T extends string>({ tabs, activeTab, onChange, addButton }: TabsProps<T>) => {
+const Tabs = <T extends string>({ 
+  tabs, 
+  activeTab, 
+  onChange, 
+  addButton, 
+  fontSize = 14
+}: TabsProps<T>) => {
   const activeTabContent = tabs.find(tab => tab.id === activeTab)?.content;
 
   return (
@@ -26,6 +33,7 @@ const Tabs = <T extends string>({ tabs, activeTab, onChange, addButton }: TabsPr
               key={tab.id}
               $isActive={activeTab === tab.id}
               onClick={() => onChange(tab.id as T)}
+              $fontSize={fontSize}
             >
               {tab.label}
               {activeTab === tab.id && <ActiveTabIndicator />}
@@ -59,11 +67,11 @@ const TabsList = styled.ul`
   align-items: center;
 `;
 
-const TabItem = styled.li<{ $isActive: boolean }>`
+const TabItem = styled.li<{ $isActive: boolean; $fontSize: number | string }>`
   position: relative;
   padding: 12px 0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: ${props => typeof props.$fontSize === 'number' ? `${props.$fontSize}px` : props.$fontSize};
   font-weight: ${props => props.$isActive ? '600' : '400'};
   color: ${props => props.$isActive ? 'rgba(0, 125, 136, 1)' : 'rgba(107, 114, 128, 1)'};
   transition: all 0.2s ease;

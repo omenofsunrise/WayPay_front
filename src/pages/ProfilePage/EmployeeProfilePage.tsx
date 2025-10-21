@@ -13,8 +13,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Employee } from '../../api/types/employee';
 import { useAuth } from '../../сontext/AuthContext';
 import Checkbox from '../../components/ui/CheckBoxes/Checkbox';
-import { useNavigate } from 'react-router-dom';
 import { authStorage } from '../../api/utils/auth-storage';
+import CustomSelect from '../../components/ui/fields/CustomSelect';
 
 interface EmployeeProfilePageProps {
     employeeId?: number;
@@ -33,10 +33,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         fetchEmployeeCreditsStats,
         fetchEmployeePaymentsStats,
         togglePermission,
-        revokeSession
+        revokeSession,
+        updateSelfRole
     } = useEmployee();
-    const { hasRole } = useAuth();
-    const [ setIsUpdatingPermissions] = useState(false);
+    const { hasRole, isSuperAdminCompany } = useAuth();
+    const [setIsUpdatingPermissions] = useState(false);
+    const [isUpdatingRole, setIsUpdatingRole] = useState(false);
     const employeePermissions = useMemo(() => [
         {
             code: 'CREATE_CREDITS',
@@ -68,6 +70,13 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         },
     ], []);
     
+    const roleOptions = useMemo(() => [
+        { value: 'директор', label: 'Директор' },
+        { value: 'админ', label: 'Администратор' },
+        { value: 'сотрудник', label: 'Сотрудник' },
+        { value: 'бухгалтер', label: 'Бухгалтер' }
+    ], []);
+    
     const canEditProfile = useMemo(() => {
         if (!employeeId) {
             return hasRole('директор') || hasRole('суперадмин') || hasRole('админ');
@@ -76,8 +85,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         }
     }, [employeeId, hasRole]);
 
+    const canChangeRole = useMemo(() => {
+        // Может менять свою роль только директор или суперадмин
+        return hasRole('директор') || hasRole('суперадмин');
+    }, [hasRole]);
+
     const handleTogglePermission = async (permissionCode: string) => {
-        
         try {
             await togglePermission(employeeId, permissionCode);
             const updatedEmployee = await fetchEmployeeById(employeeId);
@@ -88,17 +101,35 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         }
     };
     
+    const handleRoleChange = async (event: { target: { value: string } }) => {
+        const newRole = event.target.value;
+        setIsUpdatingRole(true);
+        
+        try {
+            await updateSelfRole(newRole);
+            if (employeeId) {
+                const updatedEmployee = await fetchEmployeeById(employeeId);
+                setEmployee(updatedEmployee);
+            }
+            if (!employeeId) {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Error updating role:', error);
+        } finally {
+            setIsUpdatingRole(false);
+        }
+    };
+    
     const handleLogout = () => {
-    revokeSession();
-    
-    authStorage.clear();
-    
-    if (!employeeId) {
-      window.dispatchEvent(new Event('storage'));
-      
-      window.location.href = '/auth';
-    }
-  };
+        revokeSession();
+        authStorage.clear();
+        
+        if (!employeeId) {
+            window.dispatchEvent(new Event('storage'));
+            window.location.href = '/auth';
+        }
+    };
                                 
     useEffect(() => {
         if (employeeId) {
@@ -109,14 +140,14 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     }, [employeeId]);
 
     useEffect(() => {
-            if (employeeId) {
-                fetchEmployeeById(employeeId).then(setEmployee);
-                fetchEmployeeCreditsStats(employeeId, 12);
-                fetchEmployeePaymentsStats(employeeId, 12);
-            } else {
-                fetchCreditsStats(12);
-                fetchPaymentsStats(12);
-            }
+        if (employeeId) {
+            fetchEmployeeById(employeeId).then(setEmployee);
+            fetchEmployeeCreditsStats(employeeId, 12);
+            fetchEmployeePaymentsStats(employeeId, 12);
+        } else {
+            fetchCreditsStats(12);
+            fetchPaymentsStats(12);
+        }
     }, [employeeId]);
     
     const statsToUse = employeeId ? employeeCreditsStats : creditsStats;
@@ -217,52 +248,52 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     }, [statsToUse]);
 
     const { currentMonthPayments, paymentsPercentageChange } = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-    
-    const currentMonthStat = paymentsToUse.find(
-        stat => stat.month === currentMonth && stat.year === currentYear
-    );
-    
-    let prevMonth = currentMonth - 1;
-    let prevYear = currentYear;
-    if (prevMonth === 0) {
-        prevMonth = 12;
-        prevYear--;
-    }
-    
-    const prevMonthStat = paymentsToUse.find(
-        stat => stat.month === prevMonth && stat.year === prevYear
-    );
-
-    const currentTotal = currentMonthStat?.total || 0;
-    const prevTotal = prevMonthStat?.total || 0;
-    
-    let change = 0;
-    let hasChange = false;
-    
-    if (prevTotal > 0 && currentTotal > 0) {
-        change = ((currentTotal - prevTotal) / prevTotal) * 100;
-        hasChange = true;
-    } else if (prevTotal === 0 && currentTotal > 0) {
-        change = 100;
-        hasChange = true;
-    } else if (currentTotal === 0 && prevTotal > 0) {
-        change = -100;
-        hasChange = true;
-    }
-
-    return {
-        currentMonthPayments: currentTotal,
-        paymentsPercentageChange: {
-            value: Math.round(change),
-            hasChange,
-            isPositive: change > 0,
-            isNeutral: change === 0
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        
+        const currentMonthStat = paymentsToUse.find(
+            stat => stat.month === currentMonth && stat.year === currentYear
+        );
+        
+        let prevMonth = currentMonth - 1;
+        let prevYear = currentYear;
+        if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear--;
         }
-    };
-}, [paymentsToUse]);
+        
+        const prevMonthStat = paymentsToUse.find(
+            stat => stat.month === prevMonth && stat.year === prevYear
+        );
+
+        const currentTotal = currentMonthStat?.total || 0;
+        const prevTotal = prevMonthStat?.total || 0;
+        
+        let change = 0;
+        let hasChange = false;
+        
+        if (prevTotal > 0 && currentTotal > 0) {
+            change = ((currentTotal - prevTotal) / prevTotal) * 100;
+            hasChange = true;
+        } else if (prevTotal === 0 && currentTotal > 0) {
+            change = 100;
+            hasChange = true;
+        } else if (currentTotal === 0 && prevTotal > 0) {
+            change = -100;
+            hasChange = true;
+        }
+
+        return {
+            currentMonthPayments: currentTotal,
+            paymentsPercentageChange: {
+                value: Math.round(change),
+                hasChange,
+                isPositive: change > 0,
+                isNeutral: change === 0
+            }
+        };
+    }, [paymentsToUse]);
 
     function getMonthName(month: number): string {
         const months = [
@@ -293,6 +324,20 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                 <CustomTitle style={{margin: "0"}}>
                     {employeeId ? `Профиль сотрудника` : `Мой профиль`}
                 </CustomTitle>
+                {isSuperAdminCompany && (
+                    <div style={{display: "flex", margin: "0 15px 0 auto"}}>
+                        <CustomSelect
+                            style={{marginLeft: "auto", width: "300px"}}
+                            options={roleOptions}
+                            value={authInfo?.employee?.role || ''}
+                            onChange={handleRoleChange}
+                            disabled={isUpdatingRole}
+                            placeholder="Выберите роль"
+                        />
+                        {isUpdatingRole && <RoleUpdateText>Обновление роли...</RoleUpdateText>}
+                    </div>
+                )}
+
                 {!employeeId && (
                     <LogoutButton onClick={handleLogout}>
                         <svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -397,6 +442,30 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         </PageLayout>
     );
 };
+
+const RoleSelectorSection = styled.div`
+    margin: 15px 0;
+    padding: 15px;
+    background: #FFFFFF;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    max-width: 300px;
+`;
+
+const RoleSelectorLabel = styled.label`
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+`;
+
+const RoleUpdateText = styled.div`
+    margin-top: 8px;
+    font-size: 12px;
+    color: #6B7280;
+    font-style: italic;
+`;
 
 const PermissionGroupTitle = styled.h4`
     margin: 15px 0 10px 0;

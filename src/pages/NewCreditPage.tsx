@@ -79,6 +79,7 @@ const NewCreditPage = () => {
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
   const [months, setMonths] = useState<string>('');
   const [creditName, setCreditName] = useState<string>('');
+  const [debtComment, setDebtComment] = useState<string>('');
   const [paymentDue, setPaymentDue] = useState<string>('1');
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
@@ -117,11 +118,10 @@ useEffect(() => {
         setContractDate(creditData.creditDate ? new Date(creditData.creditDate).toISOString().split('T')[0] : null);
         setNextMonthStart(creditData.nextMonthStart);
         setInDebt(creditData.inDebt || false);
+        setDebtComment(creditData.debtComment);
 
-        // Определяем тип надбавки на основе данных
         const firstProduct = creditData.products[0];
         if (firstProduct) {
-          // Если есть surchargeAmount (надбавка в рублях), используем фиксированный тип
           if (firstProduct.surchargeAmount !== undefined && firstProduct.surchargeAmount !== null) {
             setMarkupType('fixed');
             setEditMarkupType('fixed');
@@ -454,6 +454,7 @@ useEffect(() => {
     const creditData: CreateCreditRequest | UpdateCreditRequest = {
       clientId: client.id,
       name: creditName,
+      debtComment: debtComment,
       creditDate: new Date(contractDate),
       firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
       termMonths: parseInt(months),
@@ -868,7 +869,7 @@ useEffect(() => {
             </DateInputWrapper>
           </FieldGroup>
 
-            {!inDebt && (
+            {!inDebt ? (
               <>
                 <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
 
@@ -885,7 +886,20 @@ useEffect(() => {
                 </EntitySelectWrapper>
                 </FieldGroup>
               </>
-            )}
+            ):
+            <>
+              <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
+
+                <Label>Комментарий к долгу</Label>
+                <EntitySelectWrapper>
+                  <CustomInput
+                    placeholder="Кем выдан долг"
+                    value={debtComment}
+                    onChange={(e) => setDebtComment(e.target.value)}
+                  />
+                </EntitySelectWrapper>
+              </FieldGroup>
+            </>}
             {validationError && (
               <ValidationError>{validationError}</ValidationError>
             )}

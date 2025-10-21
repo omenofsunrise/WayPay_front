@@ -33,6 +33,7 @@ export interface Credit {
     payed: number;
     rest: number;
     currentMonthDebt: number;
+    debtComment?: string;
     debt: number;
     incomeRubles: number;
     incomePercents: number;
@@ -62,6 +63,7 @@ export interface CreateCreditRequest {
   paymentDay: number;
   nextMonthStart: boolean;
   inDebt: boolean;
+  debtComment?: string;
   products: Array<{
     name: string;
     price: number;
