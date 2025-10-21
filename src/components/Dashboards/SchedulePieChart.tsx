@@ -246,7 +246,7 @@ const SchedulePieChart = ({
                           stroke="white"
                           strokeWidth="1"
                         />
-                        {segment.percentage > 5 && (
+                        {/* {segment.percentage > 5 && (
                           <text
                             x={segment.textX}
                             y={segment.textY}
@@ -261,7 +261,7 @@ const SchedulePieChart = ({
                           >
                             {Math.round(segment.percentage)}%
                           </text>
-                        )}
+                        )} */}
                       </g>
                     ))}
                   </>
