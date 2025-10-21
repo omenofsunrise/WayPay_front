@@ -11,6 +11,7 @@ interface CustomSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, '
   onChange?: (event: { target: { value: string } }) => void;
   name?: string;
   disabled?: boolean;
+  required?: boolean;
 }
 
 const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -23,6 +24,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   options,
   name,
   disabled = false,
+  required = false,
   ...props
 }) => {
   const [isFocused, setIsFocused] = React.useState(false);
@@ -121,7 +123,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         value={value || ''}
         onChange={() => {}}
         tabIndex={-1}
-        required
+        required={required}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
