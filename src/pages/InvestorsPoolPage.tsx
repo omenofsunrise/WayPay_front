@@ -488,7 +488,7 @@ const InvestorsPoolPage = () => {
 
                         ${createCard(
                             commonIncomeSvg,
-                            formatMoney((report.investorIncome + report.selfIncome).toString()),
+                            formatMoney((report.allSelfIncome).toString()),
                             'Общий доход'
                         )}
 
@@ -661,7 +661,7 @@ const InvestorsPoolPage = () => {
             } else if (navigator.share) {
                 await navigator.share({
                     title: `Отчёт пула ${currentPool?.name || 'Без названия'}`,
-                    text: `Финансовый отчет по пулу инвесторов ${currentPool?.name}. Инвестиция: ${formatMoney(report.investment.toString())}, Общий доход: ${formatMoney((report.investorIncome + report.selfIncome).toString())}`,
+                    text: `Финансовый отчет по пулу инвесторов ${currentPool?.name}. Инвестиция: ${formatMoney(report.investment.toString())}, Общий доход: ${formatMoney((report.allSelfIncome).toString())}`,
                     url: window.location.href,
                 });
             } else {
@@ -826,7 +826,7 @@ const InvestorsPoolPage = () => {
                 <IconContainer>
                     <Icon src={commonIncomeSvg} alt="Total income" />
                 </IconContainer>
-                <ReportValue>{formatMoney((report.investorIncome + report.selfIncome).toString())}</ReportValue>
+                <ReportValue>{formatMoney((report.allSelfIncome).toString())}</ReportValue>
                 <ReportLabel>Общий доход</ReportLabel>
             </ReportCard>
 
