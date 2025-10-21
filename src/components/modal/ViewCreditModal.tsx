@@ -10,7 +10,7 @@ import { formatDate } from '../../utils/dateFormatter';
 import useCredit from '../../api/hooks/useCredit';
 import type { Credit } from '../../api/types/credit';
 import { formatMoney } from '../../utils/formatPrice';
-import type { Payment, PaymentByCreditParams } from '../../api/types/payment';
+import type { Payment, PaymentByCreditParams, PaymentTab } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
 import { NOTEABLE_TYPES } from '../../api/types/note';
 import useSoldProducts from '../../api/hooks/useSoldProduct';
@@ -21,6 +21,9 @@ import CreateNoteModal from './CreateNoteModal';
 import PhotoViewerModal from './PhotoViewerModal';
 import useChat from '../../api/hooks/useChat';
 import useCompany from '../../api/hooks/useCompany';
+import PaymentConfirmationGenerator from '../../utils/doxcUtils/paymentConfirmationGenerator';
+import paymentService from '../../api/services/paymentService';
+import NewPaymentModal from './NewPaymentModal';
 
 interface ViewCreditModalProps {
   id: number;
@@ -45,7 +48,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   
   const { 
       data: paymentsData, 
-      getPaymentsByCreditId
+      getPaymentsByCreditId,
+      createPayment
   } = usePayment();
 
   const { 
@@ -59,7 +63,88 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       markAsNotified
   } = useSchedule();
 
+  const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
+      try {
+          const result = await paymentService.getPaymentTab(paymentId);
+          return result;
+      } catch (err) {
+          console.error('Ошибка при получении данных для документа:', err);
+          return null;
+      }
+  }, []);
+
+  const handleOpenPaymentFromSchedule = (rowData: any[], rowIndex: number) => {
+    if (!scheduleData?.items?.[rowIndex]) return;
+    
+    const schedule = scheduleData.items[rowIndex];
+    setSelectedScheduleForPayment(schedule);
+    setIsPaymentModalOpen(true);
+  };
+
+  const scheduleTableActions = [
+    {
+      label: 'Добавить платёж',
+      action: handleOpenPaymentFromSchedule,
+      color: '#008b8b',
+      shouldShow: (rowData: any[], rowIndex: number) => {
+        if (!scheduleData?.items?.[rowIndex]) return false;
+        const schedule = scheduleData.items[rowIndex];
+        const paymentDate = schedule.paymentDate ? new Date(schedule.paymentDate) : null;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        return paymentDate && paymentDate >= today;
+      }
+    }
+  ];
+
   const { getAccountDetails } = useCompany();
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedScheduleForPayment, setSelectedScheduleForPayment] = useState<ScheduleItem | null>(null);
+  const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
+
+  const handleSavePayment = async (paymentData: {
+    paymentDate: string;
+    principalAmount: number;
+    paymentMethod: 'cash' | 'card';
+    bankCardId?: number;
+  }) => {
+    try {
+      if (!creditData) return;
+      
+      const paymentRequest = {
+        creditId: creditData.id,
+        paymentAmount: paymentData.principalAmount,
+        datePayment: paymentData.paymentDate,
+        type: paymentData.paymentMethod,
+        bankCardId: paymentData.bankCardId
+      };
+      
+      const result = await createPayment(paymentRequest);
+      
+      // Перезагружаем данные после успешного платежа
+      await loadPayments();
+      await loadSchedules();
+      
+      setIsPaymentModalOpen(false);
+      setSelectedScheduleForPayment(null);
+      
+      return result.id;
+    } catch (error) {
+      console.error('Ошибка при сохранении платежа:', error);
+      throw error;
+    }
+  };
+
+  const handlePrintReceipt = async (paymentId: number) => {
+    try {
+      await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
+      console.log('Чек успешно сгенерирован');
+    } catch (error) {
+      console.error('Ошибка при печати чека:', error);
+      alert('Платёж создан, но произошла ошибка при печати чека');
+    }
+  };
 
   const loadPayments = useCallback(async () => {
       if (id) {
@@ -329,49 +414,49 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
       
   const formatSchedulesData = (schedules: ScheduleItem[] | undefined) => {
-      if (!schedules) return [];
+    if (!schedules) return [];
 
-      return schedules.map(schedule => [
-          formatDate(schedule.paymentDate || ''),
-          formatMoney(schedule.paymentAmount.toString() || ''),
-          schedule.comment?.toString(),
-          schedule.notified ? (
-                      <button 
-                          onClick={() => sendWhatsAppMessage(
-                              schedule.id,
-                              schedule.clientPhone,
-                              formatMoney(schedule.paymentAmount.toString()),
-                              formatDate(schedule.paymentDate)
-                          )}
-                          style={{
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '0'
-                          }}
-                      >
-                          <CheckIcon />
-                      </button>
-                      
-                  ) : (
-                      <button 
-                          onClick={() => sendWhatsAppMessage(
-                              schedule.id,
-                              schedule.clientPhone,
-                              formatMoney(schedule.paymentAmount.toString()),
-                              formatDate(schedule.paymentDate)
-                          )}
-                          style={{
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '0'
-                          }}
-                      >
-                          <WhatsAppIcon />
-                      </button>
-                  )
-      ]);
+    return schedules.map(schedule => [
+      schedule.id.toString(),
+      formatDate(schedule.paymentDate || ''),
+      formatMoney(schedule.paymentAmount.toString() || ''),
+      schedule.comment?.toString(),
+      schedule.notified ? (
+        <button 
+          onClick={() => sendWhatsAppMessage(
+            schedule.id,
+            schedule.clientPhone,
+            formatMoney(schedule.paymentAmount.toString()),
+            formatDate(schedule.paymentDate)
+          )}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0'
+          }}
+        >
+          <CheckIcon />
+        </button>
+      ) : (
+        <button 
+          onClick={() => sendWhatsAppMessage(
+            schedule.id,
+            schedule.clientPhone,
+            formatMoney(schedule.paymentAmount.toString()),
+            formatDate(schedule.paymentDate)
+          )}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0'
+          }}
+        >
+          <WhatsAppIcon />
+        </button>
+      )
+    ]);
   };
 
   const getScheduleRowStyle = (schedule: ScheduleItem, index: number) => {
@@ -558,21 +643,41 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 <ModalInfoTitle>График платежей</ModalInfoTitle>
                 <CustomTable                         
                   columns={[
-                      { name: "Дата", align: "left" },
-                      { name: "Сумма", align: "right" },
-                      { name: "Примечание" },
-                      { name: "Уведомлён", align: "center" },
+                    { name: "ID", isHidden: true },
+                    { name: "Дата", align: "left" },
+                    { name: "Сумма", align: "right" },
+                    { name: "Примечание" },
+                    { name: "Уведомлён", align: "center" },
                   ]} 
                   data={formatSchedulesData(scheduleData?.items)}
                   rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
                     acc[index] = getScheduleRowStyle(schedule, index);
                     return acc;
                   }, {} as { [key: number]: any }) || {}}
+                  contextMenuActions={scheduleTableActions}
+                  onRowDoubleClick={handleOpenPaymentFromSchedule}
                 />
               </div>
           </ModalWrapper>
         </ModalContent>
       </ModalOverlay>
+
+      <NewPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => {
+          setIsPaymentModalOpen(false);
+          setSelectedScheduleForPayment(null);
+        }}
+        onSubmit={handleSavePayment}
+        creditId={creditData?.id || 0}
+        clientName={creditData?.clientFullName || ''}
+        investorName={creditData?.investorNickname || ''}
+        clientPhone={creditData?.clientPhone || ''}
+        currentDebt={creditData?.rest || 0}
+        currentMonthDebt={selectedScheduleForPayment?.paymentAmount || creditData?.currentMonthDebt || 0}
+        onPrintReceipt={handlePrintReceipt}
+        clientId={creditData?.clientId}
+      />
 
       <CreateNoteModal
         isOpen={isNoteModalOpen}

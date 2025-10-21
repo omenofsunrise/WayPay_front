@@ -28,7 +28,7 @@ export interface NewPaymentModalProps {
   clientId?: number;
 }
 
-const PRINT_RECEIPT_STORAGE_KEY = 'new-payment-print-receipt-preference';
+export const PRINT_RECEIPT_STORAGE_KEY = 'new-payment-print-receipt-preference';
 
 const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   creditId,
