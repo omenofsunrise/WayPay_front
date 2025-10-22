@@ -94,8 +94,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     }, [employeeId, hasRole]);
 
     const canChangeRole = useMemo(() => {
-        // Может менять свою роль только директор или суперадмин
-        return hasRole('директор') || hasRole('суперадмин');
+        return isSuperAdminCompany();
     }, [hasRole]);
 
     const handleTogglePermission = async (permissionCode: string) => {
@@ -332,7 +331,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                 <CustomTitle style={{margin: "0"}}>
                     {employeeId ? `Профиль сотрудника` : `Мой профиль`}
                 </CustomTitle>
-                {isSuperAdminCompany && (
+                {canChangeRole && (
                     <div style={{display: "flex", margin: "0 15px 0 auto"}}>
                         <CustomSelect
                             style={{marginLeft: "auto", width: "300px"}}
