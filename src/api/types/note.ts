@@ -21,6 +21,7 @@ export interface CreateNoteRequest {
   noteableId: number;
   content: string;
   file?: File;
+  remindDate?: Date;
 }
 
 export interface NoteFilters {

@@ -36,7 +36,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         revokeSession,
         updateSelfRole
     } = useEmployee();
-    const { hasRole, isSuperAdminCompany } = useAuth();
+    const { hasRole, isSuperAdminCompany, isSuperAdminId } = useAuth();
     const [setIsUpdatingPermissions] = useState(false);
     const [isUpdatingRole, setIsUpdatingRole] = useState(false);
     const employeePermissions = useMemo(() => [
@@ -70,13 +70,21 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         },
     ], []);
     
-    const roleOptions = useMemo(() => [
-        { value: 'директор', label: 'Директор' },
-        { value: 'админ', label: 'Администратор' },
-        { value: 'сотрудник', label: 'Сотрудник' },
-        { value: 'бухгалтер', label: 'Бухгалтер' }
-    ], []);
-    
+    const roleOptions = useMemo(() => {
+        const options = [
+            { value: 'директор', label: 'Директор' },
+            { value: 'админ', label: 'Администратор' },
+            { value: 'сотрудник', label: 'Сотрудник' },
+            { value: 'бухгалтер', label: 'Бухгалтер' }
+        ];
+        
+        if (isSuperAdminId) {
+            return [...options, { value: 'суперадмин', label: 'Суперадмин' }];
+        }
+        
+        return options;
+    }, [isSuperAdminId]);
+
     const canEditProfile = useMemo(() => {
         if (!employeeId) {
             return hasRole('директор') || hasRole('суперадмин') || hasRole('админ');

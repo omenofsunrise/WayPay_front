@@ -59,27 +59,37 @@ const CustomCalendar: React.FC<DateInputProps> = ({
   }, [value]);
 
   const handleDateSelect = (date: Date) => {
-    const localDate = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-    );
-    setSelectedDate(localDate);
+    // Создаем дату в UTC и берем только дату (без времени)
+    const utcDate = new Date(Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    ));
     
-    const year = localDate.getFullYear();
-    const month = String(localDate.getMonth() + 1).padStart(2, '0');
-    const day = String(localDate.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
+    setSelectedDate(date);
+    
+    // Используем toISOString() и берем только дату
+    const formattedDate = utcDate.toISOString().split('T')[0];
     
     onChange?.(formattedDate);
     setIsPickerOpen(false);
-    };
-
-  const handleToday = () => {
-    const today = new Date();
-    setCurrentDate(today);
-    handleDateSelect(today);
   };
+
+const handleToday = () => {
+  const today = new Date();
+  setCurrentDate(today);
+  
+  const utcToday = new Date(Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ));
+  
+  const formattedDate = utcToday.toISOString().split('T')[0];
+  
+  onChange?.(formattedDate);
+  setIsPickerOpen(false);
+};
 
   const handleReset = () => {
     setSelectedDate(null);

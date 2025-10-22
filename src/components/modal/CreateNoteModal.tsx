@@ -8,11 +8,18 @@ import AddFileButtonSvg from '../../assets/ui/buttons/AddFileButton.svg';
 import FileItem from '../Blog/FileItem';
 import type { Attachment } from '../../api/types/chat';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
+import CustomCalendar from '../ui/fields/CustomCalendar';
+import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
 
 interface CreateNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (noteData: { content: string; file?: File; attachmentInfo?: Attachment }) => void;
+  onCreate: (noteData: { 
+    content: string; 
+    file?: File; 
+    attachmentInfo?: Attachment; 
+    remindDate?: string;
+  }) => void;
   noteContent: string;
   onNoteContentChange: (content: string) => void;
   initialFile?: File | null;
@@ -32,7 +39,8 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
   const [attachmentData, setAttachmentData] = useState<Attachment | null>(attachmentInfo);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  
+  const [remindDate, setRemindDate] = useState<string>('')
+
   useEffect(() => {
     if (initialFile) {
       setAttachedFile(initialFile);
@@ -51,7 +59,8 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
     onCreate({
       content: noteContent,
       file: attachedFile || undefined,
-      attachmentInfo: attachmentData || undefined
+      attachmentInfo: attachmentData || undefined,
+      remindDate: remindDate || undefined
     });
     handleCancel();
   };
@@ -59,6 +68,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
   const handleCancel = () => {
     setAttachedFile(null);
     setAttachmentData(null);
+    setRemindDate('');
     onNoteContentChange('');
     onClose();
   };
@@ -107,6 +117,12 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
         <NoteModalWrapper>
           <CustomTitle style={{ marginTop: 0 }}>Заметка</CustomTitle>
           
+          <ModalInfoTitle>Напомнить</ModalInfoTitle>
+          <CustomCalendar 
+            value={remindDate}
+            onChange={(date) => setRemindDate(date)}
+          />
+
           <NoteInput 
             value={noteContent}
             onChange={(e) => onNoteContentChange(e.target.value)}
@@ -206,7 +222,6 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
   );
 };
 
-// Стили остаются без изменений...
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
   display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
   position: fixed;
@@ -321,7 +336,6 @@ const RemoveImageButton = styled.button`
   right: -8px;
   width: 24px;
   height: 24px;
-  background: #ff4444;
   color: white;
   border: none;
   border-radius: 50%;
@@ -336,7 +350,6 @@ const RemoveImageButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #cc0000;
     transform: scale(1.1);
   }
 `;
@@ -349,6 +362,7 @@ const ButtonContainer = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  margin-top: 15px;
 `;
 
 export default CreateNoteModal;

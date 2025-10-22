@@ -25,25 +25,30 @@ class NoteService {
     return this.getNotes(NOTEABLE_TYPES.CLIENT, clientId, filters);
   }
 
-async createNote(noteData: CreateNoteRequest): Promise<Note> {
-  const formData = new FormData();
-  
-  formData.append('noteableType', noteData.noteableType);
-  formData.append('noteableId', noteData.noteableId.toString());
-  formData.append('content', noteData.content);
-  
-  if (noteData.file) {
-    formData.append('file', noteData.file);
-  }
+  async createNote(noteData: CreateNoteRequest): Promise<Note> {
+    const formData = new FormData();
+    
+    formData.append('noteableType', noteData.noteableType);
+    formData.append('noteableId', noteData.noteableId.toString());
+    formData.append('content', noteData.content);
+    
+    
+    if (noteData.remindDate) {  
+      formData.append('remindDate', noteData.remindDate);
+    }
+    
+    if (noteData.file) {
+      formData.append('file', noteData.file);
+    }
 
-  const response = await apiClient.post<Note>('/Note', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  
-  return response.data;
-}
+    const response = await apiClient.post<Note>('/Note', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  }
 
   async deleteNote(id: number): Promise<void> {
     await apiClient.delete(`/Note/${id}`);

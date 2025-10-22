@@ -416,13 +416,14 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     setIsNoteModalOpen(true);
   };
 
-  const handleCreateNote = async (noteData: { content: string; file?: File }) => {
+  const handleCreateNote = async (noteData: { content: string; file?: File, remindDate?: Date }) => {
     if (noteData.content.trim() && id) {
       await createNote({
         noteableType: NOTEABLE_TYPES.CREDIT,
         noteableId: Number(id),
         content: noteData.content,
-        file: noteData.file
+        file: noteData.file,
+        remindDate: noteData.remindDate
       });
       setNewNoteContent('');
       setIsNoteModalOpen(false);

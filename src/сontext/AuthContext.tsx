@@ -12,6 +12,7 @@ interface AuthContextType {
   hasRole: (role: Role) => boolean;
   forbiddenRole: (role: Role) => boolean;
   isSuperAdminCompany: () => boolean;
+  isSuperAdminId: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +77,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     return authInfo.employee.companyId === 1;
   };
 
+  const isSuperAdminId = (): boolean => {
+    if (!authInfo) return false;
+    return authInfo.employee.id === 1 || authInfo.employee.id === 4;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       authInfo, 
@@ -85,7 +91,8 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       hasPermission,
       hasRole,
       forbiddenRole,
-      isSuperAdminCompany
+      isSuperAdminCompany,
+      isSuperAdminId
     }}>
       {children}
     </AuthContext.Provider>
