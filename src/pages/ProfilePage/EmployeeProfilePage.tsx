@@ -78,7 +78,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
             { value: 'бухгалтер', label: 'Бухгалтер' }
         ];
         
-        if (isSuperAdminId) {
+        if (isSuperAdminId()) {
             return [...options, { value: 'суперадмин', label: 'Суперадмин' }];
         }
         
