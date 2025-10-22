@@ -38,6 +38,7 @@ import { DesktopOnlyContent } from './components/DesktopOnly';
 import BlackCatalogPage from './pages/BlackCatalog';
 import RegistrationRequestPage from './pages/RegistrationRequestPage';
 import CreditApplicationPage from './pages/CreditApplicationPage';
+import NotificationHandler from './components/NotificationHandler';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -238,6 +239,7 @@ function App() {
         />
       )}
       <BrowserRouter>
+      <NotificationHandler />
         <TaskCountProvider>
           <Routes>
             <Route path="/" element={
