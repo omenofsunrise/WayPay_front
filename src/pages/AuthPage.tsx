@@ -6,6 +6,7 @@ import logoImage from '../assets/logos/logo.svg';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 import AuthCallModal from '../components/modal/AuthCallModal';
 import PinCodeModal from '../components/modal/PinCodeModal';
+import { getFCMToken } from '../firebase/messaging';
 
 interface AuthPageProps {
   onLoginSuccess: (token: string) => void;
@@ -78,12 +79,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     const verifyAuth = async (phone: string, id: string) => {
         if (isVerifying) return;
         
+        const fcmToken = await getFCMToken();
+        console.log(fcmToken);
         setIsVerifying(true);
         try {
             const response = await apiClient.post('/Auth/confirm', {
                 phone: phone,
                 checkId: id,
-                userType: 'employee'
+                userType: 'employee',
+                webDeviceId: fcmToken
             });
             
             if (response.data.accessToken && response.data.refreshToken) {
