@@ -38,7 +38,7 @@ import { DesktopOnlyContent } from './components/DesktopOnly';
 import BlackCatalogPage from './pages/BlackCatalog';
 import RegistrationRequestPage from './pages/RegistrationRequestPage';
 import CreditApplicationPage from './pages/CreditApplicationPage';
-import NotificationHandler from './components/NotificationHandler';
+import NotificationHandler from './components/NotificationHandler/NotificationHandler';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -225,8 +225,21 @@ function App() {
     );
   }
 
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('✅ SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('❌ SW registration failed: ', registrationError);
+        });
+    });
+  }
+
   return (
     <AuthProvider>
+      <NotificationHandler />
       {showPinModal && (
         <PinCodeModal
           isOpen={true}
@@ -239,7 +252,6 @@ function App() {
         />
       )}
       <BrowserRouter>
-      <NotificationHandler />
         <TaskCountProvider>
           <Routes>
             <Route path="/" element={
