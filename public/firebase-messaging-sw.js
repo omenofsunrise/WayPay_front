@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-console.log('[SW] ✅ Service Worker запущен', self.registration?.scope);
+console.log('[SW] ✅ Service Worker запущен', self.location.origin);
 
 const firebaseConfig = {
   apiKey: "AIzaSyB1-4uJEWVDwEKjrMYtHzWZjtjoCp1EMV4",
@@ -33,9 +33,10 @@ try {
       body: payload.notification.body || '',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/badge-72x72.png',
+      image: payload.notification.image,
       data: payload.data || {},
       tag: 'fcm-background-notification',
-      requireInteraction: false,
+      requireInteraction: true, // Уведомление не закроется автоматически
       silent: false,
       actions: [
         {
@@ -106,7 +107,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] ✅ Service Worker активирован');
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(self.clients.claim()); // Контролируем все клиенты сразу
 });
 
 console.log('[SW] 🎉 Service Worker полностью настроен и готов');

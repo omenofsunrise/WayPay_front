@@ -102,38 +102,41 @@ function App() {
   }, [updateActivity]);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      console.log('🔧 Регистрируем Service Worker...');
-      
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((registration) => {
+    const registerServiceWorker = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          console.log('🔧 Регистрируем Service Worker...');
+          
+          // Ждем полной загрузки приложения
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          });
+
           console.log('✅ Service Worker зарегистрирован:', registration.scope);
-          
-          // Проверяем активность SW
-          if (registration.active) {
-            console.log('✅ Service Worker активен и готов к работе');
+
+          // Ждем активации
+          if (registration.installing) {
+            registration.installing.addEventListener('statechange', (event) => {
+              console.log('🔄 Состояние SW:', (event.target as any)?.state);
+            });
           }
-          
+
           // Проверяем контролируемые страницы
-          registration.update().then(() => {
-            console.log('🔄 Service Worker обновлен');
-          });
-        })
-        .catch((error) => {
+          const controlled = await navigator.serviceWorker.ready;
+          console.log('🎯 Service Worker готов, контролирует:', controlled.active?.scriptURL);
+
+        } catch (error) {
           console.error('❌ Ошибка регистрации Service Worker:', error);
-          
-          // Попробуем зарегистрировать с другим путем
-          navigator.serviceWorker.register('/firebase-messaging-sw.js', { 
-            scope: '/' 
-          }).then(reg => {
-            console.log('✅ SW перерегистрирован с scope:', reg.scope);
-          }).catch(err => {
-            console.error('❌ Повторная регистрация также failed:', err);
-          });
-        });
-    } else {
-      console.warn('❌ Service Worker не поддерживается в этом браузере');
-    }
+        }
+      } else {
+        console.warn('❌ Service Worker не поддерживается в этом браузере');
+      }
+    };
+
+    registerServiceWorker();
   }, []);
 
   useEffect(() => {
