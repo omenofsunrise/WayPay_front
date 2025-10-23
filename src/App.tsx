@@ -39,6 +39,7 @@ import BlackCatalogPage from './pages/BlackCatalog';
 import RegistrationRequestPage from './pages/RegistrationRequestPage';
 import CreditApplicationPage from './pages/CreditApplicationPage';
 import NotificationHandler from './components/NotificationHandler/NotificationHandler';
+import { checkNotificationPermission } from './firebase/messaging';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -99,6 +100,58 @@ function App() {
       window.removeEventListener('click', handleUserActivity);
     };
   }, [updateActivity]);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      console.log('🔧 Регистрируем Service Worker...');
+      
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('✅ Service Worker зарегистрирован:', registration.scope);
+          
+          // Проверяем активность SW
+          if (registration.active) {
+            console.log('✅ Service Worker активен и готов к работе');
+          }
+          
+          // Проверяем контролируемые страницы
+          registration.update().then(() => {
+            console.log('🔄 Service Worker обновлен');
+          });
+        })
+        .catch((error) => {
+          console.error('❌ Ошибка регистрации Service Worker:', error);
+          
+          // Попробуем зарегистрировать с другим путем
+          navigator.serviceWorker.register('/firebase-messaging-sw.js', { 
+            scope: '/' 
+          }).then(reg => {
+            console.log('✅ SW перерегистрирован с scope:', reg.scope);
+          }).catch(err => {
+            console.error('❌ Повторная регистрация также failed:', err);
+          });
+        });
+    } else {
+      console.warn('❌ Service Worker не поддерживается в этом браузере');
+    }
+  }, []);
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const permission = await checkNotificationPermission();
+      console.log('🔔 Текущий статус разрешений:', permission);
+      
+      if (permission === 'default') {
+        console.log('⚠️ Разрешение не запрошено');
+      } else if (permission === 'denied') {
+        console.warn('❌ Разрешение на уведомления отклонено');
+      } else {
+        console.log('✅ Разрешение на уведомления предоставлено');
+      }
+    };
+    
+    checkPermissions();
+  }, []);
 
   useEffect(() => {
     const checkInactivity = () => {
@@ -223,18 +276,6 @@ function App() {
         <div className="spinner"></div>
       </div>
     );
-  }
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          console.log('✅ SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('❌ SW registration failed: ', registrationError);
-        });
-    });
   }
 
   return (

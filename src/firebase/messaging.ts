@@ -13,6 +13,17 @@ export const isMessagingSupported = async (): Promise<boolean> => {
   }
 };
 
+export const checkNotificationPermission = async (): Promise<NotificationPermission> => {
+  return Notification.permission;
+};
+
+export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
+  console.log('🔔 Запрашиваем разрешение на уведомления...');
+  const permission = await Notification.requestPermission();
+  console.log('📋 Статус разрешения:', permission);
+  return permission;
+};
+
 export const messaging = getMessaging(firebaseApp);
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
