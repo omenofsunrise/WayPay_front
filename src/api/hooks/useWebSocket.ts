@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { API_BASE_URL } from '../client';
+import { BASE_URL } from '../client';
 import { useAuth } from '../../сontext/AuthContext';
 import { authStorage } from '../utils/auth-storage';
 
@@ -26,7 +26,7 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
 
   const connect = useCallback(() => {
     try {
-      const wsUrl = `${API_BASE_URL}/ws`;
+      const wsUrl = `${BASE_URL}/ws`;
       
       console.log('🔄 Connecting to WebSocket:', wsUrl);
       socketRef.current = new WebSocket(wsUrl);
