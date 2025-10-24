@@ -6,10 +6,11 @@ import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
 import BlogIcon from '../../../assets/ui/TopBar/blog.svg';
 import newCreditIcon from '../../../assets/ui/TopBar/newCredit.svg';
 import SettingsIcon from '../../../assets/ui/TopBar/settings.svg';
+import BellIcon from '../../../assets/ui/TopBar/bell.svg';
 import { SideMenuContext } from './SideMenuContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CalculatorModal from '../../modal/CalculatorModal';
-import SettingsModal from '../../modal/SettingsModal'; // Добавлен импорт модалки настроек
+import SettingsModal from '../../modal/SettingsModal';
 import { useAuth } from '../../../сontext/AuthContext';
 import type { Permission, Role } from '../../../api/types/auth';
 import useTask from '../../../api/hooks/useTask';
@@ -159,6 +160,10 @@ const TopMenu = () => {
           ))}
         </MenuItemsWrapper>
         
+        <BellButton onClick={}>
+          <SettingsIconImg src={BellIcon} alt="Уведомления" />
+        </BellButton>
+
         <SettingsButton onClick={handleSettingsClick}>
           <SettingsIconImg src={SettingsIcon} alt="Настройки" />
         </SettingsButton>
@@ -298,6 +303,11 @@ const SettingsButton = styled.button`
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
   }
+`;
+
+const BellButton = styled(SettingsButton)`
+  top: 10px;
+  right: 50px;
 `;
 
 const SettingsIconImg = styled.img`

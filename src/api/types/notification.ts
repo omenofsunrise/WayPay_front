@@ -16,3 +16,11 @@ export interface SendNotificationRequest {
     deviceToken?: string | null;
     avatarPath?: string | null;
 }
+
+export interface NotificationResponse {
+    id: number;
+    title: string;
+    message: string;
+    senderAvatarPath: string;
+    DateTime: Date;
+}
