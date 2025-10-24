@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { BASE_URL } from '../client';
 import { useAuth } from '../../сontext/AuthContext';
-import { authStorage } from '../utils/auth-storage';
 
 interface WebSocketMessage {
   type: string;
@@ -25,6 +24,12 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
   const { authInfo } = useAuth();
 
   const connect = useCallback(() => {
+    const employeeId = authInfo?.employee?.id;
+    if (!employeeId) {
+      console.log('⏳ WebSocket: employee.id not available, skipping connection');
+      return;
+    }
+
     try {
       const wsUrl = `${BASE_URL}/ws`;
       
@@ -35,25 +40,25 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
         console.log('✅ WebSocket connected');
         reconnectAttemptsRef.current = 0;
 
-        const employeeId = authInfo.employee.id;
-        if (employeeId) {
-          socketRef.current?.send(JSON.stringify({
-            employeeId: employeeId,
-            token: authStorage.getAccessToken()
-          }));
-        }
+        socketRef.current?.send(JSON.stringify({
+          EmployeeId: employeeId,
+        }));
       };
 
       socketRef.current.onmessage = (event) => {
         try {
+          console.log('📨 RAW WebSocket message received:', event.data);
           const message: WebSocketMessage = JSON.parse(event.data);
-          console.log('📨 WebSocket message received:', message);
+          console.log('📨 Parsed WebSocket message:', message);
           
           if (message.type === 'notification') {
+            console.log('🎯 Processing notification message');
             onNotification(message);
+          } else {
+            console.log('⚡ Other message type:', message.type);
           }
         } catch (error) {
-          console.error('❌ Error parsing WebSocket message:', error);
+          console.error('❌ Error parsing WebSocket message:', error, 'Raw data:', event.data);
         }
       };
 
@@ -71,9 +76,15 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
       console.error('💥 WebSocket connection failed:', error);
       handleReconnect();
     }
-  }, [onNotification, onError]);
+  }, [onNotification, onError, authInfo?.employee?.id]);
 
   const handleReconnect = useCallback(() => {
+    const employeeId = authInfo?.employee?.id;
+    if (!employeeId) {
+      console.log('⏳ WebSocket: employee.id not available, skipping reconnection');
+      return;
+    }
+
     if (reconnectAttemptsRef.current < maxReconnectAttempts) {
       reconnectAttemptsRef.current++;
       const delay = reconnectDelay * Math.pow(2, reconnectAttemptsRef.current - 1);
@@ -83,7 +94,7 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
     } else {
       console.error('🚨 Max reconnection attempts reached');
     }
-  }, [connect]);
+  }, [connect, authInfo?.employee?.id]);
 
   const disconnect = useCallback(() => {
     if (socketRef.current) {
@@ -93,12 +104,21 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
   }, []);
 
   useEffect(() => {
-    connect();
+    const employeeId = authInfo?.employee?.id;
+    if (employeeId) {
+      console.log('👤 Employee ID available, connecting WebSocket:', employeeId);
+      connect();
+    } else {
+      console.log('⏳ Waiting for employee ID...');
+    }
 
     const handleVisibilityChange = () => {
-      if (!document.hidden && (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN)) {
-        console.log('🔄 Page visible, reconnecting WebSocket...');
-        connect();
+      if (!document.hidden) {
+        const employeeId = authInfo?.employee?.id;
+        if (employeeId && (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN)) {
+          console.log('🔄 Page visible, reconnecting WebSocket...');
+          connect();
+        }
       }
     };
 
@@ -108,7 +128,7 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
       disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [connect, disconnect]);
+  }, [connect, disconnect, authInfo?.employee?.id]);
 
   return {
     disconnect,

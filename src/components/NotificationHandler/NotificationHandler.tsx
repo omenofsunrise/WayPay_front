@@ -6,13 +6,12 @@ const NotificationsContainer = styled.div`
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 10000; // Увеличил z-index
+  z-index: 10000;
   display: flex;
   gap: 10px;
   flex-direction: column;
   pointer-events: none;
   
-  /* Мобильная адаптация */
   @media (max-width: 768px) {
     top: 10px;
     right: 10px;
@@ -45,7 +44,6 @@ const NotificationToast = styled.div<{ isLeaving: boolean }>`
     background: rgba(255, 255, 255, 0.98);
   }
 
-  /* Мобильная адаптация */
   @media (max-width: 768px) {
     min-width: unset;
     width: 100%;
@@ -171,14 +169,12 @@ const NotificationHandler: React.FC = () => {
     console.error('💥 WebSocket error in component:', error);
   }, []);
 
-  // Подключаем WebSocket
   useWebSocket({
     onNotification: handleNewNotification,
     onError: handleWebSocketError
   });
 
   const removeNotification = (id: number) => {
-    // Анимация закрытия
     setClosingNotifications(prev => new Set(prev).add(id));
     
     setTimeout(() => {
