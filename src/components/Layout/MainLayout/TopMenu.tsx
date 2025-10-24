@@ -160,9 +160,9 @@ const TopMenu = () => {
           ))}
         </MenuItemsWrapper>
         
-        <BellButton onClick={}>
-          <SettingsIconImg src={BellIcon} alt="Уведомления" />
-        </BellButton>
+        {/* <BellButton onClick={}>
+          <SettingsIconImg src={BellIcon} alt="" />
+        </BellButton> */}
 
         <SettingsButton onClick={handleSettingsClick}>
           <SettingsIconImg src={SettingsIcon} alt="Настройки" />
