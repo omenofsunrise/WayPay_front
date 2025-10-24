@@ -7,6 +7,10 @@ class NotificationService {
     const response = await apiClient.get<PaginatedResponse<NotificationResponse>>('/Notification/my', { params });
     return response.data;
   }
+
+  async readNotification(id: number) {
+    await apiClient.patch(`/Notification/read/${id}`);
+  }
 }
 
 export default new NotificationService();

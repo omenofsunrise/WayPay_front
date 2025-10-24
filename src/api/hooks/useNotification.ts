@@ -23,11 +23,25 @@ const useNotification = () => {
     }
   }, []);
 
+  const ReadNotification = useCallback(async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await notificationService.readNotification(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
     data,
     getMyNotifications,
+    ReadNotification
   };
 };
 

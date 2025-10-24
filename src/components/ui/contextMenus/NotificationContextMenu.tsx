@@ -141,11 +141,14 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
                   }}
                 />
                 <NotificationContent>
-                  <NotificationTitle>{notification.title}</NotificationTitle>
+                  <NotificationHeader>
+                    <NotificationTitle>{notification.title}</NotificationTitle>
+                    <NotificationDate>
+                      {formatRelativeTime(notification.dateTime)}
+                    </NotificationDate>
+                  </NotificationHeader>
+
                   <NotificationMessage>{notification.message}</NotificationMessage>
-                  <NotificationDate>
-                    {formatRelativeTime(notification.dateTime)}
-                  </NotificationDate>
                 </NotificationContent>
               </NotificationItem>
             ))}
@@ -232,6 +235,11 @@ const NotificationItem = styled.div`
   }
 `;
 
+const NotificationHeader = styled.div`
+  display: flex;
+  cursor: pointer;
+`;
+
 const NotificationAvatar = styled.img`
   width: 40px;
   height: 40px;
@@ -252,6 +260,7 @@ const NotificationTitle = styled.div`
   color: rgba(0, 0, 0, 0.9);
   margin-bottom: 4px;
   line-height: 1.2;
+  text-align: left;
 `;
 
 const NotificationMessage = styled.div`
@@ -260,11 +269,14 @@ const NotificationMessage = styled.div`
   margin-bottom: 6px;
   line-height: 1.3;
   word-wrap: break-word;
+  text-align: left;
 `;
 
 const NotificationDate = styled.div`
   font-size: 12px;
   color: rgba(156, 163, 175, 1);
+  text-align: right;
+  margin-left: auto;
 `;
 
 export default NotificationContextMenu;

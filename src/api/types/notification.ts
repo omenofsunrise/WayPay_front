@@ -23,4 +23,5 @@ export interface NotificationResponse {
     message: string;
     senderAvatarPath: string;
     dateTime: Date;
+    isRead: boolean;
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useWebSocket } from '../../api/hooks/useWebSocket';
 import { formatRelativeTime } from '../../utils/dateFormatter';
+import useNotification from '../../api/hooks/useNotification';
 
 const NotificationsContainer = styled.div`
   position: fixed;
@@ -120,7 +121,8 @@ const CloseButton = styled.button`
   margin: -4px;
   border-radius: 4px;
   flex-shrink: 0;
-  
+  margin-bottom: auto;
+
   &:hover {
     color: #666;
     background: rgba(0, 0, 0, 0.05);
@@ -136,12 +138,49 @@ interface Notification {
   image?: string;
   timestamp: Date;
   route?: string;
+  isRead: boolean;
 }
 
 const NotificationHandler: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [closingNotifications, setClosingNotifications] = useState<Set<number>>(new Set());
   const nextIdRef = React.useRef(1);
+  
+  const { getMyNotifications, ReadNotification } = useNotification();
+
+  // Загрузка непрочитанных уведомлений при инициализации
+  useEffect(() => {
+    const loadInitialNotifications = async () => {
+      console.log('📥 Загрузка непрочитанных уведомлений...');
+      try {
+        const result = await getMyNotifications({
+          page: 1,
+          pageSize: 10,
+          sortDirection: 'desc'
+        });
+        
+        if (result && result.items) {
+          const unreadNotifications = result.items
+            .filter(item => !item.isRead)
+            .map(item => ({
+              id: item.id,
+              title: item.title,
+              body: item.message,
+              image: item.senderAvatarPath,
+              timestamp: new Date(item.dateTime),
+              isRead: item.isRead
+            }));
+          
+          console.log(`✅ Загружено ${unreadNotifications.length} непрочитанных уведомлений`);
+          setNotifications(unreadNotifications);
+        }
+      } catch (error) {
+        console.error('❌ Ошибка при загрузке уведомлений:', error);
+      }
+    };
+
+    loadInitialNotifications();
+  }, [getMyNotifications]);
 
   const handleNewNotification = useCallback((message: any) => {
     console.log('🎯 New notification received:', message);
@@ -152,7 +191,8 @@ const NotificationHandler: React.FC = () => {
       body: message.Body,
       image: message.Image,
       route: message.Route,
-      timestamp: new Date(message.Timestamp || Date.now())
+      timestamp: new Date(message.Timestamp || Date.now()),
+      isRead: false
     };
 
     setNotifications(prev => {
@@ -185,8 +225,17 @@ const NotificationHandler: React.FC = () => {
     }, 300);
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     console.log('🖱️ Notification clicked:', notification);
+    
+    if (!notification.isRead) {
+      try {
+        await ReadNotification(notification.id);
+        console.log('✅ Уведомление помечено как прочитанное');
+      } catch (error) {
+        console.error('❌ Ошибка при отметке уведомления как прочитанного:', error);
+      }
+    }
     
     if (notification.route) {
       console.log('🔗 Navigating to:', notification.route);
@@ -205,9 +254,12 @@ const NotificationHandler: React.FC = () => {
     console.log('✅ Изображение загружено успешно:', notification.image);
   };
 
+  // Фильтруем только непрочитанные уведомления для отображения
+  const unreadNotifications = notifications.filter(notification => !notification.isRead);
+
   return (
     <NotificationsContainer>
-      {notifications.map(notification => (
+      {unreadNotifications.map(notification => (
         <NotificationToast
           key={notification.id}
           isLeaving={closingNotifications.has(notification.id)}
@@ -237,6 +289,7 @@ const NotificationHandler: React.FC = () => {
 
           <CloseButton 
             onClick={(e) => {
+              ReadNotification(notification.id);
               e.stopPropagation();
               removeNotification(notification.id);
             }}
