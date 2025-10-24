@@ -147,11 +147,11 @@ const NotificationHandler: React.FC = () => {
     
     const newNotification: Notification = {
       id: nextIdRef.current++,
-      title: message.title,
-      body: message.body,
-      image: message.image,
-      route: message.route,
-      timestamp: new Date(message.timestamp || Date.now())
+      title: message.Title,
+      body: message.Body,
+      image: message.Image,
+      route: message.Route,
+      timestamp: new Date(message.Timestamp || Date.now())
     };
 
     setNotifications(prev => {
@@ -160,9 +160,6 @@ const NotificationHandler: React.FC = () => {
       return updated;
     });
 
-    setTimeout(() => {
-      removeNotification(newNotification.id);
-    }, 5000);
   }, []);
 
   const handleWebSocketError = useCallback((error: Event) => {

@@ -51,12 +51,7 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
           const message: WebSocketMessage = JSON.parse(event.data);
           console.log('📨 Parsed WebSocket message:', message);
           
-          if (message.type === 'notification') {
-            console.log('🎯 Processing notification message');
-            onNotification(message);
-          } else {
-            console.log('⚡ Other message type:', message.type);
-          }
+          onNotification(message);
         } catch (error) {
           console.error('❌ Error parsing WebSocket message:', error, 'Raw data:', event.data);
         }
