@@ -1,19 +1,27 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { onForegroundMessage, isMessagingSupported } from '../../firebase/messaging';
+import { useWebSocket } from '../../api/hooks/useWebSocket';
 
 const NotificationsContainer = styled.div`
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 1000;
+  z-index: 10000; // Увеличил z-index
   display: flex;
   gap: 10px;
-  max-height: 100px;
   flex-direction: column;
+  pointer-events: none;
+  
+  /* Мобильная адаптация */
+  @media (max-width: 768px) {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    align-items: center;
+  }
 `;
 
-const NotificationToast = styled.div`
+const NotificationToast = styled.div<{ isLeaving: boolean }>`
   background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -27,11 +35,21 @@ const NotificationToast = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.2);
   min-width: 300px;
   max-width: 500px;
+  pointer-events: auto;
+  transform: ${props => props.isLeaving ? 'translateX(100%)' : 'translateX(0)'};
+  opacity: ${props => props.isLeaving ? 0 : 1};
   
   &:hover {
-    transform: translateY(-2px);
+    transform: ${props => props.isLeaving ? 'translateX(100%)' : 'translateY(-2px)'};
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     background: rgba(255, 255, 255, 0.98);
+  }
+
+  /* Мобильная адаптация */
+  @media (max-width: 768px) {
+    min-width: unset;
+    width: 100%;
+    max-width: 400px;
   }
 `;
 
@@ -44,6 +62,7 @@ const NotificationImage = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #f8f9fa;
   
   img {
     width: 100%;
@@ -65,6 +84,7 @@ const NotificationHeader = styled.div`
   align-items: flex-start;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
 `;
 
 const NotificationTitle = styled.span`
@@ -91,117 +111,95 @@ const NotificationBody = styled.div`
   text-align: left;
 `;
 
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  
+  &:hover {
+    color: #666;
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+
 const PLACEHOLDER_IMAGE = 'https://lets-digit.ru/Resourses/Logos/logo.png';
 
+interface Notification {
+  id: number;
+  title: string;
+  body: string;
+  image?: string;
+  timestamp: Date;
+  route?: string;
+}
+
 const NotificationHandler: React.FC = () => {
-  const [status, setStatus] = useState<string>('Инициализация...');
-  const [notifications, setNotifications] = useState<Array<{
-    id: number;
-    title: string;
-    body: string;
-    image?: string;
-    timestamp: Date;
-  }>>([]);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [closingNotifications, setClosingNotifications] = useState<Set<number>>(new Set());
+  const nextIdRef = React.useRef(1);
 
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    const setupNotifications = async () => {
-      try {
-        setStatus('Проверяем поддержку браузера...');
-        
-        const supported = await isMessagingSupported();
-        if (!supported) {
-          setStatus('❌ Браузер не поддерживает Firebase Messaging');
-          return;
-        }
-
-        setStatus('Настраиваем обработку уведомлений...');
-        
-        unsubscribe = onForegroundMessage((payload) => {
-          console.log('🎯 Уведомление получено в активном приложении:', payload);
-          setStatus(`📨 Получено уведомление: ${payload.notification?.title}`);
-          
-          showCustomNotification(payload.notification);
-        });
-
-        setStatus('✅ Обработчик уведомлений настроен');
-        
-      } catch (error) {
-        console.error('❌ Ошибка настройки уведомлений:', error);
-        setStatus(`❌ Ошибка: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+  const handleNewNotification = useCallback((message: any) => {
+    console.log('🎯 New notification received:', message);
+    
+    const newNotification: Notification = {
+      id: nextIdRef.current++,
+      title: message.title,
+      body: message.body,
+      image: message.image,
+      route: message.route,
+      timestamp: new Date(message.timestamp || Date.now())
     };
 
-    setupNotifications();
+    setNotifications(prev => {
+      const updated = [newNotification, ...prev].slice(0, 5);
+      console.log('📋 Notifications updated:', updated);
+      return updated;
+    });
 
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-        console.log('🔕 Отписались от уведомлений');
-      }
-    };
+    setTimeout(() => {
+      removeNotification(newNotification.id);
+    }, 5000);
   }, []);
 
-  // Эффект для обновления времени каждую минуту
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNotifications(prev => [...prev]);
-    }, 60000);
-
-    return () => clearInterval(interval);
+  const handleWebSocketError = useCallback((error: Event) => {
+    console.error('💥 WebSocket error in component:', error);
   }, []);
 
-  const playNotificationSound = () => {
-    if (!isSoundEnabled) return;
-
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-
-      const audioContext = audioContextRef.current;
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-      
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.05);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-      
-    } catch (error) {
-      console.warn('Не удалось воспроизвести звук уведомления:', error);
-    }
-  };
-
-  const showCustomNotification = (notification: any) => {
-    if (!notification) return;
-
-    playNotificationSound();
-
-    const newNotification = {
-      id: Date.now(),
-      title: notification.title || 'vze)))',
-      body: notification.body || '',
-      image: notification.image || PLACEHOLDER_IMAGE,
-      timestamp: new Date()
-    };
-
-    setNotifications(prev => [newNotification, ...prev]);
-  };
+  // Подключаем WebSocket
+  useWebSocket({
+    onNotification: handleNewNotification,
+    onError: handleWebSocketError
+  });
 
   const removeNotification = (id: number) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
+    // Анимация закрытия
+    setClosingNotifications(prev => new Set(prev).add(id));
+    
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(notif => notif.id !== id));
+      setClosingNotifications(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }, 300);
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    console.log('🖱️ Notification clicked:', notification);
+    
+    if (notification.route) {
+      console.log('🔗 Navigating to:', notification.route);
+      window.location.href = notification.route;
+    }
+    
+    removeNotification(notification.id);
   };
 
   const formatRelativeTime = (date: Date): string => {
@@ -235,76 +233,57 @@ const NotificationHandler: React.FC = () => {
     }
   };
 
-  const extractImageFromPayload = (payload: any): string | undefined => {
-    // Пробуем разные возможные пути к изображению в payload Firebase
-    if (payload.notification?.image) {
-      return payload.notification.image;
-    }
-    
-    if (payload.data?.image) {
-      return payload.data.image;
-    }
-    
-    if (payload.fcmOptions?.image) {
-      return payload.fcmOptions.image;
-    }
-    
-    if (payload.data?.fcm_options?.image) {
-      return payload.data.fcm_options.image;
-    }
-    
-    // Для кастомных уведомлений
-    if (payload.data?.notification?.image) {
-      return payload.data.notification.image;
-    }
-    
-    console.log('🔍 Детали payload для отладки:', {
-      notification: payload.notification,
-      data: payload.data,
-      fcmOptions: payload.fcmOptions
-    });
-    
-    return undefined;
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, notification: Notification) => {
+    console.warn('❌ Ошибка загрузки изображения:', notification.image, 'используем заглушку');
+    e.currentTarget.src = PLACEHOLDER_IMAGE;
+  };
+
+  const handleImageLoad = (notification: Notification) => {
+    console.log('✅ Изображение загружено успешно:', notification.image);
   };
 
   return (
-    <>
-      <NotificationsContainer>
-        {notifications.map(notification => (
-          <NotificationToast
-            key={notification.id} 
-            onClick={() => removeNotification(notification.id)}
-          >
-<NotificationImage>
-              <img 
-                src={notification.image || PLACEHOLDER_IMAGE} 
-                alt="Notification"
-                onError={(e) => {
-                  console.warn('❌ Ошибка загрузки изображения:', notification.image, 'используем заглушку');
-                  e.currentTarget.src = PLACEHOLDER_IMAGE;
-                }}
-                onLoad={() => {
-                  console.log('✅ Изображение загружено успешно:', notification.image);
-                }}
-              />
-            </NotificationImage>
-            
-            <NotificationContent>
-              <NotificationHeader>
-                <NotificationTitle>{notification.title}</NotificationTitle>
-                <NotificationBody>
-                  {notification.body}
-                </NotificationBody>
-              </NotificationHeader>
+    <NotificationsContainer>
+      {notifications.map(notification => (
+        <NotificationToast
+          key={notification.id}
+          isLeaving={closingNotifications.has(notification.id)}
+          onClick={() => handleNotificationClick(notification)}
+        >
+          <NotificationImage>
+            <img 
+              src={notification.image || PLACEHOLDER_IMAGE} 
+              alt="Notification"
+              onError={(e) => handleImageError(e, notification)}
+              onLoad={() => handleImageLoad(notification)}
+            />
+          </NotificationImage>
+          
+          <NotificationContent>
+            <NotificationHeader>
+              <NotificationTitle>{notification.title}</NotificationTitle>
+              <NotificationBody>
+                {notification.body}
+              </NotificationBody>
+            </NotificationHeader>
 
-              <NotificationTime>
-                  {formatRelativeTime(notification.timestamp)}
-              </NotificationTime>
-            </NotificationContent>
-          </NotificationToast>
-        ))}
-      </NotificationsContainer>
-    </>
+            <NotificationTime>
+              {formatRelativeTime(notification.timestamp)}
+            </NotificationTime>
+          </NotificationContent>
+
+          <CloseButton 
+            onClick={(e) => {
+              e.stopPropagation();
+              removeNotification(notification.id);
+            }}
+            title="Закрыть"
+          >
+            ×
+          </CloseButton>
+        </NotificationToast>
+      ))}
+    </NotificationsContainer>
   );
 };
 

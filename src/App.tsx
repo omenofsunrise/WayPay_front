@@ -18,7 +18,7 @@ import CreditControlPage from './pages/CreditControlPage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import InvestorReportPage from './pages/InvestorReportPage';
 import BudgetPage from './pages/BudgetPage';
-import { AuthProvider, useAuth } from './сontext/AuthContext';
+import { AuthProvider } from './сontext/AuthContext';
 import AdminPanelPage from './pages/AdminPanelPage';
 import ToDoListPage from './pages/ToDoListPage';
 import { TaskCountProvider } from './сontext/TaskCountContext';
@@ -39,7 +39,6 @@ import BlackCatalogPage from './pages/BlackCatalog';
 import RegistrationRequestPage from './pages/RegistrationRequestPage';
 import CreditApplicationPage from './pages/CreditApplicationPage';
 import NotificationHandler from './components/NotificationHandler/NotificationHandler';
-import { checkNotificationPermission } from './firebase/messaging';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -100,61 +99,6 @@ function App() {
       window.removeEventListener('click', handleUserActivity);
     };
   }, [updateActivity]);
-
-  useEffect(() => {
-    const registerServiceWorker = async () => {
-      if ('serviceWorker' in navigator) {
-        try {
-          console.log('🔧 Регистрируем Service Worker...');
-          
-          // Ждем полной загрузки приложения
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-            scope: '/',
-            updateViaCache: 'none'
-          });
-
-          console.log('✅ Service Worker зарегистрирован:', registration.scope);
-
-          // Ждем активации
-          if (registration.installing) {
-            registration.installing.addEventListener('statechange', (event) => {
-              console.log('🔄 Состояние SW:', (event.target as any)?.state);
-            });
-          }
-
-          // Проверяем контролируемые страницы
-          const controlled = await navigator.serviceWorker.ready;
-          console.log('🎯 Service Worker готов, контролирует:', controlled.active?.scriptURL);
-
-        } catch (error) {
-          console.error('❌ Ошибка регистрации Service Worker:', error);
-        }
-      } else {
-        console.warn('❌ Service Worker не поддерживается в этом браузере');
-      }
-    };
-
-    registerServiceWorker();
-  }, []);
-
-  useEffect(() => {
-    const checkPermissions = async () => {
-      const permission = await checkNotificationPermission();
-      console.log('🔔 Текущий статус разрешений:', permission);
-      
-      if (permission === 'default') {
-        console.log('⚠️ Разрешение не запрошено');
-      } else if (permission === 'denied') {
-        console.warn('❌ Разрешение на уведомления отклонено');
-      } else {
-        console.log('✅ Разрешение на уведомления предоставлено');
-      }
-    };
-    
-    checkPermissions();
-  }, []);
 
   useEffect(() => {
     const checkInactivity = () => {
