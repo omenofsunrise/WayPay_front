@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import CalculatorIcon from '../../../assets/ui/TopBar/calculator.svg';
 import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
@@ -16,6 +16,7 @@ import type { Permission, Role } from '../../../api/types/auth';
 import useTask from '../../../api/hooks/useTask';
 import { useTaskCount } from '../../../сontext/TaskCountContext';
 import useChat from '../../../api/hooks/useChat';
+import NotificationContextMenu from '../../ui/contextMenus/NotificationContextMenu';
 
 interface MenuItem {
   id: string;
@@ -54,11 +55,13 @@ const TopMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
-  const [showSettings, setShowSettings] = useState(false); // Состояние для модалки настроек
+  const [showSettings, setShowSettings] = useState(false);
   const { activeTasksCount, setActiveTasksCount } = useTaskCount();
   const { getActiveTasksCount } = useTask();
   const { getUnreadChatsCount } = useChat();
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const fetchTaskCount = async () => {
@@ -87,6 +90,14 @@ const TopMenu = () => {
     
     return () => clearInterval(interval);
   }, [getUnreadChatsCount]);
+
+  const handleBellClick = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  const handleNotificationsClose = () => {
+    setShowNotifications(false);
+  };
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
@@ -160,15 +171,24 @@ const TopMenu = () => {
           ))}
         </MenuItemsWrapper>
         
-        {/* <BellButton onClick={}>
-          <SettingsIconImg src={BellIcon} alt="" />
-        </BellButton> */}
+        <BellButton 
+          ref={bellButtonRef}
+          onClick={handleBellClick}
+        >
+          <SettingsIconImg src={BellIcon} alt="Уведомления" />
+        </BellButton>
 
         <SettingsButton onClick={handleSettingsClick}>
           <SettingsIconImg src={SettingsIcon} alt="Настройки" />
         </SettingsButton>
       </TopMenuContainer>
       
+      <NotificationContextMenu
+        isOpen={showNotifications}
+        onClose={handleNotificationsClose}
+        anchorElement={bellButtonRef.current}
+      />
+
       {showCalculator && <CalculatorModal onClose={handleCalculatorClose} />}
       {showSettings && <SettingsModal onClose={handleSettingsClose} />}
     </>

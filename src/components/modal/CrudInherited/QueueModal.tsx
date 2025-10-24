@@ -103,7 +103,7 @@ const QueueModal: React.FC<QueueModalProps> = ({
         clientId: false
       });
     }
-  }, [initialData, isOpen]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (mode === 'view') return;

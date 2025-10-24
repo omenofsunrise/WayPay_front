@@ -22,5 +22,5 @@ export interface NotificationResponse {
     title: string;
     message: string;
     senderAvatarPath: string;
-    DateTime: Date;
+    dateTime: Date;
 }

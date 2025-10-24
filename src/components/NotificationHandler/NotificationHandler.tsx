@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useWebSocket } from '../../api/hooks/useWebSocket';
+import { formatRelativeTime } from '../../utils/dateFormatter';
 
 const NotificationsContainer = styled.div`
   position: fixed;
@@ -193,37 +194,6 @@ const NotificationHandler: React.FC = () => {
     }
     
     removeNotification(notification.id);
-  };
-
-  const formatRelativeTime = (date: Date): string => {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    const diffInHours = Math.floor(diffInMinutes / 60);
-
-    if (diffInSeconds < 10) {
-      return 'только что';
-    } else if (diffInSeconds < 60) {
-      return 'меньше минуты назад';
-    } else if (diffInMinutes === 1) {
-      return 'минуту назад';
-    } else if (diffInMinutes < 5) {
-      return `${diffInMinutes} минуты назад`;
-    } else if (diffInMinutes < 60) {
-      return `${diffInMinutes} минут назад`;
-    } else if (diffInHours === 1) {
-      return 'час назад';
-    } else if (diffInHours < 24) {
-      return `${diffInHours} часа назад`;
-    } else {
-      return date.toLocaleTimeString('ru-RU', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit'
-      });
-    }
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, notification: Notification) => {
