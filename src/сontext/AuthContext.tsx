@@ -9,7 +9,7 @@ interface AuthContextType {
   error: string | null;
   refresh: () => Promise<void>;
   hasPermission: (permission: Permission, checkAdmins?: boolean) => boolean;
-  hasRole: (role: Role) => boolean;
+  hasRole: (role: Role | Role[]) => boolean;
   forbiddenRole: (role: Role) => boolean;
   isSuperAdminCompany: () => boolean;
   isSuperAdminId: () => boolean;
@@ -62,8 +62,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     return authInfo.employee.permissions.includes(permission);
   };
 
-  const hasRole = (role: Role): boolean => {
+  const hasRole = (role: Role | Role[]): boolean => {
     if (!authInfo) return false;
+    
+    if (Array.isArray(role)) {
+      return role.includes(authInfo.employee.role);
+    }
+    
     return authInfo.employee.role === role;
   };
 

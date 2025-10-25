@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import useNotification from '../../../api/hooks/useNotification';
 import type { NotificationResponse } from '../../../api/types/notification';
@@ -21,6 +22,7 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { getMyNotifications } = useNotification();
+  const navigate = useNavigate();
 
   // Сбрасываем состояние при закрытии
   useEffect(() => {
@@ -81,6 +83,14 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
     }
   };
 
+  const handleNotificationClick = (notification: NotificationResponse) => {
+    onClose();
+    
+    if (notification.route && notification.route.trim() !== '') {
+      window.location.href = notification.route;
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -132,7 +142,10 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
         ) : (
           <>
             {notifications.map((notification) => (
-              <NotificationItem key={notification.id}>
+              <NotificationItem 
+                key={notification.id}
+                onClick={() => handleNotificationClick(notification)}
+              >
                 <NotificationAvatar 
                   src={notification.senderAvatarPath} 
                   alt="Avatar"

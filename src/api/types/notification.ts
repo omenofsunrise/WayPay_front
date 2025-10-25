@@ -24,4 +24,6 @@ export interface NotificationResponse {
     senderAvatarPath: string;
     dateTime: Date;
     isRead: boolean;
+    route?: string;
+    type?: string;
 }

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useWebSocket } from '../../api/hooks/useWebSocket';
 import { formatRelativeTime } from '../../utils/dateFormatter';
 import useNotification from '../../api/hooks/useNotification';
+import { DISABLE_NOTIFICATIONS_KEY, getDisableNotificationsSetting, getShowContractCreationNotificationSetting, SHOW_CONTRACT_CREATION_NOTIFICATION_KEY } from '../modal/SettingsModal';
 
 const NotificationsContainer = styled.div`
   position: fixed;
@@ -139,17 +140,51 @@ interface Notification {
   timestamp: Date;
   route?: string;
   isRead: boolean;
+  type?: string;
 }
 
 const NotificationHandler: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [closingNotifications, setClosingNotifications] = useState<Set<number>>(new Set());
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [showContractCreationNotification, setShowContractCreationNotification] = useState(true);
   const nextIdRef = React.useRef(1);
   
   const { getMyNotifications, ReadNotification } = useNotification();
 
-  // Загрузка непрочитанных уведомлений при инициализации
+  // Загружаем настройки уведомлений
   useEffect(() => {
+    const loadSettings = () => {
+      const disableNotifications = getDisableNotificationsSetting();
+      const showContractCreation = getShowContractCreationNotificationSetting();
+      
+      setNotificationsEnabled(!disableNotifications);
+      setShowContractCreationNotification(showContractCreation);
+      
+      console.log('⚙️ Настройки уведомлений:', {
+        notificationsEnabled: !disableNotifications,
+        showContractCreationNotification: showContractCreation
+      });
+    };
+
+    loadSettings();
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === DISABLE_NOTIFICATIONS_KEY || e.key === SHOW_CONTRACT_CREATION_NOTIFICATION_KEY) {
+        loadSettings();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsEnabled) {
+      console.log('🔕 Уведомления выключены в настройках, пропускаем загрузку');
+      return;
+    }
+
     const loadInitialNotifications = async () => {
       console.log('📥 Загрузка непрочитанных уведомлений...');
       try {
@@ -160,7 +195,7 @@ const NotificationHandler: React.FC = () => {
         });
         
         if (result && result.items) {
-          const unreadNotifications = result.items
+          let unreadNotifications = result.items
             .filter(item => !item.isRead)
             .map(item => ({
               id: item.id,
@@ -168,8 +203,17 @@ const NotificationHandler: React.FC = () => {
               body: item.message,
               image: item.senderAvatarPath,
               timestamp: new Date(item.dateTime),
-              isRead: item.isRead
+              isRead: item.isRead,
+              type: item.type
             }));
+
+          // Фильтруем уведомления о создании договора если настройка выключена
+          if (!showContractCreationNotification) {
+            unreadNotifications = unreadNotifications.filter(
+              notification => notification.type !== 'credit'
+            );
+            console.log('📝 Фильтрация уведомлений о договорах применена');
+          }
           
           console.log(`✅ Загружено ${unreadNotifications.length} непрочитанных уведомлений`);
           setNotifications(unreadNotifications);
@@ -180,9 +224,21 @@ const NotificationHandler: React.FC = () => {
     };
 
     loadInitialNotifications();
-  }, [getMyNotifications]);
+  }, [getMyNotifications, notificationsEnabled, showContractCreationNotification]);
 
   const handleNewNotification = useCallback((message: any) => {
+    // Не обрабатываем новые уведомления если они выключены в настройках
+    if (!notificationsEnabled) {
+      console.log('🔕 Уведомления выключены, игнорируем новое уведомление');
+      return;
+    }
+
+    // Пропускаем уведомления о создании договора если настройка выключена
+    if (!showContractCreationNotification && message.Type === 'credit') {
+      console.log('📝 Уведомление о создании договора пропущено из-за настроек');
+      return;
+    }
+
     console.log('🎯 New notification received:', message);
     
     const newNotification: Notification = {
@@ -192,7 +248,8 @@ const NotificationHandler: React.FC = () => {
       image: message.Image,
       route: message.Route,
       timestamp: new Date(message.Timestamp || Date.now()),
-      isRead: false
+      isRead: false,
+      type: message.Type
     };
 
     setNotifications(prev => {
@@ -201,16 +258,19 @@ const NotificationHandler: React.FC = () => {
       return updated;
     });
 
-  }, []);
+  }, [notificationsEnabled, showContractCreationNotification]);
 
   const handleWebSocketError = useCallback((error: Event) => {
     console.error('💥 WebSocket error in component:', error);
   }, []);
 
-  useWebSocket({
-    onNotification: handleNewNotification,
-    onError: handleWebSocketError
-  });
+  // Используем WebSocket хук только если уведомления включены
+  useWebSocket(
+    notificationsEnabled ? {
+      onNotification: handleNewNotification,
+      onError: handleWebSocketError
+    } : undefined
+  );
 
   const removeNotification = (id: number) => {
     setClosingNotifications(prev => new Set(prev).add(id));
@@ -254,7 +314,12 @@ const NotificationHandler: React.FC = () => {
     console.log('✅ Изображение загружено успешно:', notification.image);
   };
 
-  // Фильтруем только непрочитанные уведомления для отображения
+  // Если уведомления выключены, не рендерим компонент
+  if (!notificationsEnabled) {
+    console.log('🔕 Компонент уведомлений не рендерится - уведомления выключены');
+    return null;
+  }
+
   const unreadNotifications = notifications.filter(notification => !notification.isRead);
 
   return (
