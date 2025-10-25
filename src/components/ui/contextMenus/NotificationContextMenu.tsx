@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import useNotification from '../../../api/hooks/useNotification';
 import type { NotificationResponse } from '../../../api/types/notification';
 import { formatRelativeTime } from '../../../utils/dateFormatter';
+import { generateAvatar, getInitials } from '../../../utils/avatarUtils';
 
 interface NotificationContextMenuProps {
   isOpen: boolean;
@@ -20,32 +21,31 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [avatarCache, setAvatarCache] = useState<Map<number, string>>(new Map());
   const menuRef = useRef<HTMLDivElement>(null);
   const { getMyNotifications } = useNotification();
   const navigate = useNavigate();
 
-  // Сбрасываем состояние при закрытии
   useEffect(() => {
     if (!isOpen) {
       setNotifications([]);
       setCurrentPage(1);
       setHasMore(true);
+      setAvatarCache(new Map());
     }
   }, [isOpen]);
 
-  // Загружаем уведомления при открытии
   useEffect(() => {
     if (isOpen && hasMore && !isLoading) {
       loadNextPage();
     }
   }, [isOpen, hasMore, isLoading]);
 
-  // Загружаем следующую страницу через небольшую задержку после предыдущей
   useEffect(() => {
     if (isOpen && hasMore && !isLoading && currentPage > 1) {
       const timer = setTimeout(() => {
         loadNextPage();
-      }, 500); // Задержка 500мс между загрузками
+      }, 500);
         
       return () => clearTimeout(timer);
     }
@@ -66,8 +66,7 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
       if (result?.items) {
         setNotifications(prev => [...prev, ...result.items]);
         
-        // Проверяем, есть ли еще страницы
-        if (result.items.length < 10 || currentPage >= 10) { // Ограничиваем максимум 10 страниц
+        if (result.items.length < 10 || currentPage >= 10) {
           setHasMore(false);
         } else {
           setCurrentPage(prev => prev + 1);
@@ -89,6 +88,40 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
     if (notification.route && notification.route.trim() !== '') {
       window.location.href = notification.route;
     }
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, notification: NotificationResponse) => {
+    console.warn('❌ Ошибка загрузки изображения:', notification.senderAvatarPath, 'генерируем аватар');
+    
+    const initials = getInitials(notification.title);
+    const generatedAvatar = generateAvatar(initials, 100);
+    
+    // Сохраняем сгенерированный аватар в кэш
+    setAvatarCache(prev => new Map(prev).set(notification.id, generatedAvatar));
+    
+    // Обновляем src изображения
+    e.currentTarget.src = generatedAvatar;
+  };
+
+  const handleImageLoad = (notification: NotificationResponse) => {
+    console.log('✅ Изображение загружено успешно:', notification.senderAvatarPath);
+  };
+
+  // Функция для получения URL изображения с учетом кэша
+  const getNotificationImage = (notification: NotificationResponse): string => {
+    // Если есть сгенерированный аватар в кэше, используем его
+    if (avatarCache.has(notification.id)) {
+      return avatarCache.get(notification.id)!;
+    }
+    
+    // Если есть оригинальное изображение, используем его
+    if (notification.senderAvatarPath) {
+      return notification.senderAvatarPath;
+    }
+    
+    // Если нет изображения, генерируем аватар на основе заголовка
+    const initials = getInitials(notification.title);
+    return generateAvatar(initials, 100);
   };
 
   useEffect(() => {
@@ -147,11 +180,10 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
                 onClick={() => handleNotificationClick(notification)}
               >
                 <NotificationAvatar 
-                  src={notification.senderAvatarPath} 
+                  src={getNotificationImage(notification)}
                   alt="Avatar"
-                  onError={(e) => {
-                    e.currentTarget.src = '/default-avatar.png';
-                  }}
+                  onError={(e) => handleImageError(e, notification)}
+                  onLoad={() => handleImageLoad(notification)}
                 />
                 <NotificationContent>
                   <NotificationHeader>
