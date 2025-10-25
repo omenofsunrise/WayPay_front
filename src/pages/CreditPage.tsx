@@ -11,7 +11,7 @@ import styled from 'styled-components';
 import Tabs from '../components/ui/fields/Tabs';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import useCredit from '../api/hooks/useCredit';
 import { InvestmentSourceType, type Credit, type SetInvestmentSourceRequest } from '../api/types/credit';
 import useExport from '../api/hooks/useExport';
@@ -72,6 +72,8 @@ const CreditPage = () => {
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] = useState(false);
   const [selectedCreditForFunding, setSelectedCreditForFunding] = useState<Credit | null>(null);
+  const { id, tab } = useParams<{ id?: string; tab?: string }>();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
@@ -86,6 +88,41 @@ const CreditPage = () => {
     { id: 'archive', label: 'В архиве' }
   ];
   
+  const getInitialTab = () => {
+    if (tab) {
+      return tab;
+    }
+    
+    if (location.pathname === '/credits/in-debt') {
+      return 'inDebt';
+    }
+    
+    return 'all';
+  };
+
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab());
+
+  useEffect(() => {
+    if (id) {
+      const creditId = parseInt(id);
+      if (!isNaN(creditId)) {
+        setViewingCreditId(creditId);
+        setIsViewModalOpen(true);
+      }
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (!isViewModalOpen && id) {
+      navigate('/credits', { replace: true });
+    }
+  }, [isViewModalOpen, id, navigate]);
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewingCreditId(null);
+  };
+
   const handleSelectFundingSource = (rowData: any[]) => {
     const [_, id] = rowData;
     const credit = creditsData?.items.find(c => c.id === Number(id));
@@ -119,8 +156,6 @@ const CreditPage = () => {
       alert('Произошла ошибка при установке источника финансирования');
     }
   };
-
-  const [activeTab, setActiveTab] = useState<string>('all');
 
   const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
       try {
@@ -629,8 +664,8 @@ const CreditPage = () => {
       <ViewCreditModal
         id={viewingCreditId || 0}
         isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-      />  
+        onClose={handleCloseViewModal}
+      />
 
       <PrintOptionModal
         isOpen={isPrintModalOpen}

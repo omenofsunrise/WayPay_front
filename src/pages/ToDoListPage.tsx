@@ -288,13 +288,13 @@ const ToDoListPage = () => {
                     options={assigneeOptions}
                     placeholder="Выберите исполнителя"
                     style={{ minWidth: '250px', height: "43px", margin: "0" }}
-                    disabled={filters.onlyMine} // Деактивируем при активации "Только свои"
+                    disabled={filters.onlyMine}
                 />
                 <ToggleContainer>
                     <Checkbox
                         label="Только свои"
                         checked={filters.onlyMine || false}
-                        onChange={handleOnlyMineChange} // Используем новый обработчик
+                        onChange={handleOnlyMineChange}
                     />
                 </ToggleContainer>
             </FilterField>

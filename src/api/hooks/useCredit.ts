@@ -174,6 +174,20 @@ const useCredit = () => {
     }
   }, []);
 
+  const getCreditById = useCallback(async (id: number): Promise<Credit | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await creditService.getCreditById(id);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch SPA data');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -188,7 +202,8 @@ const useCredit = () => {
     updateCredit,
     getCreateCreditRequest,
     setInvestmentSource,
-    getCreditListByClient
+    getCreditListByClient,
+    getCreditById
   };
 };
 

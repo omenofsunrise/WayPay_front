@@ -289,7 +289,9 @@ const CommentText = styled.p`
   white-space: pre-wrap;
   word-break: break-word;
   background: transparent;
-  color: black;`;
+  color: black;
+  text-align: left;
+`;
 
 const CommentContainer = styled.div`
   margin-top: auto;

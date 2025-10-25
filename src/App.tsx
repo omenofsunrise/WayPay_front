@@ -261,7 +261,7 @@ function App() {
               )
             } />
 
-            <Route path="/credits" element={
+            <Route path="/credits/:id?" element={
               isAuthenticated ? (
                 <MainLayout>
                   <CreditPage />

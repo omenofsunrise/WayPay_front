@@ -154,6 +154,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [selectedScheduleForPayment, setSelectedScheduleForPayment] = useState<ScheduleItem | null>(null);
   const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   const handleSavePayment = async (paymentData: {
     paymentDate: string;
     principalAmount: number;
@@ -582,7 +588,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
   return (
     <>
-      <ModalOverlay isOpen={isOpen} onClick={onClose}>
+      <ModalOverlay isOpen={isOpen} onClick={handleOverlayClick}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalWrapper>
             <TitleField style={{marginTop: 0, paddingTop: 0}}>
