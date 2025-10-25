@@ -130,7 +130,7 @@ const CloseButton = styled.button`
   }
 `;
 
-const PLACEHOLDER_IMAGE = 'https://lets-digit.ru/Resourses/Logos/logo.png';
+const PLACEHOLDER_IMAGE = 'https://lets-digit.ru/Resourses/Logos/WayPay.svg';
 
 interface Notification {
   id: number;
