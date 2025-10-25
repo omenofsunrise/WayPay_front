@@ -869,7 +869,7 @@ const ChatPage = () => {
             </React.Fragment>
           ))}
           
-          {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company' && chat.type !== 'private_chat').map(chat => (
+          {chats.filter(chat => chat.type !== 'general' && chat.type !== 'company').map(chat => (
             <React.Fragment key={chat.id}>
               <ListItem 
                 disablePadding

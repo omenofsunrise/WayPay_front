@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { useWebSocket } from '../../api/hooks/useWebSocket';
 import { formatRelativeTime } from '../../utils/dateFormatter';
 import useNotification from '../../api/hooks/useNotification';
-import { DISABLE_NOTIFICATIONS_KEY, getDisableNotificationsSetting, getShowContractCreationNotificationSetting, SHOW_CONTRACT_CREATION_NOTIFICATION_KEY } from '../modal/SettingsModal';
+import { getShowContractCreationNotificationSetting } from '../modal/SettingsModal';
 
 const NotificationsContainer = styled.div`
   position: fixed;
@@ -146,45 +146,11 @@ interface Notification {
 const NotificationHandler: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [closingNotifications, setClosingNotifications] = useState<Set<number>>(new Set());
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [showContractCreationNotification, setShowContractCreationNotification] = useState(true);
   const nextIdRef = React.useRef(1);
   
   const { getMyNotifications, ReadNotification } = useNotification();
 
-  // Загружаем настройки уведомлений
   useEffect(() => {
-    const loadSettings = () => {
-      const disableNotifications = getDisableNotificationsSetting();
-      const showContractCreation = getShowContractCreationNotificationSetting();
-      
-      setNotificationsEnabled(!disableNotifications);
-      setShowContractCreationNotification(showContractCreation);
-      
-      console.log('⚙️ Настройки уведомлений:', {
-        notificationsEnabled: !disableNotifications,
-        showContractCreationNotification: showContractCreation
-      });
-    };
-
-    loadSettings();
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === DISABLE_NOTIFICATIONS_KEY || e.key === SHOW_CONTRACT_CREATION_NOTIFICATION_KEY) {
-        loadSettings();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  useEffect(() => {
-    if (!notificationsEnabled) {
-      console.log('🔕 Уведомления выключены в настройках, пропускаем загрузку');
-      return;
-    }
-
     const loadInitialNotifications = async () => {
       console.log('📥 Загрузка непрочитанных уведомлений...');
       try {
@@ -195,7 +161,7 @@ const NotificationHandler: React.FC = () => {
         });
         
         if (result && result.items) {
-          let unreadNotifications = result.items
+          const unreadNotifications = result.items
             .filter(item => !item.isRead)
             .map(item => ({
               id: item.id,
@@ -206,14 +172,6 @@ const NotificationHandler: React.FC = () => {
               isRead: item.isRead,
               type: item.type
             }));
-
-          // Фильтруем уведомления о создании договора если настройка выключена
-          if (!showContractCreationNotification) {
-            unreadNotifications = unreadNotifications.filter(
-              notification => notification.type !== 'credit'
-            );
-            console.log('📝 Фильтрация уведомлений о договорах применена');
-          }
           
           console.log(`✅ Загружено ${unreadNotifications.length} непрочитанных уведомлений`);
           setNotifications(unreadNotifications);
@@ -224,18 +182,13 @@ const NotificationHandler: React.FC = () => {
     };
 
     loadInitialNotifications();
-  }, [getMyNotifications, notificationsEnabled, showContractCreationNotification]);
+  }, [getMyNotifications]);
 
   const handleNewNotification = useCallback((message: any) => {
-    // Не обрабатываем новые уведомления если они выключены в настройках
-    if (!notificationsEnabled) {
-      console.log('🔕 Уведомления выключены, игнорируем новое уведомление');
-      return;
-    }
+    console.log(`${message}`);
 
-    // Пропускаем уведомления о создании договора если настройка выключена
-    if (!showContractCreationNotification && message.Type === 'credit') {
-      console.log('📝 Уведомление о создании договора пропущено из-за настроек');
+    const showContractCreation = getShowContractCreationNotificationSetting();
+    if (!showContractCreation && message.Type === 'credit') {
       return;
     }
 
@@ -249,7 +202,7 @@ const NotificationHandler: React.FC = () => {
       route: message.Route,
       timestamp: new Date(message.Timestamp || Date.now()),
       isRead: false,
-      type: message.Type
+      type: message.type
     };
 
     setNotifications(prev => {
@@ -258,19 +211,16 @@ const NotificationHandler: React.FC = () => {
       return updated;
     });
 
-  }, [notificationsEnabled, showContractCreationNotification]);
+  }, []);
 
   const handleWebSocketError = useCallback((error: Event) => {
     console.error('💥 WebSocket error in component:', error);
   }, []);
 
-  // Используем WebSocket хук только если уведомления включены
-  useWebSocket(
-    notificationsEnabled ? {
-      onNotification: handleNewNotification,
-      onError: handleWebSocketError
-    } : undefined
-  );
+  useWebSocket({
+    onNotification: handleNewNotification,
+    onError: handleWebSocketError
+  });
 
   const removeNotification = (id: number) => {
     setClosingNotifications(prev => new Set(prev).add(id));
@@ -313,14 +263,18 @@ const NotificationHandler: React.FC = () => {
   const handleImageLoad = (notification: Notification) => {
     console.log('✅ Изображение загружено успешно:', notification.image);
   };
-
-  // Если уведомления выключены, не рендерим компонент
-  if (!notificationsEnabled) {
-    console.log('🔕 Компонент уведомлений не рендерится - уведомления выключены');
-    return null;
-  }
-
-  const unreadNotifications = notifications.filter(notification => !notification.isRead);
+  
+  const unreadNotifications = notifications.filter(notification => {
+    if (!notification.isRead) {
+      const showContractCreation = getShowContractCreationNotificationSetting();
+      if (showContractCreation) {
+        return true;
+      } else {
+        return notification.type !== 'credit';
+      }
+    }
+    return false;
+  });
 
   return (
     <NotificationsContainer>

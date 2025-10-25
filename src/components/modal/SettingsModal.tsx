@@ -54,9 +54,40 @@ export const getDisableNotificationsSetting = (): boolean => {
   return stored === 'true';
 };
 
+export const useLocalStorageSetting = (key: string, defaultValue: boolean) => {
+  const [value, setValue] = useState<boolean>(() => getDisableNotificationsSetting());
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setValue(getDisableNotificationsSetting());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    const handleCustomStorageChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ key: string }>;
+      if (customEvent.detail.key === key) {
+        setValue(getDisableNotificationsSetting());
+      }
+    };
+    
+    window.addEventListener('localStorageChange', handleCustomStorageChange as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange', handleCustomStorageChange as EventListener);
+    };
+  }, [key]);
+
+  return value;
+};
+
 export const setDisableNotificationsSetting = (value: boolean): void => {
   if (typeof window !== 'undefined') {
     localStorage.setItem(DISABLE_NOTIFICATIONS_KEY, value.toString());
+    window.dispatchEvent(new CustomEvent('localStorageChange', { 
+      detail: { key: DISABLE_NOTIFICATIONS_KEY } 
+    }));
   }
 };
 

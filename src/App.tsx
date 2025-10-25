@@ -39,6 +39,7 @@ import BlackCatalogPage from './pages/BlackCatalog';
 import RegistrationRequestPage from './pages/RegistrationRequestPage';
 import CreditApplicationPage from './pages/CreditApplicationPage';
 import NotificationHandler from './components/NotificationHandler/NotificationHandler';
+import { DISABLE_NOTIFICATIONS_KEY, getDisableNotificationsSetting, useLocalStorageSetting } from './components/modal/SettingsModal';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -54,7 +55,13 @@ function App() {
   const [showPinModal, setShowPinModal] = useState(false);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const [isMobile, setIsMobile] = useState<boolean>(false);
-  
+
+  const disableNotifications = useLocalStorageSetting(DISABLE_NOTIFICATIONS_KEY, false);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, [getDisableNotificationsSetting]);
+
   useEffect(() => {
     setIsMobile(isMobileDevice());
   }, []);
@@ -227,7 +234,7 @@ function App() {
 
   return (
     <AuthProvider>
-      <NotificationHandler />
+      {!disableNotifications && <NotificationHandler />}
       {showPinModal && (
         <PinCodeModal
           isOpen={true}
