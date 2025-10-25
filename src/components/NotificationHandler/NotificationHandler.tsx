@@ -238,20 +238,30 @@ const NotificationHandler: React.FC = () => {
   const handleNotificationClick = async (notification: Notification) => {
     console.log('🖱️ Notification clicked:', notification);
     
+    // Сразу помечаем как прочитанное
     if (!notification.isRead) {
       try {
         await ReadNotification(notification.id);
         console.log('✅ Уведомление помечено как прочитанное');
+        
+        // Обновляем состояние локально
+        setNotifications(prev => prev.map(notif => 
+          notif.id === notification.id 
+            ? { ...notif, isRead: true } 
+            : notif
+        ));
       } catch (error) {
         console.error('❌ Ошибка при отметке уведомления как прочитанного:', error);
       }
     }
     
+    // Навигация происходит после отметки как прочитанного
     if (notification.route) {
       console.log('🔗 Navigating to:', notification.route);
       window.location.href = notification.route;
     }
     
+    // Убираем уведомление из списка
     removeNotification(notification.id);
   };
 
