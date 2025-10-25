@@ -4,7 +4,6 @@ import { useWebSocket } from '../../api/hooks/useWebSocket';
 import { formatRelativeTime } from '../../utils/dateFormatter';
 import useNotification from '../../api/hooks/useNotification';
 import { getShowContractCreationNotificationSetting } from '../modal/SettingsModal';
-import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 
 const NotificationsContainer = styled.div`
   position: fixed;
@@ -147,7 +146,6 @@ interface Notification {
 const NotificationHandler: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [closingNotifications, setClosingNotifications] = useState<Set<number>>(new Set());
-  const [avatarCache, setAvatarCache] = useState<Map<number, string>>(new Map());
   const nextIdRef = React.useRef(1);
   
   const { getMyNotifications, ReadNotification } = useNotification();
@@ -234,12 +232,6 @@ const NotificationHandler: React.FC = () => {
         newSet.delete(id);
         return newSet;
       });
-      // Очищаем кэш аватара при удалении уведомления
-      setAvatarCache(prev => {
-        const newCache = new Map(prev);
-        newCache.delete(id);
-        return newCache;
-      });
     }, 300);
   };
 
@@ -263,39 +255,18 @@ const NotificationHandler: React.FC = () => {
     removeNotification(notification.id);
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, notification: Notification) => {
-    console.warn('❌ Ошибка загрузки изображения:', notification.image, 'генерируем аватар');
-    
-    // Генерируем аватар на основе заголовка уведомления
-    const initials = getInitials(notification.title);
-    const generatedAvatar = generateAvatar(initials, 100);
-    
-    // Сохраняем сгенерированный аватар в кэш
-    setAvatarCache(prev => new Map(prev).set(notification.id, generatedAvatar));
-    
-    // Обновляем src изображения
-    e.currentTarget.src = generatedAvatar;
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    console.warn('❌ Ошибка загрузки изображения, используем placeholder');
+    e.currentTarget.src = PLACEHOLDER_IMAGE;
   };
 
   const handleImageLoad = (notification: Notification) => {
     console.log('✅ Изображение загружено успешно:', notification.image);
   };
 
-  // Функция для получения URL изображения с учетом кэша
+  // Функция для получения URL изображения
   const getNotificationImage = (notification: Notification): string => {
-    // Если есть сгенерированный аватар в кэше, используем его
-    if (avatarCache.has(notification.id)) {
-      return avatarCache.get(notification.id)!;
-    }
-    
-    // Если есть оригинальное изображение, используем его
-    if (notification.image) {
-      return notification.image;
-    }
-    
-    // Если нет изображения, генерируем аватар на основе заголовка
-    const initials = getInitials(notification.title);
-    return generateAvatar(initials, 100);
+    return notification.image || PLACEHOLDER_IMAGE;
   };
   
   const unreadNotifications = notifications.filter(notification => {
@@ -322,7 +293,7 @@ const NotificationHandler: React.FC = () => {
             <img 
               src={getNotificationImage(notification)}
               alt="Notification"
-              onError={(e) => handleImageError(e, notification)}
+              onError={handleImageError}
               onLoad={() => handleImageLoad(notification)}
             />
           </NotificationImage>
