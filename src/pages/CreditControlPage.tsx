@@ -75,7 +75,7 @@ const CreditControlPage = () => {
     ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
     { id: 'favourite', label: 'Избранные' },
     { id: 'debtors', label: 'Просрочка' },
-    { id: 'inDebt', label: 'В долг' }, // Добавлена вкладка "В долг"
+    { id: 'inDebt', label: 'В долг' },
     { id: 'archive', label: 'В архиве' }
   ];
   
@@ -159,7 +159,7 @@ const CreditControlPage = () => {
         setFilters({ debt: true });
         break;
       case 'inDebt':
-        setFilters({ inDebt: true }); // Добавлен фильтр для вкладки "В долг"
+        setFilters({ inDebt: true });
         break;
       default:
         setFilters({});

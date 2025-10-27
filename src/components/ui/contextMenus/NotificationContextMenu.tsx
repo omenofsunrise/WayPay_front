@@ -96,10 +96,8 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
     const initials = getInitials(notification.title);
     const generatedAvatar = generateAvatar(initials, 100);
     
-    // Сохраняем сгенерированный аватар в кэш
     setAvatarCache(prev => new Map(prev).set(notification.id, generatedAvatar));
     
-    // Обновляем src изображения
     e.currentTarget.src = generatedAvatar;
   };
 
@@ -107,19 +105,15 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
     console.log('✅ Изображение загружено успешно:', notification.senderAvatarPath);
   };
 
-  // Функция для получения URL изображения с учетом кэша
   const getNotificationImage = (notification: NotificationResponse): string => {
-    // Если есть сгенерированный аватар в кэше, используем его
     if (avatarCache.has(notification.id)) {
       return avatarCache.get(notification.id)!;
     }
     
-    // Если есть оригинальное изображение, используем его
     if (notification.senderAvatarPath) {
       return notification.senderAvatarPath;
     }
     
-    // Если нет изображения, генерируем аватар на основе заголовка
     const initials = getInitials(notification.title);
     return generateAvatar(initials, 100);
   };

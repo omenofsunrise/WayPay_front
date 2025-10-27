@@ -731,10 +731,18 @@ const formatMyApplicationsTableData = () => {
             variant="success"
             onClick={() => handleProcessApplication(application)}
             title="Оформить договор"
-          >
+      >
             <FaFileContract />
             Оформить
-        </ActionButton>
+      </ActionButton>,
+      <ActionButton
+            variant="danger"
+            onClick={() => handleDeleteApplication(application)}
+            title="Удалить"
+      >
+          <FaFileContract />
+            Удалить
+      </ActionButton>
     ];
   });
 };
