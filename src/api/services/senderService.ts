@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { SenderInfoResponse, SetSenderTextRequest } from '../types/sender';
+import type { CreateSenderSetting, SenderInfoResponse, SetSenderTextRequest } from '../types/sender';
 
 class SenderService {
     async getMyCompanySenderInfo(): Promise<SenderInfoResponse> {
@@ -21,8 +21,16 @@ class SenderService {
         await apiClient.patch(`/SenderSettings/set-text-pattern`, request);
     }
 
-    async CreateSenderSetting(request: SetSenderTextRequest): Promise<void> {
-        await apiClient.post(`/SenderSettings/toggle/should-auto-buy`, request);
+    async CreateSenderSetting(request: CreateSenderSetting): Promise<void> {
+        await apiClient.post(`/SenderSettings`, request);
+    }
+
+    async DeleteSenderSetting(id: number): Promise<void> {
+        await apiClient.delete(`/SenderSettings/${id}`);
+    }
+
+    async BuyMessages(days: number): Promise<void> {
+        await apiClient.post(`/SenderSettings/buy-messages`, days);
     }
 }
 
