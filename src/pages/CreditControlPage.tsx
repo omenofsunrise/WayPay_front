@@ -338,7 +338,7 @@ const CreditControlPage = () => {
       credit.id.toString(),
       formatDate(credit.creditDate),
       credit.employeeName,
-      `${formatMoney(credit.totalClean.toString())}`,
+      `${formatMoney(credit.totalClean.toString())}`, фывыфв
       `${credit.incomePercents.toString() + '%'}`,
       `${formatMoney(credit.incomeRubles.toString())}`,
       `${formatMoney(credit.accured?.toString() || '')}`,
