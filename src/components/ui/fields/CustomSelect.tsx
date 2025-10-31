@@ -1,20 +1,20 @@
 import styled from 'styled-components';
 import React from 'react';
 
-interface CustomSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+interface CustomSelectProps<T = string> extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   placeholder?: string;
   customPlaceholder?: string;
   hasError?: boolean;
   errorMessage?: string;
-  options: { value: string; label: string }[];
-  value?: string;
-  onChange?: (event: { target: { value: string } }) => void;
+  options: { value: T; label: string }[];
+  value?: T;
+  onChange?: (event: { target: { value: T } }) => void;
   name?: string;
   disabled?: boolean;
   required?: boolean;
 }
 
-const CustomSelect: React.FC<CustomSelectProps> = ({
+const CustomSelect = <T extends string | number = string>({
   placeholder = '',
   customPlaceholder,
   value,
@@ -26,18 +26,18 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   disabled = false,
   required = false,
   ...props
-}) => {
+}: CustomSelectProps<T>) => {
   const [isFocused, setIsFocused] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(false);
   const selectRef = React.useRef<HTMLDivElement>(null);
   
   const showCustomPlaceholder = Boolean(customPlaceholder && !value && !isFocused);
 
-  const handleOptionClick = (optionValue: string) => {
+  const handleOptionClick = (optionValue: T) => {
     if (onChange && !disabled) {
       const event = {
         target: { value: optionValue, name }
-      } as React.ChangeEvent<HTMLSelectElement>;
+      };
       onChange(event);
     }
     setIsOpen(false);

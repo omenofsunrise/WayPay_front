@@ -1,13 +1,14 @@
 import PageLayout from '../../components/ui/Layouts/PageLayout';
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import CustomInput from '../../components/ui/fields/CustomInput';
 import Checkbox from '../../components/ui/CheckBoxes/Checkbox';
 import CustomSelect from '../../components/ui/fields/CustomSelect';
 import CustomTitle from '../../components/ui/Text/CustomTitle';
 import ModalInfoTitle from '../../components/ui/Text/ModalInfoTitle';
 import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
 import { Divider } from 'antd';
+import useSender from '../../api/hooks/useSender';
+import { DateDirection, TextPatternType } from '../../api/types/sender';
 
 interface SenderSettings {
   enabled: boolean;
@@ -26,6 +27,18 @@ interface SenderSettings {
 }
 
 const SenderPage = () => {
+  const {
+    isLoading,
+    error,
+    GetMyCompanySenderInfo,
+    ToggleSenderActivity,
+    ToggleShouldAutoBuy,
+    SetSenderTextPattern,
+    CreateNewSenderSetting,
+    DeleteSenderSetting,
+    BuyMessages
+  } = useSender();
+
   const [settings, setSettings] = useState<SenderSettings>({
     enabled: true,
     paymentDay: true,
@@ -34,89 +47,157 @@ const SenderPage = () => {
     overdueDay: true,
     overdueThreeDays: true,
     overdueWeek: true,
-    messageBalance: 100,
+    messageBalance: 0,
     autoPurchase: false,
-    upcomingPaymentText: 'Уважаемый клиент! Напоминаем, что {{сумма}} руб. к оплате {{дата}}. Карта: {{карта}}.',
-    overduePaymentText: 'Уважаемый клиент! Просрочка платежа {{сумма}} руб. от {{дата}}. Карта: {{карта}}. Срочно оплатите!'
+    upcomingPaymentText: '',
+    overduePaymentText: ''
   });
 
   const [purchaseAmount, setPurchaseAmount] = useState<number>(100);
-  const [isLoading, setIsLoading] = useState(false);
+  const [senderSettings, setSenderSettings] = useState<any[]>([]);
 
   useEffect(() => {
-    const savedSettings = localStorage.getItem('senderSettings');
-    if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
-    }
+    loadSenderData();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('senderSettings', JSON.stringify(settings));
-  }, [settings]);
+  const loadSenderData = async () => {
+    const data = await GetMyCompanySenderInfo();
+    if (data) {
+      setSettings(prev => ({
+        ...prev,
+        enabled: data.isSenderTurnedOn,
+        autoPurchase: data.shouldAutoBuyMessages,
+        messageBalance: data.messagesCount,
+        upcomingPaymentText: data.comingPaymentContent?.toString() || prev.upcomingPaymentText,
+        overduePaymentText: data.overduePaymentContent?.toString() || prev.overduePaymentText
+      }));
 
-  const handleSettingChange = (key: keyof SenderSettings, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
+      const apiSettings = data.senderSettingResponses || [];
+      setSenderSettings(apiSettings);
+
+      updateCheckboxesFromApi(apiSettings);
+    }
   };
 
-  const handleTextChange = (key: 'upcomingPaymentText' | 'overduePaymentText', value: string) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
+  const updateCheckboxesFromApi = (apiSettings: any[]) => {
+    const newSettings = {
+      paymentDay: false,
+      dayBeforePayment: false,
+      threeDaysBefore: false,
+      overdueDay: false,
+      overdueThreeDays: false,
+      overdueWeek: false
+    };
+
+    apiSettings.forEach(setting => {
+      if (setting.direction === DateDirection.Before) {
+        switch (setting.days) {
+          case 7:
+            newSettings.paymentDay = true;
+            break;
+          case 3:
+            newSettings.dayBeforePayment = true;
+            break;
+          case 1:
+            newSettings.threeDaysBefore = true;
+            break;
+        }
+      } else if (setting.direction === DateDirection.After) {
+        switch (setting.days) {
+          case 1:
+            newSettings.overdueDay = true;
+            break;
+          case 3:
+            newSettings.overdueThreeDays = true;
+            break;
+          case 7:
+            newSettings.overdueWeek = true;
+            break;
+        }
+      }
+    });
+
+    setSettings(prev => ({ ...prev, ...newSettings }));
+  };
+
+  const handleSettingChange = async (key: keyof SenderSettings, value: any) => {
+    if (['paymentDay', 'dayBeforePayment', 'threeDaysBefore', 'overdueDay', 'overdueThreeDays', 'overdueWeek'].includes(key)) {
+      await handleSenderSettingChange(key, value);
+    } 
+    else if (key === 'autoPurchase') {
+      await ToggleShouldAutoBuy();
+      setSettings(prev => ({ ...prev, [key]: value }));
+    }
+    else {
+      setSettings(prev => ({ ...prev, [key]: value }));
+    }
+  };
+
+  const handleSenderSettingChange = async (key: string, value: boolean) => {
+    const settingConfig = getSettingConfig(key);
+    if (!settingConfig) return;
+
+    if (value) {
+      await CreateNewSenderSetting({
+        days: settingConfig.days,
+        direction: settingConfig.direction
+      });
+    } else {
+      const existingSetting = senderSettings.find(
+        setting => setting.days === settingConfig.days && setting.direction === settingConfig.direction
+      );
+      if (existingSetting) {
+        await DeleteSenderSetting(existingSetting.id);
+      }
+    }
+
+    await loadSenderData();
+  };
+
+  const getSettingConfig = (key: string) => {
+    const configs: { [key: string]: { days: number; direction: DateDirection } } = {
+      paymentDay: { days: 7, direction: DateDirection.Before },
+      dayBeforePayment: { days: 3, direction: DateDirection.Before },
+      threeDaysBefore: { days: 1, direction: DateDirection.Before },
+      overdueDay: { days: 1, direction: DateDirection.After },
+      overdueThreeDays: { days: 3, direction: DateDirection.After },
+      overdueWeek: { days: 7, direction: DateDirection.After }
+    };
+    return configs[key];
+  };
+
+  const handleTextChange = async (key: 'upcomingPaymentText' | 'overduePaymentText', value: string) => {
+    const patternType = key === 'upcomingPaymentText' ? TextPatternType.ComingPayment : TextPatternType.OverduePayment;
+    
+    await SetSenderTextPattern({
+      newText: value,
+      patternType: patternType
+    });
+
+    setSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const handleToggleSender = async () => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSettings(prev => ({
-        ...prev,
-        enabled: !prev.enabled
-      }));
-    } catch (error) {
-      console.error('Ошибка при переключении рассылки:', error);
-      alert('Ошибка при переключении рассылки');
-    } finally {
-      setIsLoading(false);
-    }
+    await ToggleSenderActivity();
+    // Перезагружаем данные для получения актуального состояния
+    await loadSenderData();
   };
 
   const handlePurchaseMessages = async () => {
     if (purchaseAmount <= 0) return;
     
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setSettings(prev => ({
-        ...prev,
-        messageBalance: prev.messageBalance + purchaseAmount
-      }));
-      
-      setPurchaseAmount(100);
-      alert(`Успешно приобретено ${purchaseAmount} сообщений!`);
-    } catch (error) {
-      console.error('Ошибка при покупке сообщений:', error);
-      alert('Ошибка при покупке сообщений');
-    } finally {
-      setIsLoading(false);
-    }
+    // Предполагаем, что purchaseAmount соответствует количеству дней
+    const days = purchaseAmount;
+    await BuyMessages(days);
+    
+    // Перезагружаем данные для получения актуального баланса
+    await loadSenderData();
+    setPurchaseAmount(100);
   };
 
   const handleSaveSettings = async () => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      alert('Настройки успешно сохранены!');
-    } catch (error) {
-      console.error('Ошибка при сохранении настроек:', error);
-      alert('Ошибка при сохранении настроек');
-    } finally {
-      setIsLoading(false);
-    }
+    // Сохранение происходит автоматически через API вызовы
+    alert('Настройки успешно сохранены!');
   };
 
   const insertVariable = (textKey: 'upcomingPaymentText' | 'overduePaymentText', variable: string) => {
@@ -143,6 +224,11 @@ const SenderPage = () => {
     { value: 450, label: '450 сообщений - 30 дней' }
   ];
 
+  // Отображение ошибок, если они есть
+  if (error) {
+    console.error('API Error:', error);
+  }
+
   return (
     <PageLayout>
         <HeaderRow>
@@ -166,21 +252,25 @@ const SenderPage = () => {
                   checked={settings.paymentDay}
                   onChange={(e) => handleSettingChange('paymentDay', e)}
                   label="За 7 дней до платежа"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.dayBeforePayment}
                   onChange={(e) => handleSettingChange('dayBeforePayment', e)}
                   label="За 3 дня до платежа"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.threeDaysBefore}
                   onChange={(e) => handleSettingChange('threeDaysBefore', e)}
                   label="За день до платежа"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.threeDaysBefore}
                   onChange={(e) => handleSettingChange('threeDaysBefore', e)}
                   label="В день платежа"
+                  disabled={isLoading}
                 />
 
                 <Divider />
@@ -190,31 +280,37 @@ const SenderPage = () => {
                   checked={settings.overdueDay}
                   onChange={(e) => handleSettingChange('overdueDay', e)}
                   label="При просрочке 1 день"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.overdueThreeDays}
                   onChange={(e) => handleSettingChange('overdueThreeDays', e)}
                   label="При просрочке 3 дня"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.overdueWeek}
                   onChange={(e) => handleSettingChange('overdueWeek', e)}
                   label="При просрочке 7 дней"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.overdueWeek}
                   onChange={(e) => handleSettingChange('overdueWeek', e)}
                   label="При просрочке 14 дней"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.overdueWeek}
                   onChange={(e) => handleSettingChange('overdueWeek', e)}
                   label="При просрочке 30 дней"
+                  disabled={isLoading}
                 />
                 <Checkbox
                   checked={settings.overdueWeek}
                   onChange={(e) => handleSettingChange('overdueWeek', e)}
                   label="При просрочке 60 дней"
+                  disabled={isLoading}
                 />
               </SettingsGrid>
             </SettingsSection>
@@ -232,8 +328,9 @@ const SenderPage = () => {
                       <Label>Количество сообщений для покупки:</Label>
                       <CustomSelect
                         value={purchaseAmount}
-                        onChange={(value) => setPurchaseAmount(Number(value))}
+                        onChange={(e) => setPurchaseAmount(Number(e.target.value))}
                         options={purchaseOptions}
+                        disabled={isLoading}
                       />
                     </FormGroup>
                     
@@ -241,6 +338,7 @@ const SenderPage = () => {
                       checked={settings.autoPurchase}
                       onChange={(e) => handleSettingChange('autoPurchase', e)}
                       label="Автоматически докупать сообщения при нулевом балансе"
+                      disabled={isLoading}
                     />
                     
                     <DarkCyanButton
@@ -255,19 +353,27 @@ const SenderPage = () => {
             </SettingsSection>
           </TopRow>
 
-          {/* Второй ряд: Шаблоны сообщений */}
           <BottomRow>
             <MessageSection>
               <MessageHeader>
                 <ModalInfoTitle>Текст для приближающегося платежа</ModalInfoTitle>
                 <VariableButtons>
-                  <VariableButton onClick={() => insertVariable('upcomingPaymentText', 'сумма')}>
+                  <VariableButton 
+                    onClick={() => insertVariable('upcomingPaymentText', 'amount')}
+                    disabled={isLoading}
+                  >
                     Сумма
                   </VariableButton>
-                  <VariableButton onClick={() => insertVariable('upcomingPaymentText', 'дата')}>
+                  <VariableButton 
+                    onClick={() => insertVariable('upcomingPaymentText', 'date')}
+                    disabled={isLoading}
+                  >
                     Дата
                   </VariableButton>
-                  <VariableButton onClick={() => insertVariable('upcomingPaymentText', 'карта')}>
+                  <VariableButton 
+                    onClick={() => insertVariable('upcomingPaymentText', 'accountDetails')}
+                    disabled={isLoading}
+                  >
                     Карта
                   </VariableButton>
                 </VariableButtons>
@@ -279,15 +385,16 @@ const SenderPage = () => {
                 onChange={(e) => handleTextChange('upcomingPaymentText', e.target.value)}
                 rows={4}
                 placeholder="Введите текст сообщения для приближающегося платежа..."
+                disabled={isLoading}
               />
               
               <MessagePreview>
                 <PreviewLabel>Предпросмотр:</PreviewLabel>
                 <PreviewText>
                   {settings.upcomingPaymentText
-                    .replace('{{сумма}}', '1,500')
-                    .replace('{{дата}}', '15.12.2024')
-                    .replace('{{карта}}', '**** 1234')}
+                    .replace('{{amount}}', '1,500')
+                    .replace('{{date}}', '15.12.2024')
+                    .replace('{{accountDetails}}', '**** 1234')}
                 </PreviewText>
               </MessagePreview>
             </MessageSection>
@@ -296,13 +403,22 @@ const SenderPage = () => {
               <MessageHeader>
                 <ModalInfoTitle>Текст для просрочки платежа</ModalInfoTitle>
                 <VariableButtons>
-                  <VariableButton onClick={() => insertVariable('overduePaymentText', 'сумма')}>
+                  <VariableButton 
+                    onClick={() => insertVariable('overduePaymentText', 'amount')}
+                    disabled={isLoading}
+                  >
                     Сумма
                   </VariableButton>
-                  <VariableButton onClick={() => insertVariable('overduePaymentText', 'дата')}>
+                  <VariableButton 
+                    onClick={() => insertVariable('overduePaymentText', 'date')}
+                    disabled={isLoading}
+                  >
                     Дата
                   </VariableButton>
-                  <VariableButton onClick={() => insertVariable('overduePaymentText', 'карта')}>
+                  <VariableButton 
+                    onClick={() => insertVariable('overduePaymentText', 'accountDetails')}
+                    disabled={isLoading}
+                  >
                     Карта
                   </VariableButton>
                 </VariableButtons>
@@ -314,15 +430,16 @@ const SenderPage = () => {
                 onChange={(e) => handleTextChange('overduePaymentText', e.target.value)}
                 rows={4}
                 placeholder="Введите текст сообщения для просрочки платежа..."
+                disabled={isLoading}
               />
               
               <MessagePreview>
                 <PreviewLabel>Предпросмотр:</PreviewLabel>
                 <PreviewText>
                   {settings.overduePaymentText
-                    .replace('{{сумма}}', '1,500')
-                    .replace('{{дата}}', '15.12.2024')
-                    .replace('{{карта}}', '**** 1234')}
+                    .replace('{{amount}}', '1,500')
+                    .replace('{{date}}', '15.12.2024')
+                    .replace('{{accountDetails}}', '**** 1234')}
                 </PreviewText>
               </MessagePreview>
             </MessageSection>
@@ -497,22 +614,23 @@ const VariableButtons = styled.div`
   flex-wrap: wrap;
 `;
 
-const VariableButton = styled.button`
+const VariableButton = styled.button<{ disabled?: boolean }>`
   background-color: #e5e7eb;
   color: #374151;
   border: none;
   padding: 6px 12px;
   border-radius: 6px;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   font-size: 12px;
   font-weight: 500;
+  opacity: ${props => props.disabled ? 0.6 : 1};
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: #d1d5db;
   }
 `;
 
-const MessageTextarea = styled.textarea`
+const MessageTextarea = styled.textarea<{ disabled?: boolean }>`
   width: 100%;
   padding: 12px;
   border: 1px solid #d1d5db;
@@ -522,6 +640,8 @@ const MessageTextarea = styled.textarea`
   min-height: 100px;
   color: black;
   background-color: white;
+  opacity: ${props => props.disabled ? 0.6 : 1};
+  cursor: ${props => props.disabled ? 'not-allowed' : 'text'};
 
   &:focus {
     outline: none;
