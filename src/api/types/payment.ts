@@ -19,6 +19,8 @@ export interface PaymentParams extends PaginationParams {
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
     investorNickname?: string,
+    confirmed?: boolean;
+    employeeFullname?: string;
     dateFrom?: Date;
     dateTo?: Date;
 }

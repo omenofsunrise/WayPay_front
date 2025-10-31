@@ -156,10 +156,8 @@ const SchedulePage = () => {
         }
     };
 
-    // Функция для открытия модального окна платежа
     const handleOpenPaymentModal = async (schedule: ScheduleDetails) => {
         try {
-            // Получаем данные кредита по ID
             const credit = await creditService.getCreditById(schedule.creditId);
             setSelectedCredit(credit);
             setSelectedScheduleForPayment(schedule);
@@ -170,7 +168,6 @@ const SchedulePage = () => {
         }
     };
 
-    // Функция для сохранения платежа
     const handleSavePayment = async (paymentData: {
         paymentDate: string;
         principalAmount: number;
@@ -190,7 +187,6 @@ const SchedulePage = () => {
             
             const result = await createPayment(paymentRequest);
             
-            // Перезагружаем данные расписания
             await loadSchedules();
             setIsPaymentModalOpen(false);
             setSelectedScheduleForPayment(null);

@@ -13,7 +13,7 @@ interface CustomSelectWithAvatarProps extends Omit<React.HTMLAttributes<HTMLDivE
   onChange?: (event: { target: { value: string } }) => void;
   name?: string;
   disabled?: boolean;
-  required?: boolean; // Добавляем пропс required
+  required?: boolean;
 }
 
 const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
@@ -26,7 +26,7 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
   options,
   name,
   disabled = false,
-  required = false, // По умолчанию не обязательный
+  required = false,
   ...props
 }) => {
   const [isFocused, setIsFocused] = React.useState(false);

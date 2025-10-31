@@ -21,6 +21,10 @@ import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
 import PrintIcon from '../assets/ui/print.svg?react';
+import UserSelect from '../components/ui/fields/UserSelect';
+import { useEmployee } from '../api/hooks/useEmployee';
+import CustomSelect from '../components/ui/fields/CustomSelect';
+import type { EmployeeFullnames } from '../api/types/employee';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -32,6 +36,9 @@ const PaymentPage = () => {
     const pageSize = 10;
     const { authInfo } = useAuth();
     const [investorName, setInvestorName] = useState('');
+    const [employeeFullname, setEmployeeFullname] = useState('');
+    const [confirmedFilter, setConfirmedFilter] = useState<string>('all');
+    const [employees, setEmployees] = useState<EmployeeFullnames[]>([]);
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditId',
         1: 'clientFullname',
@@ -46,6 +53,8 @@ const PaymentPage = () => {
 
     const { exportData, isExporting, exportProgress } = useExport<Payment>();
 
+    const { fetchEmployeeFullnames } = useEmployee();
+        
     const { 
         isLoading, 
         error, 
@@ -54,6 +63,27 @@ const PaymentPage = () => {
         confirmPayment,
         deletePayment
     } = usePayment();
+
+    useEffect(() => {
+        const loadEmployees = async () => {
+            try {
+                const employeeList = await fetchEmployeeFullnames();
+                if (employeeList) {
+                    setEmployees(employeeList);
+                }
+            } catch (err) {
+                console.error('Ошибка при загрузке сотрудников:', err);
+            }
+        };
+
+        loadEmployees();
+    }, []);
+
+    const employeeOptions = employees.map(employee => ({
+        value: employee.fullName,
+        label: employee.fullName,
+        avatar: employee.photoPath
+    }));
 
     const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
         try {
@@ -83,9 +113,18 @@ const PaymentPage = () => {
             pageSize,
             clientFullname: fullnameFilter.trim() || undefined,
             investorNickname: investorName.trim() || undefined,
+            employeeFullname: employeeFullname.trim() || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
         };
+
+        // Добавляем фильтр по подтверждению
+        if (confirmedFilter === 'confirmed') {
+            params.confirmed = true;
+        } else if (confirmedFilter === 'not-confirmed') {
+            params.confirmed = false;
+        }
+        // Для 'all' не добавляем параметр confirmed
 
         if (sortConfig.key !== null) {
             params.sortBy = columnToApiSortMap[sortConfig.key];
@@ -93,7 +132,17 @@ const PaymentPage = () => {
         }
 
         await getPayments(params);
-    }, [currentPage, fullnameFilter, investorName, dateFromFilter, dateToFilter, sortConfig, getPayments]);
+    }, [
+        currentPage, 
+        fullnameFilter, 
+        investorName, 
+        employeeFullname,
+        confirmedFilter,
+        dateFromFilter, 
+        dateToFilter, 
+        sortConfig, 
+        getPayments
+    ]);
     
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -101,7 +150,7 @@ const PaymentPage = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [currentPage, fullnameFilter, investorName, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
+    }, [currentPage, fullnameFilter, investorName, employeeFullname, confirmedFilter, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
 
     const handleFilterChange = (value: string) => {
         setFullnameFilter(value);
@@ -110,6 +159,16 @@ const PaymentPage = () => {
 
     const handleInvestorChange = (name: string) => {
         setInvestorName(name);
+        setCurrentPage(1);
+    };
+
+    const handleEmployeeChange = (event: { target: { value: string } }) => {
+        setEmployeeFullname(event.target.value);
+        setCurrentPage(1);
+    };
+
+    const handleConfirmedChange = (event: { target: { value: string } }) => {
+        setConfirmedFilter(event.target.value);
         setCurrentPage(1);
     };
 
@@ -139,11 +198,19 @@ const PaymentPage = () => {
                         pageSize,
                         clientFullname: fullnameFilter.trim() || undefined,
                         investorNickname: investorName.trim() || undefined,
+                        employeeFullname: employeeFullname.trim() || undefined,
                         dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
                         dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
+
+                    // Добавляем фильтр по подтверждению для экспорта
+                    if (confirmedFilter === 'confirmed') {
+                        params.confirmed = true;
+                    } else if (confirmedFilter === 'not-confirmed') {
+                        params.confirmed = false;
+                    }
                     
                     const result = await paymentService.getPayments(params);
                     return {
@@ -220,7 +287,7 @@ const PaymentPage = () => {
     };
 
     const handleRowClick = (rowData: any[], rowIndex: number) => {
-        const id = rowData[rowData.length - 1]; // берет последний элемент "560"
+        const id = rowData[rowData.length - 1];
         console.log(rowData);
         const payment = paymentsData?.items.find(c => c.id === Number(id));
         if (payment) {
@@ -301,6 +368,13 @@ const PaymentPage = () => {
         }
     ];
 
+    // Опции для фильтра по статусу подтверждения
+    const confirmedOptions = [
+        { value: 'all', label: 'Все' },
+        { value: 'confirmed', label: 'Подтверждённые' },
+        { value: 'not-confirmed', label: 'Не подтверждённые' }
+    ];
+
     return (
         <PageLayout>
             <TitleField>
@@ -338,6 +412,18 @@ const PaymentPage = () => {
                     onInvestorSelect={(investor) => {
                         console.log('Selected investor:', investor);
                     }}
+                />
+                <UserSelect
+                    placeholder="Сотрудник"
+                    value={employeeFullname}
+                    onChange={handleEmployeeChange}
+                    options={employeeOptions}
+                />
+                <CustomSelect
+                    placeholder="Статус подтверждения"
+                    value={confirmedFilter}
+                    onChange={handleConfirmedChange}
+                    options={confirmedOptions}
                 />
                 <CustomCalendar 
                     prefix="От"

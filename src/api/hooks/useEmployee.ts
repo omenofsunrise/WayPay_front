@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import EmployeeService from '../services/employeeService';
-import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, PaymentStatsResponse, Profile, ProfileUpdateRequest } from '../types/employee';
+import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, EmployeeFullnames, PaymentStatsResponse, Profile, ProfileUpdateRequest } from '../types/employee';
 import { authStorage } from '../utils/auth-storage';
 import type { PaginatedResponse } from '../types/common';
 import type { AuthSession } from '../types/auth';
@@ -145,7 +145,7 @@ export function useEmployee() {
     }
   }, []);
 
-  const fetchEmployeeFullnames = useCallback(async () => {
+  const fetchEmployeeFullnames = useCallback(async (): Promise<EmployeeFullnames[] | null> => {
     try {
       const fullNames = await EmployeeService.getEmployeeFullnames();
       return fullNames;
