@@ -16,6 +16,10 @@ class CreditApplicationService {
   async acceptCreditApplications(id: number) {
     await apiClient.patch(`CreditApplication/accept/${id}`);
   }
+
+  async cancelCreditApplications(id: number) {
+    await apiClient.patch(`CreditApplication/cancel/${id}`);
+  }
 }
 
 export default new CreditApplicationService();

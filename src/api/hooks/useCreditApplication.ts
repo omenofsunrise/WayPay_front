@@ -47,6 +47,16 @@ const useCreditApplication = () => {
       }
   }, []);
 
+  const cancelCreditApplication = useCallback(async (id: number) => {
+    try {
+          await creditApplicationService.cancelCreditApplications(id);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+          setIsLoading(false);
+      }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -54,6 +64,7 @@ const useCreditApplication = () => {
     getCreditApplications,
     getMyCompanyCreditApplications,
     approveCreditApplication,
+    cancelCreditApplication
   };
 };
 

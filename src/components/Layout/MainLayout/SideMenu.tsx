@@ -75,7 +75,7 @@ const SideMenu = () => {
     'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'clients': () => true, // Базовый доступ к клиентам
     'blacklist': () => true, // Базовый доступ к черному списку
-    'credit-application': () => isSuperAdminCompany(),
+    'credit-application': () => true,
     'queue': () => true, // Базовый доступ к очереди
     'pending-payments': () => true, // Базовый доступ к платежам
     'payments-journal': () => true, // Базовый доступ к журналу платежей
@@ -411,14 +411,12 @@ const SideMenu = () => {
               >
                 Чёрный список
               </SubMenuItem>
-              {(isSuperAdminCompany()) && (
-                <SubMenuItem 
-                  onClick={() => handleSubMenuItemClick('credit-application', '/credit-application')}
-                  $selected={selectedSideMenuItem === 'credit-application'}
-                >
-                  Заявки
-                </SubMenuItem>
-              )}
+              <SubMenuItem 
+                onClick={() => handleSubMenuItemClick('credit-application', '/credit-application')}
+                $selected={selectedSideMenuItem === 'credit-application'}
+              >
+                Заявки
+              </SubMenuItem>
               <SubMenuItem 
                 onClick={() => handleSubMenuItemClick('queue', '/queue')}
                 $selected={selectedSideMenuItem === 'queue'}

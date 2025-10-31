@@ -16,6 +16,7 @@ export interface SenderInfoResponse {
     isSenderTurnedOn: boolean;
     shouldAutoBuyMessages: boolean;
     licenceDays: number;
+    currentAccountDetails: string;
 
     comingPaymentContent: boolean;
     overduePaymentContent: number;

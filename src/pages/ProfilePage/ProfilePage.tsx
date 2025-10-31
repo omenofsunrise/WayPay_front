@@ -6,7 +6,7 @@ import SessionsPage from './SessionsPage';
 import { useEffect, useState } from 'react';
 import BackButtonComponent from '../../components/ui/Buttons/BackButton';
 import BranchPage from './BranchPage';
-import SenderPage from './SenderPage'; // Добавляем импорт SenderPage
+import SenderPage from './SenderPage';
 import { useAuth } from '../../сontext/AuthContext';
 import type { Tab } from '../../components/ui/fields/Tabs';
 import Tabs from '../../components/ui/fields/Tabs';
@@ -59,12 +59,11 @@ const ProfilePage = () => {
             { id: "Сотрудники", label: "Сотрудники" },
             { id: "Данные компании", label: "Данные компании" },
             { id: "Отделения", label: "Отделения" },
-            { id: "Рассылка", label: "Рассылка" } // Добавляем вкладку Рассылка
+            { id: "Рассылка", label: "Рассылка" }
         );
     } else if (hasRole("админ")) {
         tabs.push(
             { id: "Сотрудники", label: "Сотрудники" },
-            { id: "Рассылка", label: "Рассылка" } // Добавляем вкладку Рассылка для админа
         );
     }
 
@@ -91,7 +90,7 @@ const ProfilePage = () => {
                 return <SessionsPage />;
             case "Отделения":
                 return <BranchPage />;
-            case "Рассылка": // Добавляем case для новой вкладки
+            case "Рассылка":
                 return <SenderPage />;
             default:
                 return <EmployeeProfilePage />;

@@ -401,7 +401,8 @@ const CreditApplicationPage: React.FC = () => {
     data,
     getCreditApplications,
     getMyCompanyCreditApplications,
-    approveCreditApplication
+    approveCreditApplication,
+    cancelCreditApplication
   } = useCreditApplication();
 
   const {
@@ -702,6 +703,30 @@ const formatMyApplicationsTableData = () => {
 
     const clientInitials = getInitials(application.clientName || '');
     const clientAvatarUrl = generateAvatar(clientInitials, 32);
+
+    const handleDeleteApplication = async (application: SelfCreditApplicationResponse) => {
+      const isConfirmed = window.confirm(
+        "Вы уверены, что хотите удалить заявку?"
+      );
+      
+      if (!isConfirmed) {
+        return;
+      }
+
+      try {
+        await cancelCreditApplication(application.id);
+        
+        await loadApplications();
+        
+        if (selectedApplication && selectedApplication.id === application.id) {
+          setSelectedApplication(null);
+        }
+        
+      } catch (error) {
+        console.error('Ошибка при удалении заявки:', error);
+        alert('Не удалось удалить заявку. Попробуйте еще раз.');
+      }
+    };
 
     return [
       application.id.toString(),

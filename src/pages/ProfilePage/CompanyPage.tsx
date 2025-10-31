@@ -131,7 +131,6 @@ const CompanyPage = () => {
             currentBankCardId: bankCard.id
         }));
         setDisplayBankCard(bankCard.details);
-        console.log("Selected bank card:", bankCard);
     };
 
     const handleReset = () => {
