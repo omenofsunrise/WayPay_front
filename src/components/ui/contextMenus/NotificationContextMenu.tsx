@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, type JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import useNotification from '../../../api/hooks/useNotification';
@@ -11,6 +11,34 @@ interface NotificationContextMenuProps {
   onClose: () => void;
   anchorElement: HTMLElement | null;
 }
+
+const parseNotificationMessage = (text: string): JSX.Element => {
+  if (!text) return <></>;
+
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.match(urlRegex)) {
+          return (
+            <MessageLink 
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </MessageLink>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+};
 
 const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
   isOpen,
@@ -187,7 +215,9 @@ const NotificationContextMenu: React.FC<NotificationContextMenuProps> = ({
                     </NotificationDate>
                   </NotificationHeader>
 
-                  <NotificationMessage>{notification.message}</NotificationMessage>
+                  <NotificationMessage>
+                    {parseNotificationMessage(notification.message)}
+                  </NotificationMessage>
                 </NotificationContent>
               </NotificationItem>
             ))}
@@ -309,6 +339,17 @@ const NotificationMessage = styled.div`
   line-height: 1.3;
   word-wrap: break-word;
   text-align: left;
+`;
+
+const MessageLink = styled.a`
+  color: rgba(0, 125, 136, 1);
+  text-decoration: underline;
+  cursor: pointer;
+  
+  &:hover {
+    color: rgba(0, 125, 131, 1);
+    text-decoration: none;
+  }
 `;
 
 const NotificationDate = styled.div`

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, type JSX } from 'react';
 import styled from 'styled-components';
 import { useWebSocket } from '../../api/hooks/useWebSocket';
 import { formatRelativeTime } from '../../utils/dateFormatter';
@@ -110,6 +110,17 @@ const NotificationBody = styled.div`
   line-height: 1.4;
   word-wrap: break-word;
   text-align: left;
+
+  a {
+    color: rgba(0, 125, 136, 1);
+    text-decoration: underline;
+    cursor: pointer;
+    
+    &:hover {
+      color: rgba(0, 125, 131, 1);
+      text-decoration: none;
+    }
+  }
 `;
 
 const CloseButton = styled.button`
@@ -142,6 +153,36 @@ interface Notification {
   isRead: boolean;
   type?: string;
 }
+
+// Функция для преобразования текста с ссылками в JSX с кликабельными ссылками
+const parseNotificationBody = (text: string): JSX.Element => {
+  if (!text) return <></>;
+
+  // Регулярное выражение для поиска URL
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.match(urlRegex)) {
+          return (
+            <a 
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+};
 
 const NotificationHandler: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -307,7 +348,7 @@ const NotificationHandler: React.FC = () => {
             <NotificationHeader>
               <NotificationTitle>{notification.title}</NotificationTitle>
               <NotificationBody>
-                {notification.body}
+                {parseNotificationBody(notification.body)}
               </NotificationBody>
             </NotificationHeader>
 
