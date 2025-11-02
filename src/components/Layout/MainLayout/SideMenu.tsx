@@ -85,8 +85,8 @@ const SideMenu = () => {
     'products': () => true, // Базовый доступ к товарам
     'black-catalog': () => true, // Базовый доступ к черному каталогу
     'registration-requests': () => isSuperAdminCompany(),
-    'budget': () => hasRole('директор') || hasRole('суперадмин'),
-    'payments-income': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
+    'budget': () => hasRole('бухгалтер'),
+    'payments-income': () => hasRole('бухгалтер'),
     'profile': () => true, // Профиль доступен всем
     'admin': () => hasRole('суперадмин'),
     'about': () => true, // О программе доступно всем
@@ -615,7 +615,7 @@ const SideMenu = () => {
           )}
           
           {/* Finance Menu */}
-          {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
+          {(hasRole('бухгалтер')) && (
             <MenuItem 
               onClick={(e) => {
                 if (collapsed) {
@@ -654,7 +654,7 @@ const SideMenu = () => {
             </MenuItem>
           )}
           
-          {!collapsed && expandedItem === 'finance' && (hasRole('директор') || hasRole('суперадмин')) && (
+          {!collapsed && expandedItem === 'finance' && ('бухгалтер') && (
             <SubMenu>
               <SubMenuLine />
               <SubMenuItem 
