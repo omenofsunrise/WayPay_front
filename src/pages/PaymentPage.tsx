@@ -224,7 +224,7 @@ const PaymentPage = () => {
                     'ФИО': payment.clientFullName,
                     'Платёж': formatMoney(payment.paymentAmount.toString()),
                     'Дата платежа': payment.paymentDate ? formatDate(payment.paymentDate) : '',
-                    'Тип платежа': payment.type === 'cash' ? 'Наличными' : 'Картой',
+                    'Тип платежа': payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
                     'Платёж принял': payment.employeeFullName || '',
                     'Подтверждён': payment.accepted ? 'Да' : 'Нет'
                 })
