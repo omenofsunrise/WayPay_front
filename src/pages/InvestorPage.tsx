@@ -40,7 +40,7 @@ const InvestorPage = () => {
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [investorForPrint, setInvestorForPrint] = useState<Investor | null>(null);
     const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(null);
-
+        
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
         1: 'nickname',
@@ -278,10 +278,8 @@ const InvestorPage = () => {
     const handlePrintContract = async (option: string, investor: Investor) => {
         try {
         if (option === 'investorContract') {
-            // Получаем данные для договора
             const agreementData = await getInvestorAgreement(investor.id);
             
-            // Генерируем документ
             await investorDocGenerator.generateInvestorContract(
             agreementData,
             investor.nickname || investor.fullName || 'Инвестор'
@@ -289,7 +287,7 @@ const InvestorPage = () => {
         }
         } catch (error) {
         console.error('Ошибка при печати договора:', error);
-        alert('Произошла ошибка при печати договора');
+        alert('Отказано в доступа к данным для печати');
         }
     };
 
@@ -304,6 +302,12 @@ const InvestorPage = () => {
         const [id] = rowData;
         const investorId = Number(id);
         setSelectedInvestorId(investorId === selectedInvestorId ? null : investorId);
+        
+        // Устанавливаем инвестора для печати при клике на строке
+        const investor = investorsData?.items.find(i => i.id === investorId);
+        if (investor) {
+            setInvestorForPrint(investor);
+        }
     };
 
     const selectedRowIndex = investorsData?.items?.findIndex(i => i.id === selectedInvestorId) ?? -1;
@@ -339,7 +343,14 @@ const InvestorPage = () => {
         const isBlockedIndex = canEdit ? 8 : 4;
         const isBlocked = rowData[isBlockedIndex] === 'true';
         
-        if (isBlocked) {
+        if (index === selectedRowIndex) {
+            styles[index] = {
+                backgroundColor: 'rgba(0, 125, 136, 1)',
+                color: 'white',
+            };
+        } 
+        // Иначе применяем обычные цвета по статусу
+        else if (isBlocked) {
             styles[index] = {
                 backgroundColor: '#FFEBEE',
                 color: 'black',
@@ -483,6 +494,19 @@ const InvestorPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>Инвесторы</CustomTitle>
+                {/* Кнопка печати добавлена слева от экспорта */}
+                <ExportButton 
+                    icon={<PrintIcon />} 
+                    onClick={() => {
+                        if (!investorForPrint) {
+                            alert('Пожалуйста, выберите инвестора из таблицы (клик по строке)');
+                            return;
+                        }
+                        setIsPrintModalOpen(true);
+                    }}
+                >
+                    Печать
+                </ExportButton>
                 <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
