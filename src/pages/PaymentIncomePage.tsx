@@ -89,7 +89,7 @@ const PaymentIncomePage = () => {
     
     const getDateRangeForMonth = (month: number, year: number) => {
         const dateFrom = new Date(year, month - 1, 1);
-        const dateTo = new Date(year, month, 0); // Последний день месяца
+        const dateTo = new Date(year, month, 1);
         
         return {
             dateFrom,
