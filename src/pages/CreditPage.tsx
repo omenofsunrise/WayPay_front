@@ -182,7 +182,7 @@ const CreditPage = () => {
     navigate(`/new-credit/${id}`);
   };
 
-  const handlePrintOptionSelect = async (option: 'sale' | 'schedules' | 'guaranteeConsent') => {
+  const handlePrintOptionSelect = async (option: 'sale' | 'saleSinglePage' | 'schedules' | 'guaranteeConsent') => {
     if (!selectedCreditForPrint) return;
     
     try {
@@ -190,6 +190,11 @@ const CreditPage = () => {
       
       if (option === 'sale') {
         await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
+      } else if (option === 'saleSinglePage') {
+        await docxGenerator.generateFromCreditData(
+          selectedCreditForPrint.id,
+          '/Docs/salesContractSinglePage.docx'
+        );
       } else if (option === 'schedules') {
         await docxGenerator.generateFromCreditData(
           selectedCreditForPrint.id,

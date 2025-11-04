@@ -28,7 +28,7 @@ class DocxGenerator {
         throw new Error('Не удалось получить данные для документа');
       }
       
-      const templateData = this.prepareTemplateData(docsData);
+      const templateData = await this.prepareTemplateData(docsData);
       
       const templateFile = await this.loadTemplate(templateUrl);
       
@@ -49,9 +49,27 @@ class DocxGenerator {
   /**
    * Подготавливает данные для шаблона, включая таблицы платежей и продуктов
    */
-  private prepareTemplateData(docsData: CreditDocs): any {
+  private async prepareTemplateData(docsData: CreditDocs): Promise<any> {
     const result: any = { ...docsData };
     
+    // Обработка логотипа
+    if (docsData.logo) {
+      try {
+        const logoImage = await this.loadImageAsBase64(docsData.logo);
+        result.logo = {
+          _type: 'image',
+          source: logoImage,
+          format: this.getImageFormat(docsData.logo),
+          width: 100, // Настройте размер по необходимости
+          height: 50,
+          altText: 'Logo'
+        };
+      } catch (error) {
+        console.warn('Не удалось загрузить логотип:', error);
+        result.logo = null;
+      }
+    }
+
     if (docsData.paymentSchedule && docsData.paymentSchedule.length > 0) {
       result.paymentTable = docsData.paymentSchedule.map((item, index) => ({
         index: (index + 1).toString(),
@@ -78,6 +96,56 @@ class DocxGenerator {
     result.hasProducts = !!docsData.soldProducts && docsData.soldProducts.length > 0;
     
     return result;
+  }
+
+  /**
+   * Загружает изображение и конвертирует в base64
+   */
+  private async loadImageAsBase64(imageUrl: string): Promise<string> {
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // Убираем префикс data:image/...;base64,
+          const base64 = reader.result as string;
+          const base64Data = base64.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error loading image:', error);
+      throw new Error(`Failed to load image: ${imageUrl}`);
+    }
+  }
+
+  /**
+   * Определяет формат изображения по URL
+   */
+  private getImageFormat(imageUrl: string): string {
+    const extension = imageUrl.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'png':
+        return 'png';
+      case 'jpg':
+      case 'jpeg':
+        return 'jpeg';
+      case 'gif':
+        return 'gif';
+      case 'bmp':
+        return 'bmp';
+      case 'svg':
+        return 'svg';
+      default:
+        return 'jpeg'; // default format
+    }
   }
 
   /**
@@ -136,6 +204,8 @@ class DocxGenerator {
       docType = 'Договор_поручительства';
     } else if (templateUrl.includes('guaranteeandConsentAgreement')) {
       docType = 'Договор_поручительства_и_согласие';
+    } else if (templateUrl.includes('salesContractSinglePage')) {
+      docType = 'Договор_купли_продажи_одностраничный';
     } else if (templateUrl.includes('salesContract')) {
       docType = 'Договор_купли_продажи';
     }

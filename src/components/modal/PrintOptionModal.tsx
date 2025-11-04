@@ -9,10 +9,10 @@ export interface PrintOption {
   enabled?: boolean;
 }
 
-interface PrintOptionModalProps {
+export interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: string) => void;
+  onSelect: (option: 'sale' | 'saleSinglePage' | 'schedules' | 'guaranteeConsent' | 'paymentConfirmation' | 'investorContract') => void;
   selectedCredit?: Credit | null;
   selectedPayment?: Payment | null;
   selectedInvestor?: Investor | null;
@@ -33,6 +33,7 @@ const PrintOptionModal = ({
   
   const defaultOptions: PrintOption[] = [
     { key: 'sale', label: 'Договор купли-продажи', enabled: !!selectedCredit },
+    { key: 'saleSinglePage', label: 'Договор купли-продажи (одностраничный)', enabled: !!selectedCredit },
     { key: 'guaranteeConsent', label: 'Договор поручительства', enabled: !!selectedCredit },
     { key: 'schedules', label: 'График платежей', enabled: !!selectedCredit },
     { key: 'paymentConfirmation', label: 'Чек', enabled: !!selectedPayment },
