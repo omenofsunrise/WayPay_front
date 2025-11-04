@@ -28,6 +28,7 @@ import usePayment from '../api/hooks/usePayment';
 import creditService from '../api/services/creditService';
 import type { Credit } from '../api/types/credit';
 import { useAuth } from '../сontext/AuthContext';
+import ViewCreditModal from '../components/modal/ViewCreditModal';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -67,8 +68,9 @@ const SchedulePage = () => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [selectedScheduleForPayment, setSelectedScheduleForPayment] = useState<ScheduleDetails | null>(null);
     const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
-    const { hasPermission, forbiddenRole, hasRole } = useAuth();
-
+    const { hasRole } = useAuth();
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
     const pageSize = 10;
     const { getAccountDetails } = useCompany();
     const { getScheduleAnalityc } = useAnalytic();
@@ -143,6 +145,11 @@ const SchedulePage = () => {
         container.addEventListener('scroll', handleScroll);
         return () => container.removeEventListener('scroll', handleScroll);
     }, [scheduleAnalytics.length, currentChartIndex]);
+
+    const handleCloseViewModal = () => {
+        setIsViewModalOpen(false);
+        setViewingCreditId(null);
+    };
 
     const handleDotClick = (index: number) => {
         setCurrentChartIndex(index);
@@ -250,7 +257,8 @@ const SchedulePage = () => {
         );
         
         if (schedule) {
-            handleOpenPaymentModal(schedule);
+            setViewingCreditId(schedule.creditId);
+            setIsViewModalOpen(true);
         }
     };
         
@@ -391,8 +399,29 @@ const SchedulePage = () => {
         }
     };
 
-    // Добавляем действие для контекстного меню
     const tableActions = [
+        {
+            label: 'Договор',
+            action: (rowData: any[]) => {
+                const schedule = scheduleData?.items.find(s => 
+                    s.creditId.toString() === rowData[0] && 
+                    s.clientName === rowData[1]
+                );
+                
+                if (schedule) {
+                    const schedule = scheduleData?.items.find(s => 
+                        s.creditId.toString() === rowData[0] && 
+                        s.clientName === rowData[1]
+                    );
+                    
+                    if (schedule) {
+                        setViewingCreditId(schedule.creditId);
+                        setIsViewModalOpen(true);
+                    }
+                }
+            },
+            color: '#007D88'
+        },
         {
             label: 'Добавить платёж',
             action: (rowData: any[]) => {
@@ -657,6 +686,12 @@ const SchedulePage = () => {
                 currentDebt={selectedCredit?.rest || 0}
                 currentMonthDebt={selectedScheduleForPayment?.paymentAmount || 0}
                 onPrintReceipt={() => {}}
+            />
+
+            <ViewCreditModal
+                id={viewingCreditId || 0}
+                isOpen={isViewModalOpen}
+                onClose={handleCloseViewModal}
             />
         </PageLayout>
     );
