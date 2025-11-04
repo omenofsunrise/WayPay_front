@@ -67,6 +67,7 @@ const BaseModal: React.FC<ModalProps> = ({
           {customLayout}
         </div>
         <ModalForm onSubmit={onSave}>
+          {/* Убрали overflow-y: auto отсюда */}
           <ModalContent>{children}</ModalContent>
 
           <ModalFooter>
@@ -116,12 +117,16 @@ const ModalContainer = styled.div<{ width: string }>`
   padding: 24px;
   position: relative;
   margin: 0;
+  /* Убедитесь, что у контейнера нет overflow */
+  overflow: visible;
 `;
 
 const ModalForm = styled.form`
   display: flex;
   flex-direction: column;
   flex: 1;
+  /* Убедитесь, что у формы нет overflow */
+  overflow: visible;
 `;
 
 export const ModalHeader = styled.div`
@@ -158,8 +163,11 @@ const CloseButton = styled.button`
 
 const ModalContent = styled.div`
   flex: 1;
-  overflow-y: auto;
+  /* Убрали overflow-y: auto и добавили min-height */
   margin-bottom: 20px;
+  min-height: 0;
+  /* Разрешаем контенту выходить за границы */
+  overflow: visible;
 `;
 
 const ModalFooter = styled.div`

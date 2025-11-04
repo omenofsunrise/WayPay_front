@@ -205,7 +205,8 @@ const Dropdown = styled.div`
   background: #FFFFFF;
   box-shadow: 2px 2px 25px 2px rgba(0, 0, 0, 0.25);
   border-radius: 5px;
-  z-index: 100;
+  /* Увеличиваем z-index чтобы выпадающий список был поверх модального окна */
+  z-index: 1001;
   max-height: 300px;
   overflow-y: auto;
 `;
