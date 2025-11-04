@@ -69,3 +69,17 @@ export interface GuarantorForm {
   birthdate: string;
   address: string;
 }
+
+export type PassportPhotoType = typeof PassportPhotoType[keyof typeof PassportPhotoType];
+
+export const PassportPhotoType = {
+  MainPage: 1,
+  RegistrationPage: 2
+} as const;
+
+export interface UploadPhotoResponse {
+  success: boolean;
+  message: string;
+  fileId?: string;
+  photoType?: PassportPhotoType;
+}

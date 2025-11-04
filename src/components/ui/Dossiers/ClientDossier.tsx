@@ -12,11 +12,37 @@ import { formatMoney } from '../../../utils/formatPrice';
 import Pagination from '../fields/CustomPagination';
 import CustomTable from '../tables/CustomTable';
 import ViewCreditModal from '../../modal/ViewCreditModal';
+import { PassportPhotoType } from '../../../api/types/client';
 
 const TabsContainer = styled.div`
   width: 100%;
   border-bottom: 1px solid rgba(209, 213, 219, 1);
   margin-bottom: 20px;
+`;
+
+const PassportPhotoTitle = styled.h4`
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+`;
+
+const PhotoActions = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+`;
+
+const PassportSection = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const TabsList = styled.ul`
@@ -656,24 +682,6 @@ const PassportControls = styled.div`
   margin-top: 16px;
 `;
 
-const PassportControlButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-`;
-
 interface Installment {
   id: number;
   contractNumber: string;
@@ -695,12 +703,26 @@ interface ClientDossierProps {
     docIssueYear: number;
     registrationAddress: string | null;
     hasPassportPhoto?: boolean;
+    hasSecondPassportPhoto?: boolean;    
   };
   installments: Installment[];
   onBack: () => void;
-  onUploadPassport: (file: File) => void;
+  onUploadPassport: (file: File, photoType: PassportPhotoType) => void;
   onDeletePassport: () => void;
   canDeleteComments?: boolean;
+}
+
+interface PassportPhotoState {
+  mainPage: {
+    hasPhoto: boolean;
+    isVisible: boolean;
+    photoData: string | null;
+  };
+  registrationPage: {
+    hasPhoto: boolean;
+    isVisible: boolean;
+    photoData: string | null;
+  };
 }
 
 type TabType = 'comments' | 'history';
@@ -730,6 +752,18 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const itemsPerPage = 10;
+  const [passportPhotos, setPassportPhotos] = useState<PassportPhotoState>({
+    mainPage: {
+      hasPhoto: client.hasPassportPhoto,
+      isVisible: false,
+      photoData: null
+    },
+    registrationPage: {
+      hasPhoto: client.hasSecondPassportPhoto,
+      isVisible: false,
+      photoData: null
+    }
+  });
 
   const {
     isLoading: isCreditHistoryLoading,
@@ -806,12 +840,18 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
     setHasPassport(client.hasPassportPhoto || false);
   }, [client.hasPassportPhoto]);
 
-  const handleViewPassport = async () => {
+  const handleViewPassport = async (photoType: PassportPhotoType) => {
     try {
-      const photoData = await getPassportPhoto(client.id);
-      if (photoData) {
-        setPassportPhotoData(photoData.base64Data);
-        setIsPassportVisible(true);
+      const photoData = await getPassportPhoto(client.id, photoType);
+      if (photoData && photoData.base64Data) {
+        setPassportPhotos(prev => ({
+          ...prev,
+          [photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage']: {
+            ...prev[photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage'],
+            isVisible: true,
+            photoData: photoData.base64Data
+          }
+        }));
       }
     } catch (error) {
       console.error('Ошибка при загрузке фото паспорта:', error);
@@ -819,34 +859,53 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
     }
   };
 
-  const handleDeletePassport = async () => {
-    if (window.confirm('Вы уверены, что хотите удалить фотографию паспорта?')) {
+  const handleDeletePassport = async (photoType: PassportPhotoType) => {
+    const photoTypeName = photoType === PassportPhotoType.MainPage ? 'основной страницы' : 'страницы с регистрацией';
+    
+    if (window.confirm(`Вы уверены, что хотите удалить фотографию ${photoTypeName} паспорта?`)) {
       try {
-        await deletePassportPhoto(client.id);
-        setPassportPhotoData(null);
-        setIsPassportVisible(false);
-        setHasPassport(false);
-        onDeletePassport();
+        await deletePassportPhoto(client.id, photoType);
+        setPassportPhotos(prev => ({
+          ...prev,
+          [photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage']: {
+            hasPhoto: false,
+            isVisible: false,
+            photoData: null
+          }
+        }));
+        onDeletePassport(photoType);
       } catch (error) {
         console.error('Ошибка при удалении фото паспорта:', error);
       }
     }
   };
 
-  const handleHidePassport = () => {
-    setIsPassportVisible(false);
-    setPassportPhotoData(null);
+  const handleHidePassport = (photoType: PassportPhotoType) => {
+    setPassportPhotos(prev => ({
+      ...prev,
+      [photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage']: {
+        ...prev[photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage'],
+        isVisible: false,
+        photoData: null
+      }
+    }));
   };
 
-  const handlePassportUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePassportUpload = async (e: React.ChangeEvent<HTMLInputElement>, photoType: PassportPhotoType) => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        await uploadPassportPhoto(client.id, file);
-        setPassportPhotoData(null);
-        setIsPassportVisible(false);
-        setHasPassport(true);
-        onUploadPassport(file);
+        await uploadPassportPhoto(client.id, file, photoType);
+        setPassportPhotos(prev => ({
+          ...prev,
+          [photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage']: {
+            ...prev[photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage'],
+            hasPhoto: true,
+            isVisible: false,
+            photoData: null
+          }
+        }));
+        onUploadPassport(file, photoType);
       } catch (error) {
         console.error('Ошибка при загрузке фото:', error);
         alert('Не удалось загрузить фото паспорта');
@@ -980,6 +1039,107 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
       console.error('Error creating URL from base64:', error);
       return '';
     }
+  };
+
+    const renderPassportPhotoSection = (photoType: PassportPhotoType) => {
+    const isMainPage = photoType === PassportPhotoType.MainPage;
+    const photoState = passportPhotos[isMainPage ? 'mainPage' : 'registrationPage'];
+    const title = isMainPage ? 'Основная страница' : 'Страница с регистрацией';
+
+    return (
+      <PassportPhotoSection key={photoType}>
+        <PassportPhotoTitle>{title}</PassportPhotoTitle>
+        
+        {photoState.hasPhoto ? (
+          <>
+            {photoState.isVisible && photoState.photoData ? (
+              <PassportPhoto>
+                <PassportImage 
+                  src={`data:image/jpeg;base64,${photoState.photoData}`} 
+                  alt={title}
+                  onClick={() => openPassportModal(photoType)}
+                />
+                <PhotoActions>
+                  <UploadButton 
+                    onClick={() => handleDeletePassport(photoType)}
+                    style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
+                  >
+                    <FaTrash />
+                    Удалить
+                  </UploadButton>
+                  <HidePassportButton 
+                    onClick={() => handleHidePassport(photoType)}
+                    style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
+                  >
+                    <FaEyeSlash />
+                    Скрыть
+                  </HidePassportButton>
+                  <UploadButton as="label">
+                    <FaUpload />
+                    Заменить
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => handlePassportUpload(e, photoType)}
+                      style={{ display: 'none' }}
+                    />
+                  </UploadButton>
+                </PhotoActions>
+              </PassportPhoto>
+            ) : (
+              <PassportPhoto>
+                <BlurredPassportImage 
+                  src="/passport-placeholder.jpg" 
+                  alt={`Заблокированный ${title.toLowerCase()}`}
+                />
+                <PhotoActions>
+                  <UploadButton 
+                    onClick={() => handleDeletePassport(photoType)}
+                    style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
+                  >
+                    <FaTrash />
+                    Удалить
+                  </UploadButton>
+                  <ViewPassportButton 
+                    onClick={() => handleViewPassport(photoType)}
+                    style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
+                  >
+                    <FaEye />
+                    Посмотреть
+                  </ViewPassportButton>
+                  <UploadButton as="label">
+                    <FaUpload />
+                    Заменить
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => handlePassportUpload(e, photoType)}
+                      style={{ display: 'none' }}
+                    />
+                  </UploadButton>
+                </PhotoActions>
+              </PassportPhoto>
+            )}
+          </>
+        ) : (
+          <PassportPhotoPlaceholder>
+            <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+              {title} не загружена
+            </p>
+            <UploadButton as="label">
+              <FaUpload />
+              Загрузить фото
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => handlePassportUpload(e, photoType)}
+                style={{ display: 'none' }}
+              />
+            </UploadButton>
+          </PassportPhotoPlaceholder>
+        )}
+      </PassportPhotoSection>
+    );
   };
 
   const renderFile = (comment: any) => {
@@ -1232,89 +1392,10 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
 
         <Section>
           <SectionTitle>Паспорт</SectionTitle>
-          <PassportPhotoSection>
-            {hasPassport ? (
-              <>
-                {isPassportVisible && passportPhotoData ? (
-                  <PassportPhoto>
-                    <PassportImage 
-                      src={`data:image/jpeg;base64,${passportPhotoData}`} 
-                      alt="Паспорт" 
-                      onClick={() => setShowPassportModal(true)}
-                    />
-
-                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-                      <UploadButton 
-                        onClick={handleDeletePassport}
-                        style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
-                      >
-                        <FaTrash />
-                        Удалить
-                      </UploadButton>
-                      <HidePassportButton style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }} onClick={handleHidePassport}>
-                        <FaEyeSlash />
-                        Скрыть паспорт
-                      </HidePassportButton>
-                      <UploadButton as="label">
-                        <FaUpload />
-                        Заменить
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePassportUpload}
-                          style={{ display: 'none' }}
-                        />
-                      </UploadButton>
-                    </div>
-                  </PassportPhoto>
-                ) : (
-                  <PassportPhoto>
-                    <BlurredPassportImage 
-                      src="/passport-placeholder.jpg" 
-                      alt="Заблокированный паспорт" 
-                    />
-
-                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-                      <UploadButton 
-                        onClick={handleDeletePassport}
-                        style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }}
-                      >
-                        <FaTrash />
-                        Удалить 
-                      </UploadButton>
-                      <ViewPassportButton style={{ background: 'rgba(209, 213, 219, 1)', color: 'black' }} onClick={handleViewPassport}>
-                        <FaEye />
-                        Посмотреть паспорт
-                      </ViewPassportButton>
-                      <UploadButton as="label">
-                        <FaUpload />
-                        Заменить
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePassportUpload}
-                          style={{ display: 'none' }}
-                        />
-                      </UploadButton>
-                    </div>
-                  </PassportPhoto>
-                )}
-              </>
-            ) : (
-              <PassportPhotoPlaceholder>
-                <UploadButton as="label">
-                  <FaUpload />
-                  Загрузить фото
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePassportUpload}
-                    style={{ display: 'none' }}
-                  />
-                </UploadButton>
-              </PassportPhotoPlaceholder>
-            )}
-          </PassportPhotoSection>
+          <PassportSection>
+            {renderPassportPhotoSection(PassportPhotoType.MainPage)}
+            {renderPassportPhotoSection(PassportPhotoType.RegistrationPage)}
+          </PassportSection>
         </Section>
 
         <CommentsSection>
@@ -1361,7 +1442,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
         </CommentsSection>
       </DossierGrid>
 
-      {showPassportModal && passportPhotoData && (
+      {showPassportModal && modalImage && (
         <PassportModalOverlay onClick={() => setShowPassportModal(false)}>
           <PassportModalContent onClick={(e) => e.stopPropagation()}>
             <PassportCloseButton onClick={() => setShowPassportModal(false)}>
@@ -1369,15 +1450,17 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
             </PassportCloseButton>
             
             <PassportModalImage
-              src={`data:image/jpeg;base64,${passportPhotoData}`}
-              alt="Паспорт клиента"
+              src={modalImage.src}
+              alt={modalImage.name}
             />
+            
+            <PassportCaption>{modalImage.name}</PassportCaption>
                        
           </PassportModalContent>
         </PassportModalOverlay>
       )}
 
-      {modalImage && (
+      {modalImage && !showPassportModal && (
         <ModalOverlay onClick={() => setModalImage(null)}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <CloseButton onClick={() => setModalImage(null)}>

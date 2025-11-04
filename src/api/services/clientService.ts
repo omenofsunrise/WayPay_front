@@ -1,5 +1,5 @@
 import apiClient from '../client';
-import type { Client, ClientExistsResponse, ClientParams, PassportPhotoResponse } from '../types/client';
+import type { Client, ClientExistsResponse, ClientParams, PassportPhotoResponse, PassportPhotoType, UploadPhotoResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 
 class ClientService {
@@ -47,24 +47,30 @@ class ClientService {
     return result.data;
   }
 
-  async uploadPassportPhoto(id: number, file: File): Promise<void> {
+  async uploadPassportPhoto(id: number, file: File, photoType: PassportPhotoType): Promise<UploadPhotoResponse> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('photoType', photoType.toString());
     
-    await apiClient.post(`/Client/${id}/passport-photo`, formData, {
+    const response = await apiClient.post<UploadPhotoResponse>(`/Client/${id}/passport-photo`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-  }
-
-  async getPassportPhoto(id: number): Promise<PassportPhotoResponse> {
-    const response = await apiClient.get<PassportPhotoResponse>(`/Client/${id}/passport-photo`);
     return response.data;
   }
 
-  async deletePassportPhoto(id: number): Promise<void> {
-    await apiClient.delete(`/Client/${id}/passport-photo`);
+  async getPassportPhoto(id: number, photoType: PassportPhotoType): Promise<PassportPhotoResponse> {
+    const response = await apiClient.get<PassportPhotoResponse>(`/Client/${id}/passport-photo`, {
+      params: { photoType }
+    });
+    return response.data;
+  }
+
+  async deletePassportPhoto(id: number, photoType: PassportPhotoType): Promise<void> {
+    await apiClient.delete(`/Client/${id}/passport-photo`, {
+      params: { photoType }
+    });
   }
 }
 

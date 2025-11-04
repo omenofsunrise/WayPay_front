@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { Client, ClientParams, PassportPhotoResponse } from '../types/client';
+import { PassportPhotoType, type Client, type ClientParams, type PassportPhotoResponse } from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 import clientService from '../services/clientService';
 
@@ -9,6 +9,13 @@ const useClient = () => {
   const [data, setData] = useState<PaginatedResponse<Client> | null>(null);
   const [currentClient, setCurrentClient] = useState<Client | null>(null);
   const [passportPhoto, setPassportPhoto] = useState<PassportPhotoResponse | null>(null);
+  const [passportPhotos, setPassportPhotos] = useState<{
+  mainPage: PassportPhotoResponse | null;
+  registrationPage: PassportPhotoResponse | null;
+  }>({
+    mainPage: null,
+    registrationPage: null
+  });
 
   const getClients = useCallback(async (params?: ClientParams): Promise<PaginatedResponse<Client> | null> => {
     setIsLoading(true);
@@ -155,14 +162,15 @@ const useClient = () => {
     }
   }
 
-  // Новые методы для работы с фотографиями паспорта
-  const uploadPassportPhoto = async (id: number, file: File): Promise<void> => {
+  const uploadPassportPhoto = async (id: number, file: File, photoType: PassportPhotoType): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      await clientService.uploadPassportPhoto(id, file);
-      // После загрузки обновляем информацию о фото
-      await getPassportPhoto(id);
+      const result = await clientService.uploadPassportPhoto(id, file, photoType);
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      await getPassportPhoto(id, photoType);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       throw err;
@@ -171,12 +179,17 @@ const useClient = () => {
     }
   };
 
-  const getPassportPhoto = async (id: number): Promise<PassportPhotoResponse | null> => {
+  const getPassportPhoto = async (id: number, photoType: PassportPhotoType): Promise<PassportPhotoResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await clientService.getPassportPhoto(id);
-      setPassportPhoto(result);
+      const result = await clientService.getPassportPhoto(id, photoType);
+      
+      setPassportPhotos(prev => ({
+        ...prev,
+        [photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage']: result
+      }));
+      
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -186,12 +199,27 @@ const useClient = () => {
     }
   };
 
-  const deletePassportPhoto = async (id: number): Promise<void> => {
+  const getAllPassportPhotos = async (id: number): Promise<void> => {
+    try {
+      await Promise.all([
+        getPassportPhoto(id, PassportPhotoType.MainPage),
+        getPassportPhoto(id, PassportPhotoType.RegistrationPage)
+      ]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
+  const deletePassportPhoto = async (id: number, photoType: PassportPhotoType): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      await clientService.deletePassportPhoto(id);
-      setPassportPhoto(null);
+      await clientService.deletePassportPhoto(id, photoType);
+      
+      setPassportPhotos(prev => ({
+        ...prev,
+        [photoType === PassportPhotoType.MainPage ? 'mainPage' : 'registrationPage']: null
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       throw err;
@@ -206,6 +234,7 @@ const useClient = () => {
     data,
     currentClient,
     passportPhoto,
+    passportPhotos,
     getClients,
     createClient,
     updateClient,
@@ -217,7 +246,8 @@ const useClient = () => {
     checkClientCredits,
     uploadPassportPhoto,
     getPassportPhoto,
-    deletePassportPhoto
+    deletePassportPhoto,
+    getAllPassportPhotos
   };
 };
 
