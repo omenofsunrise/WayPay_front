@@ -825,7 +825,7 @@ const CreditPage = () => {
         includePools={true}
       />
 
-      <CreateObjectTypeModal
+      {/* <CreateObjectTypeModal
         isOpen={isCreateTabModalOpen}
         onClose={() => setIsCreateTabModalOpen(false)}
         onSubmit={handleCreateTab}
@@ -843,7 +843,7 @@ const CreditPage = () => {
         onSubmit={handleEditTab}
         initialData={editingTab}
         entityType="creditTab"
-      />
+      /> */}
 
     </PageLayout>
   );
