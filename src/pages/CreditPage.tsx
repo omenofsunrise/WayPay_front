@@ -31,6 +31,13 @@ import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmation
 import paymentService from '../api/services/paymentService';
 import type { PaymentTab } from '../api/types/payment';
 import InvestorSelectModal from '../components/modal/CrudInherited/InvestorSelectModal';
+import AddButton from '../components/ui/Buttons/AddButton';
+import type { ObjectType, ObjectTypeCreateRequest, ObjectTypeUpdateRequest } from '../api/types/objectType';
+import useObjectTypes from '../api/hooks/useObjectType';
+import CreateObjectTypeModal from '../components/modal/CrudInherited/CreateObjectTypeModal';
+import EditButton from '../components/ui/Buttons/EditButton';
+import DeleteButton from '../components/ui/Buttons/DeleteButton';
+import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -55,6 +62,10 @@ const CreditPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
   const { createPayment } = usePayment();
+  const [isCreateTabModalOpen, setIsCreateTabModalOpen] = useState(false);
+  const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
+  const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
+  const [customTabs, setCustomTabs] = useState<ObjectType[]>([]);
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'date',
@@ -74,20 +85,74 @@ const CreditPage = () => {
   const [selectedCreditForFunding, setSelectedCreditForFunding] = useState<Credit | null>(null);
   const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const { 
+    isLoading: isObjectTypesLoading, 
+    objectTypes, 
+    create: createObjectType,
+    update: updateObjectType,
+    deleteObjectType: deleteObjectTypeApi,
+    getAll: getAllObjectTypes 
+  } = useObjectTypes();
 
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
                                 hasPermission('VIEW_ALL_CREDITS', true);
 
-  const tabs = [
-    { id: 'all', label: 'Все' },
-    ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
-    { id: 'favourite', label: 'Избранные' },
-    { id: 'debtors', label: 'Просрочка' },
-    { id: 'inDebt', label: 'В долг' },
-    { id: 'archive', label: 'В архиве' }
-  ];
-  
+  useEffect(() => {
+    loadCustomTabs();
+  }, []);
+
+  const loadCustomTabs = useCallback(async () => {
+    const result = await getAllObjectTypes({ 
+      entityType: 'creditTab' 
+    });
+    if (result) {
+      setCustomTabs(result.items);
+    }
+  }, [getAllObjectTypes]);
+
+  const getTabs = useCallback(() => {
+    const baseTabs = [
+      { id: 'all', label: 'Все' },
+      ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
+      { id: 'favourite', label: 'Избранные' },
+      { id: 'debtors', label: 'Просрочка' },
+      { id: 'inDebt', label: 'В долг' },
+      { id: 'archive', label: 'В архиве' }
+    ];
+
+    const customTabItems = customTabs.map(tab => ({
+      id: `tab-${tab.id}`,
+      label: (
+        <TabLabel>
+          {tab.name}
+          <TabActions>
+            <EditButton 
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingTab(tab);
+                setIsEditTabModalOpen(true);
+              }} 
+              size={25}
+            />
+            <DeleteButton 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Удалить вкладку "${tab.name}"?`)) {
+                  handleDeleteTab(tab.id);
+                }
+              }} 
+              size={25}
+            />
+          </TabActions>
+        </TabLabel>
+      ),
+      objectTypeId: tab.id
+    }));
+
+    return [...baseTabs, ...customTabItems];
+  }, [shouldShowMyCreditsTab, customTabs]);
+
   const getInitialTab = () => {
     if (tab) {
       return tab;
@@ -101,6 +166,61 @@ const CreditPage = () => {
   };
 
   const [activeTab, setActiveTab] = useState<string>(getInitialTab());
+
+  const handleCreateTab = useCallback(async (tabData: ObjectTypeCreateRequest) => {
+    if (customTabs.length >= 5) {
+      alert('Максимальное количество вкладок - 5');
+      return false;
+    }
+
+    try {
+      const result = await createObjectType(tabData);
+      if (result) {
+        await loadCustomTabs();
+        setIsCreateTabModalOpen(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Ошибка при создании вкладки:', error);
+      return false;
+    }
+  }, [createObjectType, customTabs.length, loadCustomTabs]);
+
+  const handleEditTab = useCallback(async (updateData: ObjectTypeUpdateRequest) => {
+    if (!editingTab) return false;
+
+    try {
+      const result = await updateObjectType(editingTab.id, updateData);
+      if (result) {
+        await loadCustomTabs();
+        setIsEditTabModalOpen(false);
+        setEditingTab(null);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Ошибка при редактировании вкладки:', error);
+      return false;
+    }
+  }, [editingTab, updateObjectType, loadCustomTabs]);
+
+  const handleDeleteTab = useCallback(async (tabId: number) => {
+    try {
+      await deleteObjectTypeApi(tabId);
+      await loadCustomTabs();
+      
+      // Если текущая активная вкладка была удалена, переключаемся на "Все"
+      if (activeTab === `tab-${tabId}`) {
+        setActiveTab('all');
+      }
+      
+      alert('Вкладка успешно удалена');
+    } catch (error) {
+      console.error('Ошибка при удалении вкладки:', error);
+      alert('Произошла ошибка при удалении вкладки');
+    }
+  }, [deleteObjectTypeApi, loadCustomTabs, activeTab]);
 
   useEffect(() => {
     if (id) {
@@ -226,20 +346,20 @@ const CreditPage = () => {
 
   const loadCredits = useCallback(async () => {
     const params = {
-          page: currentPage,
-          pageSize: itemsPerPage,
-          creditId: contractNumber || undefined,
-          clientFullname: clientFullName || undefined,
-          investorNickname: investorName || undefined,
-          dateFrom: fromDate ? new Date(fromDate) : undefined,
-          dateTo: toDate ? new Date(toDate) : undefined,
-          creditTypeId: creditTypeId || undefined,
-          sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-          sortDirection: sortConfig.direction,
-          ...filters
-      };
+      page: currentPage,
+      pageSize: itemsPerPage,
+      creditId: contractNumber || undefined,
+      clientFullname: clientFullName || undefined,
+      investorNickname: investorName || undefined,
+      dateFrom: fromDate ? new Date(fromDate) : undefined,
+      dateTo: toDate ? new Date(toDate) : undefined,
+      creditTypeId: creditTypeId || undefined,
+      sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+      sortDirection: sortConfig.direction,
+      ...filters
+    };
 
-      await getCredits(params);
+    await getCredits(params);
   }, [currentPage, clientFullName, investorName, fromDate, toDate, creditTypeId, sortConfig, filters, contractNumber]);
 
   useEffect(() => {
@@ -266,25 +386,30 @@ const CreditPage = () => {
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     
-    switch (tabId) {
-      case 'my':
-        setFilters({ myCredits: true });
-        break;
-      case 'favourite':
-        setFilters({ isFavourite: true });
-        break;
-      case 'archive':
-        setFilters({ isActive: false });
-        break;
-      case 'debtors':
-        setFilters({ debt: true });
-        break;
-      case 'inDebt':
-        setFilters({ inDebt: true });
-        break;
-      default:
-        setFilters({});
-        break;
+    if (tabId.startsWith('tab-')) {
+      const objectTypeId = parseInt(tabId.replace('tab-', ''));
+      setFilters({ objectTypeId });
+    } else {
+      switch (tabId) {
+        case 'my':
+          setFilters({ myCredits: true });
+          break;
+        case 'favourite':
+          setFilters({ isFavourite: true });
+          break;
+        case 'archive':
+          setFilters({ isActive: false });
+          break;
+        case 'debtors':
+          setFilters({ debt: true });
+          break;
+        case 'inDebt':
+          setFilters({ inDebt: true });
+          break;
+        default:
+          setFilters({});
+          break;
+      }
     }
     
     setCurrentPage(1);
@@ -606,10 +731,20 @@ const CreditPage = () => {
 
       <SecondRaw style={{ color: "white" }}>
         <Tabs 
-          tabs={tabs}
+          tabs={getTabs()}
           activeTab={activeTab}
           onChange={handleTabChange}
         />
+        
+        {customTabs.length < 5 && (
+          <AddButton 
+            onClick={() => setIsCreateTabModalOpen(true)}
+            tooltip="Добавить вкладку"
+            margin="0 auto 15px 15px" 
+            size={24}
+          />
+        )}
+        
         <CountInfoTitle 
           total={creditsData?.totalCount || 0} 
         />
@@ -689,6 +824,27 @@ const CreditPage = () => {
         onSubmit={handleFundingSourceSubmit}
         includePools={true}
       />
+
+      <CreateObjectTypeModal
+        isOpen={isCreateTabModalOpen}
+        onClose={() => setIsCreateTabModalOpen(false)}
+        onSubmit={handleCreateTab}
+        entityType="creditTab"
+        maxTabs={5}
+        currentTabCount={customTabs.length}
+      />
+
+      <EditObjectTypeModal
+        isOpen={isEditTabModalOpen}
+        onClose={() => {
+          setIsEditTabModalOpen(false);
+          setEditingTab(null);
+        }}
+        onSubmit={handleEditTab}
+        initialData={editingTab}
+        entityType="creditTab"
+      />
+
     </PageLayout>
   );
 };
@@ -769,6 +925,23 @@ const ClearFilterButton = styled.button`
 
   &:hover {
     color: #666;
+  }
+`;
+
+const TabLabel = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const TabActions = styled.div`
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  
+  ${TabLabel}:hover & {
+    opacity: 1;
   }
 `;
 

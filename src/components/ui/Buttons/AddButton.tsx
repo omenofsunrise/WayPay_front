@@ -5,13 +5,20 @@ interface AddButtonProps {
   onClick: (e: React.MouseEvent) => void;
   tooltip?: string;
   size?: number;
+  margin?: string;
 }
 
-const AddButton: React.FC<AddButtonProps> = ({ onClick, tooltip, size = 32 }) => {
+const AddButton: React.FC<AddButtonProps> = ({ 
+  onClick, 
+  tooltip, 
+  size = 32, 
+  margin 
+}) => {
   return (
     <AddButtonContainer 
       onClick={onClick}
       size={size}
+      margin={margin}
       title={tooltip}
     >
       <PlusIcon size={size} />
@@ -19,7 +26,7 @@ const AddButton: React.FC<AddButtonProps> = ({ onClick, tooltip, size = 32 }) =>
   );
 };
 
-const AddButtonContainer = styled.button<{ size: number }>`
+const AddButtonContainer = styled.button<{ size: number; margin?: string }>`
   width: ${props => props.size}px;
   height: ${props => props.size}px;
   border-radius: 50%;
@@ -31,6 +38,7 @@ const AddButtonContainer = styled.button<{ size: number }>`
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
+  ${props => props.margin && `margin: ${props.margin};`}
 
   &:hover {
     background-color: rgba(249, 250, 250, 1);

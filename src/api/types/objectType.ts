@@ -1,7 +1,8 @@
-export type EntityType = 'credit';
+export type EntityType = 'credit' | 'creditTab';
 
 export const ENTITY_TYPES = {
   CREDIT: 'credit' as EntityType,
+  CREDIT_TAB: 'creditTab' as EntityType,
 };
 
 export interface ObjectType {

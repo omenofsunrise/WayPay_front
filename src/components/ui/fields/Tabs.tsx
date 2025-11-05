@@ -53,7 +53,7 @@ const Tabs = <T extends string>({
 };
 
 const TabsContainer = styled.div`
-  width: 100%;
+  width: auto;
   border-bottom: 1px solid rgba(209, 213, 219, 1);
   margin-bottom: 20px;
 `;

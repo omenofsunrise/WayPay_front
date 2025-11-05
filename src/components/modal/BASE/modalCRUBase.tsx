@@ -5,6 +5,7 @@ import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 export type ModalMode = 'create' | 'edit' | 'view' | 'create-pool' | 'edit-pool';
 
 interface ModalProps {
+  isOpen?: boolean;
   title?: string;
   onClose: () => void;
   onCancel: () => void;
@@ -21,6 +22,7 @@ interface ModalProps {
 }
 
 const BaseModal: React.FC<ModalProps> = ({
+  isOpen,
   title,
   onClose,
   onCancel,
@@ -56,6 +58,8 @@ const BaseModal: React.FC<ModalProps> = ({
     };
   }, [onClose]);
 
+  if (!isOpen) return null;
+
   return (
     <ModalBackdrop>
       <ModalContainer width={width} ref={modalRef}>
@@ -67,7 +71,6 @@ const BaseModal: React.FC<ModalProps> = ({
           {customLayout}
         </div>
         <ModalForm onSubmit={onSave}>
-          {/* Убрали overflow-y: auto отсюда */}
           <ModalContent>{children}</ModalContent>
 
           <ModalFooter>
