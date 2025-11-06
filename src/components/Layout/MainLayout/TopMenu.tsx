@@ -26,10 +26,11 @@ interface MenuItem {
   modal?: boolean;
   permission?: Permission;
   forbiddenRole?: Role;
+  forbiddenPermission?: Permission;
 }
 
 const allMenuItems: MenuItem[] = [
-  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit', permission: 'CREATE_CREDITS', forbiddenRole: 'бухгалтер' },
+  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit', forbiddenPermission: 'FORBID_CREATING_CREDITS', forbiddenRole: 'бухгалтер' },
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
@@ -51,7 +52,7 @@ const TopMenu = () => {
     setSelectedTopMenuItem,
     setSelectedSideMenuItem
   } = useContext(SideMenuContext);
-  const { hasPermission, forbiddenRole } = useAuth();
+  const { hasPermission, forbiddenRole, hasRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
@@ -74,7 +75,7 @@ const TopMenu = () => {
   }, [getActiveTasksCount, setActiveTasksCount]);
 
   const menuItems = allMenuItems.filter(item => 
-    (!item.permission || hasPermission(item.permission)) && forbiddenRole(item.forbiddenRole)
+    (hasRole('директор') || hasRole('суперадмин') || hasRole('админ')) || (!item.forbiddenPermission || !hasPermission(item.forbiddenPermission)) && forbiddenRole(item.forbiddenRole)
   );
 
   useEffect(() => {

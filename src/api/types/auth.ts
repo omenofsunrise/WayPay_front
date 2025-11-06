@@ -4,6 +4,10 @@ export type Permission =
   | 'VIEW_CREDITS'
   | 'VIEW_ANALYTIC'
   | 'VIEW_ALL_CREDITS'
+  | 'FORBID_CREATING_CREDITS'
+  | 'FORBID_CREATING_PAYMENTS'
+  | 'FORBID_DELETING_PAYMENTS'
+  | 'FORBID_CREDIT_APPLICATIONS'
 ;
 
 export type Role = 'админ' | 'сотрудник' | 'директор' | 'суперадмин' | 'бухгалтер';

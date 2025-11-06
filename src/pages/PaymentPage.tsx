@@ -34,7 +34,7 @@ const PaymentPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    const { authInfo } = useAuth();
+    const { authInfo, hasPermission } = useAuth();
     const [investorName, setInvestorName] = useState('');
     const [employeeFullname, setEmployeeFullname] = useState('');
     const [confirmedFilter, setConfirmedFilter] = useState<string>('all');
@@ -50,7 +50,6 @@ const PaymentPage = () => {
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [selectedPaymentForPrint, setSelectedPaymentForPrint] = useState<Payment | null>(null);
     const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
-
     const { exportData, isExporting, exportProgress } = useExport<Payment>();
 
     const { fetchEmployeeFullnames } = useEmployee();
@@ -356,7 +355,11 @@ const PaymentPage = () => {
                 return payment;
             }
         },
-        {
+    ];
+
+    if (!hasPermission('FORBID_DELETING_PAYMENTS'))
+    {
+        tableActions.push({
             label: 'Удалить',
             action: handleDeletePayment,
             color: '#EF4444',
@@ -365,10 +368,9 @@ const PaymentPage = () => {
                 const payment = paymentsData?.items[rowIndex];
                 return payment && !payment.accepted;
             }
-        }
-    ];
+        });
+    }
 
-    // Опции для фильтра по статусу подтверждения
     const confirmedOptions = [
         { value: 'all', label: 'Все' },
         { value: 'confirmed', label: 'Подтверждённые' },

@@ -40,11 +40,11 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     const [setIsUpdatingPermissions] = useState(false);
     const [isUpdatingRole, setIsUpdatingRole] = useState(false);
     const employeePermissions = useMemo(() => [
-        {
-            code: 'CREATE_CREDITS',
-            label: 'Создание договоров',
-            roles: ['сотрудник', 'бухгалтер']
-        },
+        // {
+        //     code: 'CREATE_CREDITS',
+        //     label: 'Создание договоров',
+        //     roles: ['сотрудник', 'бухгалтер']
+        // },
         {
             code: 'VIEW_ALL_CREDITS',
             label: 'Смотреть чужие договоры',
@@ -54,7 +54,28 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
             code: 'DELETE_CREDITS',
             label: 'Удаление договоров',
             roles: ['сотрудник', 'бухгалтер']
-        }
+        },
+
+        {
+            code: 'FORBID_CREATING_CREDITS',
+            label: 'Запретить создание договоров',
+            roles: ['сотрудник']
+        },
+        {
+            code: 'FORBID_CREATING_PAYMENTS',
+            label: 'Запретить создание платежей',
+            roles: ['сотрудник']
+        },
+        {
+            code: 'FORBID_DELETING_PAYMENTS',
+            label: 'Запретить удаление платежей',
+            roles: ['сотрудник', 'бухгалтер']
+        },
+        {
+            code: 'FORBID_CREDIT_APPLICATIONS',
+            label: 'Запретить просмотр заявок',
+            roles: ['сотрудник', 'бухгалтер', 'админ']
+        },
     ], []);
 
     const adminPermissions = useMemo(() => [
@@ -66,6 +87,11 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         {
             code: 'VIEW_ALL_CREDITS',
             label: 'Смотреть чужие договоры',
+            roles: ['сотрудник', 'бухгалтер', 'админ']
+        },
+                {
+            code: 'FORBID_CREDIT_APPLICATIONS',
+            label: 'Запретить просмотр заявок',
             roles: ['сотрудник', 'бухгалтер', 'админ']
         },
     ], []);
@@ -408,13 +434,17 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                     />
                 </ResultsWrapper>
             </BottomSection>
-
             {showPermissionsPanel && (
                 <PermissionsSection>
-                    <ModalInfoTitle>Права пользователя</ModalInfoTitle>
+                    <PermissionsHeader>
+                        <ModalInfoTitle style={{ margin: "0 0 8px 0" }}>
+                            Права пользователя
+                        </ModalInfoTitle>
+                    </PermissionsHeader>
                     
                     {canSetEmployeePermissions && (
-                        <>
+                        <PermissionsCategory>
+                            {/* <CategoryTitle>Основные права доступа</CategoryTitle> */}
                             <PermissionsGrid>
                                 {employeePermissions.map(permission => (
                                     <PermissionItem key={permission.code}>
@@ -426,11 +456,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                                     </PermissionItem>
                                 ))}
                             </PermissionsGrid>
-                        </>
+                        </PermissionsCategory>
                     )}
                     
                     {canSetAdminPermissions && (
-                        <>
+                        <PermissionsCategory>
+                            {/* <CategoryTitle>Административные права</CategoryTitle> */}
                             <PermissionsGrid>
                                 {adminPermissions.map(permission => (
                                     <PermissionItem key={permission.code}>
@@ -442,7 +473,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                                     </PermissionItem>
                                 ))}
                             </PermissionsGrid>
-                        </>
+                        </PermissionsCategory>
                     )}
                 </PermissionsSection>
             )}
@@ -450,21 +481,58 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     );
 };
 
-const RoleSelectorSection = styled.div`
-    margin: 15px 0;
-    padding: 15px;
+const PermissionsSection = styled.div`
+    margin-top: 30px;
+    padding: 20px;
     background: #FFFFFF;
-    border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    max-width: 300px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #E5E7EB;
 `;
 
-const RoleSelectorLabel = styled.label`
-    display: block;
-    margin-bottom: 8px;
+const PermissionsHeader = styled.div`
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #F3F4F6;
+`;
+
+const PermissionsCategory = styled.div`
+    margin-bottom: 24px;
+    
+    &:last-child {
+        margin-bottom: 0;
+    }
+`;
+
+const CategoryTitle = styled.h3`
+    margin: 0 0 16px 0;
+    font-size: 16px;
     font-weight: 600;
     color: #374151;
-    font-size: 14px;
+    text-align: left;
+`;
+
+const PermissionsGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 2fr));
+    gap: 8px;
+    
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+`;
+
+const PermissionItem = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: auto;
+    padding: 16px;
+    background: #F9FAFB;
+    border-radius: 8px;
+    border: 1px solid #E5E7EB;
+    transition: all 0.2s ease;
 `;
 
 const RoleUpdateText = styled.div`
@@ -472,13 +540,6 @@ const RoleUpdateText = styled.div`
     font-size: 12px;
     color: #6B7280;
     font-style: italic;
-`;
-
-const PermissionGroupTitle = styled.h4`
-    margin: 15px 0 10px 0;
-    color: #374151;
-    font-size: 16px;
-    font-weight: 600;
 `;
 
 const HeaderContainer = styled.div`
@@ -550,33 +611,6 @@ const ResultsWrapper = styled.div`
     & > div {
         flex: 1;
     }
-`;
-
-const PermissionsSection = styled.div`
-    margin-top: 30px;
-    padding-bottom: 20px;
-    background: #FFFFFF;
-    border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    padding: 10px;
-`;
-
-const PermissionsGrid = styled.div`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
-    padding: 10px;
-`;
-
-const PermissionItem = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 10px;
-`;
-
-const PermissionLabel = styled.span`
-    font-size: 14px;
-    color: #374151;
 `;
 
 export default EmployeeProfilePage;

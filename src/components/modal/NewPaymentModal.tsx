@@ -8,6 +8,7 @@ import GrayButton from '../ui/Buttons/GrayButton';
 import Checkbox from '../ui/CheckBoxes/Checkbox';
 import CustomCalendar from '../ui/fields/CustomCalendar';
 import BankCardSelect from '../ui/fields/BankCardSelect';
+import { useAuth } from '../../сontext/AuthContext';
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -53,7 +54,8 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
   const [printReceipt, setPrintReceipt] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
+  const { hasPermission } = useAuth();
+  
   useEffect(() => {
     const savedPrintPreference = localStorage.getItem(PRINT_RECEIPT_STORAGE_KEY);
     if (savedPrintPreference) {
@@ -95,6 +97,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    
     const inputValue = e.target.value;
     
     if (inputValue === '₽' || inputValue === '') {
@@ -112,6 +115,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   };
 
   const handleSubmit = async () => {
+    
     if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid) return;
     
     if (paymentMethod === 'card' && !selectedBankCardId) {
@@ -189,7 +193,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
 
   const handlePrintReceiptChange = (checked: boolean) => {
     setPrintReceipt(checked);
-    // Сохраняем настройку в localStorage
     localStorage.setItem(PRINT_RECEIPT_STORAGE_KEY, JSON.stringify(checked));
   };
 
@@ -202,9 +205,14 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
           <CloseButton onClick={onClose}>&times;</CloseButton>
           
           <TitleField>
-            <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>
+            {hasPermission('FORBID_CREATING_PAYMENTS') ? (
+              <PermissionWarning>
+                У вас недостаточно прав для создания платежей
+              </PermissionWarning>
+            ) : (
+              <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>
+            )}
           </TitleField>
-          
           {isDebtPaid ? (
             <DebtPaidMessage>
               <h3>Договор полностью погашен</h3>
@@ -212,149 +220,154 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             </DebtPaidMessage>
           ) : (
             <>
-              <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
-              
-              <FormRow>
-                <InputGroup>
-                  <InputLabel>№ договора</InputLabel>
-                  <CustomInput 
-                    value={creditId.toString()}
-                    readOnly
-                  />
-                </InputGroup>
-                
-                <InputGroup>
-                  <InputLabel>Инвестор</InputLabel>
-                  <CustomInput 
-                    value={investorName}
-                    readOnly
-                  />
-                </InputGroup>
-              </FormRow>
-              
-              <FormRow>
-                <InputGroup>
-                  <InputLabel>Клиент</InputLabel>
-                  <CustomInput 
-                    value={clientName}
-                    readOnly
-                  />
-                </InputGroup>
-                
-                <InputGroup>
-                  <InputLabel>Телефон</InputLabel>
-                  <CustomInput 
-                    value={clientPhone}
-                    readOnly
-                  />
-                </InputGroup>
-              </FormRow>
-              
-              <ModalInfoTitle style={{ marginTop: '30px' }}>Сведения о платеже</ModalInfoTitle>
-              
-              <FormRow>
-                <InputGroup>
-                  <InputLabel>Дата платежа</InputLabel>
-                  <CustomCalendar 
-                    value={paymentDate} 
-                    onChange={setPaymentDate}
-                  />
-                </InputGroup>
-                
-                <InputGroup>
-                  <InputLabel>Сумма платежа</InputLabel>
-                  <CustomInput 
-                    inputType="rubles"
-                    placeholder="Сумма"
-                    value={principalAmount}
-                    onChange={handleAmountChange}
-                    max={currentDebt}
-                  />
-                  {totalAmount > currentDebt && (
-                    <ErrorText>Сумма платежа не может превышать остаток долга</ErrorText>
-                  )}
-                </InputGroup>
-              </FormRow>
-              
-              <FormRow>
-                <InputGroup>
-                  <InputLabel>Текущая задолженность</InputLabel>
-                  <CustomInput 
-                    value={formatMoney(currentMonthDebt)}
-                    readOnly
-                  />
-                </InputGroup>
-                
-                <InputGroup>
-                  <InputLabel>Остаток всего долга</InputLabel>
-                  <CustomInput 
-                    value={formatMoney(Math.max(0, remainingDebt))}
-                    readOnly
-                  />
-                </InputGroup>
-              </FormRow>
-              
-              <FormRow>
-                <InputGroup>
-                  <CheckboxWrapper>
-                    <Checkbox
-                      label='Распечатать чек после создания платежа'
-                      checked={printReceipt}
-                      onChange={handlePrintReceiptChange}
-                    />
-                  </CheckboxWrapper>
-                </InputGroup>
-              </FormRow>
-              
-              <FormRow>
-                <InputGroup>
-                  <InputLabel>Способ оплаты</InputLabel>
-                  <PaymentMethodContainer>
-                    <CheckboxWrapper>
-                      <Checkbox
-                        label='Наличными' 
-                        checked={paymentMethod === 'cash'} 
-                        onChange={handleCashChange} 
+              {!hasPermission('FORBID_CREATING_PAYMENTS') && (
+                <>
+                  <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
+                  
+                  <FormRow>
+                    <InputGroup>
+                      <InputLabel>№ договора</InputLabel>
+                      <CustomInput 
+                        value={creditId.toString()}
+                        readOnly
                       />
-                    </CheckboxWrapper>
+                    </InputGroup>
                     
-                    <CheckboxWrapper>
-                      <Checkbox 
-                        label='Картой'
-                        checked={paymentMethod === 'card'} 
-                        onChange={handleCardChange} 
+                    <InputGroup>
+                      <InputLabel>Инвестор</InputLabel>
+                      <CustomInput 
+                        value={investorName}
+                        readOnly
                       />
-                    </CheckboxWrapper>
-                  </PaymentMethodContainer>
-                </InputGroup>
-              </FormRow>
+                    </InputGroup>
+                  </FormRow>
+                  
+                  <FormRow>
+                    <InputGroup>
+                      <InputLabel>Клиент</InputLabel>
+                      <CustomInput 
+                        value={clientName}
+                        readOnly
+                      />
+                    </InputGroup>
+                    
+                    <InputGroup>
+                      <InputLabel>Телефон</InputLabel>
+                      <CustomInput 
+                        value={clientPhone}
+                        readOnly
+                      />
+                    </InputGroup>
+                  </FormRow>
+                  
+                  <ModalInfoTitle style={{ marginTop: '30px' }}>Сведения о платеже</ModalInfoTitle>
+                  
+                  <FormRow>
+                    <InputGroup>
+                      <InputLabel>Дата платежа</InputLabel>
+                      <CustomCalendar 
+                        value={paymentDate} 
+                        onChange={setPaymentDate}
+                      />
+                    </InputGroup>
+                    
+                    <InputGroup>
+                      <InputLabel>Сумма платежа</InputLabel>
+                      <CustomInput 
+                        inputType="rubles"
+                        placeholder="Сумма"
+                        value={principalAmount}
+                        onChange={handleAmountChange}
+                        max={currentDebt}
+                      />
+                      {totalAmount > currentDebt && (
+                        <ErrorText>Сумма платежа не может превышать остаток долга</ErrorText>
+                      )}
+                    </InputGroup>
+                  </FormRow>
+                  
+                  <FormRow>
+                    <InputGroup>
+                      <InputLabel>Текущая задолженность</InputLabel>
+                      <CustomInput 
+                        value={formatMoney(currentMonthDebt)}
+                        readOnly
+                      />
+                    </InputGroup>
+                    
+                    <InputGroup>
+                      <InputLabel>Остаток всего долга</InputLabel>
+                      <CustomInput 
+                        value={formatMoney(Math.max(0, remainingDebt))}
+                        readOnly
+                      />
+                    </InputGroup>
+                  </FormRow>
+                  
+                  <FormRow>
+                    <InputGroup>
+                      <CheckboxWrapper>
+                        <Checkbox
+                          label='Распечатать чек после создания платежа'
+                          checked={printReceipt}
+                          onChange={handlePrintReceiptChange}
+                        />
+                      </CheckboxWrapper>
+                    </InputGroup>
+                  </FormRow>
+                  
+                  <FormRow>
+                    <InputGroup>
+                      <InputLabel>Способ оплаты</InputLabel>
+                      <PaymentMethodContainer>
+                        <CheckboxWrapper>
+                          <Checkbox
+                            label='Наличными' 
+                            checked={paymentMethod === 'cash'} 
+                            onChange={handleCashChange}
+                          />
+                        </CheckboxWrapper>
+                        
+                        <CheckboxWrapper>
+                          <Checkbox 
+                            label='Картой'
+                            checked={paymentMethod === 'card'} 
+                            onChange={handleCardChange}
+                          />
+                        </CheckboxWrapper>
+                      </PaymentMethodContainer>
+                    </InputGroup>
+                  </FormRow>
 
-              {paymentMethod === 'card' && (
-                <FormRow>
-                  <InputGroup>
-                    <InputLabel>Банковская карта</InputLabel>
-                    <BankCardSelect
-                      value={selectedBankCardDetails}
-                      onChange={(details) => setSelectedBankCardDetails(details)}
-                      onBankCardSelect={handleBankCardSelect}
-                      placeholder="Выберите карту"
-                      clientId={clientId}
-                      selectedCardId={selectedBankCardId}
-                    />
-                    {paymentMethod === 'card' && !selectedBankCardId && (
-                      <ErrorText>Пожалуйста, выберите банковскую карту</ErrorText>
-                    )}
-                  </InputGroup>
-                </FormRow>
+                  {paymentMethod === 'card' && (
+                    <FormRow>
+                      <InputGroup>
+                        <InputLabel>Банковская карта</InputLabel>
+                        <BankCardSelect
+                          value={selectedBankCardDetails}
+                          onChange={(details) => setSelectedBankCardDetails(details)}
+                          onBankCardSelect={handleBankCardSelect}
+                          placeholder="Выберите карту"
+                          clientId={clientId}
+                          selectedCardId={selectedBankCardId}
+                        />
+                        {paymentMethod === 'card' && !selectedBankCardId && (
+                          <ErrorText>Пожалуйста, выберите банковскую карту</ErrorText>
+                        )}
+                      </InputGroup>
+                    </FormRow>
+                  )}
+                </>
               )}
+
             </>
           )}
           
           <ButtonContainer>
             <GrayButton onClick={onClose} disabled={isSubmitting}>
-              Отменить
+              {!hasPermission('FORBID_CREATING_PAYMENTS') ? 'Отменить' : 'Закрыть'}
             </GrayButton>
-            {!isDebtPaid && (
+            {!isDebtPaid && !hasPermission('FORBID_CREATING_PAYMENTS') && (
               <DarkCyanButton 
                 onClick={handleSubmit}
                 disabled={
@@ -414,6 +427,17 @@ const CloseButton = styled.button`
 
 const TitleField = styled.div`
   margin-bottom: 20px;
+  position: relative;
+`;
+
+const PermissionWarning = styled.div`
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 14px;
 `;
 
 const FormRow = styled.div`
