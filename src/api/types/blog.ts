@@ -14,6 +14,7 @@ export interface BlogPost {
   authorName: string;
   authorAvatarPath?: string;
   isAuthor: boolean;
+  audience: 'AllUsers' | 'Clients' | 'Employees';
 }
 
 export interface FileAttachment {
@@ -32,6 +33,7 @@ export interface BlogPostForm {
   content: string;
   images: File[];
   files: File[];
+  audience: 'AllUsers' | 'Clients' | 'Employees';
 }
 
 export interface BlogFeedParams {

@@ -19,12 +19,14 @@ class BlogService {
 
   async updatePost(
     postId: number,
+    audience: 'AllUsers' | 'Clients' | 'Employees',
     content: string,
     newImages?: File[],
     newFiles?: File[]
   ): Promise<BlogPost> {
     const formData = new FormData();
     formData.append('Content', content);
+    formData.append('Audience', audience);
     
     if (newImages) {
       newImages.forEach((image) => {
@@ -62,6 +64,8 @@ class BlogService {
     post.files.forEach((file) => {
       formData.append('Files', file);
     });
+
+    formData.append('Audience', post.audience);
 
     const response = await socialApiClient.post<BlogPost>('/Blog', formData, {
       headers: {

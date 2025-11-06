@@ -66,7 +66,7 @@ const BlogPage = () => {
   };
 
   const handleUpdatePost = async (postId: number, postData: BlogPostForm) => {
-    await updatePost(postId, postData.content, postData.images, postData.files, filters);
+    await updatePost(postId, postData.audience, postData.content, postData.images, postData.files, filters);
     setPostToEdit(null);
     getPosts(filters);
   };

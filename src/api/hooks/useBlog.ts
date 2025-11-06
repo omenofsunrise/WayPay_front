@@ -43,7 +43,7 @@ const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<Blog
   setError(null);
   try {
     const createdPost = await blogService.createPost(post);
-    await getPosts(params); // Передаём текущие параметры
+    await getPosts(params);
     return createdPost;
   } catch (err) {
     setError(err instanceof Error ? err.message : 'Unknown error');
@@ -73,6 +73,7 @@ const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<Blog
 
   const updatePost = async (
     postId: number,
+    audience: 'AllUsers' | 'Clients' | 'Employees',
     content: string,
     newImages?: File[],
     newFiles?: File[],
@@ -81,8 +82,8 @@ const createPost = async (post: BlogPostForm, params?: BlogParams): Promise<Blog
     setIsLoading(true);
     setError(null);
     try {
-      const updatedPost = await blogService.updatePost(postId, content, newImages, newFiles);
-      await getPosts(params); // Refresh the posts list with current params
+      const updatedPost = await blogService.updatePost(postId, audience, content, newImages, newFiles);
+      await getPosts(params);
       return updatedPost;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update post');

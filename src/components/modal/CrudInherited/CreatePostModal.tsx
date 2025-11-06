@@ -6,7 +6,8 @@ import CustomTextArea from '../../ui/fields/CustomTextArea';
 import { Container } from 'react-bootstrap';
 import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 import useBlog from '../../../api/hooks/useBlog';
-import type { BlogPostForm } from '../../../api/types/blog';
+import type { BlogPost, BlogPostForm } from '../../../api/types/blog';
+import CustomSelect from '../../ui/fields/CustomSelect';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ const CreatePostModal = ({
   onUpdate 
 }: CreatePostModalProps) => {
   const [content, setContent] = useState('');
+  const [audience, setAudience] = useState<'AllUsers' | 'Clients' | 'Employees'>('AllUsers');  
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
   const { isLoading } = useBlog();
@@ -31,11 +33,16 @@ const CreatePostModal = ({
   const MAX_FILES = 10;
   const MAX_FILE_SIZE_MB = 10;
 
-   useEffect(() => {
+  const audienceOptions = [
+    { value: 'AllUsers' as const, label: 'Для всех пользователей' },
+    { value: 'Clients' as const, label: 'Только для клиентов' },
+    { value: 'Employees' as const, label: 'Только для сотрудников' }
+  ];
+
+  useEffect(() => {
     if (postToEdit) {
       setContent(postToEdit.content);
-      // For existing files, we would need to handle them differently
-      // since they are URLs, not File objects
+      setAudience(postToEdit.audience || 'AllUsers');
       setFiles([]);
     } else {
       resetForm();
@@ -54,6 +61,7 @@ const CreatePostModal = ({
       content,
       images: files.filter(file => file.type.startsWith('image/')),
       files: files.filter(file => !file.type.startsWith('image/')),
+      audience
     };
 
     try {
@@ -71,6 +79,7 @@ const CreatePostModal = ({
 
   const resetForm = () => {
     setContent('');
+    setAudience('AllUsers');
     setFiles([]);
     setError('');
   };
@@ -156,6 +165,18 @@ const CreatePostModal = ({
     >
       <Container style={{ height: "20px" }}></Container>
       {error && <div style={{ color: 'red', margin: '0 30px', textAlign: 'center' }}>{error}</div>}
+      
+      <div style={{ margin: '0 30px 20px' }}>
+        <ModalInfoTitle style={{ margin: "0 0 10px 0" }}>Аудитория</ModalInfoTitle>
+        <CustomSelect
+          options={audienceOptions}
+          value={audience}
+          onChange={(event) => setAudience(event.target.value)}
+          placeholder="Выберите аудиторию"
+          disabled={isLoading}
+        />
+      </div>
+
       <FileRecepient 
         files={files} 
         onFileRemove={handleFileRemove} 
