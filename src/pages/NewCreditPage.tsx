@@ -88,7 +88,9 @@ const NewCreditPage = () => {
   const guarantorMenuRef = useRef<HTMLDivElement>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [objectTypeName, setObjectTypeName] = useState<string>('');
+  const [tabTypeName, setTabTypeName] = useState<string>('');
   const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType | null>(null);
+  const [selectedTabType, setSelectedTabType] = useState<SelectedObjectType | null>(null);
   const [editMarkupType, setEditMarkupType] = useState<'percent' | 'fixed'>('percent');
   const [markupType, setMarkupType] = useState<'percent' | 'fixed'>(() => {
     const savedMarkupType = localStorage.getItem(MARKUP_TYPE_STORAGE_KEY);
@@ -184,6 +186,15 @@ useEffect(() => {
         if (creditData.creditTypeId) {
           setSelectedObjectType({
             id: creditData.creditTypeId,
+            name: creditData.creditTypeName,
+            entityType: 'credit'
+          });
+          setObjectTypeName(creditData.creditTypeName);
+        }
+        
+        if (creditData.creditTabTypeId) {
+          setSelectedTabType({
+            id: creditData.creditTabTypeId,
             name: creditData.creditTypeName,
             entityType: 'credit'
           });
@@ -340,6 +351,13 @@ useEffect(() => {
     }
   }, []);
 
+  const handleTabTypeNameChange = useCallback((value: string) => {
+    setTabTypeName(value);
+    if (!value) {
+      setSelectedTabType(null);
+    }
+  }, []);
+
   const openGuarantorSelectionMenu = () => {
     setGuarantorMenuOpen(true);
   };
@@ -378,13 +396,11 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
 
   const selectedInvestor = investor || selectedPool;
   
-  // Убираем валидацию для пулов
   if (selectedPool) {
     setValidationError(null);
     return true;
   }
   
-  // Проверяем только для обычных инвесторов
   if (!selectedInvestor?.activeUntil) {
     setValidationError(null);
     return true;
@@ -922,7 +938,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </DateInputWrapper>
           </FieldGroup>
 
-          <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
+          <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
             <Label>Каталог (необязательно)</Label>
             <ObjectTypeSelect
               value={objectTypeName}
@@ -930,6 +946,16 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               onObjectTypeSelect={handleObjectTypeSelect}
               placeholder="Выберите тип договора"
               entityType="credit"
+            />
+          </FieldGroup>
+          <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
+            <Label>Категория (необязательно)</Label>
+            <ObjectTypeSelect
+              value={tabTypeName}
+              onChange={handleObjectTypeNameChange}
+              onObjectTypeSelect={handleObjectTypeSelect}
+              placeholder="Выберите категорию"
+              entityType="creditTab"
             />
           </FieldGroup>
         </FormRow>

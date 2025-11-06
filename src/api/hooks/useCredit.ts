@@ -132,6 +132,14 @@ const useCredit = () => {
     }
   }, []);
 
+  const setCreditType = useCallback(async (creditId: number, typeId?: number) => {
+    try {
+      await creditService.setCreditType(creditId, typeId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to set');
+    }
+  }, []);
+
   const deleteCredit = async (id: number) => {
     setIsLoading(true);
     setError(null);
@@ -203,7 +211,8 @@ const useCredit = () => {
     getCreateCreditRequest,
     setInvestmentSource,
     getCreditListByClient,
-    getCreditById
+    getCreditById,
+    setCreditType
   };
 };
 

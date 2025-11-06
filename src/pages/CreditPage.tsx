@@ -38,9 +38,16 @@ import CreateObjectTypeModal from '../components/modal/CrudInherited/CreateObjec
 import EditButton from '../components/ui/Buttons/EditButton';
 import DeleteButton from '../components/ui/Buttons/DeleteButton';
 import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
+import type { ContextMenuItem } from '../components/modal/ContextMenu';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
+}
+
+interface SetCategoryActionProps {
+  creditId: number;
+  onCategorySet: () => void;
+  customTabs: ObjectType[];
 }
 
 const CreditPage = () => {
@@ -101,6 +108,38 @@ const CreditPage = () => {
   useEffect(() => {
     loadCustomTabs();
   }, []);
+
+  const getCategoryMenuItems = ({ 
+    creditId, 
+    onCategorySet, 
+    customTabs 
+  }: SetCategoryActionProps): ContextMenuItem[] => {
+
+    const handleSetCategory = async (objectTypeId: number | null) => {
+      try {
+        await creditService.setCreditType(creditId, objectTypeId);
+        onCategorySet();
+      } catch (error) {
+        console.error('Ошибка при установке категории:', error);
+        alert('Произошла ошибка при установке категории');
+      }
+    };
+
+    const categoryItems: ContextMenuItem[] = [
+      {
+        label: 'Без категории',
+        action: () => handleSetCategory(null),
+        color: '#666'
+      },
+      ...customTabs.map(tab => ({
+        label: tab.name,
+        action: () => handleSetCategory(tab.id),
+        color: '#007d88'
+      }))
+    ];
+
+    return categoryItems;
+  };
 
   const loadCustomTabs = useCallback(async () => {
     const result = await getAllObjectTypes({ 
@@ -468,25 +507,44 @@ const CreditPage = () => {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
       color: '#008b8b',
-      shouldShow: () => forbiddenRole("бухгалтер")
+      shouldShow: (rowData: any[]) => forbiddenRole("бухгалтер")
     },
     {
       label: 'Выбрать источник финансирования',
       action: handleSelectFundingSource,
       color: '#007d88',
-      shouldShow: () => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
+      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
+    },
+    {
+      label: 'Установить категорию',
+      action: (rowData: any[]) => {
+        console.log('Установка категории для:', rowData);
+      },
+      color: '#007d88',
+      shouldShow: (rowData: any[]) => customTabs.length > 0,
+      getSubmenu: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const creditId = Number(id);
+        
+        return getCategoryMenuItems({ 
+          creditId, 
+          onCategorySet: loadCredits, 
+          customTabs 
+        });
+      },
+      showOnHover: true // Добавляем это свойство
     },
     {
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: () => (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
+      shouldShow: (rowData: any[]) => (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
     },
     {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
-      shouldShow: () => (hasPermission('DELETE_CREDITS') && forbiddenRole("бухгалтер"))
+      shouldShow: (rowData: any[]) => (hasPermission('DELETE_CREDITS') && forbiddenRole("бухгалтер"))
     }
   ];
 
@@ -825,7 +883,7 @@ const CreditPage = () => {
         includePools={true}
       />
 
-      {/* <CreateObjectTypeModal
+      <CreateObjectTypeModal
         isOpen={isCreateTabModalOpen}
         onClose={() => setIsCreateTabModalOpen(false)}
         onSubmit={handleCreateTab}
@@ -843,7 +901,7 @@ const CreditPage = () => {
         onSubmit={handleEditTab}
         initialData={editingTab}
         entityType="creditTab"
-      /> */}
+      />
 
     </PageLayout>
   );

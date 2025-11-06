@@ -1,11 +1,13 @@
 import styled from 'styled-components';
 import { motion, type HTMLMotionProps } from 'framer-motion';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-interface ContextMenuItem {
-  label: string;
-  action: () => void;
+export interface ContextMenuItem {
+  label: string | React.ReactNode;
+  action?: () => void;
   color?: string;
+  submenu?: ContextMenuItem[];
+  disabled?: boolean;
 }
 
 interface ContextMenuProps extends HTMLMotionProps<"div"> {
@@ -17,6 +19,7 @@ interface ContextMenuProps extends HTMLMotionProps<"div"> {
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, ...props }) => {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<number | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,7 +43,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, ...prop
     const windowHeight = window.innerHeight;
 
     const scrollY = window.scrollY || window.pageYOffset;
-    console.log(` y: ${scrollY}`);
 
     let adjustedX = x;
     let adjustedY = y;
@@ -58,6 +60,28 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, ...prop
 
   const position = getAdjustedPosition();
 
+  const handleItemClick = (item: ContextMenuItem, index: number) => {
+    if (item.submenu) {
+      setActiveSubmenu(activeSubmenu === index ? null : index);
+    } else if (item.action) {
+      item.action();
+      onClose();
+    }
+  };
+
+  const handleMouseEnter = (index: number) => {
+    if (items[index].submenu) {
+      setActiveSubmenu(index);
+    }
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    // Проверяем, не покидаем ли мы меню полностью
+    if (!menuRef.current?.contains(e.relatedTarget as Node)) {
+      setActiveSubmenu(null);
+    }
+  };
+
   return (
     <ContextMenuContainer
       ref={menuRef}
@@ -71,22 +95,56 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, ...prop
         left: position.x,
       }}
       onClick={(e) => e.stopPropagation()}
+      onMouseLeave={handleMouseLeave}
       {...props}
     >
       {items.map((item, index) => (
-        <ContextMenuItem
+        <ContextMenuItemWrapper
           key={index}
-          onClick={(e) => {
-            e.stopPropagation();
-            item.action();
-            onClose();
-          }}
-          whileHover={{ backgroundColor: '#f3f4f6' }}
-          initial={{ backgroundColor: '#ffffff' }}
-          $color={item.color}
+          $hasSubmenu={!!item.submenu}
+          $disabled={item.disabled}
         >
-          {item.label}
-        </ContextMenuItem>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!item.disabled) {
+                handleItemClick(item, index);
+              }
+            }}
+            onMouseEnter={() => !item.disabled && handleMouseEnter(index)}
+            whileHover={!item.disabled ? { backgroundColor: '#f3f4f6' } : {}}
+            initial={{ backgroundColor: '#ffffff' }}
+            $color={item.color}
+            $disabled={item.disabled}
+          >
+            <MenuItemContent>
+              {item.label}
+              {item.submenu && (
+                <SubmenuArrow>
+                  <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
+                    <path d="M1.5 1.5L6 6L1.5 10.5" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </SubmenuArrow>
+              )}
+            </MenuItemContent>
+          </ContextMenuItem>
+
+          {item.submenu && activeSubmenu === index && (
+            <SubmenuContainer
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ duration: 0.15 }}
+            >
+              <ContextMenu
+                x={0} // Измените с menuRef.current?.offsetWidth || 0 на 0
+                y={-index * 40} // Позиционируем относительно текущего пункта
+                items={item.submenu}
+                onClose={() => setActiveSubmenu(null)}
+              />
+            </SubmenuContainer>
+          )}
+        </ContextMenuItemWrapper>
       ))}
     </ContextMenuContainer>
   );
@@ -99,17 +157,43 @@ const ContextMenuContainer = styled(motion.div)`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
   padding: 4px 0;
   z-index: 1000;
-  min-width: 150px;
+  min-width: 180px;
   width: auto;
-  overflow: hidden;
+  overflow: visible;
 `;
 
-const ContextMenuItem = styled(motion.div)<{ $color?: string }>`
+const ContextMenuItemWrapper = styled.div<{ $hasSubmenu?: boolean; $disabled?: boolean }>`
+  position: relative;
+  opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
+`;
+
+const ContextMenuItem = styled(motion.div)<{ $color?: string; $disabled?: boolean }>`
   padding: 8px 16px;
   font-size: 14px;
-  cursor: pointer;
-  color: ${({ $color }) => $color || '#333'};
+  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
+  color: ${({ $color, $disabled }) => ($disabled ? '#999' : $color || '#333')};
   white-space: nowrap;
+  position: relative;
+`;
+
+const MenuItemContent = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+`;
+
+const SubmenuArrow = styled.span`
+  color: #666;
+  margin-left: 8px;
+`;
+
+const SubmenuContainer = styled(motion.div)`
+  position: absolute;
+  top: 0;
+  left: 100%;
+  z-index: 1001;
+  margin-left: 2px; 
 `;
 
 export default ContextMenu;

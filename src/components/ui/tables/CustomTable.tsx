@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import ContextMenu from '../../modal/ContextMenu';
+import ContextMenu, { type ContextMenuItem } from '../../modal/ContextMenu';
 
 type Alignment = 'left' | 'center' | 'right';
 
@@ -18,6 +18,8 @@ export interface TableAction {
   color?: string;
   disabled?: boolean;
   shouldShow?: (rowData: any[]) => boolean;
+  getSubmenu?: (rowData: any[]) => ContextMenuItem[];
+  showOnHover?: boolean;
 }
 
 export interface RowStyle {
@@ -110,20 +112,20 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     showContextMenu(event, rowIndex);
   };
 
-const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: number) => {
-  if (contextMenuActions.length === 0) return;
-  
-  event.preventDefault();
-  
-  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
-  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-  
-  setContextMenu({
-    x: clientX,
-    y: clientY,
-    rowIndex
-  });
-};
+  const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: number) => {
+    if (contextMenuActions.length === 0) return;
+    
+    event.preventDefault();
+    
+    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+    
+    setContextMenu({
+      x: clientX,
+      y: clientY,
+      rowIndex
+    });
+  };
 
   const handleTouchStart = (event: React.TouchEvent, rowIndex: number) => {
     if (contextMenuActions.length === 0) return;
@@ -146,8 +148,8 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
 
   const handleTouchMove = () => {
     if (longPressTimer.current) {
-    window.clearTimeout(longPressTimer.current);
-  }
+      window.clearTimeout(longPressTimer.current);
+    }
   };
 
   const closeContextMenu = () => {
@@ -221,12 +223,72 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
     return '#F3F4F6';
   };
 
+  const renderContextMenu = () => {
+    if (!contextMenu || contextMenuActions.length === 0) return null;
+
+    const filteredActions = (typeof contextMenuActions === 'function' 
+      ? contextMenuActions(data[contextMenu.rowIndex!]) 
+      : contextMenuActions
+    ).filter(action => 
+      typeof action === 'object' && 
+      (typeof action.shouldShow !== 'function' || 
+      action.shouldShow(data[contextMenu.rowIndex!]))
+    );
+
+    if (filteredActions.length === 0) return null;
+
+    return (
+      <ContextMenuWrapper
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          position: 'fixed', 
+          left: contextMenu.x,
+          top: contextMenu.y,
+          zIndex: 1000
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ContextMenu
+          items={filteredActions.map((action, index) => {
+            const menuItem: ContextMenuItem = {
+              label: action.label,
+              color: action.color,
+              disabled: action.disabled
+            };
+
+            // Если у действия есть подменю и оно должно показываться при наведении
+            if (action.getSubmenu && action.showOnHover) {
+              menuItem.submenu = action.getSubmenu(data[contextMenu.rowIndex!]);
+            } else if (action.getSubmenu) {
+              // Если подменю должно показываться по клику (старая логика)
+              menuItem.submenu = action.getSubmenu(data[contextMenu.rowIndex!]);
+            } else if (action.action) {
+              // Обычное действие
+              menuItem.action = () => {
+                action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
+                closeContextMenu();
+              };
+            }
+
+            return menuItem;
+          })}
+          onClose={closeContextMenu}
+          x={0}
+          y={0}
+        />
+      </ContextMenuWrapper>
+    );
+  };
+
   return (
     <TableContainer
       ref={tableRef}
     >
       {isLoading ? (
-      <LoadingOverlay>
+        <LoadingOverlay>
           <LoadingSpinner />
         </LoadingOverlay>
       ) : (
@@ -327,51 +389,9 @@ const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: n
               </AnimatePresence>
             </TableBody>
           </StyledTable>
-        
-
-      <AnimatePresence>
-            {contextMenu && contextMenuActions.length > 0 && (() => {
-              const filteredActions = (typeof contextMenuActions === 'function' 
-                ? contextMenuActions(data[contextMenu.rowIndex!]) 
-                : contextMenuActions
-              ).filter(action => 
-                typeof action === 'object' && 
-                (typeof action.shouldShow !== 'function' || 
-                action.shouldShow(data[contextMenu.rowIndex!]))
-              );
-
-              if (filteredActions.length === 0) return null;
-
-              return (
-                <ContextMenuWrapper
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  style={{
-                    position: 'fixed', 
-                    left: contextMenu.x,
-                    top: contextMenu.y,
-                    zIndex: 1000
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <ContextMenu
-                    items={filteredActions.map(action => ({
-                      label: action.label,
-                      action: () => {
-                        action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
-                        closeContextMenu();
-                      },
-                      color: action.color
-                    }))}
-                    onClose={closeContextMenu} 
-                    x={0} // Передаем 0, так как позиционируем через wrapper
-                    y={0}
-                  />
-                </ContextMenuWrapper>
-              );
-            })()}
+          
+          <AnimatePresence>
+            {renderContextMenu()}
           </AnimatePresence>
         </>
       )}

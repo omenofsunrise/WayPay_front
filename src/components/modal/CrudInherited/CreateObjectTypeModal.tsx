@@ -76,16 +76,16 @@ const CreateObjectTypeModal: React.FC<CreateObjectTypeModalProps> = ({
     onClose();
   };
 
-  const handleClose = () => {
-    onClose();
-  };
-
   const isSaveDisabled = !name.trim() || name.length > 50 || currentTabCount >= maxTabs;
+
+  // Если модальное окно закрыто, не рендерим ничего
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <BaseModal
-      isOpen={isOpen}
-      onClose={handleClose}
+      onClose={onClose}
       onCancel={handleCancel}
       onSave={handleSubmit}
       title="Создать новую вкладку"
@@ -119,6 +119,9 @@ const CreateObjectTypeModal: React.FC<CreateObjectTypeModalProps> = ({
             maxLength={50}
             disabled={currentTabCount >= maxTabs}
           />
+          <CharCount>
+            {name.length}/50 символов
+          </CharCount>
         </InputSection>
         
         {error && (
@@ -148,7 +151,7 @@ const InfoText = styled.p`
   margin: 0;
   color: #666;
   font-size: 14px;
-  text-align: center;
+  text-align: left;
 `;
 
 const LimitWarning = styled.div`
@@ -182,14 +185,6 @@ const ErrorMessage = styled.div`
   background-color: #ffebee;
   border-radius: 4px;
   border: 1px solid #ffcdd2;
-`;
-
-const HintText = styled.p`
-  margin: 0;
-  color: #888;
-  font-size: 12px;
-  text-align: center;
-  font-style: italic;
 `;
 
 export default CreateObjectTypeModal;

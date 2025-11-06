@@ -73,16 +73,16 @@ const EditObjectTypeModal: React.FC<EditObjectTypeModalProps> = ({
     onClose();
   };
 
-  const handleClose = () => {
-    onClose();
-  };
-
   const isSaveDisabled = !name.trim() || name.length > 50 || name === initialData?.name;
+
+  // Если модальное окно закрыто, не рендерим ничего
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <BaseModal
-      isOpen={isOpen}
-      onClose={handleClose}
+      onClose={onClose}
       onCancel={handleCancel}
       onSave={handleSubmit}
       title="Редактировать вкладку"
@@ -114,10 +114,6 @@ const EditObjectTypeModal: React.FC<EditObjectTypeModalProps> = ({
             {error}
           </ErrorMessage>
         )}
-
-        <HintText>
-          Текущее название: <strong>{initialData?.name}</strong>
-        </HintText>
       </ModalContent>
     </BaseModal>
   );

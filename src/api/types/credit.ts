@@ -45,6 +45,7 @@ export interface CreateCreditRequest {
   clientId: number;
   name: string;
   creditTypeId: number;
+  creditTabTypeId: number;
   
   GuarantorClientId: number;
   guarantor?: {

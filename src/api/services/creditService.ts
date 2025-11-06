@@ -58,6 +58,13 @@ class CreditService {
     await apiClient.put(`/Credit/${id}/toggle-favourite`);
   }
 
+  async setCreditType(creditId: number, typeId?: number) {
+    if (typeId === null)
+      await apiClient.patch(`/Credit/set-category/${creditId}/`);
+    else
+      await apiClient.patch(`/Credit/set-category/${creditId}/${typeId}`);
+  }
+
   async deleteCredit(id: number): Promise<void> {
     await apiClient.delete(`/Credit/${id}`);
   }
