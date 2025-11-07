@@ -9,6 +9,7 @@ interface AuthContextType {
   error: string | null;
   refresh: () => Promise<void>;
   hasPermission: (permission: Permission, checkAdmins?: boolean) => boolean;
+  denyPermission: (permission: Permission, checkAdmins?: boolean) => boolean;
   hasRole: (role: Role | Role[]) => boolean;
   forbiddenRole: (role: Role) => boolean;
   isSuperAdminCompany: () => boolean;
@@ -50,7 +51,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
   const hasPermission = (permission: Permission, checkAdmins: boolean = false): boolean => {
     if (!authInfo) return false;
-    
+
     if (ALWAYS_TRUE_ROLES.includes(authInfo.employee.role)) {
       return true;
     }
@@ -60,6 +61,20 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }
     
     return authInfo.employee.permissions.includes(permission);
+  };
+
+  const denyPermission = (permission: Permission, checkAdmins: boolean = false): boolean => {
+    if (!authInfo) return true;
+
+    if (ALWAYS_TRUE_ROLES.includes(authInfo.employee.role)) {
+      return true;
+    }
+    
+    if (!checkAdmins && SUPER_ROLES.includes(authInfo.employee.role)) {
+      return true;
+    }
+    
+    return !authInfo.employee.permissions.includes(permission);
   };
 
   const hasRole = (role: Role | Role[]): boolean => {
@@ -94,6 +109,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       error, 
       refresh: fetchAuthInfo,
       hasPermission,
+      denyPermission,
       hasRole,
       forbiddenRole,
       isSuperAdminCompany,

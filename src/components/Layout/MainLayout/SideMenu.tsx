@@ -67,7 +67,7 @@ const SideMenu = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole, hasPermission, isSuperAdminCompany } = useAuth();
+  const { hasRole, hasPermission, denyPermission, isSuperAdminCompany } = useAuth();
   
   const menuItemPermissions: Record<string, () => boolean> = {
     'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин'),
@@ -75,7 +75,7 @@ const SideMenu = () => {
     'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'clients': () => true, // Базовый доступ к клиентам
     'blacklist': () => true, // Базовый доступ к черному списку
-    'credit-application': () => !hasPermission('FORBID_CREDIT_APPLICATIONS'),
+    'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
     'queue': () => true, // Базовый доступ к очереди
     'pending-payments': () => true, // Базовый доступ к платежам
     'payments-journal': () => true, // Базовый доступ к журналу платежей
@@ -411,7 +411,7 @@ const SideMenu = () => {
               >
                 Чёрный список
               </SubMenuItem>
-              {(!hasPermission('FORBID_CREDIT_APPLICATIONS') && 
+              {(denyPermission('FORBID_CREDIT_APPLICATIONS', true) && 
                 <SubMenuItem 
                   onClick={() => handleSubMenuItemClick('credit-application', '/credit-application')}
                   $selected={selectedSideMenuItem === 'credit-application'}

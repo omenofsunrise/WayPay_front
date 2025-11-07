@@ -54,7 +54,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
   const [printReceipt, setPrintReceipt] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const { hasPermission } = useAuth();
+  const { denyPermission } = useAuth();
   
   useEffect(() => {
     const savedPrintPreference = localStorage.getItem(PRINT_RECEIPT_STORAGE_KEY);
@@ -205,12 +205,12 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
           <CloseButton onClick={onClose}>&times;</CloseButton>
           
           <TitleField>
-            {hasPermission('FORBID_CREATING_PAYMENTS') ? (
+            {denyPermission('FORBID_CREATING_PAYMENTS') ? (
+              <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>              
+            ) : (
               <PermissionWarning>
                 У вас недостаточно прав для создания платежей
               </PermissionWarning>
-            ) : (
-              <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>
             )}
           </TitleField>
           {isDebtPaid ? (
@@ -220,7 +220,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             </DebtPaidMessage>
           ) : (
             <>
-              {!hasPermission('FORBID_CREATING_PAYMENTS') && (
+              {denyPermission('FORBID_CREATING_PAYMENTS') && (
                 <>
                   <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
                   
@@ -365,7 +365,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
           
           <ButtonContainer>
             <GrayButton onClick={onClose} disabled={isSubmitting}>
-              {!hasPermission('FORBID_CREATING_PAYMENTS') ? 'Отменить' : 'Закрыть'}
+              {denyPermission('FORBID_CREATING_PAYMENTS') ? 'Отменить' : 'Закрыть'}
             </GrayButton>
             {!isDebtPaid &&  (
               <DarkCyanButton 
