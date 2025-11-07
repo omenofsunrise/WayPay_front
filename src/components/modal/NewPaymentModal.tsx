@@ -205,7 +205,13 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
           <CloseButton onClick={onClose}>&times;</CloseButton>
           
           <TitleField>
-         
+            {hasPermission('FORBID_CREATING_PAYMENTS') ? (
+              <PermissionWarning>
+                У вас недостаточно прав для создания платежей
+              </PermissionWarning>
+            ) : (
+              <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>
+            )}
           </TitleField>
           {isDebtPaid ? (
             <DebtPaidMessage>
@@ -214,6 +220,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             </DebtPaidMessage>
           ) : (
             <>
+              {!hasPermission('FORBID_CREATING_PAYMENTS') && (
                 <>
                   <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
                   
@@ -351,6 +358,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                     </FormRow>
                   )}
                 </>
+              )}
 
             </>
           )}
