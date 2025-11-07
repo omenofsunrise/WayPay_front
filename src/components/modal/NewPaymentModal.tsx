@@ -359,7 +359,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             <GrayButton onClick={onClose} disabled={isSubmitting}>
               {!hasPermission('FORBID_CREATING_PAYMENTS') ? 'Отменить' : 'Закрыть'}
             </GrayButton>
-            {!isDebtPaid && !hasPermission('FORBID_CREATING_PAYMENTS') && (
+            {!isDebtPaid &&  (
               <DarkCyanButton 
                 onClick={handleSubmit}
                 disabled={
