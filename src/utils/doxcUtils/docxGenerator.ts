@@ -1,5 +1,5 @@
 import { saveAs } from 'file-saver';
-import { TemplateHandler } from 'easy-template-x';
+import { TemplateHandler, MimeType } from 'easy-template-x';
 import type { CreditDocs, SoldProductItem } from '../../api/types/credit';
 import { formatMoney } from '../formatPrice';
 
@@ -28,7 +28,7 @@ class DocxGenerator {
         throw new Error('Не удалось получить данные для документа');
       }
       
-      const templateData = this.prepareTemplateData(docsData);
+      const templateData = await this.prepareTemplateData(docsData);
       
       const templateFile = await this.loadTemplate(templateUrl);
       
@@ -49,7 +49,7 @@ class DocxGenerator {
   /**
    * Подготавливает данные для шаблона, включая таблицы платежей и продуктов
    */
-  private prepareTemplateData(docsData: CreditDocs): any {
+  private async prepareTemplateData(docsData: CreditDocs): Promise<any> {
     const result: any = { ...docsData };
     
     if (docsData.paymentSchedule && docsData.paymentSchedule.length > 0) {
@@ -76,11 +76,117 @@ class DocxGenerator {
       result.totalProductsAmount = this.calculateTotal(docsData.soldProducts, 'totalAmount');
     }
 
+    // Обработка изображений по URL
+    await this.processImageUrls(result, docsData.logo);
+
     result.hasGuarantor = !!docsData.guarantorName;
     result.hasProducts = !!docsData.soldProducts && docsData.soldProducts.length > 0;
     
     return result;
   }
+
+  /**
+   * Обрабатывает URL изображений и конвертирует их в формат для easy-template-x
+   */
+private async processImageUrls(result: any, url: string): Promise<void> {
+  
+  try {
+    const response = await fetch(url, {
+      mode: 'cors',
+      credentials: 'omit',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    
+    // Определяем правильный MIME type
+    const contentType = response.headers.get('content-type');
+    let format: string = MimeType.Jpeg; // значение по умолчанию
+    
+    if (contentType) {
+      if (contentType.includes('png')) format = MimeType.Png;
+      else if (contentType.includes('gif')) format = MimeType.Gif;
+      else if (contentType.includes('bmp')) format = MimeType.Bmp;
+      // Для jpeg/jpg используем MimeType.Jpeg по умолчанию
+    }
+
+    result.superphoto = {
+      _type: 'image' as const,
+      source: arrayBuffer,
+      format: format,
+      width: 120,
+      height: 120,
+      altText: 'Фото клиента'
+    };
+    
+    console.log('Image processed with format:', format);
+    
+  } catch (error) {
+    console.warn(`Не удалось загрузить изображение:`, error);
+  }
+}
+
+  /**
+   * Проверяет, является ли URL допустимым для изображения
+   */
+  private isValidImageUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') return false;
+    
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    const urlLower = url.toLowerCase();
+    
+    return imageExtensions.some(ext => urlLower.includes(ext)) ||
+           urlLower.startsWith('data:image/');
+  }
+
+  /**
+   * Загружает изображение по URL и конвертирует в base64
+   */
+private async fetchImageAsArrayBuffer(url: string): Promise<{ buffer: ArrayBuffer; format: string } | null> {
+  try {
+    const response = await fetch(url, {
+      mode: 'cors',
+      credentials: 'omit',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    
+    // Определяем формат из Content-Type или URL
+    const contentType = response.headers.get('content-type');
+    let format = 'jpeg'; // значение по умолчанию
+    
+    if (contentType) {
+      const typeMap: Record<string, string> = {
+        'image/jpeg': 'jpeg',
+        'image/jpg': 'jpeg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/bmp': 'bmp',
+        'image/webp': 'webp'
+      };
+      format = typeMap[contentType] || 'jpeg';
+    } else {
+      // Определяем по расширению URL
+      const urlLower = url.toLowerCase();
+      if (urlLower.includes('.png')) format = 'png';
+      else if (urlLower.includes('.gif')) format = 'gif';
+      else if (urlLower.includes('.bmp')) format = 'bmp';
+      else if (urlLower.includes('.webp')) format = 'webp';
+    }
+
+    return { buffer: arrayBuffer, format };
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    return null;
+  }
+}
 
   /**
    * Вычисляет общую сумму для указанного поля в массиве продуктов
@@ -103,7 +209,7 @@ class DocxGenerator {
 
   /**
    * Создает данные для таблицы с двумя колонками платежей
-  */
+   */
   private prepareTwoColumnPaymentData(paymentSchedule: any[]): any[] {
     const totalPayments = paymentSchedule.length;
     const half = Math.ceil(totalPayments / 2);
@@ -145,6 +251,7 @@ class DocxGenerator {
 
   private async loadTemplate(url: string): Promise<Blob> {
     const response = await fetch(url, {
+      mode: 'cors', // Явно указываем CORS режим
       headers: {
         'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       }

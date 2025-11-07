@@ -344,7 +344,7 @@ const CreditPage = () => {
   const handlePrintOptionSelect = async (option: 'sale' | 'saleSinglePage' | 'schedules' | 'guaranteeConsent') => {
     if (!selectedCreditForPrint) return;
     
-    try {
+    // try {
       const docxGenerator = new DocxGenerator(getDocsData);
       
       if (option === 'sale') {
@@ -365,10 +365,10 @@ const CreditPage = () => {
           '/Docs/guaranteeandConsentAgreement.docx'
         );
       }
-    } catch (error) {
-      console.error('Ошибка при генерации документа:', error);
-      alert('Произошла ошибка при генерации документа');
-    }
+    // } catch (error) {
+    //   console.error('Ошибка при генерации документа:', error);
+    //   alert('Произошла ошибка при генерации документа');
+    // }
     
     setIsPrintModalOpen(false);
   };
