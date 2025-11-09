@@ -89,30 +89,59 @@ class DocxGenerator {
    * Обрабатывает URL изображений и конвертирует их в формат для easy-template-x
    */
 private async processImageUrls(result: any, url: string): Promise<void> {
-  
+  if (!this.isValidImageUrl(url)) {
+    console.warn('Invalid image URL:', url);
+    return;
+  }
+
   try {
+    console.log('Fetching image from:', url);
+    
     const response = await fetch(url, {
       mode: 'cors',
       credentials: 'omit',
+      headers: {
+        'Accept': 'image/*',
+        'Cache-Control': 'no-cache'
+      }
     });
     
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}, statusText: ${response.statusText}`);
     }
 
     const arrayBuffer = await response.arrayBuffer();
     
-    // Определяем правильный MIME type
-    const contentType = response.headers.get('content-type');
-    let format: string = MimeType.Jpeg; // значение по умолчанию
-    
-    if (contentType) {
-      if (contentType.includes('png')) format = MimeType.Png;
-      else if (contentType.includes('gif')) format = MimeType.Gif;
-      else if (contentType.includes('bmp')) format = MimeType.Bmp;
-      // Для jpeg/jpg используем MimeType.Jpeg по умолчанию
+    if (arrayBuffer.byteLength === 0) {
+      throw new Error('Empty image response');
     }
 
+    // Определяем правильный MIME type
+    const contentType = response.headers.get('content-type');
+    let format: string = MimeType.Jpeg;
+    
+    if (contentType) {
+      const typeMap: Record<string, string> = {
+        'image/png': MimeType.Png,
+        'image/jpeg': MimeType.Jpeg,
+        'image/jpg': MimeType.Jpeg,
+        'image/gif': MimeType.Gif,
+        'image/bmp': MimeType.Bmp,
+      };
+      
+      for (const [contentTypePattern, mimeType] of Object.entries(typeMap)) {
+        if (contentType.includes(contentTypePattern)) {
+          format = mimeType;
+          break;
+        }
+      }
+    }
+
+    console.log('Image processed successfully, format:', format, 'size:', arrayBuffer.byteLength);
+    
     result.superphoto = {
       _type: 'image' as const,
       source: arrayBuffer,
@@ -122,10 +151,10 @@ private async processImageUrls(result: any, url: string): Promise<void> {
       altText: 'Фото клиента'
     };
     
-    console.log('Image processed with format:', format);
-    
   } catch (error) {
-    console.warn(`Не удалось загрузить изображение:`, error);
+    console.error('Failed to load image:', error);
+    // Можно добавить fallback изображение
+    result.superphoto = null;
   }
 }
 
