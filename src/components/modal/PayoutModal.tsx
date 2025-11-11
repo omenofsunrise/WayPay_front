@@ -17,7 +17,7 @@ interface PayoutModalProps {
   currentIncome?: number | null; 
   expectedIncome?: number | null;
   payoutSource: PayoutSource;
-  onPayoutSourceChange: (source: PayoutSource) => void;
+  onPayoutSourceChange?: (source: PayoutSource) => void;
   investment?: number | null;
   isCompany: boolean;
 }
@@ -52,7 +52,7 @@ const PayoutModal = ({
 
     setWarning('');
     
-    if (investment != null && currentIncome == null && expectedIncome == null) {
+    if (investment != null && currentIncome == null && expectedIncome == null && onPayoutSourceChange != null) {
       onPayoutSourceChange('investment');
     } else {
       onPayoutSourceChange('income');

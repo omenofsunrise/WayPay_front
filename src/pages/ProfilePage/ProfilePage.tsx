@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import BackButtonComponent from '../../components/ui/Buttons/BackButton';
 import BranchPage from './BranchPage';
 import SenderPage from './SenderPage';
+import FinanceProfilePage from './FinanceProfilePage';
 import { useAuth } from '../../сontext/AuthContext';
 import type { Tab } from '../../components/ui/fields/Tabs';
 import Tabs from '../../components/ui/fields/Tabs';
@@ -59,11 +60,15 @@ const ProfilePage = () => {
             { id: "Сотрудники", label: "Сотрудники" },
             { id: "Данные компании", label: "Данные компании" },
             { id: "Отделения", label: "Отделения" },
-            { id: "Рассылка", label: "Рассылка" }
+            { id: "Рассылка", label: "Рассылка" },
         );
     } else if (hasRole("админ")) {
         tabs.push(
             { id: "Сотрудники", label: "Сотрудники" },
+        );
+    } else if (hasRole("бухгалтер")) {
+        tabs.push(
+            { id: "Финансы", label: "Финансы" }
         );
     }
 
@@ -92,6 +97,8 @@ const ProfilePage = () => {
                 return <BranchPage />;
             case "Рассылка":
                 return <SenderPage />;
+            case "Финансы":
+                return <FinanceProfilePage />;
             default:
                 return <EmployeeProfilePage />;
         }

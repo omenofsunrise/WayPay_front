@@ -20,7 +20,7 @@ import balanceSvg from '../assets/ui/InvestorReport/balance.svg';
 import allSelfIncomeSvg from '../assets/ui/InvestorReport/AllSelfIncome.svg';
 import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
 import { useInvestorPayout } from '../api/hooks/useInvestorPayout';
-import type { InvestorPayout } from '../api/types/investorPayout';
+import type { InvestorPayout, PayoutSource } from '../api/types/investorPayout';
 import PayoutModal from '../components/modal/PayoutModal';
 import InvestorModal from '../components/modal/CrudInherited/InvestorModal';
 import jsPDF from 'jspdf';
@@ -102,6 +102,7 @@ const InvestorsPoolPage = () => {
     const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
     const [investmentAmount, setInvestmentAmount] = useState('');
     const [selectedInvestorForInvestment, setSelectedInvestorForInvestment] = useState<Investor | null>(null);
+    const [payoutSource, setPayoutSource] = useState<PayoutSource>('income');
 
     useEffect(() => {
         if (selectedPoolId) {
@@ -1079,6 +1080,8 @@ const InvestorsPoolPage = () => {
                     isLoading={isPayoutsLoading}
                     isCompany={false}
                     investment={selectedInvestorForPayout?.investmentAmount || 0}
+                    payoutSource={payoutSource}
+                    onPayoutSourceChange={setPayoutSource}
                 />
 
                 <InvestorModal
