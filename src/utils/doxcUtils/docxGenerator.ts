@@ -119,7 +119,6 @@ private async processImageUrls(result: any, url: string): Promise<void> {
       throw new Error('Empty image response');
     }
 
-    // Определяем правильный MIME type
     const contentType = response.headers.get('content-type');
     let format: string = MimeType.Jpeg;
     

@@ -34,7 +34,7 @@ const PaymentPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    const { authInfo, hasPermission } = useAuth();
+    const { authInfo, denyPermission } = useAuth();
     const [investorName, setInvestorName] = useState('');
     const [employeeFullname, setEmployeeFullname] = useState('');
     const [confirmedFilter, setConfirmedFilter] = useState<string>('all');
@@ -357,7 +357,7 @@ const PaymentPage = () => {
         },
     ];
 
-    if (!hasPermission('FORBID_DELETING_PAYMENTS'))
+    if (denyPermission('FORBID_DELETING_PAYMENTS'))
     {
         tableActions.push({
             label: 'Удалить',
