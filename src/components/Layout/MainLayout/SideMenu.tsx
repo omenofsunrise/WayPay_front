@@ -70,7 +70,7 @@ const SideMenu = () => {
   const { hasRole, hasPermission, denyPermission, isSuperAdminCompany } = useAuth();
   
   const menuItemPermissions: Record<string, () => boolean> = {
-    'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин'),
+    'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasRole('бухгалтер'),
     'contracts': () => true, // Базовый доступ к договорам
     'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'clients': () => true, // Базовый доступ к клиентам
@@ -276,7 +276,7 @@ const SideMenu = () => {
       <MenuList $collapsed={collapsed}>
         {/* Основное меню с возможностью прокрутки */}
         <ScrollableMenuContent>
-          {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин')) && (
+          {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasRole('бухгалтер')) && (
             <MenuItem 
               onClick={(e) => {
                 if (collapsed) {

@@ -3,6 +3,11 @@ export interface AnalyticResponse {
   investmentAmountDiffrence: number;
   cash: number;
   cashDiffrence: number;
+  currentCash: number;
+  currentCashDiffrence: number;
+  unconfirmedCash: number;
+  unconfirmedCashDiffrence: number;
+
   latePayment: number;
   latePaymentDiffrence: number;
   totalCredits: number;
