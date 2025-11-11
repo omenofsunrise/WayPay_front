@@ -17,6 +17,8 @@ export interface Employee {
   minSurcharge: number;
   photoPath: string;
   isBlocked: boolean;
+  confirmedAmount: number;
+  unconfirmedAmount: number;
 }
 
 export interface EmployeeFilterRequest extends PaginationParams{
