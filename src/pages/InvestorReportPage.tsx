@@ -23,7 +23,7 @@ import allSelfIncomeSvg from '../assets/ui/InvestorReport/AllSelfIncome.svg';
 import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import { useInvestorPayout } from '../api/hooks/useInvestorPayout';
-import type { InvestorPayout } from '../api/types/investorPayout';
+import type { InvestorPayout, PayoutSource } from '../api/types/investorPayout';
 import PayoutModal from '../components/modal/PayoutModal';
 import ViewButton from '../components/ui/Buttons/ViewButton';
 import InvestorModal from '../components/modal/CrudInherited/InvestorModal';
@@ -61,6 +61,7 @@ const InvestorReportPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
     const [payoutAmount, setPayoutAmount] = useState<string>('');
+    const [payoutSource, setPayoutSource] = useState<PayoutSource>('income');
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
     
     const [dataTab, setDataTab] = useState<'general' | 'expected' | 'current'>('general');
@@ -546,7 +547,8 @@ const InvestorReportPage = () => {
         try {
             await addPayout({
                 investorId: Number(selectedInvestorId),
-                amount: numericAmount
+                amount: numericAmount,
+                payoutSource: payoutSource
             });
             setIsPayoutModalOpen(false);
             setPayoutAmount('');
@@ -952,6 +954,9 @@ const InvestorReportPage = () => {
                     amount={payoutAmount}
                     onAmountChange={setPayoutAmount}
                     onSubmit={handlePayoutSubmit}
+                    investment={report?.investment || 0}
+                    payoutSource={payoutSource}
+                    onPayoutSourceChange={setPayoutSource}
                     maxAmount={
                         currentInvestor?.isBlocked 
                         ? report?.balance || 0 
@@ -985,7 +990,7 @@ const InvestorReportPage = () => {
                         fullName: currentInvestor.fullName,
                         phoneNumber: currentInvestor.phoneNumber,
                         investorPie: currentInvestor.investorPie,
-                        investmentAmount: currentInvestor.investmentAmount,
+                        investmentAmount: currentInvestor.investmentAmount ?? 0,
                         balance: currentInvestor.balance,
                         isCompany: currentInvestor.isCompany,
                         isBlocked: currentInvestor.isBlocked

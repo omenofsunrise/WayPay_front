@@ -10,4 +10,7 @@ export interface InvestorPayout {
 export interface CreateInvestorPayoutDto {
   investorId: number;
   amount: number;
+  payoutSource?: PayoutSource;
 }
+
+export type PayoutSource = 'income' | 'investment';

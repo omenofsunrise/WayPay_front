@@ -126,7 +126,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
             return;
         }
 
-        // Проверка баланса
         const amountNumber = parseInt(newIncome.amount, 10);
         if (currentInvestor && amountNumber > currentInvestor.balance) {
             alert(`Нельзя вывести больше доступного баланса. Доступно: ${new Intl.NumberFormat('ru-RU').format(currentInvestor.balance)} руб.`);
