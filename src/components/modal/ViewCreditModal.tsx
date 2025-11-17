@@ -332,8 +332,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 };
 
   const notesColumns = [
+    { name: 'Сотрудник' },
     { name: 'Дата' },
     { name: 'Заметка', align: 'left' as const },
+    { name: 'Напоминание', align: 'left' as const },
     { name: '' }
   ];
 
@@ -384,6 +386,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
   const formatNotesData = () => {
     return notes.map((note, index) => [
+      note.employeeName,
       formatDate(note.createdAt),
       <NoteContent key={`note-${note.id}`}>
         {note.content}
@@ -407,6 +410,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           </FileContainer>
         )}
       </NoteContent>,
+      formatDate(note.remindDate),
       <DeleteIcon 
         key={`delete-${note.id}`} 
         onClick={() => handleDeleteNote(note.id)}
