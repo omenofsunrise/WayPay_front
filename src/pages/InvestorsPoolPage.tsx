@@ -108,7 +108,7 @@ const InvestorsPoolPage = () => {
         if (selectedPoolId) {
             const fetchInvestors = async () => {
             try {
-                const result = await getInvestors({ poolId: Number(selectedPoolId) });
+                const result = await getInvestors({ poolId: Number(selectedPoolId), pageSize: 100 });
                 if (result) {
                 setInvestors(result.items);
                 }

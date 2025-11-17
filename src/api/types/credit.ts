@@ -161,6 +161,7 @@ export interface CreditResponse extends PaginatedResponse<Credit> {
     totalRest: number;
     totalIncomeRubles: number;
     totalPrice: number;
+    totalFirstPayment: number;
 }
 
 export type InvestmentSourceType = 1 | 2;
