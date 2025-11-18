@@ -193,10 +193,12 @@ const InvestorsPoolPage = () => {
         }
     };
 
-    const handlePayoutClick = (investor: Investor) => {
-        setSelectedInvestorForPayout(investor);
-        setIsPayoutModalOpen(true);
-    };
+const handlePayoutClick = (investor: Investor) => {
+    setSelectedInvestorForPayout(investor);
+    setPayoutAmount('');
+    setPayoutSource('income'); // Сбрасываем к источнику по умолчанию
+    setIsPayoutModalOpen(true);
+};
 
     const handleAddInvestor = () => {
         setCurrentInvestor(null);
@@ -688,8 +690,9 @@ const InvestorsPoolPage = () => {
         
         try {
             await addPayout({
-            investorId: selectedInvestorForPayout.id,
-            amount: numericAmount
+                investorId: selectedInvestorForPayout.id,
+                amount: numericAmount,
+                payoutSource: payoutSource
             });
             setIsPayoutModalOpen(false);
             setPayoutAmount('');
@@ -700,6 +703,21 @@ const InvestorsPoolPage = () => {
             console.error('Payout error:', error);
         }
     };
+
+    const getMaxPayoutAmount = (investor: Investor | null) => {
+        if (!investor) return 0;
+        
+        if (investor.isBlocked) {
+            return report?.balance || 0;
+        }
+        
+        return investor.currentIncome || 0;
+    };
+
+    const getCurrentIncome = (investor: Investor | null) => {
+    if (!investor) return 0;
+    return investor.currentIncome || 0;
+};
 
     const tabs = [
         { id: 'investors', label: 'Инвесторы' },
@@ -1069,20 +1087,21 @@ const InvestorsPoolPage = () => {
                 </>
                 )}
 
-                <PayoutModal
-                    isOpen={isPayoutModalOpen}
-                    onClose={() => setIsPayoutModalOpen(false)}
-                    amount={payoutAmount}
-                    onAmountChange={setPayoutAmount}
-                    onSubmit={handlePayoutSubmit}
-                    maxAmount={selectedInvestorForPayout?.currentIncome || 0}
-                    balance={report?.balance || 0}
-                    isLoading={isPayoutsLoading}
-                    isCompany={false}
-                    investment={selectedInvestorForPayout?.investmentAmount || 0}
-                    payoutSource={payoutSource}
-                    onPayoutSourceChange={setPayoutSource}
-                />
+<PayoutModal
+    isOpen={isPayoutModalOpen}
+    onClose={() => setIsPayoutModalOpen(false)}
+    amount={payoutAmount}
+    onAmountChange={setPayoutAmount}
+    onSubmit={handlePayoutSubmit}
+    maxAmount={getMaxPayoutAmount(selectedInvestorForPayout)}
+    balance={report?.balance || 0}
+    isLoading={isPayoutsLoading}
+    currentIncome={getCurrentIncome(selectedInvestorForPayout)}
+    investment={selectedInvestorForPayout?.investmentAmount || 0}
+    payoutSource={payoutSource}
+    onPayoutSourceChange={setPayoutSource}
+    isCompany={false}
+/>
 
                 <InvestorModal
                     mode="view"
