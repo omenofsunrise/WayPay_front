@@ -32,7 +32,9 @@ class DocxGenerator {
       
       const templateFile = await this.loadTemplate(templateUrl);
       
-      const handler = new TemplateHandler();
+      const handler = new TemplateHandler({
+        maxXmlDepth: 30,
+      });
       const docx = await handler.process(templateFile, templateData);
       
       const fileName = this.generateFileName(docsData, templateUrl);
