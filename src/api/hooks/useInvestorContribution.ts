@@ -8,11 +8,11 @@ const useInvestorContribution = () => {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<InvestorContribution> | null>(null);
 
-  const getProducts = useCallback(async (investorId: number, params: PaginationParams): Promise<PaginatedResponse<InvestorContribution> | null> => {
+  const getProducts = useCallback(async (investorId?: number, poolId?: number, params?: PaginationParams): Promise<PaginatedResponse<InvestorContribution> | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await investorContributionService.getInvestorContributions(investorId, params);
+      const result = await investorContributionService.getInvestorContributions(investorId, poolId, params);
       setData(result);
       return result;
     } catch (err) {
