@@ -41,8 +41,8 @@ import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
 import CustomInput from '../components/ui/fields/CustomInput';
 import CreatePoolModal from '../components/modal/CreatePoolModal';
-import useInvestorContribution from '../api/hooks/useInvestorContribution'; // Добавляем хук
-import type { InvestorContribution } from '../api/types/investorContribution'; // Добавляем тип
+import useInvestorContribution from '../api/hooks/useInvestorContribution';
+import type { InvestorContribution } from '../api/types/investorContribution';
 
 const InvestorsPoolPage = () => {
     const { 
@@ -88,6 +88,7 @@ const InvestorsPoolPage = () => {
     } = useInvestorContribution();
 
     const [investors, setInvestors] = useState<Investor[]>([]);
+    const [investorsData, setInvestorsData] = useState<any>(null);
     const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
     const [currentInvestor, setCurrentInvestor] = useState<Investor | null>(null);
     const [selectedInvestorId, setSelectedInvestorId] = useState<string>('');
@@ -95,11 +96,12 @@ const InvestorsPoolPage = () => {
     const [report, setReport] = useState<InvestorReport | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'payouts' | 'credits' | 'investors' | 'contributions'>('investors'); // Добавляем вкладку contributions
+    const [activeTab, setActiveTab] = useState<'payouts' | 'credits' | 'investors' | 'contributions'>('investors');
     const [dataTab, setDataTab] = useState<'general' | 'expected' | 'current'>('general');
     const [creditsPage, setCreditsPage] = useState(1);
     const [payoutsPage, setPayoutsPage] = useState(1);
-    const [contributionsPage, setContributionsPage] = useState(1); // Добавляем пагинацию для инвестиций
+    const [contributionsPage, setContributionsPage] = useState(1);
+    const [investorsPage, setInvestorsPage] = useState(1);
     const [isCreatePoolModalOpen, setIsCreatePoolModalOpen] = useState(false);
     const [isEditPoolModalOpen, setIsEditPoolModalOpen] = useState(false);
     const [newPoolName, setNewPoolName] = useState('');
@@ -117,18 +119,23 @@ const InvestorsPoolPage = () => {
     useEffect(() => {
         if (selectedPoolId) {
             const fetchInvestors = async () => {
-            try {
-                const result = await getInvestors({ poolId: Number(selectedPoolId), pageSize: 100 });
-                if (result) {
-                setInvestors(result.items);
+                try {
+                    const result = await getInvestors({ 
+                        poolId: Number(selectedPoolId), 
+                        page: investorsPage,
+                        pageSize: pageSize 
+                    });
+                    if (result) {
+                        setInvestors(result.items);
+                        setInvestorsData(result);
+                    }
+                } catch (error) {
+                    console.error('Error fetching investors:', error);
                 }
-            } catch (error) {
-                console.error('Error fetching investors:', error);
-            }
             };
             fetchInvestors();
         }
-    }, [selectedPoolId, getInvestors]);
+    }, [selectedPoolId, getInvestors, investorsPage]); // Добавляем investorsPage в зависимости
 
     useEffect(() => {
         const fetchData = async () => {
@@ -161,7 +168,6 @@ const InvestorsPoolPage = () => {
                         page: creditsPage,
                         pageSize: pageSize
                     });
-                    // Загружаем инвестиции при смене пула
                     getContributions(undefined, Number(selectedPoolId), {
                         page: contributionsPage,
                         pageSize: pageSize
@@ -172,9 +178,30 @@ const InvestorsPoolPage = () => {
             };
             fetchReportData();
         }
-    }, [selectedPoolId, creditsPage, payoutsPage, contributionsPage]); // Добавляем contributionsPage в зависимости
+    }, [selectedPoolId, creditsPage, payoutsPage, contributionsPage]);
 
-    // Добавляем эффект для загрузки инвестиций при смене страницы
+    // Добавляем эффект для загрузки инвесторов при смене страницы
+    useEffect(() => {
+        if (selectedPoolId && activeTab === 'investors') {
+            const fetchInvestors = async () => {
+                try {
+                    const result = await getInvestors({ 
+                        poolId: Number(selectedPoolId), 
+                        page: investorsPage,
+                        pageSize: pageSize 
+                    });
+                    if (result) {
+                        setInvestors(result.items);
+                        setInvestorsData(result);
+                    }
+                } catch (error) {
+                    console.error('Error fetching investors:', error);
+                }
+            };
+            fetchInvestors();
+        }
+    }, [investorsPage, activeTab, selectedPoolId]);
+
     useEffect(() => {
         if (selectedPoolId && activeTab === 'contributions') {
             getContributions(undefined, Number(selectedPoolId), {
@@ -189,8 +216,8 @@ const InvestorsPoolPage = () => {
         const investor = investors.find(i => i.id === investorId);
         
         if (investor) {
-        setSelectedInvestorForInvestment(investor);
-        setIsInvestmentModalOpen(true);
+            setSelectedInvestorForInvestment(investor);
+            setIsInvestmentModalOpen(true);
         }
     };
 
@@ -201,9 +228,9 @@ const InvestorsPoolPage = () => {
         try {
             const amount = parseMoney(investmentAmount);
             if (isNaN(amount) || amount <= 0) {
-            alert('Пожалуйста, введите корректную сумму инвестиции');
-            return;
-        }
+                alert('Пожалуйста, введите корректную сумму инвестиции');
+                return;
+            }
 
             await addInvestment(selectedInvestorForInvestment.id, amount);
             setIsInvestmentModalOpen(false);
@@ -220,7 +247,7 @@ const InvestorsPoolPage = () => {
     const handlePayoutClick = (investor: Investor) => {
         setSelectedInvestorForPayout(investor);
         setPayoutAmount('');
-        setPayoutSource('income'); // Сбрасываем к источнику по умолчанию
+        setPayoutSource('income');
         setIsPayoutModalOpen(true);
     };
 
@@ -242,17 +269,16 @@ const InvestorsPoolPage = () => {
     };
 
     const handleDeleteInvestor = async (investor: Investor) => {
-        if (investor.isCompanyPool)
-        {
+        if (investor.isCompanyPool) {
             window.alert('Нельзя удалить свою компанию как инвестора');
             return;
         }
         if (window.confirm('Вы уверены, что хотите удалить этого инвестора?')) {
             try {
-            await deleteInvestor(investor.id);
-            setInvestors(investors.filter(investor => investor.id !== investor.id));
+                await deleteInvestor(investor.id);
+                await reloadData();
             } catch (error) {
-            console.error('Error deleting investor:', error);
+                console.error('Error deleting investor:', error);
             }
         }
     };
@@ -260,20 +286,20 @@ const InvestorsPoolPage = () => {
     const handleInvestorSubmit = async (investorData: Partial<Investor>) => {
         try {
             if (currentInvestor) {
-            const updatedInvestor = await updateInvestor(currentInvestor.id, investorData);
-            if (updatedInvestor) {
-                setInvestors(investors.map(inv => 
-                inv.id === currentInvestor.id ? updatedInvestor : inv
-                ));
-            }
+                const updatedInvestor = await updateInvestor(currentInvestor.id, investorData);
+                if (updatedInvestor) {
+                    setInvestors(investors.map(inv => 
+                        inv.id === currentInvestor.id ? updatedInvestor : inv
+                    ));
+                }
             } else {
-            const newInvestor = await createInvestor({
-                ...investorData,
-                poolId: Number(selectedPoolId)
-            } as Omit<Investor, 'id'>);
-            if (newInvestor) {
-                setInvestors([...investors, newInvestor]);
-            }
+                const newInvestor = await createInvestor({
+                    ...investorData,
+                    poolId: Number(selectedPoolId)
+                } as Omit<Investor, 'id'>);
+                if (newInvestor) {
+                    setInvestors([...investors, newInvestor]);
+                }
             }
             setIsInvestorModalOpen(false);
             
@@ -286,26 +312,30 @@ const InvestorsPoolPage = () => {
     const reloadData = async () => {
         if (selectedPoolId) {
             try {
-            const result = await getInvestors({ poolId: Number(selectedPoolId) });
-            if (result) {
-                setInvestors(result.items);
-            }
-            
-            const reportData = await getInvestorPoolReport(Number(selectedPoolId));
-            setReport(reportData);
-            
-            await fetchPoolPayouts(Number(selectedPoolId));
-            
-            // Перезагружаем инвестиции при обновлении данных
-            if (activeTab === 'contributions') {
-                getContributions(undefined, Number(selectedPoolId), {
-                    page: contributionsPage,
+                const result = await getInvestors({ 
+                    poolId: Number(selectedPoolId),
+                    page: investorsPage,
                     pageSize: pageSize
                 });
-            }
-            
+                if (result) {
+                    setInvestors(result.items);
+                    setInvestorsData(result);
+                }
+                
+                const reportData = await getInvestorPoolReport(Number(selectedPoolId));
+                setReport(reportData);
+                
+                await fetchPoolPayouts(Number(selectedPoolId));
+                
+                if (activeTab === 'contributions') {
+                    getContributions(undefined, Number(selectedPoolId), {
+                        page: contributionsPage,
+                        pageSize: pageSize
+                    });
+                }
+                
             } catch (error) {
-            console.error('Error reloading data:', error);
+                console.error('Error reloading data:', error);
             }
         }
     };
@@ -327,11 +357,9 @@ const InvestorsPoolPage = () => {
         </DarkCyanButton>
     ]);
 
-    // Добавляем функцию для обработки действий с инвестициями
     const handleContributionAction = async (id: number, action: string) => {
         try {
             await makeContributionAction(id, action);
-            // Обновляем данные после действия
             if (selectedPoolId) {
                 getContributions(undefined, Number(selectedPoolId), {
                     page: contributionsPage,
@@ -343,32 +371,12 @@ const InvestorsPoolPage = () => {
         }
     };
 
-    // Создаем данные для таблицы инвестиций
     const contributionsTableData = contributionsData?.items.map((contribution: InvestorContribution) => [
         formatDate(contribution.date),
         contribution.investorFullName || '-',
         formatMoney(contribution.amount.toString()),
         <div style={{ display: 'flex', gap: '8px' }}>
-            {/* <EditButton 
-                onClick={() => handleContributionAction(contribution.id, 'edit')}
-                tooltip="Редактировать"
-            />
-            <DeleteButton 
-                onClick={() => {
-                    if (window.confirm('Вы уверены, что хотите удалить эту инвестицию?')) {
-                        handleContributionAction(contribution.id, 'delete');
-                    }
-                }}
-                tooltip="Удалить"
-            />
-            {contribution.status === 'pending' && (
-                <DarkCyanButton
-                    onClick={() => handleContributionAction(contribution.id, 'approve')}
-                    tooltip="Подтвердить"
-                >
-                    Подтвердить
-                </DarkCyanButton>
-            )} */}
+            {/* Кнопки действий для инвестиций */}
         </div>
     ]) || [];
 
@@ -377,13 +385,13 @@ const InvestorsPoolPage = () => {
         
         try {
             const newPool = await createInvestorPool({
-            name: newPoolName,
-            pie: newPoolPie
+                name: newPoolName,
+                pie: newPoolPie
             }, Number(selectedInvestorId));
             
             if (newPool) {
-            setPools(prevPools => [...prevPools, newPool]);
-            setSelectedPoolId(newPool.id.toString());
+                setPools(prevPools => [...prevPools, newPool]);
+                setSelectedPoolId(newPool.id.toString());
             }
             
             setIsCreatePoolModalOpen(false);
@@ -792,16 +800,15 @@ const InvestorsPoolPage = () => {
     };
 
     const getCurrentIncome = (investor: Investor | null) => {
-    if (!investor) return 0;
-    return investor.currentIncome || 0;
-};
+        if (!investor) return 0;
+        return investor.currentIncome || 0;
+    };
 
-    // Обновляем табы, добавляя вкладку "Инвестиции"
     const tabs = [
         { id: 'investors', label: 'Инвесторы' },
         { id: 'payouts', label: 'История выплат' },
         { id: 'credits', label: 'Договоры' },
-        { id: 'contributions', label: 'Инвестиции' }, // Добавляем новую вкладку
+        { id: 'contributions', label: 'Инвестиции' },
     ];
 
     const dataTabs = [
@@ -1104,45 +1111,55 @@ const InvestorsPoolPage = () => {
                 )}
 
                 {activeTab === 'investors' && (
-                <>
-                    <CustomTable 
-                        columns={[
-                            { name: "id", isHidden: true },
-                            { name: "ФИО", align: "left" },
-                            { name: "Телефон", align: "left" },
-                            { name: "Инвестиция", align: "right" },
-                            { name: "Доля", align: "right" },
-                            { name: "Текущий доход", align: "right" },
-                            { name: "", align: "center" },
-                            { name: "", align: "center" },
-                            { name: "", align: "center" }
-                        ]} 
-                        data={investorsTableData}
-                        isLoading={isLoading}
-                    />
-                    <InvestorModal
-                        mode={currentInvestor ? 'edit-pool' : 'create-pool'}
-                        isOpen={isInvestorModalOpen}
-                        onClose={() => setIsInvestorModalOpen(false)}
-                        onSubmit={handleInvestorSubmit}
-                        initialData={currentInvestor ? {
-                            id: currentInvestor.id,
-                            nickname: currentInvestor.nickname,
-                            fullName: currentInvestor.fullName,
-                            phoneNumber: currentInvestor.phoneNumber,
-                            investorPie: currentInvestor.investorPie,
-                            investmentAmount: currentInvestor.investmentAmount,
-                            balance: currentInvestor.balance,
-                            isCompany: currentInvestor.isCompany,
-                            isBlocked: currentInvestor.isBlocked,
-                            poolId: currentInvestor.poolId,
-                            activeUntil: currentInvestor.activeUntil
-                        } : undefined}
-                    />
-                </>
+                    <>
+                        <CustomTable 
+                            columns={[
+                                { name: "id", isHidden: true },
+                                { name: "ФИО", align: "left" },
+                                { name: "Телефон", align: "left" },
+                                { name: "Инвестиция", align: "right" },
+                                { name: "Доля", align: "right" },
+                                { name: "Текущий доход", align: "right" },
+                                { name: "", align: "center" },
+                                { name: "", align: "center" },
+                                { name: "", align: "center" }
+                            ]} 
+                            data={investorsTableData}
+                            isLoading={isLoading}
+                        />
+                        <PaginationLayout>
+                            <CountInfoTitle 
+                                total={investorsData?.totalCount || 0} 
+                            />
+                            <Pagination
+                                total={investorsData?.totalCount || 0}
+                                current={investorsPage}
+                                onChange={(page) => setInvestorsPage(page)}
+                                itemsPerPage={pageSize}
+                            />
+                        </PaginationLayout>
+                        <InvestorModal
+                            mode={currentInvestor ? 'edit-pool' : 'create-pool'}
+                            isOpen={isInvestorModalOpen}
+                            onClose={() => setIsInvestorModalOpen(false)}
+                            onSubmit={handleInvestorSubmit}
+                            initialData={currentInvestor ? {
+                                id: currentInvestor.id,
+                                nickname: currentInvestor.nickname,
+                                fullName: currentInvestor.fullName,
+                                phoneNumber: currentInvestor.phoneNumber,
+                                investorPie: currentInvestor.investorPie,
+                                investmentAmount: currentInvestor.investmentAmount,
+                                balance: currentInvestor.balance,
+                                isCompany: currentInvestor.isCompany,
+                                isBlocked: currentInvestor.isBlocked,
+                                poolId: currentInvestor.poolId,
+                                activeUntil: currentInvestor.activeUntil
+                            } : undefined}
+                        />
+                    </>
                 )}
 
-                {/* Добавляем вкладку "Инвестиции" */}
                 {activeTab === 'contributions' && (
                     <>
                         <CustomTable 
@@ -1241,16 +1258,16 @@ const InvestorsPoolPage = () => {
                     >
                         <form onSubmit={handleSubmitInvestment} style={{ padding: '20px' }}>
                             <InputRow>
-                            <InputLabel>Сумма инвестиции:</InputLabel>
-                            <InputContainer>
-                                <CustomInput
-                                    name="investmentAmount"
-                                    inputType="rubles"
-                                    placeholder="Сумма"
-                                    value={investmentAmount}
-                                    onChange={(e) => setInvestmentAmount(e.target.value)}
-                                />
-                            </InputContainer>
+                                <InputLabel>Сумма инвестиции:</InputLabel>
+                                <InputContainer>
+                                    <CustomInput
+                                        name="investmentAmount"
+                                        inputType="rubles"
+                                        placeholder="Сумма"
+                                        value={investmentAmount}
+                                        onChange={(e) => setInvestmentAmount(e.target.value)}
+                                    />
+                                </InputContainer>
                             </InputRow>
                         </form>
                     </BaseModal>
