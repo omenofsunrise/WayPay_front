@@ -373,7 +373,7 @@ const InvestorsPoolPage = () => {
 
     const contributionsTableData = contributionsData?.items.map((contribution: InvestorContribution) => [
         formatDate(contribution.date),
-        contribution.investorFullName || '-',
+        contribution.investorNickname || '-',
         formatMoney(contribution.amount.toString()),
         <div style={{ display: 'flex', gap: '8px' }}>
             {/* Кнопки действий для инвестиций */}
