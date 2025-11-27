@@ -14,7 +14,8 @@ interface PayoutModalProps {
   maxAmount: number;
   balance?: number | null;
   isLoading: boolean;
-  currentIncome?: number | null; 
+  currentIncome?: number | null;
+  poolSelfIncome?: number | null; 
   expectedIncome?: number | null;
   payoutSource: PayoutSource;
   onPayoutSourceChange?: (source: PayoutSource) => void;
@@ -32,6 +33,7 @@ const PayoutModal = ({
   balance,
   isLoading,
   currentIncome,
+  poolSelfIncome,
   expectedIncome,
   investment,
   payoutSource,
@@ -41,6 +43,10 @@ const PayoutModal = ({
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
   const [actualMaxAmount, setActualMaxAmount] = useState(0);
+
+  // Определяем, какой доход использовать для отображения и расчетов
+  const displayIncome = poolSelfIncome !== null ? poolSelfIncome : currentIncome;
+  const effectiveIncome = poolSelfIncome !== null ? poolSelfIncome : currentIncome;
 
   useEffect(() => {
     if (balance != null) {
@@ -57,7 +63,7 @@ const PayoutModal = ({
     } else {
       onPayoutSourceChange('income');
     }
-  }, [maxAmount, balance, investment, currentIncome, expectedIncome]);
+  }, [maxAmount, balance, investment, currentIncome, expectedIncome, poolSelfIncome]);
 
   const formatNumber = (num: string): string => {
     if (!num) return '';
@@ -88,7 +94,7 @@ const PayoutModal = ({
   const getMaxAmountForSource = (): number => {
     switch (payoutSource) {
       case 'income':
-        if (currentIncome != null) return currentIncome;
+        if (effectiveIncome != null) return effectiveIncome;
         if (expectedIncome != null) return expectedIncome;
         return maxAmount;
       case 'investment':
@@ -107,6 +113,10 @@ const PayoutModal = ({
       default:
         return '';
     }
+  };
+
+  const getIncomeLabel = (): string => {
+    return poolSelfIncome !== null ? 'Собственный доход:' : 'Текущий доход:';
   };
 
   const validateAmount = (numericAmount: number) => {
@@ -133,21 +143,21 @@ const PayoutModal = ({
     if (payoutSource === 'income') {
       const maxIncomeAmount = getMaxAmountForSource();
       
-      if (expectedIncome != null && currentIncome != null) {
-        if (numericAmount > currentIncome) {
+      if (expectedIncome != null && effectiveIncome != null) {
+        if (numericAmount > effectiveIncome) {
           if (numericAmount > expectedIncome) {
             setError(`Сумма превышает ожидаемый доход ${formatMoney(expectedIncome.toString())}`);
             return false;
           } else {
             setWarning(
-              `Внимание: Выплата (${formatMoney(numericAmount.toString())}) превышает текущий доход ` +
-              `(${formatMoney(currentIncome.toString())}). Выплачивается часть ожидаемого дохода.`
+              `Внимание: Выплата (${formatMoney(numericAmount.toString())}) превышает ${poolSelfIncome !== null ? 'собственный доход' : 'текущий доход'} ` +
+              `(${formatMoney(effectiveIncome.toString())}). Выплачивается часть ожидаемого дохода.`
             );
           }
         }
-      } else if (currentIncome != null) {
-        if (numericAmount > currentIncome) {
-          setError(`Сумма превышает текущий доход ${formatMoney(currentIncome.toString())}`);
+      } else if (effectiveIncome != null) {
+        if (numericAmount > effectiveIncome) {
+          setError(`Сумма превышает ${poolSelfIncome !== null ? 'собственный доход' : 'текущий доход'} ${formatMoney(effectiveIncome.toString())}`);
           return false;
         }
       } else if (numericAmount > maxIncomeAmount) {
@@ -196,7 +206,7 @@ const PayoutModal = ({
         <SourceSelector>
           <SourceLabel>Источник выплаты:</SourceLabel>
           <SourceButtons>
-            {(currentIncome != null || expectedIncome != null || maxAmount > 0) && (
+            {(effectiveIncome != null || expectedIncome != null || maxAmount > 0) && (
               <SourceButton
                 $active={payoutSource === 'income'}
                 onClick={() => handleSourceChange('income')}
@@ -225,11 +235,11 @@ const PayoutModal = ({
                   <IncomeValue>{formatMoney(investment.toString())}</IncomeValue>
                 </IncomeItem>
               )}
-              {(currentIncome != null || maxAmount != null) && (
+              {(effectiveIncome != null || maxAmount != null) && (
                 <IncomeItem>
-                  <IncomeLabel>Текущий доход:</IncomeLabel>
+                  <IncomeLabel>{getIncomeLabel()}</IncomeLabel>
                   <IncomeValue>
-                    {formatMoney((currentIncome ?? maxAmount)?.toString() || '0')}
+                    {formatMoney((effectiveIncome ?? maxAmount)?.toString() || '0')}
                   </IncomeValue>
                 </IncomeItem>
               )}

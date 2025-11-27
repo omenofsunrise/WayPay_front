@@ -1196,6 +1196,7 @@ const InvestorsPoolPage = () => {
                     balance={report?.balance || 0}
                     isLoading={isPayoutsLoading}
                     currentIncome={getCurrentIncome(selectedInvestorForPayout)}
+                    poolSelfIncome={selectedInvestorForPayout?.isCompanyPool ? report?.selfPaymentIncome || 0 : null}
                     investment={selectedInvestorForPayout?.investmentAmount || 0}
                     payoutSource={payoutSource}
                     onPayoutSourceChange={setPayoutSource}
