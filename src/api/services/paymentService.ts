@@ -31,7 +31,12 @@ class PaymentService {
   }
 
   async deletePayment(id: number): Promise<void> {
-    await apiClient.delete(`/Payment/${id}`);
+    try {
+      await apiClient.delete(`/Payment/${id}`);
+    } catch (err) {
+      console.error('Ошибка при удалении платежа:', err);
+      alert('Нельзя удалить платёж');
+    }
   }
 }
 
