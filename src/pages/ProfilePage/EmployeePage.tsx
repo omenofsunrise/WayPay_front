@@ -188,55 +188,55 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     };
 
    const handleToggleAccountingPermission = async (employee: Employee, newValue: boolean) => {
-    setUpdatingPermissions(prev => ({ ...prev, [employee.id]: true }));
-    
-    try {
-        await togglePermission(employee.id, 'MANAGE_ACCOUNTING');
+        setUpdatingPermissions(prev => ({ ...prev, [employee.id]: true }));
         
-        // Обновляем локальное состояние
-        setLocalEmployees(prev => prev.map(e => {
-            if (e.id === employee.id) {
-                const permissions = e.permissions || [];
-                
-                if (newValue) {
-                    // Добавляем разрешение текущему сотруднику
-                    if (!permissions.some(p => p.code === 'MANAGE_ACCOUNTING')) {
+        try {
+            await togglePermission(employee.id, 'MANAGE_ACCOUNTING');
+            
+            // Обновляем локальное состояние
+            setLocalEmployees(prev => prev.map(e => {
+                if (e.id === employee.id) {
+                    const permissions = e.permissions || [];
+                    
+                    if (newValue) {
+                        // Добавляем разрешение текущему сотруднику
+                        if (!permissions.some(p => p.code === 'MANAGE_ACCOUNTING')) {
+                            return {
+                                ...e,
+                                permissions: [...permissions, { code: 'MANAGE_ACCOUNTING', name: 'Управление финансами' }]
+                            };
+                        }
+                    } else {
+                        // Удаляем разрешение у текущего сотрудника
                         return {
                             ...e,
-                            permissions: [...permissions, { code: 'MANAGE_ACCOUNTING', name: 'Управление финансами' }]
+                            permissions: permissions.filter(p => p.code !== 'MANAGE_ACCOUNTING')
                         };
                     }
-                } else {
-                    // Удаляем разрешение у текущего сотрудника
+                }
+                
+                // Для всех остальных сотрудников: если включаем право у одного,
+                // то отключаем у всех остальных
+                if (newValue && e.id !== employee.id) {
                     return {
                         ...e,
-                        permissions: permissions.filter(p => p.code !== 'MANAGE_ACCOUNTING')
+                        permissions: (e.permissions || []).filter(p => p.code !== 'MANAGE_ACCOUNTING')
                     };
                 }
-            }
+                
+                return e;
+            }));
             
-            // Для всех остальных сотрудников: если включаем право у одного,
-            // то отключаем у всех остальных
-            if (newValue && e.id !== employee.id) {
-                return {
-                    ...e,
-                    permissions: (e.permissions || []).filter(p => p.code !== 'MANAGE_ACCOUNTING')
-                };
-            }
-            
-            return e;
-        }));
-        
-        message.success(newValue ? 'Право на ведение бухгалтерии предоставлено' : 'Право на ведение бухгалтерии отозвано');
-    } catch (error) {
-        console.error('Ошибка при обновлении разрешения:', error);
-        message.error('Не удалось обновить разрешение');
-        // Возвращаем состояние к предыдущему
-        await loadEmployees();
-    } finally {
-        setUpdatingPermissions(prev => ({ ...prev, [employee.id]: false }));
-    }
-};
+            message.success(newValue ? 'Право на ведение бухгалтерии предоставлено' : 'Право на ведение бухгалтерии отозвано');
+        } catch (error) {
+            console.error('Ошибка при обновлении разрешения:', error);
+            message.error('Не удалось обновить разрешение');
+            // Возвращаем состояние к предыдущему
+            await loadEmployees();
+        } finally {
+            setUpdatingPermissions(prev => ({ ...prev, [employee.id]: false }));
+        }
+    };
 
     const handleCheckboxChange = (employee: Employee, checked: boolean) => {
         const currentPermission = hasAccountingPermission(employee);
