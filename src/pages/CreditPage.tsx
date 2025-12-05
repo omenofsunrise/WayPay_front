@@ -507,13 +507,13 @@ const CreditPage = () => {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
       color: '#008b8b',
-      shouldShow: (rowData: any[]) => denyPermission('MANAGE_ACCOUNTING')
+      shouldShow: (rowData: any[]) => denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Выбрать источник финансирования',
       action: handleSelectFundingSource,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING')
+      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Установить категорию',
@@ -538,13 +538,13 @@ const CreditPage = () => {
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING')
+      shouldShow: (rowData: any[]) => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
-      shouldShow: (rowData: any[]) => (hasPermission('DELETE_CREDITS') && denyPermission('MANAGE_ACCOUNTING'))
+      shouldShow: (rowData: any[]) => (hasPermission('DELETE_CREDITS') && denyPermission('MANAGE_ACCOUNTING', true))
     }
   ];
 

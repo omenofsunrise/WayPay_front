@@ -240,19 +240,19 @@ const CreditControlPage = () => {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
       color: '#008b8b',
-      shouldShow: () => denyPermission('MANAGE_ACCOUNTING')
+      shouldShow: () => denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: () => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING')
+      shouldShow: () => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
-      shouldShow: () => hasPermission('DELETE_CREDITS') && denyPermission('MANAGE_ACCOUNTING')
+      shouldShow: () => hasPermission('DELETE_CREDITS') && denyPermission('MANAGE_ACCOUNTING', true)
     }
   ];
 

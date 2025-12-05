@@ -94,7 +94,7 @@ const SchedulePage = () => {
         getList,
         markAsNotified
     } = useSchedule();
-    const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING') || hasRole('админ');
+    const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true) || hasRole('админ');
     const saveActiveTabToStorage = useCallback((tab: TabType) => {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
     }, []);

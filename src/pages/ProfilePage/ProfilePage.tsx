@@ -66,7 +66,7 @@ const ProfilePage = () => {
         tabs.push(
             { id: "Сотрудники", label: "Сотрудники" },
         );
-    } else if (hasPermission('MANAGE_ACCOUNTING')) {
+    } else if (hasPermission('MANAGE_ACCOUNTING', true)) {
         tabs.push(
             { id: "Финансы", label: "Финансы" }
         );
