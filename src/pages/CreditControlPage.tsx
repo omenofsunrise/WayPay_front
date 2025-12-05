@@ -61,7 +61,7 @@ const CreditControlPage = () => {
     5: 'income_percents',
     6: 'income_rubles',
   };
-  const { hasPermission, hasRole, forbiddenRole } = useAuth();
+  const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
   const navigate = useNavigate();
@@ -240,19 +240,19 @@ const CreditControlPage = () => {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
       color: '#008b8b',
-      shouldShow: () => forbiddenRole("бухгалтер")
+      shouldShow: () => denyPermission('MANAGE_ACCOUNTING')
     },
     {
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: () => (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
+      shouldShow: () => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING')
     },
     {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
-      shouldShow: () => hasPermission('DELETE_CREDITS') && forbiddenRole("бухгалтер")
+      shouldShow: () => hasPermission('DELETE_CREDITS') && denyPermission('MANAGE_ACCOUNTING')
     }
   ];
 

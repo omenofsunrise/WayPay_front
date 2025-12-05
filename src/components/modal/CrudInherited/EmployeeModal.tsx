@@ -35,7 +35,6 @@ type EmployeeModalProps = {
 const roleOptions = [
   { value: 'админ', label: 'Администратор' },
   { value: 'сотрудник', label: 'Сотрудник' },
-  { value: 'бухгалтер', label: 'Бухгалтер' },
 ];
 
 const EmployeeModal: React.FC<EmployeeModalProps> = ({

@@ -149,7 +149,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
         }
         
         if (hasRole('админ')) {
-            return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
+            return employee.role === 'сотрудник';
         }
         
         return false;
@@ -164,7 +164,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
         }
         
         if (hasRole('админ')) {
-            return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
+            return employee.role === 'сотрудник';
         }
         
         return false;
@@ -335,24 +335,6 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
             loadEmployees();
             throw err;
         }
-    };
-
-    const canEditSurcharge = (employee: Employee): boolean => {
-        if (!authInfo) return false;
-        
-        if (employee.id === authInfo.employee.id) {
-            return hasRole('суперадмин') || hasRole('директор') || hasRole('админ');
-        }
-        
-        if (hasRole('суперадмин') || hasRole('директор')) {
-            return true;
-        }
-        
-        if (hasRole('админ')) {
-            return employee.role === 'сотрудник' || employee.role === 'бухгалтер';
-        }
-        
-        return false;
     };
 
     const handleRowDoubleClick = (rowData: any[]) => {
@@ -591,7 +573,6 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
                         onChange={(e) => setRoleValue(e.target.value)}
                         options={[
                             { value: 'сотрудник', label: 'Сотрудник' },
-                            { value: 'бухгалтер', label: 'Бухгалтер' },
                             { value: 'админ', label: 'Администратор' },
                         ]}
                         placeholder="Выберите роль"

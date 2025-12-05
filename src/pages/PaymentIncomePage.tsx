@@ -243,7 +243,8 @@ const PaymentIncomePage = () => {
             shouldShow: (rowData: any[]) => {
                 const rowIndex = tableData.indexOf(rowData);
                 const payment = paymentsData?.items[rowIndex];
-                return payment && !payment.accepted && authInfo?.employee.role === 'бухгалтер';
+                return payment && !payment.accepted && 
+                        authInfo?.employee.permissions.includes('MANAGE_ACCOUNTING');
             }
         },
         {

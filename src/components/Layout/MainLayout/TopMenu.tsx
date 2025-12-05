@@ -26,11 +26,18 @@ interface MenuItem {
   modal?: boolean;
   permission?: Permission;
   forbiddenRole?: Role;
-  forbiddenPermission?: Permission;
+  forbiddenPermissions?: Permission[]; // Изменено на массив permissions
 }
 
 const allMenuItems: MenuItem[] = [
-  { id: 'newCredit', icon: newCreditIcon, text: 'Новый договор', path: '/new-credit', forbiddenPermission: 'FORBID_CREATING_CREDITS', forbiddenRole: 'бухгалтер' },
+  { 
+    id: 'newCredit', 
+    icon: newCreditIcon, 
+    text: 'Новый договор', 
+    path: '/new-credit', 
+    forbiddenPermissions: ['FORBID_CREATING_CREDITS', 'MANAGE_ACCOUNTING'], // Теперь массив
+    forbiddenRole: 'бухгалтер' 
+  },
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
   { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
@@ -74,9 +81,31 @@ const TopMenu = () => {
     fetchTaskCount();
   }, [getActiveTasksCount, setActiveTasksCount]);
 
-  const menuItems = allMenuItems.filter(item => 
-    (hasRole('директор') || hasRole('суперадмин') || hasRole('админ')) || (!item.forbiddenPermission || !hasPermission(item.forbiddenPermission)) && forbiddenRole(item.forbiddenRole)
-  );
+  // Функция для проверки запрещенных пермишенов
+  const hasForbiddenPermission = (forbiddenPermissions?: Permission[]): boolean => {
+    if (!forbiddenPermissions || forbiddenPermissions.length === 0) {
+      return false;
+    }
+    
+    // Проверяем, есть ли хотя бы один запрещенный пермишен у пользователя
+    return forbiddenPermissions.some(permission => hasPermission(permission));
+  };
+
+  const menuItems = allMenuItems.filter(item => {
+    // Для директора, суперадмина и админа показываем все элементы
+    if (hasRole('директор') || hasRole('суперадмин') || hasRole('админ')) {
+      return true;
+    }
+    
+    // Проверяем запрещенные пермишены (теперь массив)
+    const hasForbiddenPerm = hasForbiddenPermission(item.forbiddenPermissions);
+    
+    // Проверяем запрещенную роль
+    const isForbiddenRole = forbiddenRole(item.forbiddenRole);
+    
+    // Показываем элемент только если нет запрещенных пермишенов И нет запрещенной роли
+    return !hasForbiddenPerm && !isForbiddenRole;
+  });
 
   useEffect(() => {
     const fetchUnreadChatsCount = async () => {

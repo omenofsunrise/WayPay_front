@@ -8,9 +8,10 @@ export type Permission =
   | 'FORBID_CREATING_PAYMENTS'
   | 'FORBID_DELETING_PAYMENTS'
   | 'FORBID_CREDIT_APPLICATIONS'
+  | 'MANAGE_ACCOUNTING'
 ;
 
-export type Role = 'админ' | 'сотрудник' | 'директор' | 'суперадмин' | 'бухгалтер';
+export type Role = 'админ' | 'сотрудник' | 'директор' | 'суперадмин';
 
 export interface AuthInfo {
   type: 'employee';

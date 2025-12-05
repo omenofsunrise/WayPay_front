@@ -82,7 +82,7 @@ const CreditPage = () => {
     7: 'rest',
     8: 'debt'
   };
-  const { hasPermission, forbiddenRole, hasRole } = useAuth();
+  const { hasPermission, forbiddenRole, hasRole, denyPermission } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource } = useCredit();
@@ -507,13 +507,13 @@ const CreditPage = () => {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
       color: '#008b8b',
-      shouldShow: (rowData: any[]) => forbiddenRole("бухгалтер")
+      shouldShow: (rowData: any[]) => denyPermission('MANAGE_ACCOUNTING')
     },
     {
       label: 'Выбрать источник финансирования',
       action: handleSelectFundingSource,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
+      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING')
     },
     {
       label: 'Установить категорию',
@@ -532,19 +532,19 @@ const CreditPage = () => {
           customTabs 
         });
       },
-      showOnHover: true // Добавляем это свойство
+      showOnHover: true
     },
     {
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => (hasRole('директор') || hasRole('суперадмин')) && forbiddenRole("бухгалтер")
+      shouldShow: (rowData: any[]) => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING')
     },
     {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
-      shouldShow: (rowData: any[]) => (hasPermission('DELETE_CREDITS') && forbiddenRole("бухгалтер"))
+      shouldShow: (rowData: any[]) => (hasPermission('DELETE_CREDITS') && denyPermission('MANAGE_ACCOUNTING'))
     }
   ];
 

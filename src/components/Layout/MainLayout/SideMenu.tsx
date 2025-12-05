@@ -70,7 +70,7 @@ const SideMenu = () => {
   const { hasRole, hasPermission, denyPermission, isSuperAdminCompany } = useAuth();
   
   const menuItemPermissions: Record<string, () => boolean> = {
-    'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasRole('бухгалтер'),
+    'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING'),
     'contracts': () => true, // Базовый доступ к договорам
     'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'clients': () => true, // Базовый доступ к клиентам
@@ -85,8 +85,8 @@ const SideMenu = () => {
     'products': () => true, // Базовый доступ к товарам
     'black-catalog': () => true, // Базовый доступ к черному каталогу
     'registration-requests': () => isSuperAdminCompany(),
-    'budget': () => hasRole('бухгалтер'),
-    'payments-income': () => hasRole('бухгалтер'),
+    'budget': () => hasPermission('MANAGE_ACCOUNTING'),
+    'payments-income': () => hasPermission('MANAGE_ACCOUNTING'),
     'profile': () => true, // Профиль доступен всем
     'admin': () => hasRole('суперадмин'),
     'about': () => true, // О программе доступно всем
@@ -276,7 +276,7 @@ const SideMenu = () => {
       <MenuList $collapsed={collapsed}>
         {/* Основное меню с возможностью прокрутки */}
         <ScrollableMenuContent>
-          {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasRole('бухгалтер')) && (
+          {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING')) && (
             <MenuItem 
               onClick={(e) => {
                 if (collapsed) {
@@ -617,7 +617,7 @@ const SideMenu = () => {
           )}
           
           {/* Finance Menu */}
-          {(hasRole('бухгалтер')) && (
+          {(hasPermission('MANAGE_ACCOUNTING')) && (
             <MenuItem 
               onClick={(e) => {
                 if (collapsed) {
@@ -656,7 +656,7 @@ const SideMenu = () => {
             </MenuItem>
           )}
           
-          {!collapsed && expandedItem === 'finance' && ('бухгалтер') && (
+          {!collapsed && expandedItem === 'finance' && (hasPermission('MANAGE_ACCOUNTING')) && (
             <SubMenu>
               <SubMenuLine />
               <SubMenuItem 

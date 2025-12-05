@@ -68,7 +68,7 @@ const SchedulePage = () => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [selectedScheduleForPayment, setSelectedScheduleForPayment] = useState<ScheduleDetails | null>(null);
     const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
-    const { hasRole } = useAuth();
+    const { hasRole, hasPermission } = useAuth();
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
     const pageSize = 10;
@@ -94,7 +94,7 @@ const SchedulePage = () => {
         getList,
         markAsNotified
     } = useSchedule();
-    const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин') || hasRole('бухгалтер') || hasRole('админ');
+    const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING') || hasRole('админ');
     const saveActiveTabToStorage = useCallback((tab: TabType) => {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
     }, []);

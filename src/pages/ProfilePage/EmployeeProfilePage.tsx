@@ -48,12 +48,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         {
             code: 'VIEW_ALL_CREDITS',
             label: 'Смотреть чужие договоры',
-            roles: ['сотрудник', 'бухгалтер', 'админ']
+            roles: ['сотрудник', 'админ']
         },
         {
             code: 'DELETE_CREDITS',
             label: 'Удаление договоров',
-            roles: ['сотрудник', 'бухгалтер']
+            roles: ['сотрудник', ]
         },
 
         {
@@ -69,12 +69,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         {
             code: 'FORBID_DELETING_PAYMENTS',
             label: 'Запретить удаление платежей',
-            roles: ['сотрудник', 'бухгалтер']
+            roles: ['сотрудник']
         },
         {
             code: 'FORBID_CREDIT_APPLICATIONS',
             label: 'Запретить просмотр заявок',
-            roles: ['сотрудник', 'бухгалтер', 'админ']
+            roles: ['сотрудник', 'админ']
         },
     ], []);
 
@@ -87,12 +87,12 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         {
             code: 'VIEW_ALL_CREDITS',
             label: 'Смотреть чужие договоры',
-            roles: ['сотрудник', 'бухгалтер', 'админ']
+            roles: ['сотрудник', 'админ']
         },
                 {
             code: 'FORBID_CREDIT_APPLICATIONS',
             label: 'Запретить просмотр заявок',
-            roles: ['сотрудник', 'бухгалтер', 'админ']
+            roles: ['сотрудник', 'админ']
         },
     ], []);
     
@@ -101,7 +101,6 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
             { value: 'директор', label: 'Директор' },
             { value: 'админ', label: 'Администратор' },
             { value: 'сотрудник', label: 'Сотрудник' },
-            { value: 'бухгалтер', label: 'Бухгалтер' }
         ];
         
         if (isSuperAdminId()) {
@@ -188,7 +187,7 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
     const [employee, setEmployee] = useState<Employee | null>(null);
     
     const canSetEmployeePermissions = employee && 
-        (employee.role === 'сотрудник' || employee.role === 'бухгалтер');
+        (employee.role === 'сотрудник');
     
     const canSetAdminPermissions = employee && 
         (employee.role === 'админ');
@@ -229,7 +228,6 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
                             (hasRole('суперадмин') || hasRole('директор') || 
                              (hasRole('админ') && employee?.role === 'сотрудник')) &&
                             (employee?.role === 'сотрудник' || 
-                             employee?.role === 'бухгалтер' || 
                              employee?.role === 'админ');
 
     const { currentMonthCount, percentageChange: creditsPercentageChange } = useMemo(() => {

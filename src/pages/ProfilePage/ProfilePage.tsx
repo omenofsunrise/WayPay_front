@@ -26,7 +26,7 @@ const ProfilePage = () => {
         return saved ? parseInt(saved) : null;
     });
 
-    const { hasRole } = useAuth();
+    const { hasRole, hasPermission } = useAuth();
 
     useEffect(() => {
         localStorage.setItem('profileActiveTab', activeTab);
@@ -66,7 +66,7 @@ const ProfilePage = () => {
         tabs.push(
             { id: "Сотрудники", label: "Сотрудники" },
         );
-    } else if (hasRole("бухгалтер")) {
+    } else if (hasPermission('MANAGE_ACCOUNTING')) {
         tabs.push(
             { id: "Финансы", label: "Финансы" }
         );
