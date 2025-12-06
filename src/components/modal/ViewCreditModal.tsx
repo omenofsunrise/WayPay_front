@@ -483,41 +483,62 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       formatDate(schedule.paymentDate || ''),
       formatMoney(schedule.paymentAmount.toString() || ''),
       schedule.comment?.toString(),
-      schedule.notified ? (
-        <button 
-          onClick={() => sendWhatsAppMessage(
-            schedule.id,
-            schedule.clientPhone,
-            formatMoney(schedule.paymentAmount.toString()),
-            formatDate(schedule.paymentDate)
-          )}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0'
-          }}
-        >
-          <CheckIcon />
-        </button>
-      ) : (
-        <button 
-          onClick={() => sendWhatsAppMessage(
-            schedule.id,
-            schedule.clientPhone,
-            formatMoney(schedule.paymentAmount.toString()),
-            formatDate(schedule.paymentDate)
-          )}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0'
-          }}
-        >
-          <WhatsAppIcon />
-        </button>
-      )
+      // Объединенная колонка: статус + иконка уведомления
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        gap: '8px'
+      }}>
+        {schedule.payed ? (
+          <>
+            <span style={{ color: '#1B5E20', fontWeight: '500' }}>
+              Оплачено
+            </span>
+          </>
+        ) : (
+          <>
+            <span style={{ color: '#666' }}>
+              {schedule.notified ? 'Уведомлён' : 'Не уведомлён'}
+            </span>
+            {!schedule.notified ? (
+              <button 
+                onClick={() => sendWhatsAppMessage(
+                  schedule.id,
+                  schedule.clientPhone,
+                  formatMoney(schedule.paymentAmount.toString()),
+                  formatDate(schedule.paymentDate)
+                )}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0'
+                }}
+              >
+                <WhatsAppIcon style={{ color: '#25D366' }} />
+              </button>
+            ) : (
+               <button 
+                onClick={() => sendWhatsAppMessage(
+                  schedule.id,
+                  schedule.clientPhone,
+                  formatMoney(schedule.paymentAmount.toString()),
+                  formatDate(schedule.paymentDate)
+                )}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0'
+                }}
+              >
+                <CheckIcon style={{ color: '#1B5E20', fontSize: '18px' }} />
+              </button>
+            )}
+          </>
+        )}
+      </div>
     ]);
   };
 
@@ -525,7 +546,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     const today = new Date();
     const paymentDate = schedule.paymentDate ? new Date(schedule.paymentDate) : null;
     
-    if (schedule.paymentAmount === 0) {
+    if (schedule.paymentAmount === 0 || schedule.payed) {
       return {
         backgroundColor: '#E8F5E8',
         color: '#1B5E20',
@@ -716,7 +737,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                     { name: "Дата", align: "left" },
                     { name: "Сумма", align: "right" },
                     { name: "Примечание" },
-                    { name: "Уведомлён", align: "center" },
+                    { name: "Статус", align: "center" },
                   ]} 
                   data={formatSchedulesData(scheduleData?.items)}
                   rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
