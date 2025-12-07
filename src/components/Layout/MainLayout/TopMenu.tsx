@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import CalculatorIcon from '../../../assets/ui/TopBar/calculator.svg';
 import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
@@ -26,7 +26,7 @@ interface MenuItem {
   modal?: boolean;
   permission?: Permission;
   forbiddenRole?: Role;
-  forbiddenPermissions?: Permission[]; // Изменено на массив permissions
+  forbiddenPermissions?: Permission[];
 }
 
 const allMenuItems: MenuItem[] = [
@@ -35,8 +35,7 @@ const allMenuItems: MenuItem[] = [
     icon: newCreditIcon, 
     text: 'Новый договор', 
     path: '/new-credit', 
-    forbiddenPermissions: ['FORBID_CREATING_CREDITS', 'MANAGE_ACCOUNTING'], // Теперь массив
-    forbiddenRole: 'бухгалтер' 
+    forbiddenPermissions: ['FORBID_CREATING_CREDITS', 'MANAGE_ACCOUNTING'],
   },
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
@@ -100,11 +99,8 @@ const TopMenu = () => {
     // Проверяем запрещенные пермишены (теперь массив)
     const hasForbiddenPerm = hasForbiddenPermission(item.forbiddenPermissions);
     
-    // Проверяем запрещенную роль
-    const isForbiddenRole = forbiddenRole(item.forbiddenRole);
-    
     // Показываем элемент только если нет запрещенных пермишенов И нет запрещенной роли
-    return !hasForbiddenPerm && !isForbiddenRole;
+    return !hasForbiddenPerm;
   });
 
   useEffect(() => {
