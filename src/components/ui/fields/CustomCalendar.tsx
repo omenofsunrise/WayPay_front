@@ -5,6 +5,7 @@ import CalendarIcon from '../../../assets/ui/calendar.svg?react';
 interface DateInputProps {
   prefix?: string;
   value?: string;
+  placeholder?: string;
   onChange?: (date: string) => void;
   onReset?: () => void;
 }
@@ -19,6 +20,7 @@ const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const CustomCalendar: React.FC<DateInputProps> = ({ 
   prefix = 'Дата:', 
   value = '', 
+  placeholder = 'Выберите дату',
   onChange, 
   onReset 
 }) => {
@@ -188,7 +190,7 @@ const handleToday = () => {
   };
 
   const formatDisplayDate = () => {
-    if (!selectedDate) return 'Выберите дату';
+    if (!selectedDate) return placeholder;
     return selectedDate.toLocaleDateString('ru-RU', {
       day: '2-digit',
       month: '2-digit',

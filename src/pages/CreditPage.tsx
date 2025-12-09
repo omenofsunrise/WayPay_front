@@ -57,6 +57,8 @@ const CreditPage = () => {
   const [clientFullName, setClientFullName] = useState('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [fromCreationDate, setFromCreationDate] = useState<string>('');
+  const [toCreationDate, setToCreationDate] = useState<string>('');
   const [objectType, setObjectType] = useState<string>('');
   const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
   const [sortConfig, setSortConfig] = useState<{
@@ -249,7 +251,6 @@ const CreditPage = () => {
       await deleteObjectTypeApi(tabId);
       await loadCustomTabs();
       
-      // Если текущая активная вкладка была удалена, переключаемся на "Все"
       if (activeTab === `tab-${tabId}`) {
         setActiveTab('all');
       }
@@ -392,6 +393,8 @@ const CreditPage = () => {
       investorNickname: investorName || undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
       dateTo: toDate ? new Date(toDate) : undefined,
+      CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
+      CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
       creditTypeId: creditTypeId || undefined,
       sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
       sortDirection: sortConfig.direction,
@@ -399,7 +402,7 @@ const CreditPage = () => {
     };
 
     await getCredits(params);
-  }, [currentPage, clientFullName, investorName, fromDate, toDate, creditTypeId, sortConfig, filters, contractNumber]);
+  }, [currentPage, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber]);
 
   useEffect(() => {
     loadCredits();
@@ -749,28 +752,6 @@ const CreditPage = () => {
         </InputWrapper>
 
         <InputWrapper>
-          <CustomCalendar 
-            prefix="от:"
-            value={fromDate}
-            onChange={(date) => {
-              setFromDate(date);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
-        
-        <InputWrapper>
-          <CustomCalendar 
-            prefix="до:"
-            value={toDate}
-            onChange={(date) => {
-              setToDate(date);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
-        
-        <InputWrapper>
           <ObjectTypeSelect 
             value={objectType}
             onChange={handleObjectTypeChange}
@@ -786,6 +767,56 @@ const CreditPage = () => {
         </InputWrapper>
         
       </FilterField>
+
+      <SecondRaw style={{ color: "white", gap: "15px" }}>
+        <InputWrapper>
+          <CustomCalendar 
+            prefix="от:"
+            placeholder='Дата договора'
+            value={fromDate}
+            onChange={(date) => {
+              setFromDate(date);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
+        
+        <InputWrapper>
+          <CustomCalendar 
+            prefix="до:"
+            placeholder='Дата договора'
+            value={toDate}
+            onChange={(date) => {
+              setToDate(date);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
+
+        <InputWrapper>
+          <CustomCalendar 
+            prefix="от:"
+            placeholder='Дата создания'
+            value={fromCreationDate}
+            onChange={(date) => {
+              setFromCreationDate(date);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
+        
+        <InputWrapper>
+          <CustomCalendar 
+            prefix="до:"
+            placeholder='Дата создания'
+            value={toCreationDate}
+            onChange={(date) => {
+              setToCreationDate(date);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
+      </SecondRaw>
 
       <SecondRaw style={{ color: "white" }}>
         <Tabs 
