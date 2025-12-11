@@ -640,7 +640,8 @@ const CreditPage = () => {
       credit.isActive
     ]);
 
-    if (credits.length > 0 && forbiddenRole('сотрудник')) {
+    if (credits.length > 0 && 
+      (hasRole('админ') || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING'))) {
       const totalsRow = [
         '',
         '',
