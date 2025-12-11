@@ -632,6 +632,7 @@ const CreditPage = () => {
       credit.id.toString(),
       formatDate(credit.creditDate),
       credit.clientFullName,
+      `${formatMoney(credit.firstPayment?.toString() || '')}`,
       `${formatMoney(credit.accured?.toString() || '')}`,
       `${formatMoney(credit.payed.toString())}`,
       `${formatMoney(credit.rest.toString())}`,
@@ -647,6 +648,7 @@ const CreditPage = () => {
         '',
         '',
         'Итого',
+        `${formatMoney(creditsData.totalFirstPayment.toString())}`,
         `${formatMoney(creditsData.totalAccured.toString())}`,
         `${formatMoney(creditsData.totalPayed.toString())}`,
         `${formatMoney(creditsData.totalRest.toString())}`,
@@ -851,6 +853,7 @@ const CreditPage = () => {
               { name: "№", isSortable: true },
               { name: "Дата договора", isSortable: true, align: "right" },
               { name: "ФИО покупателя", isSortable: true, align: "left" },
+              { name: "Первоначальный взнос", isSortable: true, align: "right" },
               { name: "Начислено", isSortable: true, align: "right" },
               { name: "Уплачено", isSortable: true, align: "right" },
               { name: "Остаток", isSortable: true, align: "right" },
@@ -866,6 +869,7 @@ const CreditPage = () => {
             selectedRow={selectedCreditForPrint ? creditsData?.items.findIndex(c => c.id === selectedCreditForPrint.id) : null}
             contextMenuActions={tableActions}
             hasTotalsRow={forbiddenRole('сотрудник')}
+            debtChecker={(row) => row[row.length - 2] === true}
           />
 
           <PaginationLayout>
