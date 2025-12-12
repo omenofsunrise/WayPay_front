@@ -531,13 +531,14 @@ const InvestorReportPage = () => {
         const numericAmount = Number(payoutAmount.replace(/\D/g, ''));
         let maxAllowedAmount = 0;
 
-        if (currentInvestor.isBlocked) {
-            maxAllowedAmount = report.balance;
-        } else {
-            maxAllowedAmount = report.isCompany 
-                ? report.investorIncome + report.selfIncome 
-                : report.investorIncome;
-        }
+        // if (currentInvestor.isBlocked) {
+        maxAllowedAmount = report.balance;
+        // } 
+        // else {
+        //     maxAllowedAmount = report.isCompany 
+        //         ? report.investorIncome + report.selfIncome 
+        //         : report.investorIncome;
+        // }
 
         if (numericAmount > maxAllowedAmount) {
             alert(`Нельзя выплатить больше чем ${formatMoney(maxAllowedAmount.toString())}`);
