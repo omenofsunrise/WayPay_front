@@ -35,7 +35,7 @@ const allMenuItems: MenuItem[] = [
     icon: newCreditIcon, 
     text: 'Новый договор', 
     path: '/new-credit', 
-    forbiddenPermissions: ['FORBID_CREATING_CREDITS', 'MANAGE_ACCOUNTING'],
+    forbiddenPermissions: ['FORBID_CREATING_CREDITS'],
   },
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },

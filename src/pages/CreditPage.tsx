@@ -510,7 +510,6 @@ const CreditPage = () => {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
       color: '#008b8b',
-      shouldShow: (rowData: any[]) => denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Выбрать источник финансирования',
