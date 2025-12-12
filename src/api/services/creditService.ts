@@ -58,6 +58,10 @@ class CreditService {
     await apiClient.put(`/Credit/${id}/toggle-favourite`);
   }
 
+  async acceptCredit(id: number) {
+    await apiClient.patch(`/Credit/approve/${id}`);
+  }
+
   async setCreditType(creditId: number, typeId?: number) {
     if (typeId === null)
       await apiClient.patch(`/Credit/set-category/${creditId}/`);

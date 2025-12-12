@@ -132,6 +132,14 @@ const useCredit = () => {
     }
   }, []);
 
+  const acceptCredit = useCallback(async (id: number) => {
+    try {
+      await creditService.acceptCredit(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle favorite');
+    }
+  }, []);
+
   const setCreditType = useCallback(async (creditId: number, typeId?: number) => {
     try {
       await creditService.setCreditType(creditId, typeId);
@@ -212,7 +220,8 @@ const useCredit = () => {
     setInvestmentSource,
     getCreditListByClient,
     getCreditById,
-    setCreditType
+    setCreditType,
+    acceptCredit
   };
 };
 

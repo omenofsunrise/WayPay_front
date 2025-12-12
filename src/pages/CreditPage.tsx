@@ -87,7 +87,7 @@ const CreditPage = () => {
   const { hasPermission, forbiddenRole, hasRole, denyPermission } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource } = useCredit();
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource, acceptCredit } = useCredit();
   const navigate = useNavigate();
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] = useState(false);
@@ -289,6 +289,14 @@ const CreditPage = () => {
     if (credit) {
       setSelectedCreditForFunding(credit);
       setIsInvestorSelectModalOpen(true);
+    }
+  };
+
+  const handleAccept = (rowData: any[]) => {
+    const [_, id] = rowData;
+    const credit = creditsData?.items.find(c => c.id === Number(id));
+    if (credit) {
+      acceptCredit(credit.id);
     }
   };
 
@@ -506,6 +514,19 @@ const CreditPage = () => {
   };
 
   const tableActions = [
+    {
+      label: 'Подтвердить договор',
+      action: handleAccept,
+      color: '#007d88',
+      shouldShow: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = creditsData?.items.find(c => c.id === Number(id));
+        
+        return hasPermission('MANAGE_ACCOUNTING', true) && 
+              credit && 
+              !credit.hasCounterApproved;
+      }
+    },
     {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
