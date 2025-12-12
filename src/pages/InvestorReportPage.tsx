@@ -39,6 +39,7 @@ import { useAuth } from '../сontext/AuthContext';
 import useInvestorContribution from '../api/hooks/useInvestorContribution';
 import type { InvestorContribution } from '../api/types/investorContribution';
 import GrayButton from '../components/ui/Buttons/GrayButton';
+import { getInvestorPayouts } from '../api/services/investorPayoutService';
 
 const InvestorReportPage = () => {
     const { getInvestors, currentInvestor, getInvestorById, getInvestorReport } = useInvestor();
@@ -47,7 +48,8 @@ const InvestorReportPage = () => {
         isLoading: isPayoutsLoading, 
         fetchPayouts, 
         addPayout, 
-        removePayout 
+        removePayout,
+        makePayoutAction
     } = useInvestorPayout();
     const { 
         investorCredits, 
@@ -133,12 +135,22 @@ const InvestorReportPage = () => {
     const handleContributionAction = async (id: number, action: 'confirm' | 'reject') => {
         try {
             await makeContributionAction(id, action);
-            // Refresh contributions data after action
             if (selectedInvestorId) {
-                getContributions(Number(selectedInvestorId), { 
-                    page: contributionsPage, 
-                    pageSize: pageSize 
+                getContributions(Number(selectedInvestorId), {
+                    page: contributionsPage,
+                    pageSize: pageSize
                 });
+            }
+        } catch (error) {
+            console.error('Contribution action error:', error);
+        }
+    };
+
+    const handlePayoutAction = async (id: number, action: 'confirm' | 'reject') => {
+        try {
+            await makePayoutAction(id, action);
+            if (selectedInvestorId) {
+                getInvestorPayouts(Number(selectedInvestorId));
             }
         } catch (error) {
             console.error('Contribution action error:', error);
@@ -582,14 +594,24 @@ const InvestorReportPage = () => {
         formatDate(payout.payoutDate),
         payout.employeeFullName,
         formatMoney(payout.amount.toString()),
-        <ActionButtons>
-            <GrayButton style={{margin: "0 auto"}}
-                onClick={() => handleDeletePayout(payout.id)}
-                disabled={isPayoutsLoading}
-            >
-                Удалить
-            </GrayButton>
-        </ActionButtons>
+        payout.confirmed ? (
+            <ConfirmedBadge></ConfirmedBadge>
+        ) : (
+            <ActionButtons>
+                <DarkCyanButton style={{margin: "0 auto"}}
+                    onClick={() => handlePayoutAction(payout.id, 'confirm')}
+                    disabled={isContributionsLoading}
+                >
+                    Подтвердить
+                </DarkCyanButton>
+                <GrayButton 
+                    onClick={() => handlePayoutAction(payout.id, 'reject')}
+                    disabled={isContributionsLoading}
+                >
+                    Удалить
+                </GrayButton>
+            </ActionButtons>
+        )
     ]);
 
     const creditsTableData = investorCredits?.items.map((credit: Credit) => {

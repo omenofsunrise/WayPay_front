@@ -7,7 +7,8 @@ import {
   createInvestorPayout,
   deleteInvestorPayout,
   getInvestorPayouts,
-  getPoolPayouts
+  getPoolPayouts,
+  makeAction
 } from '../services/investorPayoutService';
 
 export const useInvestorPayout = () => {
@@ -56,6 +57,18 @@ export const useInvestorPayout = () => {
     }
   };
 
+  const makePayoutAction = async (id: number, action: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await makeAction(id, action);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const removePayout = async (id: number) => {
     setIsLoading(true);
     setError(null);
@@ -78,5 +91,6 @@ export const useInvestorPayout = () => {
     fetchPoolPayouts,
     addPayout,
     removePayout,
+    makePayoutAction
   };
 };

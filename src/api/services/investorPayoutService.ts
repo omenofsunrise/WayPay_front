@@ -10,6 +10,11 @@ export const createInvestorPayout = async (dto: CreateInvestorPayoutDto): Promis
   }
 };
 
+export const makeAction = async (id: number, action: string) : Promise<void> => {
+  await apiClient.patch(`/InvestorPayouts/action/${id}`, action);
+  return;
+}
+
 export const deleteInvestorPayout = async (id: number): Promise<void> => {
   try {
     await apiClient.delete(`/InvestorPayouts/${id}`);
