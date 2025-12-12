@@ -37,6 +37,8 @@ const CreditControlPage = () => {
   const [clientFullName, setClientFullName] = useState('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [fromCreationDate, setFromCreationDate] = useState<string>('');
+  const [toCreationDate, setToCreationDate] = useState<string>('');
   const [rublesIncomeFrom, setRublesIncomeFrom] = useState<string>('');
   const [rublesIncomeTo, setRublesIncomeTo] = useState<string>('');
   const [percentsIncomeFrom, setPercentsIncomeFrom] = useState<string>('');
@@ -96,6 +98,8 @@ const CreditControlPage = () => {
       investorNickname: investorName || undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
       dateTo: toDate ? new Date(toDate) : undefined,
+      createdAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
+      createdTo: toCreationDate ? new Date(toCreationDate) : undefined,
       rublesIncomeFrom: rublesIncomeFrom && !isNaN(Number(rublesIncomeFrom))
         ? Number(rublesIncomeFrom)
         : undefined,
@@ -118,7 +122,7 @@ const CreditControlPage = () => {
   }, [
     currentPage, contractNumber, clientFullName, investorName, 
     fromDate, toDate, rublesIncomeFrom, rublesIncomeTo, 
-    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters, creditTypeId
+    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters, creditTypeId, toCreationDate, fromCreationDate
   ]);
 
   useEffect(() => {
@@ -402,27 +406,33 @@ const CreditControlPage = () => {
         </InputWrapper>
         
         <InputWrapper>
-          <CustomCalendar 
-            prefix="от:"
-            value={fromDate}
-            onChange={(date) => {
-              setFromDate(date);
+          <CustomInput 
+            inputType="fullname"
+            placeholder="ФИО"
+            value={clientFullName}
+            onChange={(e) => {
+              setClientFullName(e.target.value);
               setCurrentPage(1);
             }}
           />
         </InputWrapper>
-        
+
+
         <InputWrapper>
-          <CustomCalendar 
-            prefix="до:"
-            value={toDate}
-            onChange={(date) => {
-              setToDate(date);
-              setCurrentPage(1);
-            }}
+          <ObjectTypeSelect 
+            value={objectType}
+            onChange={handleObjectTypeChange}
+            onObjectTypeSelect={handleObjectTypeSelect}
+            placeholder="Каталог"
+            customPlaceholder="Каталог"
           />
+          {objectType && (
+            <ClearFilterButton onClick={handleClearObjectType}>
+              ×
+            </ClearFilterButton>
+          )}
         </InputWrapper>
-        
+
         <InputWrapper style={{ minWidth: "500px" }}>
           <InvestorSelect 
             placeholder="Инвестор"
@@ -439,29 +449,53 @@ const CreditControlPage = () => {
       </FilterField>
 
       <SecondRaw>
-        <CustomInput 
-          style={{ display: "flex"}}
-          inputType="fullname"
-          placeholder="ФИО"
-          value={clientFullName}
-          onChange={(e) => {
-            setClientFullName(e.target.value);
-            setCurrentPage(1);
-          }}
-        />
-
-          <ObjectTypeSelect 
-            value={objectType}
-            onChange={handleObjectTypeChange}
-            onObjectTypeSelect={handleObjectTypeSelect}
-            placeholder="Каталог"
-            customPlaceholder="Каталог"
+                <InputWrapper>
+          <CustomCalendar 
+            prefix="от:"
+            placeholder='Дата договора'
+            value={fromDate}
+            onChange={(date) => {
+              setFromDate(date);
+              setCurrentPage(1);
+            }}
           />
-          {objectType && (
-            <ClearFilterButton onClick={handleClearObjectType}>
-              ×
-            </ClearFilterButton>
-          )}
+        </InputWrapper>
+        
+        <InputWrapper>
+          <CustomCalendar 
+            prefix="до:"
+            placeholder='Дата договора'
+            value={toDate}
+            onChange={(date) => {
+              setToDate(date);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
+
+        <InputWrapper>
+          <CustomCalendar 
+            prefix="от:"
+            placeholder='Дата создания'
+            value={fromCreationDate}
+            onChange={(date) => {
+              setFromCreationDate(date);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
+        
+        <InputWrapper>
+          <CustomCalendar 
+            prefix="до:"
+            placeholder='Дата создания'
+            value={toCreationDate}
+            onChange={(date) => {
+              setToCreationDate(date);
+              setCurrentPage(1);
+            }}
+          />
+        </InputWrapper>
 
         <IncomeContainer>
           <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitle>
