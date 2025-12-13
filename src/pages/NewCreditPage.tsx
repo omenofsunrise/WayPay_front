@@ -344,6 +344,11 @@ useEffect(() => {
     setObjectTypeName(objectType.name);
   }, []);
 
+  const handleTabTypeSelect = useCallback((objectType: SelectedObjectType) => {
+    setTabTypeName(objectType.name);
+    setSelectedTabType(objectType);
+  }, []);
+
   const handleObjectTypeNameChange = useCallback((value: string) => {
     setObjectTypeName(value);
     if (!value) {
@@ -943,7 +948,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <ObjectTypeSelect
               value={objectTypeName}
               onChange={handleObjectTypeNameChange}
-              onObjectTypeSelect={handleObjectTypeSelect}
+              onObjectTypeSelect={handleTabTypeSelect}
               placeholder="Выберите тип договора"
               entityType="credit"
             />
@@ -952,7 +957,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <Label>Категория (необязательно)</Label>
             <ObjectTypeSelect
               value={tabTypeName}
-              onChange={handleObjectTypeNameChange}
+              onChange={handleTabTypeNameChange}
               onObjectTypeSelect={handleObjectTypeSelect}
               placeholder="Выберите категорию"
               entityType="creditTab"
