@@ -344,16 +344,16 @@ useEffect(() => {
     setObjectTypeName(objectType.name);
   }, []);
 
-  const handleTabTypeSelect = useCallback((objectType: SelectedObjectType) => {
-    setTabTypeName(objectType.name);
-    setSelectedTabType(objectType);
-  }, []);
-
   const handleObjectTypeNameChange = useCallback((value: string) => {
     setObjectTypeName(value);
     if (!value) {
       setSelectedObjectType(null);
     }
+  }, []);
+
+  const handleTabTypeSelect = useCallback((objectType: SelectedObjectType) => {
+    setSelectedTabType(objectType);
+    setTabTypeName(objectType.name);
   }, []);
 
   const handleTabTypeNameChange = useCallback((value: string) => {
@@ -506,6 +506,10 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       creditData.creditTypeId = selectedObjectType.id;
     }
     
+    if (selectedTabType && selectedTabType.id) {
+      creditData.creditTabTypeId = selectedObjectType.id;
+    }
+
     if (guarantorClient) {
       creditData.GuarantorClientId = guarantorClient.id;
     } else if (guarantor) {
@@ -948,7 +952,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <ObjectTypeSelect
               value={objectTypeName}
               onChange={handleObjectTypeNameChange}
-              onObjectTypeSelect={handleTabTypeSelect}
+              onObjectTypeSelect={handleObjectTypeSelect}
               placeholder="Выберите тип договора"
               entityType="credit"
             />
@@ -958,7 +962,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <ObjectTypeSelect
               value={tabTypeName}
               onChange={handleTabTypeNameChange}
-              onObjectTypeSelect={handleObjectTypeSelect}
+              onObjectTypeSelect={handleTabTypeSelect}
               placeholder="Выберите категорию"
               entityType="creditTab"
             />
