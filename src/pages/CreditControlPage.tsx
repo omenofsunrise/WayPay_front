@@ -65,7 +65,7 @@ const CreditControlPage = () => {
   };
   const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite } = useCredit();
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, acceptCredit } = useCredit();
   const navigate = useNavigate();
 
   const shouldShowMyCreditsTab = hasRole('директор') || 
@@ -239,7 +239,28 @@ const CreditControlPage = () => {
     }
   };
 
+  const handleAccept = (rowData: any[]) => {
+    const [_, id] = rowData;
+    const credit = creditsData?.items.find(c => c.id === Number(id));
+    if (credit) {
+      acceptCredit(credit.id);
+    }
+  };
+
   const tableActions = [
+    {
+      label: 'Подтвердить договор',
+      action: handleAccept,
+      color: '#007d88',
+      shouldShow: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = creditsData?.items.find(c => c.id === Number(id));
+        
+        return hasPermission('MANAGE_ACCOUNTING', true) && 
+              credit && 
+              !credit.hasCounterApproved;
+      }
+    },
     {
       label: 'Добавить платёж',
       action: handleOpenPaymentModal,
