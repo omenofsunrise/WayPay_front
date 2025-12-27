@@ -892,7 +892,7 @@ const CreditPage = () => {
             selectedRow={selectedCreditForPrint ? creditsData?.items.findIndex(c => c.id === selectedCreditForPrint.id) : null}
             contextMenuActions={tableActions}
             hasTotalsRow={forbiddenRole('сотрудник')}
-            debtChecker={(row) => row[row.length - 2] === true}
+            debtChecker={(row) => row[row.length - 2] !== '0₽' && row[row.length - 2] !== '0'}
           />
 
           <PaginationLayout>
