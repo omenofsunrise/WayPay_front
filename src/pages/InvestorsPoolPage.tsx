@@ -1198,6 +1198,7 @@ const InvestorsPoolPage = () => {
                     currentIncome={getCurrentIncome(selectedInvestorForPayout)}
                     poolSelfIncome={selectedInvestorForPayout?.isCompanyPool ? report?.selfPaymentIncome || 0 : null}
                     investment={selectedInvestorForPayout?.investmentAmount || 0}
+                    firstContribution={selectedInvestorForPayout?.firstContribution || null}
                     payoutSource={payoutSource}
                     onPayoutSourceChange={setPayoutSource}
                     isCompany={false}

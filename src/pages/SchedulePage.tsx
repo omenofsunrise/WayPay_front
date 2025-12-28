@@ -29,6 +29,7 @@ import creditService from '../api/services/creditService';
 import type { Credit } from '../api/types/credit';
 import { useAuth } from '../сontext/AuthContext';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
+import { sendWhatsAppMessage } from '../utils/sendWhatsAppMessage';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -72,7 +73,6 @@ const SchedulePage = () => {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
     const pageSize = 10;
-    const { getAccountDetails } = useCompany();
     const { getScheduleAnalityc } = useAnalytic();
     const { createPayment } = usePayment();
     const [scheduleAnalytics, setScheduleAnalytics] = useState<ScheduleAnalitycResponse[]>([]);
@@ -91,8 +91,7 @@ const SchedulePage = () => {
         isLoading, 
         error, 
         scheduleData, 
-        getList,
-        markAsNotified
+        getList
     } = useSchedule();
     const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true) || hasRole('админ');
     const saveActiveTabToStorage = useCallback((tab: TabType) => {
@@ -361,44 +360,6 @@ const SchedulePage = () => {
         }
     };
 
-    function formatPhoneNumber(phone: string): string {
-        const digits = phone.replace(/\D/g, '');
-
-        if (digits.startsWith('8')) {
-            return '7' + digits.slice(1);
-        }
-
-        return digits;
-    }
-
-    const sendWhatsAppMessage = async (scheduleId: number, phone: string, amount: string, date: string) => {
-        try {
-            const companyData = await getAccountDetails();
-            
-            if (!companyData) {
-                console.error('Не удалось получить данные компании');
-                return;
-            }
-
-            const cleanedPhone = formatPhoneNumber(phone);
-            const message = `Напоминаем о платеже в компании ${companyData.company} в размере ${amount}, ${date}.\nДля перевода: ${companyData.accountDetails}`;
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
-            
-            window.open(whatsappUrl, '_blank');
-            
-            const success = await markAsNotified(scheduleId);
-            
-            if (success) {
-                await loadSchedules();
-            } else {
-                console.error('Не удалось отметить уведомление');
-            }
-        } catch (error) {
-            console.error('Ошибка при отправке WhatsApp:', error);
-        }
-    };
-
     const tableActions = [
         {
             label: 'Договор',
@@ -438,48 +399,55 @@ const SchedulePage = () => {
         }
     ];
     
-    const tableData = scheduleData?.items.map(schedule => [
-        schedule.creditId.toString(),
-        schedule.clientName,
-        formatMoney(schedule.paymentAmount.toString()),
-        formatDate(schedule.paymentDate),
-        schedule.notified ? (
-            <button 
-                onClick={() => sendWhatsAppMessage(
-                    schedule.id,
-                    schedule.clientPhone,
-                    formatMoney(schedule.paymentAmount.toString()),
-                    formatDate(schedule.paymentDate)
-                )}
-                style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '0'
-                }}
-            >
-                <CheckIcon />
-            </button>
+    const tableData = scheduleData?.items.map(schedule => {
+        const formattedAmount = formatMoney(schedule.paymentAmount.toString());
+        const formattedDate = formatDate(schedule.paymentDate);
+        
+        const handleWhatsAppClick = async () => {
+            const success = await sendWhatsAppMessage(
+                schedule.id,
+                schedule.clientPhone,
+            );
             
-        ) : (
-            <button 
-                onClick={() => sendWhatsAppMessage(
-                    schedule.id,
-                    schedule.clientPhone,
-                    formatMoney(schedule.paymentAmount.toString()),
-                    formatDate(schedule.paymentDate)
-                )}
-                style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '0'
-                }}
-            >
-                <WhatsAppIcon />
-            </button>
-        )
-    ]) || [];
+            if (success) {
+                loadSchedules();
+            }
+        };
+        
+        return [
+            schedule.creditId.toString(),
+            schedule.clientName,
+            formattedAmount,
+            formattedDate,
+            schedule.notified ? (
+                <button 
+                    onClick={handleWhatsAppClick}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0'
+                    }}
+                    title="Отправить повторно"
+                >
+                    <CheckIcon />
+                </button>
+            ) : (
+                <button 
+                    onClick={handleWhatsAppClick}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0'
+                    }}
+                    title="Отправить уведомление"
+                >
+                    <WhatsAppIcon />
+                </button>
+            )
+        ];
+    }) || [];
 
     const rowStyles = getRowStyles(tableData, scheduleData);
 

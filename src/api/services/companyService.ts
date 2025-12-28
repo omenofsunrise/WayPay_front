@@ -22,6 +22,11 @@ class CompanyService {
     return response.data;
   }
 
+  async getFilledSender(scheduleId: number): Promise<string> {
+    const response = await apiClient.get<string>(`/SenderSettings/filled/${scheduleId}`);
+    return response.data;
+  }
+
   async getAllCompanies(): Promise<Company[]> {
     const response = await apiClient.get<Company[]>('/Company/all');
     return response.data;

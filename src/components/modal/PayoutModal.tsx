@@ -20,6 +20,7 @@ interface PayoutModalProps {
   payoutSource: PayoutSource;
   onPayoutSourceChange?: (source: PayoutSource) => void;
   investment?: number | null;
+  firstContribution?: number | null;
   isCompany: boolean;
 }
 
@@ -36,6 +37,7 @@ const PayoutModal = ({
   poolSelfIncome,
   expectedIncome,
   investment,
+  firstContribution,
   payoutSource,
   onPayoutSourceChange,
   isCompany
@@ -229,6 +231,13 @@ const PayoutModal = ({
 
         <IncomeInfo>
             <>
+              {firstContribution != null && (
+                <IncomeItem>
+                  <IncomeLabel>Первоначальная инвестиция:</IncomeLabel>
+                  <IncomeValue>{formatMoney(firstContribution.toString())}</IncomeValue>
+                </IncomeItem>
+              )}
+
               {investment != null && (
                 <IncomeItem>
                   <IncomeLabel>Инвестиция:</IncomeLabel>

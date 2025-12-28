@@ -24,6 +24,7 @@ import useCompany from '../../api/hooks/useCompany';
 import PaymentConfirmationGenerator from '../../utils/doxcUtils/paymentConfirmationGenerator';
 import paymentService from '../../api/services/paymentService';
 import NewPaymentModal from './NewPaymentModal';
+import { sendWhatsAppMessage } from '../../utils/sendWhatsAppMessage';
 
 interface ViewCreditModalProps {
   id: number;
@@ -303,25 +304,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       return digits;
   }
 
-  const sendWhatsAppMessage = async (scheduleId: number, phone: string, amount: string, date: string) => {
+  const sendMessage = async (scheduleId: number, phone: string, amount: string, date: string) => {
     try {
-        const companyData = await getAccountDetails();
-        
-        if (!companyData) {
-            console.error('Не удалось получить данные компании');
-            return;
-        }
-
-        const cleanedPhone = formatPhoneNumber(phone);
-        const message = `Напоминаем о платеже в компании ${companyData.company} в размере ${amount}, ${date}.\nДля перевода: ${companyData.accountDetails}`;
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
-        
-        window.open(whatsappUrl, '_blank');
-        
-        const success = await markAsNotified(scheduleId);
-        
-        if (success) {
+        if (sendWhatsAppMessage) {
             await loadSchedules();
         } else {
             console.error('Не удалось отметить уведомление');
