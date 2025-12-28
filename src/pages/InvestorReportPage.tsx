@@ -980,6 +980,7 @@ const InvestorReportPage = () => {
                     investment={report?.investment || 0}
                     payoutSource={payoutSource}
                     onPayoutSourceChange={setPayoutSource}
+                    firstContribution={currentInvestor?.firstContribution || null}
                     maxAmount={
                         currentInvestor?.isBlocked 
                         ? report?.balance || 0 
