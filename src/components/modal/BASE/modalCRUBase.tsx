@@ -1,4 +1,4 @@
-import React, { type ReactNode, useEffect, useRef } from 'react';
+import React, { type ReactNode, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 
@@ -18,6 +18,7 @@ interface ModalProps {
   width?: string;
   saveButtonText?: string;
   customLayout?: React.ReactNode;
+  maxHeight?: string; // Опциональный параметр для ограничения максимальной высоты
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -33,15 +34,50 @@ const BaseModal: React.FC<ModalProps> = ({
   hideCanselButton = false,
   width = '562px',
   saveButtonText = "Сохранить",
-  customLayout
+  customLayout,
+  maxHeight = '90vh' // Значение по умолчанию - 90% высоты окна
 }) => {
   const isViewMode = mode === 'view';
   const modalRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
 
   const handleCancel = (e: React.MouseEvent) => {
     e.preventDefault();
     onCancel();
   };
+
+  // Проверяем, нужно ли включать скроллинг
+  useEffect(() => {
+    const checkContentHeight = () => {
+      if (contentRef.current) {
+        const contentHeight = contentRef.current.scrollHeight;
+        const containerHeight = contentRef.current.clientHeight;
+        setIsScrollable(contentHeight > containerHeight);
+      }
+    };
+
+    checkContentHeight();
+    
+    // Добавляем обработчик на изменение размеров окна
+    window.addEventListener('resize', checkContentHeight);
+    
+    // Используем MutationObserver для отслеживания изменений в контенте
+    const observer = new MutationObserver(checkContentHeight);
+    if (contentRef.current) {
+      observer.observe(contentRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true
+      });
+    }
+
+    return () => {
+      window.removeEventListener('resize', checkContentHeight);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -58,7 +94,7 @@ const BaseModal: React.FC<ModalProps> = ({
 
   return (
     <ModalBackdrop>
-      <ModalContainer width={width} ref={modalRef}>
+      <ModalContainer width={width} maxHeight={maxHeight} ref={modalRef}>
         <CloseButton onClick={onClose}>&times;</CloseButton>
         <ModalHeader>
           <ModalTitle>{title}</ModalTitle>
@@ -67,8 +103,12 @@ const BaseModal: React.FC<ModalProps> = ({
           {customLayout}
         </div>
         <ModalForm onSubmit={onSave}>
-          {/* Убрали overflow-y: auto отсюда */}
-          <ModalContent>{children}</ModalContent>
+          <ModalContent 
+            ref={contentRef}
+            isScrollable={isScrollable}
+          >
+            {children}
+          </ModalContent>
 
           <ModalFooter>
             {!hideCanselButton && (
@@ -76,7 +116,7 @@ const BaseModal: React.FC<ModalProps> = ({
             )}
             {!isViewMode && !hideSaveButton && (
               <DarkCyanButton 
-                style={{ minWidth: "136px", padding: "10p 20px", borderRadius: "10px", fontSize: "16px" }}
+                style={{ minWidth: "136px", padding: "10px 20px", borderRadius: "10px", fontSize: "16px" }}
                 type="submit"
                 disabled={isSaveDisabled || isSubmitting}
               >
@@ -105,9 +145,9 @@ const ModalBackdrop = styled.div`
   z-index: 1000;
 `;
 
-const ModalContainer = styled.div<{ width: string }>`
+const ModalContainer = styled.div<{ width: string; maxHeight: string }>`
   width: ${props => props.width};
-  height: auto;
+  max-height: ${props => props.maxHeight};
   background-color: rgba(249, 250, 250, 1);
   border: 1px solid rgba(173, 179, 188, 1);
   border-radius: 5px;
@@ -117,16 +157,15 @@ const ModalContainer = styled.div<{ width: string }>`
   padding: 24px;
   position: relative;
   margin: 0;
-  /* Убедитесь, что у контейнера нет overflow */
-  overflow: visible;
+  overflow: hidden; /* Скрываем переполнение контейнера */
 `;
 
 const ModalForm = styled.form`
   display: flex;
   flex-direction: column;
   flex: 1;
-  /* Убедитесь, что у формы нет overflow */
-  overflow: visible;
+  min-height: 0; /* Важно для flex-контейнера с overflow */
+  overflow: hidden;
 `;
 
 export const ModalHeader = styled.div`
@@ -134,6 +173,7 @@ export const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-top: 0;
+  flex-shrink: 0; /* Запрещаем сжатие заголовка */
 `;
 
 export const ModalTitle = styled.h2`
@@ -161,13 +201,36 @@ const CloseButton = styled.button`
   }
 `;
 
-const ModalContent = styled.div`
+const ModalContent = styled.div<{ isScrollable: boolean }>`
   flex: 1;
-  /* Убрали overflow-y: auto и добавили min-height */
   margin-bottom: 20px;
-  min-height: 0;
-  /* Разрешаем контенту выходить за границы */
-  overflow: visible;
+  min-height: 0; /* Важно для flex-контейнера с overflow */
+  
+  /* Включаем скроллинг только когда нужно */
+  overflow-y: ${props => props.isScrollable ? 'auto' : 'visible'};
+  
+  /* Кастомный скроллбар для лучшего вида */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(241, 241, 241, 1);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(173, 179, 188, 1);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba(130, 140, 150, 1);
+    }
+  }
+  
+  /* Для Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(173, 179, 188, 1) rgba(241, 241, 241, 1);
 `;
 
 const ModalFooter = styled.div`
@@ -175,6 +238,7 @@ const ModalFooter = styled.div`
   justify-content: space-between;
   align-items: center;
   margin: 10px 30px 20px 30px;
+  flex-shrink: 0; /* Запрещаем сжатие футера */
 `;
 
 const CancelButton = styled.button`
