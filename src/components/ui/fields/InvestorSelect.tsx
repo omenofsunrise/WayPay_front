@@ -45,7 +45,6 @@ const InvestorSelect = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
 
-  // Загружаем инвесторов при монтировании и при изменении searchTerm
   useEffect(() => {
     const fetchInvestors = async () => {
       setIsLoading(true);
