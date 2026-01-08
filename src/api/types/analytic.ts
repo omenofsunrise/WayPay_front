@@ -7,6 +7,10 @@ export interface AnalyticResponse {
   currentCashDiffrence: number;
   unconfirmedCash: number;
   unconfirmedCashDiffrence: number;
+  unconfirmedCredits: number;
+  unconfirmedCreditsDiffrence: number;
+  unconfirmedPayments: number;
+  unconfirmedPaymentsDiffrence: number;
 
   latePayment: number;
   latePaymentDiffrence: number;
