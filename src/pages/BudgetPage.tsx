@@ -30,6 +30,7 @@ interface Investor {
   investorPie: number;
   investmentAmount: number;
   balance: number;
+  isCompany: boolean;
 }
 
 interface IncomeState {
@@ -62,6 +63,17 @@ interface Outcome {
   comment: string;
 }
 
+interface SelectedEntity {
+  id: number;
+  type: 'investor' | 'pool';
+  nickname?: string;
+  name?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  balance?: number;
+  isCompany?: boolean;
+}
+
 const BudgetPage = () => {
     const currentDate = new Date();
     const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
@@ -74,6 +86,7 @@ const BudgetPage = () => {
         amount: '',
         comment: '',
         investorId: '',
+        investorPoolId: '',
         companyShare: 100,
     });
     const [newOutcome, setNewOutcome] = useState({
@@ -83,7 +96,7 @@ const BudgetPage = () => {
     const [investors, setInvestors] = useState<Investor[]>([]);
     const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
-    const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
+    const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
 
     const [incomes, setIncomes] = useState<IncomeState>({});
     const [outcomes, setOutcomes] = useState<OutcomeState>({});
@@ -330,25 +343,58 @@ const BudgetPage = () => {
         }).filter(row => row !== null);
     };
 
-    const handleSelectInvestor = (investor: Investor) => {
-        setSelectedInvestor(investor);
-        setNewIncome(prev => ({...prev, investorId: investor.id.toString()}));
+    const handleSelectEntity = (entity: SelectedEntity) => {
+        setSelectedEntity(entity);
+        
+        // Сбрасываем оба ID и устанавливаем только выбранный тип
+        if (entity.type === 'investor') {
+            setNewIncome(prev => ({
+                ...prev, 
+                investorId: entity.id.toString(),
+                investorPoolId: ''
+            }));
+        } else {
+            setNewIncome(prev => ({
+                ...prev, 
+                investorId: '',
+                investorPoolId: entity.id.toString()
+            }));
+        }
+        
         setIsInvestorModalOpen(false);
     };
 
     const handleAddIncome = async () => {
         try {
-            const result = await createIncome({
+            // Подготавливаем данные для отправки
+            const incomeData: any = {
                 amount: parseFloat(newIncome.amount),
                 comment: newIncome.comment,
-                investorId: parseInt(newIncome.investorId),
                 companyShare: newIncome.companyShare
-            });
+            };
+
+            // Добавляем только один параметр в зависимости от выбранного типа
+            if (selectedEntity?.type === 'investor' && newIncome.investorId) {
+                incomeData.investorId = parseInt(newIncome.investorId);
+            } else if (selectedEntity?.type === 'pool' && newIncome.investorPoolId) {
+                incomeData.investorPoolId = parseInt(newIncome.investorPoolId);
+            } else {
+                alert("Пожалуйста, выберите инвестора или пул");
+                return false;
+            }
+
+            const result = await createIncome(incomeData);
             
             if (result) {
                 setShowIncomeModal(false);
-                setNewIncome({ amount: '', comment: '', investorId: '', companyShare: 100 });
-                setSelectedInvestor(null);
+                setNewIncome({ 
+                    amount: '', 
+                    comment: '', 
+                    investorId: '', 
+                    investorPoolId: '', 
+                    companyShare: 100 
+                });
+                setSelectedEntity(null);
                 await fetchData();
                 return true;
             }
@@ -515,7 +561,7 @@ const BudgetPage = () => {
                 show={showIncomeModal}
                 onClose={() => {
                     setShowIncomeModal(false);
-                    setSelectedInvestor(null);
+                    setSelectedEntity(null);
                 }}
                 onSave={async (e) => {
                     e.preventDefault();
@@ -523,7 +569,12 @@ const BudgetPage = () => {
                 }}
                 newIncome={newIncome}
                 setNewIncome={setNewIncome}
-                investors={investors}
+                selectedEntity={selectedEntity}
+                onEntitySelect={() => setIsInvestorModalOpen(true)}
+                onEntityClear={() => {
+                    setSelectedEntity(null);
+                    setNewIncome(prev => ({...prev, investorId: '', investorPoolId: ''}));
+                }}
             />
 
             <OutcomeModal
@@ -540,24 +591,25 @@ const BudgetPage = () => {
             <InvestorSelectModal
                 isOpen={isInvestorModalOpen}
                 onClose={() => setIsInvestorModalOpen(false)}
-                onSubmit={handleSelectInvestor}
+                onSubmit={handleSelectEntity}
+                includePools={true}
             />
 
-            {selectedInvestor && (
+            {selectedEntity && selectedEntity.type === 'investor' && (
                 <InvestorModal
                     mode="view"
                     isOpen={isViewInvestorModalOpen}
                     onClose={() => setIsViewInvestorModalOpen(false)}
                     onSubmit={async () => false}
                     initialData={{
-                        id: selectedInvestor.id,
-                        nickname: selectedInvestor.nickname,
-                        fullName: selectedInvestor.fullName,
-                        phoneNumber: selectedInvestor.phoneNumber,
-                        investorPie: selectedInvestor.investorPie,
-                        investmentAmount: selectedInvestor.investmentAmount,
-                        balance: selectedInvestor.balance,
-                        isCompany: false,
+                        id: selectedEntity.id,
+                        nickname: selectedEntity.nickname || '',
+                        fullName: selectedEntity.fullName || '',
+                        phoneNumber: selectedEntity.phoneNumber || '',
+                        investorPie: 0,
+                        investmentAmount: 0,
+                        balance: selectedEntity.balance || 0,
+                        isCompany: selectedEntity.isCompany || false,
                         isBlocked: false
                     }}
                 />

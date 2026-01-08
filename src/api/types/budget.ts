@@ -18,7 +18,8 @@ export interface BudgetOutcome {
 export interface CreateBudgetIncomeDto {
   amount: number;
   comment: string;
-  investorId: number;
+  investorId?: number;
+  investorPoolId?: number;
   companyShare?: number;
 }
 
