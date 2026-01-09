@@ -239,11 +239,17 @@ const CreditControlPage = () => {
     }
   };
 
-  const handleAccept = (rowData: any[]) => {
+  const handleAccept = async (rowData: any[]) => {
     const [_, id] = rowData;
     const credit = creditsData?.items.find(c => c.id === Number(id));
     if (credit) {
-      acceptCredit(credit.id);
+      try {
+        await acceptCredit(credit.id);
+        // Обновляем список договоров после подтверждения
+        await loadCredits();
+      } catch (error) {
+        console.error('Ошибка при подтверждении договора:', error);
+      }
     }
   };
 
