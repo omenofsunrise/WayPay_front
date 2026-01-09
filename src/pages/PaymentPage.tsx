@@ -236,7 +236,7 @@ const PaymentPage = () => {
     const formatPaymentsData = (payments: Payment[] | undefined) => {
         if (!payments) return [];
 
-        return payments.map(payment => [
+        const formattedData = payments.map(payment => [
             payment.creditId?.toString() || '',
             payment.clientFullName || '',
             formatMoney(payment.paymentAmount?.toString() || '0'),
@@ -246,6 +246,21 @@ const PaymentPage = () => {
             payment.accepted ? 'Да' : 'Нет',
             payment.id.toString()
         ]);
+
+        if (payments.length > 0) {
+            const totalsRow = [
+                '',
+                'Итого',
+                `${formatMoney(paymentsData.totalPayments.toString())}`,
+                '',
+                '',
+                '',
+                '',
+            ];
+            formattedData.push(totalsRow);
+        }
+
+        return formattedData;
     };
 
     const handleConfirmPayment = async (rowData: any[]) => {
