@@ -17,12 +17,12 @@ import SchedulePage from './pages/SchedulePage';
 import CreditControlPage from './pages/CreditControlPage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import InvestorReportPage from './pages/InvestorReportPage';
-import BudgetPage from './pages/BudgetPage';
+import BudgetPage from './pages/FinancePage/BudgetPage';
 import { AuthProvider } from './сontext/AuthContext';
 import AdminPanelPage from './pages/AdminPanelPage';
 import ToDoListPage from './pages/ToDoListPage';
 import { TaskCountProvider } from './сontext/TaskCountContext';
-import PaymentsIncomePage from './pages/PaymentIncomePage';
+import PaymentsIncomePage from './pages/FinancePage/PaymentIncomePage';
 import BlogPage from './pages/BlogPage';
 import ChatPage from './pages/ChatPage';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -40,6 +40,7 @@ import RegistrationRequestPage from './pages/RegistrationRequestPage';
 import CreditApplicationPage from './pages/CreditApplicationPage';
 import NotificationHandler from './components/NotificationHandler/NotificationHandler';
 import { DISABLE_NOTIFICATIONS_KEY, getDisableNotificationsSetting, useLocalStorageSetting } from './components/modal/SettingsModal';
+import FinancePage from './pages/FinancePage/FinancePage';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -352,6 +353,12 @@ function App() {
             <Route path="investors-pool" element={
                 <MainLayout>
                   <InvestorsPoolPage />
+                </MainLayout>
+            } />
+
+            <Route path="finance" element={
+                <MainLayout>
+                  <FinancePage />
                 </MainLayout>
             } />
 

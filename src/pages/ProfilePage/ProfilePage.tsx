@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import BackButtonComponent from '../../components/ui/Buttons/BackButton';
 import BranchPage from './BranchPage';
 import SenderPage from './SenderPage';
-import FinanceProfilePage from './FinanceProfilePage';
+import FinanceProfilePage from '../FinancePage/FinanceProfilePage';
 import { useAuth } from '../../сontext/AuthContext';
 import type { Tab } from '../../components/ui/fields/Tabs';
 import Tabs from '../../components/ui/fields/Tabs';

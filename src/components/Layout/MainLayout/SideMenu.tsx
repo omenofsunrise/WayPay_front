@@ -39,11 +39,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
   '/black-catalog': { mainItem: 'references', subItems: { '/black-catalog': 'black-catalog' } },
   '/registration-requests': { mainItem: 'references', subItems: { '/registration-requests': 'registration-requests' } },
-  '/budget': { mainItem: 'finance', subItems: { '/budget': 'budget' } },
-  '/payments-income': { mainItem: 'finance', subItems: { '/payments-income': 'payments-income' } },
-  '/profile': { mainItem: 'profile' },
-  '/about': { mainItem: 'about' },
-  '/admin': { mainItem: 'admin' },
+  '/finance': { mainItem: 'finance' },
   '/investors-pool': { 
     mainItem: 'investors', 
     subItems: { '/investors-pool': 'investors-pool' } 
@@ -71,25 +67,24 @@ const SideMenu = () => {
   
   const menuItemPermissions: Record<string, () => boolean> = {
     'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true),
-    'contracts': () => true, // Базовый доступ к договорам
+    'contracts': () => true,
     'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
-    'clients': () => true, // Базовый доступ к клиентам
-    'blacklist': () => true, // Базовый доступ к черному списку
+    'clients': () => true,
+    'blacklist': () => true,
     'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
-    'queue': () => true, // Базовый доступ к очереди
-    'pending-payments': () => true, // Базовый доступ к платежам
-    'payments-journal': () => true, // Базовый доступ к журналу платежей
+    'queue': () => true,
+    'pending-payments': () => true,
+    'payments-journal': () => true,
     'investors': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'investors-report': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'investors-pool': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
-    'products': () => true, // Базовый доступ к товарам
-    'black-catalog': () => true, // Базовый доступ к черному каталогу
+    'products': () => true,
+    'black-catalog': () => true,
     'registration-requests': () => isSuperAdminCompany(),
-    'budget': () => hasPermission('MANAGE_ACCOUNTING', true),
-    'payments-income': () => hasPermission('MANAGE_ACCOUNTING', true),
-    'profile': () => true, // Профиль доступен всем
+    'finance': () => hasPermission('MANAGE_ACCOUNTING', true), // Изменено с 'budget' на 'finance'
+    'profile': () => true,
     'admin': () => hasRole('суперадмин'),
-    'about': () => true, // О программе доступно всем
+    'about': () => true,
   };
 
   const checkMenuItemPermission = (menuItemKey: string): boolean => {
@@ -99,6 +94,12 @@ const SideMenu = () => {
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
+    
+    // Проверяем, находится ли пользователь на любой из страниц финансов
+    if (currentPath.startsWith('/finance') || currentPath.startsWith('/budget') || currentPath.startsWith('/payments-income')) {
+      return 'finance';
+    }
+    
     const menuItem = menuItemsMap[currentPath];
     
     if (menuItem) {
@@ -213,8 +214,6 @@ const SideMenu = () => {
       'products': 'Товары',
       'black-catalog': 'Чёрный каталог',
       'registration-requests': 'Заявки на регистрацию',
-      'budget': 'Бюджет',
-      'payments-income': 'Доходы от платежей'
     };
     
     return labels[subItemKey] || subItemKey;
@@ -274,7 +273,6 @@ const SideMenu = () => {
       {!collapsed && <Logo src={logo} alt="logo" />}
       
       <MenuList $collapsed={collapsed}>
-        {/* Основное меню с возможностью прокрутки */}
         <ScrollableMenuContent>
           {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true)) && (
             <MenuItem 
@@ -615,63 +613,26 @@ const SideMenu = () => {
               )}
             </SubMenu>
           )}
-          
-          {/* Finance Menu */}
+
           {(hasPermission('MANAGE_ACCOUNTING', true)) && (
             <MenuItem 
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, 'finance', true);
+                  handleCollapsedMenuClick(e, 'finance', false);
                 } else {
-                  handleMainMenuItemClick('finance', undefined, true);
+                  handleMenuItemClick('finance', '/finance');
                 }
               }}
               $collapsed={collapsed}
-              $selected={selectedSideMenuItem === 'budget'} 
+              $selected={selectedSideMenuItem === 'finance'}
             >
               <Icon 
                 src={financeIcon} 
                 $collapsed={collapsed} 
-                $selected={selectedSideMenuItem === 'budget'} 
+                $selected={selectedSideMenuItem === 'finance'} 
               />
-              {!collapsed && (
-                <>
-                  <MenuItemText>Финансы</MenuItemText>
-                  <ExpandArrow 
-                    width="14" 
-                    height="8" 
-                    viewBox="0 0 14 8" 
-                    fill="none" 
-                    $expanded={expandedItem === 'finance'}
-                  >
-                    <path 
-                      d="M1 1.32422L7 7.32422L13 1.32422" 
-                      stroke="#50555C" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                  </ExpandArrow>
-                </>
-              )}
+              {!collapsed && <MenuItemText>Финансы</MenuItemText>}
             </MenuItem>
-          )}
-          
-          {!collapsed && expandedItem === 'finance' && (hasPermission('MANAGE_ACCOUNTING', true)) && (
-            <SubMenu>
-              <SubMenuLine />
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('budget', '/budget')}
-                $selected={selectedSideMenuItem === 'budget'}
-              >
-                Бюджет
-              </SubMenuItem>
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('payments-income', '/payments-income')}
-                $selected={selectedSideMenuItem === 'payments-income'}
-              >
-                Доходы от платежей
-              </SubMenuItem>
-            </SubMenu>
           )}
         </ScrollableMenuContent>
 
@@ -716,42 +677,22 @@ const SideMenu = () => {
             </MenuItem>
           )}
         </BottomMenuSection>
-                  {/* About - всегда в самом низу */}
-          <MenuItem
-            onClick={(e) => {
-              if (collapsed) {
-                handleCollapsedMenuClick(e, 'about', false);
-              } else {
-                handleMenuItemClick('about', '/about');
-              }
-            }}
-            $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'about'}
-          >
-            {!collapsed ? (
-              <>
-                <AboutIcon $selected={selectedSideMenuItem === 'about'}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
-                          stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                          strokeWidth="1.25" 
-                          strokeLinecap="round"/>
-                    <path d="M11 12V16C11 16.5523 11.4477 17 12 17C12.5523 17 13 16.5523 13 16V12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" 
-                          fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                          stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                          strokeWidth="1.25" 
-                          strokeLinecap="round"/>
-                    <path d="M13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55229 11.4477 9 12 9C12.5523 9 13 8.55229 13 8Z" 
-                          fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                          stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                          strokeWidth="1.25" 
-                          strokeLinecap="round"/>
-                  </svg>
-                </AboutIcon>
-                <MenuItemText>О программе</MenuItemText>
-              </>
-            ) : (
-              <AboutIconCollapsed $selected={selectedSideMenuItem === 'about'}>
+        
+        {/* About - всегда в самом низу */}
+        <MenuItem
+          onClick={(e) => {
+            if (collapsed) {
+              handleCollapsedMenuClick(e, 'about', false);
+            } else {
+              handleMenuItemClick('about', '/about');
+            }
+          }}
+          $collapsed={collapsed}
+          $selected={selectedSideMenuItem === 'about'}
+        >
+          {!collapsed ? (
+            <>
+              <AboutIcon $selected={selectedSideMenuItem === 'about'}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
                         stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
@@ -768,9 +709,30 @@ const SideMenu = () => {
                         strokeWidth="1.25" 
                         strokeLinecap="round"/>
                 </svg>
-              </AboutIconCollapsed>
-            )}
-          </MenuItem>
+              </AboutIcon>
+              <MenuItemText>О программе</MenuItemText>
+            </>
+          ) : (
+            <AboutIconCollapsed $selected={selectedSideMenuItem === 'about'}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
+                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                      strokeWidth="1.25" 
+                      strokeLinecap="round"/>
+                <path d="M11 12V16C11 16.5523 11.4477 17 12 17C12.5523 17 13 16.5523 13 16V12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" 
+                      fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                      strokeWidth="1.25" 
+                      strokeLinecap="round"/>
+                <path d="M13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55229 11.4477 9 12 9C12.5523 9 13 8.55229 13 8Z" 
+                      fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
+                      strokeWidth="1.25" 
+                      strokeLinecap="round"/>
+              </svg>
+            </AboutIconCollapsed>
+          )}
+        </MenuItem>
       </MenuList>
       
       {/* Context Menu для свернутого состояния */}
@@ -832,8 +794,8 @@ const ScrollableMenuContent = styled.div`
     display: none;
   }
   
-  -ms-overflow-style: none;  /* IE и Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 `;
 
 const BottomMenuSection = styled.div`
