@@ -40,6 +40,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/black-catalog': { mainItem: 'references', subItems: { '/black-catalog': 'black-catalog' } },
   '/registration-requests': { mainItem: 'references', subItems: { '/registration-requests': 'registration-requests' } },
   '/finance': { mainItem: 'finance' },
+  '/profile': { mainItem: 'profile' },
   '/investors-pool': { 
     mainItem: 'investors', 
     subItems: { '/investors-pool': 'investors-pool' } 
