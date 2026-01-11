@@ -92,7 +92,7 @@ const CreditControlPage = () => {
     const params = {
       page: currentPage,
       pageSize: itemsPerPage,
-      creditId: contractNumber || undefined,
+      name: contractNumber || undefined,
       creditTypeId: creditTypeId || undefined, 
       clientFullname: clientFullName || undefined,
       investorNickname: investorName || undefined,
