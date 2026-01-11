@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
 import CustomInput from '../components/ui/fields/CustomInput';
-import CustomTable from '../components/ui/tables/CustomTable';
+import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';
@@ -625,6 +625,43 @@ const CreditPage = () => {
     }
   };
 
+  const rowStyles = useMemo(() => {
+    if (!creditsData?.items) return {};
+
+    const styles: { [rowIndex: number]: RowStyle } = {};
+    
+    creditsData.items.forEach((credit, rowIndex) => {
+      const baseStyle: RowStyle = {
+        backgroundColor: '#FFFFFF',
+        color: '#000000',
+        fontWeight: 'normal',
+        hoverBackgroundColor: '#F3F4F6'
+      };
+
+      if (credit.debt > 0) {
+        baseStyle.backgroundColor = '#E8D8D8';
+      }
+
+      if (!credit.isActive) {
+        baseStyle.backgroundColor = '#E8F5E8';
+        baseStyle.color = '#1B5E20';
+      }
+
+      if (!credit.hasCounterApproved) {
+        baseStyle.color = '#FF5A5A';
+      }
+
+      if (selectedCreditForPrint?.id === credit.id) {
+        baseStyle.backgroundColor = '#007D88';
+        baseStyle.color = '#FFFFFF';
+      }
+
+      styles[rowIndex] = baseStyle;
+    });
+
+    return styles;
+  }, [creditsData?.items, selectedCreditForPrint]);
+
   const formatCreditData = (credits: Credit[] | undefined) => {
     if (!credits) return [];
     
@@ -890,6 +927,7 @@ const CreditPage = () => {
               { name: "isActive", isHidden: true, align: "right" },
             ]} 
             data={formatCreditData(creditsData?.items)}
+            rowStyles={rowStyles}
             onSort={handleSort}
             sortConfig={sortConfig}
             onRowDoubleClick={handleRowDoubleClick}

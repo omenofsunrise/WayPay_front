@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
 import CustomInput from '../components/ui/fields/CustomInput';
-import CustomTable from '../components/ui/tables/CustomTable';
+import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import Tabs from '../components/ui/fields/Tabs';
@@ -337,6 +337,14 @@ const CreditControlPage = () => {
     }
   };
 
+  const handleRowClick = (rowData: any[], rowIndex: number) => {
+    const [_, id] = rowData;
+    const credit = creditsData?.items.find(c => c.id === Number(id));
+    if (credit) {
+      setSelectedCredit(credit);
+    }
+  };
+
   const formatCreditData = (credits: Credit[] | undefined) => {
     if (!credits) return [];
     
@@ -396,6 +404,45 @@ const CreditControlPage = () => {
 
     return formattedData;
   };
+
+    const rowStyles = useMemo(() => {
+      if (!creditsData?.items) return {};
+  
+      const styles: { [rowIndex: number]: RowStyle } = {};
+      
+      creditsData.items.forEach((credit, rowIndex) => {
+        const baseStyle: RowStyle = {
+          backgroundColor: '#FFFFFF',
+          color: '#000000',
+          fontWeight: 'normal',
+          hoverBackgroundColor: '#F3F4F6'
+        };
+  
+        if (credit.debt > 0) {
+          baseStyle.backgroundColor = '#E8D8D8';
+        }
+  
+        if (!credit.isActive) {
+          baseStyle.backgroundColor = '#E8F5E8';
+          baseStyle.color = '#1B5E20';
+        }
+
+        if (!credit.hasCounterApproved) {
+          baseStyle.color = '#FF5A5A';
+        }
+
+        console.log('снизу id выбрпп');
+        console.log(credit?.id);
+        if (selectedCredit?.id === credit.id) {
+          baseStyle.backgroundColor = '#007D88';
+          baseStyle.color = '#FFFFFF';
+        }
+  
+        styles[rowIndex] = baseStyle;
+      });
+  
+      return styles;
+    }, [creditsData?.items, selectedCredit]);
 
   const handleRowDoubleClick = (rowData: any[]) => {
     const [_, id] = rowData;
@@ -602,12 +649,13 @@ const CreditControlPage = () => {
               { name: "hasDebt", isHidden: true } 
             ]} 
             data={formatCreditData(creditsData?.items)}
+            onRowClick={handleRowClick}
             onSort={handleSort}
+            rowStyles={rowStyles}
             sortConfig={sortConfig}
             onRowDoubleClick={handleRowDoubleClick}
             contextMenuActions={tableActions}
             hasTotalsRow={true}
-            debtChecker={(row) => row[row.length - 2] === true}
           />
 
           <PaginationLayout>           

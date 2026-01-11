@@ -185,23 +185,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       };
     }
     
-    if (isDebtRow) {
-      return {
-        backgroundColor: customStyle.backgroundColor || '#E8D8D8',
-        color: customStyle.color || 'inherit',
-        fontWeight: customStyle.fontWeight || 'normal'
-      };
-    }
-    
-    const isActive = data[rowIndex][data[rowIndex].length - 1] === false;
-    if (isActive) {
-      return {
-        backgroundColor: customStyle.backgroundColor || '#E8F5E8',
-        color: '#1B5E20',
-        fontWeight: customStyle.fontWeight || 'normal'
-      };
-    }
-    
     return {
       backgroundColor: customStyle.backgroundColor || '#FFFFFF',
       color: customStyle.color || 'inherit',
@@ -217,7 +200,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     if (rowStyle.hoverBackgroundColor) return rowStyle.hoverBackgroundColor;
     
     if (rowIndex === selectedRow) return '#007D88';
-    if (isDebtRow) return '#E8D8D8CC'; // Adding transparency for hover effect
+    // if (isDebtRow) return '#E8D8D8CC'; // Adding transparency for hover effect
     if (data[rowIndex][data[rowIndex].length - 1] === false) return '#51D5B4CC'; // Adding transparency
     
     return '#F3F4F6';
