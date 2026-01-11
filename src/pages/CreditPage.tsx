@@ -401,7 +401,7 @@ const CreditPage = () => {
     const params = {
       page: currentPage,
       pageSize: itemsPerPage,
-      creditId: contractNumber || undefined,
+      search: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
       investorNickname: investorName || undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
