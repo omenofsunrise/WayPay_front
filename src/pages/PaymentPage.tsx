@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
-import CustomTable from "../components/ui/tables/CustomTable";
+import CustomTable, { type RowStyle } from "../components/ui/tables/CustomTable";
 import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
@@ -347,6 +347,34 @@ const PaymentPage = () => {
         }
     };
 
+
+      const rowStyles = useMemo(() => {
+        if (!paymentsData?.items) return {};
+    
+        const styles: { [rowIndex: number]: RowStyle } = {};
+        
+        paymentsData.items.forEach((payment, rowIndex) => {
+          const baseStyle: RowStyle = {
+            backgroundColor: '#FFFFFF',
+            color: '#000000',
+            fontWeight: 'normal'
+          };
+    
+          if (!payment.accepted) {
+            baseStyle.color = '#FF5A5A';
+          }
+    
+          if (selectedPaymentForPrint?.id === payment.id) {
+            baseStyle.backgroundColor = '#007D88';
+            baseStyle.color = '#FFFFFF';
+          }
+    
+          styles[rowIndex] = baseStyle;
+        });
+    
+        return styles;
+      }, [paymentsData?.items, selectedPaymentForPrint]);
+
     const tableData = formatPaymentsData(paymentsData?.items);
 
     const tableActions = [
@@ -472,6 +500,7 @@ const PaymentPage = () => {
                             { name: "id", align: "center", isHidden: true },               
                         ]} 
                         data={tableData}
+                        rowStyles={rowStyles}
                         onSort={handleSort}
                         sortConfig={sortConfig}
                         onRowClick={handleRowClick}
