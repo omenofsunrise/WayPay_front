@@ -29,6 +29,7 @@ import { formatMoney } from '../utils/formatPrice';
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 const NEXT_MONTH_START_STORAGE_KEY = 'credit_next_month_start';
 const IN_DEBT_STORAGE_KEY = 'credit_in_debt';
+const CREDIT_DRAFT_STORAGE_KEY = 'credit_draft';
 
 interface Client {
   id: number;
@@ -106,8 +107,49 @@ const NewCreditPage = () => {
     const savedInDebt = localStorage.getItem(IN_DEBT_STORAGE_KEY);
     return savedInDebt === 'true';
   });
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
 
   const creditApplicationData = location.state?.creditApplication;
+
+  // Загрузка черновика при первой инициализации
+  useEffect(() => {
+    if (isDraftLoaded) return;
+    const draftRaw = localStorage.getItem(CREDIT_DRAFT_STORAGE_KEY);
+    if (draftRaw) {
+      try {
+        const draft = JSON.parse(draftRaw);
+        setContractDate(draft.contractDate ?? null);
+        setClient(draft.client ?? null);
+        setGuarantor(draft.guarantor ?? null);
+        setGuarantorClient(draft.guarantorClient ?? null);
+        setInvestor(draft.investor ?? null);
+        setSelectedPool(draft.selectedPool ?? null);
+        setProducts(draft.products ?? []);
+        setTotalSum(draft.totalSum ?? 0);
+        setInitialPaymentPercent(draft.initialPaymentPercent ?? '');
+        setInitialPaymentAmount(draft.initialPaymentAmount ?? '');
+        setMonths(draft.months ?? '');
+        setCreditName(draft.creditName ?? '');
+        setDebtComment(draft.debtComment ?? '');
+        setPaymentDue(draft.paymentDue ?? '1');
+        setNextMonthStart(draft.nextMonthStart ?? false);
+        setInDebt(draft.inDebt ?? false);
+        setObjectTypeName(draft.objectTypeName ?? '');
+        setTabTypeName(draft.tabTypeName ?? '');
+        setSelectedObjectType(draft.selectedObjectType ?? null);
+        setSelectedTabType(draft.selectedTabType ?? null);
+        setPaymentSchedule(draft.paymentSchedule ?? []);
+        setHasDraft(true);
+        setIsDraftLoaded(true);
+      } catch (e) {
+        console.error('Failed to load draft', e);
+        setIsDraftLoaded(true);
+      }
+    } else {
+      setIsDraftLoaded(true);
+    }
+  }, [isDraftLoaded]);
 
 useEffect(() => {
   const loadCreditData = async () => {
@@ -312,6 +354,64 @@ useEffect(() => {
   useEffect(() => {
   }, [initialPaymentAmount]);
 
+  // Сохранение черновика
+  useEffect(() => {
+    if (!isDraftLoaded || isEditMode) return;
+    const draft = {
+      contractDate,
+      client,
+      guarantor,
+      guarantorClient,
+      investor,
+      selectedPool,
+      products,
+      totalSum,
+      initialPaymentPercent,
+      initialPaymentAmount,
+      months,
+      creditName,
+      debtComment,
+      paymentDue,
+      nextMonthStart,
+      inDebt,
+      objectTypeName,
+      tabTypeName,
+      selectedObjectType,
+      selectedTabType,
+      paymentSchedule
+    };
+    try {
+      localStorage.setItem(CREDIT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      setHasDraft(true);
+    } catch (e) {
+      console.error('Failed to save draft', e);
+    }
+  }, [
+    isDraftLoaded,
+    isEditMode,
+    contractDate,
+    client,
+    guarantor,
+    guarantorClient,
+    investor,
+    selectedPool,
+    products,
+    totalSum,
+    initialPaymentPercent,
+    initialPaymentAmount,
+    months,
+    creditName,
+    debtComment,
+    paymentDue,
+    nextMonthStart,
+    inDebt,
+    objectTypeName,
+    tabTypeName,
+    selectedObjectType,
+    selectedTabType,
+    paymentSchedule
+  ]);
+
   const handleMarkupTypeChange = useCallback((type: 'percent' | 'fixed') => {
     setMarkupType(type);
     localStorage.setItem(MARKUP_TYPE_STORAGE_KEY, type);
@@ -324,6 +424,32 @@ useEffect(() => {
 
   const parseAmount = useCallback((formatted: string): number => {
     return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
+  }, []);
+
+  const resetDraft = useCallback(() => {
+    localStorage.removeItem(CREDIT_DRAFT_STORAGE_KEY);
+    setHasDraft(false);
+    setContractDate(null);
+    setClient(null);
+    setGuarantor(null);
+    setGuarantorClient(null);
+    setInvestor(null);
+    setSelectedPool(null);
+    setProducts([]);
+    setTotalSum(0);
+    setInitialPaymentPercent('');
+    setInitialPaymentAmount('');
+    setMonths('');
+    setCreditName('');
+    setDebtComment('');
+    setPaymentDue('1');
+    setNextMonthStart(false);
+    setInDebt(false);
+    setObjectTypeName('');
+    setTabTypeName('');
+    setSelectedObjectType(null);
+    setSelectedTabType(null);
+    setPaymentSchedule([]);
   }, []);
 
   useEffect(() => {
@@ -548,6 +674,8 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     currentError = error;
 
     if (createdCredit) {
+      localStorage.removeItem(CREDIT_DRAFT_STORAGE_KEY);
+      setHasDraft(false);
       navigate('/credits');
     } else {
       const errorMessage = (currentError as any)?.response?.data || 
@@ -878,6 +1006,15 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       <TitleField style={{ marginTop: "0" }}>
         <CustomTitle>{isEditMode ? 'Редактирование договора' : 'Новый договор'}</CustomTitle>
       </TitleField>
+
+      {!isEditMode && hasDraft && (
+        <DraftBanner>
+          <span>Черновик сохранен локально</span>
+          <DraftActions>
+            <DarkCyanButton onClick={resetDraft}>Сбросить черновик</DarkCyanButton>
+          </DraftActions>
+        </DraftBanner>
+      )}
 
       <ContentWrapper>
         <CheckboxContainer>
@@ -1260,6 +1397,24 @@ const MarkupTypeToggle = styled.button<{ active: boolean }>`
   &:focus {
     outline: none;
   }
+`;
+
+const DraftBanner = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f1fbfd;
+  border: 1px solid #cceef3;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0 16px;
+  color: #0b7285;
+  gap: 12px;
+`;
+
+const DraftActions = styled.div`
+  display: flex;
+  gap: 8px;
 `;
 
 const ContentWrapper = styled.div`
