@@ -627,6 +627,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
                       <Label>Телефон</Label>
                       <Value>{creditData && creditData.clientPhone}</Value>
+
+                      {creditData?.termMonths && (
+                        <>
+                          <Label>Срок, месяцев</Label>
+                          <Value>{creditData.termMonths}</Value>
+                        </>
+                      )}
                       
                       {creditData && creditData.guarantorFullname && (
                         <>
