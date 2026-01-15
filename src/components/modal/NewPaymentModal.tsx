@@ -9,6 +9,8 @@ import Checkbox from '../ui/CheckBoxes/Checkbox';
 import CustomCalendar from '../ui/fields/CustomCalendar';
 import BankCardSelect from '../ui/fields/BankCardSelect';
 import { useAuth } from '../../сontext/AuthContext';
+import { formatPhoneHref } from '../../utils/phoneUtils';
+import { formatPhoneHref } from '../../utils/phoneUtils';
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -253,10 +255,9 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                     
                     <InputGroup>
                       <InputLabel>Телефон</InputLabel>
-                      <CustomInput 
-                        value={clientPhone}
-                        readOnly
-                      />
+                      <PhoneLink href={formatPhoneHref(clientPhone)} onClick={(e) => e.stopPropagation()}>
+                        {clientPhone}
+                      </PhoneLink>
                     </InputGroup>
                   </FormRow>
                   
@@ -450,6 +451,22 @@ const InputGroup = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
+`;
+
+const PhoneLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(209, 213, 219, 1);
+  border-radius: 5px;
+  font-size: 14px;
+  color: #007D88;
+  background: #f9fafb;
+  text-decoration: none;
+  min-height: 38px;
+  &:hover {
+    color: #005e69;
+  }
 `;
 
 const InputLabel = styled.label`

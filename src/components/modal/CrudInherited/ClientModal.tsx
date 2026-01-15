@@ -7,6 +7,7 @@ import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComp
 import type { ClientForm } from '../../../api/types/client';
 import Button from '../../ui/Buttons/DarkCyanButton';
 import useClient from '../../../api/hooks/useClient';
+import { formatPhoneHref } from '../../../utils/phoneUtils';
 
 interface Client {
   id: number;
@@ -675,15 +676,21 @@ const ClientModal: React.FC<ClientModalProps> = ({
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
             <InputContainer>
-              <PhoneModalInput
-                name="phone"
-                placeholder="Телефон"
-                value={formData.phone}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.phone && validationErrors.phone}
-                errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
-              />
+              {mode === 'view' ? (
+                <a href={formatPhoneHref(formData.phone)} style={{ color: '#007D88', textDecoration: 'none' }}>
+                  {formData.phone}
+                </a>
+              ) : (
+                <PhoneModalInput
+                  name="phone"
+                  placeholder="Телефон"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  disabled={mode === 'view'}
+                  hasError={touchedFields.phone && validationErrors.phone}
+                  errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
+                />
+              )}
             </InputContainer>
           </InputRow>
 

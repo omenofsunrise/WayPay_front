@@ -13,6 +13,7 @@ import Pagination from '../fields/CustomPagination';
 import CustomTable from '../tables/CustomTable';
 import ViewCreditModal from '../../modal/ViewCreditModal';
 import { PassportPhotoType } from '../../../api/types/client';
+import { formatPhoneHref } from '../../../utils/phoneUtils';
 
 const TabsContainer = styled.div`
   width: 100%;
@@ -1365,7 +1366,15 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
           <InfoGrid>
             <InfoItem>
               <InfoLabel>Телефон</InfoLabel>
-              <InfoValue>{client.phone}</InfoValue>
+              <InfoValue>
+                {client.phone ? (
+                  <a href={formatPhoneHref(client.phone)} style={{ color: '#007D88' }}>
+                    {client.phone}
+                  </a>
+                ) : (
+                  ''
+                )}
+              </InfoValue>
             </InfoItem>
             <InfoItem>
               <InfoLabel>WhatsApp</InfoLabel>

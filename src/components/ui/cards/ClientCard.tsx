@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
 import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV } from 'react-icons/fa';
 import useChat from '../../../api/hooks/useChat';
+import { formatPhoneHref } from '../../../utils/phoneUtils';
 
 const Card = styled.div`
   background: white;
@@ -396,7 +397,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
             <InfoValue>
               {client.phone ? (
                 <PhoneLink 
-                  href={`tel:${client.phone}`} 
+                  href={formatPhoneHref(client.phone)} 
                   onClick={(e) => e.stopPropagation()}
                 >
                   {formatPhone(client.phone)}

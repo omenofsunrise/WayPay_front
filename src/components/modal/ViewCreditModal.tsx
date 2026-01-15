@@ -25,6 +25,8 @@ import PaymentConfirmationGenerator from '../../utils/doxcUtils/paymentConfirmat
 import paymentService from '../../api/services/paymentService';
 import NewPaymentModal from './NewPaymentModal';
 import { sendWhatsAppMessage } from '../../utils/sendWhatsAppMessage';
+import { formatPhoneHref } from '../../utils/phoneUtils';
+import { formatPhoneHref } from '../../utils/phoneUtils';
 
 interface ViewCreditModalProps {
   id: number;
@@ -626,7 +628,15 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       <Value>{creditData && creditData.clientFullName}</Value>
 
                       <Label>Телефон</Label>
-                      <Value>{creditData && creditData.clientPhone}</Value>
+                      <Value>
+                        {creditData?.clientPhone ? (
+                          <a href={formatPhoneHref(creditData.clientPhone)} style={{ color: '#007D88' }}>
+                            {creditData.clientPhone}
+                          </a>
+                        ) : (
+                          ''
+                        )}
+                      </Value>
 
                       {creditData?.address && (
                         <>
@@ -652,7 +662,11 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       {creditData && creditData.guarantorPhone && (
                         <>
                           <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
-                          <Value>{creditData && creditData.guarantorPhone}</Value>
+                          <Value>
+                            <a href={formatPhoneHref(creditData.guarantorPhone)} style={{ color: '#007D88' }}>
+                              {creditData.guarantorPhone}
+                            </a>
+                          </Value>
                         </>
                       )}
 

@@ -8,6 +8,7 @@ import type { Investor } from '../../../api/types/investor';
 import { formatMoney, parseMoney } from '../../../utils/formatPrice';
 import { useAuth } from '../../../сontext/AuthContext';
 import CustomCalendar from '../../ui/fields/CustomCalendar';
+import { formatPhoneHref } from '../../../utils/phoneUtils';
 
 type InvestorModalProps = {
   mode: ModalMode;
@@ -463,15 +464,21 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
             <InputContainer>
-              <PhoneModalInput
-                name="phoneNumber"
-                placeholder="Телефон"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.phoneNumber && validationErrors.phoneNumber}
-                errorMessage={touchedFields.phoneNumber ? errorMessages.phoneNumber : undefined}
-              />
+              {mode === 'view' ? (
+                <a href={formatPhoneHref(formData.phoneNumber)} style={{ color: '#007D88', textDecoration: 'none' }}>
+                  {formData.phoneNumber}
+                </a>
+              ) : (
+                <PhoneModalInput
+                  name="phoneNumber"
+                  placeholder="Телефон"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  disabled={mode === 'view'}
+                  hasError={touchedFields.phoneNumber && validationErrors.phoneNumber}
+                  errorMessage={touchedFields.phoneNumber ? errorMessages.phoneNumber : undefined}
+                />
+              )}
             </InputContainer>
           </InputRow>
           

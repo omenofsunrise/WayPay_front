@@ -15,6 +15,7 @@ import useQueue from "../api/hooks/useQueue";
 import useClients from "../api/hooks/useClient";
 import type { Queue } from '../api/types/queue';
 import { formatMoney } from '../utils/formatPrice';
+import { formatPhoneHref } from '../utils/phoneUtils';
 import useExport from '../api/hooks/useExport';
 import type { Client } from '../api/types/client';
 
@@ -228,7 +229,7 @@ const QueuePage = () => {
     const tableData = queues.map((queue: Queue) => [
         queue.positionInQueue.toString(),
         queue.clientFullName || queue.clientId.toString(),
-        queue.clientPhone || '—',
+        queue.clientPhone ? <a href={formatPhoneHref(queue.clientPhone)}>{queue.clientPhone}</a> : '—',
         formatMoney(queue.sum.toString()),
     ]);
     

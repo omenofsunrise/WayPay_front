@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import useCompany from '../api/hooks/useCompany';
 import type { CommonInfo } from '../api/types/company';
+import { formatPhoneHref } from '../utils/phoneUtils';
 
 const AboutPage: React.FC = () => {
   const { getCommonInfo } = useCompany();
@@ -80,7 +81,9 @@ const AboutPage: React.FC = () => {
           <InfoItem>
             <Label>Телефон:</Label>
             <PhoneContainer>
-              <PhoneValue onClick={handlePhoneClick}>{commonInfo.phone}</PhoneValue>
+              <PhoneLink href={formatPhoneHref(commonInfo.phone)} onClick={handlePhoneClick}>
+                {commonInfo.phone}
+              </PhoneLink>
               {copied && <CopiedMessage>Скопировано!</CopiedMessage>}
             </PhoneContainer>
           </InfoItem>
@@ -206,12 +209,13 @@ const PhoneContainer = styled.div`
     flex: 1;
 `;
 
-const PhoneValue = styled(Value)`
+const PhoneLink = styled.a`
   color: rgba(0, 125, 136, 1);
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
   display: inline-block;
+  text-decoration: none;
   
   &:hover {
     color: rgba(37, 203, 161, 1);

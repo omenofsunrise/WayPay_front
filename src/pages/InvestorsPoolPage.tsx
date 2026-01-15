@@ -7,6 +7,7 @@ import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from '../api/types/investor';
 import useInvestor from '../api/hooks/useInvestor';
 import { formatDate } from '../utils/dateFormatter';
+import { formatPhoneHref } from '../utils/phoneUtils';
 import { formatMoney, parseMoney } from '../utils/formatPrice';
 import investmentSvg from '../assets/ui/InvestorReport/investment.svg';
 import paymentIncomeSvg from '../assets/ui/InvestorReport/PaymentIncome.svg';
@@ -343,7 +344,7 @@ const InvestorsPoolPage = () => {
     const investorsTableData = investors.map((investor: Investor) => [
         investor.id.toString(),
         investor.fullName ?? '-',
-        investor.phoneNumber ?? '-',
+    investor.phoneNumber ? <a href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</a> : '-',
         investor.investmentAmount ? formatMoney(investor.investmentAmount.toString()) : '-',
         investor.pieInPool !== null && investor.pieInPool !== undefined ? `${investor.pieInPool}%` : '-',
         investor.currentIncome ? formatMoney(investor.currentIncome.toString()) : '-',

@@ -13,6 +13,7 @@ import { Container } from 'react-bootstrap';
 import styled from 'styled-components';
 import ClientCard from '../components/ui/cards/ClientCard';
 import ClientDossier from '../components/ui/Dossiers/ClientDossier';
+import { formatPhoneHref } from '../utils/phoneUtils';
 import { useAuth } from '../сontext/AuthContext';
 import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
 import { TitleContainer } from './BlackCatalog';
