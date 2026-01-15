@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import Portal from '../../../utils/Portal';
-import { FaTimes, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaTimes, FaPlus, FaEdit, FaTrash, FaList } from 'react-icons/fa';
 import useObjectTypes from '../../../api/hooks/useObjectType';
 import type { EntityType } from '../../../api/types/objectType';
+import BaseModal from '../../modal/BASE/modalCRUBase';
+import Pagination from './CustomPagination';
 
 interface ObjectTypeSelectProps {
   value: string;
@@ -42,11 +44,16 @@ const ObjectTypeSelect = ({
     deleteObjectType,
     isLoading 
   } = useObjectTypes();
+  
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [newName, setNewName] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
@@ -98,6 +105,7 @@ const ObjectTypeSelect = ({
       onObjectTypeSelect(objectType);
     }
     setIsDropdownOpen(false);
+    setIsModalOpen(false);
   };
 
   const handleClearSelection = () => {
@@ -187,6 +195,25 @@ const ObjectTypeSelect = ({
     }
   };
 
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  // Расчет пагинированных данных для модального окна
+  const paginatedObjectTypes = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return objectTypes.slice(startIndex, endIndex);
+  }, [objectTypes, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   const displayObjectTypes = objectTypes;
 
   return (
@@ -210,6 +237,11 @@ const ObjectTypeSelect = ({
             <ClearButton onClick={handleClearSelection}>
               <FaTimes size={14} />
             </ClearButton>
+          )}
+          {!disabled && (
+            <ModalButton onClick={handleOpenModal} title="Открыть список каталогов">
+              <FaList size={14} />
+            </ModalButton>
           )}
         </InputWrapper>
         
@@ -306,7 +338,7 @@ const ObjectTypeSelect = ({
                       </ObjectTypeItem>
                     ))
                   ) : (
-                    <DropdownItem>Каталогы не найдены</DropdownItem>
+                    <DropdownItem>Каталоги не найдены</DropdownItem>
                   )}
                 </DropdownContent>
                 
@@ -327,11 +359,133 @@ const ObjectTypeSelect = ({
           <ErrorMessage>{errorMessage}</ErrorMessage>
         )}
       </InputContainer>
+
+      {/* Модальное окно с типами объектов */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <BaseModal
+            title="Выбор каталога"
+            onClose={handleCloseModal}
+            onCancel={handleCloseModal}
+            width="800px"
+            maxHeight="80vh"
+            hideSaveButton={true}
+            saveButtonText=""
+          >
+            <ModalContentWrapper>
+              {/* Форма создания нового каталога */}
+              <CreateSection>
+                <SectionTitle>Создать новый каталог</SectionTitle>
+                <CreateForm>
+                  <ModalInput
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Введите название каталога"
+                  />
+                  <ModalButtonGroup>
+                    <ModalActionButton 
+                      $primary 
+                      onClick={handleConfirmCreate}
+                      disabled={!newName.trim()}
+                    >
+                      Создать
+                    </ModalActionButton>
+                    <ModalActionButton 
+                      $secondary 
+                      onClick={handleCancelCreate}
+                    >
+                      Отмена
+                    </ModalActionButton>
+                  </ModalButtonGroup>
+                </CreateForm>
+              </CreateSection>
+
+              {/* Список существующих каталогов */}
+              <ListSection>
+                {isLoading ? (
+                  <LoadingMessage>Загрузка каталогов...</LoadingMessage>
+                ) : paginatedObjectTypes.length > 0 ? (
+                  <>
+                    <ObjectTypeList>
+                      {paginatedObjectTypes.map((objectType) => (
+                        <ModalObjectTypeItem key={objectType.id}>
+                          {isEditing === objectType.id ? (
+                            <EditContainer>
+                              <ModalEditInput
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                autoFocus
+                              />
+                              <ModalActionButtons>
+                                <ModalActionButton 
+                                  $confirm 
+                                  onClick={() => handleConfirmEdit(objectType.id)}
+                                  disabled={!editName.trim()}
+                                >
+                                  ✓
+                                </ModalActionButton>
+                                <ModalActionButton 
+                                  $cancel 
+                                  onClick={handleCancelEdit}
+                                >
+                                  ✕
+                                </ModalActionButton>
+                              </ModalActionButtons>
+                            </EditContainer>
+                          ) : (
+                            <>
+                              <ModalObjectTypeName 
+                                onClick={() => handleObjectTypeSelect(objectType)}
+                              >
+                                {objectType.name}
+                              </ModalObjectTypeName>
+                              <ModalObjectTypeActions>
+                                <ModalActionButton 
+                                  $edit 
+                                  onClick={() => handleStartEdit(objectType)}
+                                  title="Редактировать"
+                                >
+                                  <FaEdit size={14} />
+                                </ModalActionButton>
+                                <ModalActionButton 
+                                  $delete 
+                                  onClick={() => handleDelete(objectType.id, objectType.name)}
+                                  title="Удалить"
+                                >
+                                  <FaTrash size={14} />
+                                </ModalActionButton>
+                              </ModalObjectTypeActions>
+                            </>
+                          )}
+                        </ModalObjectTypeItem>
+                      ))}
+                    </ObjectTypeList>
+                    
+                    {/* Пагинация */}
+                    {objectTypes.length > itemsPerPage && (
+                      <PaginationContainer>
+                        <Pagination
+                          total={objectTypes.length}
+                          current={currentPage}
+                          onChange={handlePageChange}
+                          itemsPerPage={itemsPerPage}
+                        />
+                      </PaginationContainer>
+                    )}
+                  </>
+                ) : (
+                  <EmptyMessage>Каталоги не найдены</EmptyMessage>
+                )}
+              </ListSection>
+            </ModalContentWrapper>
+          </BaseModal>
+        )}
+      </AnimatePresence>
     </>
   );
 };
 
-// Стили остаются без изменений
+// Обновленные и новые стили
 const InputContainer = styled.div`
   position: relative;
   display: inline-block;
@@ -360,7 +514,7 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
   color: black;
   padding: 5px;
   padding-left: 15px;
-  padding-right: 30px;
+  padding-right: 60px;
   cursor: pointer;
 
   &:hover {
@@ -384,7 +538,7 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
 
 const ClearButton = styled.button`
   position: absolute;
-  right: 8px;
+  right: 35px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -400,6 +554,27 @@ const ClearButton = styled.button`
 
   &:hover {
     color: #666;
+  }
+`;
+
+const ModalButton = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+
+  &:hover {
+    color: rgba(0, 125, 136, 1);
   }
 `;
 
@@ -587,6 +762,248 @@ const AddButton = styled.button`
   &:hover {
     color: rgba(0, 100, 110, 1);
   }
+`;
+
+// Новые стили для модального окна
+const ModalContentWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+`;
+
+const CreateSection = styled.div`
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+`;
+
+const ListSection = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`;
+
+const SectionTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+`;
+
+const CreateForm = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+`;
+
+const ModalInput = styled.input`
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 125, 136, 1);
+  border-radius: 5px;
+  font-size: 14px;
+  color: black;
+  background: white;
+  outline: none;
+  
+  &:focus {
+    border-color: rgba(0, 125, 136, 0.8);
+    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.2);
+  }
+`;
+
+const ModalButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ModalActionButton = styled.button<{ 
+  $primary?: boolean; 
+  $secondary?: boolean; 
+  $confirm?: boolean; 
+  $cancel?: boolean;
+  $edit?: boolean;
+  $delete?: boolean;
+}>`
+  padding: 8px 16px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 80px;
+
+  ${({ $primary }) => $primary && `
+    background-color: rgba(0, 125, 136, 1);
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background-color: rgba(0, 100, 110, 1);
+    }
+    
+    &:disabled {
+      background-color: rgba(0, 125, 136, 0.5);
+      cursor: not-allowed;
+    }
+  `}
+
+  ${({ $secondary }) => $secondary && `
+    background-color: rgba(209, 213, 219, 1);
+    color: black;
+    
+    &:hover {
+      background-color: rgba(209, 213, 219, 0.8);
+    }
+  `}
+
+  ${({ $confirm }) => $confirm && `
+    background: none;
+    color: rgba(0, 125, 136, 1);
+    border: 1px solid rgba(0, 125, 136, 1);
+    min-width: auto;
+    padding: 6px 12px;
+    
+    &:hover:not(:disabled) {
+      background-color: rgba(0, 125, 136, 0.1);
+    }
+  `}
+
+  ${({ $cancel }) => $cancel && `
+    background: none;
+    color: rgba(80, 85, 92, 1);
+    border: 1px solid rgba(80, 85, 92, 1);
+    min-width: auto;
+    padding: 6px 12px;
+    
+    &:hover {
+      background-color: rgba(80, 85, 92, 0.1);
+    }
+  `}
+
+  ${({ $edit }) => $edit && `
+    background: none;
+    color: rgba(80, 85, 92, 1);
+    border: 1px solid rgba(80, 85, 92, 1);
+    min-width: auto;
+    padding: 6px;
+    
+    &:hover {
+      background-color: rgba(0, 123, 255, 0.1);
+      color: rgba(0, 123, 255, 1);
+      border-color: rgba(0, 123, 255, 1);
+    }
+  `}
+
+  ${({ $delete }) => $delete && `
+    background: none;
+    color: rgba(80, 85, 92, 1);
+    border: 1px solid rgba(80, 85, 92, 1);
+    min-width: auto;
+    padding: 6px;
+    
+    &:hover {
+      background-color: rgba(220, 53, 69, 0.1);
+      color: rgba(220, 53, 69, 1);
+      border-color: rgba(220, 53, 69, 1);
+    }
+  `}
+`;
+
+const ObjectTypeList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  min-height: 200px;
+`;
+
+const ModalObjectTypeItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  color: black;
+  border-bottom: 1px solid #f1f1f1;
+  transition: background-color 0.2s ease;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background-color: #f8f9fa;
+  }
+`;
+
+const ModalObjectTypeName = styled.div`
+  flex: 1;
+  cursor: pointer;
+  padding: 4px 0;
+  font-size: 14px;
+  
+  &:hover {
+    color: rgba(0, 125, 136, 1);
+  }
+`;
+
+const ModalObjectTypeActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ModalActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ModalEditInput = styled.input`
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 125, 136, 1);
+  border-radius: 5px;
+  font-size: 14px;
+  color: black;
+  background: white;
+  outline: none;
+  
+  &:focus {
+    border-color: rgba(0, 125, 136, 0.8);
+    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.2);
+  }
+`;
+
+const PaginationContainer = styled.div`
+  margin-top: 16px;
+  padding: 16px;
+  border-top: 1px solid #e9ecef;
+`;
+
+const LoadingMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: rgba(80, 85, 92, 1);
+  font-size: 14px;
+`;
+
+const EmptyMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: rgba(80, 85, 92, 1);
+  font-size: 14px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
 `;
 
 export default ObjectTypeSelect;
