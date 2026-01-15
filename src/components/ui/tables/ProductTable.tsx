@@ -134,6 +134,29 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
     });
   };
 
+  const handleTotalPriceChange = (id: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^\d]/g, '');
+    const desiredTotal = parseInt(rawValue, 10) || 0;
+
+    const updatedProducts = products.map(product => {
+      if (product.id !== id) return product;
+
+      const quantity = product.quantity || 1;
+      const pricePerUnit = product.price;
+      const desiredPerUnit = Math.max(0, Math.round(desiredTotal / quantity));
+      const markupPerUnit = Math.max(0, desiredPerUnit - pricePerUnit);
+      const totalPrice = Math.max(0, desiredPerUnit * quantity);
+
+      return {
+        ...product,
+        markup: markupPerUnit,
+        totalPrice
+      };
+    });
+
+    onProductsChange(updatedProducts);
+  };
+
   const handleInputChange = (id: number, field: keyof Product, value: string) => {
     const updatedProducts = products.map(product => {
       if (product.id === id) {
@@ -346,7 +369,21 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
                       style={{ border: 'none', padding: '0' }}
                     />
                   </BodyCell>
-                  <BodyCell>{formatMoney(product.totalPrice.toString())}</BodyCell>
+                  <BodyCell>
+                    {markupType === 'fixed' ? (
+                      <CustomInput
+                        inputType="rubles"
+                        value={product.totalPrice ? formatMoney(product.totalPrice.toString()) : ''}
+                        onChange={(e) => handleTotalPriceChange(product.id, e)}
+                        onKeyDown={(e) => handleKeyDown(e, product.id)}
+                        placeholder="0"
+                        min="0"
+                        style={{ border: 'none', padding: '0' }}
+                      />
+                    ) : (
+                      formatMoney(product.totalPrice.toString())
+                    )}
+                  </BodyCell>
                   <BodyCell>
                     {index !== products.length - 1 && (
                       <DeleteButton 
