@@ -60,7 +60,7 @@ const ObjectTypeSelect = ({
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
 
   useEffect(() => {
-    getAll({ entityType, pageSize: 100 });
+    getAll({ entityType, pageSize: 6 });
   }, [getAll, entityType]);
 
   useEffect(() => {

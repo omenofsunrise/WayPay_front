@@ -736,6 +736,9 @@ const CreditPage = () => {
 
   const handleObjectTypeChange = (value: string) => {
     setObjectType(value);
+    if (!value) {
+      setCreditTypeId(null);
+    }
     setCurrentPage(1);
   };
 
@@ -746,12 +749,6 @@ const CreditPage = () => {
   }) => {
     setCreditTypeId(objectType.id);
     setObjectType(objectType.name);
-    setCurrentPage(1);
-  };
-
-  const handleClearObjectType = () => {
-    setObjectType('');
-    setCreditTypeId(null);
     setCurrentPage(1);
   };
 
@@ -835,12 +832,8 @@ const CreditPage = () => {
             onObjectTypeSelect={handleObjectTypeSelect}
             placeholder="Каталог"
             customPlaceholder="Каталог"
+            hideClearButton={false}
           />
-          {objectType && (
-            <ClearFilterButton onClick={handleClearObjectType}>
-              ×
-            </ClearFilterButton>
-          )}
         </InputWrapper>
         
       </FilterField>
@@ -1073,28 +1066,6 @@ const EmptyStarIcon = styled.div<EmptyStarIconProps>`
     path {
       stroke: #50555C;
     }
-  }
-`;
-
-const ClearFilterButton = styled.button`
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #999;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  z-index: 10;
-
-  &:hover {
-    color: #666;
   }
 `;
 

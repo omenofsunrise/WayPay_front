@@ -44,6 +44,8 @@ const CreditControlPage = () => {
   const [rublesIncomeTo, setRublesIncomeTo] = useState<string>('');
   const [percentsIncomeFrom, setPercentsIncomeFrom] = useState<string>('');
   const [percentsIncomeTo, setPercentsIncomeTo] = useState<string>('');
+  const [objectType, setObjectType] = useState<string>('');
+  const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
@@ -55,8 +57,6 @@ const CreditControlPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
   const { createPayment } = usePayment();
-  const [objectType, setObjectType] = useState<string>('');
-  const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'date',
@@ -177,6 +177,9 @@ const CreditControlPage = () => {
 
   const handleObjectTypeChange = (value: string) => {
     setObjectType(value);
+    if (!value) {
+      setCreditTypeId(null);
+    }
     setCurrentPage(1);
   };
 
@@ -187,12 +190,6 @@ const CreditControlPage = () => {
   }) => {
     setCreditTypeId(objectType.id);
     setObjectType(objectType.name);
-    setCurrentPage(1);
-  };
-
-  const handleClearObjectType = () => {
-    setObjectType('');
-    setCreditTypeId(null);
     setCurrentPage(1);
   };
 
@@ -501,12 +498,8 @@ const CreditControlPage = () => {
             onObjectTypeSelect={handleObjectTypeSelect}
             placeholder="Каталог"
             customPlaceholder="Каталог"
+            hideClearButton={false}
           />
-          {objectType && (
-            <ClearFilterButton onClick={handleClearObjectType}>
-              ×
-            </ClearFilterButton>
-          )}
         </InputWrapper>
 
         <InputWrapper style={{ minWidth: "500px" }}>
@@ -769,28 +762,6 @@ const IncomeContainer = styled.div`
   max-width: 600px;
   align-items: center;
   flex-grow: 1;
-`;
-
-const ClearFilterButton = styled.button`
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #999;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  z-index: 10;
-
-  &:hover {
-    color: #666;
-  }
 `;
 
 export default CreditControlPage;
