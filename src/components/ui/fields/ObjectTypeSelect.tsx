@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import Portal from '../../../utils/Portal';
@@ -7,6 +7,8 @@ import useObjectTypes from '../../../api/hooks/useObjectType';
 import type { EntityType } from '../../../api/types/objectType';
 import BaseModal from '../../modal/BASE/modalCRUBase';
 import Pagination from './CustomPagination';
+import DarkCyanButton from '../Buttons/DarkCyanButton';
+import CustomInput from './CustomInput';
 
 interface ObjectTypeSelectProps {
   value: string;
@@ -47,10 +49,9 @@ const ObjectTypeSelect = ({
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isEditing, setIsEditing] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [newName, setNewName] = useState('');
+  const [manageModalMode, setManageModalMode] = useState<'create' | 'edit' | null>(null);
+  const [manageName, setManageName] = useState('');
+  const [editingObject, setEditingObject] = useState<{ id: number; name: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
@@ -66,8 +67,6 @@ const ObjectTypeSelect = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
-        setIsCreating(false);
-        setIsEditing(null);
       }
     };
 
@@ -120,48 +119,19 @@ const ObjectTypeSelect = ({
   };
 
   const handleCreateNew = () => {
-    setIsCreating(true);
-    setNewName('');
-  };
-
-  const handleConfirmCreate = async () => {
-    if (newName.trim()) {
-      const created = await create({
-        name: newName.trim(),
-        entityType: entityType
-      });
-      
-      if (created) {
-        setNewName('');
-        setIsCreating(false);
-        handleObjectTypeSelect(created);
-      }
-    }
-  };
-
-  const handleCancelCreate = () => {
-    setIsCreating(false);
-    setNewName('');
+    setIsModalOpen(false);
+    setIsDropdownOpen(false);
+    setManageModalMode('create');
+    setManageName('');
+    setEditingObject(null);
   };
 
   const handleStartEdit = (objectType: { id: number; name: string }) => {
-    setIsEditing(objectType.id);
-    setEditName(objectType.name);
-  };
-
-  const handleConfirmEdit = async (id: number) => {
-    if (editName.trim()) {
-      const updated = await update(id, { name: editName.trim() });
-      if (updated) {
-        setIsEditing(null);
-        setEditName('');
-      }
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(null);
-    setEditName('');
+    setIsModalOpen(false);
+    setIsDropdownOpen(false);
+    setManageModalMode('edit');
+    setManageName(objectType.name);
+    setEditingObject(objectType);
   };
 
   const handleDelete = async (id: number, name: string) => {
@@ -176,22 +146,10 @@ const ObjectTypeSelect = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (isCreating) {
-        handleConfirmCreate();
-      } else if (isEditing) {
-        handleConfirmEdit(isEditing);
-      } else if (objectTypes.length > 0) {
-        handleObjectTypeSelect(objectTypes[0]);
-      }
+    if (e.key === 'Enter' && objectTypes.length > 0) {
+      handleObjectTypeSelect(objectTypes[0]);
     } else if (e.key === 'Escape') {
-      if (isCreating) {
-        handleCancelCreate();
-      } else if (isEditing) {
-        handleCancelEdit();
-      } else {
-        setIsDropdownOpen(false);
-      }
+      setIsDropdownOpen(false);
     }
   };
 
@@ -201,6 +159,40 @@ const ObjectTypeSelect = ({
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+  };
+
+  const handleCloseManageModal = () => {
+    setManageModalMode(null);
+    setManageName('');
+    setEditingObject(null);
+  };
+
+  const handleManageSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!manageModalMode || !manageName.trim()) return;
+
+    if (manageModalMode === 'create') {
+      const created = await create({
+        name: manageName.trim(),
+        entityType: entityType
+      });
+      
+      if (created) {
+        setManageName('');
+        setManageModalMode(null);
+        handleObjectTypeSelect(created);
+      }
+    } else if (editingObject) {
+      const updated = await update(editingObject.id, { name: manageName.trim() });
+      if (updated) {
+        if (value === editingObject.name) {
+          onChange(updated.name);
+        }
+        setManageModalMode(null);
+        setManageName('');
+        setEditingObject(null);
+      }
+    }
   };
 
   // Расчет пагинированных данных для модального окна
@@ -219,31 +211,33 @@ const ObjectTypeSelect = ({
   return (
     <>
       <InputContainer>
-        <InputWrapper>
-          <StyledInput
-            ref={inputRef}
-            type="text"
-            value={value}
-            readOnly
-            onClick={handleInputClick}
-            onFocus={handleFocus}
-            onKeyDown={handleKeyDown}
-            placeholder={customPlaceholder && !value ? '' : placeholder}
-            hasError={hasError}
-            disabled={disabled || isLoading}
-            {...props}
-          />
-          {value && !disabled && (
-            <ClearButton onClick={handleClearSelection}>
-              <FaTimes size={14} />
-            </ClearButton>
-          )}
-          {!disabled && (
-            <ModalButton onClick={handleOpenModal} title="Открыть список каталогов">
-              <FaList size={14} />
-            </ModalButton>
-          )}
-        </InputWrapper>
+        <ControlsRow>
+          <InputWrapper>
+            <StyledInput
+              ref={inputRef}
+              type="text"
+              value={value}
+              readOnly
+              onClick={handleInputClick}
+              onFocus={handleFocus}
+              onKeyDown={handleKeyDown}
+              placeholder={customPlaceholder && !value ? '' : placeholder}
+              hasError={hasError}
+              disabled={disabled || isLoading}
+              {...props}
+            />
+            {value && !disabled && (
+              <ClearButton type="button" onClick={handleClearSelection}>
+                <FaTimes size={14} />
+              </ClearButton>
+            )}
+            {!disabled && (
+              <ModalButton type="button" onClick={handleOpenModal} title="Открыть список каталогов">
+                <FaList size={14} />
+              </ModalButton>
+            )}
+          </InputWrapper>
+        </ControlsRow>
         
         {customPlaceholder && !value && (
           <PlaceholderLabel isVisible={true}>
@@ -272,69 +266,30 @@ const ObjectTypeSelect = ({
                 <DropdownContent>
                   {isLoading ? (
                     <DropdownItem>Загрузка каталогов...</DropdownItem>
-                  ) : isCreating ? (
-                    <CreateContainer>
-                      <CreateInput
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Введите название каталога"
-                        autoFocus
-                      />
-                      <ActionButtons>
-                        <ActionButton $confirm onClick={handleConfirmCreate}>
-                          ✓
-                        </ActionButton>
-                        <ActionButton $cancel onClick={handleCancelCreate}>
-                          ✕
-                        </ActionButton>
-                      </ActionButtons>
-                    </CreateContainer>
                   ) : displayObjectTypes.length > 0 ? (
                     displayObjectTypes.map((objectType) => (
                       <ObjectTypeItem key={objectType.id}>
-                        {isEditing === objectType.id ? (
-                          <EditContainer>
-                            <EditInput
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              autoFocus
-                            />
-                            <ActionButtons>
-                              <ActionButton $confirm onClick={() => handleConfirmEdit(objectType.id)}>
-                                ✓
-                              </ActionButton>
-                              <ActionButton $cancel onClick={handleCancelEdit}>
-                                ✕
-                              </ActionButton>
-                            </ActionButtons>
-                          </EditContainer>
-                        ) : (
-                          <>
-                            <ObjectTypeName 
-                              onClick={() => handleObjectTypeSelect(objectType)}
+                        <>
+                        <ObjectTypeName 
+                            onClick={() => handleObjectTypeSelect(objectType)}
+                          >
+                            {objectType.name}
+                          </ObjectTypeName>
+                          <ObjectTypeActions>
+                            <CompactActionButton
+                              onClick={() => handleStartEdit(objectType)}
+                              title="Редактировать"
                             >
-                              {objectType.name}
-                            </ObjectTypeName>
-                            <ObjectTypeActions>
-                              <ActionButton 
-                                $edit 
-                                onClick={() => handleStartEdit(objectType)}
-                                title="Редактировать"
-                              >
-                                <FaEdit size={12} />
-                              </ActionButton>
-                              <ActionButton 
-                                $delete 
-                                onClick={() => handleDelete(objectType.id, objectType.name)}
-                                title="Удалить"
-                              >
-                                <FaTrash size={12} />
-                              </ActionButton>
-                            </ObjectTypeActions>
-                          </>
-                        )}
+                              <FaEdit size={12} />
+                            </CompactActionButton>
+                            <CompactActionButton
+                              onClick={() => handleDelete(objectType.id, objectType.name)}
+                              title="Удалить"
+                            >
+                              <FaTrash size={12} />
+                            </CompactActionButton>
+                          </ObjectTypeActions>
+                        </>
                       </ObjectTypeItem>
                     ))
                   ) : (
@@ -343,12 +298,10 @@ const ObjectTypeSelect = ({
                 </DropdownContent>
                 
                 <DropdownFooter>
-                  {!isCreating && (
-                    <AddButton onClick={handleCreateNew}>
-                      <FaPlus size={12} />
-                      <span>Создать новый каталог</span>
-                    </AddButton>
-                  )}
+                  <AddButton type="button" onClick={handleCreateNew}>
+                    <FaPlus size={12} />
+                    <span>Создать новый каталог</span>
+                  </AddButton>
                 </DropdownFooter>
               </DropdownMenu>
             </Portal>
@@ -373,32 +326,17 @@ const ObjectTypeSelect = ({
             saveButtonText=""
           >
             <ModalContentWrapper>
-              {/* Форма создания нового каталога */}
-              <CreateSection>
-                <SectionTitle>Создать новый каталог</SectionTitle>
-                <CreateForm>
-                  <ModalInput
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Введите название каталога"
-                  />
-                  <ModalButtonGroup>
-                    <ModalActionButton 
-                      $primary 
-                      onClick={handleConfirmCreate}
-                      disabled={!newName.trim()}
-                    >
-                      Создать
-                    </ModalActionButton>
-                    <ModalActionButton 
-                      $secondary 
-                      onClick={handleCancelCreate}
-                    >
-                      Отмена
-                    </ModalActionButton>
-                  </ModalButtonGroup>
-                </CreateForm>
-              </CreateSection>
+              {/* Кнопка создания каталога сверху справа */}
+              <TopActions>
+                <ModalActionButton 
+                  type="button"
+                  $primary 
+                  onClick={handleCreateNew}
+                >
+                  <FaPlus size={14} />
+                  Создать каталог
+                </ModalActionButton>
+              </TopActions>
 
               {/* Список существующих каталогов */}
               <ListSection>
@@ -409,54 +347,27 @@ const ObjectTypeSelect = ({
                     <ObjectTypeList>
                       {paginatedObjectTypes.map((objectType) => (
                         <ModalObjectTypeItem key={objectType.id}>
-                          {isEditing === objectType.id ? (
-                            <EditContainer>
-                              <ModalEditInput
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                autoFocus
-                              />
-                              <ModalActionButtons>
-                                <ModalActionButton 
-                                  $confirm 
-                                  onClick={() => handleConfirmEdit(objectType.id)}
-                                  disabled={!editName.trim()}
-                                >
-                                  ✓
-                                </ModalActionButton>
-                                <ModalActionButton 
-                                  $cancel 
-                                  onClick={handleCancelEdit}
-                                >
-                                  ✕
-                                </ModalActionButton>
-                              </ModalActionButtons>
-                            </EditContainer>
-                          ) : (
-                            <>
-                              <ModalObjectTypeName 
-                                onClick={() => handleObjectTypeSelect(objectType)}
+                          <>
+                            <ModalObjectTypeName 
+                              onClick={() => handleObjectTypeSelect(objectType)}
+                            >
+                              {objectType.name}
+                            </ModalObjectTypeName>
+                            <ModalObjectTypeActions>
+                              <CompactActionButton
+                                onClick={() => handleStartEdit(objectType)}
+                                title="Редактировать"
                               >
-                                {objectType.name}
-                              </ModalObjectTypeName>
-                              <ModalObjectTypeActions>
-                                <ModalActionButton 
-                                  $edit 
-                                  onClick={() => handleStartEdit(objectType)}
-                                  title="Редактировать"
-                                >
-                                  <FaEdit size={14} />
-                                </ModalActionButton>
-                                <ModalActionButton 
-                                  $delete 
-                                  onClick={() => handleDelete(objectType.id, objectType.name)}
-                                  title="Удалить"
-                                >
-                                  <FaTrash size={14} />
-                                </ModalActionButton>
-                              </ModalObjectTypeActions>
-                            </>
-                          )}
+                                <FaEdit size={14} />
+                              </CompactActionButton>
+                              <CompactActionButton
+                                onClick={() => handleDelete(objectType.id, objectType.name)}
+                                title="Удалить"
+                              >
+                                <FaTrash size={14} />
+                              </CompactActionButton>
+                            </ModalObjectTypeActions>
+                          </>
                         </ModalObjectTypeItem>
                       ))}
                     </ObjectTypeList>
@@ -481,6 +392,32 @@ const ObjectTypeSelect = ({
           </BaseModal>
         )}
       </AnimatePresence>
+
+      {/* Модалка создания/редактирования каталога */}
+      <AnimatePresence>
+        {manageModalMode && (
+          <BaseModal
+            title={manageModalMode === 'create' ? 'Создать каталог' : 'Редактировать каталог'}
+            onClose={handleCloseManageModal}
+            onCancel={handleCloseManageModal}
+            onSave={handleManageSubmit}
+            isSaveDisabled={!manageName.trim()}
+            saveButtonText={manageModalMode === 'create' ? 'Создать' : 'Сохранить'}
+            width="520px"
+            maxHeight="60vh"
+          >
+            <CreateForm>
+              <CustomInput
+                value={manageName}
+                onChange={(e) => setManageName(e.target.value)}
+                placeholder="Введите название каталога"
+                autoFocus
+              />
+            </CreateForm>
+          </BaseModal>
+        )}
+      </AnimatePresence>
+
     </>
   );
 };
@@ -488,9 +425,18 @@ const ObjectTypeSelect = ({
 // Обновленные и новые стили
 const InputContainer = styled.div`
   position: relative;
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   margin-right: auto;
+  gap: 8px;
+`;
+
+const ControlsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 `;
 
 const InputWrapper = styled.div`
@@ -629,7 +575,8 @@ const DropdownItem = styled.div`
 const ObjectTypeItem = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 8px 12px;
   color: black;
   border-bottom: 1px solid #f1f1f1;
@@ -645,6 +592,8 @@ const ObjectTypeName = styled.div`
   flex: 1;
   cursor: pointer;
   padding: 4px 0;
+  text-align: left;
+  margin-right: auto;
   &:hover {
     color: rgba(0, 125, 136, 1);
   }
@@ -654,93 +603,14 @@ const ObjectTypeActions = styled.div`
   display: flex;
   gap: 4px;
   opacity: 0;
+  margin-left: auto;
+  align-self: stretch;
+  align-items: stretch;
   transition: opacity 0.2s ease;
 
   ${ObjectTypeItem}:hover & {
     opacity: 1;
   }
-`;
-
-const ActionButton = styled.button<{ $confirm?: boolean; $cancel?: boolean; $edit?: boolean; $delete?: boolean }>`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${props => {
-    if (props.$confirm) return 'rgba(0, 125, 136, 1)';
-    if (props.$cancel) return 'rgba(80, 85, 92, 1)';
-    if (props.$edit) return 'rgba(80, 85, 92, 1)';
-    if (props.$delete) return 'rgba(80, 85, 92, 1)';
-    return '#6c757d';
-  }};
-  
-  &:hover {
-    background-color: ${props => {
-      if (props.$confirm) return 'rgba(40, 167, 69, 0.1)';
-      if (props.$cancel) return 'rgba(220, 53, 69, 0.1)';
-      if (props.$edit) return 'rgba(0, 123, 255, 0.1)';
-      if (props.$delete) return 'rgba(220, 53, 69, 0.1)';
-      return '#f8f9fa';
-    }};
-  }
-`;
-
-const CreateContainer = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  gap: 8px;
-`;
-
-const EditContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const CreateInput = styled.input`
-  flex: 1;
-  padding: 4px 8px;
-  border: 1px solid rgba(0, 125, 136, 1);
-  color: black;
-  background: white;
-  border-radius: 5px;
-  font-size: 14px;
-  
-  outline: none;
-  
-  transition: border-color 0.2s ease;
-  
-  &:focus {
-    border-color: rgba(0, 125, 136, 0.8);
-  }
-`;
-
-const EditInput = styled.input`
-  flex: 1;
-  padding: 4px 8px;
-  border: 1px solid rgba(0, 125, 136, 1);
-  color: black;
-  background: white;
-  border-radius: 5px;
-  font-size: 14px;
-  
-  outline: none;
-  
-  transition: border-color 0.2s ease;
-  
-  &:focus {
-    border-color: rgba(0, 125, 136, 0.8);
-  }
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 2px;
 `;
 
 const DropdownFooter = styled.div`
@@ -772,11 +642,10 @@ const ModalContentWrapper = styled.div`
   height: 100%;
 `;
 
-const CreateSection = styled.div`
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
+const TopActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 `;
 
 const ListSection = styled.div`
@@ -797,27 +666,14 @@ const CreateForm = styled.div`
   display: flex;
   gap: 12px;
   align-items: center;
-`;
-
-const ModalInput = styled.input`
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid rgba(0, 125, 136, 1);
-  border-radius: 5px;
-  font-size: 14px;
-  color: black;
-  background: white;
-  outline: none;
-  
-  &:focus {
-    border-color: rgba(0, 125, 136, 0.8);
-    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.2);
-  }
+  margin-top: 12px;
 `;
 
 const ModalButtonGroup = styled.div`
   display: flex;
   gap: 8px;
+  justify-content: flex-start;
+  align-items: center;
 `;
 
 const ModalActionButton = styled.button<{ 
@@ -928,7 +784,8 @@ const ObjectTypeList = styled.div`
 const ModalObjectTypeItem = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 12px 16px;
   color: black;
   border-bottom: 1px solid #f1f1f1;
@@ -948,6 +805,8 @@ const ModalObjectTypeName = styled.div`
   cursor: pointer;
   padding: 4px 0;
   font-size: 14px;
+  text-align: left;
+  margin-right: auto;
   
   &:hover {
     color: rgba(0, 125, 136, 1);
@@ -957,27 +816,19 @@ const ModalObjectTypeName = styled.div`
 const ModalObjectTypeActions = styled.div`
   display: flex;
   gap: 8px;
+  align-items: stretch;
+  justify-content: flex-start;
+  margin-left: auto;
 `;
 
-const ModalActionButtons = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const ModalEditInput = styled.input`
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid rgba(0, 125, 136, 1);
-  border-radius: 5px;
-  font-size: 14px;
-  color: black;
-  background: white;
-  outline: none;
-  
-  &:focus {
-    border-color: rgba(0, 125, 136, 0.8);
-    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.2);
-  }
+const CompactActionButton = styled(DarkCyanButton)`
+  padding: 8px 14px;
+  height: 36px;
+  min-width: 64px;
+  font-size: 12px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
 `;
 
 const PaginationContainer = styled.div`
