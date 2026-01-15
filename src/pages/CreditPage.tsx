@@ -54,6 +54,7 @@ const CreditPage = () => {
   const [contractNumber, setContractNumber] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [investorName, setInvestorName] = useState('');
+  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(null);
   const [clientFullName, setClientFullName] = useState('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -403,7 +404,8 @@ const CreditPage = () => {
       pageSize: itemsPerPage,
       name: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
-      investorNickname: investorName || undefined,
+      investorNickname: selectedInvestmentSource?.type === 'pool' ? undefined : (investorName || undefined),
+      investorPoolId: selectedInvestmentSource?.type === 'pool' ? selectedInvestmentSource.id : undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
       dateTo: toDate ? new Date(toDate) : undefined,
       CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
@@ -415,7 +417,7 @@ const CreditPage = () => {
     };
 
     await getCredits(params);
-  }, [currentPage, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber]);
+  }, [currentPage, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
 
   useEffect(() => {
     loadCredits();
@@ -810,11 +812,19 @@ const CreditPage = () => {
             value={investorName}
             onChange={(name) => {
               setInvestorName(name);
+              setSelectedInvestmentSource(null);
               setCurrentPage(1);
             }}
             onInvestorSelect={(investor) => {
-              console.log('Selected investor:', investor);
+              setInvestorName(investor.nickname || investor.fullName || '');
+              setSelectedInvestmentSource({
+                type: investor.type || 'investor',
+                id: investor.id,
+                name: investor.nickname || investor.fullName || ''
+              });
+              setCurrentPage(1);
             }}
+            includePools
           />
         </InputWrapper>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import useInvestor from '../../../api/hooks/useInvestor';
+import useInvestorPool from '../../../api/hooks/useInvestorPool';
 import Portal from '../../../utils/Portal';
 import InvestorSelectModal from '../../modal/CrudInherited/InvestorSelectModal';
 import { FaTimes } from 'react-icons/fa';
@@ -17,12 +18,14 @@ interface InvestorSelectProps {
     investorPie: number;
     investmentAmount: number;
     balance: number;
+    type?: 'investor' | 'pool';
   }) => void;
   placeholder?: string;
   customPlaceholder?: string;
   hasError?: boolean;
   errorMessage?: string;
   disabled?: boolean;
+  includePools?: boolean;
 }
 
 const InvestorSelect = ({
@@ -34,11 +37,13 @@ const InvestorSelect = ({
   hasError = false,
   errorMessage,
   disabled = false,
+  includePools = false,
   ...props
 }: InvestorSelectProps) => {
   const { getInvestors } = useInvestor();
+  const { getInvestorPools } = useInvestorPool();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [investors, setInvestors] = useState<{ id: number; name: string }[]>([]);
+  const [investors, setInvestors] = useState<{ id: number; name: string; type: 'investor' | 'pool' }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showInvestorModal, setShowInvestorModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -49,17 +54,27 @@ const InvestorSelect = ({
     const fetchInvestors = async () => {
       setIsLoading(true);
       try {
-        const data = await getInvestors({ pageSize: 20, name: value });
-        if (data) {
-          setInvestors(data.items.map(item => ({ id: item.id, name: item.nickname })));
-        }
+        const [investorData, poolsData] = await Promise.all([
+          getInvestors({ pageSize: 20, name: value }),
+          includePools ? getInvestorPools({ pageSize: 20, name: value }) : Promise.resolve(null)
+        ]);
+
+        const investorItems = investorData?.items.map(item => ({ id: item.id, name: item.nickname, type: 'investor' as const })) || [];
+        const poolItems = includePools 
+          ? (poolsData?.items.map(pool => ({ id: pool.id, name: pool.name, type: 'pool' as const })) || [])
+          : [];
+
+        setInvestors([...investorItems, ...poolItems]);
+      } catch (err) {
+        console.error('Ошибка загрузки инвесторов/пулов', err);
+        setInvestors([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchInvestors();
-  }, [value, getInvestors]);
+  }, [value, getInvestors, getInvestorPools, includePools]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -93,10 +108,19 @@ const InvestorSelect = ({
     updateMenuPosition();
   };
 
-  const handleInvestorSelect = (investor: { id: number; name: string }) => {
+  const handleInvestorSelect = (investor: { id: number; name: string; type: 'investor' | 'pool' }) => {
     onChange(investor.name);
     if (onInvestorSelect) {
-      onInvestorSelect(investor);
+      onInvestorSelect({
+        id: investor.id,
+        nickname: investor.name,
+        fullName: investor.name,
+        phoneNumber: '',
+        investorPie: 0,
+        investmentAmount: 0,
+        balance: 0,
+        type: investor.type
+      });
     }
     setIsDropdownOpen(false);
   };
@@ -111,7 +135,8 @@ const InvestorSelect = ({
         phoneNumber: '',
         investorPie: 0,
         investmentAmount: 0,
-        balance: 0
+        balance: 0,
+        type: 'investor'
       });
     }
   };
@@ -129,8 +154,9 @@ const InvestorSelect = ({
     investorPie: number;
     investmentAmount: number;
     balance: number;
+    type: 'investor' | 'pool';
     }) => {
-    onChange(selectedInvestor.nickname);
+    onChange(selectedInvestor.nickname || selectedInvestor.fullName || '');
     if (onInvestorSelect) {
         onInvestorSelect(selectedInvestor);
     }
@@ -195,11 +221,12 @@ const InvestorSelect = ({
                     <DropdownItem>Загрузка инвесторов...</DropdownItem>
                   ) : investors.length > 0 ? (
                     investors.map((investor) => (
-                      <DropdownItem
-                        key={investor.id}
-                        onClick={() => handleInvestorSelect(investor)}
-                      >
+                    <DropdownItem
+                      key={`${investor.type}-${investor.id}`}
+                      onClick={() => handleInvestorSelect(investor)}
+                    >
                         {investor.name}
+                        {investor.type === 'pool' ? ' (пул)' : ''}
                       </DropdownItem>
                     ))
                   ) : (
@@ -226,6 +253,7 @@ const InvestorSelect = ({
         isOpen={showInvestorModal}
         onClose={() => setShowInvestorModal(false)}
         onSubmit={handleInvestorSelectFromModal}
+        includePools={includePools}
       />
     </>
   );
