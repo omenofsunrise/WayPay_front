@@ -435,7 +435,14 @@ useEffect(() => {
     setGuarantorClient(null);
     setInvestor(null);
     setSelectedPool(null);
-    setProducts([]);
+    setProducts([{
+      id: Date.now(),
+      name: ``,
+      price: 0,
+      quantity: 1,
+      markup: 0,
+      totalPrice: 0
+    }]);
     setTotalSum(0);
     setInitialPaymentPercent('');
     setInitialPaymentAmount('');
