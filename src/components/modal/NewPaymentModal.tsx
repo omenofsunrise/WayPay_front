@@ -10,7 +10,6 @@ import CustomCalendar from '../ui/fields/CustomCalendar';
 import BankCardSelect from '../ui/fields/BankCardSelect';
 import { useAuth } from '../../сontext/AuthContext';
 import { formatPhoneHref } from '../../utils/phoneUtils';
-import { formatPhoneHref } from '../../utils/phoneUtils';
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -456,7 +455,7 @@ const InputGroup = styled.div`
 const PhoneLink = styled.a`
   display: inline-flex;
   align-items: center;
-  padding: 10px 12px;
+  padding: 0px 12px;
   border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 5px;
   font-size: 14px;

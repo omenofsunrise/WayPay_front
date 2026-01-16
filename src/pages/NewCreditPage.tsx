@@ -1005,16 +1005,8 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     <PageLayout>
       <TitleField style={{ marginTop: "0" }}>
         <CustomTitle>{isEditMode ? 'Редактирование договора' : 'Новый договор'}</CustomTitle>
+        <DarkCyanButton onClick={resetDraft}>Сбросить черновик</DarkCyanButton>
       </TitleField>
-
-      {!isEditMode && hasDraft && (
-        <DraftBanner>
-          <span>Черновик сохранен локально</span>
-          <DraftActions>
-            <DarkCyanButton onClick={resetDraft}>Сбросить черновик</DarkCyanButton>
-          </DraftActions>
-        </DraftBanner>
-      )}
 
       <ContentWrapper>
         <CheckboxContainer>

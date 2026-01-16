@@ -26,7 +26,6 @@ import paymentService from '../../api/services/paymentService';
 import NewPaymentModal from './NewPaymentModal';
 import { sendWhatsAppMessage } from '../../utils/sendWhatsAppMessage';
 import { formatPhoneHref } from '../../utils/phoneUtils';
-import { formatPhoneHref } from '../../utils/phoneUtils';
 
 interface ViewCreditModalProps {
   id: number;
