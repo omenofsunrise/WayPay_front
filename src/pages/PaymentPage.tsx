@@ -285,11 +285,6 @@ const PaymentPage = () => {
         
         if (!payment) return;
         
-        if (payment.accepted) {
-            alert('Нельзя удалить подтверждённый платёж');
-            return;
-        }
-        
         if (window.confirm('Вы уверены, что хотите удалить этот платёж?')) {
             try {
                 await deletePayment(payment.id);
@@ -410,7 +405,8 @@ const PaymentPage = () => {
             shouldShow: (rowData: any[]) => {
                 const rowIndex = tableData.indexOf(rowData);
                 const payment = paymentsData?.items[rowIndex];
-                return payment && !payment.accepted;
+                return payment && !payment.accepted || 
+                    authInfo?.employee.permissions.includes('MANAGE_ACCOUNTING');
             }
         });
     }
