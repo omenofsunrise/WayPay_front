@@ -26,6 +26,18 @@ interface ObjectTypeSelectProps {
   entityType?: EntityType;
 }
 
+interface PaginationResponse {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  items: Array<{
+    id: number;
+    name: string;
+    entityType: EntityType;
+  }>;
+}
+
 const ObjectTypeSelect = ({
   value,
   onChange,
@@ -39,7 +51,6 @@ const ObjectTypeSelect = ({
   ...props
 }: ObjectTypeSelectProps) => {
   const { 
-    objectTypes, 
     getAll, 
     create, 
     update, 
@@ -47,21 +58,48 @@ const ObjectTypeSelect = ({
     isLoading 
   } = useObjectTypes();
   
+  const [objectTypesData, setObjectTypesData] = useState<PaginationResponse | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [manageModalMode, setManageModalMode] = useState<'create' | 'edit' | null>(null);
   const [manageName, setManageName] = useState('');
   const [editingObject, setEditingObject] = useState<{ id: number; name: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [dropdownCurrentPage, setDropdownCurrentPage] = useState(1);
+  const itemsPerPage = 16; // Для dropdown (6 как в примере)
+  const modalItemsPerPage = 6; // Для модального окна
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
 
+  // Получение данных с пагинацией
+  const fetchObjectTypes = async (page: number, pageSize: number = itemsPerPage, isForModal: boolean = false) => {
+    try {
+      const data = await getAll({ 
+        entityType, 
+        pageSize, 
+        page 
+      });
+      if (data) {
+        if (isForModal) {
+          setObjectTypesData(data);
+        } else {
+          // Для dropdown используем только первую страницу
+          if (page === 1) {
+            setObjectTypesData(data);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching object types:', error);
+    }
+  };
+
   useEffect(() => {
-    getAll({ entityType, pageSize: 6 });
-  }, [getAll, entityType]);
+    // Загружаем первую страницу для dropdown при монтировании
+    fetchObjectTypes(1, itemsPerPage);
+  }, [entityType]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -89,6 +127,8 @@ const ObjectTypeSelect = ({
     if (!disabled) {
       setIsDropdownOpen(true);
       updateMenuPosition();
+      // Обновляем данные при открытии dropdown
+      fetchObjectTypes(1, itemsPerPage);
     }
   };
 
@@ -138,6 +178,12 @@ const ObjectTypeSelect = ({
     if (window.confirm(`Вы уверены, что хотите удалить каталог "${name}"?`)) {
       try {
         await deleteObjectType(id);
+        // Обновляем данные после удаления
+        if (isModalOpen) {
+          fetchObjectTypes(currentPage, modalItemsPerPage, true);
+        } else {
+          fetchObjectTypes(1, itemsPerPage);
+        }
       }
       catch {
         window.alert("Невозможно удалить категорию к которой привязаны договоры");
@@ -146,8 +192,9 @@ const ObjectTypeSelect = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && objectTypes.length > 0) {
-      handleObjectTypeSelect(objectTypes[0]);
+    const items = objectTypesData?.items || [];
+    if (e.key === 'Enter' && items.length > 0) {
+      handleObjectTypeSelect(items[0]);
     } else if (e.key === 'Escape') {
       setIsDropdownOpen(false);
     }
@@ -155,10 +202,13 @@ const ObjectTypeSelect = ({
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
+    // Загружаем первую страницу для модального окна
+    fetchObjectTypes(1, modalItemsPerPage, true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setCurrentPage(1);
   };
 
   const handleCloseManageModal = () => {
@@ -180,6 +230,12 @@ const ObjectTypeSelect = ({
       if (created) {
         setManageName('');
         setManageModalMode(null);
+        // Обновляем данные после создания
+        if (isModalOpen) {
+          fetchObjectTypes(currentPage, modalItemsPerPage, true);
+        } else {
+          fetchObjectTypes(1, itemsPerPage);
+        }
         handleObjectTypeSelect(created);
       }
     } else if (editingObject) {
@@ -191,22 +247,29 @@ const ObjectTypeSelect = ({
         setManageModalMode(null);
         setManageName('');
         setEditingObject(null);
+        // Обновляем данные после редактирования
+        if (isModalOpen) {
+          fetchObjectTypes(currentPage, modalItemsPerPage, true);
+        } else {
+          fetchObjectTypes(1, itemsPerPage);
+        }
       }
     }
   };
 
-  // Расчет пагинированных данных для модального окна
-  const paginatedObjectTypes = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return objectTypes.slice(startIndex, endIndex);
-  }, [objectTypes, currentPage, itemsPerPage]);
-
-  const handlePageChange = (page: number) => {
+  // Обработчики для пагинации в модальном окне
+  const handleModalPageChange = (page: number) => {
     setCurrentPage(page);
+    fetchObjectTypes(page, modalItemsPerPage, true);
   };
 
-  const displayObjectTypes = objectTypes;
+  // Обработчик для пагинации в dropdown
+  const handleDropdownPageChange = (page: number) => {
+    setDropdownCurrentPage(page);
+    fetchObjectTypes(page, itemsPerPage);
+  };
+
+  const displayObjectTypes = objectTypesData?.items || [];
 
   return (
     <>
@@ -267,31 +330,33 @@ const ObjectTypeSelect = ({
                   {isLoading ? (
                     <DropdownItem>Загрузка каталогов...</DropdownItem>
                   ) : displayObjectTypes.length > 0 ? (
-                    displayObjectTypes.map((objectType) => (
-                      <ObjectTypeItem key={objectType.id}>
-                        <>
-                        <ObjectTypeName 
-                            onClick={() => handleObjectTypeSelect(objectType)}
-                          >
-                            {objectType.name}
-                          </ObjectTypeName>
-                          <ObjectTypeActions>
-                            <CompactActionButton
-                              onClick={() => handleStartEdit(objectType)}
-                              title="Редактировать"
+                    <>
+                      {displayObjectTypes.map((objectType) => (
+                        <ObjectTypeItem key={objectType.id}>
+                          <>
+                            <ObjectTypeName 
+                              onClick={() => handleObjectTypeSelect(objectType)}
                             >
-                              <FaEdit size={12} />
-                            </CompactActionButton>
-                            <CompactActionButton
-                              onClick={() => handleDelete(objectType.id, objectType.name)}
-                              title="Удалить"
-                            >
-                              <FaTrash size={12} />
-                            </CompactActionButton>
-                          </ObjectTypeActions>
-                        </>
-                      </ObjectTypeItem>
-                    ))
+                              {objectType.name}
+                            </ObjectTypeName>
+                            <ObjectTypeActions>
+                              <CompactActionButton
+                                onClick={() => handleStartEdit(objectType)}
+                                title="Редактировать"
+                              >
+                                <FaEdit size={12} />
+                              </CompactActionButton>
+                              <CompactActionButton
+                                onClick={() => handleDelete(objectType.id, objectType.name)}
+                                title="Удалить"
+                              >
+                                <FaTrash size={12} />
+                              </CompactActionButton>
+                            </ObjectTypeActions>
+                          </>
+                        </ObjectTypeItem>
+                      ))}
+                    </>
                   ) : (
                     <DropdownItem>Каталоги не найдены</DropdownItem>
                   )}
@@ -342,10 +407,10 @@ const ObjectTypeSelect = ({
               <ListSection>
                 {isLoading ? (
                   <LoadingMessage>Загрузка каталогов...</LoadingMessage>
-                ) : paginatedObjectTypes.length > 0 ? (
+                ) : displayObjectTypes.length > 0 ? (
                   <>
                     <ObjectTypeList>
-                      {paginatedObjectTypes.map((objectType) => (
+                      {displayObjectTypes.map((objectType) => (
                         <ModalObjectTypeItem key={objectType.id}>
                           <>
                             <ModalObjectTypeName 
@@ -372,14 +437,14 @@ const ObjectTypeSelect = ({
                       ))}
                     </ObjectTypeList>
                     
-                    {/* Пагинация */}
-                    {objectTypes.length > itemsPerPage && (
+                    {/* Пагинация для модального окна */}
+                    {objectTypesData && objectTypesData.totalPages > 1 && (
                       <PaginationContainer>
                         <Pagination
-                          total={objectTypes.length}
+                          total={objectTypesData.totalCount}
                           current={currentPage}
-                          onChange={handlePageChange}
-                          itemsPerPage={itemsPerPage}
+                          onChange={handleModalPageChange}
+                          itemsPerPage={modalItemsPerPage}
                         />
                       </PaginationContainer>
                     )}
@@ -618,6 +683,11 @@ const DropdownFooter = styled.div`
   border-top: 1px solid rgba(209, 213, 219, 1);
 `;
 
+const DropdownPaginationContainer = styled.div`
+  padding: 8px 12px;
+  border-top: 1px solid #f1f1f1;
+`;
+
 const AddButton = styled.button`
   display: flex;
   align-items: center;
@@ -655,13 +725,6 @@ const ListSection = styled.div`
   min-height: 0;
 `;
 
-const SectionTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 12px;
-`;
-
 const CreateForm = styled.div`
   display: flex;
   gap: 12px;
@@ -669,21 +732,7 @@ const CreateForm = styled.div`
   margin-top: 12px;
 `;
 
-const ModalButtonGroup = styled.div`
-  display: flex;
-  gap: 8px;
-  justify-content: flex-start;
-  align-items: center;
-`;
-
-const ModalActionButton = styled.button<{ 
-  $primary?: boolean; 
-  $secondary?: boolean; 
-  $confirm?: boolean; 
-  $cancel?: boolean;
-  $edit?: boolean;
-  $delete?: boolean;
-}>`
+const ModalActionButton = styled.button<{ $primary?: boolean }>`
   padding: 8px 16px;
   border-radius: 5px;
   font-size: 14px;
@@ -708,67 +757,6 @@ const ModalActionButton = styled.button<{
     &:disabled {
       background-color: rgba(0, 125, 136, 0.5);
       cursor: not-allowed;
-    }
-  `}
-
-  ${({ $secondary }) => $secondary && `
-    background-color: rgba(209, 213, 219, 1);
-    color: black;
-    
-    &:hover {
-      background-color: rgba(209, 213, 219, 0.8);
-    }
-  `}
-
-  ${({ $confirm }) => $confirm && `
-    background: none;
-    color: rgba(0, 125, 136, 1);
-    border: 1px solid rgba(0, 125, 136, 1);
-    min-width: auto;
-    padding: 6px 12px;
-    
-    &:hover:not(:disabled) {
-      background-color: rgba(0, 125, 136, 0.1);
-    }
-  `}
-
-  ${({ $cancel }) => $cancel && `
-    background: none;
-    color: rgba(80, 85, 92, 1);
-    border: 1px solid rgba(80, 85, 92, 1);
-    min-width: auto;
-    padding: 6px 12px;
-    
-    &:hover {
-      background-color: rgba(80, 85, 92, 0.1);
-    }
-  `}
-
-  ${({ $edit }) => $edit && `
-    background: none;
-    color: rgba(80, 85, 92, 1);
-    border: 1px solid rgba(80, 85, 92, 1);
-    min-width: auto;
-    padding: 6px;
-    
-    &:hover {
-      background-color: rgba(0, 123, 255, 0.1);
-      color: rgba(0, 123, 255, 1);
-      border-color: rgba(0, 123, 255, 1);
-    }
-  `}
-
-  ${({ $delete }) => $delete && `
-    background: none;
-    color: rgba(80, 85, 92, 1);
-    border: 1px solid rgba(80, 85, 92, 1);
-    min-width: auto;
-    padding: 6px;
-    
-    &:hover {
-      background-color: rgba(220, 53, 69, 0.1);
-      color: rgba(220, 53, 69, 1);
-      border-color: rgba(220, 53, 69, 1);
     }
   `}
 `;
