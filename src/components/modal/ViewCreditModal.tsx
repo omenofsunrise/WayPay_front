@@ -33,20 +33,133 @@ interface ViewCreditModalProps {
   onClose: () => void;
 }
 
+// Интерфейс для заметки с загруженным файлом
+interface NoteWithFile extends Note {
+  fileBase64?: string;
+  fileName?: string;
+  isLoading?: boolean;
+}
+
 const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   id,
   isOpen,
   onClose
 }) => {
-  const { notes, isLoading: isNotesLoading, error: notesError, getCreditNotes, createNote, deleteNote } = useNotes();
+  const { 
+    notes: initialNotes, 
+    isLoading: isNotesLoading, 
+    error: notesError, 
+    getCreditNotes, 
+    createNote, 
+    deleteNote, 
+    getFileByNote 
+  } = useNotes();
+  
   const { getCredits } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
+  const [notes, setNotes] = useState<NoteWithFile[]>([]);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [noteImages, setNoteImages] = useState<string[]>([]);
   const { createPrivateChat } = useChat();
+  
+  // Обновляем состояние заметок при загрузке из API
+  useEffect(() => {
+    if (initialNotes) {
+      // Преобразуем заметки и добавляем флаг загрузки файлов
+      const notesWithFiles: NoteWithFile[] = initialNotes.map(note => ({
+        ...note,
+        isLoading: false
+      }));
+      setNotes(notesWithFiles);
+      
+      // Сразу загружаем файлы для всех заметок, которые имеют fileId
+      loadFilesForNotes(notesWithFiles);
+    }
+  }, [initialNotes]);
+
+  // Загрузка файлов для заметок
+  const loadFilesForNotes = async (notesToLoad: NoteWithFile[]) => {
+    for (const note of notesToLoad) {
+        await loadNoteFile(note.id);
+    }
+  };
+
+  // Загрузка файла для конкретной заметки
+  const loadNoteFile = async (noteId: number) => {
+    try {
+      // Устанавливаем флаг загрузки
+      setNotes(prevNotes => 
+        prevNotes.map(note => 
+          note.id === noteId 
+            ? { ...note, isLoading: true } 
+            : note
+        )
+      );
+
+      const fileData = await getFileByNote(noteId);
+      
+      if (fileData) {
+        // Обновляем заметку с загруженным файлом
+        setNotes(prevNotes => 
+          prevNotes.map(note => {
+            if (note.id === noteId) {
+              // Определяем тип файла по имени или используем дефолтный
+              let fileName = note.fileName || `file_${noteId}`;
+              let fileBase64 = fileData;
+              
+              // Если это изображение, добавляем data URL prefix
+              if (isImageFile(fileName)) {
+                const extension = fileName.split('.').pop()?.toLowerCase();
+                const mimeType = getMimeTypeFromExtension(extension);
+                fileBase64 = `data:${mimeType};base64,${fileData}`;
+              }
+              
+              return { 
+                ...note, 
+                fileBase64, 
+                fileName,
+                isLoading: false 
+              };
+            }
+            return note;
+          })
+        );
+      }
+    } catch (error) {
+      console.error(`Error loading file for note ${noteId}:`, error);
+      setNotes(prevNotes => 
+        prevNotes.map(note => 
+          note.id === noteId 
+            ? { ...note, isLoading: false } 
+            : note
+        )
+      );
+    }
+  };
+
+  // Определение MIME типа по расширению файла
+  const getMimeTypeFromExtension = (extension?: string): string => {
+    const mimeTypes: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'webp': 'image/webp',
+      'pdf': 'application/pdf',
+      'txt': 'text/plain',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    };
+    
+    return mimeTypes[extension?.toLowerCase() || ''] || 'application/octet-stream';
+  };
+
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -69,12 +182,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-      setContextMenu({
-        visible: true,
-        x: event.clientX,
-        y: event.clientY,
-        rowIndex
-      });
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      rowIndex
+    });
   };
 
   useEffect(() => {
@@ -109,30 +222,30 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
 
   const { 
-      data: paymentsData, 
-      getPaymentsByCreditId,
-      createPayment
+    data: paymentsData, 
+    getPaymentsByCreditId,
+    createPayment
   } = usePayment();
 
   const { 
-      data: soldProductsData, 
-      getSoldProducts
+    data: soldProductsData, 
+    getSoldProducts
   } = useSoldProducts();
   
   const { 
-      scheduleData, 
-      getByCreditId: getSchedules,
-      markAsNotified
+    scheduleData, 
+    getByCreditId: getSchedules,
+    markAsNotified
   } = useSchedule();
 
   const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
-      try {
-          const result = await paymentService.getPaymentTab(paymentId);
-          return result;
-      } catch (err) {
-          console.error('Ошибка при получении данных для документа:', err);
-          return null;
-      }
+    try {
+      const result = await paymentService.getPaymentTab(paymentId);
+      return result;
+    } catch (err) {
+      console.error('Ошибка при получении данных для документа:', err);
+      return null;
+    }
   }, []);
 
   const handleOpenPaymentFromSchedule = (rowData: any[], rowIndex: number) => {
@@ -206,43 +319,43 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
 
   const loadPayments = useCallback(async () => {
-      if (id) {
-          const params: PaymentByCreditParams = {
-              creditId: id,
-              page: 1,
-              pageSize: 100
-          };
-          await getPaymentsByCreditId(params);
-      }
+    if (id) {
+      const params: PaymentByCreditParams = {
+        creditId: id,
+        page: 1,
+        pageSize: 100
+      };
+      await getPaymentsByCreditId(params);
+    }
   }, [getPaymentsByCreditId, id]);
 
   const loadSoldProducts = useCallback(async () => {
-      if (id) {
-          await getSoldProducts(id);
-      }
+    if (id) {
+      await getSoldProducts(id);
+    }
   }, [getSoldProducts, id]);
 
   const loadSchedules = useCallback(async () => {
-      if (id) {
-          const params: ScheduleParams = {
-              includePayed: true,
-              page: 1,
-              pageSize: 100
-          };
-          await getSchedules(id, params);
-      }
+    if (id) {
+      const params: ScheduleParams = {
+        includePayed: true,
+        page: 1,
+        pageSize: 100
+      };
+      await getSchedules(id, params);
+    }
   }, [getSchedules, id]);
 
   useEffect(() => {
-      loadSoldProducts();
+    loadSoldProducts();
   }, [loadSoldProducts]);
 
   useEffect(() => {
-      loadPayments();
+    loadPayments();
   }, [loadPayments]);
 
   useEffect(() => {
-      loadSchedules();
+    loadSchedules();
   }, [loadSchedules]);
 
   useEffect(() => {
@@ -258,7 +371,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           }
         } catch (error) {
           console.error('Error fetching data:', error);
-        } finally {
         }
       };
 
@@ -267,13 +379,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   }, [isOpen, id, getCreditNotes, getCredits]);
 
+  // Обновляем массив изображений при изменении заметок
   useEffect(() => {
-    if (notes && notes.length > 0) {
-      const images = notes
-        .filter(note => note.fileBase64 && isImageFile(note.fileName))
-        .map(note => `data:image/jpeg;base64,${note.fileBase64}`);
-      setNoteImages(images);
-    }
+    const images = notes
+      .filter(note => note.fileBase64 && isImageFile(note.fileName))
+      .map(note => note.fileBase64!);
+    setNoteImages(images);
   }, [notes]);
 
   const isImageFile = (fileName: string | undefined): boolean => {
@@ -284,10 +395,19 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     );
   };
 
-  const downloadFile = (note: any) => {
+  const downloadFile = (note: NoteWithFile) => {
     if (note.fileBase64 && note.fileName) {
+      // Если это data URL, извлекаем чистый base64
+      let base64Data = note.fileBase64;
+      if (base64Data.startsWith('data:')) {
+        const base64Index = base64Data.indexOf('base64,');
+        if (base64Index !== -1) {
+          base64Data = base64Data.substring(base64Index + 7);
+        }
+      }
+      
       const link = document.createElement('a');
-      link.href = `data:application/octet-stream;base64,${note.fileBase64}`;
+      link.href = `data:application/octet-stream;base64,${base64Data}`;
       link.download = note.fileName;
       document.body.appendChild(link);
       link.click();
@@ -295,27 +415,30 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   };
 
-  function formatPhoneNumber(phone: string): string {
-      const digits = phone.replace(/\D/g, '');
+  const handleForceLoadFile = (noteId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    loadNoteFile(noteId);
+  };
 
-      if (digits.startsWith('8')) {
-          return '7' + digits.slice(1);
-      }
-
-      return digits;
-  }
+  const formatPhoneNumber = (phone: string): string => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('8')) {
+      return '7' + digits.slice(1);
+    }
+    return digits;
+  };
 
   const sendMessage = async (scheduleId: number, phone: string, amount: string, date: string) => {
     try {
-        if (sendWhatsAppMessage) {
-            await loadSchedules();
-        } else {
-            console.error('Не удалось отметить уведомление');
-        }
+      if (sendWhatsAppMessage) {
+        await loadSchedules();
+      } else {
+        console.error('Не удалось отметить уведомление');
+      }
     } catch (error) {
-        console.error('Ошибка при отправке WhatsApp:', error);
+      console.error('Ошибка при отправке WhatsApp:', error);
     }
-};
+  };
 
   const notesColumns = [
     { name: 'Сотрудник' },
@@ -331,11 +454,15 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
 
   const handlePhotoClick = (noteIndex: number) => {
+    const note = notes[noteIndex];
+    if (!note.fileBase64 || !isImageFile(note.fileName)) return;
+    
     let imageIndex = 0;
     let currentCount = 0;
     
     for (let i = 0; i < notes.length; i++) {
-      if (notes[i].fileBase64 && isImageFile(notes[i].fileName)) {
+      const currentNote = notes[i];
+      if (currentNote.fileBase64 && isImageFile(currentNote.fileName)) {
         if (i === noteIndex) {
           imageIndex = currentCount;
           break;
@@ -349,25 +476,25 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
 
   const MessageButton = styled.button`
-      background: rgba(0, 125, 136, 1);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      min-width: 40px;
-      min-height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-      margin-left: 10px;
-      padding: 8px;
+    background: rgba(0, 125, 136, 1);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    margin-left: 10px;
+    padding: 8px;
 
-      &:hover {
-        background: rgba(0, 100, 110, 1);
-        transform: scale(1.05);
-      }
+    &:hover {
+      background: rgba(0, 100, 110, 1);
+      transform: scale(1.05);
+    }
   `;
 
   const formatNotesData = () => {
@@ -376,13 +503,34 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       formatDate(note.createdAt),
       <NoteContent key={`note-${note.id}`}>
         {note.content}
+        {note.fileId && !note.fileBase64 && note.isLoading && (
+          <FileContainer>
+            <LoadingFile>
+              <LoadingSpinner />
+              <span>Загрузка файла...</span>
+            </LoadingFile>
+          </FileContainer>
+        )}
+        {note.fileId && !note.fileBase64 && !note.isLoading && (
+          <FileContainer>
+            <RetryFile onClick={(e) => handleForceLoadFile(note.id, e)}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 4V10H7" stroke="#50555C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M23 20V14H17" stroke="#50555C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M20.49 9C19.9828 7.56678 19.1209 6.2854 17.9845 5.27542C16.8482 4.26543 15.4745 3.55976 13.9917 3.22426C12.5089 2.88875 10.9652 2.93434 9.50481 3.35677C8.04437 3.77921 6.71475 4.56471 5.64 5.64L1 10M23 14L18.36 18.36C17.2853 19.4353 15.9556 20.2208 14.4952 20.6432C13.0348 21.0657 11.4911 21.1113 10.0083 20.7757C8.52547 20.4402 7.1518 19.7346 6.01547 18.7246C4.87914 17.7146 4.01717 16.4332 3.51 15" stroke="#50555C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Нажмите, чтобы загрузить файл</span>
+            </RetryFile>
+          </FileContainer>
+        )}
         {note.fileBase64 && (
           <FileContainer>
             {isImageFile(note.fileName) ? (
               <NoteImage 
-                src={`data:image/jpeg;base64,${note.fileBase64}`}
+                src={note.fileBase64}
                 alt="Прикрепленное изображение"
                 onClick={() => handlePhotoClick(index)}
+                onError={() => console.error(`Failed to load image for note ${note.id}`)}
               />
             ) : (
               <FileIcon onClick={() => downloadFile(note)}>
@@ -402,7 +550,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         onClick={() => handleDeleteNote(note.id)}
       >
         <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2.97271 16.8889C2.97271 18.05 4.01965 19 5.29924 19H14.6054C15.885 19 16.9319 18.05 16.9319 16.8889V4.22222H2.97271V16.8889ZM18.0952 1.05556H14.0237L12.8605 0H7.04414L5.88088 1.05556H1.80945V3.16667H18.0952V1.05556Z" fill="#50555C"/>
+          <path d="M2.97271 14.828C1 13.657 1 12.771 1 9C1 5.229 1 3.343 2.464 2.172C3.93 1 6.286 1 11 1C15.714 1 18.071 1 19.535 2.172C20.999 3.344 21 5.229 21 9C21 12.771 21 13.657 19.535 14.828C18.072 16 15.714 16 11 16C8.49 16 7.2 17.738 5 19V15.788C3.906 15.625 3.101 15.338 2.464 14.828Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </DeleteIcon>
     ]);
@@ -437,28 +585,28 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   };
 
   useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          onClose();
-        }
-      };
-  
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-      };
-    }, [onClose]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
     
   const formatPaymentsData = (payments: Payment[] | undefined) => {
-      if (!payments) return [];
+    if (!payments) return [];
 
-      return payments.map(payment => [
-          payment.paymentDate ? formatDate(payment.paymentDate) : '',
-          formatMoney(payment.paymentAmount?.toString() || '0'),
-          payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails ?? ""}`,
-          payment.employeeFullName || '',
-          payment.accepted ? 'Да' : 'Нет'
-      ]);
+    return payments.map(payment => [
+      payment.paymentDate ? formatDate(payment.paymentDate) : '',
+      formatMoney(payment.paymentAmount?.toString() || '0'),
+      payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails ?? ""}`,
+      payment.employeeFullName || '',
+      payment.accepted ? 'Да' : 'Нет'
+    ]);
   };
       
   const formatSchedulesData = (schedules: ScheduleItem[] | undefined) => {
@@ -505,7 +653,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 <WhatsAppIcon style={{ color: '#25D366' }} />
               </button>
             ) : (
-               <button 
+              <button 
                 onClick={() => sendWhatsAppMessage(
                   schedule.id,
                   schedule.clientPhone,
@@ -559,7 +707,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     e.stopPropagation();
     
     try {
-      const chat = await createPrivateChat(creditData.clientId, 'client');
+      const chat = await createPrivateChat(creditData?.clientId || 0, 'client');
       
       if (chat?.id) {
         window.open(`/chat/${chat.id}`, '_blank');
@@ -613,154 +761,154 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               </MessageButton>
             </TitleField>
 
-             <div>
-                <HorizontalContainer style={{ marginBottom: '30px' }}>
-                  <VerticalContainer>
-                    <ModalInfoTitle style={{marginBottom: "5px"}}>Сведения о договоре</ModalInfoTitle>
-                      <Label>{creditData && creditData.name && 'Договор'}</Label>
-                      <Value>{creditData && creditData.name && creditData.name}</Value>
+            <div>
+              <HorizontalContainer style={{ marginBottom: '30px' }}>
+                <VerticalContainer>
+                  <ModalInfoTitle style={{marginBottom: "5px"}}>Сведения о договоре</ModalInfoTitle>
+                  <Label>{creditData && creditData.name && 'Договор'}</Label>
+                  <Value>{creditData && creditData.name && creditData.name}</Value>
 
-                      <Label>Дата</Label>
-                      <Value>{creditData && formatDate(creditData.creditDate)}</Value>
+                  <Label>Дата</Label>
+                  <Value>{creditData && formatDate(creditData.creditDate)}</Value>
 
-                      <Label>Покупатель</Label>
-                      <Value>{creditData && creditData.clientFullName}</Value>
+                  <Label>Покупатель</Label>
+                  <Value>{creditData && creditData.clientFullName}</Value>
 
-                      <Label>Телефон</Label>
+                  <Label>Телефон</Label>
+                  <Value>
+                    {creditData?.clientPhone ? (
+                      <a href={formatPhoneHref(creditData.clientPhone)} style={{ color: '#007D88' }}>
+                        {creditData.clientPhone}
+                      </a>
+                    ) : (
+                      ''
+                    )}
+                  </Value>
+
+                  {creditData?.address && (
+                    <>
+                      <Label>Адрес</Label>
+                      <Value>{creditData.address}</Value>
+                    </>
+                  )}
+
+                  {creditData?.termMonths && (
+                    <>
+                      <Label>Срок, месяцев</Label>
+                      <Value>{creditData.termMonths}</Value>
+                    </>
+                  )}
+                  
+                  {creditData && creditData.guarantorFullname && (
+                    <>
+                      <Label>{creditData && creditData.guarantorFullname && 'Поручитель'}</Label>
+                      <Value>{creditData && creditData.guarantorFullname && creditData.guarantorFullname}</Value>
+                    </>
+                  )}
+
+                  {creditData && creditData.guarantorPhone && (
+                    <>
+                      <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
                       <Value>
-                        {creditData?.clientPhone ? (
-                          <a href={formatPhoneHref(creditData.clientPhone)} style={{ color: '#007D88' }}>
-                            {creditData.clientPhone}
-                          </a>
-                        ) : (
-                          ''
-                        )}
+                        <a href={formatPhoneHref(creditData.guarantorPhone)} style={{ color: '#007D88' }}>
+                          {creditData.guarantorPhone}
+                        </a>
                       </Value>
+                    </>
+                  )}
 
-                      {creditData?.address && (
-                        <>
-                          <Label>Адрес</Label>
-                          <Value>{creditData.address}</Value>
-                        </>
-                      )}
+                  {creditData && creditData.creditTypeName && (
+                    <>
+                      <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
+                      <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
+                    </>
+                  )}
+                  
+                  {creditData?.debtDays > 0 && (
+                    <>
+                      <Label>Дней просрочки</Label>
+                      <Value>{creditData.debtDays}</Value>
+                    </>
+                  )}
+                  
+                  {creditData?.debtComment && (
+                    <>
+                      <Label>В долг выдал</Label>
+                      <Value>{creditData.debtComment}</Value>
+                    </>
+                  )}
 
-                      {creditData?.termMonths && (
-                        <>
-                          <Label>Срок, месяцев</Label>
-                          <Value>{creditData.termMonths}</Value>
-                        </>
-                      )}
-                      
-                      {creditData && creditData.guarantorFullname && (
-                        <>
-                          <Label>{creditData && creditData.guarantorFullname && 'Поручитель'}</Label>
-                          <Value>{creditData && creditData.guarantorFullname}</Value>
-                        </>
-                      )}
+                </VerticalContainer>
+                <VerticalContainer style={{ width: "100%", minWidth: "700px", marginLeft: "60px"}}>
+                  <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
+                    <ModalInfoTitle>Заметки</ModalInfoTitle>
+                    <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
+                  </HorizontalContainer>
+                  <TableContainer style={{ width: "100%" }}>
+                    {isNotesLoading ? (
+                      <LoadingText>Загрузка заметок...</LoadingText>
+                    ) : notesError ? (
+                      <ErrorText>{notesError}</ErrorText>
+                    ) : (
+                      <Table 
+                        columns={notesColumns} 
+                        data={formatNotesData()}
+                      />
+                    )}
+                  </TableContainer>
+                </VerticalContainer>
+              </HorizontalContainer>
 
-                      {creditData && creditData.guarantorPhone && (
-                        <>
-                          <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
-                          <Value>
-                            <a href={formatPhoneHref(creditData.guarantorPhone)} style={{ color: '#007D88' }}>
-                              {creditData.guarantorPhone}
-                            </a>
-                          </Value>
-                        </>
-                      )}
+              <ModalInfoTitle>Товары</ModalInfoTitle>
 
-                      {creditData && creditData.creditTypeName && (
-                        <>
-                          <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
-                          <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
-                        </>
-                      )}
-                      
-                      {creditData?.debtDays > 0 && (
-                        <>
-                          <Label>Дней просрочки</Label>
-                          <Value>{creditData.debtDays}</Value>
-                        </>
-                      )}
-                      
-                      {creditData?.debtComment && (
-                        <>
-                          <Label>В долг выдал</Label>
-                          <Value>{creditData.debtComment}</Value>
-                        </>
-                      )}
+              <CustomTable                         
+                columns={[
+                  { name: "Название" },
+                  { name: "Стоимость", align: "right" },
+                  { name: "Надбавка", align: "right" },
+                  { name: "Цена", align: "right" },
+                ]} 
+                data={formatSoldProductsData(soldProductsData)}
+              />
 
-                  </VerticalContainer>
-                  <VerticalContainer style={{ width: "100%", minWidth: "700px", marginLeft: "60px"}}>
-                    <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
-                      <ModalInfoTitle>Заметки</ModalInfoTitle>
-                      <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
-                    </HorizontalContainer>
-                    <TableContainer style={{ width: "100%" }}>
-                      {isNotesLoading ? (
-                        <LoadingText>Загрузка заметок...</LoadingText>
-                      ) : notesError ? (
-                        <ErrorText>{notesError}</ErrorText>
-                      ) : (
-                        <Table 
-                          columns={notesColumns} 
-                          data={formatNotesData()}
-                        />
-                      )}
-                    </TableContainer>
-                  </VerticalContainer>
-                </HorizontalContainer>
+              <Value style={{margin: "10px 0 15px"}}>
+                {creditData && creditData.firstPayment != 0 &&`Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
+              </Value>
+              {paymentsData?.items && paymentsData.items.length > 0 && (
+                <>
+                  <ModalInfoTitle>Платежи</ModalInfoTitle>
+                  <CustomTable                         
+                    columns={[
+                      { name: "Дата", align: "left" },
+                      { name: "Сумма", align: "right" },
+                      { name: "Тип платежа" },
+                      { name: "Платёж принял" },
+                      { name: "Подтверждён" },                
+                    ]} 
+                    data={formatPaymentsData(paymentsData?.items)}
+                  />
+                </>
+              )}
 
-                <ModalInfoTitle>Товары</ModalInfoTitle>
-
-                <CustomTable                         
-                  columns={[
-                      { name: "Название" },
-                      { name: "Стоимость", align: "right" },
-                      { name: "Надбавка", align: "right" },
-                      { name: "Цена", align: "right" },
-                  ]} 
-                  data={formatSoldProductsData(soldProductsData)}
-                />
-
-                <Value style={{margin: "10px 0 15px"}}>
-                  {creditData && creditData.firstPayment != 0 &&`Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
-                </Value>
-                {paymentsData?.items.length > 0 && (
-                  <>
-                    <ModalInfoTitle>Платежи</ModalInfoTitle>
-                    <CustomTable                         
-                      columns={[
-                        { name: "Дата", align: "left" },
-                        { name: "Сумма", align: "right" },
-                        { name: "Тип платежа" },
-                        { name: "Платёж принял" },
-                        { name: "Подтверждён" },                
-                      ]} 
-                      data={formatPaymentsData(paymentsData?.items)}
-                    />
-                  </>
-                )}
-
-                <ModalInfoTitle>График платежей</ModalInfoTitle>
-                <CustomTable                         
-                  columns={[
-                    { name: "ID", isHidden: true },
-                    { name: "Дата", align: "left" },
-                    { name: "Сумма", align: "right" },
-                    { name: "Примечание" },
-                    { name: "Статус", align: "center" },
-                  ]} 
-                  data={formatSchedulesData(scheduleData?.items)}
-                  rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
-                    acc[index] = getScheduleRowStyle(schedule, index);
-                    return acc;
-                  }, {} as { [key: number]: any }) || {}}
-                  contextMenuActions={scheduleTableActions}
-                  onRowDoubleClick={handleOpenPaymentFromSchedule}
-                  onRowContextMenu={handleRowContextMenu} // Добавьте этот проп
-                />
-              </div>
+              <ModalInfoTitle>График платежей</ModalInfoTitle>
+              <CustomTable                         
+                columns={[
+                  { name: "ID", isHidden: true },
+                  { name: "Дата", align: "left" },
+                  { name: "Сумма", align: "right" },
+                  { name: "Примечание" },
+                  { name: "Статус", align: "center" },
+                ]} 
+                data={formatSchedulesData(scheduleData?.items)}
+                rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
+                  acc[index] = getScheduleRowStyle(schedule, index);
+                  return acc;
+                }, {} as { [key: number]: any }) || {}}
+                contextMenuActions={scheduleTableActions}
+                onRowDoubleClick={handleOpenPaymentFromSchedule}
+                onRowContextMenu={handleRowContextMenu}
+              />
+            </div>
           </ModalWrapper>
         </ModalContent>
       </ModalOverlay>
@@ -857,13 +1005,13 @@ const ModalWrapper = styled.div`
 `;
 
 const VerticalContainer = styled.div`
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 `;
 
 const HorizontalContainer = styled.div`
-    display: flex;
-    flex-direction: row;
+  display: flex;
+  flex-direction: row;
 `;
 
 const ModalContent = styled.div`
@@ -973,6 +1121,49 @@ const FileIcon = styled.div`
   
   &:hover {
     background-color: #e9ecef;
+  }
+`;
+
+const LoadingFile = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  color: #666;
+  font-size: 14px;
+`;
+
+const RetryFile = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background-color: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #2e7d32;
+  font-size: 14px;
+  
+  &:hover {
+    background-color: #c8e6c9;
+  }
+`;
+
+const LoadingSpinner = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007D88;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 `;
 

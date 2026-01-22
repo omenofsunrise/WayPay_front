@@ -31,6 +31,10 @@ const useNotes = () => {
     return getNotes(NOTEABLE_TYPES.CREDIT, creditId, filters);
   }, [getNotes]);
 
+  const getFileByNote = useCallback((noteId: number) => {
+    return noteService.getFileByNote(noteId);
+  }, []);
+
   const getClientNotes = useCallback((clientId: number, filters?: NoteFilters) => {
     return getNotes(NOTEABLE_TYPES.CLIENT, clientId, filters);
   }, [getNotes]);
@@ -63,25 +67,16 @@ const useNotes = () => {
     }
   }
 
-  const downloadFile = async (noteId: number): Promise<Blob | null> => {
-    try {
-      return await noteService.downloadNoteFile(noteId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to download file');
-      return null;
-    }
-  }
-
   return {
     isLoading,
     error,
     notes,
     getNotes,
+    getFileByNote,
     getCreditNotes,
     getClientNotes,
     createNote,
     deleteNote,
-    downloadFile,
     clearError: () => setError(null),
     clearNotes: () => setNotes([]),
   };

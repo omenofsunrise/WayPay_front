@@ -6,10 +6,12 @@ class NoteService {
   async getNotes(
     type: NoteableType, 
     id: number, 
-    filters?: NoteFilters
+    includeFiles: boolean
   ): Promise<Note[]> {
     const params = new URLSearchParams();
-    params.append('includeFiles', 'true');
+    if (includeFiles) {
+      params.append('includeFiles', 'true');
+    }
 
     const response = await apiClient.get<Note[]>(
       `/Note/by-type/${type}/${id}?${params.toString()}`
@@ -17,12 +19,19 @@ class NoteService {
     return response.data;
   }
 
-  async getCreditNotes(creditId: number, filters?: NoteFilters): Promise<Note[]> {
-    return this.getNotes(NOTEABLE_TYPES.CREDIT, creditId, filters);
+  async getCreditNotes(creditId: number): Promise<Note[]> {
+    return this.getNotes(NOTEABLE_TYPES.CREDIT, creditId, false);
   }
 
-  async getClientNotes(clientId: number, filters?: NoteFilters): Promise<Note[]> {
-    return this.getNotes(NOTEABLE_TYPES.CLIENT, clientId, filters);
+  async getFileByNote(noteId: number): Promise<string> {
+    const response = await apiClient.get<string>(
+      `/Note/file/${noteId}`
+    );
+    return response.data;
+  }
+
+  async getClientNotes(clientId: number): Promise<Note[]> {
+    return this.getNotes(NOTEABLE_TYPES.CLIENT, clientId, true);
   }
 
   async createNote(noteData: CreateNoteRequest): Promise<Note> {
@@ -52,13 +61,6 @@ class NoteService {
 
   async deleteNote(id: number): Promise<void> {
     await apiClient.delete(`/Note/${id}`);
-  }
-
-  async downloadNoteFile(noteId: number): Promise<Blob> {
-    const response = await apiClient.get(`/Note/${noteId}/file`, {
-      responseType: 'blob',
-    });
-    return response.data;
   }
 }
 
