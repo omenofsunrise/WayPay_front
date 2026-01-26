@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import React from 'react';
 
-type InputType = 'number' | 'text' | 'fullname' | 'doc' | 'date' | 'rubles' | 'percents';
+type InputType = 'number' | 'text' | 'fullname' | 'doc' | 'date' | 'rubles' | 'percents' | 'ufloat';
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string;
@@ -31,176 +31,218 @@ const CustomInput: React.FC<CustomInputProps> = ({
     let newValue = e.target.value;
 
     switch (inputType) {
-        case 'number':
-            if (/^\d*$/.test(newValue)) {
-                onChange?.(e);
+      case 'number':
+        if (/^\d*$/.test(newValue)) {
+          onChange?.(e);
+        }
+        break;
+      case 'rubles':
+        const cursorPosition = e.target.selectionStart;
+        const originalValue = e.target.value;
+        
+        let numericValue = originalValue.replace(/[^\d]/g, '');
+        
+        if (numericValue === '') {
+          e.target.value = '';
+          onChange(e);
+          break;
+        }
+        
+        const numberValue = parseInt(numericValue, 10);
+        if (!isNaN(numberValue)) {
+          let formattedValue = numberValue.toLocaleString('ru-RU');
+          formattedValue += ' ₽';
+          
+          const digitsBeforeCursor = countDigitsBeforePosition(originalValue, cursorPosition || 0);
+          const newCursorPosition = findCursorPositionInFormattedValue(formattedValue, digitsBeforeCursor);
+          
+          e.target.value = formattedValue;
+          onChange(e);
+          
+          setTimeout(() => {
+            e.target.setSelectionRange(newCursorPosition, newCursorPosition);
+          }, 0);
+        }
+        break;
+
+      case 'percents':
+        // Удаляем все нецифровые символы, кроме точки для десятичных значений
+        newValue = newValue.replace(/[^\d.]/g, '');
+        
+        // Убираем лишние точки (оставляем только первую)
+        const parts = newValue.split('.');
+        if (parts.length > 2) {
+          newValue = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // Ограничиваем до двух знаков после запятой
+        if (parts.length === 2 && parts[1].length > 2) {
+          newValue = parts[0] + '.' + parts[1].slice(0, 2);
+        }
+        
+        // Проверяем, что значение в диапазоне от 0 до 100
+        const numValue = parseFloat(newValue);
+        if (!isNaN(numValue)) {
+          if (numValue > 100) {
+            newValue = '100';
+          } else if (numValue < 0) {
+            newValue = '0';
+          }
+        }
+        
+        if (newValue && newValue !== '') {
+          newValue += ' %';
+          
+          const currentCursorPos = e.target.selectionStart || 0;
+          const valueWithoutPercent = newValue.replace(' %', '');
+          
+          e.target.value = newValue;
+          onChange(e);
+          
+          setTimeout(() => {
+            if (currentCursorPos < valueWithoutPercent.length) {
+              e.target.setSelectionRange(currentCursorPos, currentCursorPos);
             }
-            break;
-        case 'rubles':
-          const cursorPosition = e.target.selectionStart;
-          const originalValue = e.target.value;
-          
-          let numericValue = originalValue.replace(/[^\d]/g, '');
-          
-          if (numericValue === '') {
-            e.target.value = '';
-            onChange(e);
-            break;
-          }
-          
-          const numberValue = parseInt(numericValue, 10);
-          if (!isNaN(numberValue)) {
-            let formattedValue = numberValue.toLocaleString('ru-RU');
-            formattedValue += ' ₽';
-            
-            const digitsBeforeCursor = countDigitsBeforePosition(originalValue, cursorPosition || 0);
-            const newCursorPosition = findCursorPositionInFormattedValue(formattedValue, digitsBeforeCursor);
-            
-            e.target.value = formattedValue;
-            onChange(e);
-            
-            setTimeout(() => {
-              e.target.setSelectionRange(newCursorPosition, newCursorPosition);
-            }, 0);
-          }
-          break;
+          }, 0);
+        } else {
+          e.target.value = newValue;
+          onChange(e);
+        }
+        break;
 
-        case 'percents':
-          // Удаляем все нецифровые символы, кроме точки для десятичных значений
-          newValue = newValue.replace(/[^\d.]/g, '');
-          
-          // Убираем лишние точки (оставляем только первую)
-          const parts = newValue.split('.');
-          if (parts.length > 2) {
-            newValue = parts[0] + '.' + parts.slice(1).join('');
+      case 'ufloat':
+        newValue = newValue.replace(/[^\d.]/g, '');
+        
+        const ufloatParts = newValue.split('.');
+        if (ufloatParts.length > 2) {
+          newValue = ufloatParts[0] + '.' + ufloatParts.slice(1).join('');
+        }
+        
+        if (ufloatParts.length === 2) {
+          if (ufloatParts[0].length > 1 && ufloatParts[0].startsWith('0')) {
+            ufloatParts[0] = String(parseInt(ufloatParts[0], 10));
+            newValue = ufloatParts.join('.');
           }
           
-          // Ограничиваем до двух знаков после запятой
-          if (parts.length === 2 && parts[1].length > 2) {
-            newValue = parts[0] + '.' + parts[1].slice(0, 2);
+          if (ufloatParts[1].length > 2) {
+            newValue = ufloatParts[0] + '.' + ufloatParts[1].slice(0, 2);
           }
-          
-          // Проверяем, что значение в диапазоне от 0 до 100
-          const numValue = parseFloat(newValue);
-          if (!isNaN(numValue)) {
-            if (numValue > 100) {
-              newValue = '100';
-            } else if (numValue < 0) {
-              newValue = '0';
+        } else if (ufloatParts.length === 1 && ufloatParts[0].length > 1) {
+          if (ufloatParts[0].startsWith('0')) {
+            newValue = String(parseInt(ufloatParts[0], 10));
+          }
+        }
+        
+        const floatValue = parseFloat(newValue);
+        if (!isNaN(floatValue)) {
+          if (floatValue > 999999999) {
+            newValue = '999999999';
+          } else if (floatValue < 0) {
+            newValue = '';
+          }
+        }
+        
+        
+        const ufloatCursorPos = e.target.selectionStart || 0;
+        const digitsBeforeCursor = countDigitsBeforePosition(e.target.value, ufloatCursorPos);
+        
+        e.target.value = newValue;
+        onChange(e);
+        
+        setTimeout(() => {
+          const newCursorPos = findCursorPositionInFormattedValue(newValue, digitsBeforeCursor);
+          e.target.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+        break;
+
+      case 'fullname':
+        newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\-\s]/g, '');
+        newValue = newValue.replace(/\s{2,}/g, ' ');
+        
+        newValue = newValue.replace(/- /g, '-');
+        newValue = newValue.replace(/ -/g, ' ');
+        
+        let words = newValue.split(' ').filter(word => word.length > 0);
+        words = words.slice(0, 3);
+        
+        newValue = words
+          .map(word => {
+            if (word.startsWith('-')) {
+              word = word.substring(1);
             }
-          }
-          
-          // Добавляем символ процента в конец
-          if (newValue && newValue !== '') {
-            newValue += ' %';
             
-            // Сохраняем позицию курсора перед добавлением символа процента
-            const currentCursorPos = e.target.selectionStart || 0;
-            const valueWithoutPercent = newValue.replace(' %', '');
+            const hyphenCount = (word.match(/-/g) || []).length;
+            if (hyphenCount > 1) {
+              const parts = word.split('-');
+              word = parts[0] + '-' + parts.slice(1).join('');
+            }
             
-            e.target.value = newValue;
-            onChange(e);
-            
-            // Восстанавливаем позицию курсора (если он не в конце)
-            setTimeout(() => {
-              if (currentCursorPos < valueWithoutPercent.length) {
-                e.target.setSelectionRange(currentCursorPos, currentCursorPos);
-              }
-            }, 0);
-          } else {
-            e.target.value = newValue;
-            onChange(e);
-          }
-          break;
+            if (word.includes('-')) {
+              return word.split('-')
+                .map((part, index) => {
+                  if (part.length === 0) return '';
+                  return index > 0 
+                    ? part[0].toUpperCase() + part.slice(1).toLowerCase() 
+                    : part[0].toUpperCase() + part.slice(1).toLowerCase();
+                })
+                .join('-');
+            }
+            return word.length > 0 
+              ? word[0].toUpperCase() + word.slice(1).toLowerCase() 
+              : '';
+          })
+          .join(' ');
+          
+        if (newValue.length > 0 && newValue[newValue.length - 1] !== ' ' && 
+            e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
+          newValue += ' ';
+        }
+        
+        if (newValue.length > 100) {
+          newValue = newValue.slice(0, 100);
+        }
+        
+        e.target.value = newValue;
+        onChange(e);
+        break;
 
-        case 'fullname':
-          newValue = newValue.replace(/[^a-zA-Zа-яА-ЯёЁ'\-\s]/g, '');
-          newValue = newValue.replace(/\s{2,}/g, ' ');
-          
-          newValue = newValue.replace(/- /g, '-');
-          newValue = newValue.replace(/ -/g, ' ');
-          
-          let words = newValue.split(' ').filter(word => word.length > 0);
-          words = words.slice(0, 3);
-          
-          newValue = words
-            .map(word => {
-              if (word.startsWith('-')) {
-                word = word.substring(1);
-              }
-              
-              const hyphenCount = (word.match(/-/g) || []).length;
-              if (hyphenCount > 1) {
-                const parts = word.split('-');
-                word = parts[0] + '-' + parts.slice(1).join('');
-              }
-              
-              if (word.includes('-')) {
-                return word.split('-')
-                  .map((part, index) => {
-                    if (part.length === 0) return '';
-                    return index > 0 
-                      ? part[0].toUpperCase() + part.slice(1).toLowerCase() 
-                      : part[0].toUpperCase() + part.slice(1).toLowerCase();
-                  })
-                  .join('-');
-              }
-              return word.length > 0 
-                ? word[0].toUpperCase() + word.slice(1).toLowerCase() 
-                : '';
-            })
-            .join(' ');
-            
-          if (newValue.length > 0 && newValue[newValue.length - 1] !== ' ' && 
-              e.target.value.length > 0 && e.target.value[e.target.value.length - 1] === ' ') {
-            newValue += ' ';
-          }
-          
-          if (newValue.length > 100) {
-            newValue = newValue.slice(0, 100);
-          }
-          
-          e.target.value = newValue;
-          onChange(e);
-          break;
+      case 'doc':
+        newValue = newValue.replace(/\D/g, '');
+        if (newValue.length > 4) {
+          newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
+        }
+        if (newValue.length > 11) {
+          newValue = newValue.slice(0, 11);
+        }
+        e.target.value = newValue;
+        onChange(e);
+        break;
 
-        case 'doc':
-          newValue = newValue.replace(/\D/g, '');
-          if (newValue.length > 4) {
-            newValue = `${newValue.slice(0, 4)} ${newValue.slice(4, 10)}`;
-          }
-          if (newValue.length > 11) {
-            newValue = newValue.slice(0, 11);
-          }
-          e.target.value = newValue;
-          onChange(e);
-          break;
+      case 'date':
+        newValue = newValue.replace(/\D/g, '');
+        
+        if (newValue.length > 4) {
+          newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
+        } else if (newValue.length > 2) {
+          newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
+        }
+        
+        if (newValue.length > 10) {
+          newValue = newValue.slice(0, 10);
+        }
+        
+        const isDeleting = (value as string)?.length > newValue.length;
+        if (isDeleting && [3, 6].includes(newValue.length)) {
+          newValue = newValue.slice(0, newValue.length - 1);
+        }
+        
+        e.target.value = newValue;
+        onChange(e);
+        break;
 
-        case 'date':
-          newValue = newValue.replace(/\D/g, '');
-          
-          if (newValue.length > 4) {
-            newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}.${newValue.slice(4, 8)}`;
-          } else if (newValue.length > 2) {
-            newValue = `${newValue.slice(0, 2)}.${newValue.slice(2, 4)}`;
-          }
-          
-          if (newValue.length > 10) {
-            newValue = newValue.slice(0, 10);
-          }
-          
-          const isDeleting = (value as string)?.length > newValue.length;
-          if (isDeleting && [3, 6].includes(newValue.length)) {
-            newValue = newValue.slice(0, newValue.length - 1);
-          }
-          
-          e.target.value = newValue;
-          onChange(e);
-          break;
-
-        default:
-          onChange(e);
-          break;
+      default:
+        onChange(e);
+        break;
     }
   };
 
@@ -239,7 +281,7 @@ const CustomInput: React.FC<CustomInputProps> = ({
           props.onBlur?.(e);
         }}
         onChange={handleInputChange}
-        inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' || inputType === 'rubles' || inputType === 'percents' ? 'numeric' : 'text'}
+        inputMode={inputType === 'number' || inputType === 'doc' || inputType === 'date' || inputType === 'rubles' || inputType === 'percents' || inputType === 'ufloat' ? 'decimal' : 'text'}
         maxLength={inputType === 'doc' ? 11 : inputType === 'date' ? 10 : undefined}
         hasError={hasError}
       />
