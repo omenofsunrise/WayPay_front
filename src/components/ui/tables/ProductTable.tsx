@@ -162,7 +162,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
       if (product.id === id) {
         let numericValue: number;
         
-        if (field === 'price') {
+        if (field === 'price' || (field === 'markup' && markupType === 'fixed')) {
           numericValue = parseInt(value.replace(/[^\d]/g, ''), 10) || 0;
         } else {
           numericValue = Number(value) || 0;
@@ -170,7 +170,7 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
         
         const updatedProduct = {
           ...product,
-          [field]: (field === 'name' || field === 'markup') ? value : numericValue
+          [field]: (field === 'name' || (field === 'markup' && markupType === 'percent')) ? value : numericValue
         };
         
         if (['price', 'quantity', 'markup'].includes(field)) {
