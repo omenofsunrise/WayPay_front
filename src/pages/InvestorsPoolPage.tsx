@@ -105,6 +105,7 @@ const {
         totalCount: number;
     } | null>(null);
 
+    const [filteredPayouts, setFilteredPayouts] = useState<InvestorPayout[]>([]);
     const [investors, setInvestors] = useState<Investor[]>([]);
     const [investorsData, setInvestorsData] = useState<any>(null);
     const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
@@ -330,6 +331,21 @@ const {
         }
     }, [contributionsPage, activeTab, selectedPoolId]);
 
+    useEffect(() => {
+        if (selectedPoolId && activeTab === 'payouts') {
+            if (selectedInvestorForFilter?.id) {
+                // Фильтруем выплаты по выбранному инвестору
+                const filtered = payouts.filter(payout => 
+                    payout.investorId === selectedInvestorForFilter.id
+                );
+                setFilteredPayouts(filtered);
+            } else {
+                // Показываем все выплаты пула
+                setFilteredPayouts(payouts);
+            }
+        }
+    }, [payouts, selectedInvestorForFilter, selectedPoolId, activeTab]);
+
     const handleInvestorDoubleClick = async (investor: Investor) => {
         setSelectedInvestorForCredits(investor);
         setIsInvestorCreditsLoading(true);
@@ -357,14 +373,12 @@ const {
         balance: number;
         type?: 'investor' | 'pool';
     }) => {
-        // Сохраняем объект инвестора с ID
         setSelectedInvestorForFilter({
             id: investor.id,
             name: investor.nickname || investor.fullName,
             type: investor.type || 'investor'
         });
         
-        // Обновляем значение поиска как имя инвестора
         setSearchValue(investor.nickname || investor.fullName || '');
         
         // Сбрасываем пагинацию в зависимости от активной вкладки
@@ -372,29 +386,35 @@ const {
             setCreditsPage(1);
         } else if (activeTab === 'contributions') {
             setContributionsPage(1);
+        } else if (activeTab === 'payouts') {
+            setPayoutsPage(1);
         }
     };
 
     const handleInvestorSelectChange = (value: string) => {
-        // Если пользователь очистил поле или изменил текст
         if (!value || value === '') {
             setSelectedInvestorForFilter(null);
             setSearchValue('');
-            setCreditsPage(1);
             
-            // Загружаем все договоры пула
-            if (selectedPoolId) {
-                getCredits({
-                    investorPoolId: Number(selectedPoolId),
-                    page: 1,
-                    pageSize: pageSize
-                }).then(data => {
-                    setFilteredCredits(null);
-                });
+            // Сбрасываем фильтрацию в зависимости от активной вкладки
+            if (activeTab === 'credits') {
+                setCreditsPage(1);
+                if (selectedPoolId) {
+                    getCredits({
+                        investorPoolId: Number(selectedPoolId),
+                        page: 1,
+                        pageSize: pageSize
+                    }).then(data => {
+                        setFilteredCredits(null);
+                    });
+                }
+            } else if (activeTab === 'payouts') {
+                setPayoutsPage(1);
+                setFilteredPayouts(payouts);
+            } else if (activeTab === 'contributions') {
+                setContributionsPage(1);
             }
-        }
-        // Если пользователь вводит текст, обновляем searchValue
-        else {
+        } else {
             setSearchValue(value);
         }
     };
@@ -1025,16 +1045,24 @@ const {
     const handleClearFilter = () => {
         setSelectedInvestorForFilter(null);
         setSearchValue('');
-        setCreditsPage(1);
         
-        if (selectedPoolId) {
-            getCredits({
-                investorPoolId: Number(selectedPoolId),
-                page: 1,
-                pageSize: pageSize
-            }).then(data => {
-                setFilteredCredits(null);
-            });
+        // Сбрасываем пагинацию в зависимости от активной вкладки
+        if (activeTab === 'credits') {
+            setCreditsPage(1);
+            if (selectedPoolId) {
+                getCredits({
+                    investorPoolId: Number(selectedPoolId),
+                    page: 1,
+                    pageSize: pageSize
+                }).then(data => {
+                    setFilteredCredits(null);
+                });
+            }
+        } else if (activeTab === 'payouts') {
+            setPayoutsPage(1);
+            setFilteredPayouts(payouts); // Сбрасываем фильтр выплат
+        } else if (activeTab === 'contributions') {
+            setContributionsPage(1);
         }
     };
 
@@ -1291,7 +1319,7 @@ const {
                     </TabsContainer>
                     
                     <SearchContainer>
-                        {(activeTab === 'credits' || activeTab === 'contributions') && (
+                        {(activeTab === 'credits' || activeTab === 'contributions' || activeTab === 'payouts') && (
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%' }}>
                                 <InvestorSelect
                                     value={searchValue}
@@ -1318,15 +1346,21 @@ const {
                                 { name: "Выплата, руб", isSortable: true, align: "left" },
                                 { name: "", align: "center" }
                             ]} 
-                            data={payoutTableData}
+                            data={filteredPayouts.map((payout: InvestorPayout) => [
+                                formatDate(payout.payoutDate),
+                                payout.employeeFullName,
+                                payout.investorFullName,
+                                formatMoney(payout.amount.toString()),
+                                <DeleteButton onClick={() => handleDeletePayout(payout.id)}></DeleteButton>
+                            ])}
                             isLoading={isPayoutsLoading}
                         />
                         <PaginationLayout>
                             <CountInfoTitle 
-                                total={payouts?.length || 0} 
+                                total={filteredPayouts?.length || 0} 
                             />
                             <Pagination
-                                total={payouts?.length || 0}
+                                total={filteredPayouts?.length || 0}
                                 current={payoutsPage}
                                 onChange={(page) => setPayoutsPage(page)}
                                 itemsPerPage={pageSize}
