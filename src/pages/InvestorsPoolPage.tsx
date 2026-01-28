@@ -44,9 +44,10 @@ import CustomInput from '../components/ui/fields/CustomInput';
 import CreatePoolModal from '../components/modal/CreatePoolModal';
 import useInvestorContribution from '../api/hooks/useInvestorContribution';
 import type { InvestorContribution } from '../api/types/investorContribution';
+import InvestorSelect from '../components/ui/fields/InvestorSelect';
 
 const InvestorsPoolPage = () => {
-    const { 
+const { 
         getInvestors, 
         getInvestorById, 
         deleteInvestor,
@@ -89,6 +90,16 @@ const InvestorsPoolPage = () => {
         makeAction: makeContributionAction
     } = useInvestorContribution();
 
+    const [filteredCredits, setFilteredCredits] = useState<{
+        items: Credit[];
+        totalCount: number;
+    } | null>(null)
+
+    const [selectedInvestorForFilter, setSelectedInvestorForFilter] = useState<{
+        id: number;
+        name: string;
+        type?: 'investor' | 'pool';
+    } | null>(null);
     const [investors, setInvestors] = useState<Investor[]>([]);
     const [investorsData, setInvestorsData] = useState<any>(null);
     const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
@@ -126,6 +137,48 @@ const InvestorsPoolPage = () => {
         totalCount: number;
     } | null>(null);
     const [isInvestorCreditsLoading, setIsInvestorCreditsLoading] = useState(false);
+    // Состояние для поиска
+    const [searchValue, setSearchValue] = useState<string>('');
+
+    useEffect(() => {
+        if (selectedPoolId && activeTab === 'credits') {
+            setIsLoading(true);
+            
+            const fetchCredits = async () => {
+                try {
+                    let creditsData;
+                    
+                    // Если выбран инвестор для фильтрации
+                    if (selectedInvestorForFilter?.id) {
+                        // Используем ID инвестора для фильтрации
+                        creditsData = await getCreditsByInvestorId(
+                            Number(selectedInvestorForFilter.id),
+                            creditsPage,
+                            pageSize
+                        );
+                        // Устанавливаем отфильтрованные данные
+                        setFilteredCredits(creditsData);
+                    } else {
+                        // Иначе загружаем все договоры пула
+                        creditsData = await getCredits({
+                            investorPoolId: Number(selectedPoolId),
+                            page: creditsPage,
+                            pageSize: pageSize
+                        });
+                        // Очищаем отфильтрованные данные
+                        setFilteredCredits(null);
+                    }
+                } catch (error) {
+                    console.error('Error fetching credits:', error);
+                    setFilteredCredits(null);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            fetchCredits();
+        }
+    }, [selectedPoolId, creditsPage, activeTab, selectedInvestorForFilter, getCredits, getCreditsByInvestorId]);
 
     useEffect(() => {
         if (selectedInvestorForCredits && isInvestorCreditsModalOpen) {
@@ -258,6 +311,52 @@ const InvestorsPoolPage = () => {
             setInvestorCreditsData(null);
         } finally {
             setIsInvestorCreditsLoading(false);
+        }
+    };
+
+    const handleInvestorSelect = (investor: { 
+        id: number; 
+        nickname: string; 
+        fullName: string; 
+        phoneNumber: string;
+        investorPie: number;
+        investmentAmount: number;
+        balance: number;
+        type?: 'investor' | 'pool';
+    }) => {
+        // Сохраняем объект инвестора с ID
+        setSelectedInvestorForFilter({
+            id: investor.id,
+            name: investor.nickname || investor.fullName,
+            type: investor.type || 'investor'
+        });
+        
+        // Обновляем значение поиска как имя инвестора
+        setSearchValue(investor.nickname || investor.fullName || '');
+        setCreditsPage(1); // Сбрасываем страницу при изменении фильтра
+    };
+
+    const handleInvestorSelectChange = (value: string) => {
+        // Если пользователь очистил поле или изменил текст
+        if (!value || value === '') {
+            setSelectedInvestorForFilter(null);
+            setSearchValue('');
+            setCreditsPage(1);
+            
+            // Загружаем все договоры пула
+            if (selectedPoolId) {
+                getCredits({
+                    investorPoolId: Number(selectedPoolId),
+                    page: 1,
+                    pageSize: pageSize
+                }).then(data => {
+                    setFilteredCredits(null);
+                });
+            }
+        }
+        // Если пользователь вводит текст, обновляем searchValue
+        else {
+            setSearchValue(value);
         }
     };
 
@@ -875,6 +974,42 @@ const InvestorsPoolPage = () => {
         { id: 'current', label: 'Текущий доход' }
     ];
 
+    const handleSearchChange = (value: string) => {
+        setSearchValue(value);
+        
+        // Если поле очищено, сбрасываем фильтр
+        if (!value) {
+            setSelectedInvestorForFilter(null);
+            setCreditsPage(1);
+            
+            if (selectedPoolId) {
+                getCredits({
+                    investorPoolId: Number(selectedPoolId),
+                    page: 1,
+                    pageSize: pageSize
+                }).then(data => {
+                    setFilteredCredits(null);
+                });
+            }
+        }
+    };
+
+    const handleClearFilter = () => {
+        setSelectedInvestorForFilter(null);
+        setSearchValue('');
+        setCreditsPage(1);
+        
+        if (selectedPoolId) {
+            getCredits({
+                investorPoolId: Number(selectedPoolId),
+                page: 1,
+                pageSize: pageSize
+            }).then(data => {
+                setFilteredCredits(null);
+            });
+        }
+    };
+
     const handleDeletePayout = async (id: number) => {
         try {
             await removePayout(id);
@@ -895,10 +1030,7 @@ const InvestorsPoolPage = () => {
         <DeleteButton onClick={() => handleDeletePayout(payout.id)}></DeleteButton>
     ]);
 
-    const creditsTableData = data?.items.map((credit: Credit) => {
-        const hasDebt = credit.debt > 0;
-        const isActive = credit.isActive;
-        
+    const creditsTableData = (filteredCredits?.items || data?.items || []).map((credit: Credit) => {
         return [
             credit.id,
             formatDate(credit.creditDate.toString()),
@@ -908,10 +1040,8 @@ const InvestorsPoolPage = () => {
             formatMoney(credit.payed.toString()),
             formatMoney(credit.rest.toString()),
             formatMoney(credit.debt.toString()),
-            hasDebt, 
-            isActive
         ];
-    }) || [];
+    });
 
     const investorCreditsTableData = investorCreditsData?.items.map((credit: Credit) => {
         const hasDebt = credit.debt > 0;
@@ -929,7 +1059,7 @@ const InvestorsPoolPage = () => {
         ];
     }) || [];
 
-    const rowStyles = data?.items.reduce((styles, credit, index) => {
+    const rowStyles = (filteredCredits?.items || data?.items || []).reduce((styles, credit, index) => {
         const style: RowStyle = {};
         
         if (credit.debt > 0) {
@@ -1104,25 +1234,51 @@ const InvestorsPoolPage = () => {
                     )}
                 </PoolTabsContainer>
                 
-                <TabsContainer>
-                    <Tabs<'payouts' | 'credits' | 'investors' | 'contributions'>
-                        tabs={tabs}
-                        activeTab={activeTab}
-                        onChange={(tabId) => setActiveTab(tabId)}
-                        addButton={activeTab === 'investors' && pools.length > 0 ? (
-                            <div style={{display: "flex", gap: "20px"}}>
-                                <DarkCyanButton 
-                                    children='Реинвестировать'
-                                    onClick={handleReinvest}
-                                />
-                                <AddButton 
-                                    onClick={handleAddInvestor}
-                                    tooltip="Добавить инвестора"
+                <TabsHeaderContainer>
+                    <TabsContainer style={{ marginBottom: 0, flex: 1 }}>
+                        <Tabs<'payouts' | 'credits' | 'investors' | 'contributions'>
+                            tabs={tabs}
+                            activeTab={activeTab}
+                            onChange={(tabId) => {
+                                setActiveTab(tabId);
+                                // При переключении вкладок сбрасываем фильтр
+                                if (tabId !== 'credits') {
+                                    setSelectedInvestorForFilter(null);
+                                    setSearchValue('');
+                                }
+                            }}
+                            addButton={activeTab === 'investors' && pools.length > 0 ? (
+                                <div style={{display: "flex", gap: "20px"}}>
+                                    <DarkCyanButton 
+                                        children='Реинвестировать'
+                                        onClick={handleReinvest}
+                                    />
+                                    <AddButton 
+                                        onClick={handleAddInvestor}
+                                        tooltip="Добавить инвестора"
+                                    />
+                                </div>
+                            ) : null}
+                        />
+                    </TabsContainer>
+                    
+                    <SearchContainer>
+                        {activeTab === 'credits' && (
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%' }}>
+                                <InvestorSelect
+                                    value={searchValue}
+                                    poolId={Number.parseInt(selectedPoolId)}
+                                    onChange={handleInvestorSelectChange}
+                                    onInvestorSelect={handleInvestorSelect}
+                                    placeholder="Инвесторы"
+                                    customPlaceholder=""
+                                    disabled={!selectedPoolId}
+                                    hasError={false}
                                 />
                             </div>
-                        ) : null}
-                    />
-                </TabsContainer>
+                        )}
+                    </SearchContainer>
+                </TabsHeaderContainer>
 
                 {activeTab === 'payouts' && (
                     <>
@@ -1638,6 +1794,28 @@ const DoubleClickCell = styled.div`
         &:hover {
             text-decoration: underline;
         }
+    }
+`;
+
+const TabsHeaderContainer = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin: 30px 0 20px;
+    width: 100%;
+`;
+
+const SearchContainer = styled.div`
+    min-width: 300px;
+    max-width: 400px;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    
+    @media (max-width: 768px) {
+        min-width: 200px;
+        max-width: 300px;
     }
 `;
 

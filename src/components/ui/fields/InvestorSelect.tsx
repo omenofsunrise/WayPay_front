@@ -26,6 +26,7 @@ interface InvestorSelectProps {
   errorMessage?: string;
   disabled?: boolean;
   includePools?: boolean;
+  poolId?: number; // Добавлено: ID пула для фильтрации инвесторов
 }
 
 const InvestorSelect = ({
@@ -38,6 +39,7 @@ const InvestorSelect = ({
   errorMessage,
   disabled = false,
   includePools = false,
+  poolId, // Добавлено
   ...props
 }: InvestorSelectProps) => {
   const { getInvestors } = useInvestor();
@@ -54,14 +56,32 @@ const InvestorSelect = ({
     const fetchInvestors = async () => {
       setIsLoading(true);
       try {
+        const params: any = {
+          pageSize: 20,
+          name: value
+        };
+
+        if (poolId) {
+          params.poolId = poolId;
+        }
+
         const [investorData, poolsData] = await Promise.all([
-          getInvestors({ pageSize: 20, name: value }),
-          includePools ? getInvestorPools({ pageSize: 20, name: value }) : Promise.resolve(null)
+          getInvestors(params),
+          includePools ? getInvestorPools({ pageSize: 20 }) : Promise.resolve(null)
         ]);
 
-        const investorItems = investorData?.items.map(item => ({ id: item.id, name: item.nickname, type: 'investor' as const })) || [];
+        const investorItems = investorData?.items.map(item => ({ 
+          id: item.id, 
+          name: (item.nickname && item.nickname.trim() !== '') ? item.nickname : item.fullName,
+          type: 'investor' as const 
+        })) || [];
+        
         const poolItems = includePools 
-          ? (poolsData?.items.map(pool => ({ id: pool.id, name: pool.name, type: 'pool' as const })) || [])
+          ? (poolsData?.items.map(pool => ({ 
+              id: pool.id, 
+              name: pool.name, 
+              type: 'pool' as const 
+            })) || [])
           : [];
 
         setInvestors([...investorItems, ...poolItems]);
@@ -74,7 +94,7 @@ const InvestorSelect = ({
     };
 
     fetchInvestors();
-  }, [value, getInvestors, getInvestorPools, includePools]);
+  }, [value, getInvestors, getInvestorPools, includePools, poolId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -221,16 +241,18 @@ const InvestorSelect = ({
                     <DropdownItem>Загрузка инвесторов...</DropdownItem>
                   ) : investors.length > 0 ? (
                     investors.map((investor) => (
-                    <DropdownItem
-                      key={`${investor.type}-${investor.id}`}
-                      onClick={() => handleInvestorSelect(investor)}
-                    >
+                      <DropdownItem
+                        key={`${investor.type}-${investor.id}`}
+                        onClick={() => handleInvestorSelect(investor)}
+                      >
                         {investor.name}
                         {investor.type === 'pool' ? ' (пул)' : ''}
                       </DropdownItem>
                     ))
                   ) : (
-                    <DropdownItem>Инвесторы не найдены</DropdownItem>
+                    <DropdownItem>
+                      {poolId ? 'Инвесторы в этом пуле не найдены' : 'Инвесторы не найдены'}
+                    </DropdownItem>
                   )}
                 </DropdownContent>
                 
@@ -254,6 +276,7 @@ const InvestorSelect = ({
         onClose={() => setShowInvestorModal(false)}
         onSubmit={handleInvestorSelectFromModal}
         includePools={includePools}
+        poolId={poolId}
       />
     </>
   );

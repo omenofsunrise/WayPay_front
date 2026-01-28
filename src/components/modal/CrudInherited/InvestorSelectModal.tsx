@@ -27,6 +27,7 @@ interface InvestorSelectModalProps {
   }) => void;
   width?: string;
   includePools?: boolean;
+  poolId?: number; // Добавлено: ID пула для фильтрации инвесторов
 }
 
 const InvestorSelectModal = ({ 
@@ -34,7 +35,8 @@ const InvestorSelectModal = ({
   onClose, 
   onSubmit, 
   width = "1000px",
-  includePools = false
+  includePools = false,
+  poolId // Добавлено
 }: InvestorSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,6 +91,11 @@ const InvestorSelectModal = ({
       search: nameFilter || undefined
     };
 
+    // Добавлено: если указан poolId, передаем его в параметры
+    if (poolId) {
+      params.poolId = poolId;
+    }
+
     if (sortConfig.key !== null) {
       params.sortBy = columnToApiSortMap[sortConfig.key];
       params.sortDirection = sortConfig.direction;
@@ -102,7 +109,7 @@ const InvestorSelectModal = ({
     } else {
       await getInvestors(params);
     }
-  }, [currentPage, nameFilter, sortConfig, getInvestors, getInvestorPools, includePools]);
+  }, [currentPage, nameFilter, sortConfig, getInvestors, getInvestorPools, includePools, poolId]); // Добавлен poolId
   
   useEffect(() => {
     if (isOpen) {
@@ -181,7 +188,7 @@ const InvestorSelectModal = ({
 
   const investorsTableData = investorsData?.items?.map(investor => [
     investor.id.toString(),
-    investor.nickname,
+    (investor.nickname && investor.nickname.trim() !== '') ? investor.nickname : investor.fullName,
     investor.phoneNumber ? <a href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</a> : '',
     investor.investorPie.toString() + "%",
     investor.isBlocked?.toString() || 'false',

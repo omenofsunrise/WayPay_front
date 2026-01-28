@@ -208,6 +208,7 @@ const useCredit = () => {
     isLoading,
     error,
     data,
+    setData,
     investorCredits,
     getCredits,
     getCreditsByInvestorId,
