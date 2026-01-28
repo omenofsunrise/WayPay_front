@@ -900,6 +900,7 @@ const InvestorsPoolPage = () => {
         const isActive = credit.isActive;
         
         return [
+            credit.id,
             formatDate(credit.creditDate.toString()),
             credit.clientFullName,
             credit.clientPhone,
@@ -917,6 +918,7 @@ const InvestorsPoolPage = () => {
         const isActive = credit.isActive;
         
         return [
+            credit.id,
             formatDate(credit.creditDate.toString()),
             credit.clientFullName,
             credit.clientPhone,
@@ -1156,10 +1158,11 @@ const InvestorsPoolPage = () => {
                         ) : (
                             <CustomTable 
                                 columns={[
-                                    { name: "Дата договора", isSortable: true },
+                                    { name: "№" },
+                                    { name: "Дата договора" },
                                     { name: "Клиент", align: "left" },
                                     { name: "Телефон", align: "left" },
-                                    { name: "Начислено", isSortable: true, align: "left" },
+                                    { name: "Начислено",  align: "left" },
                                     { name: "Уплачено", align: "left" },
                                     { name: "Остаток", align: "left" },
                                     { name: "Долг", align: "left" },
@@ -1287,7 +1290,8 @@ const InvestorsPoolPage = () => {
                             <CreditsTableContainer>
                                 <CustomTable 
                                     columns={[
-                                        { name: "Дата договора", isSortable: true },
+                                        { name: "№" },
+                                        { name: "Дата договора" },
                                         { name: "Клиент", align: "left" },
                                         { name: "Телефон", align: "left" },
                                         { name: "Начислено", align: "right" },
