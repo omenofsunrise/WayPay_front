@@ -100,6 +100,11 @@ const {
         name: string;
         type?: 'investor' | 'pool';
     } | null>(null);
+    const [filteredContributions, setFilteredContributions] = useState<{
+        items: InvestorContribution[];
+        totalCount: number;
+    } | null>(null);
+
     const [investors, setInvestors] = useState<Investor[]>([]);
     const [investorsData, setInvestorsData] = useState<any>(null);
     const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
@@ -179,6 +184,34 @@ const {
             fetchCredits();
         }
     }, [selectedPoolId, creditsPage, activeTab, selectedInvestorForFilter, getCredits, getCreditsByInvestorId]);
+
+    useEffect(() => {
+        if (selectedPoolId && activeTab === 'contributions' && selectedInvestorForFilter?.id) {
+            const fetchContributionsByInvestor = async () => {
+                setIsLoading(true);
+                try {
+                    const contributions = await getContributions(Number(selectedInvestorForFilter.id), Number(selectedPoolId), {
+                        page: contributionsPage,
+                        pageSize: pageSize
+                    });
+                    setFilteredContributions(contributions);
+                } catch (error) {
+                    console.error('Error fetching contributions by investor:', error);
+                    setFilteredContributions(null);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            fetchContributionsByInvestor();
+        } else if (selectedPoolId && activeTab === 'contributions') {
+            setFilteredContributions(null);
+            getContributions(undefined, Number(selectedPoolId), {
+                page: contributionsPage,
+                pageSize: pageSize
+            });
+        }
+    }, [selectedPoolId, contributionsPage, activeTab, selectedInvestorForFilter, getContributions]);
 
     useEffect(() => {
         if (selectedInvestorForCredits && isInvestorCreditsModalOpen) {
@@ -333,7 +366,13 @@ const {
         
         // Обновляем значение поиска как имя инвестора
         setSearchValue(investor.nickname || investor.fullName || '');
-        setCreditsPage(1); // Сбрасываем страницу при изменении фильтра
+        
+        // Сбрасываем пагинацию в зависимости от активной вкладки
+        if (activeTab === 'credits') {
+            setCreditsPage(1);
+        } else if (activeTab === 'contributions') {
+            setContributionsPage(1);
+        }
     };
 
     const handleInvestorSelectChange = (value: string) => {
@@ -528,7 +567,7 @@ const {
         }
     };
 
-    const contributionsTableData = contributionsData?.items.map((contribution: InvestorContribution) => [
+    const contributionsTableData = (filteredContributions?.items || contributionsData?.items || []).map((contribution: InvestorContribution) => [
         formatDate(contribution.date),
         contribution.investorNickname || '-',
         formatMoney(contribution.amount.toString()),
@@ -979,18 +1018,7 @@ const {
         
         // Если поле очищено, сбрасываем фильтр
         if (!value) {
-            setSelectedInvestorForFilter(null);
-            setCreditsPage(1);
-            
-            if (selectedPoolId) {
-                getCredits({
-                    investorPoolId: Number(selectedPoolId),
-                    page: 1,
-                    pageSize: pageSize
-                }).then(data => {
-                    setFilteredCredits(null);
-                });
-            }
+            handleClearFilter();
         }
     };
 
@@ -1263,7 +1291,7 @@ const {
                     </TabsContainer>
                     
                     <SearchContainer>
-                        {activeTab === 'credits' && (
+                        {(activeTab === 'credits' || activeTab === 'contributions') && (
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%' }}>
                                 <InvestorSelect
                                     value={searchValue}
@@ -1393,7 +1421,7 @@ const {
                 )}
 
                 {activeTab === 'contributions' && (
-                    <>
+                    <>  
                         <CustomTable 
                             columns={[
                                 { name: "Дата", isSortable: true },
@@ -1406,10 +1434,18 @@ const {
                         />
                         <PaginationLayout>
                             <CountInfoTitle 
-                                total={contributionsData?.totalCount || 0} 
+                                total={
+                                    selectedInvestorForFilter 
+                                        ? (filteredContributions?.totalCount || 0)
+                                        : (contributionsData?.totalCount || 0)
+                                } 
                             />
                             <Pagination
-                                total={contributionsData?.totalCount || 0}
+                                total={
+                                    selectedInvestorForFilter 
+                                        ? (filteredContributions?.totalCount || 0)
+                                        : (contributionsData?.totalCount || 0)
+                                }
                                 current={contributionsPage}
                                 onChange={(page) => setContributionsPage(page)}
                                 itemsPerPage={pageSize}
