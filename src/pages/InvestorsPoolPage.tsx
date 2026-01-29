@@ -1096,6 +1096,7 @@ const {
             formatMoney(credit.payed.toString()),
             formatMoney(credit.rest.toString()),
             formatMoney(credit.debt.toString()),
+            formatMoney(credit.incomeRubles.toString()),
         ];
     });
 
@@ -1112,6 +1113,7 @@ const {
             formatMoney(credit.payed.toString()),
             formatMoney(credit.rest.toString()),
             formatMoney(credit.debt.toString()),
+            formatMoney(credit.incomeRubles.toString())
         ];
     }) || [];
 
@@ -1384,6 +1386,7 @@ const {
                                     { name: "Уплачено", align: "left" },
                                     { name: "Остаток", align: "left" },
                                     { name: "Долг", align: "left" },
+                                    { name: "Ожидаемый доход", align: "left" },
                                 ]} 
                                 data={creditsTableData}
                                 isLoading={isCreditsLoading}
@@ -1524,6 +1527,7 @@ const {
                                         { name: "Уплачено", align: "right" },
                                         { name: "Остаток", align: "right" },
                                         { name: "Долг", align: "right" },
+                                        { name: "Ожидаемый доход", align: "left" },
                                     ]} 
                                     data={investorCreditsTableData}
                                     isLoading={false}
