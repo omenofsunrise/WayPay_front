@@ -34,7 +34,7 @@ const PaymentPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    const { authInfo, denyPermission } = useAuth();
+    const { authInfo, denyPermission, refresh } = useAuth();
     const [investorName, setInvestorName] = useState('');
     const [employeeFullname, setEmployeeFullname] = useState('');
     const [confirmedFilter, setConfirmedFilter] = useState<string>('all');
@@ -62,6 +62,17 @@ const PaymentPage = () => {
         confirmPayment,
         deletePayment
     } = usePayment();
+
+    useEffect(() => {
+        if (authInfo) {
+            loadPayments();
+        }
+    }, [authInfo?.employee.permissions]);
+
+    useEffect(() => {
+        refresh().then(() => {
+        });
+    }, []);
 
     useEffect(() => {
         const loadEmployees = async () => {
