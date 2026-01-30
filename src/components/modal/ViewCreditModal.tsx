@@ -792,6 +792,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                     </>
                   )}
 
+                  {creditData?.clientBirthdate && (
+                    <>
+                      <Label>Дата рождения</Label>
+                      <Value>{new Date(`${creditData.clientBirthdate}`).toLocaleDateString('ru-RU')}</Value>
+                    </>
+                  )}
+
                   {creditData?.termMonths && (
                     <>
                       <Label>Срок, месяцев</Label>
@@ -814,6 +821,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           {creditData.guarantorPhone}
                         </a>
                       </Value>
+                    </>
+                  )}
+
+                  {creditData?.guarantorBirthdate && (
+                    <>
+                      <Label>Дата рождения</Label>
+                      <Value>{new Date(`${creditData.guarantorBirthdate}`).toLocaleDateString('ru-RU')}</Value>
                     </>
                   )}
 
