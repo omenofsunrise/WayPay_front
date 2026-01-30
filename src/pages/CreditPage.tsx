@@ -398,12 +398,27 @@ const CreditPage = () => {
     }
   };
 
+  const includeAllStates = useMemo(() => {
+    const excludedTabs = ['favourite', 'archive', 'debtors', 'inDebt'];
+    if (excludedTabs.includes(activeTab)) {
+      return false;
+    }
+
+    return contractNumber.trim() !== '' || 
+          clientFullName.trim() !== '' || 
+          investorName.trim() !== '' || 
+          (creditTypeId !== null && creditTypeId !== undefined && creditTypeId !== 0);
+  }, [contractNumber, clientFullName, investorName, objectType, selectedInvestmentSource, creditTypeId]);
+
   const loadCredits = useCallback(async () => {
+    const shouldInclude = includeAllStates; 
+
     const params = {
       page: currentPage,
       pageSize: itemsPerPage,
       name: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
+      includeAllStates: shouldInclude ? true : undefined,
       investorNickname: selectedInvestmentSource?.type === 'pool' ? undefined : (investorName || undefined),
       investorPoolId: selectedInvestmentSource?.type === 'pool' ? selectedInvestmentSource.id : undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
@@ -417,7 +432,7 @@ const CreditPage = () => {
     };
 
     await getCredits(params);
-  }, [currentPage, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
+  }, [currentPage, includeAllStates, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
 
   useEffect(() => {
     loadCredits();
