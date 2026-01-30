@@ -1101,9 +1101,6 @@ const {
     });
 
     const investorCreditsTableData = investorCreditsData?.items.map((credit: Credit) => {
-        const hasDebt = credit.debt > 0;
-        const isActive = credit.isActive;
-        
         return [
             credit.id,
             formatDate(credit.creditDate.toString()),
@@ -1113,7 +1110,10 @@ const {
             formatMoney(credit.payed.toString()),
             formatMoney(credit.rest.toString()),
             formatMoney(credit.debt.toString()),
-            formatMoney(credit.incomeRubles.toString())
+            formatMoney(credit.incomeRubles.toString()),
+            formatMoney((credit.incomeRubles 
+                * (selectedInvestorForCredits.pieInPool / 100) 
+                * (selectedInvestorForCredits.investorPie / 100)).toString()),
         ];
     }) || [];
 
@@ -1528,6 +1528,7 @@ const {
                                         { name: "Остаток", align: "right" },
                                         { name: "Долг", align: "right" },
                                         { name: "Ожидаемый доход", align: "left" },
+                                        { name: "Ожидаемый доход инвестора", align: "left" },
                                     ]} 
                                     data={investorCreditsTableData}
                                     isLoading={false}
