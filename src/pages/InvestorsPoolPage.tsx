@@ -1100,22 +1100,41 @@ const {
         ];
     });
 
-    const investorCreditsTableData = investorCreditsData?.items.map((credit: Credit) => {
-        return [
-            credit.id,
-            formatDate(credit.creditDate.toString()),
-            credit.clientFullName,
-            credit.clientPhone,
-            formatMoney(credit.accured.toString()),
-            formatMoney(credit.payed.toString()),
-            formatMoney(credit.rest.toString()),
-            formatMoney(credit.debt.toString()),
-            formatMoney(credit.incomeRubles.toString()),
-            formatMoney((credit.incomeRubles 
-                * (selectedInvestorForCredits.pieInPool / 100) 
-                * (selectedInvestorForCredits.investorPie / 100)).toString()),
-        ];
-    }) || [];
+    const investorCreditsTableData = (() => {
+        const rows = investorCreditsData?.items.map((credit: Credit, index: number) => {
+            const expectedIncome = credit.incomeRubles 
+                * (selectedInvestorForCredits?.pieInPool || 0) / 100 
+                * (selectedInvestorForCredits?.investorPie || 0) / 100;
+            
+            return [
+                investorCreditsData.items.length - index, // или credit.id если нужно
+                formatDate(credit.creditDate.toString()),
+                credit.clientFullName,
+                credit.clientPhone,
+                formatMoney(expectedIncome.toString()),
+            ];
+        }) || [];
+
+        if (rows.length > 0) {
+            const totalExpectedIncome = investorCreditsData?.items.reduce((sum: number, credit: Credit) => {
+                const expectedIncome = credit.incomeRubles 
+                    * (selectedInvestorForCredits?.pieInPool || 0) / 100 
+                    * (selectedInvestorForCredits?.investorPie || 0) / 100;
+                return sum + expectedIncome;
+            }, 0) || 0;
+
+            // Добавляем строку "Итого"
+            rows.push([
+                '',
+                '',
+                '',
+                'Итого:',
+                formatMoney(totalExpectedIncome.toString()),
+            ]);
+        }
+
+        return rows;
+    })();
 
     const rowStyles = (filteredCredits?.items || data?.items || []).reduce((styles, credit, index) => {
         const style: RowStyle = {};
@@ -1493,7 +1512,7 @@ const {
 
                 {isInvestorCreditsModalOpen && selectedInvestorForCredits && (
                     <BaseModal
-                        title={`Договоры инвестора`}
+                        title={`Договоры инвестора ${selectedInvestorForCredits?.fullName}`}
                         onClose={() => {
                             setIsInvestorCreditsModalOpen(false);
                             setSelectedInvestorForCredits(null);
@@ -1523,13 +1542,9 @@ const {
                                         { name: "Дата договора" },
                                         { name: "Клиент", align: "left" },
                                         { name: "Телефон", align: "left" },
-                                        { name: "Начислено", align: "right" },
-                                        { name: "Уплачено", align: "right" },
-                                        { name: "Остаток", align: "right" },
-                                        { name: "Долг", align: "right" },
-                                        { name: "Ожидаемый доход", align: "left" },
                                         { name: "Ожидаемый доход инвестора", align: "left" },
                                     ]} 
+                                    hasTotalsRow={true}
                                     data={investorCreditsTableData}
                                     isLoading={false}
                                 />
@@ -1685,6 +1700,7 @@ const InfoValue = styled.span`
 
 const CreditsTableContainer = styled.div`
     overflow: hidden;
+    margin-top: 20px;
 `;
 
 const LoadingMessage = styled.div`
