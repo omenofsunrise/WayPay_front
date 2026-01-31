@@ -39,6 +39,62 @@ import EditButton from '../components/ui/Buttons/EditButton';
 import DeleteButton from '../components/ui/Buttons/DeleteButton';
 import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
 import type { ContextMenuItem } from '../components/modal/ContextMenu';
+import { createWhatsAppMessageWithoutPhone } from '../utils/sendWhatsAppMessage';
+
+// Интерфейс для модалки "Поделиться"
+interface ShareOptionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (option: 'contractData' | 'paymentHistory' | 'paymentSchedule') => void;
+  selectedCredit?: Credit | null;
+  modalTitle?: string;
+}
+
+// Компонент модалки "Поделиться"
+const ShareOptionModal = ({ 
+  isOpen, 
+  onClose, 
+  onSelect, 
+  selectedCredit,
+  modalTitle = "Поделиться" 
+}: ShareOptionModalProps) => {
+  
+  const options = [
+    { key: 'contractData', label: 'Данными договора', enabled: !!selectedCredit },
+    { key: 'paymentHistory', label: 'Историей платежей', enabled: !!selectedCredit },
+    // { key: 'paymentSchedule', label: 'Расписанием платежей', enabled: !!selectedCredit }
+  ];
+
+  const handleSelect = (optionKey: 'contractData' | 'paymentHistory' | 'paymentSchedule') => {
+    if (selectedCredit) {
+      onSelect(optionKey);
+    } else {
+      console.error('No credit selected for sharing');
+      onClose();
+    }
+  };
+
+  return (
+    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalTitle>{modalTitle}</ModalTitle>
+        <PrintOptions>
+          {options.map(option => (
+            option.enabled !== false && (
+              <PrintOption 
+                key={option.key} 
+                onClick={() => handleSelect(option.key as any)}
+                disabled={!option.enabled}
+              >
+                {option.label}
+              </PrintOption>
+            )
+          ))}
+        </PrintOptions>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -71,7 +127,7 @@ const CreditPage = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
-  const { createPayment } = usePayment();
+  const { createPayment, generatePaymentHistoryMessage } = usePayment();
   const [isCreateTabModalOpen, setIsCreateTabModalOpen] = useState(false);
   const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
@@ -87,6 +143,8 @@ const CreditPage = () => {
   };
   const { hasPermission, forbiddenRole, hasRole, denyPermission } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  // Новое состояние для модалки "Поделиться"
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource, acceptCredit } = useCredit();
   const navigate = useNavigate();
@@ -111,6 +169,51 @@ const CreditPage = () => {
   useEffect(() => {
     loadCustomTabs();
   }, []);
+
+  const generateShareMessage = useCallback(async (option: 'contractData' | 'paymentHistory' | 'paymentSchedule'): Promise<string> => {
+    if (!selectedCreditForPrint) return '';
+    
+    const credit = selectedCreditForPrint;
+    const today = new Date().toLocaleDateString('ru-RU');
+    switch (option) {
+      case 'contractData':
+        return `Договор №${credit.id}
+
+Дата оформления договора: ${formatDate(credit.creditDate)}
+Клиент: ${credit.clientFullName}
+${credit.guarantorFullName ? `Поручитель: ${credit.guarantorFullName}\n` : ''}Срок: ${credit.termMonths} месяцев
+Стоимость товара: ${formatMoney(credit.totalClean?.toString())}
+${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(credit.firstPayment?.toString())}\n` : ''}Общая сумма договора: ${formatMoney(credit.totalAmount?.toString() || '0')}`;
+               
+    case 'paymentHistory':
+      return await generatePaymentHistoryMessage(credit);
+               
+      case 'paymentSchedule':
+        return `📅 *Расписание платежей по договору #${credit.id}*\n\n` +
+               `Клиент: ${credit.clientFullName}\n` +
+               `Дата договора: ${formatDate(credit.creditDate)}\n` +
+               `Общая сумма: ${formatMoney(credit.totalAmount?.toString() || '0')}\n` +
+               `_Для получения детального графика платежей обратитесь к менеджеру._\n` +
+               `_Отправлено ${today}_`;
+               
+      default:
+        return '';
+    }
+  }, [selectedCreditForPrint]);
+
+  const handleShareOptionSelect = useCallback(async (option: 'contractData' | 'paymentHistory' | 'paymentSchedule', e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    const message = await generateShareMessage(option);
+    if (message) {
+      const whatsappUrl = createWhatsAppMessageWithoutPhone(message);
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
+    setIsShareModalOpen(false);
+  }, [generateShareMessage]);
 
   const getCategoryMenuItems = ({ 
     creditId, 
@@ -380,10 +483,6 @@ const CreditPage = () => {
           '/Docs/guaranteeandConsentAgreement.docx'
         );
       }
-    // } catch (error) {
-    //   console.error('Ошибка при генерации документа:', error);
-    //   alert('Произошла ошибка при генерации документа');
-    // }
     
     setIsPrintModalOpen(false);
   };
@@ -772,6 +871,19 @@ const CreditPage = () => {
       <TitleField>
         <CustomTitle>Договоры</CustomTitle>
         <ExportButton 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!selectedCreditForPrint) {
+              alert('Пожалуйста, выберите договора из таблицы (клик по строке)');
+              return;
+            }
+            setIsShareModalOpen(true);
+          }}
+        >
+          Поделиться
+        </ExportButton>
+        <ExportButton 
           icon={<PrintIcon />} 
           onClick={() => {
             if (!selectedCreditForPrint) {
@@ -993,6 +1105,14 @@ const CreditPage = () => {
         selectedCredit={selectedCreditForPrint}
       />
 
+      {/* Новая модалка для кнопки "Поделиться" */}
+      <ShareOptionModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onSelect={handleShareOptionSelect}
+        selectedCredit={selectedCreditForPrint}
+      />
+
       <InvestorSelectModal
         isOpen={isInvestorSelectModalOpen}
         onClose={() => {
@@ -1098,6 +1218,59 @@ const TabActions = styled.div`
   
   ${TabLabel}:hover & {
     opacity: 1;
+  }
+`;
+
+// Стили для модалки "Поделиться" (можно вынести в отдельный файл)
+const ModalOverlay = styled.div<{ isOpen: boolean }>`
+  display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  color: black;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  color: black;
+`;
+
+const ModalTitle = styled.h3`
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
+`;
+
+const PrintOptions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const PrintOption = styled.button<{ disabled?: boolean }>`
+  padding: 12px;
+  background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#f5f5f5'};
+  border: 1px solid ${({ disabled }) => disabled ? '#eee' : '#ddd'};
+  border-radius: 4px;
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
+  text-align: center;
+  transition: background-color 0.2s;
+  color: ${({ disabled }) => disabled ? '#999' : 'black'};
+  
+  &:hover {
+    background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#e9e9e9'};
+    border-color: ${({ disabled }) => disabled ? '#eee' : 'rgba(0, 125, 136, 1)'};
   }
 `;
 
