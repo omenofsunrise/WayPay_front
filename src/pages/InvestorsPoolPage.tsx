@@ -1107,7 +1107,7 @@ const {
                 * (selectedInvestorForCredits?.investorPie || 0) / 100;
             
             return [
-                investorCreditsData.items.length - index, // или credit.id если нужно
+                credit.id, // или credit.id если нужно
                 formatDate(credit.creditDate.toString()),
                 credit.clientFullName,
                 credit.clientPhone,
