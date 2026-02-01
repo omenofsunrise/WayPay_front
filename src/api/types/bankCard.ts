@@ -1,9 +1,8 @@
-import type { PaginationParams } from './common';
-
 export interface BankCard {
   id: number;
-  phone: string;
   details: string;
+  balance: number;
+  paymentsAmount: number;
 }
 
 export interface BankCardRequest {

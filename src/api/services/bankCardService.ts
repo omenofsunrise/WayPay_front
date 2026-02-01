@@ -31,6 +31,13 @@ class BankCardService {
     return response.data;
   }
 
+  async addWithdraw(id: number, amount: number): Promise<void> {
+    const response = await apiClient.patch(`/BankCard/withdraw/${id}`, null, {
+      params: { amount }
+    });
+    return response.data;
+  }
+
   async delete(id: number): Promise<void> {
     await apiClient.delete(`/BankCard/${id}`);
   }

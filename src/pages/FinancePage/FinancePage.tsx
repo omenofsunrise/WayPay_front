@@ -6,6 +6,7 @@ import PaymentIncomePage from './PaymentIncomePage';
 import type { Tab } from '../../components/ui/fields/Tabs';
 import Tabs from '../../components/ui/fields/Tabs';
 import { useAuth } from '../../сontext/AuthContext';
+import BankCardsPage from './BankCardsPage';
 
 const FinancePage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -20,7 +21,8 @@ const FinancePage = () => {
 
     const tabs: Tab[] = [
         { id: "Бюджет", label: "Бюджет" },
-        { id: "Платежи", label: "Платежи" }
+        { id: "Платежи", label: "Платежи" },
+        { id: "Карточки", label: "Карточки" }
     ];
 
     // Добавляем вкладку "Сотрудники" если есть соответствующие права
@@ -36,6 +38,9 @@ const FinancePage = () => {
                 return <PaymentIncomePage />;
             case "Сотрудники":
                 return <FinanceProfilePage onViewEmployee={() => {}} />;
+            case "Карточки":
+                return <BankCardsPage />
+
             default:
                 return <BudgetPage />;
         }
