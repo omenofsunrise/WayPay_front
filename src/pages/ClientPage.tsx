@@ -522,7 +522,7 @@ const ClientPage = () => {
                         )}
                     </TitleContainer>
                     <StyledCountInfo
-                        total={totalClientsCount} 
+                        total={6534} 
                     />
                 </TitleContainer>
             

@@ -1116,20 +1116,15 @@ const {
         }) || [];
 
         if (rows.length > 0) {
-            const totalExpectedIncome = investorCreditsData?.items.reduce((sum: number, credit: Credit) => {
-                const expectedIncome = credit.incomeRubles 
-                    * (selectedInvestorForCredits?.pieInPool || 0) / 100 
-                    * (selectedInvestorForCredits?.investorPie || 0) / 100;
-                return sum + expectedIncome;
-            }, 0) || 0;
-
             // Добавляем строку "Итого"
             rows.push([
                 '',
                 '',
                 '',
                 'Итого:',
-                formatMoney(totalExpectedIncome.toString()),
+                formatMoney((investorCreditsData.totalIncomeRubles 
+                * (selectedInvestorForCredits?.pieInPool || 0) / 100 
+                * (selectedInvestorForCredits?.investorPie || 0) / 100).toString()),
             ]);
         }
 
