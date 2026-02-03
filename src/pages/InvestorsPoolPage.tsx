@@ -1096,7 +1096,7 @@ const {
             formatMoney(credit.payed.toString()),
             formatMoney(credit.rest.toString()),
             formatMoney(credit.debt.toString()),
-            formatMoney(credit.incomeRubles.toString()),
+            formatMoney(credit.defferedIncome.toString()),
         ];
     });
 
@@ -1400,7 +1400,7 @@ const {
                                     { name: "Уплачено", align: "left" },
                                     { name: "Остаток", align: "left" },
                                     { name: "Долг", align: "left" },
-                                    { name: "Ожидаемый доход", align: "left" },
+                                    { name: "Отложенный доход", align: "left" },
                                 ]} 
                                 data={creditsTableData}
                                 isLoading={isCreditsLoading}
