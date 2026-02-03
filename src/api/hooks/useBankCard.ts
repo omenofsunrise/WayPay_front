@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { BankCard, BankCardFilters, BankCardRequest } from '../types/bankCard';
+import type { BankCard, BankCardFilters, BankCardRequest, Withdraw } from '../types/bankCard';
 import type { PagedResult } from '../types/objectType';
 import bankCardService from '../services/bankCardService';
 
@@ -16,6 +16,20 @@ const useBankCards = () => {
       const result = await bankCardService.getAll(filters);
       setObjectTypes(result.items);
       setPagedResult(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getWithdraws = useCallback(async (filters?: BankCardFilters): Promise<PagedResult<Withdraw> | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await bankCardService.getWithdraws(filters);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -82,6 +96,19 @@ const useBankCards = () => {
     }
   }, []);
 
+  const deleteWithdraw = useCallback(async (id: number): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await bankCardService.deleteWithdraw(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -97,6 +124,8 @@ const useBankCards = () => {
       setObjectTypes([]);
       setPagedResult(null);
     },
+    getWithdraws,
+    deleteWithdraw
   };
 };
 

@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import CustomInput from "../../components/ui/fields/CustomInput";
 import Pagination from "../../components/ui/fields/CustomPagination";
 import CustomTable from "../../components/ui/tables/CustomTable";
-import FilterField from "../../components/ui/Layouts/FilterField";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../../components/ui/Layouts/PaginationLayout";
 import TitleField from "../../components/ui/Layouts/TitleLayout";
@@ -12,12 +11,14 @@ import CustomTitle from "../../components/ui/Text/CustomTitle";
 import AddButton from '../../components/ui/Buttons/AddButton';
 import useExport from '../../api/hooks/useExport';
 import bankCardService from '../../api/services/bankCardService';
-import type { BankCard, BankCardRequest, BankCardFilters } from '../../api/types/bankCard';
+import type { BankCard, BankCardRequest, BankCardFilters, Withdraw } from '../../api/types/bankCard';
 import { formatMoney } from '../../utils/formatPrice';
 import { useAuth } from '../../сontext/AuthContext';
 import type { ModalMode } from '../../components/modal/BASE/modalCRUBase';
 import useBankCards from '../../api/hooks/useBankCard';
 import BaseModal from '../../components/modal/BASE/modalCRUBase';
+import { formatDate } from '../../utils/dateFormatter';
+import Tabs from '../../components/ui/fields/Tabs';
 
 const BankCardsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +31,13 @@ const BankCardsPage = () => {
   const [selectedCard, setSelectedCard] = useState<BankCard | null>(null);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [activeTab, setActiveTab] = useState<'cards' | 'history'>('cards');
+  const [withdraws, setWithdraws] = useState<Withdraw[]>([]);
+  const [withdrawsTotalCount, setWithdrawsTotalCount] = useState(0);
+  const [withdrawsCurrentPage, setWithdrawsCurrentPage] = useState(1);
+  const [isWithdrawsLoading, setIsWithdrawsLoading] = useState(false);
+  const [historyFilterCardId, setHistoryFilterCardId] = useState<number | null>(null);
+  const [historyFilterCardName, setHistoryFilterCardName] = useState<string>('');
   
   const pageSize = 10;
   const { authInfo } = useAuth();
@@ -43,7 +51,9 @@ const BankCardsPage = () => {
     create, 
     update, 
     deleteBankCard,
-    addWithdraw 
+    addWithdraw,
+    getWithdraws,
+    deleteWithdraw
   } = useBankCards();
 
   const { exportData, isExporting, exportProgress } = useExport<BankCard>();
@@ -57,9 +67,46 @@ const BankCardsPage = () => {
     await getAll(filters);
   }, [currentPage, sortConfig, getAll]);
 
+  const loadWithdraws = useCallback(async () => {
+    setIsWithdrawsLoading(true);
+    try {
+      const filters: BankCardFilters = {
+        page: withdrawsCurrentPage,
+        pageSize,
+        bankCardId: historyFilterCardId || undefined
+      };
+      
+      const result = await getWithdraws(filters);
+      if (result) {
+        setWithdraws(result.items);
+        setWithdrawsTotalCount(result.totalCount);
+      }
+    } catch (err) {
+      console.error('Ошибка при загрузке истории выводов:', err);
+    } finally {
+      setIsWithdrawsLoading(false);
+    }
+  }, [withdrawsCurrentPage, historyFilterCardId, getWithdraws]);
+
+  const clearHistoryFilter = () => {
+    setHistoryFilterCardId(null);
+    setHistoryFilterCardName('');
+    setWithdrawsCurrentPage(1);
+  };
+
   useEffect(() => {
-    loadBankCards();
-  }, [loadBankCards]);
+    if (activeTab === 'cards') {
+      loadBankCards();
+    } else if (activeTab === 'history') {
+      loadWithdraws();
+    }
+  }, [loadBankCards, loadWithdraws, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      loadWithdraws();
+    }
+  }, [withdrawsCurrentPage, historyFilterCardId]);
 
   const handleExport = async () => {
     try {
@@ -100,6 +147,17 @@ const BankCardsPage = () => {
     ]);
   };
 
+  const formatWithdrawsData = (withdraws: Withdraw[] | undefined) => {
+    if (!withdraws) return [];
+
+    return withdraws.map(withdraw => [
+      withdraw.id.toString(),
+      withdraw.bankCard.details,
+      formatMoney(withdraw.amount.toString()),
+      formatDate(withdraw.createdAt),
+    ]);
+  };
+
   const handleCreateCard = () => {
     setModalMode('create');
     setSelectedCard(null);
@@ -129,6 +187,35 @@ const BankCardsPage = () => {
         loadBankCards();
       } catch (err) {
         console.error('Ошибка при удалении карты:', err);
+      }
+    }
+  };
+
+  const handleViewHistory = (rowData: any[]) => {
+    const rowIndex = tableData.indexOf(rowData);
+    const card = bankCards?.[rowIndex];
+    
+    if (!card) return;
+    
+    // Устанавливаем фильтр для истории по выбранной карте
+    setHistoryFilterCardId(card.id);
+    setHistoryFilterCardName(card.details);
+    setWithdrawsCurrentPage(1);
+    setActiveTab('history');
+  };
+
+  const handleDeleteWithdraw = async (rowData: any[]) => {
+    const rowIndex = withdrawsTableData.indexOf(rowData);
+    const withdraw = withdraws?.[rowIndex];
+    
+    if (!withdraw) return;
+    
+    if (window.confirm('Вы уверены, что хотите удалить эту запись вывода?')) {
+      try {
+        await deleteWithdraw(withdraw.id);
+        loadWithdraws();
+      } catch (err) {
+        console.error('Ошибка при удалении записи вывода:', err);
       }
     }
   };
@@ -194,15 +281,13 @@ const BankCardsPage = () => {
   };
 
   const tableData = formatBankCardsData(bankCards);
+  const withdrawsTableData = formatWithdrawsData(withdraws);
 
-  const tableActions = [
+  const cardsTableActions = [
     {
       label: 'Редактировать',
       action: handleEditCard,
       color: '#007D88',
-      shouldShow: (rowData: any[]) => {
-        return authInfo?.employee.permissions.includes('MANAGE_ACCOUNTING');
-      }
     },
     {
       label: 'Снять средства',
@@ -215,26 +300,30 @@ const BankCardsPage = () => {
       }
     },
     {
+      label: 'История выводов',
+      action: handleViewHistory,
+      color: '#666',
+    },
+    {
       label: 'Удалить',
       action: handleDeleteCard,
       color: '#EF4444',
     }
   ];
 
-  const totalBalance = bankCards?.reduce((sum, card) => sum + card.balance, 0) || 0;
-  const totalPayments = bankCards?.reduce((sum, card) => sum + card.paymentsAmount, 0) || 0;
+  const withdrawsTableActions = [
+    {
+      label: 'Удалить запись',
+      action: handleDeleteWithdraw,
+      color: '#EF4444',
+    }
+  ];
 
-  return (
-    <PageLayout>
-      <TitleField style={{ gap: "35px" }}>
-        <CustomTitle>Банковские карты</CustomTitle>
-        <AddButton onClick={handleCreateCard}></AddButton>
-      </TitleField>
-      
-      {isLoading && <div>Загрузка...</div>}
-      {error && <div>Ошибка: {error}</div>}
-      
-      {!isLoading && !error && (
+  const tabs = [
+    {
+      id: 'cards',
+      label: 'Банковские карты',
+      content: (
         <>
           <CustomTable 
             columns={[
@@ -245,7 +334,7 @@ const BankCardsPage = () => {
             ]} 
             data={tableData}
             sortConfig={sortConfig}
-            contextMenuActions={tableActions}
+            contextMenuActions={cardsTableActions}
           />
           
           <PaginationLayout>
@@ -261,7 +350,86 @@ const BankCardsPage = () => {
             />
           </PaginationLayout>
         </>
-      )}
+      )
+    },
+    {
+      id: 'history',
+      label: 'История выводов',
+      content:
+        <>
+          {/* Блок фильтрации */}
+          {historyFilterCardId && (
+            <HistoryFilterBlock>
+              <FilterInfo>
+                <FilterCardInfo>{historyFilterCardName}</FilterCardInfo>
+              </FilterInfo>
+              <ClearFilterButton onClick={clearHistoryFilter}>
+                Сбросить фильтр
+              </ClearFilterButton>
+            </HistoryFilterBlock>
+          )}
+          
+          {isWithdrawsLoading && <LoadingMessage>Загрузка истории...</LoadingMessage>}
+          
+          {!isWithdrawsLoading && withdraws.length > 0 && (
+            <>
+              <CustomTable 
+                columns={[
+                  { name: "ID", isSortable: true, align: "center" },
+                  { name: "Карта", isSortable: true, align: "left" },
+                  { name: "Сумма", isSortable: true, align: "right" },
+                  { name: "Дата и время", isSortable: true, align: "center" },
+                ]} 
+                data={withdrawsTableData}
+                contextMenuActions={withdrawsTableActions}
+              />
+              
+              <PaginationLayout>
+                <CountInfoTitle 
+                  total={withdrawsTotalCount} 
+                />
+                
+                <Pagination
+                  total={withdrawsTotalCount}
+                  current={withdrawsCurrentPage}
+                  onChange={setWithdrawsCurrentPage}
+                  itemsPerPage={pageSize}
+                />
+              </PaginationLayout>
+            </>
+          )}
+          
+          {!isWithdrawsLoading && withdraws.length === 0 && (
+            <NoDataMessage>
+              {historyFilterCardId 
+                ? 'Нет записей о выводах для выбранной карты' 
+                : 'Нет записей о выводах карт'}
+            </NoDataMessage>
+          )}
+        </>
+    }
+  ];
+
+  return (
+    <PageLayout>
+      <TitleField style={{ gap: "35px" }}>
+        <CustomTitle>Банковские карты</CustomTitle>
+        <AddButton onClick={handleCreateCard}></AddButton>
+      </TitleField>
+      
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={(tabId) => {
+          setActiveTab(tabId as 'cards' | 'history');
+          if (tabId === 'history') {
+            loadWithdraws();
+          }
+        }}
+      />
+      
+      {activeTab === 'cards' && isLoading && <LoadingMessage>Загрузка...</LoadingMessage>}
+      {activeTab === 'cards' && error && <ErrorMessage>Ошибка: {error}</ErrorMessage>}
 
       {/* Модалка для создания/редактирования карты */}
       {isModalOpen && (
@@ -293,6 +461,7 @@ const BankCardsPage = () => {
         >
           <FormField>
             <Label>Карта:</Label>
+            <CardInfo>{selectedCard.details}</CardInfo>
           </FormField>
           <FormField>
             <Label>Текущий баланс:</Label>
@@ -325,13 +494,18 @@ export default BankCardsPage;
 const SummaryInfo = styled.div`
   display: flex;
   gap: 30px;
-  margin-left: auto;
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 `;
 
 const TableTitle = styled.div`
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #000;
+  color: #6b7280;
+  margin-bottom: 8px;
 `;
 
 const FormField = styled.div`
@@ -350,6 +524,8 @@ const CardInfo = styled.div`
   background-color: #f5f5f5;
   border-radius: 5px;
   border: 1px solid #ddd;
+  font-weight: 500;
+  color: #333;
 `;
 
 const BalanceInfo = styled.div`
@@ -366,4 +542,102 @@ const Hint = styled.div`
   font-size: 14px;
   color: #666;
   margin-top: 5px;
+`;
+
+const NoDataMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  margin: 20px 0;
+`;
+
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #007D88;
+  font-size: 16px;
+`;
+
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #EF4444;
+  font-size: 16px;
+  background-color: #fef2f2;
+  border-radius: 8px;
+  margin: 20px 0;
+`;
+
+const HistoryFilterBlock = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+`;
+
+const FilterInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const FilterLabel = styled.span`
+  font-weight: 500;
+  color: #333;
+`;
+
+const FilterCardInfo = styled.span`
+  font-weight: 600;
+  color: #007D88;
+  background-color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #b3e0e3;
+`;
+
+const ClearFilterButton = styled.button`
+  padding: 8px 16px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
+  }
+`;
+
+const SelectCardMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+`;
+
+const BackButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 30px;
+  
+  &:hover {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
+  }
 `;

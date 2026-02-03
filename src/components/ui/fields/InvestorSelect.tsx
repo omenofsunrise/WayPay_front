@@ -26,7 +26,7 @@ interface InvestorSelectProps {
   errorMessage?: string;
   disabled?: boolean;
   includePools?: boolean;
-  poolId?: number; // Добавлено: ID пула для фильтрации инвесторов
+  poolId?: number;
 }
 
 const InvestorSelect = ({
