@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
-import CustomTable from '../../ui/tables/CustomTable';
 import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 import useClients from '../../../api/hooks/useClient';
 import Pagination from '../../ui/fields/CustomPagination';
@@ -11,7 +10,7 @@ import ClientModal from './ClientModal';
 import { useAuth } from '../../../сontext/AuthContext';
 import type { Client } from '../../../api/types/client';
 import PhoneModalInput from '../../ui/fields/PhoneModalInput';
-import { formatPhoneHref } from '../../../utils/phoneUtils';
+import ClientCard from '../../ui/cards/ClientCard';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -25,7 +24,7 @@ const ClientSelectModal = ({
   isOpen, 
   onClose, 
   onSubmit, 
-  width = "832px",
+  width = "900px",
   title,
 }: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
@@ -140,15 +139,12 @@ const ClientSelectModal = ({
     });
   };
 
-  const handleRowClick = (rowData: any[], rowIndex: number) => {
-    const client = clientsData?.items[rowIndex];
-    if (client) {
-      setSelectedClient({
-        id: client.id,
-        fullName: client.fullName,
-        phone: client.phone
-      });
-    }
+  const handleClientCardClick = (client: ClientCardType) => {
+    setSelectedClient({
+      id: client.id,
+      fullName: client.fullName,
+      phone: client.phone
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -195,12 +191,21 @@ const ClientSelectModal = ({
     }
   };
 
-  const tableData = clientsData?.items?.map(client => [
-    client.id.toString(),
-    client.fullName,
-    client.phone ? <a href={formatPhoneHref(client.phone)}>{client.phone}</a> : '',
-    formatDate(client.birthdate),
-  ]) || [];
+  const transformClientData = (client: any): ClientCardType => ({
+    id: client.id,
+    fullName: client.fullName,
+    phone: client.phone,
+    secondPhone: client.secondPhone || null,
+    doc: client.doc || '',
+    birthdate: client.birthdate ? new Date(client.birthdate) : null,
+    docIssueDate: client.docIssueDate ? new Date(client.docIssueDate) : null,
+    docIssueYear: client.docIssueYear || null,
+    registrationAddress: client.registrationAddress || null,
+    creditIds: client.creditIds || null,
+    creditRestTerms: client.creditRestTerms || null,
+    hasPassportPhoto: client.hasPassportPhoto || null,
+    blacklist: client.blacklist || false
+  });
 
   if (!isOpen) return null;
 
@@ -261,32 +266,24 @@ const ClientSelectModal = ({
                 </SearchPrompt>
               ) : (
                 <>
-                  <TableContainer>
-                    <CustomTable 
-                      columns={[
-                        { name: "ID", isSortable: true, align: "left" },
-                        { name: "ФИО", isSortable: true, align: "left" },
-                        { name: "Телефон", align: "left" },
-                        { name: "Дата рождения", isSortable: true, align: "right" },
-                      ]} 
-                      data={tableData}
-                      onRowClick={handleRowClick}
-                      onSort={handleSort}
-                      sortConfig={sortConfig}
-                      selectedRow={selectedClient ? tableData.findIndex(row => row[0] === selectedClient.id.toString()) : -1}
-                    />
-                  </TableContainer>
-                  
-                  {clientsData && clientsData.totalCount > 0 && (
-                    <PaginationContainer>
-                      <Pagination
-                        total={clientsData.totalCount}
-                        current={currentPage}
-                        onChange={setCurrentPage}
-                        itemsPerPage={pageSize}
-                      />
-                    </PaginationContainer>
-                  )}
+                  <CardsContainer>
+                    {clientsData?.items?.map((client: any) => (
+                      <ClientCardWrapper 
+                        key={client.id} 
+                        $isSelected={selectedClient?.id === client.id}
+                        onClick={() => handleClientCardClick(transformClientData(client))}
+                      >
+                        <ClientCard 
+                          client={transformClientData(client)}
+                          onEdit={() => {}} // Пустые функции, так как в модальном окне редактирование не нужно
+                          onDelete={() => {}}
+                          onRightClick={() => {}}
+                          onOpenDossier={() => {}}
+                          showMenu={false} // Скрываем меню в модальном окне выбора
+                        />
+                      </ClientCardWrapper>
+                    ))}
+                  </CardsContainer>
                 </>
               )}
             </>
@@ -327,8 +324,35 @@ const FilterContainer = styled.div`
   gap: 10px;
 `;
 
-const TableContainer = styled.div`
+const CardsContainer = styled.div`
   margin-bottom: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+`;
+
+const ClientCardWrapper = styled.div<{ $isSelected: boolean }>`
+  position: relative;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  cursor: pointer;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid ${props => props.$isSelected ? '#007D88' : 'transparent'};
+    border-radius: 12px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s;
+  }
 `;
 
 const PaginationContainer = styled.div`
