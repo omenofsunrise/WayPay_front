@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
-import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV } from 'react-icons/fa';
+import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV, FaExclamationTriangle } from 'react-icons/fa';
 import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 
@@ -224,6 +224,39 @@ const MenuItem = styled.button`
   }
 `;
 
+const BlacklistBadge = styled.div`
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  color: #EF4444;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.5);
+  z-index: 10;
+  animation: intenseGlow 1.5s infinite alternate;
+
+  @keyframes intenseGlow {
+    0% {
+      box-shadow: 0 0 5px rgba(239, 68, 68, 0.5),
+                  0 0 10px rgba(239, 68, 68, 0.3),
+                  0 0 15px rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+    }
+    100% {
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.8),
+                  0 0 20px rgba(239, 68, 68, 0.5),
+                  0 0 30px rgba(239, 68, 68, 0.3);
+      color: #ff6b6b;
+    }
+  }
+`;
+
 export interface Client {
   id: number;
   fullName: string;
@@ -237,6 +270,7 @@ export interface Client {
   creditIds?: string[] | null;
   creditRestTerms?: string[] | null;
   hasPassportPhoto?: boolean | null;
+  blacklist?: boolean; // Добавлено свойство черного списка
 }
 
 interface ClientCardProps {
@@ -273,7 +307,6 @@ const ClientCard: React.FC<ClientCardProps> = ({
     };
   }, []);
 
-  // Если клиент null, показываем заглушку
   if (!client) {
     return (
       <Card>
@@ -351,16 +384,28 @@ const ClientCard: React.FC<ClientCardProps> = ({
   const hasContracts = client.creditIds && client.creditIds.length > 0;
   const safeCreditIds = client.creditIds || [];
   const safeCreditRestTerms = client.creditRestTerms || [];
+  const isBlacklisted = client.blacklist === true;
 
   return (
     <Card 
       key={client.id} 
       onClick={handleCardClick}
       onContextMenu={handleRightClick}
+      style={isBlacklisted ? { 
+        borderColor: '#EF4444',
+        background: 'linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)'
+      } : {}}
     >
+      {isBlacklisted && (
+        <BlacklistBadge>
+          <FaExclamationTriangle size={14} />
+          Чёрный список
+        </BlacklistBadge>
+      )}
+      
       <CardContent>
         <CardTitle>
-          {client.fullName || 'Не указано'}
+            {client.fullName || 'Не указано'}
         </CardTitle>
         
         {showMenu && (
@@ -386,7 +431,9 @@ const ClientCard: React.FC<ClientCardProps> = ({
               <IconWrapper><FaIdCard size={12} /></IconWrapper>
               ID клиента
             </InfoLabel>
-            <InfoValue>{client.id || 'Не указан'}</InfoValue>
+            <InfoValue>
+              {client.id || 'Не указан'}
+            </InfoValue>
           </InfoItem>
           
           <InfoItem>
@@ -399,6 +446,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
                 <PhoneLink 
                   href={formatPhoneHref(client.phone)} 
                   onClick={(e) => e.stopPropagation()}
+                  style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
                 >
                   {formatPhone(client.phone)}
                 </PhoneLink>
@@ -420,6 +468,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
                   target="_blank" 
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
+                  style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
                 >
                   {formatPhone(client.secondPhone)}
                 </WhatsAppLink>
@@ -456,7 +505,10 @@ const ClientCard: React.FC<ClientCardProps> = ({
                 const isUrgent = months > 0 && months < 3;
                 
                 return (
-                  <ContractCard key={index}>
+                  <ContractCard key={index} style={isBlacklisted ? { 
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: '#EF4444'
+                  } : {}}>
                     <ContractNumber>{contractId || 'Без номера'}</ContractNumber>
                     <ContractTerm>
                       Остаток: {months} мес.
