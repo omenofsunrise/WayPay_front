@@ -1102,12 +1102,12 @@ const {
 
     const investorCreditsTableData = (() => {
         const rows = investorCreditsData?.items.map((credit: Credit, index: number) => {
-            const expectedIncome = credit.incomeRubles 
+            const expectedIncome = credit.defferedIncome 
                 * (selectedInvestorForCredits?.pieInPool || 0) / 100 
                 * (selectedInvestorForCredits?.investorPie || 0) / 100;
             
             return [
-                credit.id, // или credit.id если нужно
+                credit.id,
                 formatDate(credit.creditDate.toString()),
                 credit.clientFullName,
                 credit.clientPhone,
@@ -1122,7 +1122,7 @@ const {
                 '',
                 '',
                 'Итого:',
-                formatMoney((investorCreditsData.totalIncomeRubles 
+                formatMoney((investorCreditsData.totalDefferedIncome 
                 * (selectedInvestorForCredits?.pieInPool || 0) / 100 
                 * (selectedInvestorForCredits?.investorPie || 0) / 100).toString()),
             ]);
@@ -1537,7 +1537,7 @@ const {
                                         { name: "Дата договора" },
                                         { name: "Клиент", align: "left" },
                                         { name: "Телефон", align: "left" },
-                                        { name: "Ожидаемый доход инвестора", align: "left" },
+                                        { name: "Отложенный доход инвестора", align: "left" },
                                     ]} 
                                     hasTotalsRow={true}
                                     data={investorCreditsTableData}
