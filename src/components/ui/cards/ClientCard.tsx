@@ -233,28 +233,12 @@ const BlacklistBadge = styled.div`
   padding: 6px 10px;
   border-radius: 6px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   gap: 6px;
   box-shadow: 0 2px 12px rgba(239, 68, 68, 0.5);
   z-index: 10;
-  animation: intenseGlow 1.5s infinite alternate;
-
-  @keyframes intenseGlow {
-    0% {
-      box-shadow: 0 0 5px rgba(239, 68, 68, 0.5),
-                  0 0 10px rgba(239, 68, 68, 0.3),
-                  0 0 15px rgba(239, 68, 68, 0.2);
-      color: #EF4444;
-    }
-    100% {
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.8),
-                  0 0 20px rgba(239, 68, 68, 0.5),
-                  0 0 30px rgba(239, 68, 68, 0.3);
-      color: #ff6b6b;
-    }
-  }
 `;
 
 export interface Client {
