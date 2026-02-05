@@ -4,8 +4,9 @@ import type {
   InvestorPool, 
   InvestorPoolRequest, 
   InvestorPoolParams,
+  Reinvestment,
 } from '../types/investorPool';
-import type { PaginatedResponse } from '../types/common';
+import type { PaginatedResponse, PaginationParams } from '../types/common';
 import type { InvestorReport } from '../types/investor';
 
 const useInvestorPool = () => {
@@ -118,6 +119,20 @@ const useInvestorPool = () => {
     }
   };
 
+  const getReinvestments = async (poolId: number, params: PaginationParams, investorId: number): Promise<PaginatedResponse<Reinvestment> | null> => {
+    console.log('ADSKJDLAKSHDKLJKJH GHJ ПОСОМТРИ РПОСОСО СОРОРОСОСО');
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await investorPoolService.getReinvestments(poolId, params, investorId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const deleteInvestorPool = async (id: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -149,7 +164,8 @@ const useInvestorPool = () => {
     deleteInvestorPool,
     reportData,
     getInvestorPoolReport,
-    reinvestInvestorPool
+    reinvestInvestorPool,
+    getReinvestments
   };
 };
 

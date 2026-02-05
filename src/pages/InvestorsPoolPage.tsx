@@ -36,7 +36,7 @@ import useInvestorPool from '../api/hooks/useInvestorPool';
 import EditButton from '../components/ui/Buttons/EditButton';
 import AddButton from '../components/ui/Buttons/AddButton';
 import DeleteButton from '../components/ui/Buttons/DeleteButton';
-import type { InvestorPool } from '../api/types/investorPool';
+import type { InvestorPool, Reinvestment } from '../api/types/investorPool';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
@@ -80,7 +80,8 @@ const {
         getInvestorPoolReport,
         reinvestInvestorPool,
         reportData,
-        data: poolsData
+        data: poolsData,
+        getReinvestments
     } = useInvestorPool();
 
     const {
@@ -115,7 +116,7 @@ const {
     const [report, setReport] = useState<InvestorReport | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'payouts' | 'credits' | 'investors' | 'contributions'>('investors');
+    const [activeTab, setActiveTab] = useState<'payouts' | 'credits' | 'investors' | 'contributions' | 'reinvestments'>('investors');
     const [dataTab, setDataTab] = useState<'general' | 'expected' | 'current'>('general');
     const [creditsPage, setCreditsPage] = useState(1);
     const [payoutsPage, setPayoutsPage] = useState(1);
@@ -135,7 +136,6 @@ const {
     const [investmentAmount, setInvestmentAmount] = useState('');
     const [selectedInvestorForInvestment, setSelectedInvestorForInvestment] = useState<Investor | null>(null);
     const [payoutSource, setPayoutSource] = useState<PayoutSource>('income');
-    // Новые состояния для модального окна кредитов инвестора
     const [isInvestorCreditsModalOpen, setIsInvestorCreditsModalOpen] = useState(false);
     const [selectedInvestorForCredits, setSelectedInvestorForCredits] = useState<Investor | null>(null);
     const [investorCreditsData, setInvestorCreditsData] = useState<{
@@ -143,8 +143,17 @@ const {
         totalCount: number;
     } | null>(null);
     const [isInvestorCreditsLoading, setIsInvestorCreditsLoading] = useState(false);
-    // Состояние для поиска
     const [searchValue, setSearchValue] = useState<string>('');
+    const [reinvestmentsPage, setReinvestmentsPage] = useState(1);
+const [reinvestmentsData, setReinvestmentsData] = useState<{
+    items: Reinvestment[];
+    totalCount: number;
+} | null>(null);
+const [isReinvestmentsLoading, setIsReinvestmentsLoading] = useState(false);
+const [filteredReinvestments, setFilteredReinvestments] = useState<{
+    items: Reinvestment[];
+    totalCount: number;
+} | null>(null);
 
     useEffect(() => {
         if (selectedPoolId && activeTab === 'credits') {
@@ -185,6 +194,39 @@ const {
             fetchCredits();
         }
     }, [selectedPoolId, creditsPage, activeTab, selectedInvestorForFilter, getCredits, getCreditsByInvestorId]);
+
+    useEffect(() => {
+    if (selectedPoolId && activeTab === 'reinvestments') {
+        const loadReinvestments = async () => {
+            setIsReinvestmentsLoading(true);
+            try {
+                const reinvestments = await getReinvestments(
+                    Number(selectedPoolId),
+                    {
+                        page: reinvestmentsPage,
+                        pageSize: pageSize
+                    },
+                    selectedInvestorForFilter?.id || 0 // 0 = все инвесторы
+                );
+                
+                if (selectedInvestorForFilter?.id) {
+                    setFilteredReinvestments(reinvestments);
+                } else {
+                    setReinvestmentsData(reinvestments);
+                    setFilteredReinvestments(null);
+                }
+            } catch (error) {
+                console.error('Error fetching reinvestments:', error);
+                setReinvestmentsData(null);
+                setFilteredReinvestments(null);
+            } finally {
+                setIsReinvestmentsLoading(false);
+            }
+        };
+        
+        loadReinvestments();
+    }
+}, [selectedPoolId, reinvestmentsPage, activeTab, selectedInvestorForFilter]);
 
     useEffect(() => {
         if (selectedPoolId && activeTab === 'contributions' && selectedInvestorForFilter?.id) {
@@ -392,32 +434,34 @@ const {
     };
 
     const handleInvestorSelectChange = (value: string) => {
-        if (!value || value === '') {
-            setSelectedInvestorForFilter(null);
-            setSearchValue('');
-            
-            // Сбрасываем фильтрацию в зависимости от активной вкладки
-            if (activeTab === 'credits') {
-                setCreditsPage(1);
-                if (selectedPoolId) {
-                    getCredits({
-                        investorPoolId: Number(selectedPoolId),
-                        page: 1,
-                        pageSize: pageSize
-                    }).then(data => {
-                        setFilteredCredits(null);
-                    });
-                }
-            } else if (activeTab === 'payouts') {
-                setPayoutsPage(1);
-                setFilteredPayouts(payouts);
-            } else if (activeTab === 'contributions') {
-                setContributionsPage(1);
+    if (!value || value === '') {
+        setSelectedInvestorForFilter(null);
+        setSearchValue('');
+        
+        // Сбрасываем фильтрацию в зависимости от активной вкладки
+        if (activeTab === 'credits') {
+            setCreditsPage(1);
+            if (selectedPoolId) {
+                getCredits({
+                    investorPoolId: Number(selectedPoolId),
+                    page: 1,
+                    pageSize: pageSize
+                }).then(data => {
+                    setFilteredCredits(null);
+                });
             }
-        } else {
-            setSearchValue(value);
+        } else if (activeTab === 'payouts') {
+            setPayoutsPage(1);
+            setFilteredPayouts(payouts);
+        } else if (activeTab === 'contributions') {
+            setContributionsPage(1);
+        } else if (activeTab === 'reinvestments') {
+            setReinvestmentsPage(1);
         }
-    };
+    } else {
+        setSearchValue(value);
+    }
+};
 
     const investorsTableData = investors.map((investor: Investor) => {
         const createDoubleClickCell = (content: React.ReactNode) => (
@@ -565,6 +609,22 @@ const {
                         page: contributionsPage,
                         pageSize: pageSize
                     });
+                }
+                
+                if (activeTab === 'reinvestments') {
+                    const reinvestments = await getReinvestments(
+                        Number(selectedPoolId),
+                        {
+                            page: reinvestmentsPage,
+                            pageSize: pageSize
+                        },
+                        selectedInvestorForFilter?.id || 0
+                    );
+                    if (selectedInvestorForFilter?.id) {
+                        setFilteredReinvestments(reinvestments);
+                    } else {
+                        setReinvestmentsData(reinvestments);
+                    }
                 }
                 
             } catch (error) {
@@ -1025,22 +1085,14 @@ const {
         { id: 'payouts', label: 'История выплат' },
         { id: 'credits', label: 'Договоры' },
         { id: 'contributions', label: 'Инвестиции' },
-    ];
+        { id: 'reinvestments', label: 'Реинвестиции' },
+];
 
     const dataTabs = [
         { id: 'general', label: 'Общие данные' },
         { id: 'expected', label: 'Ожидаемый доход' },
         { id: 'current', label: 'Текущий доход' }
     ];
-
-    const handleSearchChange = (value: string) => {
-        setSearchValue(value);
-        
-        // Если поле очищено, сбрасываем фильтр
-        if (!value) {
-            handleClearFilter();
-        }
-    };
 
     const handleClearFilter = () => {
         setSelectedInvestorForFilter(null);
@@ -1063,7 +1115,20 @@ const {
             setFilteredPayouts(payouts); // Сбрасываем фильтр выплат
         } else if (activeTab === 'contributions') {
             setContributionsPage(1);
+        } else if (activeTab === 'reinvestments') {
+            setReinvestmentsPage(1);
         }
+    };
+
+    const getReinvestmentTableData = () => {
+    const items = filteredReinvestments?.items || reinvestmentsData?.items || [];
+    
+    return items.map((reinvestment: Reinvestment) => [
+            reinvestment.id.toString(),
+            formatDate(reinvestment.date.toString()),
+            reinvestment.investorNickname,
+            formatMoney(reinvestment.amount.toString()),
+        ]);
     };
 
     const handleDeletePayout = async (id: number) => {
@@ -1249,7 +1314,11 @@ const {
                                 <PoolTabItem 
                                     key={pool.id}
                                     $isActive={selectedPoolId === pool.id.toString()}
-                                    onClick={() => setSelectedPoolId(pool.id.toString())}
+                                    onClick={() => {
+        setSelectedPoolId(pool.id.toString());
+        setSelectedInvestorForFilter(null);
+        setSearchValue('');
+    }}
                                 >
                                     {pool.name}
                                     {selectedPoolId === pool.id.toString() && <ActiveTabIndicator />}
@@ -1308,7 +1377,7 @@ const {
                 
                 <TabsHeaderContainer>
                     <TabsContainer style={{ marginBottom: 0, flex: 1 }}>
-                        <Tabs<'payouts' | 'credits' | 'investors' | 'contributions'>
+                        <Tabs<'payouts' | 'credits' | 'investors' | 'contributions' | 'reinvestments'>
                             tabs={tabs}
                             activeTab={activeTab}
                             onChange={(tabId) => {
@@ -1335,7 +1404,8 @@ const {
                     </TabsContainer>
                     
                     <SearchContainer>
-                        {(activeTab === 'credits' || activeTab === 'contributions' || activeTab === 'payouts') && (
+                        {(activeTab === 'credits' || activeTab === 'contributions' || activeTab === 'payouts' 
+                        || activeTab === 'reinvestments') && (
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%' }}>
                                 <InvestorSelect
                                     value={searchValue}
@@ -1360,7 +1430,7 @@ const {
                                 { name: "Выплатил", align: "left" },
                                 { name: "Инвестор", align: "left" },
                                 { name: "Выплата, руб", isSortable: true, align: "left" },
-                                { name: "", align: "center" }
+                                { name: "", align: "center" },
                             ]} 
                             data={filteredPayouts.map((payout: InvestorPayout) => [
                                 formatDate(payout.payoutDate),
@@ -1385,6 +1455,40 @@ const {
                     </>
                 )}
                 
+                {activeTab === 'reinvestments' && (
+    <>
+        <CustomTable 
+            columns={[
+                { name: "ID", isSortable: true },
+                { name: "Дата реинвестиции", isSortable: true },
+                { name: "Инвестор", align: "left" },
+                { name: "Сумма", align: "right", isSortable: true },
+            ]} 
+            data={getReinvestmentTableData()}
+            isLoading={isReinvestmentsLoading}
+        />
+        <PaginationLayout>
+            <CountInfoTitle 
+                total={
+                    selectedInvestorForFilter 
+                        ? (filteredReinvestments?.totalCount || 0)
+                        : (reinvestmentsData?.totalCount || 0)
+                } 
+            />
+            <Pagination
+                total={
+                    selectedInvestorForFilter 
+                        ? (filteredReinvestments?.totalCount || 0)
+                        : (reinvestmentsData?.totalCount || 0)
+                }
+                current={reinvestmentsPage}
+                onChange={(page) => setReinvestmentsPage(page)}
+                itemsPerPage={pageSize}
+            />
+        </PaginationLayout>
+    </>
+)}
+
                 {activeTab === 'credits' && (
                     <>
                         {isCreditsLoading ? (
@@ -1552,7 +1656,6 @@ const {
                                         current={investorsCreditsPage}
                                         onChange={(page) => {
                                             setInvestorsCreditsPage(page);
-                                            // Перезагружаем данные при изменении страницы
                                             if (selectedInvestorForCredits) {
                                                 getCreditsByInvestorId(selectedInvestorForCredits.id, page, pageSize)
                                                     .then(data => setInvestorCreditsData(data));
