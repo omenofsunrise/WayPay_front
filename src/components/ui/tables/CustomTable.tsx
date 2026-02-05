@@ -36,16 +36,19 @@ interface CreditsTableProps {
   contextMenuActions?: TableAction[] | ((rowData: any[]) => TableAction[]);
   onSort?: (columnIndex: number) => void;
   onRowClick?: (rowData: any[], rowIndex: number) => void;
+  onMultiSelectChange?: (selectedIndices: number[]) => void;
   sortConfig?: {
     key: number | null;
     direction: 'asc' | 'desc';
   };
-  selectedRow?: number;
+  selectedRow?: number | number[];
   fixedHeight?: string;
   hasTotalsRow?: boolean;
   debtChecker?: (rowData: any[]) => boolean;
   rowStyles?: { [rowIndex: number]: RowStyle };
   isLoading?: boolean;
+  multiSelect?: boolean;
+  selectableRows?: number[];
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({ 
@@ -56,14 +59,17 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   onSort,
   sortConfig,
   onRowClick,
+  onMultiSelectChange,
   selectedRow: externalSelectedRow,
   fixedHeight,
   hasTotalsRow,
   debtChecker,
   rowStyles = {},
-  isLoading
+  isLoading,
+  multiSelect = false,
+  selectableRows
 }) => {
-  const [internalSelectedRow, setInternalSelectedRow] = useState<number | null>(null);
+  const [internalSelectedRows, setInternalSelectedRows] = useState<number[]>([]);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -73,7 +79,16 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   const longPressTimer = useRef<number | null>(null);
   const LONG_PRESS_DURATION = 500;
 
-  const selectedRow = externalSelectedRow !== undefined ? externalSelectedRow : internalSelectedRow;
+  // Преобразуем externalSelectedRow в массив, если это одиночное значение
+  const externalSelectedRows = externalSelectedRow === undefined 
+    ? undefined 
+    : Array.isArray(externalSelectedRow) 
+      ? externalSelectedRow 
+      : [externalSelectedRow];
+
+  const selectedRows = externalSelectedRows !== undefined 
+    ? externalSelectedRows 
+    : internalSelectedRows;
 
   const handleSort = (columnIndex: number) => {
     if (!columns[columnIndex].isSortable || !onSort) return;
@@ -91,26 +106,85 @@ const CustomTable: React.FC<CreditsTableProps> = ({
 
   const checkDebt = debtChecker || defaultDebtChecker;
 
-  const handleRowClick = (rowIndex: number) => {
-    // Если клик на уже выбранную строку - ничего не делаем, оставляем её выбранной
-    if (rowIndex === selectedRow) return;
+  const isRowSelectable = (rowIndex: number, isTotalsRow: boolean) => {
+    if (isTotalsRow) return false;
+    if (!selectableRows) return true;
+    return selectableRows.includes(rowIndex);
+  };
+
+  const handleRowClick = (rowIndex: number, isTotalsRow: boolean, event: React.MouseEvent) => {
+    // Пропускаем клик по итоговой строке
+    if (isTotalsRow) return;
     
-    const newSelectedRow = rowIndex;
-    if (externalSelectedRow === undefined) {
-      setInternalSelectedRow(newSelectedRow);
+    // Проверяем, можно ли выделить строку
+    if (!isRowSelectable(rowIndex, isTotalsRow)) return;
+
+    let newSelectedRows: number[] = [];
+
+    if (multiSelect) {
+      // Мультиселект с поддержкой Ctrl и Shift
+      const isCtrlPressed = event.ctrlKey || event.metaKey;
+      const isShiftPressed = event.shiftKey;
+
+      if (isShiftPressed && selectedRows.length > 0) {
+        // Выделение диапазона
+        const lastSelected = selectedRows[selectedRows.length - 1];
+        const start = Math.min(lastSelected, rowIndex);
+        const end = Math.max(lastSelected, rowIndex);
+        
+        newSelectedRows = [...selectedRows];
+        for (let i = start; i <= end; i++) {
+          if (isRowSelectable(i, false) && !newSelectedRows.includes(i)) {
+            newSelectedRows.push(i);
+          }
+        }
+      } else if (isCtrlPressed) {
+        // Добавление/удаление из выделения
+        if (selectedRows.includes(rowIndex)) {
+          newSelectedRows = selectedRows.filter(idx => idx !== rowIndex);
+        } else {
+          newSelectedRows = [...selectedRows, rowIndex];
+        }
+      } else {
+        // Одиночное выделение
+        newSelectedRows = [rowIndex];
+      }
+    } else {
+      // Одиночное выделение
+      newSelectedRows = [rowIndex];
     }
+
+    // Сортируем индексы для удобства
+    newSelectedRows.sort((a, b) => a - b);
+
+    // Обновляем внутреннее состояние, если не управляется извне
+    if (externalSelectedRows === undefined) {
+      setInternalSelectedRows(newSelectedRows);
+    }
+
+    // Вызываем колбэк с массивом выделенных строк
+    if (onMultiSelectChange && multiSelect) {
+      onMultiSelectChange(newSelectedRows);
+    }
+
+    // Вызываем колбэк клика по строке
     if (onRowClick) {
-      onRowClick(data[rowIndex], rowIndex);
+      if (multiSelect) {
+        // Для мультиселекта передаем последнюю выбранную строку
+        onRowClick(data[rowIndex], rowIndex);
+      } else {
+        onRowClick(data[rowIndex], rowIndex);
+      }
     }
   };
 
-  const handleRowDoubleClick = (row: any[], rowIndex: number) => {
-    if (onRowDoubleClick) {
-      onRowDoubleClick(row, rowIndex);
-    }
+  const handleRowDoubleClick = (row: any[], rowIndex: number, isTotalsRow: boolean) => {
+    if (isTotalsRow || !onRowDoubleClick) return;
+    onRowDoubleClick(row, rowIndex);
   };
 
-  const handleContextMenu = (event: React.MouseEvent, rowIndex: number) => {
+  const handleContextMenu = (event: React.MouseEvent, rowIndex: number, isTotalsRow: boolean) => {
+    if (isTotalsRow) return;
     event.preventDefault();
     showContextMenu(event, rowIndex);
   };
@@ -130,8 +204,8 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     });
   };
 
-  const handleTouchStart = (event: React.TouchEvent, rowIndex: number) => {
-    if (contextMenuActions.length === 0) return;
+  const handleTouchStart = (event: React.TouchEvent, rowIndex: number, isTotalsRow: boolean) => {
+    if (isTotalsRow || contextMenuActions.length === 0) return;
     
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -180,7 +254,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     
     const customStyle = rowStyles[rowIndex] || {};
     
-    if (rowIndex === selectedRow) {
+    if (selectedRows.includes(rowIndex)) {
       return {
         backgroundColor: customStyle.backgroundColor || '#007D88',
         color: customStyle.color || '#FFFFFF',
@@ -199,10 +273,12 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   const getHoverBackgroundColor = (rowIndex: number, isTotalsRow: boolean, isDebtRow: boolean): string => {
     if (isTotalsRow) return '#FFFFFF';
     
+    if (!isRowSelectable(rowIndex, isTotalsRow)) return '#FFFFFF';
+    
     const rowStyle = getRowStyle(rowIndex, isTotalsRow, isDebtRow);
     if (rowStyle.hoverBackgroundColor) return rowStyle.hoverBackgroundColor;
     
-    if (rowIndex === selectedRow) return '#007D88';
+    if (selectedRows.includes(rowIndex)) return '#007D88';
     // if (isDebtRow) return '#E8D8D8CC'; // Adding transparency for hover effect
     if (data[rowIndex][data[rowIndex].length - 1] === false) return '#51D5B4CC'; // Adding transparency
     
@@ -210,15 +286,18 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   };
 
   const renderContextMenu = () => {
-    if (!contextMenu || contextMenuActions.length === 0) return null;
+    if (!contextMenu || contextMenu.rowIndex === null || contextMenuActions.length === 0) return null;
+
+    const rowData = data[contextMenu.rowIndex];
+    if (!rowData) return null;
 
     const filteredActions = (typeof contextMenuActions === 'function' 
-      ? contextMenuActions(data[contextMenu.rowIndex!]) 
+      ? contextMenuActions(rowData) 
       : contextMenuActions
     ).filter(action => 
       typeof action === 'object' && 
       (typeof action.shouldShow !== 'function' || 
-      action.shouldShow(data[contextMenu.rowIndex!]))
+      action.shouldShow(rowData))
     );
 
     if (filteredActions.length === 0) return null;
@@ -247,14 +326,14 @@ const CustomTable: React.FC<CreditsTableProps> = ({
 
             // Если у действия есть подменю и оно должно показываться при наведении
             if (action.getSubmenu && action.showOnHover) {
-              menuItem.submenu = action.getSubmenu(data[contextMenu.rowIndex!]);
+              menuItem.submenu = action.getSubmenu(rowData);
             } else if (action.getSubmenu) {
               // Если подменю должно показываться по клику (старая логика)
-              menuItem.submenu = action.getSubmenu(data[contextMenu.rowIndex!]);
+              menuItem.submenu = action.getSubmenu(rowData);
             } else if (action.action) {
               // Обычное действие
               menuItem.action = () => {
-                action.action(data[contextMenu.rowIndex!], contextMenu.rowIndex!);
+                action.action(rowData, contextMenu.rowIndex!);
                 closeContextMenu();
               };
             }
@@ -269,6 +348,31 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     );
   };
 
+  // Обработчик клика по документу для снятия выделения
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!multiSelect) return;
+      
+      const target = event.target as HTMLElement;
+      const isClickInsideTable = tableRef.current?.contains(target);
+      
+      if (!isClickInsideTable && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        // Снимаем выделение при клике вне таблицы без модификаторов
+        if (externalSelectedRows === undefined && internalSelectedRows.length > 0) {
+          setInternalSelectedRows([]);
+        }
+        if (onMultiSelectChange) {
+          onMultiSelectChange([]);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, [multiSelect, externalSelectedRows, internalSelectedRows, onMultiSelectChange]);
+
   return (
     <TableContainer
       ref={tableRef}
@@ -281,7 +385,15 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         <>
           <StyledTable>
             <TableHeader>
-              <TableRow>
+              <TableRow $isHeader>
+                {multiSelect && (
+                  <HeaderCell
+                    $align="center"
+                    $isFirst={true}
+                    style={{ width: '50px' }}
+                  >
+                  </HeaderCell>
+                )}
                 {columns.map((column, index) => (
                   !column.isHidden && (
                   <HeaderCell 
@@ -290,7 +402,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                     $isActive={sortConfig?.key === index}
                     onClick={() => handleSort(index)}
                     $align={column.align || 'center'}
-                    $isFirst={index === 0}
+                    $isFirst={index === 0 && !multiSelect}
                     $isLast={index === columns.length - 1}
                   >
                     <HeaderContent $align={column.align || 'center'}>
@@ -320,8 +432,10 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                 {data.map((row, rowIndex) => {
                   const isTotalsRow = hasTotalsRow && rowIndex === data.length - 1;
                   const isDebtRow = !isTotalsRow && checkDebt(row);
+                  const isSelectable = isRowSelectable(rowIndex, isTotalsRow);
                   const rowStyle = getRowStyle(rowIndex, isTotalsRow, isDebtRow);
                   const hoverBackgroundColor = getHoverBackgroundColor(rowIndex, isTotalsRow, isDebtRow);
+                  const isSelected = selectedRows.includes(rowIndex);
 
                   return (
                     <TableRow 
@@ -337,30 +451,61 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                       exit={{ opacity: 0, y: 10 }}
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       $isLast={rowIndex === data.length - 1}
-                      $isSelected={rowIndex === selectedRow}
+                      $isSelected={isSelected}
                       $isTotalsRow={isTotalsRow}
-                      onClick={() => !isTotalsRow && handleRowClick(rowIndex)}
-                      onDoubleClick={() => !isTotalsRow && handleRowDoubleClick(row, rowIndex)}
-                      onContextMenu={(e) => !isTotalsRow && handleContextMenu(e, rowIndex)}
-                      onTouchStart={(e) => !isTotalsRow && handleTouchStart(e, rowIndex)}
+                      $isSelectable={isSelectable}
+                      onClick={(e) => handleRowClick(rowIndex, isTotalsRow, e)}
+                      onDoubleClick={() => handleRowDoubleClick(row, rowIndex, isTotalsRow)}
+                      onContextMenu={(e) => handleContextMenu(e, rowIndex, isTotalsRow)}
+                      onTouchStart={(e) => handleTouchStart(e, rowIndex, isTotalsRow)}
                       onTouchEnd={handleTouchEnd}
                       onTouchMove={handleTouchMove}
-                      whileHover={!isTotalsRow ? {
+                      whileHover={isSelectable ? {
                           backgroundColor: hoverBackgroundColor,
                           transition: { duration: 0.15 }
                         } : {}}
                       style={{
                         backgroundColor: rowStyle.backgroundColor || '#FFFFFF',
                         color: rowStyle.color || 'inherit',
-                        fontWeight: rowStyle.fontWeight || 'normal'
+                        fontWeight: rowStyle.fontWeight || 'normal',
+                        cursor: isSelectable ? 'pointer' : 'default'
                       }}
                     >
+                      {multiSelect && (
+                        <BodyCell 
+                          $align="center"
+                          $isFirst={true}
+                          $isTotalsCell={isTotalsRow}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ width: '50px' }}
+                        >
+                          {isSelectable && (
+                            <CheckboxContainer>
+                              <CheckboxInput
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleRowClick(rowIndex, isTotalsRow, { ctrlKey: true } as React.MouseEvent);
+                                }}
+                              />
+                              <CheckboxMark $checked={isSelected}>
+                                {isSelected && (
+                                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                    <path d="M1 4L3.5 7L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </CheckboxMark>
+                            </CheckboxContainer>
+                          )}
+                        </BodyCell>
+                      )}
                       {row.map((cell, cellIndex) => (
                         !columns[cellIndex]?.isHidden && (
                         <BodyCell 
                           key={cellIndex}
                           $align={columns[cellIndex]?.align || 'center'}
-                          $isFirst={cellIndex === 0}
+                          $isFirst={cellIndex === 0 && !multiSelect}
                           $isLast={cellIndex === row.length - 1}
                           $isTotalsCell={isTotalsRow}
                           $isBeforeTotals={isTotalsRow && cellIndex < row.findIndex(cell => cell === 'Итого:')}
@@ -466,9 +611,15 @@ const TableRow = styled(motion.tr)<{
   $isLast?: boolean; 
   $isSelected?: boolean;
   $isTotalsRow?: boolean;
+  $isSelectable?: boolean;
+  $isHeader?: boolean;
 }>`
   position: relative;
-  cursor: ${({ $isTotalsRow }) => ($isTotalsRow ? 'default' : 'pointer')};
+  cursor: ${({ $isTotalsRow, $isSelectable, $isHeader }) => {
+    if ($isHeader) return 'default';
+    if ($isTotalsRow) return 'default';
+    return $isSelectable ? 'pointer' : 'default';
+  }};
   font-weight: ${({ $isTotalsRow }) => ($isTotalsRow ? 'bold' : 'normal')};
 
   &::after {
@@ -491,8 +642,8 @@ const HeaderCell = styled.th<{
   $isLast?: boolean;
 }>`
   padding: 16px;
-  padding-left: ${({ $isFirst }) => ($isFirst ? '50px' : '16px')};
-  padding-right: ${({ $isLast }) => ($isLast ? '50px' : '16px')};
+  padding-left: ${({ $isFirst }) => ($isFirst ? '16px' : '16px')};
+  padding-right: ${({ $isLast }) => ($isLast ? '16px' : '16px')};
   text-align: ${({ $align }) => $align};
   font-weight: 500;
   position: relative;
@@ -529,12 +680,80 @@ const BodyCell = styled.td<{
   $isBeforeTotals?: boolean;
 }>`
   padding: 16px;
-  padding-left: ${({ $isFirst }) => ($isFirst ? '50px' : '16px')};
-  padding-right: ${({ $isLast }) => ($isLast ? '50px' : '16px')};
+  padding-left: ${({ $isFirst }) => ($isFirst ? '16px' : '16px')};
+  padding-right: ${({ $isLast }) => ($isLast ? '16px' : '16px')};
   text-align: ${({ $align }) => $align};
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) => 
     ($isBeforeTotals || $isTotalsCell) ? 'none' : '0.5px solid #D1D5DB'};
+`;
+
+const CheckboxHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+`;
+
+const MultiSelectIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #007D88;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+`;
+
+const CheckboxContainer = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+`;
+
+const CheckboxInput = styled.input`
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 1;
+  
+  &:checked + div {
+    background-color: #007D88;
+    border-color: #007D88;
+  }
+  
+  &:hover + div {
+    border-color: #007D88;
+  }
+`;
+
+const CheckboxMark = styled.div<{ $checked: boolean }>`
+  width: 18px;
+  height: 18px;
+  border: 2px solid ${({ $checked }) => $checked ? '#007D88' : '#D1D5DB'};
+  border-radius: 4px;
+  background-color: ${({ $checked }) => $checked ? '#007D88' : 'transparent'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  svg {
+    opacity: ${({ $checked }) => $checked ? 1 : 0};
+    transition: opacity 0.2s ease;
+  }
 `;
 
 export default CustomTable;
