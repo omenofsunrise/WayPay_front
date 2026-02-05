@@ -37,6 +37,8 @@ const PaymentPage = () => {
     const pageSize = 10;
     const { authInfo, denyPermission, refresh } = useAuth();
     const [investorName, setInvestorName] = useState('');
+    const [investorId, setInvestorId] = useState<number | null>(null);
+    const [isPool, setIsPool] = useState(false);
     const [employeeFullname, setEmployeeFullname] = useState('');
     const [confirmedFilter, setConfirmedFilter] = useState<string>('all');
     const [employees, setEmployees] = useState<EmployeeFullnames[]>([]);
@@ -91,18 +93,18 @@ const PaymentPage = () => {
         loadEmployees();
     }, []);
 
-const employeeOptions = [
-    {
-        value: '',
-        label: 'Все',
-        avatar: null
-    },
-    ...employees.map(employee => ({
-        value: employee.fullName,
-        label: employee.fullName,
-        avatar: employee.photoPath
-    }))
-];
+    const employeeOptions = [
+        {
+            value: '',
+            label: 'Все',
+            avatar: null
+        },
+        ...employees.map(employee => ({
+            value: employee.fullName,
+            label: employee.fullName,
+            avatar: employee.photoPath
+        }))
+    ];
 
     const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
         try {
@@ -131,11 +133,20 @@ const employeeOptions = [
             page: currentPage,
             pageSize,
             clientFullname: fullnameFilter.trim() || undefined,
-            investorNickname: investorName.trim() || undefined,
             employeeFullname: employeeFullname.trim() || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
         };
+
+        // Добавляем фильтр по инвестору/пулу в зависимости от типа
+        if (investorId !== null) {
+            if (isPool) {
+                params.poolId = investorId === 0 ? undefined : investorId;
+            } else {
+                params.investorId = investorId === 0 ? undefined : investorId;
+            }
+        }
+        
         return params;
     }
 
@@ -157,7 +168,8 @@ const employeeOptions = [
     }, [
         currentPage, 
         fullnameFilter, 
-        investorName, 
+        investorId, // Используем investorId вместо investorName
+        isPool, // Добавляем зависимость от типа
         employeeFullname,
         confirmedFilter,
         dateFromFilter, 
@@ -172,7 +184,7 @@ const employeeOptions = [
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [currentPage, fullnameFilter, investorName, employeeFullname, confirmedFilter, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
+    }, [currentPage, fullnameFilter, investorId, isPool, employeeFullname, confirmedFilter, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
 
     const handleFilterChange = (value: string) => {
         setFullnameFilter(value);
@@ -184,6 +196,26 @@ const employeeOptions = [
         setCurrentPage(1);
     };
 
+    const handleInvestorSelect = (investorData: {
+        id: number;
+        nickname: string;
+        fullName: string;
+        phoneNumber: string;
+        investorPie: number;
+        investmentAmount: number;
+        balance: number;
+        type: 'investor' | 'pool';
+    }) => {
+        // Сохраняем имя для отображения в поле
+        setInvestorName(investorData.nickname || investorData.fullName || '');
+        
+        // Сохраняем ID и тип для фильтрации
+        setInvestorId(investorData.id);
+        setIsPool(investorData.type === 'pool');
+        
+        setCurrentPage(1);
+    };
+
     const handleEmployeeChange = (event: { target: { value: string } }) => {
         setEmployeeFullname(event.target.value === 'Все' ? undefined : event.target.value);
         setCurrentPage(1);
@@ -191,6 +223,13 @@ const employeeOptions = [
 
     const handleConfirmedChange = (event: { target: { value: string } }) => {
         setConfirmedFilter(event.target.value);
+        setCurrentPage(1);
+    };
+
+    const handleClearInvestorFilter = () => {
+        setInvestorName('');
+        setInvestorId(null);
+        setIsPool(false);
         setCurrentPage(1);
     };
 
@@ -219,13 +258,21 @@ const employeeOptions = [
                         page,
                         pageSize,
                         clientFullname: fullnameFilter.trim() || undefined,
-                        investorNickname: investorName.trim() || undefined,
                         employeeFullname: employeeFullname.trim() || undefined,
                         dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
                         dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
+
+                    // Добавляем фильтр по инвестору/пулу для экспорта
+                    if (investorId !== null) {
+                        if (isPool) {
+                            params.poolId = investorId;
+                        } else {
+                            params.investorId = investorId;
+                        }
+                    }
 
                     // Добавляем фильтр по подтверждению для экспорта
                     if (confirmedFilter === 'confirmed') {
@@ -248,7 +295,7 @@ const employeeOptions = [
                     'Дата платежа': payment.paymentDate ? formatDate(payment.paymentDate) : '',
                     'Тип платежа': payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
                     'Платёж принял': payment.employeeFullName || '',
-                    'Подтверждён': payment.accepted ? 'Да' : 'Нет'
+                    'Подтверждён': payment.accepted ? 'Да' : 'Нет',
                 })
             });
         } catch (error) {
@@ -267,6 +314,7 @@ const employeeOptions = [
             payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
             payment.employeeFullName || '',
             payment.accepted ? 'Да' : 'Нет',
+            payment.investorNickname || '',
             payment.id.toString()
         ]);
 
@@ -275,6 +323,7 @@ const employeeOptions = [
                 '',
                 'Итого',
                 `${formatMoney(paymentsData.totalPayments.toString())}`,
+                '',
                 '',
                 '',
                 '',
@@ -328,7 +377,7 @@ const employeeOptions = [
     };
 
     const handlePrintPayment = async (rowData: any[]) => {
-        const paymentId = parseInt(rowData[7]);
+        const paymentId = parseInt(rowData[8]);
         const payment = paymentsData?.items.find(p => p.id === paymentId);
         
         if (!payment) {
@@ -365,8 +414,7 @@ const employeeOptions = [
         }
     };
 
-
-      const rowStyles = useMemo(() => {
+    const rowStyles = useMemo(() => {
         if (!paymentsData?.items) return {};
     
         const styles: { [rowIndex: number]: RowStyle } = {};
@@ -496,12 +544,12 @@ const employeeOptions = [
                     onChange={(e) => handleFilterChange(e.target.value)}
                 />
                 <InvestorSelect
-                    placeholder="Инвестор"
+                    placeholder="Инвестор/Пул"
                     value={investorName}
                     onChange={handleInvestorChange}
-                    onInvestorSelect={(investor) => {
-                        console.log('Selected investor:', investor);
-                    }}
+                    onInvestorSelect={handleInvestorSelect}
+                    includePools={true}
+                    onClear={handleClearInvestorFilter}
                 />
                 <UserSelect
                     placeholder="Сотрудник"
@@ -540,7 +588,8 @@ const employeeOptions = [
                             { name: "Дата платежа", isSortable: true, align: "right" },
                             { name: "Тип платежа", align: "left" },
                             { name: "Платёж принял", align: "left" },
-                            { name: "Подтверждён", align: "center" },    
+                            { name: "Подтверждён", align: "center" },
+                            { name: "Инвестор/Пул", align: "left", isHidden: true },
                             { name: "id", align: "center", isHidden: true },               
                         ]} 
                         data={tableData}
