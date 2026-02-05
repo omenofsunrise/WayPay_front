@@ -25,6 +25,7 @@ import UserSelect from '../components/ui/fields/UserSelect';
 import { useEmployee } from '../api/hooks/useEmployee';
 import CustomSelect from '../components/ui/fields/CustomSelect';
 import type { EmployeeFullnames } from '../api/types/employee';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -60,6 +61,7 @@ const PaymentPage = () => {
         data: paymentsData, 
         getPayments,
         confirmPayment,
+        confirmPaymentList,
         deletePayment
     } = usePayment();
 
@@ -67,7 +69,7 @@ const PaymentPage = () => {
         if (authInfo) {
             loadPayments();
         }
-    }, [authInfo?.employee.permissions]);
+    }, [authInfo?.employee.permissions, confirmPaymentList]);
 
     useEffect(() => {
         refresh().then(() => {
@@ -89,11 +91,18 @@ const PaymentPage = () => {
         loadEmployees();
     }, []);
 
-    const employeeOptions = employees.map(employee => ({
+const employeeOptions = [
+    {
+        value: '',
+        label: 'Все',
+        avatar: null
+    },
+    ...employees.map(employee => ({
         value: employee.fullName,
         label: employee.fullName,
         avatar: employee.photoPath
-    }));
+    }))
+];
 
     const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
         try {
@@ -117,7 +126,7 @@ const PaymentPage = () => {
         setCurrentPage(1);
     };
 
-    const loadPayments = useCallback(async () => {
+    const formParams = (): PaymentParams => {
         const params: PaymentParams = {
             page: currentPage,
             pageSize,
@@ -127,14 +136,17 @@ const PaymentPage = () => {
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
         };
+        return params;
+    }
 
-        // Добавляем фильтр по подтверждению
+    const loadPayments = useCallback(async () => {
+        const params: PaymentParams = formParams();
+
         if (confirmedFilter === 'confirmed') {
             params.confirmed = true;
         } else if (confirmedFilter === 'not-confirmed') {
             params.confirmed = false;
         }
-        // Для 'all' не добавляем параметр confirmed
 
         if (sortConfig.key !== null) {
             params.sortBy = columnToApiSortMap[sortConfig.key];
@@ -173,7 +185,7 @@ const PaymentPage = () => {
     };
 
     const handleEmployeeChange = (event: { target: { value: string } }) => {
-        setEmployeeFullname(event.target.value);
+        setEmployeeFullname(event.target.value === 'Все' ? undefined : event.target.value);
         setCurrentPage(1);
     };
 
@@ -373,6 +385,7 @@ const PaymentPage = () => {
           if (selectedPaymentForPrint?.id === payment.id) {
             baseStyle.backgroundColor = '#007D88';
             baseStyle.color = '#FFFFFF';
+            baseStyle.hoverBackgroundColor = '#007D88';
           }
     
           styles[rowIndex] = baseStyle;
@@ -432,6 +445,30 @@ const PaymentPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>История платежей</CustomTitle>
+                {(authInfo?.employee.permissions.includes('MANAGE_ACCOUNTING') && 
+                    <DarkCyanButton
+                        style={{ marginTop: "15px", marginRight: "20px"}}
+                        onClick={async () => {
+                            if (window.confirm("Вы уверены, что хотите подтвердить оплаты по всем платежам выбранных фильтров?")) {
+                            try {
+                                // Ждём подтверждения
+                                await confirmPaymentList(formParams());
+                                
+                                // После успешного подтверждения обновляем данные
+                                await loadPayments();
+                                
+                                // Можно показать сообщение об успехе
+                                alert("Все платежи успешно подтверждены!");
+                            } catch (error) {
+                                console.error("Ошибка при подтверждении платежей:", error);
+                                alert("Произошла ошибка при подтверждении платежей");
+                            }
+                            }
+                        }}
+                        >
+                        Подтвердить все платежи по указанным фильтрам
+                    </DarkCyanButton>
+                )}
                 <ExportButton 
                     icon={<PrintIcon />} 
                     onClick={() => {

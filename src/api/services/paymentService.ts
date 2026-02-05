@@ -30,6 +30,13 @@ class PaymentService {
     await apiClient.patch(`/Payment/${id}/confirm`);
   }
 
+  async confirmPaymentList(params?: PaymentParams) {
+    await apiClient.patch('/Payment/confirm/list', null, { 
+      params: params 
+    });
+    return;
+  }
+
   async deletePayment(id: number): Promise<void> {
     try {
       await apiClient.delete(`/Payment/${id}`);

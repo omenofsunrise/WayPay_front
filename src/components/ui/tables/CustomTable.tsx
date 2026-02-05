@@ -92,7 +92,10 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   const checkDebt = debtChecker || defaultDebtChecker;
 
   const handleRowClick = (rowIndex: number) => {
-    const newSelectedRow = rowIndex === selectedRow ? null : rowIndex;
+    // Если клик на уже выбранную строку - ничего не делаем, оставляем её выбранной
+    if (rowIndex === selectedRow) return;
+    
+    const newSelectedRow = rowIndex;
     if (externalSelectedRow === undefined) {
       setInternalSelectedRow(newSelectedRow);
     }

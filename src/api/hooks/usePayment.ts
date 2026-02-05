@@ -84,6 +84,18 @@ const usePayment = () => {
     }
   }, []);
 
+  const confirmPaymentList = useCallback(async (params?: PaymentParams) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await paymentService.confirmPaymentList(params);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const deletePayment = useCallback(async (id: number): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -161,7 +173,8 @@ const usePayment = () => {
     confirmPayment,
     deletePayment,
     getPaymentTab,
-    generatePaymentHistoryMessage
+    generatePaymentHistoryMessage,
+    confirmPaymentList
   };
 };
 
