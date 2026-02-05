@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import CustomTitle from '../ui/Text/CustomTitle';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
@@ -57,6 +57,123 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { denyPermission } = useAuth();
   
+  // Ссылка на модальное окно
+  const modalRef = useRef<HTMLDivElement>(null);
+  // Ссылка на начальную позицию touch
+  const touchStartY = useRef(0);
+  // Флаг, предотвращающий скролл страницы
+  const [isModalScrolling, setIsModalScrolling] = useState(false);
+  // Сохраняем позицию скролла
+  const scrollYRef = useRef(0);
+
+  // Предотвращаем скролл страницы при открытии модального окна
+  useEffect(() => {
+    if (isOpen) {
+      // Запоминаем текущую позицию скролла
+      scrollYRef.current = window.scrollY;
+      // Фиксируем страницу
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollYRef.current}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '15px'; // Компенсируем исчезновение скроллбара
+      
+      return () => {
+        // Восстанавливаем при закрытии
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        window.scrollTo(0, scrollYRef.current);
+      };
+    }
+  }, [isOpen]);
+
+  // Обработчик для предотвращения скролла страницы при достижении границ модального окна
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (!modalRef.current) return;
+    
+    const modalContent = modalRef.current;
+    const isAtTop = modalContent.scrollTop === 0;
+    const isAtBottom = Math.abs(modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight) < 1;
+    
+    // Если скроллим вверх и достигли верха - предотвращаем событие
+    if (e.deltaY < 0 && isAtTop) {
+      e.preventDefault();
+    }
+    
+    // Если скроллим вниз и достигли низа - предотвращаем событие
+    if (e.deltaY > 0 && isAtBottom) {
+      e.preventDefault();
+    }
+  }, []);
+
+  // Обработчик для touch событий (мобильные устройства)
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    if (!modalRef.current) return;
+    touchStartY.current = e.touches[0].clientY;
+    setIsModalScrolling(true);
+  }, []);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!modalRef.current || !isModalScrolling) return;
+    
+    const modalContent = modalRef.current;
+    const currentTouchY = e.touches[0].clientY;
+    const touchDiff = touchStartY.current - currentTouchY;
+    
+    const isAtTop = modalContent.scrollTop === 0;
+    const isAtBottom = Math.abs(modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight) < 1;
+    
+    // Если пытаемся скроллить вверх, но уже вверху
+    if (touchDiff < 0 && isAtTop) {
+      e.preventDefault();
+    }
+    
+    // Если пытаемся скроллить вниз, но уже внизу
+    if (touchDiff > 0 && isAtBottom) {
+      e.preventDefault();
+    }
+  }, [isModalScrolling]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsModalScrolling(false);
+  }, []);
+
+  // Добавляем обработчики событий
+  useEffect(() => {
+    const modalElement = modalRef.current;
+    if (!modalElement || !isOpen) return;
+
+    modalElement.addEventListener('wheel', handleWheel, { passive: false });
+    modalElement.addEventListener('touchstart', handleTouchStart, { passive: true });
+    modalElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+    modalElement.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      modalElement.removeEventListener('wheel', handleWheel);
+      modalElement.removeEventListener('touchstart', handleTouchStart);
+      modalElement.removeEventListener('touchmove', handleTouchMove);
+      modalElement.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isOpen, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
+
+  // Обработчик клавиши Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  // Загрузка предпочтений печати
   useEffect(() => {
     const savedPrintPreference = localStorage.getItem(PRINT_RECEIPT_STORAGE_KEY);
     if (savedPrintPreference) {
@@ -70,6 +187,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     }
   }, []);
 
+  // Сброс состояния при открытии
   useEffect(() => {
     if (isOpen) {
       setPaymentDate('');
@@ -84,6 +202,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     }
   }, [isOpen, currentDebt]);
 
+  // Обновление состояния долга
   useEffect(() => {
     setIsDebtPaid(currentDebt <= 0);
     setRemainingDebt(currentDebt - totalAmount);
@@ -98,7 +217,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    
     const inputValue = e.target.value;
     
     if (inputValue === '₽' || inputValue === '') {
@@ -116,7 +234,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    
     if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid) return;
     
     if (paymentMethod === 'card' && !selectedBankCardId) {
@@ -150,19 +267,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose]);
     
   const handleCashChange = (checked: boolean) => {
     if (checked) {
@@ -197,11 +301,20 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     localStorage.setItem(PRINT_RECEIPT_STORAGE_KEY, JSON.stringify(checked));
   };
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay isOpen={isOpen}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
+    <ModalOverlay isOpen={isOpen} onClick={handleOverlayClick}>
+      <ModalContent 
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         <ModalWrapper>
           <CloseButton onClick={onClose}>&times;</CloseButton>
           
@@ -399,7 +512,7 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
   background-color: rgba(0, 0, 0, 0.5);
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
 `;
 
 const ModalContent = styled.div`
@@ -409,6 +522,36 @@ const ModalContent = styled.div`
   width: 600px;
   max-height: 90vh;
   overflow-y: auto;
+  
+  /* Для плавного скролла на мобильных */
+  -webkit-overflow-scrolling: touch;
+  
+  /* Скрываем стандартный скроллбар если нужно */
+  scrollbar-width: thin;
+  scrollbar-color: #007D88 #f0f0f0;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #007D88;
+    border-radius: 3px;
+  }
+  
+  /* Убираем скроллбар на очень маленьких экранах */
+  @media (max-width: 768px) {
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    
+    scrollbar-width: none;
+  }
 `;
 
 const ModalWrapper = styled.div`
@@ -423,6 +566,11 @@ const CloseButton = styled.button`
   border: none;
   font-size: 20px;
   cursor: pointer;
+  z-index: 1;
+  
+  &:hover {
+    opacity: 0.7;
+  }
 `;
 
 const TitleField = styled.div`
@@ -444,6 +592,11 @@ const FormRow = styled.div`
   display: flex;
   gap: 20px;
   margin-bottom: 16px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 12px;
+  }
 `;
 
 const InputGroup = styled.div`
@@ -481,11 +634,20 @@ const ButtonContainer = styled.div`
   justify-content: flex-end;
   gap: 12px;
   margin-top: 30px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const PaymentMethodContainer = styled.div`
   display: flex;
   gap: 24px;
+  
+  @media (max-width: 768px) {
+    gap: 12px;
+    flex-direction: column;
+  }
 `;
 
 const CheckboxWrapper = styled.div`

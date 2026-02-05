@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import useInvestor from '../../../api/hooks/useInvestor';
@@ -39,7 +39,7 @@ const InvestorSelect = ({
   errorMessage,
   disabled = false,
   includePools = false,
-  poolId, // Добавлено
+  poolId,
   ...props
 }: InvestorSelectProps) => {
   const { getInvestors } = useInvestor();
@@ -51,6 +51,57 @@ const InvestorSelect = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
+
+  // Блокировка скролла страницы при открытом dropdown
+  useEffect(() => {
+    if (isDropdownOpen) {
+      // Сохраняем текущую позицию скролла
+      const scrollY = window.scrollY;
+      const body = document.body;
+      const html = document.documentElement;
+      
+      // Блокируем скролл на body и html
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.width = '100%';
+      body.style.overflow = 'hidden';
+      
+      // Добавляем padding-right чтобы компенсировать исчезновение скроллбара
+      const scrollbarWidth = window.innerWidth - html.clientWidth;
+      if (scrollbarWidth > 0) {
+        body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+      
+      return () => {
+        // Восстанавливаем скролл при закрытии dropdown
+        const scrollY = parseInt(body.style.top || '0', 10) * -1;
+        body.style.position = '';
+        body.style.top = '';
+        body.style.width = '';
+        body.style.overflow = '';
+        body.style.paddingRight = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isDropdownOpen]);
+
+  // Обработка колесика мыши внутри dropdown
+  const handleDropdownWheel = useCallback((e: WheelEvent) => {
+    if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) {
+      // Позволяем скроллить только внутри dropdown
+      e.stopPropagation();
+    }
+  }, []);
+
+  // Добавляем обработчик колесика мыши
+  useEffect(() => {
+    if (isDropdownOpen) {
+      document.addEventListener('wheel', handleDropdownWheel, { passive: false });
+      return () => {
+        document.removeEventListener('wheel', handleDropdownWheel);
+      };
+    }
+  }, [isDropdownOpen, handleDropdownWheel]);
 
   useEffect(() => {
     const fetchInvestors = async () => {
@@ -103,16 +154,18 @@ const InvestorSelect = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isDropdownOpen]);
 
   const updateMenuPosition = () => {
     if (inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
       setMenuPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom, // Используем абсолютные координаты (без scrollY)
+        left: rect.left,
         width: rect.width
       });
     }
@@ -186,6 +239,8 @@ const InvestorSelect = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && investors.length > 0) {
       handleInvestorSelect(investors[0]);
+    } else if (e.key === 'Escape') {
+      setIsDropdownOpen(false);
     }
   };
 
@@ -228,7 +283,7 @@ const InvestorSelect = ({
                 transition={{ duration: 0.2 }}
                 ref={dropdownRef}
                 style={{
-                  position: 'absolute',
+                  position: 'fixed', // Используем fixed вместо absolute
                   top: `${menuPosition.top}px`,
                   left: `${menuPosition.left}px`,
                   width: `${menuPosition.width}px`,
@@ -236,7 +291,12 @@ const InvestorSelect = ({
                   zIndex: 1000
                 }}
               >
-                <DropdownContent>
+                <DropdownContent
+                  onWheel={(e) => {
+                    // Предотвращаем всплытие события колесика
+                    e.stopPropagation();
+                  }}
+                >
                   {isLoading ? (
                     <DropdownItem>Загрузка инвесторов...</DropdownItem>
                   ) : investors.length > 0 ? (
@@ -375,7 +435,7 @@ const ErrorMessage = styled.span`
 `;
 
 const DropdownMenu = styled(motion.div)`
-  position: absolute;
+  position: fixed;
   background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
@@ -384,11 +444,36 @@ const DropdownMenu = styled(motion.div)`
   max-height: 300px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 `;
 
 const DropdownContent = styled.div`
   overflow-y: auto;
   flex-grow: 1;
+  max-height: 240px; // Ограничиваем высоту контента
+  
+  /* Кастомный скроллбар */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+  
+  /* Для Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
 `;
 
 const DropdownItem = styled.div`
