@@ -140,6 +140,20 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      // Полностью блокируем скролл на странице
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Восстанавливаем скролл
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isOpen]);
+
   // Определение MIME типа по расширению файла
   const getMimeTypeFromExtension = (extension?: string): string => {
     const mimeTypes: Record<string, string> = {
@@ -904,7 +918,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 </>
               )}
 
-              <ModalInfoTitle>График платежей</ModalInfoTitle>
+              <ModalInfoTitle style={{marginTop: "15px"}}>График платежей</ModalInfoTitle>
               <CustomTable                         
                 columns={[
                   { name: "ID", isHidden: true },
@@ -1033,8 +1047,13 @@ const ModalContent = styled.div`
   padding: 24px;
   border-radius: 8px;
   width: auto;
-  overflow-y: auto;
+  max-width: 90vw;
   max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  /* Для плавного скролла на мобильных */
+  -webkit-overflow-scrolling: touch;
 `;
 
 const AddButton = styled.img`
@@ -1051,8 +1070,10 @@ const TableContainer = styled.div`
   border-radius: 8px;
   overflow-y: auto;
   width: 100%;
-  height: 100%;
-  max-height: 500px;  
+  /* Убираем max-height или делаем его адаптивным */
+  height: auto;
+  min-height: 200px;
+  max-height: 400px; /* или убрать вообще */
 `;
 
 const LoadingText = styled.div`
