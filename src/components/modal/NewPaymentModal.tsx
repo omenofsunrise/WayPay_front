@@ -56,108 +56,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [printReceipt, setPrintReceipt] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { denyPermission } = useAuth();
-  
-  // Ссылка на модальное окно
-  const modalRef = useRef<HTMLDivElement>(null);
-  // Ссылка на начальную позицию touch
-  const touchStartY = useRef(0);
-  // Флаг, предотвращающий скролл страницы
-  const [isModalScrolling, setIsModalScrolling] = useState(false);
-  // Сохраняем позицию скролла
-  const scrollYRef = useRef(0);
-
-  // Предотвращаем скролл страницы при открытии модального окна
-  useEffect(() => {
-    if (isOpen) {
-      // Запоминаем текущую позицию скролла
-      scrollYRef.current = window.scrollY;
-      // Фиксируем страницу
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollYRef.current}px`;
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = '15px'; // Компенсируем исчезновение скроллбара
-      
-      return () => {
-        // Восстанавливаем при закрытии
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
-        window.scrollTo(0, scrollYRef.current);
-      };
-    }
-  }, [isOpen]);
-
-  // Обработчик для предотвращения скролла страницы при достижении границ модального окна
-  const handleWheel = useCallback((e: WheelEvent) => {
-    if (!modalRef.current) return;
-    
-    const modalContent = modalRef.current;
-    const isAtTop = modalContent.scrollTop === 0;
-    const isAtBottom = Math.abs(modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight) < 1;
-    
-    // Если скроллим вверх и достигли верха - предотвращаем событие
-    if (e.deltaY < 0 && isAtTop) {
-      e.preventDefault();
-    }
-    
-    // Если скроллим вниз и достигли низа - предотвращаем событие
-    if (e.deltaY > 0 && isAtBottom) {
-      e.preventDefault();
-    }
-  }, []);
-
-  // Обработчик для touch событий (мобильные устройства)
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (!modalRef.current) return;
-    touchStartY.current = e.touches[0].clientY;
-    setIsModalScrolling(true);
-  }, []);
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!modalRef.current || !isModalScrolling) return;
-    
-    const modalContent = modalRef.current;
-    const currentTouchY = e.touches[0].clientY;
-    const touchDiff = touchStartY.current - currentTouchY;
-    
-    const isAtTop = modalContent.scrollTop === 0;
-    const isAtBottom = Math.abs(modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight) < 1;
-    
-    // Если пытаемся скроллить вверх, но уже вверху
-    if (touchDiff < 0 && isAtTop) {
-      e.preventDefault();
-    }
-    
-    // Если пытаемся скроллить вниз, но уже внизу
-    if (touchDiff > 0 && isAtBottom) {
-      e.preventDefault();
-    }
-  }, [isModalScrolling]);
-
-  const handleTouchEnd = useCallback(() => {
-    setIsModalScrolling(false);
-  }, []);
-
-  // Добавляем обработчики событий
-  useEffect(() => {
-    const modalElement = modalRef.current;
-    if (!modalElement || !isOpen) return;
-
-    modalElement.addEventListener('wheel', handleWheel, { passive: false });
-    modalElement.addEventListener('touchstart', handleTouchStart, { passive: true });
-    modalElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-    modalElement.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      modalElement.removeEventListener('wheel', handleWheel);
-      modalElement.removeEventListener('touchstart', handleTouchStart);
-      modalElement.removeEventListener('touchmove', handleTouchMove);
-      modalElement.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isOpen, handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   // Обработчик клавиши Escape
   useEffect(() => {
@@ -312,7 +210,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   return (
     <ModalOverlay isOpen={isOpen} onClick={handleOverlayClick}>
       <ModalContent 
-        ref={modalRef}
         onClick={(e) => e.stopPropagation()}
       >
         <ModalWrapper>
@@ -512,7 +409,14 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
   background-color: rgba(0, 0, 0, 0.5);
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 1000;
+  overflow-y: auto; // Разрешаем скролл оверлея
+  padding: 20px; // Отступы для маленьких экранов
+  
+  // Отключаем скролл для самого оверлея на мобильных
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 `;
 
 const ModalContent = styled.div`
@@ -520,13 +424,16 @@ const ModalContent = styled.div`
   padding: 24px;
   border-radius: 8px;
   width: 600px;
+  max-width: 90vw; // Для адаптивности
   max-height: 90vh;
   overflow-y: auto;
+  margin: auto; // Центрирование
+  position: relative;
   
-  /* Для плавного скролла на мобильных */
+  // Для плавного скролла на мобильных
   -webkit-overflow-scrolling: touch;
   
-  /* Скрываем стандартный скроллбар если нужно */
+  // Скрываем стандартный скроллбар если нужно
   scrollbar-width: thin;
   scrollbar-color: #007D88 #f0f0f0;
   
@@ -544,8 +451,14 @@ const ModalContent = styled.div`
     border-radius: 3px;
   }
   
-  /* Убираем скроллбар на очень маленьких экранах */
+  // Убираем скроллбар на очень маленьких экранах
   @media (max-width: 768px) {
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 16px;
+    
     &::-webkit-scrollbar {
       display: none;
     }
