@@ -20,6 +20,7 @@ import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import { EditOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 import { formatMoney } from '../../utils/formatPrice';
+import { formatPhoneHref } from '../../utils/phoneUtils';
 
 interface FinanceProfilePageProps {
     onViewEmployee: (id: number) => void;
@@ -259,6 +260,22 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
         }
     };
 
+    const handleBlockEmployeeFromModal = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!employeeToBlock) return;
+
+        try {
+            await toggleEmployeeBlock(employeeToBlock.id);
+            message.success('Сотрудник успешно заблокирован');
+            setIsBlockModalOpen(false);
+            setEmployeeToBlock(null);
+            await loadEmployees();
+        } catch (err: any) {
+            console.error('Ошибка при блокировке сотрудника:', err);
+            message.error('Не удалось заблокировать сотрудника');
+        }
+    };
+
     const handleUnblockEmployee = async (rowData: any[]) => {
         const [id] = rowData;
         const employeeId = Number(id);
@@ -449,7 +466,16 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
         </div>,
         formatMoney(employee.confirmedAmount?.toString() ?? '0'),
         formatMoney(employee.unconfirmedAmount?.toString() ?? '0'),
-        employee.phone,
+        employee.phone ? (
+            <a
+                href={formatPhoneHref(employee.phone)}
+                style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+                {employee.phone}
+            </a>
+        ) : (
+            '-'
+        ),
     ]);
 
     const rowStyles: { [rowIndex: number]: RowStyle } = {};
@@ -585,7 +611,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
                     title="Нельзя удалить сотрудника"
                     onClose={() => setIsBlockModalOpen(false)}
                     onCancel={() => setIsBlockModalOpen(false)}
-                    onSave={handleBlockEmployee}
+                    onSave={handleBlockEmployeeFromModal}
                     isSubmitting={false}
                 >
                     <div style={{ padding: '16px' }}>
