@@ -6,6 +6,7 @@ import { useEmployee } from "../../api/hooks/useEmployee";
 import { FILE_BASE_URL } from "../../api/client";
 import { getInitials, generateAvatar } from "../../utils/avatarUtils";
 import type { Employee } from "../../api/types/employee";
+import { formatPhoneHref } from "../../utils/phoneUtils";
 
 interface UserContainerProps {
     employee?: Employee;
@@ -264,7 +265,13 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
                         <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16.8262 13.3525L14.6037 13.0988C14.3424 13.0681 14.0775 13.097 13.829 13.1834C13.5804 13.2698 13.3547 13.4114 13.1687 13.5975L11.5587 15.2075C9.07494 13.944 7.05603 11.9251 5.79247 9.44129L7.41122 7.82254C7.78747 7.44629 7.97122 6.92129 7.90997 6.38754L7.65622 4.18254C7.6068 3.75562 7.40201 3.36181 7.08088 3.07619C6.75975 2.79056 6.34475 2.63309 5.91497 2.63379H4.40122C3.41247 2.63379 2.58997 3.45629 2.65122 4.44504C3.11497 11.9175 9.09122 17.885 16.555 18.3488C17.5437 18.41 18.3662 17.5875 18.3662 16.5988V15.085C18.375 14.2013 17.71 13.4575 16.8262 13.3525Z" fill="#50555C"/>
                         </svg>
-                        {employee.phone}
+                        {employee.phone ? (
+                            <PhoneLink href={formatPhoneHref(employee.phone)}>
+                                {employee.phone}
+                            </PhoneLink>
+                        ) : (
+                            'Не указан'
+                        )}
                     </ContactItem>
                     <ContactItem>
                         <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -380,6 +387,15 @@ const ContactItem = styled.div`
     
     svg {
         flex-shrink: 0;
+    }
+`;
+
+const PhoneLink = styled.a`
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
     }
 `;
 

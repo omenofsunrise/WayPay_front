@@ -11,7 +11,7 @@ import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import EmployeeModal from "../../components/modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
-import type { Employee, EmployeeFilterRequest } from '../../api/types/employee';
+import type { Employee, EmployeeFilterRequest, Permission } from '../../api/types/employee';
 import CustomSelect from '../../components/ui/fields/CustomSelect';
 import Avatar from '../../components/Profile/Avatar';
 import { FILE_BASE_URL } from '../../api/client';
@@ -201,9 +201,14 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                     if (newValue) {
                         // Добавляем разрешение текущему сотруднику
                         if (!permissions.some(p => p.code === 'MANAGE_ACCOUNTING')) {
+                            const accountingPermission: Permission = {
+                                id: 0,
+                                code: 'MANAGE_ACCOUNTING',
+                                description: 'Управление финансами'
+                            };
                             return {
                                 ...e,
-                                permissions: [...permissions, { code: 'MANAGE_ACCOUNTING', name: 'Управление финансами' }]
+                                permissions: [...permissions, accountingPermission]
                             };
                         }
                     } else {
@@ -353,6 +358,22 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                 console.error('Ошибка при блокировке сотрудника:', err);
                 message.error('Не удалось заблокировать сотрудника');
             }
+        }
+    };
+
+    const handleBlockEmployeeFromModal = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!employeeToBlock) return;
+
+        try {
+            await toggleEmployeeBlock(employeeToBlock.id);
+            message.success('Сотрудник успешно заблокирован');
+            setIsBlockModalOpen(false);
+            setEmployeeToBlock(null);
+            await loadEmployees();
+        } catch (err: any) {
+            console.error('Ошибка при блокировке сотрудника:', err);
+            message.error('Не удалось заблокировать сотрудника');
         }
     };
 
@@ -755,7 +776,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
                     title="Нельзя удалить сотрудника"
                     onClose={() => setIsBlockModalOpen(false)}
                     onCancel={() => setIsBlockModalOpen(false)}
-                    onSave={handleBlockEmployee}
+                    onSave={handleBlockEmployeeFromModal}
                     isSubmitting={false}
                 >
                     <div style={{ padding: '16px' }}>

@@ -1156,7 +1156,11 @@ const [filteredReinvestments, setFilteredReinvestments] = useState<{
             credit.id,
             formatDate(credit.creditDate.toString()),
             credit.clientFullName,
-            credit.clientPhone,
+            credit.clientPhone ? (
+                <a href={formatPhoneHref(credit.clientPhone)}>{credit.clientPhone}</a>
+            ) : (
+                '-'
+            ),
             formatMoney(credit.accured.toString()),
             formatMoney(credit.payed.toString()),
             formatMoney(credit.rest.toString()),
