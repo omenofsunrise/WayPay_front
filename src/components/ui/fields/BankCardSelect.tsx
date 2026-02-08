@@ -1,3 +1,4 @@
+// BankCardSelect.tsx - исправленный компонент
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,12 +50,7 @@ const BankCardSelect = ({
   const [newDetails, setNewDetails] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
-  const [dropdownStyle, setDropdownStyle] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-    maxHeight: '300px'
-  });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (clientId) {
@@ -77,41 +73,8 @@ const BankCardSelect = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const calculateDropdownPosition = () => {
-    if (!inputRef.current) return;
-
-    const inputRect = inputRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - inputRect.bottom;
-    const spaceAbove = inputRect.top;
-    
-    // Вычисляем доступную высоту
-    const availableHeight = Math.max(spaceBelow, spaceAbove) - 20; // 20px отступ от края экрана
-    const maxHeight = Math.min(400, availableHeight);
-    
-    // Определяем, открывать ли сверху или снизу
-    const shouldOpenAbove = spaceBelow < 200 && spaceAbove > spaceBelow;
-    
-    const dropdownWidth = inputRect.width;
-    const left = inputRect.left + window.scrollX;
-    
-    const top = shouldOpenAbove 
-      ? inputRect.top + window.scrollY - maxHeight - 5 // Открываем сверху
-      : inputRect.bottom + window.scrollY + 5; // Открываем снизу
-
-    setDropdownStyle({
-      top,
-      left,
-      width: dropdownWidth,
-      maxHeight: `${maxHeight}px`
-    });
-  };
-
   const handleInputClick = () => {
     if (!disabled) {
-      if (!isDropdownOpen) {
-        calculateDropdownPosition();
-      }
       setIsDropdownOpen(!isDropdownOpen);
     }
   };
@@ -222,147 +185,135 @@ const BankCardSelect = ({
   const displayBankCards = bankCards;
 
   return (
-    <>
-      <InputContainer ref={inputRef}>
-        <InputWrapper>
-          <StyledInput
-            type="text"
-            value={value}
-            readOnly
-            onClick={handleInputClick}
-            onFocus={handleFocus}
-            onKeyDown={handleKeyDown}
-            placeholder={customPlaceholder && !value ? '' : placeholder}
-            hasError={hasError}
-            disabled={disabled || isLoading}
-            {...props}
-          />
-          {value && !disabled && (
-            <ClearButton onClick={handleClearSelection}>
-              <FaTimes size={14} />
-            </ClearButton>
-          )}
-          <CardIcon>
-            <FaCreditCard size={16} />
-          </CardIcon>
-        </InputWrapper>
-        
-        {customPlaceholder && !value && (
-          <PlaceholderLabel isVisible={true}>
-            {customPlaceholder}
-          </PlaceholderLabel>
+    <InputContainer ref={containerRef}>
+      <InputWrapper ref={inputRef}>
+        <StyledInput
+          type="text"
+          value={value}
+          readOnly
+          onClick={handleInputClick}
+          onFocus={handleFocus}
+          onKeyDown={handleKeyDown}
+          placeholder={customPlaceholder && !value ? '' : placeholder}
+          hasError={hasError}
+          disabled={disabled || isLoading}
+          {...props}
+        />
+        {value && !disabled && (
+          <ClearButton onClick={handleClearSelection}>
+            <FaTimes size={14} />
+          </ClearButton>
         )}
+        <CardIcon>
+          <FaCreditCard size={16} />
+        </CardIcon>
+      </InputWrapper>
+      
+      {customPlaceholder && !value && (
+        <PlaceholderLabel isVisible={true}>
+          {customPlaceholder}
+        </PlaceholderLabel>
+      )}
 
-        <AnimatePresence>
-          {isDropdownOpen && (
-            <Portal>
-              <DropdownContainer
-                initial={{ opacity: 0, scaleY: 0.95 }}
-                animate={{ opacity: 1, scaleY: 1 }}
-                exit={{ opacity: 0, scaleY: 0.95 }}
-                transition={{ duration: 0.15 }}
-                ref={dropdownRef}
-                style={{
-                  position: 'absolute',
-                  top: `${dropdownStyle.top}px`,
-                  left: `${dropdownStyle.left}px`,
-                  width: `${dropdownStyle.width}px`,
-                  maxHeight: dropdownStyle.maxHeight,
-                  zIndex: 9999
-                }}
-              >
-                <DropdownContent>
-                  {isLoading ? (
-                    <DropdownItem>Загрузка карт...</DropdownItem>
-                  ) : isCreating ? (
-                    <CreateContainer>
-                      <CreateInput
-                        value={newDetails}
-                        onChange={(e) => setNewDetails(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Реквизиты карты"
-                        autoFocus
-                      />
-                      <ActionButtons>
-                        <ActionButton $confirm onClick={handleConfirmCreate}>
-                          ✓
-                        </ActionButton>
-                        <ActionButton $cancel onClick={handleCancelCreate}>
-                          ✕
-                        </ActionButton>
-                      </ActionButtons>
-                    </CreateContainer>
-                  ) : displayBankCards.length > 0 ? (
-                    <BankCardsList>
-                      {displayBankCards.map((bankCard) => (
-                        <BankCardItem key={bankCard.id}>
-                          {isEditing === bankCard.id ? (
-                            <EditContainer>
-                              <EditInput
-                                value={editDetails}
-                                onChange={(e) => setEditDetails(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Детали"
-                                autoFocus
-                              />
-                              <ActionButtons>
-                                <ActionButton $confirm onClick={() => handleConfirmEdit(bankCard.id)}>
-                                  ✓
-                                </ActionButton>
-                                <ActionButton $cancel onClick={handleCancelEdit}>
-                                  ✕
-                                </ActionButton>
-                              </ActionButtons>
-                            </EditContainer>
-                          ) : (
-                            <>
-                              <BankCardInfo onClick={() => handleBankCardSelect(bankCard)}>
-                                <BankCardDetails>{bankCard.details}</BankCardDetails>
-                              </BankCardInfo>
-                              <BankCardActions>
-                                <ActionButton 
-                                  $edit 
-                                  onClick={() => handleStartEdit(bankCard)}
-                                  title="Редактировать"
-                                >
-                                  <FaEdit size={12} />
-                                </ActionButton>
-                                <ActionButton 
-                                  $delete 
-                                  onClick={() => handleDelete(bankCard.id, bankCard.details)}
-                                  title="Удалить"
-                                >
-                                  <FaTrash size={12} />
-                                </ActionButton>
-                              </BankCardActions>
-                            </>
-                          )}
-                        </BankCardItem>
-                      ))}
-                    </BankCardsList>
-                  ) : (
-                    <DropdownItem>Карты не найдены</DropdownItem>
-                  )}
-                </DropdownContent>
-                
-                {!isCreating && !isEditing && (
-                  <DropdownFooter>
-                    <AddButton onClick={handleCreateNew}>
-                      <FaPlus size={12} />
-                      <span>Создать новую карту</span>
-                    </AddButton>
-                  </DropdownFooter>
-                )}
-              </DropdownContainer>
-            </Portal>
-          )}
-        </AnimatePresence>
-
-        {hasError && errorMessage && (
-          <ErrorMessage>{errorMessage}</ErrorMessage>
+      <AnimatePresence>
+        {isDropdownOpen && (
+          <DropdownContainer
+            initial={{ opacity: 0, scaleY: 0.95 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0.95 }}
+            transition={{ duration: 0.15 }}
+            ref={dropdownRef}
+          >
+            <DropdownContent>
+              {isLoading ? (
+                <DropdownItem>Загрузка карт...</DropdownItem>
+              ) : isCreating ? (
+                <CreateContainer>
+                  <CreateInput
+                    value={newDetails}
+                    onChange={(e) => setNewDetails(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Реквизиты карты"
+                    autoFocus
+                  />
+                  <ActionButtons>
+                    <ActionButton $confirm onClick={handleConfirmCreate}>
+                      ✓
+                    </ActionButton>
+                    <ActionButton $cancel onClick={handleCancelCreate}>
+                      ✕
+                    </ActionButton>
+                  </ActionButtons>
+                </CreateContainer>
+              ) : displayBankCards.length > 0 ? (
+                <BankCardsList>
+                  {displayBankCards.map((bankCard) => (
+                    <BankCardItem key={bankCard.id}>
+                      {isEditing === bankCard.id ? (
+                        <EditContainer>
+                          <EditInput
+                            value={editDetails}
+                            onChange={(e) => setEditDetails(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Детали"
+                            autoFocus
+                          />
+                          <ActionButtons>
+                            <ActionButton $confirm onClick={() => handleConfirmEdit(bankCard.id)}>
+                              ✓
+                            </ActionButton>
+                            <ActionButton $cancel onClick={handleCancelEdit}>
+                              ✕
+                            </ActionButton>
+                          </ActionButtons>
+                        </EditContainer>
+                      ) : (
+                        <>
+                          <BankCardInfo onClick={() => handleBankCardSelect(bankCard)}>
+                            <BankCardDetails>{bankCard.details}</BankCardDetails>
+                          </BankCardInfo>
+                          <BankCardActions>
+                            <ActionButton 
+                              $edit 
+                              onClick={() => handleStartEdit(bankCard)}
+                              title="Редактировать"
+                            >
+                              <FaEdit size={12} />
+                            </ActionButton>
+                            <ActionButton 
+                              $delete 
+                              onClick={() => handleDelete(bankCard.id, bankCard.details)}
+                              title="Удалить"
+                            >
+                              <FaTrash size={12} />
+                            </ActionButton>
+                          </BankCardActions>
+                        </>
+                      )}
+                    </BankCardItem>
+                  ))}
+                </BankCardsList>
+              ) : (
+                <DropdownItem>Карты не найдены</DropdownItem>
+              )}
+            </DropdownContent>
+            
+            {!isCreating && !isEditing && (
+              <DropdownFooter>
+                <AddButton onClick={handleCreateNew}>
+                  <FaPlus size={12} />
+                  <span>Создать новую карту</span>
+                </AddButton>
+              </DropdownFooter>
+            )}
+          </DropdownContainer>
         )}
-      </InputContainer>
-    </>
+      </AnimatePresence>
+
+      {hasError && errorMessage && (
+        <ErrorMessage>{errorMessage}</ErrorMessage>
+      )}
+    </InputContainer>
   );
 };
 
@@ -473,6 +424,11 @@ const ErrorMessage = styled.span`
 `;
 
 const DropdownContainer = styled(motion.div)`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
   background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
@@ -482,6 +438,8 @@ const DropdownContainer = styled(motion.div)`
   flex-direction: column;
   overflow: hidden;
   transform-origin: top center;
+  max-height: 400px;
+  width: 100%;
 `;
 
 const DropdownContent = styled.div`
@@ -535,6 +493,7 @@ const BankCardDetails = styled.div`
   color: #333;
   white-space: nowrap;
   overflow: hidden;
+  text-align: left;
   text-overflow: ellipsis;
 `;
 

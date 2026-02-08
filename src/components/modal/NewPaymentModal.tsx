@@ -32,6 +32,36 @@ export interface NewPaymentModalProps {
 
 export const PRINT_RECEIPT_STORAGE_KEY = 'new-payment-print-receipt-preference';
 
+// Вспомогательная функция для блокировки скролла
+const useLockBodyScroll = (isOpen: boolean) => {
+  useEffect(() => {
+    if (isOpen) {
+      // Сохраняем текущую позицию скролла
+      const scrollY = window.scrollY;
+      const body = document.body;
+      
+      // Блокируем скролл
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.left = '0';
+      body.style.right = '0';
+      body.style.overflow = 'hidden';
+      
+      return () => {
+        // Восстанавливаем скролл
+        body.style.position = '';
+        body.style.top = '';
+        body.style.left = '';
+        body.style.right = '';
+        body.style.overflow = '';
+        
+        // Восстанавливаем позицию скролла
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+};
+
 const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   creditId,
   clientName,
@@ -56,6 +86,9 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [printReceipt, setPrintReceipt] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { denyPermission } = useAuth();
+
+  // Блокируем скролл body при открытии модалки
+  useLockBodyScroll(isOpen);
 
   // Обработчик клавиши Escape
   useEffect(() => {
@@ -199,16 +232,10 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     localStorage.setItem(PRINT_RECEIPT_STORAGE_KEY, JSON.stringify(checked));
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay isOpen={isOpen} onClick={handleOverlayClick}>
+    <ModalOverlay isOpen={isOpen}>
       <ModalContent 
         onClick={(e) => e.stopPropagation()}
       >
@@ -412,6 +439,7 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
   z-index: 1000;
   overflow-y: auto; // Разрешаем скролл оверлея
   padding: 20px; // Отступы для маленьких экранов
+  overflow: hidden; // Отключаем скролл для оверлея
   
   // Отключаем скролл для самого оверлея на мобильных
   @media (max-width: 768px) {
