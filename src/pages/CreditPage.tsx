@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
@@ -50,24 +50,85 @@ interface SetCategoryActionProps {
   customTabs: ObjectType[];
 }
 
+const CREDIT_FILTERS_STORAGE_KEY = 'creditsPageFilters';
+
+type CreditFiltersStorage = {
+  contractNumber: string;
+  currentPage: number;
+  investorName: string;
+  selectedInvestmentSource: { type: 'investor' | 'pool'; id: number; name: string } | null;
+  clientFullName: string;
+  fromDate: string;
+  toDate: string;
+  fromCreationDate: string;
+  toCreationDate: string;
+  objectType: string;
+  creditTypeId: number | null;
+  sortConfig: { key: number | null; direction: 'asc' | 'desc' };
+  filters: { isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean; objectTypeId?: number };
+  activeTab: string;
+};
+
+const readStoredFilters = <T,>(key: string): T | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+};
+
 const CreditPage = () => {
-  const [contractNumber, setContractNumber] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [investorName, setInvestorName] = useState('');
-  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(null);
-  const [clientFullName, setClientFullName] = useState('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
-  const [fromCreationDate, setFromCreationDate] = useState<string>('');
-  const [toCreationDate, setToCreationDate] = useState<string>('');
-  const [objectType, setObjectType] = useState<string>('');
-  const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
+  const storedFiltersRef = useRef<CreditFiltersStorage | null>(readStoredFilters(CREDIT_FILTERS_STORAGE_KEY));
+  const storedFilters = storedFiltersRef.current;
+  const { id, tab } = useParams<{ id?: string; tab?: string }>();
+  const baseTab = useMemo(() => {
+    if (tab) return tab;
+    if (location.pathname === '/credits/in-debt') return 'inDebt';
+    return 'all';
+  }, [tab]);
+  const shouldUseStoredTab = !tab && location.pathname !== '/credits/in-debt';
+  const getTabFilters = useCallback((tabId: string) => {
+    if (tabId.startsWith('tab-')) {
+      const objectTypeId = parseInt(tabId.replace('tab-', ''));
+      return Number.isNaN(objectTypeId) ? {} : { objectTypeId };
+    }
+    switch (tabId) {
+      case 'my':
+        return { myCredits: true };
+      case 'favourite':
+        return { isFavourite: true };
+      case 'archive':
+        return { isActive: false };
+      case 'debtors':
+        return { debt: true };
+      case 'inDebt':
+        return { inDebt: true };
+      default:
+        return {};
+    }
+  }, []);
+
+  const [contractNumber, setContractNumber] = useState(storedFilters?.contractNumber ?? '');
+  const [currentPage, setCurrentPage] = useState(storedFilters?.currentPage ?? 1);
+  const [investorName, setInvestorName] = useState(storedFilters?.investorName ?? '');
+  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(storedFilters?.selectedInvestmentSource ?? null);
+  const [clientFullName, setClientFullName] = useState(storedFilters?.clientFullName ?? '');
+  const [fromDate, setFromDate] = useState<string>(storedFilters?.fromDate ?? '');
+  const [toDate, setToDate] = useState<string>(storedFilters?.toDate ?? '');
+  const [fromCreationDate, setFromCreationDate] = useState<string>(storedFilters?.fromCreationDate ?? '');
+  const [toCreationDate, setToCreationDate] = useState<string>(storedFilters?.toCreationDate ?? '');
+  const [objectType, setObjectType] = useState<string>(storedFilters?.objectType ?? '');
+  const [creditTypeId, setCreditTypeId] = useState<number | null>(storedFilters?.creditTypeId ?? null);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
-  }>({ key: null, direction: 'desc' });
+  }>(storedFilters?.sortConfig ?? { key: null, direction: 'desc' });
   const itemsPerPage = 10;
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>({});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean; objectTypeId?: number }>(
+    shouldUseStoredTab ? (storedFilters?.filters ?? {}) : getTabFilters(baseTab)
+  );
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -93,7 +154,6 @@ const CreditPage = () => {
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] = useState(false);
   const [selectedCreditForFunding, setSelectedCreditForFunding] = useState<Credit | null>(null);
-  const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { 
     isLoading: isObjectTypesLoading, 
@@ -195,19 +255,7 @@ const CreditPage = () => {
     return [...baseTabs, ...customTabItems];
   }, [shouldShowMyCreditsTab, customTabs]);
 
-  const getInitialTab = () => {
-    if (tab) {
-      return tab;
-    }
-    
-    if (location.pathname === '/credits/in-debt') {
-      return 'inDebt';
-    }
-    
-    return 'all';
-  };
-
-  const [activeTab, setActiveTab] = useState<string>(getInitialTab());
+  const [activeTab, setActiveTab] = useState<string>(shouldUseStoredTab ? (storedFilters?.activeTab ?? baseTab) : baseTab);
 
   const handleCreateTab = useCallback(async (tabData: ObjectTypeCreateRequest) => {
     if (customTabs.length >= 5) {
@@ -442,35 +490,98 @@ const CreditPage = () => {
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    
-    if (tabId.startsWith('tab-')) {
-      const objectTypeId = parseInt(tabId.replace('tab-', ''));
-      setFilters({ objectTypeId });
-    } else {
-      switch (tabId) {
-        case 'my':
-          setFilters({ myCredits: true });
-          break;
-        case 'favourite':
-          setFilters({ isFavourite: true });
-          break;
-        case 'archive':
-          setFilters({ isActive: false });
-          break;
-        case 'debtors':
-          setFilters({ debt: true });
-          break;
-        case 'inDebt':
-          setFilters({ inDebt: true });
-          break;
-        default:
-          setFilters({});
-          break;
-      }
-    }
-    
+
+    setFilters(getTabFilters(tabId));
     setCurrentPage(1);
   };
+
+  const resetFilters = () => {
+    setContractNumber('');
+    setInvestorName('');
+    setSelectedInvestmentSource(null);
+    setClientFullName('');
+    setFromDate('');
+    setToDate('');
+    setFromCreationDate('');
+    setToCreationDate('');
+    setObjectType('');
+    setCreditTypeId(null);
+    setSortConfig({ key: null, direction: 'desc' });
+    setActiveTab(baseTab);
+    setFilters(getTabFilters(baseTab));
+    setCurrentPage(1);
+    localStorage.removeItem(CREDIT_FILTERS_STORAGE_KEY);
+  };
+
+  const hasActiveFilters = useMemo(() => {
+    const hasInputs = Boolean(
+      contractNumber ||
+      investorName ||
+      clientFullName ||
+      fromDate ||
+      toDate ||
+      fromCreationDate ||
+      toCreationDate ||
+      objectType ||
+      creditTypeId !== null ||
+      selectedInvestmentSource
+    );
+    const hasFilterFlags = Object.keys(filters).length > 0;
+    const hasSort = sortConfig.key !== null;
+    const hasTabChange = activeTab !== baseTab;
+    return hasInputs || hasFilterFlags || hasSort || hasTabChange || currentPage !== 1;
+  }, [
+    contractNumber,
+    investorName,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    objectType,
+    creditTypeId,
+    selectedInvestmentSource,
+    filters,
+    sortConfig,
+    activeTab,
+    baseTab,
+    currentPage
+  ]);
+
+  useEffect(() => {
+    const payload: CreditFiltersStorage = {
+      contractNumber,
+      currentPage,
+      investorName,
+      selectedInvestmentSource,
+      clientFullName,
+      fromDate,
+      toDate,
+      fromCreationDate,
+      toCreationDate,
+      objectType,
+      creditTypeId,
+      sortConfig,
+      filters,
+      activeTab
+    };
+    localStorage.setItem(CREDIT_FILTERS_STORAGE_KEY, JSON.stringify(payload));
+  }, [
+    contractNumber,
+    currentPage,
+    investorName,
+    selectedInvestmentSource,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    objectType,
+    creditTypeId,
+    sortConfig,
+    filters,
+    activeTab
+  ]);
 
   const handleDeleteCredit = async (rowData: any[]) => {
     const [_, id] = rowData;
@@ -895,18 +1006,22 @@ const CreditPage = () => {
           onChange={handleTabChange}
         />
         
-        {customTabs.length < 5 && (
-          <AddButton 
-            onClick={() => setIsCreateTabModalOpen(true)}
-            tooltip="Добавить вкладку"
-            margin="0 auto 15px 15px" 
-            size={24}
+        <RightActions>
+          {customTabs.length < 5 && (
+            <AddButton 
+              onClick={() => setIsCreateTabModalOpen(true)}
+              tooltip="Добавить вкладку"
+              margin="0 auto 15px 15px" 
+              size={24}
+            />
+          )}
+          <ResetFiltersButton onClick={resetFilters} disabled={!hasActiveFilters}>
+            Сбросить фильтры
+          </ResetFiltersButton>
+          <CountInfoTitle 
+            total={creditsData?.totalCount || 0} 
           />
-        )}
-        
-        <CountInfoTitle 
-          total={creditsData?.totalCount || 0} 
-        />
+        </RightActions>
       </SecondRaw>
 
       {isLoading && <div>Загрузка...</div>}
@@ -1034,6 +1149,12 @@ const SecondRaw = styled.div`
   align-items: center;
 `;
 
+const RightActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
 const StarIcon = styled.div`
   cursor: pointer;
   color: gold;
@@ -1083,6 +1204,26 @@ const TabActions = styled.div`
   
   ${TabLabel}:hover & {
     opacity: 1;
+  }
+`;
+
+const ResetFiltersButton = styled.button`
+  background: none;
+  border: none;
+  color: #007d88;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+  padding: 0;
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.4;
   }
 `;
 
