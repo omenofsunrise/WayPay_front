@@ -1,50 +1,48 @@
-import { useState, useCallback, useEffect } from "react";
-import BaseModal from "../BASE/modalCRUBase";
-import CustomInput from "../../ui/fields/CustomInput";
-import CustomTable, { type RowStyle } from "../../ui/tables/CustomTable";
-import useInvestor from "../../../api/hooks/useInvestor";
-import useInvestorPool from "../../../api/hooks/useInvestorPool";
-import Pagination from "../../ui/fields/CustomPagination";
-import styled from "styled-components";
-import { formatMoney } from "../../../utils/formatPrice";
-import { formatDate } from "../../../utils/dateFormatter";
-import { formatPhoneHref } from "../../../utils/phoneUtils";
-import PhoneLink from "../../ui/links/PhoneLink";
+import { useState, useCallback, useEffect } from 'react';
+import BaseModal from '../BASE/modalCRUBase';
+import CustomInput from '../../ui/fields/CustomInput';
+import CustomTable, { type RowStyle } from '../../ui/tables/CustomTable';
+import useInvestor from '../../../api/hooks/useInvestor';
+import useInvestorPool from '../../../api/hooks/useInvestorPool';
+import Pagination from '../../ui/fields/CustomPagination';
+import styled from 'styled-components';
+import { formatMoney } from '../../../utils/formatPrice';
+import { formatDate } from '../../../utils/dateFormatter';
+import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../../ui/links/PhoneLink';
 
 interface InvestorSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (entity: {
-    id: number;
-    nickname?: string;
+  onSubmit: (entity: { 
+    id: number; 
+    nickname?: string; 
     name?: string;
-    fullName?: string;
+    fullName?: string; 
     phoneNumber?: string;
     investorPie?: number;
     pie?: number;
     investmentAmount?: number;
     balance?: number;
-    type: "investor" | "pool";
+    type: 'investor' | 'pool';
   }) => void;
   width?: string;
   includePools?: boolean;
-  poolId?: number; // Добавлено: ID пула для фильтрации инвесторов
 }
 
-const InvestorSelectModal = ({
-  isOpen,
-  onClose,
-  onSubmit,
+const InvestorSelectModal = ({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
   width = "1000px",
-  includePools = false,
-  poolId, // Добавлено
+  includePools = false
 }: InvestorSelectModalProps) => {
-  const [nameFilter, setNameFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
-    direction: "asc" | "desc";
-  }>({ key: null, direction: "asc" });
+    direction: 'asc' | 'desc';
+  }>({ key: null, direction: 'asc' });
   const [selectedEntity, setSelectedEntity] = useState<{
     id: number;
     nickname?: string;
@@ -57,45 +55,40 @@ const InvestorSelectModal = ({
     balance?: number;
     isCompany: boolean;
     activeUntil?: string;
-    type: "investor" | "pool";
+    type: 'investor' | 'pool';
   } | null>(null);
-
+  
   const pageSize = 4;
-
+  
   const columnToApiSortMap: Record<number, string> = {
-    0: "id",
-    3: includePools ? "pie" : "investor_pie",
-    4: "balance",
+    0: 'id',
+    3: includePools ? 'pie' : 'investor_pie',
+    4: 'balance'
   };
-
-  const {
-    isLoading: isLoadingInvestors,
-    error: investorsError,
-    data: investorsData,
-    getInvestors,
+  
+  const { 
+    isLoading: isLoadingInvestors, 
+    error: investorsError, 
+    data: investorsData, 
+    getInvestors
   } = useInvestor();
-
-  const {
-    isLoading: isLoadingPools,
-    error: poolsError,
-    data: poolsData,
-    getInvestorPools,
+  
+  const { 
+    isLoading: isLoadingPools, 
+    error: poolsError, 
+    data: poolsData, 
+    getInvestorPools
   } = useInvestorPool();
-
+  
   const isLoading = isLoadingInvestors || (includePools && isLoadingPools);
   const error = investorsError || (includePools && poolsError);
-
+  
   const loadEntities = useCallback(async () => {
     const params: any = {
       page: currentPage,
       pageSize,
-      search: nameFilter || undefined,
+      search: nameFilter || undefined
     };
-
-    // Добавлено: если указан poolId, передаем его в параметры
-    if (poolId) {
-      params.poolId = poolId;
-    }
 
     if (sortConfig.key !== null) {
       params.sortBy = columnToApiSortMap[sortConfig.key];
@@ -103,20 +96,15 @@ const InvestorSelectModal = ({
     }
 
     if (includePools) {
-      await Promise.all([getInvestors(params), getInvestorPools(params)]);
+      await Promise.all([
+        getInvestors(params),
+        getInvestorPools(params)
+      ]);
     } else {
       await getInvestors(params);
     }
-  }, [
-    currentPage,
-    nameFilter,
-    sortConfig,
-    getInvestors,
-    getInvestorPools,
-    includePools,
-    poolId,
-  ]); // Добавлен poolId
-
+  }, [currentPage, nameFilter, sortConfig, getInvestors, getInvestorPools, includePools]);
+  
   useEffect(() => {
     if (isOpen) {
       loadEntities();
@@ -131,25 +119,24 @@ const InvestorSelectModal = ({
 
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
-
-    setSortConfig((prev) => {
+    
+    setSortConfig(prev => {
       if (prev.key === columnIndex) {
         return {
           key: columnIndex,
-          direction: prev.direction === "asc" ? "desc" : "asc",
+          direction: prev.direction === 'asc' ? 'desc' : 'asc'
         };
       }
       return {
         key: columnIndex,
-        direction: "asc",
+        direction: 'asc'
       };
     });
   };
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
-    const isPool =
-      includePools && rowIndex >= (investorsData?.items?.length || 0);
-
+    const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
+    
     if (isPool) {
       const poolIndex = rowIndex - (investorsData?.items?.length || 0);
       const pool = poolsData?.items[poolIndex];
@@ -162,7 +149,7 @@ const InvestorSelectModal = ({
           pie: pool.pie,
           balance: pool.balance || 0,
           activeUntil: pool.activeUntil,
-          type: "pool",
+          type: 'pool'
         });
       }
     } else {
@@ -178,7 +165,7 @@ const InvestorSelectModal = ({
           balance: investor.balance,
           activeUntil: investor.activeUntil,
           isCompany: investor.isCompany,
-          type: "investor",
+          type: 'investor'
         });
       }
     }
@@ -193,34 +180,25 @@ const InvestorSelectModal = ({
     }
   };
 
-  const investorsTableData =
-    investorsData?.items?.map((investor) => [
-      investor.id.toString(),
-      investor.nickname && investor.nickname.trim() !== ""
-        ? investor.nickname
-        : investor.fullName,
-      investor.phoneNumber ? (
-        <a href={formatPhoneHref(investor.phoneNumber)}>
-          {investor.phoneNumber}
-        </a>
-      ) : (
-        ""
-      ),
-      investor.investorPie.toString() + "%",
-      investor.isBlocked?.toString() || "false",
-      formatMoney(investor.balance.toString()),
-      formatDate(investor.activeUntil ?? new Date()),
-    ]) || [];
+  const investorsTableData = investorsData?.items?.map(investor => [
+    investor.id.toString(),
+    investor.nickname,
+    investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : '',
+    investor.investorPie.toString() + "%",
+    investor.isBlocked?.toString() || 'false',
+    formatMoney(investor.balance.toString()),
+    formatDate(investor.activeUntil ?? new Date()),
+  ]) || [];
 
-  const poolsTableData = includePools
-    ? poolsData?.items?.map((pool) => [
+  const poolsTableData = includePools 
+    ? poolsData?.items?.map(pool => [
         pool.id.toString(),
         pool.name,
-        "—",
+        '—', 
         "",
-        "—",
+        '—', 
         formatMoney(pool.balance.toString()),
-        formatDate(pool.activeUntil ?? new Date()),
+        formatDate(pool.activeUntil ?? new Date())
       ]) || []
     : [];
 
@@ -228,31 +206,33 @@ const InvestorSelectModal = ({
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {
     const isBlockedIndex = 4;
-    const isBlocked = rowData[isBlockedIndex] === "true";
+    const isBlocked = rowData[isBlockedIndex] === 'true';
     const rowId = parseInt(rowData[0]);
     const isSelected = selectedEntity && rowId === selectedEntity.id;
-
+    
     if (isSelected) {
       styles[index] = {
-        backgroundColor: "#007D88",
-        color: "white",
-        fontWeight: "normal",
+        backgroundColor: '#007D88',
+        color: 'white',
+        fontWeight: 'normal'
       };
-    } else if (isBlocked) {
+    } 
+    else if (isBlocked) {
       styles[index] = {
-        backgroundColor: "#FFEBEE",
-        color: "black",
-        fontWeight: "normal",
-        hoverBackgroundColor: "black",
+        backgroundColor: '#FFEBEE',
+        color: 'black',
+        fontWeight: 'normal',
+        hoverBackgroundColor: 'black'
       };
-    } else {
+    } 
+    else {
       styles[index] = {
-        backgroundColor: "white",
-        color: "black",
-        fontWeight: "normal",
+        backgroundColor: 'white',
+        color: 'black',
+        fontWeight: 'normal'
       };
     }
-
+    
     return styles;
   }, {} as Record<number, RowStyle>);
 
@@ -270,7 +250,7 @@ const InvestorSelectModal = ({
     >
       <ModalContent>
         <FilterContainer>
-          <CustomInput
+          <CustomInput 
             style={{ maxWidth: "none" }}
             inputType="fullname"
             placeholder="Поиск по никнейму или названию пула"
@@ -278,57 +258,35 @@ const InvestorSelectModal = ({
             onChange={(e) => handleFilterChange(e.target.value)}
           />
         </FilterContainer>
-
+        
         {isLoading && <LoadingMessage>Загрузка...</LoadingMessage>}
         {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
-
+        
         {!isLoading && !error && (
           <>
             <TableContainer>
-              <CustomTable
+              <CustomTable 
                 columns={[
-                  {
-                    name: "ID",
-                    isSortable: true,
-                    align: "left",
-                    isHidden: true,
-                  },
-                  {
-                    name: includePools ? "Никнейм/Название" : "Никнейм",
-                    align: "left",
-                  },
+                  { name: "ID", isSortable: true, align: "left", isHidden: true },
+                  { name: includePools ? "Никнейм/Название" : "Никнейм", align: "left" },
                   { name: "Телефон", align: "left", isHidden: true },
-                  {
-                    name: "Доля",
-                    align: "left",
-                    isSortable: true,
-                    isHidden: true,
-                  },
+                  { name: "Доля", align: "left", isSortable: true, isHidden: true },
                   { name: "заблокирован", isHidden: true },
                   { name: "Касса", isSortable: true, align: "right" },
                   { name: "Дата окончания инвестора/пула", align: "left" },
-                ]}
+                ]} 
                 data={tableData}
                 onRowClick={handleRowClick}
                 onSort={handleSort}
                 sortConfig={sortConfig}
                 rowStyles={rowStyles}
-                selectedRow={
-                  selectedEntity
-                    ? tableData.findIndex(
-                        (row) => row[0] === selectedEntity.id.toString()
-                      )
-                    : -1
-                }
+                selectedRow={selectedEntity ? tableData.findIndex(row => row[0] === selectedEntity.id.toString()) : -1}
               />
             </TableContainer>
-
+            
             <PaginationContainer>
               <Pagination
-                total={
-                  (investorsData?.totalCount || 0) +
-                  (includePools ? poolsData?.totalCount || 0 : 0)
-                }
+                total={(investorsData?.totalCount || 0) + (includePools ? (poolsData?.totalCount || 0) : 0)}
                 current={currentPage}
                 onChange={setCurrentPage}
                 itemsPerPage={pageSize}

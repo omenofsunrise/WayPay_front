@@ -738,16 +738,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
       const creditAmount = totalSum - initialPayment;
 
-      console.log('[PaymentSchedule] 🔄 Генерация превью графика платежей:', {
-        contractDate,
-        months,
-        paymentDue,
-        totalSum,
-        initialPayment,
-        creditAmount,
-        nextMonthStart
-      });
-
       const previewParams = {
         creditDate: new Date(contractDate),
         termMonths: parseInt(months),
@@ -756,43 +746,22 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         nextMonthStart: nextMonthStart,
       };
 
-      console.log('[PaymentSchedule] 📤 Отправка запроса на превью:', previewParams);
       await getPreview(previewParams);
     } catch (error) {
-      console.error('[PaymentSchedule] ❌ Ошибка при генерации превью:', error);
+      console.error('Failed to generate schedule preview:', error);
     }
   }, [contractDate, months, paymentDue, totalSum, initialPaymentAmount, nextMonthStart, parseAmount, getPreview]);
 
   useEffect(() => {
     if (previewData) {
-      console.log('[PaymentSchedule] 📥 Получены данные превью от API:', {
-        previewDataCount: previewData.length,
-        previewData: previewData.slice(0, 3) // Показываем первые 3 элемента для отладки
-      });
-
       const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
       const creditAmount = totalSum - initialPayment;
       
-      console.log('[PaymentSchedule] 📊 Расчеты для формирования графика:', {
-        initialPayment,
-        creditAmount,
-        totalSum
-      });
-      
       const formattedSchedule = previewData.map((item, index) => {
-        const previousPayments = previewData
+        const remainingAmount = creditAmount - previewData
           .slice(0, index)
           .reduce((sum, payment) => sum + payment.paymentAmount, 0);
-        const remainingAmount = creditAmount - previousPayments;
-        
-        console.log(`[PaymentSchedule] 📅 Элемент ${index + 1}:`, {
-          paymentDate: item.paymentDate,
-          paymentAmount: item.paymentAmount,
-          comment: item.comment,
-          remainingAmount,
-          previousPayments
-        });
-        
+          
         return {
           id: index + 1,
           date: new Date(item.paymentDate).toLocaleDateString('ru-RU'),
@@ -802,13 +771,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         };
       });
       
-      console.log('[PaymentSchedule] 📋 Сформирован основной график:', {
-        count: formattedSchedule.length,
-        items: formattedSchedule.slice(0, 3)
-      });
-      
       if (initialPayment > 0) {
-        console.log('[PaymentSchedule] 💰 Добавление первоначального взноса:', initialPayment);
         formattedSchedule.unshift({
           id: 0,
           date: new Date(contractDate!).toLocaleDateString('ru-RU'),
@@ -818,35 +781,13 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         });
       }
       
-      console.log('[PaymentSchedule] ✅ Итоговый график платежей:', {
-        totalItems: formattedSchedule.length,
-        firstItem: formattedSchedule[0],
-        lastItem: formattedSchedule[formattedSchedule.length - 1],
-        allItems: formattedSchedule
-      });
-      
       setPaymentSchedule(formattedSchedule);
     }
   }, [previewData, totalSum, initialPaymentAmount, contractDate, parseAmount]);
 
   useEffect(() => {
-    console.log('[PaymentSchedule] 🔍 Проверка условий для генерации графика:', {
-      contractDate,
-      months,
-      paymentDue,
-      totalSum,
-      conditionsMet: contractDate && months && paymentDue && totalSum > 0
-    });
-    
     if (contractDate && months && paymentDue && totalSum > 0) {
-      console.log('[PaymentSchedule] 🚀 Запуск генерации графика...');
       generateSchedulePreview();
-    } else {
-      console.log('[PaymentSchedule] ⏸️ Условия не выполнены, график не генерируется');
-      if (paymentSchedule.length > 0) {
-        console.log('[PaymentSchedule] 🧹 Очистка существующего графика');
-        setPaymentSchedule([]);
-      }
     }
   }, [contractDate, months, paymentDue, totalSum, nextMonthStart, generateSchedulePreview]);
 
@@ -1332,10 +1273,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </InputGroup>
           </PaymentScheduleInputs>
           <PaymentScheduleTableWrapper>
-            <PaymentScheduleTable 
-              data={paymentSchedule} 
-              isLoading={isScheduleLoading} 
-            />
+            <PaymentScheduleTable data={paymentSchedule} isLoading={isScheduleLoading} />
           </PaymentScheduleTableWrapper>
         </PaymentScheduleContainer>
       </ContentWrapper>

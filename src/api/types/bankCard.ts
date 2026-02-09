@@ -1,10 +1,9 @@
-import { number } from "framer-motion";
+import type { PaginationParams } from './common';
 
 export interface BankCard {
   id: number;
+  phone: string;
   details: string;
-  balance: number;
-  paymentsAmount: number;
 }
 
 export interface BankCardRequest {
@@ -15,17 +14,4 @@ export interface BankCardRequest {
 export interface BankCardFilters {
   page?: number;
   pageSize?: number;
-  bankCardId?: number;
-}
-
-export interface Withdraw {
-  id: number;
-
-  createdAt: Date;
-
-  amount: number;
-
-  bankCardId: number;
-
-  bankCard: BankCard;
 }

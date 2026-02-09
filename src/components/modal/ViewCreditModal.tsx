@@ -141,20 +141,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      // Полностью блокируем скролл на странице
-      document.body.style.overflow = 'hidden';
-    } else {
-      // Восстанавливаем скролл
-      document.body.style.overflow = 'auto';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [isOpen]);
-
   // Определение MIME типа по расширению файла
   const getMimeTypeFromExtension = (extension?: string): string => {
     const mimeTypes: Record<string, string> = {
@@ -807,13 +793,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                     </>
                   )}
 
-                  {creditData?.clientBirthdate && (
-                    <>
-                      <Label>Дата рождения</Label>
-                      <Value>{new Date(`${creditData.clientBirthdate}`).toLocaleDateString('ru-RU')}</Value>
-                    </>
-                  )}
-
                   {creditData?.termMonths && (
                     <>
                       <Label>Срок, месяцев</Label>
@@ -836,13 +815,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           {creditData.guarantorPhone}
                         </PhoneLink>
                       </Value>
-                    </>
-                  )}
-
-                  {creditData?.guarantorBirthdate && (
-                    <>
-                      <Label>Дата рождения</Label>
-                      <Value>{new Date(`${creditData.guarantorBirthdate}`).toLocaleDateString('ru-RU')}</Value>
                     </>
                   )}
 
@@ -919,7 +891,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 </>
               )}
 
-              <ModalInfoTitle style={{marginTop: "15px"}}>График платежей</ModalInfoTitle>
+              <ModalInfoTitle>График платежей</ModalInfoTitle>
               <CustomTable                         
                 columns={[
                   { name: "ID", isHidden: true },
@@ -1048,13 +1020,8 @@ const ModalContent = styled.div`
   padding: 24px;
   border-radius: 8px;
   width: auto;
-  max-width: 90vw;
-  max-height: 90vh;
   overflow-y: auto;
-  overflow-x: hidden;
-  
-  /* Для плавного скролла на мобильных */
-  -webkit-overflow-scrolling: touch;
+  max-height: 90vh;
 `;
 
 const AddButton = styled.img`
@@ -1071,10 +1038,8 @@ const TableContainer = styled.div`
   border-radius: 8px;
   overflow-y: auto;
   width: 100%;
-  /* Убираем max-height или делаем его адаптивным */
-  height: auto;
-  min-height: 200px;
-  max-height: 400px; /* или убрать вообще */
+  height: 100%;
+  max-height: 500px;  
 `;
 
 const LoadingText = styled.div`

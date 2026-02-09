@@ -25,8 +25,6 @@ type MenuItemProps = CollapsibleProps & {
 };
 
 const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string, string> }> = {
-  '/admin': { mainItem: 'admin' },
-  '/about': { mainItem: 'about' },
   '/analytics': { mainItem: 'analytics' },
   '/credits': { mainItem: 'contracts', subItems: { '/credits': 'contracts' } },
   '/credit-control': { mainItem: 'contracts', subItems: { '/credit-control': 'contracts-control' } },

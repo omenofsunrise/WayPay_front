@@ -23,8 +23,6 @@ export interface PaymentParams extends PaginationParams {
     employeeFullname?: string;
     dateFrom?: Date;
     dateTo?: Date;
-    poolId?: number;
-    investorId?: number;
 }
 
 export interface PaymentByCreditParams extends PaginationParams {

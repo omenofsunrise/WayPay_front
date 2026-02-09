@@ -414,7 +414,7 @@ const BlacklistPage = () => {
                             )}
                         </TitleContainer>
                         <StyledCountInfo 
-                            total={blacklistData?.totalItemsCount} 
+                            total={totalBlacklistCount} 
                         />
                     </TitleContainer>
                     

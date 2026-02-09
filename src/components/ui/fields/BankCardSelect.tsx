@@ -1,5 +1,4 @@
-// BankCardSelect.tsx - исправленный компонент
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import Portal from '../../../utils/Portal';
@@ -49,8 +48,8 @@ const BankCardSelect = ({
   const [editDetails, setEditDetails] = useState('');
   const [newDetails, setNewDetails] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
 
   useEffect(() => {
     if (clientId) {
@@ -73,15 +72,28 @@ const BankCardSelect = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleInputClick = () => {
-    if (!disabled) {
-      setIsDropdownOpen(!isDropdownOpen);
+  const updateMenuPosition = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
     }
   };
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    e.target.blur();
+  const handleInputClick = () => {
+    if (!disabled) {
+      setIsDropdownOpen(true);
+      updateMenuPosition();
+    }
+  };
+
+  const handleFocus = () => {
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
   };
 
   const handleBankCardSelect = (bankCard: { id: number; details: string }) => {
@@ -90,8 +102,6 @@ const BankCardSelect = ({
       onBankCardSelect(bankCard);
     }
     setIsDropdownOpen(false);
-    setIsCreating(false);
-    setIsEditing(null);
   };
 
   const handleClearSelection = () => {
@@ -102,7 +112,6 @@ const BankCardSelect = ({
         details: ''
       });
     }
-    setIsDropdownOpen(false);
   };
 
   const handleCreateNew = () => {
@@ -185,135 +194,144 @@ const BankCardSelect = ({
   const displayBankCards = bankCards;
 
   return (
-    <InputContainer ref={containerRef}>
-      <InputWrapper ref={inputRef}>
-        <StyledInput
-          type="text"
-          value={value}
-          readOnly
-          onClick={handleInputClick}
-          onFocus={handleFocus}
-          onKeyDown={handleKeyDown}
-          placeholder={customPlaceholder && !value ? '' : placeholder}
-          hasError={hasError}
-          disabled={disabled || isLoading}
-          {...props}
-        />
-        {value && !disabled && (
-          <ClearButton onClick={handleClearSelection}>
-            <FaTimes size={14} />
-          </ClearButton>
+    <>
+      <InputContainer>
+        <InputWrapper>
+          <StyledInput
+            ref={inputRef}
+            type="text"
+            value={value}
+            readOnly
+            onClick={handleInputClick}
+            onFocus={handleFocus}
+            onKeyDown={handleKeyDown}
+            placeholder={customPlaceholder && !value ? '' : placeholder}
+            hasError={hasError}
+            disabled={disabled || isLoading}
+            {...props}
+          />
+          {value && !disabled && (
+            <ClearButton onClick={handleClearSelection}>
+              <FaTimes size={14} />
+            </ClearButton>
+          )}
+          <CardIcon>
+            <FaCreditCard size={16} />
+          </CardIcon>
+        </InputWrapper>
+        
+        {customPlaceholder && !value && (
+          <PlaceholderLabel isVisible={true}>
+            {customPlaceholder}
+          </PlaceholderLabel>
         )}
-        <CardIcon>
-          <FaCreditCard size={16} />
-        </CardIcon>
-      </InputWrapper>
-      
-      {customPlaceholder && !value && (
-        <PlaceholderLabel isVisible={true}>
-          {customPlaceholder}
-        </PlaceholderLabel>
-      )}
 
-      <AnimatePresence>
-        {isDropdownOpen && (
-          <DropdownContainer
-            initial={{ opacity: 0, scaleY: 0.95 }}
-            animate={{ opacity: 1, scaleY: 1 }}
-            exit={{ opacity: 0, scaleY: 0.95 }}
-            transition={{ duration: 0.15 }}
-            ref={dropdownRef}
-          >
-            <DropdownContent>
-              {isLoading ? (
-                <DropdownItem>Загрузка карт...</DropdownItem>
-              ) : isCreating ? (
-                <CreateContainer>
-                  <CreateInput
-                    value={newDetails}
-                    onChange={(e) => setNewDetails(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Реквизиты карты"
-                    autoFocus
-                  />
-                  <ActionButtons>
-                    <ActionButton $confirm onClick={handleConfirmCreate}>
-                      ✓
-                    </ActionButton>
-                    <ActionButton $cancel onClick={handleCancelCreate}>
-                      ✕
-                    </ActionButton>
-                  </ActionButtons>
-                </CreateContainer>
-              ) : displayBankCards.length > 0 ? (
-                <BankCardsList>
-                  {displayBankCards.map((bankCard) => (
-                    <BankCardItem key={bankCard.id}>
-                      {isEditing === bankCard.id ? (
-                        <EditContainer>
-                          <EditInput
-                            value={editDetails}
-                            onChange={(e) => setEditDetails(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Детали"
-                            autoFocus
-                          />
-                          <ActionButtons>
-                            <ActionButton $confirm onClick={() => handleConfirmEdit(bankCard.id)}>
-                              ✓
-                            </ActionButton>
-                            <ActionButton $cancel onClick={handleCancelEdit}>
-                              ✕
-                            </ActionButton>
-                          </ActionButtons>
-                        </EditContainer>
-                      ) : (
-                        <>
-                          <BankCardInfo onClick={() => handleBankCardSelect(bankCard)}>
-                            <BankCardDetails>{bankCard.details}</BankCardDetails>
-                          </BankCardInfo>
-                          <BankCardActions>
-                            <ActionButton 
-                              $edit 
-                              onClick={() => handleStartEdit(bankCard)}
-                              title="Редактировать"
-                            >
-                              <FaEdit size={12} />
-                            </ActionButton>
-                            <ActionButton 
-                              $delete 
-                              onClick={() => handleDelete(bankCard.id, bankCard.details)}
-                              title="Удалить"
-                            >
-                              <FaTrash size={12} />
-                            </ActionButton>
-                          </BankCardActions>
-                        </>
-                      )}
-                    </BankCardItem>
-                  ))}
-                </BankCardsList>
-              ) : (
-                <DropdownItem>Карты не найдены</DropdownItem>
-              )}
-            </DropdownContent>
-            
-            {!isCreating && !isEditing && (
-              <DropdownFooter>
-                <AddButton onClick={handleCreateNew}>
-                  <FaPlus size={12} />
-                  <span>Создать новую карту</span>
-                </AddButton>
-              </DropdownFooter>
-            )}
-          </DropdownContainer>
+        <AnimatePresence>
+          {isDropdownOpen && (
+            <Portal>
+              <DropdownMenu
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                ref={dropdownRef}
+                style={{
+                  position: 'absolute',
+                  top: `${menuPosition.top}px`,
+                  left: `${menuPosition.left}px`,
+                  width: `${menuPosition.width}px`,
+                  maxHeight: '400px',
+                  zIndex: 1000
+                }}
+              >
+                <DropdownContent>
+                  {isLoading ? (
+                    <DropdownItem>Загрузка карт...</DropdownItem>
+                  ) : isCreating ? (
+                    <CreateContainer>
+                      <CreateInput
+                        value={newDetails}
+                        onChange={(e) => setNewDetails(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Реквизиты карты"
+                      />
+                      <ActionButtons>
+                        <ActionButton $confirm onClick={handleConfirmCreate}>
+                          ✓
+                        </ActionButton>
+                        <ActionButton $cancel onClick={handleCancelCreate}>
+                          ✕
+                        </ActionButton>
+                      </ActionButtons>
+                    </CreateContainer>
+                  ) : displayBankCards.length > 0 ? (
+                    displayBankCards.map((bankCard) => (
+                      <BankCardItem key={bankCard.id}>
+                        {isEditing === bankCard.id ? (
+                          <EditContainer>
+                            <EditInput
+                              value={editDetails}
+                              onChange={(e) => setEditDetails(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              placeholder="Детали"
+                            />
+                            <ActionButtons>
+                              <ActionButton $confirm onClick={() => handleConfirmEdit(bankCard.id)}>
+                                ✓
+                              </ActionButton>
+                              <ActionButton $cancel onClick={handleCancelEdit}>
+                                ✕
+                              </ActionButton>
+                            </ActionButtons>
+                          </EditContainer>
+                        ) : (
+                          <>
+                            <BankCardInfo onClick={() => handleBankCardSelect(bankCard)}>
+                              <BankCardDetails>{bankCard.details}</BankCardDetails>
+                            </BankCardInfo>
+                            <BankCardActions>
+                              <ActionButton 
+                                $edit 
+                                onClick={() => handleStartEdit(bankCard)}
+                                title="Редактировать"
+                              >
+                                <FaEdit size={12} />
+                              </ActionButton>
+                              <ActionButton 
+                                $delete 
+                                onClick={() => handleDelete(bankCard.id, bankCard.details)}
+                                title="Удалить"
+                              >
+                                <FaTrash size={12} />
+                              </ActionButton>
+                            </BankCardActions>
+                          </>
+                        )}
+                      </BankCardItem>
+                    ))
+                  ) : (
+                    <DropdownItem>Карты не найдены</DropdownItem>
+                  )}
+                </DropdownContent>
+                
+                <DropdownFooter>
+                  {!isCreating && (
+                    <AddButton onClick={handleCreateNew}>
+                      <FaPlus size={12} />
+                      <span>Создать новую карту</span>
+                    </AddButton>
+                  )}
+                </DropdownFooter>
+              </DropdownMenu>
+            </Portal>
+          )}
+        </AnimatePresence>
+
+        {hasError && errorMessage && (
+          <ErrorMessage>{errorMessage}</ErrorMessage>
         )}
-      </AnimatePresence>
-
-      {hasError && errorMessage && (
-        <ErrorMessage>{errorMessage}</ErrorMessage>
-      )}
-    </InputContainer>
+      </InputContainer>
+    </>
   );
 };
 
@@ -423,23 +441,16 @@ const ErrorMessage = styled.span`
   display: block;
 `;
 
-const DropdownContainer = styled(motion.div)`
+const DropdownMenu = styled(motion.div)`
   position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 4px;
   background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 400px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  transform-origin: top center;
-  max-height: 400px;
-  width: 100%;
 `;
 
 const DropdownContent = styled.div`
@@ -448,30 +459,25 @@ const DropdownContent = styled.div`
 `;
 
 const DropdownItem = styled.div`
-  padding: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
   font-size: 14px;
-  color: #666;
-  text-align: center;
-`;
-
-const BankCardsList = styled.div`
-  max-height: 300px;
-  overflow-y: auto;
+  color: black;
+  &:hover {
+    background-color: #ebf8ff;
+  }
 `;
 
 const BankCardItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 8px 12px;
   color: black;
   border-bottom: 1px solid #f1f1f1;
-  transition: background-color 0.2s ease;
-  
   &:last-child {
     border-bottom: none;
   }
-  
   &:hover {
     background-color: #f8f9fa;
   }
@@ -481,35 +487,38 @@ const BankCardInfo = styled.div`
   flex: 1;
   cursor: pointer;
   padding: 4px 0;
-  min-width: 0; /* Для корректного обрезания текста */
-  
   &:hover {
     color: rgba(0, 125, 136, 1);
   }
 `;
 
+const BankCardName = styled.div`
+  font-weight: 500;
+  margin-bottom: 2px;
+`;
+
 const BankCardDetails = styled.div`
   font-size: 14px;
-  color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-align: left;
-  text-overflow: ellipsis;
+  color: #666;
 `;
 
 const BankCardActions = styled.div`
   display: flex;
-  gap: 8px;
-  margin-left: 8px;
-  flex-shrink: 0;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  ${BankCardItem}:hover & {
+    opacity: 1;
+  }
 `;
 
 const ActionButton = styled.button<{ $confirm?: boolean; $cancel?: boolean; $edit?: boolean; $delete?: boolean }>`
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 4px;
+  padding: 4px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -520,11 +529,10 @@ const ActionButton = styled.button<{ $confirm?: boolean; $cancel?: boolean; $edi
     if (props.$delete) return 'rgba(80, 85, 92, 1)';
     return '#6c757d';
   }};
-  transition: background-color 0.2s ease;
   
   &:hover {
     background-color: ${props => {
-      if (props.$confirm) return 'rgba(0, 125, 136, 0.1)';
+      if (props.$confirm) return 'rgba(40, 167, 69, 0.1)';
       if (props.$cancel) return 'rgba(220, 53, 69, 0.1)';
       if (props.$edit) return 'rgba(0, 123, 255, 0.1)';
       if (props.$delete) return 'rgba(220, 53, 69, 0.1)';
@@ -536,80 +544,73 @@ const ActionButton = styled.button<{ $confirm?: boolean; $cancel?: boolean; $edi
 const CreateContainer = styled.div`
   display: flex;
   align-items: center;
-  padding: 12px;
+  padding: 8px 12px;
   gap: 8px;
-  border-bottom: 1px solid #f1f1f1;
+  flex-direction: column;
 `;
 
 const EditContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex-direction: column;
 `;
 
 const CreateInput = styled.input`
-  flex: 1;
-  padding: 8px;
+  width: 100%;
+  padding: 4px 8px;
   border: 1px solid rgba(0, 125, 136, 1);
   color: black;
   background: white;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s ease;
   
   &:focus {
     border-color: rgba(0, 125, 136, 0.8);
-    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.1);
   }
 `;
 
 const EditInput = styled.input`
-  flex: 1;
-  padding: 8px;
+  width: 100%;
+  padding: 4px 8px;
   border: 1px solid rgba(0, 125, 136, 1);
   color: black;
   background: white;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s ease;
   
   &:focus {
     border-color: rgba(0, 125, 136, 0.8);
-    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.1);
   }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
   gap: 4px;
+  align-self: flex-end;
 `;
 
 const DropdownFooter = styled.div`
-  padding: 12px;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(209, 213, 219, 1);
 `;
 
 const AddButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: none;
   border: none;
   cursor: pointer;
   color: rgba(0, 125, 136, 1);
   font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-  width: 100%;
-  justify-content: center;
+  padding: 4px 0;
   
   &:hover {
-    background-color: rgba(0, 125, 136, 0.1);
     color: rgba(0, 100, 110, 1);
   }
 `;

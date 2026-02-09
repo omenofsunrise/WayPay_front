@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import Portal from '../../../utils/Portal';
@@ -112,65 +112,12 @@ const ObjectTypeSelect = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (isDropdownOpen) {
-      // Сохраняем текущую позицию скролла
-      const scrollY = window.scrollY;
-      const body = document.body;
-      
-      // Блокируем скролл на body
-      body.style.position = 'fixed';
-      body.style.top = `-${scrollY}px`;
-      body.style.width = '100%';
-      body.style.overflowY = 'scroll'; // Оставляем скроллбар чтобы не прыгал контент
-      
-      return () => {
-        // Восстанавливаем скролл при закрытии dropdown
-        body.style.position = '';
-        body.style.top = '';
-        body.style.width = '';
-        body.style.overflowY = '';
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [isDropdownOpen]);
-
-  const handleDropdownWheel = useCallback((e: WheelEvent) => {
-    if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) {
-      // Позволяем скроллить только внутри dropdown
-      e.stopPropagation();
-    }
-  }, []);
-
-  // Добавляем обработчик колесика мыши
-  useEffect(() => {
-    if (isDropdownOpen) {
-      document.addEventListener('wheel', handleDropdownWheel, { passive: false });
-      return () => {
-        document.removeEventListener('wheel', handleDropdownWheel);
-      };
-    }
-  }, [isDropdownOpen, handleDropdownWheel]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isDropdownOpen]);
-
   const updateMenuPosition = () => {
     if (inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
       setMenuPosition({
-        top: rect.bottom,
-        left: rect.left,
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
         width: rect.width
       });
     }
@@ -673,8 +620,6 @@ const DropdownMenu = styled(motion.div)`
   max-height: 400px;
   display: flex;
   flex-direction: column;
-
-  overscroll-behavior: contain;
 `;
 
 const DropdownContent = styled.div`

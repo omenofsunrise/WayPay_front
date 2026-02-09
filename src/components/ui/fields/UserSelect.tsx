@@ -32,7 +32,6 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
   const [isFocused, setIsFocused] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(false);
   const selectRef = React.useRef<HTMLDivElement>(null);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
   
   const showCustomPlaceholder = Boolean(customPlaceholder && !value && !isFocused);
 
@@ -61,62 +60,12 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
     }
   };
 
-  // Функция для предотвращения прокрутки страницы, но не dropdown
-  const preventBodyScroll = (e: Event) => {
-    // Проверяем, происходит ли событие внутри dropdown
-    if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) {
-      // Если внутри dropdown, разрешаем прокрутку
-      return;
-    }
-    
-    // Если не внутри dropdown, предотвращаем прокрутку страницы
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
   React.useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
-    
-    // Добавляем обработчики для предотвращения прокрутки страницы
-    if (isOpen) {
-      // Сохраняем текущую позицию скролла
-      const scrollY = window.scrollY;
-      const scrollX = window.scrollX;
-      
-      // Блокируем скролл на body
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = `-${scrollX}px`;
-      document.body.style.width = '100%';
-      
-      // Обработчики для дополнительной безопасности
-      document.addEventListener('wheel', preventBodyScroll, { passive: false });
-      document.addEventListener('touchmove', preventBodyScroll, { passive: false });
-    }
-    
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      
-      // Восстанавливаем скролл при закрытии dropdown
-      if (isOpen) {
-        const scrollY = document.body.style.top;
-        const scrollX = document.body.style.left;
-        
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.width = '';
-        
-        // Восстанавливаем позицию скролла
-        window.scrollTo(parseInt(scrollX || '0', 10) * -1, parseInt(scrollY || '0', 10) * -1);
-        
-        document.removeEventListener('wheel', preventBodyScroll);
-        document.removeEventListener('touchmove', preventBodyScroll);
-      }
     };
-  }, [isOpen]);
+  }, []);
 
   const selectedOption = options.find(option => option.value === value);
   const displayValue = selectedOption ? selectedOption.label : '';
@@ -154,7 +103,7 @@ const UserSelect: React.FC<CustomSelectWithAvatarProps> = ({
         </StyledSelect>
         
         {isOpen && (
-          <Dropdown ref={dropdownRef}>
+          <Dropdown>
             {options.map((option) => (
               <OptionItem 
                 key={option.value} 
@@ -289,28 +238,7 @@ const Dropdown = styled.div`
   overflow-y: auto;
   min-width: 200px;
   
-  /* Включаем прокрутку внутри dropdown */
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-  }
-  
-  &::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-  }
-  
-  /* Для Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 #f1f1f1;
+  /* Динамическое позиционирование - будет вычисляться в useEffect */
 `;
 
 const OptionItem = styled.div<{ $isSelected: boolean }>`

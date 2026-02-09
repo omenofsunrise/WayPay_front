@@ -25,7 +25,6 @@ import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useAuth } from '../сontext/AuthContext';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
-import CustomSelect from '../components/ui/fields/CustomSelect';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -121,7 +120,7 @@ const CreditControlPage = () => {
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, acceptCredit } = useCredit();
   const navigate = useNavigate();
-const [approvalStatus, setApprovalStatus] = useState<string>('');
+
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
                                 hasPermission('VIEW_ALL_CREDITS', true);
@@ -142,12 +141,6 @@ const [approvalStatus, setApprovalStatus] = useState<string>('');
     navigate(`/new-credit/${id}`);
   };
 
-  const approvalOptions = [
-    { value: '', label: 'Все' },
-    { value: 'confirmed', label: 'Подтверждённые' },
-    { value: 'notConfirmed', label: 'Неподтверждённые' }
-  ];
-
   const loadCredits = useCallback(async () => {
     const params = {
       page: currentPage,
@@ -161,9 +154,6 @@ const [approvalStatus, setApprovalStatus] = useState<string>('');
       dateTo: toDate ? new Date(toDate) : undefined,
       createdAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
       createdTo: toCreationDate ? new Date(toCreationDate) : undefined,
-      accepted: approvalStatus 
-        ? (approvalStatus === 'confirmed' ? true : false)
-        : undefined,
       rublesIncomeFrom: rublesIncomeFrom && !isNaN(Number(rublesIncomeFrom))
         ? Number(rublesIncomeFrom)
         : undefined,
@@ -186,7 +176,7 @@ const [approvalStatus, setApprovalStatus] = useState<string>('');
   }, [
     currentPage, contractNumber, clientFullName, investorName, selectedInvestmentSource,
     fromDate, toDate, rublesIncomeFrom, rublesIncomeTo, 
-    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters, creditTypeId, toCreationDate, fromCreationDate, approvalStatus
+    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters, creditTypeId, toCreationDate, fromCreationDate
   ]);
 
   useEffect(() => {
@@ -650,7 +640,7 @@ const [approvalStatus, setApprovalStatus] = useState<string>('');
           />
         </InputWrapper>
 
-        <InputWrapper style={{ minWidth: "250px" }}>
+        <InputWrapper style={{ minWidth: "500px" }}>
           <InvestorSelect 
             placeholder="Инвестор"
             value={investorName}
@@ -671,20 +661,6 @@ const [approvalStatus, setApprovalStatus] = useState<string>('');
             includePools
           />
         </InputWrapper>
-<InputWrapper style={{ minWidth: "150px" }}>
-  <CustomSelect 
-    placeholder="Статус подтверждения"
-    customPlaceholder="Статус подтверждения"
-    options={approvalOptions}
-    value={approvalStatus}
-    onChange={(event) => {
-      setApprovalStatus(event.target.value);
-      setCurrentPage(1);
-    }}
-    hasError={false}
-    disabled={false}
-  />
-</InputWrapper>
       </FilterField>
 
       <SecondRaw>

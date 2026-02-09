@@ -1,4 +1,3 @@
-import { number } from 'framer-motion';
 import type { PaginationParams } from './common';
 
 export interface InvestorPool {
@@ -26,12 +25,4 @@ export interface UpdateNameRequest {
 
 export interface UpdatePieRequest {
   newPie: number;
-}
-
-export interface Reinvestment {
-  id: number;
-  investorId: number;
-  date: Date;
-  amount: number;
-  investorNickname: string;
 }

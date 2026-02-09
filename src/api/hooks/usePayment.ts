@@ -2,9 +2,6 @@ import { useState, useCallback } from 'react';
 import paymentService from '../services/paymentService';
 import type { Payment, PaymentParams, CreatePaymentRequest, PaymentByCreditParams, PaymentTab, PaymentResponse } from '../types/payment';
 import type { PaginatedResponse } from '../types/common';
-import type { Credit } from '../types/credit';
-import { formatDate } from '../../utils/dateFormatter';
-import { formatMoney } from '../../utils/formatPrice';
 
 const usePayment = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -84,18 +81,6 @@ const usePayment = () => {
     }
   }, []);
 
-  const confirmPaymentList = useCallback(async (params?: PaymentParams) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await paymentService.confirmPaymentList(params);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const deletePayment = useCallback(async (id: number): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -110,59 +95,6 @@ const usePayment = () => {
     }
   }, []);
 
-  const generatePaymentHistoryMessage = async (credit: Credit): Promise<string> => {
-    try {
-      const paginationParams = {
-        page: 1,
-        pageSize: 100,
-        creditId: credit.id
-      };
-      
-      const paymentHistory = await getPaymentsByCreditId(paginationParams);
-      
-      if (!paymentHistory?.items?.length) {
-        return `История платежей по договору №${credit.id}\n\n` +
-              `*Платежей не найдено.*\n\n`;
-      }
-      
-      let message = `История платежей по договору №${credit.id}\n\n`;
-      message += `------------------\n`;
-      
-      const sortedPayments = [...paymentHistory.items].sort((a, b) => 
-        new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
-      );
-      
-      sortedPayments.forEach((payment, index) => {
-        const paymentDate = formatDate(payment.paymentDate);
-        const paymentAmount = formatMoney(payment.paymentAmount.toString());
-        const paymentType = payment.type === 'cash' ? 'Наличные' : 'Карта';
-        const status = payment.accepted ? '✅ Принят' : '⏳ Ожидает';
-        
-        message += `${index + 1}. ${paymentDate}\n`;
-        message += `   Сумма: ${paymentAmount}\n`;
-        message += `   Способ: ${paymentType}\n`;
-        if (payment.bankCardDetails) {
-          message += `   Карта: ${payment.bankCardDetails}\n`;
-        }
-        if (payment.employeeFullName) {
-          message += `   Сотрудник: ${payment.employeeFullName}\n`;
-        }
-        message += `------------------\n`;
-      });
-      
-      message += `Количество платежей: ${paymentHistory.items.length}\n`;;
-      
-      return message;
-      
-    } catch (error) {
-      console.error('Ошибка при загрузке истории платежей:', error);
-      return `📋 *История платежей по договору №${credit.id}*\n\n` +
-            `Произошла ошибка при загрузке данных.\n` +
-            `Пожалуйста, обратитесь к администратору.\n\n` +
-            `_Отправлено ${new Date().toLocaleDateString('ru-RU')}_`;
-    }
-  };
-
   return {
     isLoading,
     error,
@@ -172,9 +104,7 @@ const usePayment = () => {
     createPayment,
     confirmPayment,
     deletePayment,
-    getPaymentTab,
-    generatePaymentHistoryMessage,
-    confirmPaymentList
+    getPaymentTab
   };
 };
 

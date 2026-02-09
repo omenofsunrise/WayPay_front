@@ -1,18 +1,9 @@
-import React, { useRef, useState } from "react";
-import styled from "styled-components";
-import PhoneLinkBase from "../links/PhoneLink";
-import {
-  FaWhatsapp,
-  FaPhone,
-  FaBirthdayCake,
-  FaIdCard,
-  FaComment,
-  FaEllipsisV,
-  FaExclamationTriangle,
-} from "react-icons/fa";
-
-import useChat from "../../../api/hooks/useChat";
-import { formatPhoneHref } from "../../../utils/phoneUtils";
+import React, { useRef, useState } from 'react';
+import styled from 'styled-components';
+import PhoneLinkBase from '../links/PhoneLink';
+import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV } from 'react-icons/fa';
+import useChat from '../../../api/hooks/useChat';
+import { formatPhoneHref } from '../../../utils/phoneUtils';
 
 const Card = styled.div`
   background: white;
@@ -77,11 +68,11 @@ const InfoLabel = styled.span`
 
 const InfoValue = styled.span<{ $highlight?: boolean; $warning?: boolean }>`
   font-size: 14px;
-  font-weight: ${(props) => (props.$highlight ? "600" : "400")};
-  color: ${(props) => {
-    if (props.$warning) return "#EF4444";
-    if (props.$highlight) return "#007D88";
-    return "#111827";
+  font-weight: ${props => props.$highlight ? '600' : '400'};
+  color: ${props => {
+    if (props.$warning) return '#EF4444';
+    if (props.$highlight) return '#007D88';
+    return '#111827';
   }};
   min-height: 20px;
   display: flex;
@@ -119,7 +110,7 @@ const ContractNumber = styled.span`
 
 const ContractTerm = styled.span`
   font-size: 13px;
-  color: #ef4444;
+  color: #EF4444;
   font-weight: 600;
 `;
 
@@ -138,7 +129,7 @@ const WhatsAppLink = styled.a`
   transition: color 0.2s;
 
   &:hover {
-    color: #25d366;
+    color: #25D366;
   }
 `;
 
@@ -208,7 +199,7 @@ const ContextMenu = styled.div<{ $isVisible: boolean }>`
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 8px 0;
   z-index: 100;
-  display: ${(props) => (props.$isVisible ? "block" : "none")};
+  display: ${props => props.$isVisible ? 'block' : 'none'};
   min-width: 150px;
 `;
 
@@ -228,23 +219,6 @@ const MenuItem = styled.button`
   }
 `;
 
-const BlacklistBadge = styled.div`
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
-  color: #ef4444;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.5);
-  z-index: 10;
-`;
-
 export interface Client {
   id: number;
   fullName: string;
@@ -258,7 +232,6 @@ export interface Client {
   creditIds?: string[] | null;
   creditRestTerms?: string[] | null;
   hasPassportPhoto?: boolean | null;
-  blacklist?: boolean; // Добавлено свойство черного списка
 }
 
 interface ClientCardProps {
@@ -270,10 +243,10 @@ interface ClientCardProps {
   showMenu?: boolean;
 }
 
-const ClientCard: React.FC<ClientCardProps> = ({
-  client,
-  onEdit,
-  onDelete,
+const ClientCard: React.FC<ClientCardProps> = ({ 
+  client, 
+  onEdit, 
+  onDelete, 
   onRightClick,
   onOpenDossier,
   showMenu = true,
@@ -281,7 +254,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
   const { createPrivateChat } = useChat();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
+  
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -289,12 +262,13 @@ const ClientCard: React.FC<ClientCardProps> = ({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
+  // Если клиент null, показываем заглушку
   if (!client) {
     return (
       <Card>
@@ -307,43 +281,40 @@ const ClientCard: React.FC<ClientCardProps> = ({
   }
 
   const formatPhone = (phone: string | null | undefined): string => {
-    if (!phone) return "Не указан";
-
-    const cleaned = phone.replace(/\D/g, "");
+    if (!phone) return 'Не указан';
+    
+    const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 11) {
-      return cleaned.replace(
-        /(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/,
-        "$1 ($2) $3-$4-$5"
-      );
+      return cleaned.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 ($2) $3-$4-$5');
     }
     return phone;
   };
 
   const handleMessageClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
+    
     try {
-      const chat = await createPrivateChat(client.id, "client");
-
+      const chat = await createPrivateChat(client.id, 'client');
+      
       if (chat?.id) {
-        window.open(`/chat/${chat.id}`, "_blank");
+        window.open(`/chat/${chat.id}`, '_blank');
       }
     } catch (error) {
-      console.error("Ошибка при создании чата:", error);
+      console.error('Ошибка при создании чата:', error);
     }
   };
 
   const formatDate = (date: Date | null): string => {
-    if (!date) return "Не указана";
-
+    if (!date) return 'Не указана';
+    
     try {
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) {
-        return "Неверная дата";
+        return 'Неверная дата';
       }
-      return dateObj.toLocaleDateString("ru-RU");
+      return dateObj.toLocaleDateString('ru-RU');
     } catch {
-      return "Ошибка даты";
+      return 'Ошибка даты';
     }
   };
 
@@ -375,32 +346,18 @@ const ClientCard: React.FC<ClientCardProps> = ({
   const hasContracts = client.creditIds && client.creditIds.length > 0;
   const safeCreditIds = client.creditIds || [];
   const safeCreditRestTerms = client.creditRestTerms || [];
-  const isBlacklisted = client.blacklist === true;
 
   return (
-    <Card
-      key={client.id}
+    <Card 
+      key={client.id} 
       onClick={handleCardClick}
       onContextMenu={handleRightClick}
-      style={
-        isBlacklisted
-          ? {
-              borderColor: "#EF4444",
-              background: "linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)",
-            }
-          : {}
-      }
     >
-      {isBlacklisted && (
-        <BlacklistBadge>
-          <FaExclamationTriangle size={14} />
-          Чёрный список
-        </BlacklistBadge>
-      )}
-
       <CardContent>
-        <CardTitle>{client.fullName || "Не указано"}</CardTitle>
-
+        <CardTitle>
+          {client.fullName || 'Не указано'}
+        </CardTitle>
+        
         {showMenu && (
           <>
             <MenuButton onClick={handleMenuClick}>
@@ -417,119 +374,88 @@ const ClientCard: React.FC<ClientCardProps> = ({
         {/* <MessageButton onClick={handleMessageClick}>
           <FaComment size={30} />
         </MessageButton> */}
-
+        
         <InfoGrid>
           <InfoItem>
             <InfoLabel>
-              <IconWrapper>
-                <FaIdCard size={12} />
-              </IconWrapper>
+              <IconWrapper><FaIdCard size={12} /></IconWrapper>
               ID клиента
             </InfoLabel>
-            <InfoValue>{client.id || "Не указан"}</InfoValue>
+            <InfoValue>{client.id || 'Не указан'}</InfoValue>
           </InfoItem>
-
+          
           <InfoItem>
             <InfoLabel>
-              <IconWrapper>
-                <FaPhone size={12} />
-              </IconWrapper>
+              <IconWrapper><FaPhone size={12} /></IconWrapper>
               Телефон
             </InfoLabel>
             <InfoValue>
               {client.phone ? (
-                <PhoneLink
-                  href={formatPhoneHref(client.phone)}
+                <PhoneLink 
+                  href={formatPhoneHref(client.phone)} 
                   onClick={(e) => e.stopPropagation()}
-                  style={
-                    isBlacklisted
-                      ? { color: "#EF4444", fontWeight: "bold" }
-                      : {}
-                  }
                 >
                   {formatPhone(client.phone)}
                 </PhoneLink>
               ) : (
-                "Не указан"
+                'Не указан'
               )}
             </InfoValue>
           </InfoItem>
-
+          
           <InfoItem>
             <InfoLabel>
-              <IconWrapper>
-                <FaWhatsapp size={13} />
-              </IconWrapper>
+              <IconWrapper><FaWhatsapp size={13} /></IconWrapper>
               WhatsApp
             </InfoLabel>
             <InfoValue>
               {client.secondPhone ? (
-                <WhatsAppLink
-                  href={`https://wa.me/${client.secondPhone.replace(
-                    /\D/g,
-                    ""
-                  )}`}
-                  target="_blank"
+                <WhatsAppLink 
+                  href={`https://wa.me/${client.secondPhone.replace(/\D/g, '')}`} 
+                  target="_blank" 
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  style={
-                    isBlacklisted
-                      ? { color: "#EF4444", fontWeight: "bold" }
-                      : {}
-                  }
                 >
                   {formatPhone(client.secondPhone)}
                 </WhatsAppLink>
               ) : (
-                "Не указан"
+                'Не указан'
               )}
             </InfoValue>
           </InfoItem>
-
+          
           <InfoItem>
             <InfoLabel>
-              <IconWrapper>
-                <FaBirthdayCake size={12} />
-              </IconWrapper>
+              <IconWrapper><FaBirthdayCake size={12} /></IconWrapper>
               Дата рождения
             </InfoLabel>
             <InfoValue>{formatDate(client.birthdate)}</InfoValue>
           </InfoItem>
-
+          
           <InfoItem>
             <InfoLabel>Адрес регистрации</InfoLabel>
-            <InfoValue>{client.registrationAddress || "Не указан"}</InfoValue>
+            <InfoValue>{client.registrationAddress || 'Не указан'}</InfoValue>
           </InfoItem>
         </InfoGrid>
-
+        
         {hasContracts && (
           <ContractsSection>
             <ContractsHeader>
               <InfoLabel>Договоры</InfoLabel>
             </ContractsHeader>
-
+            
             <ContractsGrid>
               {safeCreditIds.map((contractId, index) => {
-                const restTerm = safeCreditRestTerms[index] || "0";
+                const restTerm = safeCreditRestTerms[index] || '0';
                 const months = parseInt(restTerm) || 0;
                 const isUrgent = months > 0 && months < 3;
-
+                
                 return (
-                  <ContractCard
-                    key={index}
-                    style={
-                      isBlacklisted
-                        ? {
-                            background: "rgba(239, 68, 68, 0.1)",
-                            borderColor: "#EF4444",
-                          }
-                        : {}
-                    }
-                  >
-                    <ContractNumber>
-                      {contractId || "Без номера"}
-                    </ContractNumber>
-                    <ContractTerm>Остаток: {months} мес.</ContractTerm>
+                  <ContractCard key={index}>
+                    <ContractNumber>{contractId || 'Без номера'}</ContractNumber>
+                    <ContractTerm>
+                      Остаток: {months} мес.
+                    </ContractTerm>
                   </ContractCard>
                 );
               })}

@@ -20,12 +20,6 @@ interface PaymentScheduleTableProps {
 const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps) => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
-  console.log('[PaymentScheduleTable] 📊 Рендеринг таблицы с данными:', {
-    dataCount: data.length,
-    data: data,
-    isLoading: onDataChange
-  });
-
   return (
     <TableContainer>
       <StyledTable>
@@ -38,28 +32,19 @@ const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps)
           </tr>
         </TableHeader>
         <TableBody>
-          {data.map((item) => {
-            console.log(`[PaymentScheduleTable] 📋 Рендеринг строки ${item.id}:`, {
-              date: item.date,
-              remainingAmount: item.remainingAmount,
-              requiredPayment: item.requiredPayment,
-              comment: item.comment
-            });
-            
-            return (
-              <StyledTableRow 
-                key={item.id}
-                onMouseEnter={() => setHoveredRow(item.id)}
-                onMouseLeave={() => setHoveredRow(null)}
-                $isHovered={hoveredRow === item.id}
-              >
-                <BodyCell>{item.date}</BodyCell>
-                <BodyCell>{formatMoney(item.remainingAmount.toString())}</BodyCell>
-                <BodyCell>{formatMoney(item.requiredPayment.toString())}</BodyCell>
-                <BodyCell>{item.comment}</BodyCell>
-              </StyledTableRow>
-            );
-          })}
+          {data.map((item) => (
+            <StyledTableRow 
+              key={item.id}
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              $isHovered={hoveredRow === item.id}
+            >
+              <BodyCell>{item.date}</BodyCell>
+              <BodyCell>{formatMoney(item.remainingAmount.toString())}</BodyCell>
+              <BodyCell>{formatMoney(item.requiredPayment.toString())}</BodyCell>
+              <BodyCell>{item.comment}</BodyCell>
+            </StyledTableRow>
+          ))}
         </TableBody>
       </StyledTable>
     </TableContainer>

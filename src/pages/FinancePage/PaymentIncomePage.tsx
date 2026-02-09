@@ -88,8 +88,8 @@ const PaymentIncomePage = () => {
     } = usePayment();
     
     const getDateRangeForMonth = (month: number, year: number) => {
-        const dateFrom = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-        const dateTo = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+        const dateFrom = new Date(year, month - 1, 1);
+        const dateTo = new Date(year, month, 1);
         
         return {
             dateFrom,
