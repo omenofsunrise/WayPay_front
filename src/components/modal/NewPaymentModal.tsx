@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import PhoneLinkBase from '../ui/links/PhoneLink';
 import CustomTitle from '../ui/Text/CustomTitle';
 import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
 import CustomInput from '../ui/fields/CustomInput';
@@ -452,20 +453,15 @@ const InputGroup = styled.div`
   flex-direction: column;
 `;
 
-const PhoneLink = styled.a`
+const PhoneLink = styled(PhoneLinkBase)`
   display: inline-flex;
   align-items: center;
   padding: 0px 12px;
   border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 5px;
   font-size: 14px;
-  color: #007D88;
   background: #f9fafb;
-  text-decoration: none;
   min-height: 38px;
-  &:hover {
-    color: #005e69;
-  }
 `;
 
 const InputLabel = styled.label`

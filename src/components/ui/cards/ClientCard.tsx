@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
+import PhoneLinkBase from '../links/PhoneLink';
 import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV } from 'react-icons/fa';
 import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
@@ -132,16 +133,10 @@ const WhatsAppLink = styled.a`
   }
 `;
 
-const PhoneLink = styled.a`
-  color: rgba(75, 85, 99, 1);
-  text-decoration: none;
+const PhoneLink = styled(PhoneLinkBase)`
   display: flex;
   align-items: center;
   gap: 6px;
-
-  &:hover {
-    color: #007D88;
-  }
 `;
 
 const MessageButton = styled.button`

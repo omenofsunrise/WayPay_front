@@ -8,6 +8,7 @@ import type { ClientForm } from '../../../api/types/client';
 import Button from '../../ui/Buttons/DarkCyanButton';
 import useClient from '../../../api/hooks/useClient';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../../ui/links/PhoneLink';
 
 interface Client {
   id: number;
@@ -677,9 +678,9 @@ const ClientModal: React.FC<ClientModalProps> = ({
             <InputLabel>Телефон:</InputLabel>
             <InputContainer>
               {mode === 'view' ? (
-                <a href={formatPhoneHref(formData.phone)} style={{ color: '#007D88', textDecoration: 'none' }}>
+                <PhoneLink href={formatPhoneHref(formData.phone)}>
                   {formData.phone}
-                </a>
+                </PhoneLink>
               ) : (
                 <PhoneModalInput
                   name="phone"

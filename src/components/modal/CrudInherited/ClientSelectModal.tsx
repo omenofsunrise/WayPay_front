@@ -12,6 +12,7 @@ import { useAuth } from '../../../сontext/AuthContext';
 import type { Client } from '../../../api/types/client';
 import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../../ui/links/PhoneLink';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -198,7 +199,7 @@ const ClientSelectModal = ({
   const tableData = clientsData?.items?.map(client => [
     client.id.toString(),
     client.fullName,
-    client.phone ? <a href={formatPhoneHref(client.phone)}>{client.phone}</a> : '',
+    client.phone ? <PhoneLink href={formatPhoneHref(client.phone)}>{client.phone}</PhoneLink> : '',
     formatDate(client.birthdate),
   ]) || [];
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import PhoneLinkBase from '../components/ui/links/PhoneLink';
 import apiClient from '../api/client';
 import { authStorage } from '../api/utils/auth-storage';
 import logoImage from '../assets/logos/logo.svg';
@@ -178,15 +179,7 @@ const InfoText = styled.div`
     line-height: 1.5;
 `;
 
-const InfoPhone = styled.a`
-    color: rgba(0, 125, 136, 1);
-    text-decoration: none;
-    font-weight: 500;
-    
-    &:hover {
-        text-decoration: underline;
-    }
-`;
+const InfoPhone = styled(PhoneLinkBase)``;
 
 const InfoLink = styled.a`
     color: rgba(0, 125, 136, 1);

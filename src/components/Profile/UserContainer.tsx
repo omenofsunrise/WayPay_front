@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import PhoneLinkBase from "../ui/links/PhoneLink";
 import { useState, useRef, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
@@ -390,14 +391,7 @@ const ContactItem = styled.div`
     }
 `;
 
-const PhoneLink = styled.a`
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-        text-decoration: underline;
-    }
-`;
+const PhoneLink = styled(PhoneLinkBase)``;
 
 const ContextMenu = styled.div`
     position: fixed;

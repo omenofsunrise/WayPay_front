@@ -9,6 +9,7 @@ import styled from 'styled-components';
 import { formatMoney } from '../../../utils/formatPrice';
 import { formatDate } from '../../../utils/dateFormatter';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../../ui/links/PhoneLink';
 
 interface InvestorSelectModalProps {
   isOpen: boolean;
@@ -182,7 +183,7 @@ const InvestorSelectModal = ({
   const investorsTableData = investorsData?.items?.map(investor => [
     investor.id.toString(),
     investor.nickname,
-    investor.phoneNumber ? <a href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</a> : '',
+    investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : '',
     investor.investorPie.toString() + "%",
     investor.isBlocked?.toString() || 'false',
     formatMoney(investor.balance.toString()),

@@ -3,11 +3,11 @@ import {
   Typography,
   Box,
   Button,
-  Divider,
-  Link
+  Divider
 } from '@mui/material';
 import styled from "styled-components";
 import { useNavigate } from 'react-router-dom';
+import PhoneLink from '../components/ui/links/PhoneLink';
 
 const LicenseContainer = styled.div`
   display: flex;
@@ -64,18 +64,9 @@ const LicenseOutPage = () => {
           color: '#888'
         }}>
           По вопросам продления лицензии обращайтесь по номеру{' '}
-          <Link 
-            href="tel:89899242424" 
-            sx={{ 
-              color: '#007D88',
-              textDecoration: 'none',
-              '&:hover': {
-                textDecoration: 'underline'
-              }
-            }}
-          >
+          <PhoneLink href="tel:89899242424">
             8 (989) 924-24-24
-          </Link>
+          </PhoneLink>
         </Typography>
       </LicenseContent>
     </LicenseContainer>

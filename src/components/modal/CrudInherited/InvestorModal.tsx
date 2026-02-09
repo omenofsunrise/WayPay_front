@@ -9,6 +9,7 @@ import { formatMoney, parseMoney } from '../../../utils/formatPrice';
 import { useAuth } from '../../../сontext/AuthContext';
 import CustomCalendar from '../../ui/fields/CustomCalendar';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../../ui/links/PhoneLink';
 
 type InvestorModalProps = {
   mode: ModalMode;
@@ -465,9 +466,9 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             <InputLabel>Телефон:</InputLabel>
             <InputContainer>
               {mode === 'view' ? (
-                <a href={formatPhoneHref(formData.phoneNumber)} style={{ color: '#007D88', textDecoration: 'none' }}>
+                <PhoneLink href={formatPhoneHref(formData.phoneNumber)}>
                   {formData.phoneNumber}
-                </a>
+                </PhoneLink>
               ) : (
                 <PhoneModalInput
                   name="phoneNumber"

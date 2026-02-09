@@ -8,6 +8,7 @@ import type { Investor, InvestorReport } from '../api/types/investor';
 import useInvestor from '../api/hooks/useInvestor';
 import { formatDate } from '../utils/dateFormatter';
 import { formatPhoneHref } from '../utils/phoneUtils';
+import PhoneLink from '../components/ui/links/PhoneLink';
 import { formatMoney, parseMoney } from '../utils/formatPrice';
 import investmentSvg from '../assets/ui/InvestorReport/investment.svg';
 import paymentIncomeSvg from '../assets/ui/InvestorReport/PaymentIncome.svg';
@@ -344,7 +345,7 @@ const InvestorsPoolPage = () => {
     const investorsTableData = investors.map((investor: Investor) => [
         investor.id.toString(),
         investor.fullName ?? '-',
-    investor.phoneNumber ? <a href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</a> : '-',
+    investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : '-',
         investor.investmentAmount ? formatMoney(investor.investmentAmount.toString()) : '-',
         investor.pieInPool !== null && investor.pieInPool !== undefined ? `${investor.pieInPool}%` : '-',
         investor.currentIncome ? formatMoney(investor.currentIncome.toString()) : '-',
@@ -846,7 +847,7 @@ const InvestorsPoolPage = () => {
             formatDate(credit.creditDate.toString()),
             credit.clientFullName,
             credit.clientPhone ? (
-                <a href={formatPhoneHref(credit.clientPhone)}>{credit.clientPhone}</a>
+                <PhoneLink href={formatPhoneHref(credit.clientPhone)}>{credit.clientPhone}</PhoneLink>
             ) : (
                 '-'
             ),
