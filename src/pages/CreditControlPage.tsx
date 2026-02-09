@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
@@ -30,28 +30,80 @@ interface EmptyStarIconProps {
   isSelected?: boolean;
 }
 
+const CREDIT_CONTROL_FILTERS_STORAGE_KEY = 'creditControlPageFilters';
+
+type CreditControlFiltersStorage = {
+  contractNumber: string;
+  currentPage: number;
+  investorName: string;
+  selectedInvestmentSource: { type: 'investor' | 'pool'; id: number; name: string } | null;
+  clientFullName: string;
+  fromDate: string;
+  toDate: string;
+  fromCreationDate: string;
+  toCreationDate: string;
+  rublesIncomeFrom: string;
+  rublesIncomeTo: string;
+  percentsIncomeFrom: string;
+  percentsIncomeTo: string;
+  objectType: string;
+  creditTypeId: number | null;
+  sortConfig: { key: number | null; direction: 'asc' | 'desc' };
+  filters: { isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean };
+  activeTab: string;
+};
+
+const readStoredFilters = <T,>(key: string): T | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+};
+
 const CreditControlPage = () => {
-  const [contractNumber, setContractNumber] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [investorName, setInvestorName] = useState('');
-  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(null);
-  const [clientFullName, setClientFullName] = useState('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
-  const [fromCreationDate, setFromCreationDate] = useState<string>('');
-  const [toCreationDate, setToCreationDate] = useState<string>('');
-  const [rublesIncomeFrom, setRublesIncomeFrom] = useState<string>('');
-  const [rublesIncomeTo, setRublesIncomeTo] = useState<string>('');
-  const [percentsIncomeFrom, setPercentsIncomeFrom] = useState<string>('');
-  const [percentsIncomeTo, setPercentsIncomeTo] = useState<string>('');
-  const [objectType, setObjectType] = useState<string>('');
-  const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
+  const storedFiltersRef = useRef<CreditControlFiltersStorage | null>(readStoredFilters(CREDIT_CONTROL_FILTERS_STORAGE_KEY));
+  const storedFilters = storedFiltersRef.current;
+  const getTabFilters = useCallback((tabId: string) => {
+    switch (tabId) {
+      case 'my':
+        return { myCredits: true };
+      case 'favourite':
+        return { isFavourite: true };
+      case 'archive':
+        return { isActive: false };
+      case 'debtors':
+        return { debt: true };
+      case 'inDebt':
+        return { inDebt: true };
+      default:
+        return {};
+    }
+  }, []);
+
+  const [contractNumber, setContractNumber] = useState(storedFilters?.contractNumber ?? '');
+  const [currentPage, setCurrentPage] = useState(storedFilters?.currentPage ?? 1);
+  const [investorName, setInvestorName] = useState(storedFilters?.investorName ?? '');
+  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(storedFilters?.selectedInvestmentSource ?? null);
+  const [clientFullName, setClientFullName] = useState(storedFilters?.clientFullName ?? '');
+  const [fromDate, setFromDate] = useState<string>(storedFilters?.fromDate ?? '');
+  const [toDate, setToDate] = useState<string>(storedFilters?.toDate ?? '');
+  const [fromCreationDate, setFromCreationDate] = useState<string>(storedFilters?.fromCreationDate ?? '');
+  const [toCreationDate, setToCreationDate] = useState<string>(storedFilters?.toCreationDate ?? '');
+  const [rublesIncomeFrom, setRublesIncomeFrom] = useState<string>(storedFilters?.rublesIncomeFrom ?? '');
+  const [rublesIncomeTo, setRublesIncomeTo] = useState<string>(storedFilters?.rublesIncomeTo ?? '');
+  const [percentsIncomeFrom, setPercentsIncomeFrom] = useState<string>(storedFilters?.percentsIncomeFrom ?? '');
+  const [percentsIncomeTo, setPercentsIncomeTo] = useState<string>(storedFilters?.percentsIncomeTo ?? '');
+  const [objectType, setObjectType] = useState<string>(storedFilters?.objectType ?? '');
+  const [creditTypeId, setCreditTypeId] = useState<number | null>(storedFilters?.creditTypeId ?? null);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
-  }>({ key: null, direction: 'desc' });
+  }>(storedFilters?.sortConfig ?? { key: null, direction: 'desc' });
   const itemsPerPage = 10;
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>({});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>(storedFilters?.filters ?? {});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -82,7 +134,7 @@ const CreditControlPage = () => {
     { id: 'archive', label: 'В архиве' }
   ];
   
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>(storedFilters?.activeTab ?? 'all');
 
   const handleEditCredit = (rowData: any[]) => {
     const [_, id] = rowData;
@@ -150,30 +202,116 @@ const CreditControlPage = () => {
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    
-    switch (tabId) {
-      case 'my':
-        setFilters({ myCredits: true });
-        break;
-      case 'favourite':
-        setFilters({ isFavourite: true });
-        break;
-      case 'archive':
-        setFilters({ isActive: false });
-        break;
-      case 'debtors':
-        setFilters({ debt: true });
-        break;
-      case 'inDebt':
-        setFilters({ inDebt: true });
-        break;
-      default:
-        setFilters({});
-        break;
-    }
-    
+    setFilters(getTabFilters(tabId));
     setCurrentPage(1);
   };
+
+  const resetFilters = () => {
+    setContractNumber('');
+    setInvestorName('');
+    setSelectedInvestmentSource(null);
+    setClientFullName('');
+    setFromDate('');
+    setToDate('');
+    setFromCreationDate('');
+    setToCreationDate('');
+    setRublesIncomeFrom('');
+    setRublesIncomeTo('');
+    setPercentsIncomeFrom('');
+    setPercentsIncomeTo('');
+    setObjectType('');
+    setCreditTypeId(null);
+    setSortConfig({ key: null, direction: 'desc' });
+    setActiveTab('all');
+    setFilters({});
+    setCurrentPage(1);
+    localStorage.removeItem(CREDIT_CONTROL_FILTERS_STORAGE_KEY);
+  };
+
+  const hasActiveFilters = useMemo(() => {
+    const hasInputs = Boolean(
+      contractNumber ||
+      investorName ||
+      clientFullName ||
+      fromDate ||
+      toDate ||
+      fromCreationDate ||
+      toCreationDate ||
+      rublesIncomeFrom ||
+      rublesIncomeTo ||
+      percentsIncomeFrom ||
+      percentsIncomeTo ||
+      objectType ||
+      creditTypeId !== null ||
+      selectedInvestmentSource
+    );
+    const hasFilterFlags = Object.keys(filters).length > 0;
+    const hasSort = sortConfig.key !== null;
+    const hasTabChange = activeTab !== 'all';
+    return hasInputs || hasFilterFlags || hasSort || hasTabChange || currentPage !== 1;
+  }, [
+    contractNumber,
+    investorName,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    rublesIncomeFrom,
+    rublesIncomeTo,
+    percentsIncomeFrom,
+    percentsIncomeTo,
+    objectType,
+    creditTypeId,
+    selectedInvestmentSource,
+    filters,
+    sortConfig,
+    activeTab,
+    currentPage
+  ]);
+
+  useEffect(() => {
+    const payload: CreditControlFiltersStorage = {
+      contractNumber,
+      currentPage,
+      investorName,
+      selectedInvestmentSource,
+      clientFullName,
+      fromDate,
+      toDate,
+      fromCreationDate,
+      toCreationDate,
+      rublesIncomeFrom,
+      rublesIncomeTo,
+      percentsIncomeFrom,
+      percentsIncomeTo,
+      objectType,
+      creditTypeId,
+      sortConfig,
+      filters,
+      activeTab
+    };
+    localStorage.setItem(CREDIT_CONTROL_FILTERS_STORAGE_KEY, JSON.stringify(payload));
+  }, [
+    contractNumber,
+    currentPage,
+    investorName,
+    selectedInvestmentSource,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    rublesIncomeFrom,
+    rublesIncomeTo,
+    percentsIncomeFrom,
+    percentsIncomeTo,
+    objectType,
+    creditTypeId,
+    sortConfig,
+    filters,
+    activeTab
+  ]);
 
   const handleObjectTypeChange = (value: string) => {
     setObjectType(value);
@@ -628,9 +766,14 @@ const CreditControlPage = () => {
           activeTab={activeTab}
           onChange={handleTabChange}
         />
-        <CountInfoTitle 
-          total={creditsData?.totalCount || 0} 
-        />
+        <RightActions>
+          <ResetFiltersButton onClick={resetFilters} disabled={!hasActiveFilters}>
+            Сбросить фильтры
+          </ResetFiltersButton>
+          <CountInfoTitle 
+            total={creditsData?.totalCount || 0} 
+          />
+        </RightActions>
       </SecondRaw>
       {isLoading && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}
@@ -714,6 +857,12 @@ const SecondRaw = styled.div`
   align-items: center;
 `;
 
+const RightActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
 const StarIcon = styled.div`
   cursor: pointer;
   color: gold;
@@ -762,6 +911,26 @@ const IncomeContainer = styled.div`
   max-width: 600px;
   align-items: center;
   flex-grow: 1;
+`;
+
+const ResetFiltersButton = styled.button`
+  background: none;
+  border: none;
+  color: #007d88;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+  padding: 0;
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
 `;
 
 export default CreditControlPage;
