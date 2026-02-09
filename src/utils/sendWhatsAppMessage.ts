@@ -35,6 +35,75 @@ export const sendWhatsAppMessage = async (
     }
 };
 
+/**
+ * Создает URL для WhatsApp с предзаполненным сообщением, но без номера получателя
+ * @param message - текст сообщения
+ * @returns string - URL для открытия WhatsApp
+ */
+export const createWhatsAppMessageWithoutPhone = (message: string): string => {
+    const encodedMessage = encodeURIComponent(message);
+    return `https://wa.me/?text=${encodedMessage}`;
+};
+
+/**
+ * Отправка полностью кастомного сообщения через WhatsApp
+ * @param phone - номер телефона получателя
+ * @param message - произвольный текст сообщения
+ * @param scheduleId - (опционально) ID расписания для отметки как уведомленного
+ * @returns Promise<boolean> - успешность операции
+ */
+export const sendCustomWhatsAppMessage = async (
+    phone: string,
+    message: string
+): Promise<boolean> => {
+    try {
+        // 1. Форматируем телефон
+        const cleanedPhone = formatPhoneNumber(phone);
+        
+        // 2. Кодируем сообщение для URL
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
+        
+        // 3. Открываем WhatsApp
+        window.open(whatsappUrl, '_blank');
+        
+        return true;
+    } catch (error) {
+        console.error('Ошибка при отправке кастомного WhatsApp сообщения:', error);
+        return false;
+    }
+};
+
+/**
+ * Отправка кастомного сообщения с предварительной проверкой данных компании
+ * @param phone - номер телефона получателя
+ * @param message - произвольный текст сообщения
+ * @param scheduleId - (опционально) ID расписания для отметки как уведомленного
+ * @returns Promise<boolean> - успешность операции
+ */
+export const sendCustomWhatsAppMessageWithCompanyCheck = async (
+    phone: string,
+    message: string,
+    scheduleId?: number
+): Promise<boolean> => {
+    try {
+        // 1. Получаем данные компании для проверки доступности сервиса
+        const companyData = await companyService.getAccountDetails();
+        
+        if (!companyData) {
+            console.error('Не удалось получить данные компании');
+            return false;
+        }
+
+        // 2. Используем основной метод отправки
+        return await sendCustomWhatsAppMessage(phone, message, scheduleId);
+        
+    } catch (error) {
+        console.error('Ошибка при отправке кастомного WhatsApp сообщения:', error);
+        return false;
+    }
+};
+
 function formatPhoneNumber(phone: string): string {
     const digits = phone.replace(/\D/g, '');
     

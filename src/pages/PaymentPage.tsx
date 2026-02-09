@@ -25,6 +25,7 @@ import UserSelect from '../components/ui/fields/UserSelect';
 import { useEmployee } from '../api/hooks/useEmployee';
 import CustomSelect from '../components/ui/fields/CustomSelect';
 import type { EmployeeFullnames } from '../api/types/employee';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -34,8 +35,10 @@ const PaymentPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const pageSize = 10;
-    const { authInfo, denyPermission } = useAuth();
+    const { authInfo, denyPermission, refresh } = useAuth();
     const [investorName, setInvestorName] = useState('');
+    const [investorId, setInvestorId] = useState<number | null>(null);
+    const [isPool, setIsPool] = useState(false);
     const [employeeFullname, setEmployeeFullname] = useState('');
     const [confirmedFilter, setConfirmedFilter] = useState<string>('all');
     const [employees, setEmployees] = useState<EmployeeFullnames[]>([]);
@@ -60,8 +63,20 @@ const PaymentPage = () => {
         data: paymentsData, 
         getPayments,
         confirmPayment,
+        confirmPaymentList,
         deletePayment
     } = usePayment();
+
+    useEffect(() => {
+        if (authInfo) {
+            loadPayments();
+        }
+    }, [authInfo?.employee.permissions, confirmPaymentList]);
+
+    useEffect(() => {
+        refresh().then(() => {
+        });
+    }, []);
 
     useEffect(() => {
         const loadEmployees = async () => {
@@ -78,11 +93,18 @@ const PaymentPage = () => {
         loadEmployees();
     }, []);
 
-    const employeeOptions = employees.map(employee => ({
-        value: employee.fullName,
-        label: employee.fullName,
-        avatar: employee.photoPath
-    }));
+    const employeeOptions = [
+        {
+            value: '',
+            label: 'Все',
+            avatar: null
+        },
+        ...employees.map(employee => ({
+            value: employee.fullName,
+            label: employee.fullName,
+            avatar: employee.photoPath
+        }))
+    ];
 
     const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
         try {
@@ -106,24 +128,36 @@ const PaymentPage = () => {
         setCurrentPage(1);
     };
 
-    const loadPayments = useCallback(async () => {
+    const formParams = (): PaymentParams => {
         const params: PaymentParams = {
             page: currentPage,
             pageSize,
             clientFullname: fullnameFilter.trim() || undefined,
-            investorNickname: investorName.trim() || undefined,
             employeeFullname: employeeFullname.trim() || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
         };
 
-        // Добавляем фильтр по подтверждению
+        // Добавляем фильтр по инвестору/пулу в зависимости от типа
+        if (investorId !== null) {
+            if (isPool) {
+                params.poolId = investorId === 0 ? undefined : investorId;
+            } else {
+                params.investorId = investorId === 0 ? undefined : investorId;
+            }
+        }
+        
+        return params;
+    }
+
+    const loadPayments = useCallback(async () => {
+        const params: PaymentParams = formParams();
+
         if (confirmedFilter === 'confirmed') {
             params.confirmed = true;
         } else if (confirmedFilter === 'not-confirmed') {
             params.confirmed = false;
         }
-        // Для 'all' не добавляем параметр confirmed
 
         if (sortConfig.key !== null) {
             params.sortBy = columnToApiSortMap[sortConfig.key];
@@ -134,7 +168,8 @@ const PaymentPage = () => {
     }, [
         currentPage, 
         fullnameFilter, 
-        investorName, 
+        investorId, // Используем investorId вместо investorName
+        isPool, // Добавляем зависимость от типа
         employeeFullname,
         confirmedFilter,
         dateFromFilter, 
@@ -149,7 +184,7 @@ const PaymentPage = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [currentPage, fullnameFilter, investorName, employeeFullname, confirmedFilter, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
+    }, [currentPage, fullnameFilter, investorId, isPool, employeeFullname, confirmedFilter, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
 
     const handleFilterChange = (value: string) => {
         setFullnameFilter(value);
@@ -161,13 +196,40 @@ const PaymentPage = () => {
         setCurrentPage(1);
     };
 
+    const handleInvestorSelect = (investorData: {
+        id: number;
+        nickname: string;
+        fullName: string;
+        phoneNumber: string;
+        investorPie: number;
+        investmentAmount: number;
+        balance: number;
+        type: 'investor' | 'pool';
+    }) => {
+        // Сохраняем имя для отображения в поле
+        setInvestorName(investorData.nickname || investorData.fullName || '');
+        
+        // Сохраняем ID и тип для фильтрации
+        setInvestorId(investorData.id);
+        setIsPool(investorData.type === 'pool');
+        
+        setCurrentPage(1);
+    };
+
     const handleEmployeeChange = (event: { target: { value: string } }) => {
-        setEmployeeFullname(event.target.value);
+        setEmployeeFullname(event.target.value === 'Все' ? undefined : event.target.value);
         setCurrentPage(1);
     };
 
     const handleConfirmedChange = (event: { target: { value: string } }) => {
         setConfirmedFilter(event.target.value);
+        setCurrentPage(1);
+    };
+
+    const handleClearInvestorFilter = () => {
+        setInvestorName('');
+        setInvestorId(null);
+        setIsPool(false);
         setCurrentPage(1);
     };
 
@@ -196,13 +258,21 @@ const PaymentPage = () => {
                         page,
                         pageSize,
                         clientFullname: fullnameFilter.trim() || undefined,
-                        investorNickname: investorName.trim() || undefined,
                         employeeFullname: employeeFullname.trim() || undefined,
                         dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
                         dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
+
+                    // Добавляем фильтр по инвестору/пулу для экспорта
+                    if (investorId !== null) {
+                        if (isPool) {
+                            params.poolId = investorId;
+                        } else {
+                            params.investorId = investorId;
+                        }
+                    }
 
                     // Добавляем фильтр по подтверждению для экспорта
                     if (confirmedFilter === 'confirmed') {
@@ -225,7 +295,7 @@ const PaymentPage = () => {
                     'Дата платежа': payment.paymentDate ? formatDate(payment.paymentDate) : '',
                     'Тип платежа': payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
                     'Платёж принял': payment.employeeFullName || '',
-                    'Подтверждён': payment.accepted ? 'Да' : 'Нет'
+                    'Подтверждён': payment.accepted ? 'Да' : 'Нет',
                 })
             });
         } catch (error) {
@@ -244,6 +314,7 @@ const PaymentPage = () => {
             payment.type === 'cash' ? 'Наличными' : `Картой ${payment.bankCardDetails}`,
             payment.employeeFullName || '',
             payment.accepted ? 'Да' : 'Нет',
+            payment.investorNickname || '',
             payment.id.toString()
         ]);
 
@@ -252,6 +323,7 @@ const PaymentPage = () => {
                 '',
                 'Итого',
                 `${formatMoney(paymentsData.totalPayments.toString())}`,
+                '',
                 '',
                 '',
                 '',
@@ -305,7 +377,7 @@ const PaymentPage = () => {
     };
 
     const handlePrintPayment = async (rowData: any[]) => {
-        const paymentId = parseInt(rowData[7]);
+        const paymentId = parseInt(rowData[8]);
         const payment = paymentsData?.items.find(p => p.id === paymentId);
         
         if (!payment) {
@@ -342,8 +414,7 @@ const PaymentPage = () => {
         }
     };
 
-
-      const rowStyles = useMemo(() => {
+    const rowStyles = useMemo(() => {
         if (!paymentsData?.items) return {};
     
         const styles: { [rowIndex: number]: RowStyle } = {};
@@ -362,6 +433,7 @@ const PaymentPage = () => {
           if (selectedPaymentForPrint?.id === payment.id) {
             baseStyle.backgroundColor = '#007D88';
             baseStyle.color = '#FFFFFF';
+            baseStyle.hoverBackgroundColor = '#007D88';
           }
     
           styles[rowIndex] = baseStyle;
@@ -421,6 +493,30 @@ const PaymentPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>История платежей</CustomTitle>
+                {(authInfo?.employee.permissions.includes('MANAGE_ACCOUNTING') && 
+                    <DarkCyanButton
+                        style={{ marginTop: "15px", marginRight: "20px"}}
+                        onClick={async () => {
+                            if (window.confirm("Вы уверены, что хотите подтвердить оплаты по всем платежам выбранных фильтров?")) {
+                            try {
+                                // Ждём подтверждения
+                                await confirmPaymentList(formParams());
+                                
+                                // После успешного подтверждения обновляем данные
+                                await loadPayments();
+                                
+                                // Можно показать сообщение об успехе
+                                alert("Все платежи успешно подтверждены!");
+                            } catch (error) {
+                                console.error("Ошибка при подтверждении платежей:", error);
+                                alert("Произошла ошибка при подтверждении платежей");
+                            }
+                            }
+                        }}
+                        >
+                        Подтвердить все платежи по указанным фильтрам
+                    </DarkCyanButton>
+                )}
                 <ExportButton 
                     icon={<PrintIcon />} 
                     onClick={() => {
@@ -448,12 +544,12 @@ const PaymentPage = () => {
                     onChange={(e) => handleFilterChange(e.target.value)}
                 />
                 <InvestorSelect
-                    placeholder="Инвестор"
+                    placeholder="Инвестор/Пул"
                     value={investorName}
                     onChange={handleInvestorChange}
-                    onInvestorSelect={(investor) => {
-                        console.log('Selected investor:', investor);
-                    }}
+                    onInvestorSelect={handleInvestorSelect}
+                    includePools={true}
+                    onClear={handleClearInvestorFilter}
                 />
                 <UserSelect
                     placeholder="Сотрудник"
@@ -492,7 +588,8 @@ const PaymentPage = () => {
                             { name: "Дата платежа", isSortable: true, align: "right" },
                             { name: "Тип платежа", align: "left" },
                             { name: "Платёж принял", align: "left" },
-                            { name: "Подтверждён", align: "center" },    
+                            { name: "Подтверждён", align: "center" },
+                            { name: "Инвестор/Пул", align: "left", isHidden: true },
                             { name: "id", align: "center", isHidden: true },               
                         ]} 
                         data={tableData}

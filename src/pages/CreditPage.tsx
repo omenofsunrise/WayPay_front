@@ -39,6 +39,62 @@ import EditButton from '../components/ui/Buttons/EditButton';
 import DeleteButton from '../components/ui/Buttons/DeleteButton';
 import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
 import type { ContextMenuItem } from '../components/modal/ContextMenu';
+import { createWhatsAppMessageWithoutPhone } from '../utils/sendWhatsAppMessage';
+
+// Интерфейс для модалки "Поделиться"
+interface ShareOptionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (option: 'contractData' | 'paymentHistory' | 'paymentSchedule') => void;
+  selectedCredit?: Credit | null;
+  modalTitle?: string;
+}
+
+// Компонент модалки "Поделиться"
+const ShareOptionModal = ({ 
+  isOpen, 
+  onClose, 
+  onSelect, 
+  selectedCredit,
+  modalTitle = "Поделиться" 
+}: ShareOptionModalProps) => {
+  
+  const options = [
+    { key: 'contractData', label: 'Данными договора', enabled: !!selectedCredit },
+    { key: 'paymentHistory', label: 'Историей платежей', enabled: !!selectedCredit },
+    // { key: 'paymentSchedule', label: 'Расписанием платежей', enabled: !!selectedCredit }
+  ];
+
+  const handleSelect = (optionKey: 'contractData' | 'paymentHistory' | 'paymentSchedule') => {
+    if (selectedCredit) {
+      onSelect(optionKey);
+    } else {
+      console.error('No credit selected for sharing');
+      onClose();
+    }
+  };
+
+  return (
+    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalTitle>{modalTitle}</ModalTitle>
+        <PrintOptions>
+          {options.map(option => (
+            option.enabled !== false && (
+              <PrintOption 
+                key={option.key} 
+                onClick={() => handleSelect(option.key as any)}
+                disabled={!option.enabled}
+              >
+                {option.label}
+              </PrintOption>
+            )
+          ))}
+        </PrintOptions>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -132,7 +188,7 @@ const CreditPage = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
-  const { createPayment } = usePayment();
+  const { createPayment, generatePaymentHistoryMessage } = usePayment();
   const [isCreateTabModalOpen, setIsCreateTabModalOpen] = useState(false);
   const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
@@ -148,13 +204,16 @@ const CreditPage = () => {
   };
   const { hasPermission, forbiddenRole, hasRole, denyPermission } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  // Новое состояние для модалки "Поделиться"
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource, acceptCredit } = useCredit();
   const navigate = useNavigate();
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] = useState(false);
   const [selectedCreditForFunding, setSelectedCreditForFunding] = useState<Credit | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const { 
     isLoading: isObjectTypesLoading, 
     objectTypes, 
@@ -171,6 +230,155 @@ const CreditPage = () => {
   useEffect(() => {
     loadCustomTabs();
   }, []);
+
+  const handleMultiSelectChange = useCallback((selectedIndices: number[]) => {
+    setSelectedRows(selectedIndices);
+  }, []);
+
+  const handlePrintButtonClick = () => {
+    if (selectedRows.length === 0) {
+      alert('Пожалуйста, выберите хотя бы один договор из таблицы');
+      return;
+    }
+    
+    if (selectedRows.length === 1) {
+      // Если выбран один договор - показываем модалку печати
+      const selectedIndex = selectedRows[0];
+      const credit = creditsData?.items[selectedIndex];
+      if (credit) {
+        setSelectedCreditForPrint(credit);
+        setIsPrintModalOpen(true);
+      }
+    } else {
+      // Если выбрано несколько договоров - предлагаем массовую печать
+      const confirmMassPrint = window.confirm(
+        `Вы выбрали ${selectedRows.length} договора(ов). Хотите сгенерировать документы для всех выбранных договоров?`
+      );
+      
+      if (confirmMassPrint) {
+        // Реализуйте массовую печать здесь
+        handleMassPrint(selectedRows);
+      }
+    }
+  };
+
+  const handleShareButtonClick = () => {
+    if (selectedRows.length === 0) {
+      alert('Пожалуйста, выберите хотя бы один договор из таблицы');
+      return;
+    }
+    
+    if (selectedRows.length === 1) {
+      // Если выбран один договор - показываем модалку "Поделиться"
+      const selectedIndex = selectedRows[0];
+      const credit = creditsData?.items[selectedIndex];
+      if (credit) {
+        setSelectedCreditForPrint(credit);
+        setIsShareModalOpen(true);
+      }
+    } else {
+      // Если выбрано несколько договоров - предлагаем массовую рассылку
+      const confirmMassShare = window.confirm(
+        `Вы выбрали ${selectedRows.length} договора(ов). Хотите отправить данные по всем выбранным договорам?`
+      );
+      
+      if (confirmMassShare) {
+        // Реализуйте массовую рассылку здесь
+        handleMassShare(selectedRows);
+      }
+    }
+  };
+
+  // Функция для массовой печати
+  const handleMassPrint = async (selectedIndices: number[]) => {
+    try {
+      const docxGenerator = new DocxGenerator(getDocsData);
+      
+      for (const rowIndex of selectedIndices) {
+        const credit = creditsData?.items[rowIndex];
+        if (credit) {
+          // Генерируем стандартный договор для каждого выбранного кредита
+          await docxGenerator.generateFromCreditData(credit.id);
+        }
+      }
+      
+      alert(`Сгенерировано документов: ${selectedIndices.length}`);
+    } catch (error) {
+      console.error('Ошибка при массовой печати:', error);
+      alert('Произошла ошибка при печати некоторых документов');
+    }
+  };
+
+  // Функция для массовой рассылки
+  const handleMassShare = async (selectedIndices: number[]) => {
+    try {
+      let combinedMessage = ``;
+      
+      for (const rowIndex of selectedIndices) {
+        const credit = creditsData?.items[rowIndex];
+        if (credit) {
+          combinedMessage += `*Договор №${credit.id}*\n`;
+          combinedMessage += `Клиент: ${credit.clientFullName}\n`;
+          combinedMessage += `Дата: ${formatDate(credit.creditDate)}\n`;
+          combinedMessage += `Сумма: ${formatMoney(credit.totalAmount?.toString() || '0')}\n`;
+          combinedMessage += `Остаток: ${formatMoney(credit.rest?.toString() || '0')}\n`;
+          combinedMessage += `---\n`;
+        }
+      }
+      
+      const whatsappUrl = createWhatsAppMessageWithoutPhone(combinedMessage);
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      
+    } catch (error) {
+      console.error('Ошибка при массовой рассылке:', error);
+      alert('Произошла ошибка при подготовке сообщения');
+    }
+  };
+
+  const generateShareMessage = useCallback(async (option: 'contractData' | 'paymentHistory' | 'paymentSchedule'): Promise<string> => {
+    if (!selectedCreditForPrint) return '';
+    
+    const credit = selectedCreditForPrint;
+    const today = new Date().toLocaleDateString('ru-RU');
+    switch (option) {
+      case 'contractData':
+        return `Договор №${credit.id}
+
+Дата оформления договора: ${formatDate(credit.creditDate)}
+Клиент: ${credit.clientFullName}
+${credit.guarantorFullName ? `Поручитель: ${credit.guarantorFullName}\n` : ''}Срок: ${credit.termMonths} месяцев
+Стоимость товара: ${formatMoney(credit.totalClean?.toString())}
+${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(credit.firstPayment?.toString())}\n` : ''}Общая сумма договора: ${formatMoney(credit.totalAmount?.toString() || '0')}`;
+               
+    case 'paymentHistory':
+      return await generatePaymentHistoryMessage(credit);
+               
+      case 'paymentSchedule':
+        return `📅 *Расписание платежей по договору #${credit.id}*\n\n` +
+               `Клиент: ${credit.clientFullName}\n` +
+               `Дата договора: ${formatDate(credit.creditDate)}\n` +
+               `Общая сумма: ${formatMoney(credit.totalAmount?.toString() || '0')}\n` +
+               `_Для получения детального графика платежей обратитесь к менеджеру._\n` +
+               `_Отправлено ${today}_`;
+               
+      default:
+        return '';
+    }
+  }, [selectedCreditForPrint]);
+
+  const handleShareOptionSelect = useCallback(async (option: 'contractData' | 'paymentHistory' | 'paymentSchedule', e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    const message = await generateShareMessage(option);
+    if (message) {
+      const whatsappUrl = createWhatsAppMessageWithoutPhone(message);
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
+    setIsShareModalOpen(false);
+  }, [generateShareMessage]);
 
   const getCategoryMenuItems = ({ 
     creditId, 
@@ -395,7 +603,8 @@ const CreditPage = () => {
     const [_, id] = rowData;
     const credit = creditsData?.items.find(c => c.id === Number(id));
     if (credit) {
-    setSelectedCreditForPrint(credit);
+      // Для обратной совместимости устанавливаем selectedCreditForPrint
+      setSelectedCreditForPrint(credit);
     }
   };
 
@@ -407,32 +616,27 @@ const CreditPage = () => {
   const handlePrintOptionSelect = async (option: 'sale' | 'saleSinglePage' | 'schedules' | 'guaranteeConsent') => {
     if (!selectedCreditForPrint) return;
     
-    // try {
-      const docxGenerator = new DocxGenerator(getDocsData);
-      
-      if (option === 'sale') {
-        await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
-      } else if (option === 'saleSinglePage') {
-        await docxGenerator.generateFromCreditData(
-          selectedCreditForPrint.id,
-          '/Docs/salesContractSinglePage.docx'
-        );
-      } else if (option === 'schedules') {
-        await docxGenerator.generateFromCreditData(
-          selectedCreditForPrint.id,
-          '/Docs/schedules.docx'
-        );
-      } else if (option === 'guaranteeConsent') {
-        await docxGenerator.generateFromCreditData(
-          selectedCreditForPrint.id,
-          '/Docs/guaranteeandConsentAgreement.docx'
-        );
-      }
-    // } catch (error) {
-    //   console.error('Ошибка при генерации документа:', error);
-    //   alert('Произошла ошибка при генерации документа');
-    // }
+    const docxGenerator = new DocxGenerator(getDocsData);
     
+    if (option === 'sale') {
+      await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
+    } else if (option === 'saleSinglePage') {
+      await docxGenerator.generateFromCreditData(
+        selectedCreditForPrint.id,
+        '/Docs/salesContractSinglePage.docx'
+      );
+    } else if (option === 'schedules') {
+      await docxGenerator.generateFromCreditData(
+        selectedCreditForPrint.id,
+        '/Docs/schedules.docx'
+      );
+    } else if (option === 'guaranteeConsent') {
+      await docxGenerator.generateFromCreditData(
+        selectedCreditForPrint.id,
+        '/Docs/guaranteeandConsentAgreement.docx'
+      );
+    }
+  
     setIsPrintModalOpen(false);
   };
 
@@ -446,12 +650,27 @@ const CreditPage = () => {
     }
   };
 
+  const includeAllStates = useMemo(() => {
+    const excludedTabs = ['favourite', 'archive', 'debtors', 'inDebt'];
+    if (excludedTabs.includes(activeTab)) {
+      return false;
+    }
+
+    return contractNumber.trim() !== '' || 
+          clientFullName.trim() !== '' || 
+          investorName.trim() !== '' || 
+          (creditTypeId !== null && creditTypeId !== undefined && creditTypeId !== 0);
+  }, [contractNumber, clientFullName, investorName, objectType, selectedInvestmentSource, creditTypeId]);
+
   const loadCredits = useCallback(async () => {
+    const shouldInclude = includeAllStates; 
+
     const params = {
       page: currentPage,
       pageSize: itemsPerPage,
       name: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
+      includeAllStates: shouldInclude ? true : undefined,
       investorNickname: selectedInvestmentSource?.type === 'pool' ? undefined : (investorName || undefined),
       investorPoolId: selectedInvestmentSource?.type === 'pool' ? selectedInvestmentSource.id : undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
@@ -465,7 +684,7 @@ const CreditPage = () => {
     };
 
     await getCredits(params);
-  }, [currentPage, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
+  }, [currentPage, includeAllStates, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
 
   useEffect(() => {
     loadCredits();
@@ -493,6 +712,7 @@ const CreditPage = () => {
 
     setFilters(getTabFilters(tabId));
     setCurrentPage(1);
+    setSelectedRows([]); // Сбрасываем выбор при смене вкладки
   };
 
   const resetFilters = () => {
@@ -764,7 +984,14 @@ const CreditPage = () => {
         baseStyle.color = '#FF5A5A';
       }
 
-      if (selectedCreditForPrint?.id === credit.id) {
+      // Подсветка выбранных строк
+      if (selectedRows.includes(rowIndex)) {
+        baseStyle.backgroundColor = '#E3F2FD';
+        baseStyle.color = '#1565C0';
+      }
+
+      // Подсветка строки при одиночном выборе
+      if (selectedCreditForPrint?.id === credit.id && selectedRows.length === 1) {
         baseStyle.backgroundColor = '#007D88';
         baseStyle.color = '#FFFFFF';
       }
@@ -773,7 +1000,7 @@ const CreditPage = () => {
     });
 
     return styles;
-  }, [creditsData?.items, selectedCreditForPrint]);
+  }, [creditsData?.items, selectedCreditForPrint, selectedRows]);
 
   const formatCreditData = (credits: Credit[] | undefined) => {
     if (!credits) return [];
@@ -863,19 +1090,33 @@ const CreditPage = () => {
     setCurrentPage(1);
   };
 
+  // Добавим индикатор выбранных строк
+  const SelectedCount = () => {
+    if (selectedRows.length === 0) return null;
+    
+    return (
+      <SelectedCountBadge>
+        Выбрано: {selectedRows.length}
+      </SelectedCountBadge>
+    );
+  };
+
   return (
     <PageLayout>
       <TitleField>
         <CustomTitle>Договоры</CustomTitle>
         <ExportButton 
-          icon={<PrintIcon />} 
-          onClick={() => {
-            if (!selectedCreditForPrint) {
-              alert('Пожалуйста, выберите договора из таблицы (клик по строке)');
-              return;
-            }
-            setIsPrintModalOpen(true);
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleShareButtonClick();
           }}
+        >
+          Поделиться
+        </ExportButton>
+        <ExportButton 
+          icon={<PrintIcon />} 
+          onClick={() => { handlePrintButtonClick(); }}
         >
           Печать
         </ExportButton>
@@ -1021,7 +1262,13 @@ const CreditPage = () => {
           <CountInfoTitle 
             total={creditsData?.totalCount || 0} 
           />
-        </RightActions>
+        )}
+        
+        <CountInfoTitle 
+          total={creditsData?.totalCount || 0} 
+        />
+        
+        <SelectedCount />
       </SecondRaw>
 
       {isLoading && <div>Загрузка...</div>}
@@ -1047,10 +1294,11 @@ const CreditPage = () => {
             data={formatCreditData(creditsData?.items)}
             rowStyles={rowStyles}
             onSort={handleSort}
+            multiSelect={true}
+            onMultiSelectChange={handleMultiSelectChange}
             sortConfig={sortConfig}
             onRowDoubleClick={handleRowDoubleClick}
             onRowClick={handleRowClick}
-            selectedRow={selectedCreditForPrint ? creditsData?.items.findIndex(c => c.id === selectedCreditForPrint.id) : null}
             contextMenuActions={tableActions}
             hasTotalsRow={forbiddenRole('сотрудник')}
             debtChecker={(row) => row[row.length - 2] !== '0₽' && row[row.length - 2] !== '0'}
@@ -1060,7 +1308,10 @@ const CreditPage = () => {
             <Pagination
               total={creditsData?.totalCount || 0}
               current={currentPage}
-              onChange={setCurrentPage}
+              onChange={(page) => {
+                setCurrentPage(page);
+                setSelectedRows([]); // Сбрасываем выбор при смене страницы
+              }}
               itemsPerPage={itemsPerPage}
             />
           </PaginationLayout>
@@ -1090,6 +1341,14 @@ const CreditPage = () => {
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         onSelect={handlePrintOptionSelect}
+        selectedCredit={selectedCreditForPrint}
+      />
+
+      {/* Новая модалка для кнопки "Поделиться" */}
+      <ShareOptionModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onSelect={handleShareOptionSelect}
         selectedCredit={selectedCreditForPrint}
       />
 
@@ -1147,6 +1406,7 @@ const SecondRaw = styled.div`
   background-color: transparent;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 `;
 
 const RightActions = styled.div`
@@ -1207,23 +1467,67 @@ const TabActions = styled.div`
   }
 `;
 
-const ResetFiltersButton = styled.button`
-  background: none;
-  border: none;
-  color: #007d88;
-  cursor: pointer;
-  font-size: 13px;
-  text-decoration: underline;
-  padding: 0;
-  opacity: 0.85;
+const SelectedCountBadge = styled.div`
+  background-color: #007D88;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 15px;
+  margin-bottom: 15px;
+`;
 
+// Стили для модалки "Поделиться" (можно вынести в отдельный файл)
+const ModalOverlay = styled.div<{ isOpen: boolean }>`
+  display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  color: black;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  color: black;
+`;
+
+const ModalTitle = styled.h3`
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
+`;
+
+const PrintOptions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const PrintOption = styled.button<{ disabled?: boolean }>`
+  padding: 12px;
+  background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#f5f5f5'};
+  border: 1px solid ${({ disabled }) => disabled ? '#eee' : '#ddd'};
+  border-radius: 4px;
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
+  text-align: center;
+  transition: background-color 0.2s;
+  color: ${({ disabled }) => disabled ? '#999' : 'black'};
+  
   &:hover {
-    opacity: 1;
-  }
-
-  &:disabled {
-    cursor: default;
-    opacity: 0.4;
+    background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#e9e9e9'};
+    border-color: ${({ disabled }) => disabled ? '#eee' : 'rgba(0, 125, 136, 1)'};
   }
 `;
 

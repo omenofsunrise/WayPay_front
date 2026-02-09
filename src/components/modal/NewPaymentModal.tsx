@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import PhoneLinkBase from '../ui/links/PhoneLink';
 import CustomTitle from '../ui/Text/CustomTitle';
@@ -33,6 +33,36 @@ export interface NewPaymentModalProps {
 
 export const PRINT_RECEIPT_STORAGE_KEY = 'new-payment-print-receipt-preference';
 
+// Вспомогательная функция для блокировки скролла
+const useLockBodyScroll = (isOpen: boolean) => {
+  useEffect(() => {
+    if (isOpen) {
+      // Сохраняем текущую позицию скролла
+      const scrollY = window.scrollY;
+      const body = document.body;
+      
+      // Блокируем скролл
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.left = '0';
+      body.style.right = '0';
+      body.style.overflow = 'hidden';
+      
+      return () => {
+        // Восстанавливаем скролл
+        body.style.position = '';
+        body.style.top = '';
+        body.style.left = '';
+        body.style.right = '';
+        body.style.overflow = '';
+        
+        // Восстанавливаем позицию скролла
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+};
+
 const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   creditId,
   clientName,
@@ -57,7 +87,25 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [printReceipt, setPrintReceipt] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { denyPermission } = useAuth();
-  
+
+  // Блокируем скролл body при открытии модалки
+  useLockBodyScroll(isOpen);
+
+  // Обработчик клавиши Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  // Загрузка предпочтений печати
   useEffect(() => {
     const savedPrintPreference = localStorage.getItem(PRINT_RECEIPT_STORAGE_KEY);
     if (savedPrintPreference) {
@@ -71,6 +119,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     }
   }, []);
 
+  // Сброс состояния при открытии
   useEffect(() => {
     if (isOpen) {
       setPaymentDate('');
@@ -85,6 +134,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     }
   }, [isOpen, currentDebt]);
 
+  // Обновление состояния долга
   useEffect(() => {
     setIsDebtPaid(currentDebt <= 0);
     setRemainingDebt(currentDebt - totalAmount);
@@ -99,7 +149,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    
     const inputValue = e.target.value;
     
     if (inputValue === '₽' || inputValue === '') {
@@ -117,7 +166,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    
     if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid) return;
     
     if (paymentMethod === 'card' && !selectedBankCardId) {
@@ -151,19 +199,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose]);
     
   const handleCashChange = (checked: boolean) => {
     if (checked) {
@@ -202,7 +237,9 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
 
   return (
     <ModalOverlay isOpen={isOpen}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
+      <ModalContent 
+        onClick={(e) => e.stopPropagation()}
+      >
         <ModalWrapper>
           <CloseButton onClick={onClose}>&times;</CloseButton>
           
@@ -401,6 +438,14 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow-y: auto; // Разрешаем скролл оверлея
+  padding: 20px; // Отступы для маленьких экранов
+  overflow: hidden; // Отключаем скролл для оверлея
+  
+  // Отключаем скролл для самого оверлея на мобильных
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 `;
 
 const ModalContent = styled.div`
@@ -408,8 +453,47 @@ const ModalContent = styled.div`
   padding: 24px;
   border-radius: 8px;
   width: 600px;
+  max-width: 90vw; // Для адаптивности
   max-height: 90vh;
   overflow-y: auto;
+  margin: auto; // Центрирование
+  position: relative;
+  
+  // Для плавного скролла на мобильных
+  -webkit-overflow-scrolling: touch;
+  
+  // Скрываем стандартный скроллбар если нужно
+  scrollbar-width: thin;
+  scrollbar-color: #007D88 #f0f0f0;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #007D88;
+    border-radius: 3px;
+  }
+  
+  // Убираем скроллбар на очень маленьких экранах
+  @media (max-width: 768px) {
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 16px;
+    
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    
+    scrollbar-width: none;
+  }
 `;
 
 const ModalWrapper = styled.div`
@@ -424,6 +508,11 @@ const CloseButton = styled.button`
   border: none;
   font-size: 20px;
   cursor: pointer;
+  z-index: 1;
+  
+  &:hover {
+    opacity: 0.7;
+  }
 `;
 
 const TitleField = styled.div`
@@ -445,6 +534,11 @@ const FormRow = styled.div`
   display: flex;
   gap: 20px;
   margin-bottom: 16px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 12px;
+  }
 `;
 
 const InputGroup = styled.div`
@@ -477,11 +571,20 @@ const ButtonContainer = styled.div`
   justify-content: flex-end;
   gap: 12px;
   margin-top: 30px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const PaymentMethodContainer = styled.div`
   display: flex;
   gap: 24px;
+  
+  @media (max-width: 768px) {
+    gap: 12px;
+    flex-direction: column;
+  }
 `;
 
 const CheckboxWrapper = styled.div`

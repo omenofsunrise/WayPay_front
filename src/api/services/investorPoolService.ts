@@ -4,9 +4,10 @@ import type {
   InvestorPoolRequest, 
   InvestorPoolParams,
   UpdateNameRequest,
-  UpdatePieRequest
+  UpdatePieRequest,
+  Reinvestment
 } from '../types/investorPool';
-import type { PaginatedResponse } from '../types/common';
+import type { PaginatedResponse, PaginationParams } from '../types/common';
 import type { InvestorReport } from '../types/investor';
 
 class InvestorPoolService {
@@ -40,6 +41,21 @@ class InvestorPoolService {
   async reinvestInvestorPool(id: number) {
     await apiClient.patch(`/InvestorPool/reinvest/${id}`);
     return;
+  }
+
+  async getReinvestments(id: number, params: PaginationParams, investorId?: number): Promise<PaginatedResponse<Reinvestment>> {
+    const queryParams = new URLSearchParams({
+      page: params.page.toString(),
+      pageSize: params.pageSize.toString(),
+    });
+
+    if (investorId !== undefined && investorId !== null && investorId !== 0) {
+      queryParams.append('investorId', investorId.toString());
+    }
+
+    const url = `/InvestorPool/${id}/reinvestments?${queryParams.toString()}`;
+    const respose = await apiClient.get<PaginatedResponse<Reinvestment>>(url);
+    return respose.data;
   }
 
   async deleteInvestorPool(id: number): Promise<void> {
