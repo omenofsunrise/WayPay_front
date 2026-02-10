@@ -14,6 +14,7 @@ import CustomTable from '../tables/CustomTable';
 import ViewCreditModal from '../../modal/ViewCreditModal';
 import { PassportPhotoType } from '../../../api/types/client';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../links/PhoneLink';
 
 const TabsContainer = styled.div`
   width: 100%;
@@ -1368,9 +1369,9 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
               <InfoLabel>Телефон</InfoLabel>
               <InfoValue>
                 {client.phone ? (
-                  <a href={formatPhoneHref(client.phone)} style={{ color: '#007D88' }}>
+                  <PhoneLink href={formatPhoneHref(client.phone)}>
                     {client.phone}
-                  </a>
+                  </PhoneLink>
                 ) : (
                   ''
                 )}

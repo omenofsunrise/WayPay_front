@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import React, { useState, useEffect, useRef } from "react";
+import styled from "styled-components";
 
 interface ProgressBarProps {
   percentage: number;
@@ -11,14 +11,14 @@ interface ProgressBarProps {
   };
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ 
-  percentage, 
-  onChange, 
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  percentage,
+  onChange,
   draggable = false,
   colors = {
-    primary: 'rgba(0, 125, 136, 1)',
-    secondary: 'rgba(37, 203, 161, 1)'
-  }
+    primary: "rgba(0, 125, 136, 1)",
+    secondary: "rgba(37, 203, 161, 1)",
+  },
 }) => {
   const barRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -47,35 +47,32 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     let newPercentage = (x / rect.width) * 100;
 
     newPercentage = Math.max(0, Math.min(100, newPercentage));
-    
+
     onChange(Math.round(newPercentage));
   };
 
   useEffect(() => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
       };
     }
   }, [isDragging]);
 
   return (
-    <ProgressBarContainer 
+    <ProgressBarContainer
       ref={barRef}
       $draggable={draggable}
       onMouseDown={handleMouseDown}
     >
       <ProgressBackground $secondaryColor={colors.secondary} />
-      <ProgressFill 
-        $percentage={percentage} 
-        $primaryColor={colors.primary}
-      />
+      <ProgressFill $percentage={percentage} $primaryColor={colors.primary} />
       {draggable && (
-        <ProgressHandle 
+        <ProgressHandle
           $percentage={percentage}
           $primaryColor={colors.primary}
         />
@@ -91,10 +88,10 @@ const ProgressBarContainer = styled.div<{ $draggable: boolean }>`
   border-radius: 5px;
   overflow: hidden;
   margin-top: 10px;
-  cursor: ${props => props.$draggable ? 'pointer' : 'default'};
-  
+  cursor: ${(props) => (props.$draggable ? "pointer" : "default")};
+
   &:hover {
-    cursor: ${props => props.$draggable ? 'pointer' : 'default'};
+    cursor: ${(props) => (props.$draggable ? "pointer" : "default")};
   }
 `;
 
@@ -104,35 +101,36 @@ const ProgressBackground = styled.div<{ $secondaryColor: string }>`
   top: 0;
   width: 100%;
   height: 100%;
-  background: ${props => props.$secondaryColor};
+  background: ${(props) => props.$secondaryColor};
   border-radius: 5px;
 `;
 
-const ProgressFill = styled.div<{ 
-  $percentage: number; 
+const ProgressFill = styled.div<{
+  $percentage: number;
   $primaryColor: string;
 }>`
   position: absolute;
   left: 0;
   top: 0;
   height: 100%;
-  width: ${props => props.$percentage}%;
-  background: ${props => props.$primaryColor};
-  border-radius: ${props => props.$percentage === 100 ? '5px' : '5px 0 0 5px'};
+  width: ${(props) => props.$percentage}%;
+  background: ${(props) => props.$primaryColor};
+  border-radius: ${(props) =>
+    props.$percentage === 100 ? "5px" : "5px 0 0 5px"};
   transition: width 0.1s ease;
   z-index: 1;
 `;
 
-const ProgressHandle = styled.div<{ 
+const ProgressHandle = styled.div<{
   $percentage: number;
   $primaryColor: string;
 }>`
   position: absolute;
-  left: ${props => props.$percentage}%;
+  left: ${(props) => props.$percentage}%;
   top: 50%;
   width: 16px;
   height: 16px;
-  background: ${props => props.$primaryColor};
+  background: ${(props) => props.$primaryColor};
   border: 2px solid white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
@@ -140,7 +138,7 @@ const ProgressHandle = styled.div<{
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 2;
   transition: left 0.1s ease;
-  
+
   &:active {
     cursor: grabbing;
   }

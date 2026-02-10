@@ -3,4 +3,5 @@ export interface InvestorContribution {
   amount: number;
   date: Date;
   confirmed: boolean;
+  investorNickname?: string;
 }

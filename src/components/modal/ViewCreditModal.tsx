@@ -26,6 +26,7 @@ import paymentService from '../../api/services/paymentService';
 import NewPaymentModal from './NewPaymentModal';
 import { sendWhatsAppMessage } from '../../utils/sendWhatsAppMessage';
 import { formatPhoneHref } from '../../utils/phoneUtils';
+import PhoneLink from '../ui/links/PhoneLink';
 
 interface ViewCreditModalProps {
   id: number;
@@ -791,9 +792,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                   <Label>Телефон</Label>
                   <Value>
                     {creditData?.clientPhone ? (
-                      <a href={formatPhoneHref(creditData.clientPhone)} style={{ color: '#007D88' }}>
+                      <PhoneLink href={formatPhoneHref(creditData.clientPhone)}>
                         {creditData.clientPhone}
-                      </a>
+                      </PhoneLink>
                     ) : (
                       ''
                     )}
@@ -831,9 +832,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                     <>
                       <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
                       <Value>
-                        <a href={formatPhoneHref(creditData.guarantorPhone)} style={{ color: '#007D88' }}>
+                        <PhoneLink href={formatPhoneHref(creditData.guarantorPhone)}>
                           {creditData.guarantorPhone}
-                        </a>
+                        </PhoneLink>
                       </Value>
                     </>
                   )}

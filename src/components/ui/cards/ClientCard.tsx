@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV, FaExclamationTriangle } from 'react-icons/fa';
 import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../links/PhoneLink';
 
 const Card = styled.div`
   background: white;
@@ -132,16 +133,10 @@ const WhatsAppLink = styled.a`
   }
 `;
 
-const PhoneLink = styled.a`
-  color: rgba(75, 85, 99, 1);
-  text-decoration: none;
+const PhoneLinkRow = styled(PhoneLink)`
   display: flex;
   align-items: center;
   gap: 6px;
-
-  &:hover {
-    color: #007D88;
-  }
 `;
 
 const MessageButton = styled.button`
@@ -427,13 +422,13 @@ const ClientCard: React.FC<ClientCardProps> = ({
             </InfoLabel>
             <InfoValue>
               {client.phone ? (
-                <PhoneLink 
+                <PhoneLinkRow 
                   href={formatPhoneHref(client.phone)} 
                   onClick={(e) => e.stopPropagation()}
                   style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
                 >
                   {formatPhone(client.phone)}
-                </PhoneLink>
+                </PhoneLinkRow>
               ) : (
                 'Не указан'
               )}

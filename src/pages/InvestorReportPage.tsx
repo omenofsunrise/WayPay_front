@@ -10,6 +10,7 @@ import CustomSelect from '../components/ui/fields/CustomSelect';
 import { formatDate } from '../utils/dateFormatter';
 import { formatMoney } from '../utils/formatPrice';
 import { formatPhoneHref } from '../utils/phoneUtils';
+import { PHONE_LINK_COLOR } from '../components/ui/links/PhoneLink';
 import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
 import investmentSvg from '../assets/ui/InvestorReport/investment.svg';
 import paymentIncomeSvg from '../assets/ui/InvestorReport/PaymentIncome.svg';
@@ -285,7 +286,7 @@ const InvestorReportPage = () => {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div>
                             <p style="margin: 5px 0; color: #374151;"><strong>Псевдоним:</strong> ${currentInvestor?.nickname || 'Не указан'}</p>
-                            <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber ? `<a href="${formatPhoneHref(currentInvestor.phoneNumber)}" style="color:#007D88;text-decoration:none;">${currentInvestor.phoneNumber}</a>` : 'Не указан'}</p>
+                            <p style="margin: 5px 0; color: #374151;"><strong>Телефон:</strong> ${currentInvestor?.phoneNumber ? `<a href="${formatPhoneHref(currentInvestor.phoneNumber)}" style="color:${PHONE_LINK_COLOR};text-decoration:none;">${currentInvestor.phoneNumber}</a>` : 'Не указан'}</p>
                         </div>
                         <div>
                             <p style="margin: 5px 0; color: #374151;"><strong>Статус:</strong> 

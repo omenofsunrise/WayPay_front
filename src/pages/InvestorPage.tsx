@@ -21,6 +21,7 @@ import { InputContainer, InputLabel, InputRow } from '../components/Containers/I
 import { useAuth } from '../сontext/AuthContext';
 import { formatDate } from '../utils/dateFormatter';
 import { formatPhoneHref } from '../utils/phoneUtils';
+import PhoneLink from '../components/ui/links/PhoneLink';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import PrintIcon from '../assets/ui/print.svg?react';
 import InvestorDocxGenerator from '../utils/doxcUtils/investorDocxGenerator';
@@ -331,7 +332,7 @@ const InvestorPage = () => {
             investor.id.toString(),
             investor.nickname || '',
             ...(canEdit? [investor.fullName || ''] : []),
-            ...(canEdit? [investor.phoneNumber ? <a href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</a> : ''] : []),
+            ...(canEdit? [investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : ''] : []),
             ...(canEdit? [investor.investorPie || ''] : []),
             ...(canEdit? [formatMoney((investor.investmentAmount || 0).toString()) || ''] : []),
             formatMoney((investor.balance || 0).toString()),

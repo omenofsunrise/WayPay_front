@@ -7,6 +7,7 @@ export interface Investor {
   fullName: string;
   phoneNumber: string;
   investorPie: number;
+  pieInPool?: number;
   investmentAmount: number;
   balance: number;
   activeUntil: string;

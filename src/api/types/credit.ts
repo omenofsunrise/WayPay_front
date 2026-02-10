@@ -39,6 +39,7 @@ export interface Credit {
     incomePercents: number;
     employeeName: string;
     debtDays?: number;
+    defferedIncome?: number;
 }
 
 export interface CreateCreditRequest {

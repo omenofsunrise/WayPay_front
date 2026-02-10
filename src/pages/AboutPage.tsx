@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import useCompany from '../api/hooks/useCompany';
 import type { CommonInfo } from '../api/types/company';
 import { formatPhoneHref } from '../utils/phoneUtils';
+import PhoneLink from '../components/ui/links/PhoneLink';
 
 const AboutPage: React.FC = () => {
   const { getCommonInfo } = useCompany();
@@ -209,19 +210,6 @@ const PhoneContainer = styled.div`
     flex: 1;
 `;
 
-const PhoneLink = styled.a`
-  color: rgba(0, 125, 136, 1);
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
-  display: inline-block;
-  text-decoration: none;
-  
-  &:hover {
-    color: rgba(37, 203, 161, 1);
-    text-decoration: underline;
-  }
-`;
 
 const CopiedMessage = styled.span`
   position: absolute;

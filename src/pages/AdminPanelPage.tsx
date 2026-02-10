@@ -11,6 +11,7 @@ import BaseModal from '../components/modal/BASE/modalCRUBase';
 import CustomInput from '../components/ui/fields/CustomInput';
 import { formatDate } from '../utils/dateFormatter';
 import { formatPhoneHref } from '../utils/phoneUtils';
+import PhoneLink from '../components/ui/links/PhoneLink';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { Container, Tabs } from 'react-bootstrap';
 import { useEmployee } from '../api/hooks/useEmployee';
@@ -388,13 +389,12 @@ const AdminPanelPage = () => {
         >
           {company.chief}
         </span>,
-        <a 
+        <PhoneLink 
           href={formatPhoneHref(company.phone)}
           onClick={() => handleOpenPhoneEdit(company.id, company.phone)}
-          style={{ cursor: 'pointer', textDecoration: 'underline', color: '#007D88' }}
         >
           {company.phone}
-        </a>,
+        </PhoneLink>,
         <span 
           onClick={() => handleOpenDateEdit(company.id, company.licenceDate || new Date())}
           style={{ cursor: 'pointer', textDecoration: 'underline' }}

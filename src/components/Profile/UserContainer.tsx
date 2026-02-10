@@ -7,6 +7,7 @@ import { FILE_BASE_URL } from "../../api/client";
 import { getInitials, generateAvatar } from "../../utils/avatarUtils";
 import type { Employee } from "../../api/types/employee";
 import { formatPhoneHref } from "../../utils/phoneUtils";
+import PhoneLink from "../ui/links/PhoneLink";
 
 interface UserContainerProps {
     employee?: Employee;
@@ -390,14 +391,6 @@ const ContactItem = styled.div`
     }
 `;
 
-const PhoneLink = styled.a`
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-        text-decoration: underline;
-    }
-`;
 
 const ContextMenu = styled.div`
     position: fixed;

@@ -10,6 +10,7 @@ import CustomCalendar from '../ui/fields/CustomCalendar';
 import BankCardSelect from '../ui/fields/BankCardSelect';
 import { useAuth } from '../../сontext/AuthContext';
 import { formatPhoneHref } from '../../utils/phoneUtils';
+import PhoneLink from '../ui/links/PhoneLink';
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -291,9 +292,9 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                     
                     <InputGroup>
                       <InputLabel>Телефон</InputLabel>
-                      <PhoneLink href={formatPhoneHref(clientPhone)} onClick={(e) => e.stopPropagation()}>
+                      <PhoneLinkBox href={formatPhoneHref(clientPhone)} onClick={(e) => e.stopPropagation()}>
                         {clientPhone}
-                      </PhoneLink>
+                      </PhoneLinkBox>
                     </InputGroup>
                   </FormRow>
                   
@@ -546,20 +547,15 @@ const InputGroup = styled.div`
   flex-direction: column;
 `;
 
-const PhoneLink = styled.a`
+const PhoneLinkBox = styled(PhoneLink)`
   display: inline-flex;
   align-items: center;
   padding: 0px 12px;
   border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 5px;
   font-size: 14px;
-  color: #007D88;
   background: #f9fafb;
-  text-decoration: none;
   min-height: 38px;
-  &:hover {
-    color: #005e69;
-  }
 `;
 
 const InputLabel = styled.label`

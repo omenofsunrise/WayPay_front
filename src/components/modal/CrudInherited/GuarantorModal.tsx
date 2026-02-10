@@ -6,6 +6,7 @@ import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
 import type { GuarantorForm } from '../../../api/types/client';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import PhoneLink from '../../ui/links/PhoneLink';
 
 export interface Guarantor {
   id: number;
@@ -143,9 +144,9 @@ const DraggableInput: React.FC<DraggableInputProps> = ({
       case 'phone':
         if (mode === 'view') {
           return (
-            <a href={formatPhoneHref(formData.phone)} style={{ color: '#007D88', textDecoration: 'none' }}>
+            <PhoneLink href={formatPhoneHref(formData.phone)}>
               {formData.phone}
-            </a>
+            </PhoneLink>
           );
         }
         return (
