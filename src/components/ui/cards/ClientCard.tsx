@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV, FaExclamationTriangle } from 'react-icons/fa';
 import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
-import PhoneLink from '../links/PhoneLink';
 
 const Card = styled.div`
   background: white;
@@ -38,6 +37,13 @@ const CardTitle = styled.h3`
   justify-content: space-between;
   align-items: center;
   padding-right: 50px; /* Для кнопки сообщения */
+`;
+
+const CardTitleText = styled.span<{ $hasBlacklistBadge?: boolean }>`
+  display: inline-block;
+  ${props => props.$hasBlacklistBadge && `
+    margin-left: 170px; /* Отступ для бейджа */
+  `}
 `;
 
 const InfoGrid = styled.div`
@@ -133,10 +139,16 @@ const WhatsAppLink = styled.a`
   }
 `;
 
-const PhoneLinkRow = styled(PhoneLink)`
+const PhoneLink = styled.a`
+  color: rgba(75, 85, 99, 1);
+  text-decoration: none;
   display: flex;
   align-items: center;
   gap: 6px;
+
+  &:hover {
+    color: #007D88;
+  }
 `;
 
 const MessageButton = styled.button`
@@ -249,7 +261,7 @@ export interface Client {
   creditIds?: string[] | null;
   creditRestTerms?: string[] | null;
   hasPassportPhoto?: boolean | null;
-  blacklist?: boolean; // Добавлено свойство черного списка
+  blacklist?: boolean;
 }
 
 interface ClientCardProps {
@@ -384,7 +396,9 @@ const ClientCard: React.FC<ClientCardProps> = ({
       
       <CardContent>
         <CardTitle>
+          <CardTitleText $hasBlacklistBadge={isBlacklisted}>
             {client.fullName || 'Не указано'}
+          </CardTitleText>
         </CardTitle>
         
         {showMenu && (
@@ -422,13 +436,13 @@ const ClientCard: React.FC<ClientCardProps> = ({
             </InfoLabel>
             <InfoValue>
               {client.phone ? (
-                <PhoneLinkRow 
+                <PhoneLink 
                   href={formatPhoneHref(client.phone)} 
                   onClick={(e) => e.stopPropagation()}
                   style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
                 >
                   {formatPhone(client.phone)}
-                </PhoneLinkRow>
+                </PhoneLink>
               ) : (
                 'Не указан'
               )}
