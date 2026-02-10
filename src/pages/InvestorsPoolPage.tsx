@@ -537,8 +537,8 @@ const InvestorsPoolPage = () => {
           : "-"
       ),
       createDoubleClickCell(
-        investor.investorPie !== null && investor.investorPie !== undefined
-          ? `${investor.investorPie}%`
+        investor.pieInPool !== null && investor.pieInPool !== undefined
+          ? `${investor.pieInPool}%`
           : "-"
       ),
       createDoubleClickCell(
