@@ -107,23 +107,50 @@ interface SetCategoryActionProps {
 }
 
 const CreditPage = () => {
-  const [contractNumber, setContractNumber] = useState('');
+  const colors = {
+    primary: '#007D88'
+  };
+  const FILTERS_STORAGE_KEY = 'creditsFilters';
+  const { id, tab } = useParams<{ id?: string; tab?: string }>();
+  const savedFilters = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      console.error('Ошибка чтения фильтров договоров из localStorage:', error);
+      return null;
+    }
+  }, []);
+
+  const initialTab = useMemo(() => {
+    if (tab) {
+      return tab;
+    }
+
+    if (location.pathname === '/credits/in-debt') {
+      return 'inDebt';
+    }
+
+    return typeof savedFilters?.activeTab === 'string' ? savedFilters.activeTab : 'all';
+  }, [tab, savedFilters]);
+
+  const [contractNumber, setContractNumber] = useState(() => savedFilters?.contractNumber ?? '');
   const [currentPage, setCurrentPage] = useState(1);
-  const [investorName, setInvestorName] = useState('');
-  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(null);
-  const [clientFullName, setClientFullName] = useState('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
-  const [fromCreationDate, setFromCreationDate] = useState<string>('');
-  const [toCreationDate, setToCreationDate] = useState<string>('');
-  const [objectType, setObjectType] = useState<string>('');
-  const [creditTypeId, setCreditTypeId] = useState<number | null>(null);
+  const [investorName, setInvestorName] = useState(() => savedFilters?.investorName ?? '');
+  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(() => savedFilters?.selectedInvestmentSource ?? null);
+  const [clientFullName, setClientFullName] = useState(() => savedFilters?.clientFullName ?? '');
+  const [fromDate, setFromDate] = useState<string>(() => savedFilters?.fromDate ?? '');
+  const [toDate, setToDate] = useState<string>(() => savedFilters?.toDate ?? '');
+  const [fromCreationDate, setFromCreationDate] = useState<string>(() => savedFilters?.fromCreationDate ?? '');
+  const [toCreationDate, setToCreationDate] = useState<string>(() => savedFilters?.toCreationDate ?? '');
+  const [objectType, setObjectType] = useState<string>(() => savedFilters?.objectType ?? '');
+  const [creditTypeId, setCreditTypeId] = useState<number | null>(() => (typeof savedFilters?.creditTypeId === 'number' ? savedFilters.creditTypeId : null));
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
   const itemsPerPage = 10;
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>({});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>(() => savedFilters?.filters ?? {});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -152,7 +179,6 @@ const CreditPage = () => {
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] = useState(false);
   const [selectedCreditForFunding, setSelectedCreditForFunding] = useState<Credit | null>(null);
-  const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const { 
     isLoading: isObjectTypesLoading, 
     objectTypes, 
@@ -402,19 +428,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     return [...baseTabs, ...customTabItems];
   }, [shouldShowMyCreditsTab, customTabs]);
 
-  const getInitialTab = () => {
-    if (tab) {
-      return tab;
-    }
-    
-    if (location.pathname === '/credits/in-debt') {
-      return 'inDebt';
-    }
-    
-    return 'all';
-  };
-
-  const [activeTab, setActiveTab] = useState<string>(getInitialTab());
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
 
   const handleCreateTab = useCallback(async (tabData: ObjectTypeCreateRequest) => {
     if (customTabs.length >= 5) {
@@ -499,6 +513,87 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       setIsInvestorSelectModalOpen(true);
     }
   };
+
+  useEffect(() => {
+    const payload = {
+      contractNumber,
+      investorName,
+      selectedInvestmentSource,
+      clientFullName,
+      fromDate,
+      toDate,
+      fromCreationDate,
+      toCreationDate,
+      objectType,
+      creditTypeId,
+      activeTab,
+      filters
+    };
+
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(payload));
+  }, [
+    contractNumber,
+    investorName,
+    selectedInvestmentSource,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    objectType,
+    creditTypeId,
+    activeTab,
+    filters
+  ]);
+
+  const hasActiveFilters = useMemo(() => {
+    return Boolean(
+      contractNumber ||
+      investorName ||
+      selectedInvestmentSource ||
+      clientFullName ||
+      fromDate ||
+      toDate ||
+      fromCreationDate ||
+      toCreationDate ||
+      objectType ||
+      (creditTypeId !== null && creditTypeId !== undefined) ||
+      activeTab !== 'all' ||
+      (filters && Object.keys(filters).length > 0)
+    );
+  }, [
+    contractNumber,
+    investorName,
+    selectedInvestmentSource,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    objectType,
+    creditTypeId,
+    activeTab,
+    filters
+  ]);
+
+  const resetFilters = useCallback(() => {
+    setContractNumber('');
+    setInvestorName('');
+    setSelectedInvestmentSource(null);
+    setClientFullName('');
+    setFromDate('');
+    setToDate('');
+    setFromCreationDate('');
+    setToCreationDate('');
+    setObjectType('');
+    setCreditTypeId(null);
+    setFilters({});
+    setActiveTab('all');
+    setSortConfig({ key: null, direction: 'desc' });
+    setCurrentPage(1);
+    setSelectedRows([]);
+    localStorage.removeItem(FILTERS_STORAGE_KEY);
+  }, []);
 
   const handleAccept = async (rowData: any[]) => {
     const [_, id] = rowData;
@@ -1075,6 +1170,14 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
             hideClearButton={false}
           />
         </InputWrapper>
+
+        <ResetFiltersButton
+          type="button"
+          onClick={resetFilters}
+          disabled={!hasActiveFilters}
+        >
+          Сбросить фильтры
+        </ResetFiltersButton>
         
       </FilterField>
 
@@ -1143,10 +1246,20 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
             size={24}
           />
         )}
-        
-        <CountInfoTitle 
-          total={creditsData?.totalCount || 0} 
-        />
+
+        <TotalControls>
+          <CountInfoTitle 
+            total={creditsData?.totalCount || 0} 
+          />
+          <ResetFiltersLink
+            $primaryColor={colors.primary}
+            type="button"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+          >
+            Сбросить фильтры
+          </ResetFiltersLink>
+        </TotalControls>
         
         <SelectedCount />
       </SecondRaw>
@@ -1273,6 +1386,28 @@ const FilterField = styled.div`
   position: relative;
 `;
 
+const ResetFiltersButton = styled.button`
+  align-self: center;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+`;
+
 const InputWrapper = styled.div`
   flex: 1;  
   min-width: 0;
@@ -1287,6 +1422,32 @@ const SecondRaw = styled.div`
   justify-content: space-between;
   align-items: center;
   position: relative;
+`;
+
+const TotalControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const ResetFiltersLink = styled.button<{ $primaryColor: string }>`
+  background: none;
+  border: 0;
+  padding: 0;
+  color: ${props => props.$primaryColor};
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 `;
 
 const StarIcon = styled.div`
