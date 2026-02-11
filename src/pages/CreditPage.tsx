@@ -39,7 +39,7 @@ import EditButton from '../components/ui/Buttons/EditButton';
 import DeleteButton from '../components/ui/Buttons/DeleteButton';
 import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
 import type { ContextMenuItem } from '../components/modal/ContextMenu';
-import { createWhatsAppMessageWithoutPhone } from '../utils/sendWhatsAppMessage';
+import { createWhatsAppMessageWithoutPhone, sendWhatsAppMessageToPhone } from '../utils/sendWhatsAppMessage';
 
 // Интерфейс для модалки "Поделиться"
 interface ShareOptionModalProps {
@@ -332,18 +332,39 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
   }, [selectedCreditForPrint]);
 
   const handleShareOptionSelect = useCallback(async (option: 'contractData' | 'paymentHistory' | 'paymentSchedule', e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    const message = await generateShareMessage(option);
-    if (message) {
-      const whatsappUrl = createWhatsAppMessageWithoutPhone(message);
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-    }
-    setIsShareModalOpen(false);
-  }, [generateShareMessage]);
+      if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+      }
+      
+      if (!selectedCreditForPrint) {
+          alert('Договор не выбран');
+          setIsShareModalOpen(false);
+          return;
+      }
+      
+      // Получаем номер телефона клиента
+      const clientPhone = selectedCreditForPrint.clientPhone;
+      
+      if (!clientPhone) {
+          alert('У клиента не указан номер телефона');
+          setIsShareModalOpen(false);
+          return;
+      }
+      
+      const message = await generateShareMessage(option);
+      if (message) {
+          // Используем новую функцию для отправки на конкретный номер
+          const success = sendWhatsAppMessageToPhone(clientPhone, message);
+          
+          if (success) {
+              console.log(`Сообщение отправлено на номер: ${clientPhone}`);
+          } else {
+              alert('Не удалось открыть WhatsApp. Проверьте номер телефона.');
+          }
+      }
+      setIsShareModalOpen(false);
+  }, [generateShareMessage, selectedCreditForPrint]);
 
   const getCategoryMenuItems = ({ 
     creditId, 

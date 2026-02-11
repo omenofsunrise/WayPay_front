@@ -36,6 +36,31 @@ export const sendWhatsAppMessage = async (
 };
 
 /**
+ * Отправляет сообщение WhatsApp на конкретный номер телефона
+ * @param phone - номер телефона получателя
+ * @param message - текст сообщения
+ * @returns boolean - успешность операции
+ */
+export const sendWhatsAppMessageToPhone = (phone: string, message: string): boolean => {
+    try {
+        // Форматируем телефон
+        const cleanedPhone = formatPhoneNumber(phone);
+        
+        // Кодируем сообщение для URL
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
+        
+        // Открываем WhatsApp
+        window.open(whatsappUrl, '_blank');
+        
+        return true;
+    } catch (error) {
+        console.error('Ошибка при отправке WhatsApp сообщения:', error);
+        return false;
+    }
+};
+
+/**
  * Создает URL для WhatsApp с предзаполненным сообщением, но без номера получателя
  * @param message - текст сообщения
  * @returns string - URL для открытия WhatsApp
@@ -96,7 +121,7 @@ export const sendCustomWhatsAppMessageWithCompanyCheck = async (
         }
 
         // 2. Используем основной метод отправки
-        return await sendCustomWhatsAppMessage(phone, message, scheduleId);
+        return await sendCustomWhatsAppMessage(phone, message);
         
     } catch (error) {
         console.error('Ошибка при отправке кастомного WhatsApp сообщения:', error);
