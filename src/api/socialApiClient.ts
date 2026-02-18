@@ -2,8 +2,8 @@ import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse, type In
 import { authStorage } from './utils/auth-storage';
 import apiClient, { API_BASE_URL, PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './client';
 
-export const SOCIAL_BASE_URL = import.meta.env.VITE_SOCIAL_BASE_URL || 'https://web.waypay.one:5002/';
-export const SOCIAL_API_BASE_URL = import.meta.env.VITE_SOCIAL_API_BASE_URL || 'https://web.waypay.one:5002/';
+export const SOCIAL_BASE_URL = import.meta.env.VITE_SOCIAL_BASE_URL;
+export const SOCIAL_API_BASE_URL = import.meta.env.VITE_SOCIAL_API_BASE_URL;
 
 const socialApiClient = axios.create({
     baseURL: SOCIAL_API_BASE_URL,
