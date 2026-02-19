@@ -16,6 +16,66 @@ export function parseDateInput(dateString: string): Date {
     return new Date(dateString);
 }
 
+export function parseBlacklistDate(dateString: string): Date | null {
+    if (!dateString) return null;
+    
+    let day: number, month: number, year: number;
+    
+    // Проверяем формат DD-MM-YYYY (с дефисами)
+    if (dateString.includes('-')) {
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+            day = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10) - 1;
+            year = parseInt(parts[2], 10);
+        }
+    }
+    // Проверяем формат DD.MM.YYYY (с точками)
+    else if (dateString.includes('.')) {
+        const parts = dateString.split('.');
+        if (parts.length === 3) {
+            day = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10) - 1;
+            year = parseInt(parts[2], 10);
+        }
+    }
+    // Проверяем ISO формат YYYY-MM-DD
+    else if (dateString.includes('-') && dateString.split('-')[0].length === 4) {
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+            year = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10) - 1;
+            day = parseInt(parts[2], 10);
+        }
+    }
+    
+    // Если удалось распарсить, проверяем валидность
+    if (day !== undefined && month !== undefined && year !== undefined) {
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year) && 
+            day >= 1 && day <= 31 && 
+            month >= 0 && month <= 11 && 
+            year >= 1900 && year <= 2100) {
+            
+            const date = new Date(year, month, day);
+            
+            if (date.getDate() === day && 
+                date.getMonth() === month && 
+                date.getFullYear() === year) {
+                return date;
+            }
+        }
+    }
+    
+    // Пробуем распарсить как ISO строку
+    const isoDate = new Date(dateString);
+    if (!isNaN(isoDate.getTime())) {
+        return isoDate;
+    }
+    
+    console.log('Не удалось распарсить дату:', dateString);
+    return null;
+}
+
 export const formatRelativeTime = (date: Date | string | number): string => {
   let parsedDate: Date;
   
