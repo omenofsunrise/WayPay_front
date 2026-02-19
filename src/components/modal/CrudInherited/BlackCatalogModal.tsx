@@ -33,24 +33,31 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  initialData = {},
-}) => {
-  const [formData, setFormData] = useState({
+  initialData = {
     fullName: '',
     phone: '',
-    birthdate: '',
+    birthdate: null,
     doc: '',
-    docIssueDate: '',
+    docIssueDate: null,
     address: '',
     secondPhone: ''
+  },
+}) => {
+  const [formData, setFormData] = useState({
+    fullName: initialData.fullName || '',
+    phone: initialData.phone || '',
+    birthdate: initialData.birthdate ? formatDate(initialData.birthdate) : '',
+    doc: initialData.doc || '',
+    docIssueDate: initialData.docIssueDate ? formatDate(initialData.docIssueDate) : '',
+    address: initialData.address || '',
+    secondPhone: initialData.secondPhone || ''
   });
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isSaveDisabled, setIsSaveDisabled] = useState(false);
 
-  // Инициализация формы при открытии или изменении initialData
   useEffect(() => {
-    if (isOpen && initialData) {
+    if (isOpen) {
       setFormData({
         fullName: initialData.fullName || '',
         phone: initialData.phone || '',
@@ -62,47 +69,36 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
       });
       setValidationErrors({});
     }
-  }, [isOpen, initialData]);
+  }, [isOpen]);
 
-  // Валидация формы
   useEffect(() => {
     validateForm();
-  }, [formData]);
+  }, [formData, mode, initialData]);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
-    // Проверка ФИО (обязательное поле)
-    if (!formData.fullName.trim()) {
-      errors.fullName = 'ФИО обязательно для заполнения';
-    }
-
-    // Проверка телефона
     if (formData.phone && !/^\+?[0-9]{10,15}$/.test(formData.phone.replace(/\D/g, ''))) {
       errors.phone = 'Неверный формат телефона';
     }
 
-    // Проверка даты рождения
     if (formData.birthdate) {
       const birthDate = parseBlacklistDate(formData.birthdate);
-      console.log(birthDate);
-      if (!birthDate) {
+      if (!birthDate || birthDate > new Date()) {
         errors.birthdate = 'Неверная дата рождения';
       }
     }
 
-    // Проверка даты выдачи документа
     if (formData.docIssueDate) {
       const issueDate = parseBlacklistDate(formData.docIssueDate);
       if (!issueDate || issueDate > new Date()) {
         errors.docIssueDate = 'Неверная дата выдачи';
       }
     }
-
-    setValidationErrors(errors);
-    
-    // В режиме редактирования проверяем, были ли изменения
-    if (mode === 'edit' && initialData) {
+   
+    if (mode === 'create') {
+      setIsSaveDisabled(false);
+    } else if (mode === 'edit') {
       const isChanged = 
         formData.fullName !== initialData.fullName ||
         formData.phone !== initialData.phone ||
@@ -112,9 +108,10 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
         formData.address !== initialData.address ||
         formData.secondPhone !== initialData.secondPhone;
       
-      setIsSaveDisabled(!isChanged || Object.keys(errors).length > 0);
-    } else {
-      setIsSaveDisabled(Object.keys(errors).length > 0);
+      // setIsSaveDisabled(!isChanged);
+      setIsSaveDisabled(false);
+    } else if (mode === 'view') {
+      setIsSaveDisabled(false);
     }
   };
 
@@ -129,45 +126,18 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
       return;
     }
 
-    // Подготавливаем данные для отправки
-    const submitData: Partial<BlacklistClient> = {};
-
-    // Добавляем только заполненные поля
-    if (formData.fullName.trim()) {
-      submitData.fullName = formData.fullName.trim();
-    }
-
-    if (formData.phone) {
-      submitData.phone = formData.phone;
-    }
-
-    // Преобразуем дату рождения из строки в Date объект
-    if (formData.birthdate) {
-      submitData.birthdate = parseBlacklistDate(formData.birthdate);
-    } else {
-      submitData.birthdate = null; // Явно указываем null, если дата не заполнена
-    }
-
-    if (formData.doc.trim()) {
-      submitData.doc = formData.doc.trim();
-    }
-
-    // Преобразуем дату выдачи документа
-    if (formData.docIssueDate) {
-      submitData.docIssueDate = parseBlacklistDate(formData.docIssueDate);
-    } else {
-      submitData.docIssueDate = null;
-    }
-
-    if (formData.address.trim()) {
-      submitData.address = formData.address.trim();
-    }
-
-    if (formData.secondPhone.trim()) {
-      submitData.secondPhone = formData.secondPhone.trim();
-    }
+    const submitData: Partial<BlacklistClient> = {
+      fullName: formData.fullName.trim() || undefined,
+      phone: formData.phone || undefined,
+      birthdate: formData.birthdate ? parseBlacklistDate(formData.birthdate) : null,
+      doc: formData.doc.trim() || undefined,
+      docIssueDate: formData.docIssueDate ? parseBlacklistDate(formData.docIssueDate) : null,
+      address: formData.address.trim() || undefined,
+      secondPhone: formData.secondPhone.trim() || undefined
+    };
 
     onSubmit(submitData);
+    onClose();
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -176,7 +146,6 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
       [field]: value
     }));
 
-    // Очищаем ошибку для измененного поля
     if (validationErrors[field]) {
       setValidationErrors(prev => ({
         ...prev,
@@ -213,12 +182,10 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <CustomInput
           inputType="fullname"
-          placeholder="ФИО клиента *"
+          placeholder="ФИО клиента"
           value={formData.fullName}
           onChange={(e) => handleInputChange('fullName', e.target.value)}
           disabled={mode === 'view'}
-          hasError={!!validationErrors.fullName}
-          errorMessage={validationErrors.fullName}
         />
 
         <PhoneModalInput
