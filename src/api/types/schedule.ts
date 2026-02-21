@@ -12,6 +12,7 @@ export interface SchedulePreviewParams {
     paymentDay: number;
     totalAmount: number;
     nextMonthStart: boolean;
+    turnOfRounding: boolean;
 }
 
 export interface ScheduleParams extends PaginationParams {

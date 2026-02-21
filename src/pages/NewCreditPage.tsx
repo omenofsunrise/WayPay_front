@@ -27,6 +27,7 @@ import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import { formatMoney } from '../utils/formatPrice';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
+const TURN_OF_ROUNDING_KEY = 'turn_of_rounding';
 const NEXT_MONTH_START_STORAGE_KEY = 'credit_next_month_start';
 const IN_DEBT_STORAGE_KEY = 'credit_in_debt';
 const CREDIT_DRAFT_STORAGE_KEY = 'credit_draft';
@@ -80,6 +81,10 @@ const NewCreditPage = () => {
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
   const [months, setMonths] = useState<string>('');
   const [creditName, setCreditName] = useState<string>('');
+  const [turnOfRounding, setTurnOfRounding] = useState<boolean>(() => {
+    const savedturnOfRounding = localStorage.getItem(TURN_OF_ROUNDING_KEY);
+    return savedturnOfRounding === 'true';
+  });
   const [debtComment, setDebtComment] = useState<string>('');
   const [paymentDue, setPaymentDue] = useState<string>('1');
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
@@ -161,6 +166,7 @@ useEffect(() => {
         setCreditName(creditData.name || '');
         setContractDate(creditData.creditDate ? new Date(creditData.creditDate).toISOString().split('T')[0] : null);
         setNextMonthStart(creditData.nextMonthStart);
+        setTurnOfRounding(creditData.turnOfRounding);
         setInDebt(creditData.inDebt || false);
         setDebtComment(creditData.debtComment);
 
@@ -378,7 +384,8 @@ useEffect(() => {
       tabTypeName,
       selectedObjectType,
       selectedTabType,
-      paymentSchedule
+      paymentSchedule,
+      turnOfRounding
     };
     try {
       localStorage.setItem(CREDIT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -404,6 +411,7 @@ useEffect(() => {
     debtComment,
     paymentDue,
     nextMonthStart,
+    turnOfRounding,
     inDebt,
     objectTypeName,
     tabTypeName,
@@ -420,6 +428,11 @@ useEffect(() => {
   const handleNextMonthStartChange = useCallback((checked: boolean) => {
     setNextMonthStart(checked);
     localStorage.setItem(NEXT_MONTH_START_STORAGE_KEY, checked.toString());
+  }, []);
+
+  const handleTurnOfRoundingChange = useCallback((checked: boolean) => {
+    setTurnOfRounding(checked);
+    localStorage.setItem(TURN_OF_ROUNDING_KEY, checked.toString());
   }, []);
 
   const parseAmount = useCallback((formatted: string): number => {
@@ -450,7 +463,6 @@ useEffect(() => {
     setCreditName('');
     setDebtComment('');
     setPaymentDue('1');
-    setNextMonthStart(false);
     setInDebt(false);
     setObjectTypeName('');
     setTabTypeName('');
@@ -620,6 +632,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       termMonths: parseInt(months),
       paymentDay: parseInt(paymentDue),
       nextMonthStart: nextMonthStart,
+      turnOfRounding: turnOfRounding,
       inDebt: inDebt,
       products: products
         .filter(product => product.name.trim() !== '' && product.price > 0)
@@ -700,6 +713,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     months,
     paymentDue,
     nextMonthStart,
+    turnOfRounding,
     products,
     parseAmount,
     createCredit,
@@ -754,6 +768,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         paymentDay: parseInt(paymentDue),
         totalAmount: creditAmount,
         nextMonthStart: nextMonthStart,
+        turnOfRounding: turnOfRounding
       };
 
       console.log('[PaymentSchedule] 📤 Отправка запроса на превью:', previewParams);
@@ -761,7 +776,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     } catch (error) {
       console.error('[PaymentSchedule] ❌ Ошибка при генерации превью:', error);
     }
-  }, [contractDate, months, paymentDue, totalSum, initialPaymentAmount, nextMonthStart, parseAmount, getPreview]);
+  }, [contractDate, months, paymentDue, totalSum, initialPaymentAmount, nextMonthStart, parseAmount, getPreview, turnOfRounding]);
 
   useEffect(() => {
     if (previewData) {
@@ -848,7 +863,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         setPaymentSchedule([]);
       }
     }
-  }, [contractDate, months, paymentDue, totalSum, nextMonthStart, generateSchedulePreview]);
+  }, [contractDate, months, paymentDue, totalSum, nextMonthStart, turnOfRounding, generateSchedulePreview]);
 
   const handlePercentChange = useCallback((e?: ChangeEvent<HTMLInputElement>, value?: string) => {
     if (e != null)
@@ -1257,8 +1272,13 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
           <ModalInfoTitle style={{marginRight: '32px'}}>График выплат</ModalInfoTitle>
           <Checkbox 
             label='Начинать выплаты со следующего месяца'
-            checked={nextMonthStart} 
-            onChange={handleNextMonthStartChange} 
+            checked={nextMonthStart}
+            onChange={handleNextMonthStartChange}
+          />
+          <Checkbox 
+            label='Отключить округление'
+            checked={turnOfRounding} 
+            onChange={handleTurnOfRoundingChange} 
           />
         </CheckboxContainer>
 

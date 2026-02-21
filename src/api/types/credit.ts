@@ -64,6 +64,7 @@ export interface CreateCreditRequest {
   termMonths: number;
   paymentDay: number;
   nextMonthStart: boolean;
+  turnOfRounding: boolean;
   inDebt: boolean;
   debtComment?: string;
   products: Array<{
