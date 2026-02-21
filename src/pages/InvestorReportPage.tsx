@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import ExportButton from "../components/ui/Buttons/ExportButton";
@@ -8,7 +9,7 @@ import type { Investor, InvestorReport } from '../api/types/investor';
 import useInvestor from '../api/hooks/useInvestor';
 import CustomSelect from '../components/ui/fields/CustomSelect';
 import { formatDate } from '../utils/dateFormatter';
-import { formatMoney } from '../utils/formatPrice';
+import { formatMoney, parseMoney } from '../utils/formatPrice';
 import { formatPhoneHref } from '../utils/phoneUtils';
 import { PHONE_LINK_COLOR } from '../components/ui/links/PhoneLink';
 import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
@@ -42,9 +43,18 @@ import useInvestorContribution from '../api/hooks/useInvestorContribution';
 import type { InvestorContribution } from '../api/types/investorContribution';
 import GrayButton from '../components/ui/Buttons/GrayButton';
 import { getInvestorPayouts } from '../api/services/investorPayoutService';
+import EditButton from '../components/ui/Buttons/EditButton';
+import BaseModal from '../components/modal/BASE/modalCRUBase';
+import {
+  InputContainer,
+  InputLabel,
+  InputRow,
+} from "../components/Containers/InputComponents";
+import CustomInput from "../components/ui/fields/CustomInput";
+import CustomCalendar from "../components/ui/fields/CustomCalendar";
 
 const InvestorReportPage = () => {
-    const { getInvestors, currentInvestor, getInvestorById, getInvestorReport } = useInvestor();
+    const { getInvestors, currentInvestor, getInvestorById, getInvestorReport, updateInvestment } = useInvestor();
     const { 
         payouts, 
         isLoading: isPayoutsLoading, 
@@ -77,6 +87,19 @@ const InvestorReportPage = () => {
         getProducts: getContributions,
         makeAction: makeContributionAction
     } = useInvestorContribution();
+
+    // Состояния для редактирования инвестиции
+    const [isEditInvestmentModalOpen, setIsEditInvestmentModalOpen] = useState(false);
+    const [selectedInvestmentForEdit, setSelectedInvestmentForEdit] = useState<{
+        id: number;
+        amount: number;
+        date: string;
+    } | null>(null);
+    const [editInvestmentAmount, setEditInvestmentAmount] = useState("");
+    const [editInvestmentDate, setEditInvestmentDate] = useState(() => {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    });
 
     const [contributionsPage, setContributionsPage] = useState(1);
     const [creditsPage, setCreditsPage] = useState(1);
@@ -126,6 +149,75 @@ const InvestorReportPage = () => {
             fetchReportData();
         }
     }, [selectedInvestorId, creditsPage, payoutsPage, contributionsPage, getContributions]);
+
+    // Обработчик редактирования инвестиции
+    const handleEditInvestment = (contribution: InvestorContribution) => {
+        let dateStr: string;
+        if (contribution.date instanceof Date) {
+            dateStr = contribution.date.toISOString().split('T')[0];
+        } else {
+            dateStr = new Date(contribution.date).toISOString().split('T')[0];
+        }
+        
+        setSelectedInvestmentForEdit({
+            id: contribution.id,
+            amount: contribution.amount,
+            date: dateStr,
+        });
+        setEditInvestmentAmount(contribution.amount.toString());
+        setEditInvestmentDate(dateStr);
+        setIsEditInvestmentModalOpen(true);
+    };
+
+    // Обработчик обновления инвестиции
+    const handleUpdateInvestment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedInvestmentForEdit) return;
+
+        try {
+            const amount = parseMoney(editInvestmentAmount);
+            if (isNaN(amount) || amount <= 0) {
+                alert("Пожалуйста, введите корректную сумму инвестиции");
+                return;
+            }
+
+            const dateObj = new Date(editInvestmentDate);
+            const today = new Date();
+            
+            const isToday = dateObj.toDateString() === today.toDateString();
+            
+            if (isToday) {
+                dateObj.setHours(
+                    today.getHours(),
+                    today.getMinutes(),
+                    today.getSeconds(),
+                    today.getMilliseconds()
+                );
+            } else {
+                dateObj.setHours(12, 0, 0, 0);
+            }
+
+            await updateInvestment(selectedInvestmentForEdit.id, amount, dateObj);
+            
+            setIsEditInvestmentModalOpen(false);
+            setEditInvestmentAmount("");
+            setEditInvestmentDate(today.toISOString().split('T')[0]);
+            setSelectedInvestmentForEdit(null);
+
+            // Перезагружаем данные
+            if (selectedInvestorId) {
+                getContributions(Number(selectedInvestorId), {
+                    page: contributionsPage,
+                    pageSize: pageSize
+                });
+                const updatedReport = await getInvestorReport(Number(selectedInvestorId));
+                setReport(updatedReport);
+            }
+        } catch (err) {
+            console.error("Ошибка при обновлении инвестиции:", err);
+            alert("Произошла ошибка при обновлении инвестиции");
+        }
+    };
 
     const handleInvestorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedInvestorId(e.target.value);
@@ -178,6 +270,7 @@ const InvestorReportPage = () => {
                 >
                     Удалить
                 </GrayButton>
+                <EditButton onClick={() => handleEditInvestment(contribution)} />
             </ActionButtons>
         )
     ]) || [];
@@ -545,14 +638,7 @@ const InvestorReportPage = () => {
         const numericAmount = Number(payoutAmount.replace(/\D/g, ''));
         let maxAllowedAmount = 0;
 
-        // if (currentInvestor.isBlocked) {
         maxAllowedAmount = report.balance;
-        // } 
-        // else {
-        //     maxAllowedAmount = report.isCompany 
-        //         ? report.investorIncome + report.selfIncome 
-        //         : report.investorIncome;
-        // }
 
         if (numericAmount > maxAllowedAmount) {
             alert(`Нельзя выплатить больше чем ${formatMoney(maxAllowedAmount.toString())}`);
@@ -954,7 +1040,7 @@ const InvestorReportPage = () => {
                             columns={[
                                 { name: "Дата", isSortable: true },
                                 { name: "Сумма инвестиции, руб", isSortable: true, align: "left" },
-                                { name: "", align: "center" }
+                                { name: "Действия", align: "center" }
                             ]} 
                             data={contributionsTableData}
                             isLoading={isContributionsLoading}  
@@ -971,6 +1057,47 @@ const InvestorReportPage = () => {
                             />
                         </PaginationLayout>
                     </>
+                )}
+
+                {/* Модальное окно редактирования инвестиции */}
+                {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
+                    <BaseModal
+                        title={`Редактирование инвестиции`}
+                        onClose={() => setIsEditInvestmentModalOpen(false)}
+                        onCancel={() => setIsEditInvestmentModalOpen(false)}
+                        onSave={handleUpdateInvestment}
+                        isSaveDisabled={
+                            !editInvestmentAmount ||
+                            isNaN(parseFloat(editInvestmentAmount)) ||
+                            parseFloat(editInvestmentAmount) <= 0
+                        }
+                        mode="edit"
+                    >
+                        <form onSubmit={handleUpdateInvestment} style={{ padding: "20px" }}>
+                            <InputRow>
+                                <InputLabel>Сумма инвестиции:</InputLabel>
+                                <InputContainer>
+                                    <CustomInput
+                                        name="investmentAmount"
+                                        inputType="rubles"
+                                        placeholder="Сумма"
+                                        value={editInvestmentAmount}
+                                        onChange={(e) => setEditInvestmentAmount(e.target.value)}
+                                    />
+                                </InputContainer>
+                            </InputRow>
+                            <InputRow>
+                                <InputLabel>Дата инвестиции</InputLabel>
+                                <InputContainer>
+                                    <CustomCalendar
+                                        placeholder="Дата инвестиции"
+                                        value={editInvestmentDate}
+                                        onChange={(dateString) => setEditInvestmentDate(dateString)}
+                                    />
+                                </InputContainer>
+                            </InputRow>
+                        </form>
+                    </BaseModal>
                 )}
 
                 <PayoutModal
@@ -1026,6 +1153,7 @@ const InvestorReportPage = () => {
         </PageLayout>
     );
 };
+
 
 const TabsContainer = styled.div`
     margin: 30px 0 20px;
