@@ -32,6 +32,11 @@ class ProductService {
     return response.data;
   }
 
+  async updateInvestment(id: number, amount: number, date: Date) {
+    const response = await apiClient.put(`InvestmentContribution/${id}`, { amount, date });
+    return response.data;
+  }
+
   async autoSelectInvestor(totalProductAmount: number, lastPaymentDay: Date): Promise<AutoSelectInvestorResponse> {
     const response = await apiClient.post<AutoSelectInvestorResponse>(
       '/Investor/auto-select',

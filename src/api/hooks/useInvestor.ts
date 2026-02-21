@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import investorService from '../services/investorService';
 import type { AutoSelectInvestorResponse, Investor, InvestorAgreementResponse, InvestorParams, InvestorReport } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
-import { number } from 'framer-motion';
 
 const useInvestor = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -119,6 +118,18 @@ const useInvestor = () => {
     }
   };
 
+    const updateInvestment = async (id: number, amount: number, date: Date) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await investorService.updateInvestment(id, amount, date);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
   const autoSelectInvestor = async (totalProductAmount: number, lastPaymentDay: Date): Promise<AutoSelectInvestorResponse | null> => {
     setIsLoading(true);
     setError(null);
@@ -221,7 +232,8 @@ const useInvestor = () => {
     checkInvestorCredits,
     blockInvestor,
     clearInvestor,
-    getInvestorAgreement
+    getInvestorAgreement,
+    updateInvestment
   };
 };
 

@@ -62,6 +62,7 @@ const InvestorsPoolPage = () => {
     createInvestor,
     updateInvestor,
     addInvestment,
+    updateInvestment
   } = useInvestor();
 
   const {
@@ -150,6 +151,17 @@ const InvestorsPoolPage = () => {
   const [investmentDate, setInvestmentDate] = useState(() => {
     const today = new Date();
         return today.toISOString().split('T')[0];
+  });
+  const [isEditInvestmentModalOpen, setIsEditInvestmentModalOpen] = useState(false);
+  const [selectedInvestmentForEdit, setSelectedInvestmentForEdit] = useState<{
+    id: number;
+    amount: number;
+    date: string;
+  } | null>(null);
+  const [editInvestmentAmount, setEditInvestmentAmount] = useState("");
+  const [editInvestmentDate, setEditInvestmentDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
   });
   const [selectedInvestorForInvestment, setSelectedInvestorForInvestment] =
     useState<Investor | null>(null);
@@ -298,6 +310,67 @@ const InvestorsPoolPage = () => {
     selectedInvestorForFilter,
     getContributions,
   ]);
+
+  const handleEditInvestment = (contribution: InvestorContribution) => {
+    console.log('Edit clicked:', contribution);
+    
+    let dateStr: string;
+    if (contribution.date instanceof Date) {
+      dateStr = contribution.date.toISOString().split('T')[0];
+    } else {
+      dateStr = new Date(contribution.date).toISOString().split('T')[0];
+    }
+    
+    setSelectedInvestmentForEdit({
+      id: contribution.id,
+      amount: contribution.amount,
+      date: dateStr,
+    });
+    setEditInvestmentAmount(contribution.amount.toString());
+    setEditInvestmentDate(dateStr);
+    setIsEditInvestmentModalOpen(true);
+  };
+
+  const handleUpdateInvestment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvestmentForEdit) return;
+
+    try {
+      const amount = parseMoney(editInvestmentAmount);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Пожалуйста, введите корректную сумму инвестиции");
+        return;
+      }
+
+      const dateObj = new Date(editInvestmentDate);
+      const today = new Date();
+      
+      const isToday = dateObj.toDateString() === today.toDateString();
+      
+      if (isToday) {
+          dateObj.setHours(
+              today.getHours(),
+              today.getMinutes(),
+              today.getSeconds(),
+              today.getMilliseconds()
+          );
+      } else {
+          dateObj.setHours(12, 0, 0, 0);
+      }
+
+      await updateInvestment(selectedInvestmentForEdit.id, amount, dateObj);
+      
+      setIsEditInvestmentModalOpen(false);
+      setEditInvestmentAmount("");
+      setEditInvestmentDate(today.toISOString().split('T')[0]);
+      setSelectedInvestmentForEdit(null);
+
+      await reloadData();
+    } catch (err) {
+      console.error("Ошибка при обновлении инвестиции:", err);
+      alert("Произошла ошибка при обновлении инвестиции");
+    }
+  };
 
   useEffect(() => {
     if (selectedInvestorForCredits && isInvestorCreditsModalOpen) {
@@ -758,7 +831,7 @@ const InvestorsPoolPage = () => {
         contribution.investorNickname || "-",
         formatMoney(contribution.amount.toString()),
         <div style={{ display: "flex", gap: "8px" }}>
-          {/* Кнопки действий для инвестиций */}
+          <EditButton onClick={() => handleEditInvestment(contribution)} />
         </div>,
       ]
     ) || [];
@@ -1851,6 +1924,46 @@ const InvestorsPoolPage = () => {
           </>
         )}
 
+        {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
+          <BaseModal
+            title={`Редактирование инвестиции`}
+            onClose={() => setIsEditInvestmentModalOpen(false)}
+            onCancel={() => setIsEditInvestmentModalOpen(false)}
+            onSave={handleUpdateInvestment}
+            isSaveDisabled={
+              !editInvestmentAmount ||
+              isNaN(parseFloat(editInvestmentAmount)) ||
+              parseFloat(editInvestmentAmount) <= 0
+            }
+            mode="edit"
+          >
+            <form onSubmit={handleUpdateInvestment} style={{ padding: "20px" }}>
+              <InputRow>
+                <InputLabel>Сумма инвестиции:</InputLabel>
+                <InputContainer>
+                  <CustomInput
+                    name="investmentAmount"
+                    inputType="rubles"
+                    placeholder="Сумма"
+                    value={editInvestmentAmount}
+                    onChange={(e) => setEditInvestmentAmount(e.target.value)}
+                  />
+                </InputContainer>
+              </InputRow>
+              <InputRow>
+                <InputLabel>Дата инвестиции</InputLabel>
+                <InputContainer>
+                  <CustomCalendar
+                    placeholder="Дата инвестиции"
+                    value={editInvestmentDate}
+                    onChange={(dateString) => setEditInvestmentDate(dateString)}
+                  />
+                </InputContainer>
+              </InputRow>
+            </form>
+          </BaseModal>
+        )}
+
         {isInvestorCreditsModalOpen && selectedInvestorForCredits && (
           <BaseModal
             title={`Договоры инвестора ${selectedInvestorForCredits?.fullName}`}
@@ -2035,7 +2148,6 @@ const InvestorsPoolPage = () => {
   );
 };
 
-// Стили для модального окна кредитов инвестора
 const InvestorCreditsContainer = styled.div`
   max-height: 70vh;
   overflow-y: auto;
