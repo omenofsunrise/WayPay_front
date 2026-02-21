@@ -120,7 +120,6 @@ const InvestorPage = () => {
 
             await addInvestment(selectedInvestor.id, amount, dateObj);
 
-
             setIsInvestmentModalOpen(false);
             setInvestmentAmount('');
             setInvestmentDate(today.toISOString().split('T')[0]);

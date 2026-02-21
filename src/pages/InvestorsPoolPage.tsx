@@ -52,6 +52,7 @@ import CreatePoolModal from "../components/modal/CreatePoolModal";
 import useInvestorContribution from "../api/hooks/useInvestorContribution";
 import type { InvestorContribution } from "../api/types/investorContribution";
 import InvestorSelect from "../components/ui/fields/InvestorSelect";
+import CustomCalendar from "../components/ui/fields/CustomCalendar";
 
 const InvestorsPoolPage = () => {
   const {
@@ -146,6 +147,10 @@ const InvestorsPoolPage = () => {
     useState<Investor | null>(null);
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [investmentAmount, setInvestmentAmount] = useState("");
+  const [investmentDate, setInvestmentDate] = useState(() => {
+    const today = new Date();
+        return today.toISOString().split('T')[0];
+  });
   const [selectedInvestorForInvestment, setSelectedInvestorForInvestment] =
     useState<Investor | null>(null);
   const [payoutSource, setPayoutSource] = useState<PayoutSource>("income");
@@ -580,9 +585,29 @@ const InvestorsPoolPage = () => {
         return;
       }
 
-      await addInvestment(selectedInvestorForInvestment.id, amount);
+      const dateObj = new Date(investmentDate);
+      const today = new Date();
+      
+      const isToday = dateObj.toDateString() === today.toDateString();
+      
+      if (isToday) {
+          dateObj.setHours(
+              today.getHours(),
+              today.getMinutes(),
+              today.getSeconds(),
+              today.getMilliseconds()
+          );
+          console.log('Сегодняшняя дата, время:', dateObj.toLocaleTimeString());
+      } else {
+          dateObj.setHours(12, 0, 0, 0);
+          console.log('Не сегодняшняя дата, установлено 12:00');
+      }
+
+      await addInvestment(selectedInvestorForInvestment.id, amount, dateObj);
+      
       setIsInvestmentModalOpen(false);
       setInvestmentAmount("");
+      setInvestmentDate(today.toISOString().split('T')[0]);
       setSelectedInvestorForInvestment(null);
 
       await reloadData();
@@ -1989,6 +2014,16 @@ const InvestorsPoolPage = () => {
                     placeholder="Сумма"
                     value={investmentAmount}
                     onChange={(e) => setInvestmentAmount(e.target.value)}
+                  />
+                </InputContainer>
+              </InputRow>
+              <InputRow>
+                <InputLabel>Дата инвестиции</InputLabel>
+                <InputContainer>
+                  <CustomCalendar
+                      placeholder="Дата инвестиции"
+                      value={investmentDate ? new Date(investmentDate).toISOString().split('T')[0] : ''}
+                      onChange={(dateString) => setInvestmentDate(dateString)}
                   />
                 </InputContainer>
               </InputRow>
