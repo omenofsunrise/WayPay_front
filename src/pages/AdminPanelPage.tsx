@@ -158,7 +158,8 @@ const AdminPanelPage = () => {
   } = useCompany();
 
   const {
-    updateDirectorFullname
+    updateDirectorFullname,
+    setSelfCompany
   } = useEmployee();
 
   const {
@@ -205,6 +206,10 @@ const AdminPanelPage = () => {
     setEditingCompanyId(companyId);
     setDirectorValue(currentDirector);
     setIsDirectorModalOpen(true);
+  };
+
+  const handleEnterCopany = (companyId: number) => {
+    setSelfCompany(companyId);
   };
 
   const handleSavePhone = async (e: React.FormEvent) => {
@@ -449,6 +454,11 @@ const AdminPanelPage = () => {
 
   const tableActions = hasRole('суперадмин') 
     ? [
+        {
+          label: 'Зайти в компанию',
+          action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
+          color: '#EF4444'
+        },
         {
           label: 'Изм. директора',
           action: (rowData: any[]) => handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),

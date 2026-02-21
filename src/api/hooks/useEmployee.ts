@@ -505,6 +505,19 @@ export function useEmployee() {
     }
   }, [fetchAuthInfo]);
 
+  const setSelfCompany = useCallback(async (companyId: number) => {
+    try {
+      await EmployeeService.setSelfCompany(companyId);
+      await fetchAuthInfo();
+      await fetchAuthInfo();
+    } catch (err) {
+      setRevokeAllError(err instanceof Error ? err.message : 'Unknown error');
+      throw err;
+    } finally {
+      setRevokeAllLoading(false);
+    }
+  }, [fetchAuthInfo]);
+
   useEffect(() => {
     fetchAuthInfo();
   }, [fetchAuthInfo]);
@@ -564,6 +577,7 @@ export function useEmployee() {
     revokeAllSessions,
     revokeAllLoading,
     revokeAllError,
-    updateDirectorFullname
+    updateDirectorFullname,
+    setSelfCompany
   };
 }

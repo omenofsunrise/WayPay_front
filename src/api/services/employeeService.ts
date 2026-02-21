@@ -312,6 +312,14 @@ static async revokeSession(tokenId?: number): Promise<void> {
       throw error;
     }
   }
+
+  static async setSelfCompany(companyId: number): Promise<void> {
+    try {
+      await apiClient.put(`/Employee/enter-company/${companyId}`);
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default EmployeeService;
