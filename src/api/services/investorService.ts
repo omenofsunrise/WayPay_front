@@ -27,8 +27,8 @@ class ProductService {
     await apiClient.delete(`/Investor/${id}`);
   }
 
-  async addInvestment(id: number, amount: number): Promise<Investor> {
-    const response = await apiClient.put<Investor>(`Investor/${id}/add-investment`, { amount });
+  async addInvestment(id: number, amount: number, date: Date): Promise<Investor> {
+    const response = await apiClient.put<Investor>(`Investor/${id}/add-investment`, { amount, date });
     return response.data;
   }
 

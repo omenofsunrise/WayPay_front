@@ -96,11 +96,11 @@ const useInvestor = () => {
     }
   }
 
-  const addInvestment = async (id: number, amount: number): Promise<Investor | null> => {
+  const addInvestment = async (id: number, amount: number, date: Date): Promise<Investor | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedInvestor = await investorService.addInvestment(id, amount);
+      const updatedInvestor = await investorService.addInvestment(id, amount, date);
       if (data) {
         const updatedItems = data.items.map(item => 
           item.id === id ? updatedInvestor : item

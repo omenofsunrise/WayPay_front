@@ -25,6 +25,7 @@ import PhoneLink from '../components/ui/links/PhoneLink';
 import PrintOptionModal from '../components/modal/PrintOptionModal';
 import PrintIcon from '../assets/ui/print.svg?react';
 import InvestorDocxGenerator from '../utils/doxcUtils/investorDocxGenerator';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -73,7 +74,11 @@ const InvestorPage = () => {
     
     const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
     const [investmentAmount, setInvestmentAmount] = useState('');
-
+    const [investmentDate, setInvestmentDate] = useState(() => {
+    const today = new Date();
+        return today.toISOString().split('T')[0];
+    });
+    
     const handleAddInvestment = (rowData: any[]) => {
         if (!canEdit) return;
         
@@ -93,9 +98,32 @@ const InvestorPage = () => {
                 return;
             }
 
-            await addInvestment(selectedInvestor.id, amount);
+            // Создаем объект даты из выбранной даты
+            const dateObj = new Date(investmentDate);
+            const today = new Date();
+            
+            // Проверяем, является ли выбранная дата сегодняшней
+            const isToday = dateObj.toDateString() === today.toDateString();
+            
+            if (isToday) {
+                dateObj.setHours(
+                    today.getHours(),
+                    today.getMinutes(),
+                    today.getSeconds(),
+                    today.getMilliseconds()
+                );
+                console.log('Сегодняшняя дата, время:', dateObj.toLocaleTimeString());
+            } else {
+                dateObj.setHours(12, 0, 0, 0);
+                console.log('Не сегодняшняя дата, установлено 12:00');
+            }
+
+            await addInvestment(selectedInvestor.id, amount, dateObj);
+
+
             setIsInvestmentModalOpen(false);
             setInvestmentAmount('');
+            setInvestmentDate(today.toISOString().split('T')[0]);
             setSelectedInvestor(null); 
             await loadInvestors();
         } catch (err) {
@@ -599,6 +627,16 @@ const InvestorPage = () => {
                                     placeholder="Сумма"
                                     value={investmentAmount}
                                     onChange={(e) => setInvestmentAmount(e.target.value)}
+                                />
+                            </InputContainer>
+                        </InputRow>
+                        <InputRow>
+                            <InputLabel>Дата инвестиции:</InputLabel>
+                            <InputContainer>
+                                <CustomCalendar
+                                    placeholder="Дата инвестиции"
+                                    value={investmentDate ? new Date(investmentDate).toISOString().split('T')[0] : ''}
+                                    onChange={(dateString) => setInvestmentDate(dateString)}
                                 />
                             </InputContainer>
                         </InputRow>
