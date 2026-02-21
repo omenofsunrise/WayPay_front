@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { formatPhoneHref } from "../../utils/phoneUtils";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../../components/ui/fields/CustomInput";
@@ -43,7 +43,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
   const pageSize = 10;
-  const { authInfo, hasRole } = useAuth();
+  const { authInfo, hasRole, isSuperAdminIdUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit" | "view">(
     "create"
@@ -139,6 +139,10 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   useEffect(() => {
     loadEmployees();
   }, [currentPage, nameFilter, roleFilter, sortConfig, loadEmployees]);
+
+  const filteredEmployees = useMemo(() => {
+    return localEmployees.filter(emp => !isSuperAdminIdUser(emp.id));
+  }, [localEmployees, isSuperAdminIdUser]);
 
   const handleFilterChange = (value: string) => {
     setNameFilter(value);
@@ -603,7 +607,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     return actions;
   };
 
-  const tableData = localEmployees.map((employee, index) => [
+  const tableData = filteredEmployees.map((employee, index) => [
     employee.id.toString(),
     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       <Avatar
@@ -688,7 +692,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   ]);
 
   const rowStyles: { [rowIndex: number]: RowStyle } = {};
-  localEmployees.forEach((employee, index) => {
+  filteredEmployees.forEach((employee, index) => {
     if (isEmployeeBlocked(employee)) {
       rowStyles[index] = {
         backgroundColor: "rgba(254, 202, 202, 0.3)",

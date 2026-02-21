@@ -37,14 +37,8 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
         updateSelfRole
     } = useEmployee();
     const { hasRole, isSuperAdminCompany, isSuperAdminId } = useAuth();
-    const [setIsUpdatingPermissions] = useState(false);
     const [isUpdatingRole, setIsUpdatingRole] = useState(false);
     const employeePermissions = useMemo(() => [
-        // {
-        //     code: 'CREATE_CREDITS',
-        //     label: 'Создание договоров',
-        //     roles: ['сотрудник', 'бухгалтер']
-        // },
         {
             code: 'VIEW_ALL_CREDITS',
             label: 'Смотреть чужие договоры',
