@@ -143,6 +143,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   const filteredEmployees = useMemo(() => {
     return localEmployees.filter(emp => !isSuperAdminIdUser(emp.id));
   }, [localEmployees, isSuperAdminIdUser]);
+  const filteredOutCount = localEmployees.length - filteredEmployees.length;
 
   const handleFilterChange = (value: string) => {
     setNameFilter(value);
@@ -755,10 +756,10 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           />
 
           <PaginationLayout>
-            <CountInfoTitle total={totalCount} />
+            <CountInfoTitle total={totalCount- filteredOutCount} />
 
             <Pagination
-              total={totalCount}
+              total={totalCount - filteredOutCount}
               current={currentPage}
               onChange={setCurrentPage}
               itemsPerPage={pageSize}
