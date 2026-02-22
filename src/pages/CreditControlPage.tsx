@@ -782,14 +782,6 @@ const CreditControlPage = () => {
           <CountInfoTitle 
             total={creditsData?.totalCount || 0} 
           />
-          <ResetFiltersLink
-            $primaryColor={colors.primary}
-            type="button"
-            onClick={resetFilters}
-            disabled={!hasActiveFilters}
-          >
-            Сбросить фильтры
-          </ResetFiltersLink>
         </TotalControls>
       </SecondRaw>
       {isLoading && <div>Загрузка...</div>}
