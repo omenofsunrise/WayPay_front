@@ -40,6 +40,7 @@ import DeleteButton from '../components/ui/Buttons/DeleteButton';
 import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
 import type { ContextMenuItem } from '../components/modal/ContextMenu';
 import { createWhatsAppMessageWithoutPhone, sendWhatsAppMessageToPhone } from '../utils/sendWhatsAppMessage';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 
 // Интерфейс для модалки "Поделиться"
 interface ShareOptionModalProps {
@@ -1134,17 +1135,18 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       </TitleField>
 
       <FilterField>
-        <InputWrapper>
+        <ContractNumberWrapper>
           <CustomInput
             inputType="text"
-            placeholder="№ Договора"
+            placeholder="№"
             value={contractNumber}
+            style={{ minWidth: "10px", maxWidth: "60px", padding: "5px"}}
             onChange={(e) => {
               setContractNumber(e.target.value);
               setCurrentPage(1);
             }}
           />
-        </InputWrapper>
+        </ContractNumberWrapper>
         
         <InputWrapper>
           <CustomInput 
@@ -1191,18 +1193,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
             hideClearButton={false}
           />
         </InputWrapper>
-
-        <ResetFiltersButton
-          type="button"
-          onClick={resetFilters}
-          disabled={!hasActiveFilters}
-        >
-          Сбросить фильтры
-        </ResetFiltersButton>
         
-      </FilterField>
-
-      <SecondRaw style={{ color: "white", gap: "15px" }}>
         <InputWrapper>
           <CustomCalendar 
             prefix="от:"
@@ -1250,7 +1241,16 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
             }}
           />
         </InputWrapper>
-      </SecondRaw>
+
+        <DarkCyanButton
+          style={{ }}
+          type="button"
+          onClick={resetFilters}
+          disabled={!hasActiveFilters}
+        >
+          Сброс
+        </DarkCyanButton>
+      </FilterField>
 
       <SecondRaw style={{ color: "white" }}>
         <Tabs 
@@ -1272,14 +1272,6 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
           <CountInfoTitle 
             total={creditsData?.totalCount || 0} 
           />
-          <ResetFiltersLink
-            $primaryColor={colors.primary}
-            type="button"
-            onClick={resetFilters}
-            disabled={!hasActiveFilters}
-          >
-            Сбросить фильтры
-          </ResetFiltersLink>
         </TotalControls>
         
         <SelectedCount />
@@ -1407,31 +1399,15 @@ const FilterField = styled.div`
   position: relative;
 `;
 
-const ResetFiltersButton = styled.button`
-  align-self: center;
-  height: 40px;
-  padding: 0 14px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  color: #111827;
-  border-radius: 10px;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    background: #f3f4f6;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-`;
-
 const InputWrapper = styled.div`
   flex: 1;  
   min-width: 0;
+  position: relative;
+`;
+
+const ContractNumberWrapper = styled.div`
+  width: 60px;  /* Фиксированная ширина */
+  min-width: 60px;
   position: relative;
 `;
 
@@ -1449,26 +1425,6 @@ const TotalControls = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-`;
-
-const ResetFiltersLink = styled.button<{ $primaryColor: string }>`
-  background: none;
-  border: 0;
-  padding: 0;
-  color: ${props => props.$primaryColor};
-  font-size: 13px;
-  text-decoration: underline;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    opacity: 0.85;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
 `;
 
 const StarIcon = styled.div`
