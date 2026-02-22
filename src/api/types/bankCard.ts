@@ -5,11 +5,14 @@ export interface BankCard {
   details: string;
   balance: number;
   paymentsAmount: number;
+  limit?: number;
+  usageCount?: number;
 }
 
 export interface BankCardRequest {
   phone?: string;
   details?: string;
+  limit?: number;
 }
 
 export interface BankCardFilters {

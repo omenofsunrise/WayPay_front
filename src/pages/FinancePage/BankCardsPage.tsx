@@ -19,13 +19,10 @@ import useBankCards from '../../api/hooks/useBankCard';
 import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import { formatDate } from '../../utils/dateFormatter';
 import Tabs from '../../components/ui/fields/Tabs';
+import { number } from 'framer-motion';
 
 const BankCardsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState<{
-    key: number | null;
-    direction: 'asc' | 'desc';
-  }>({ key: null, direction: 'asc' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>('create');
   const [selectedCard, setSelectedCard] = useState<BankCard | null>(null);
@@ -65,7 +62,7 @@ const BankCardsPage = () => {
     };
 
     await getAll(filters);
-  }, [currentPage, sortConfig, getAll]);
+  }, [currentPage, getAll]);
 
   const loadWithdraws = useCallback(async () => {
     setIsWithdrawsLoading(true);
@@ -144,6 +141,8 @@ const BankCardsPage = () => {
       card.details || '',
       formatMoney(card.paymentsAmount.toString()),
       formatMoney(card.balance.toString()),
+      formatMoney(card.limit === null ? '0' : card.limit.toString()),
+      card.usageCount === null ? '0' : card.usageCount.toString(),
     ]);
   };
 
@@ -236,7 +235,8 @@ const BankCardsPage = () => {
     
     const formData = new FormData(e.target as HTMLFormElement);
     const cardData: BankCardRequest = {
-      details: formData.get('details') as string
+      details: formData.get('details') as string,
+      limit: number.parse(formData.get('limit') as string)
     };
 
     try {
@@ -331,9 +331,10 @@ const BankCardsPage = () => {
               { name: "Реквизиты", isSortable: true, align: "left" },
               { name: "Всего выплат", isSortable: true, align: "right" },
               { name: "Баланс", isSortable: true, align: "right" },
+              { name: "Лимит", align: "right" },
+              { name: "Отправлено раз", align: "right" },
             ]} 
             data={tableData}
-            sortConfig={sortConfig}
             contextMenuActions={cardsTableActions}
           />
           
@@ -443,9 +444,24 @@ const BankCardsPage = () => {
           <FormField>
             <CustomInput
               inputType="text"
+              placeholder='Реквизиты'
               name="details"
               defaultValue={selectedCard?.details || ''}
               required
+            />
+          </FormField>
+          <FormField>
+            <CustomInput
+              type="text"
+              inputMode="numeric"
+              pattern="\d*"
+              name="limit"
+              placeholder='Лимит'
+              defaultValue={selectedCard?.limit || ''}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                e.target.value = value;
+              }}
             />
           </FormField>
         </BaseModal>
