@@ -39,8 +39,9 @@ import useInvestorPool from "../api/hooks/useInvestorPool";
 import EditButton from "../components/ui/Buttons/EditButton";
 import AddButton from "../components/ui/Buttons/AddButton";
 import DeleteButton from "../components/ui/Buttons/DeleteButton";
-import type { InvestorPool, Reinvestment } from "../api/types/investorPool";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
+import GrayButton from "../components/ui/Buttons/GrayButton";
+import type { InvestorPool, Reinvestment } from "../api/types/investorPool";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import {
   InputContainer,
@@ -71,6 +72,7 @@ const InvestorsPoolPage = () => {
     fetchPoolPayouts,
     addPayout,
     removePayout,
+    makePayoutAction
   } = useInvestorPayout();
 
   const {
@@ -311,9 +313,35 @@ const InvestorsPoolPage = () => {
     getContributions,
   ]);
 
+  const handleContributionAction = async (id: number, action: 'confirm' | 'reject') => {
+    try {
+      await makeContributionAction(id, action);
+      if (selectedPoolId) {
+        if (selectedInvestorForFilter?.id) {
+          // Если есть фильтр по инвестору, обновляем отфильтрованные данные
+          const contributions = await getContributions(
+            Number(selectedInvestorForFilter.id),
+            Number(selectedPoolId),
+            {
+              page: contributionsPage,
+              pageSize: pageSize,
+            }
+          );
+          setFilteredContributions(contributions);
+        } else {
+          // Иначе обновляем общие данные
+          getContributions(undefined, Number(selectedPoolId), {
+            page: contributionsPage,
+            pageSize: pageSize,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Contribution action error:', error);
+    }
+  };
+
   const handleEditInvestment = (contribution: InvestorContribution) => {
-    console.log('Edit clicked:', contribution);
-    
     let dateStr: string;
     if (contribution.date instanceof Date) {
       dateStr = contribution.date.toISOString().split('T')[0];
@@ -810,31 +838,32 @@ const InvestorsPoolPage = () => {
     }
   };
 
-  const handleContributionAction = async (id: number, action: string) => {
-    try {
-      await makeContributionAction(id, action);
-      if (selectedPoolId) {
-        getContributions(undefined, Number(selectedPoolId), {
-          page: contributionsPage,
-          pageSize: pageSize,
-        });
-      }
-    } catch (error) {
-      console.error("Error performing contribution action:", error);
-    }
-  };
-
-  const contributionsTableData =
-    (filteredContributions?.items || contributionsData?.items || []).map(
-      (contribution: InvestorContribution) => [
-        formatDate(contribution.date),
-        contribution.investorNickname || "-",
-        formatMoney(contribution.amount.toString()),
-        <div style={{ display: "flex", gap: "8px" }}>
+  const contributionsTableData = (filteredContributions?.items || contributionsData?.items || []).map(
+    (contribution: InvestorContribution) => [
+      formatDate(contribution.date.toString()),
+      contribution.investorNickname || "-",
+      formatMoney(contribution.amount.toString()),
+      contribution.confirmed ? (
+        <ConfirmedBadge>Подтверждено</ConfirmedBadge>
+      ) : (
+        <ActionButtons>
+          <DarkCyanButton
+            onClick={() => handleContributionAction(contribution.id, 'confirm')}
+            disabled={isContributionsLoading}
+          >
+            Подтвердить
+          </DarkCyanButton>
+          <GrayButton
+            onClick={() => handleContributionAction(contribution.id, 'reject')}
+            disabled={isContributionsLoading}
+          >
+            Удалить
+          </GrayButton>
           <EditButton onClick={() => handleEditInvestment(contribution)} />
-        </div>,
-      ]
-    ) || [];
+        </ActionButtons>
+      ),
+    ]
+  ) || [];
 
   const handleCreatePool = async () => {
     if (!newPoolName.trim()) return;
@@ -1897,7 +1926,7 @@ const InvestorsPoolPage = () => {
                 { name: "Дата", isSortable: true },
                 { name: "Инвестор", align: "left" },
                 { name: "Сумма", align: "right" },
-                { name: "", align: "center" },
+                { name: "Действия", align: "center" }
               ]}
               data={contributionsTableData}
               isLoading={isContributionsLoading}
@@ -2342,6 +2371,20 @@ const ReportValue = styled.span`
   margin: 90px 0 0;
   width: 100%;
   padding-left: 25px;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const ConfirmedBadge = styled.span`
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
 `;
 
 const ShareIcon = () => (
