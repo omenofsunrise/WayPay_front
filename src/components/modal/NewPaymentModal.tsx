@@ -186,7 +186,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
           ? { ...paymentData, bankCardId: selectedBankCardId }
           : paymentData
       );
-
       if (printReceipt && paymentId && onPrintReceipt) {
         await onPrintReceipt(paymentId);
       }

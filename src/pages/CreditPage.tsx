@@ -711,6 +711,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
 
   const handlePrintReceipt = async (paymentId: number) => {
     try {
+      console.log('ПОЧАЛОСЬ');
       await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
       console.log('Чек успешно сгенерирован');
     } catch (error) {
@@ -851,7 +852,8 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       
       await loadCredits();
       setIsPaymentModalOpen(false);
-      return result.id;
+      console.log(result);
+      return result;
     } catch (error) {
       console.error('Ошибка при сохранении платежа:', error);
     }
@@ -1399,6 +1401,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
         currentDebt={selectedCreditForPrint?.rest || 0}
         currentMonthDebt={selectedCreditForPrint?.currentMonthDebt || 0}
         onPrintReceipt={handlePrintReceipt}
+        clientId={selectedCreditForPrint?.clientId}
       />
 
       <ViewCreditModal
