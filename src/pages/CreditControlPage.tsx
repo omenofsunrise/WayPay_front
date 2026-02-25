@@ -27,6 +27,9 @@ import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import CustomSelect from '../components/ui/fields/CustomSelect';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
+import paymentService from '../api/services/paymentService';
+import type { PaymentTab } from '../api/types/payment';
+import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -346,6 +349,28 @@ const CreditControlPage = () => {
     }
   };
 
+  const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
+      try {
+          const result = await paymentService.getPaymentTab(paymentId);
+          return result;
+      } catch (err) {
+          console.error('Ошибка при получении данных для документа:', err);
+          return null;
+      }
+  }, []);
+
+  const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
+
+  const handlePrintReceipt = async (paymentId: number) => {
+      try {
+          await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
+          console.log('Чек успешно сгенерирован');
+      } catch (error) {
+          console.error('Ошибка при печати чека:', error);
+          alert('Платёж создан, но произошла ошибка при печати чека');
+      }
+  };
+
   const handleSavePayment = async (paymentData: {
     paymentDate: string;
     principalAmount: number;
@@ -361,10 +386,11 @@ const CreditControlPage = () => {
         type: paymentData.paymentMethod
       };
       
-      await createPayment(paymentRequest);
+      const result = await createPayment(paymentRequest);
       
       await loadCredits();
       setIsPaymentModalOpen(false);
+      return result;
     } catch (error) {
       console.error('Ошибка при сохранении платежа:', error);
     }
@@ -914,6 +940,8 @@ const CreditControlPage = () => {
         clientPhone={selectedCredit?.clientPhone || ''}
         currentDebt={selectedCredit?.rest || 0}
         currentMonthDebt={selectedCredit?.currentMonthDebt || 0}
+        onPrintReceipt={handlePrintReceipt} 
+        clientId={selectedCredit?.clientId}
       />
 
       <ViewCreditModal

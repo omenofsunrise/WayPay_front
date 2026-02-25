@@ -852,7 +852,6 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       
       await loadCredits();
       setIsPaymentModalOpen(false);
-      console.log(result);
       return result;
     } catch (error) {
       console.error('Ошибка при сохранении платежа:', error);
