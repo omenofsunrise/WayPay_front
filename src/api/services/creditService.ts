@@ -62,6 +62,11 @@ class CreditService {
     await apiClient.patch(`/Credit/approve/${id}`);
   }
 
+  async acceptCredits(params?: CreditParams) {
+    await apiClient.patch('/Credit/confirm/list', params);
+    return;
+  }
+
   async setCreditType(creditId: number, typeId?: number) {
     if (typeId === null)
       await apiClient.patch(`/Credit/set-category/${creditId}/`);

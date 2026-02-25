@@ -26,6 +26,7 @@ import { useAuth } from '../сontext/AuthContext';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import CustomSelect from '../components/ui/fields/CustomSelect';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -81,9 +82,11 @@ const CreditControlPage = () => {
   };
   const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, acceptCredit } = useCredit();
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, acceptCredit, acceptCredits } = useCredit();
   const navigate = useNavigate();
   const [approvalStatus, setApprovalStatus] = useState<string>(() => savedFilters?.approvalStatus ?? '');
+  const [isConfirmingAll, setIsConfirmingAll] = useState(false);
+  
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
                                 hasPermission('VIEW_ALL_CREDITS', true);
@@ -533,6 +536,69 @@ const CreditControlPage = () => {
     return formattedData;
   };
 
+    const handleConfirmAllCredits = useCallback(async () => {
+    // Подтверждение у пользователя
+    const confirmMessage = `Вы действительно хотите подтвердить ВСЕ договоры, соответствующие текущим фильтрам?
+
+Это действие нельзя отменить. Продолжить?`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsConfirmingAll(true);
+    
+    try {
+      // Формируем параметры фильтрации для подтверждения
+      const params = {
+        name: contractNumber || undefined,
+        clientFullname: clientFullName || undefined,
+        investorNickname: selectedInvestmentSource?.type === 'pool' ? undefined : (investorName || undefined),
+        investorPoolId: selectedInvestmentSource?.type === 'pool' ? selectedInvestmentSource.id : undefined,
+        dateFrom: fromDate ? new Date(fromDate) : undefined,
+        dateTo: toDate ? new Date(toDate) : undefined,
+        createdAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
+        createdTo: toCreationDate ? new Date(toCreationDate) : undefined,
+        accepted: approvalStatus 
+          ? (approvalStatus === 'confirmed' ? true : false)
+          : undefined,
+        rublesIncomeFrom: rublesIncomeFrom && !isNaN(Number(rublesIncomeFrom))
+          ? Number(rublesIncomeFrom)
+          : undefined,
+        rublesIncomeTo: rublesIncomeTo && !isNaN(Number(rublesIncomeTo))
+          ? Number(rublesIncomeTo)
+          : undefined,
+        percentsIncomeFrom: percentsIncomeFrom && !isNaN(Number(percentsIncomeFrom))
+          ? Number(percentsIncomeFrom)
+          : undefined,
+        percentsIncomeTo: percentsIncomeTo && !isNaN(Number(percentsIncomeTo))
+          ? Number(percentsIncomeTo)
+          : undefined,
+        creditTypeId: creditTypeId || undefined,
+        ...filters
+      };
+
+      await acceptCredits(params);
+      
+      // Показываем сообщение об успехе
+      alert('Все договоры по указанным фильтрам успешно подтверждены');
+      
+      // Обновляем список договоров
+      await loadCredits();
+      
+    } catch (error) {
+      console.error('Ошибка при массовом подтверждении договоров:', error);
+      alert('Произошла ошибка при подтверждении договоров. Пожалуйста, попробуйте еще раз.');
+    } finally {
+      setIsConfirmingAll(false);
+    }
+  }, [
+    acceptCredits, contractNumber, clientFullName, investorName, 
+    objectType, fromDate, toDate, fromCreationDate, toCreationDate, 
+    rublesIncomeFrom, rublesIncomeTo, percentsIncomeFrom, percentsIncomeTo,
+    activeTab, filters, selectedInvestmentSource, creditTypeId, approvalStatus, loadCredits
+  ]);
+
     const rowStyles = useMemo(() => {
       if (!creditsData?.items) return {};
   
@@ -582,16 +648,31 @@ const CreditControlPage = () => {
     <PageLayout>
       <TitleField>
         <CustomTitle>Контроль договоров</CustomTitle>
-          {/* <ExportButton icon={<PrintIcon />} onClick={handlePrint}>
-            Печать
-          </ExportButton> */}
-          <ExportButton 
-            onClick={handleExport}
-            isExporting={isExporting}
-            exportProgress={exportProgress}
+        
+        {/* Новая кнопка для подтверждения всех договоров по фильтрам */}
+        {hasPermission('MANAGE_ACCOUNTING', true) && (
+          <DarkCyanButton 
+            onClick={handleConfirmAllCredits}
+            disabled={isConfirmingAll}
           >
-            Экспорт
-          </ExportButton>
+            {isConfirmingAll ? (
+              <>
+                <SpinnerIcon />
+                Подтверждение...
+              </>
+            ) : (
+              'Подтвердить все по фильтрам'
+            )}
+          </DarkCyanButton>
+        )}
+        
+        <ExportButton 
+          onClick={handleExport}
+          isExporting={isExporting}
+          exportProgress={exportProgress}
+        >
+          Экспорт
+        </ExportButton>
       </TitleField>
 
       <FilterField>
@@ -618,7 +699,6 @@ const CreditControlPage = () => {
             }}
           />
         </InputWrapper>
-
 
         <InputWrapper>
           <ObjectTypeSelect 
@@ -962,6 +1042,48 @@ const IncomeContainer = styled.div`
   max-width: 600px;
   align-items: center;
   flex-grow: 1;
+`;
+
+const ConfirmAllButton = styled.button<{ $isConfirming?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background-color: ${({ $isConfirming }) => $isConfirming ? '#f0f0f0' : '#28a745'};
+  color: ${({ $isConfirming }) => $isConfirming ? '#666' : 'white'};
+  border: 1px solid ${({ $isConfirming }) => $isConfirming ? '#ddd' : '#218838'};
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
+  transition: all 0.2s;
+  white-space: nowrap;
+  
+  &:hover:not(:disabled) {
+    background-color: #218838;
+    border-color: #1e7e34;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const SpinnerIcon = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 `;
 
 export default CreditControlPage;

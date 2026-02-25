@@ -140,6 +140,19 @@ const useCredit = () => {
     }
   }, []);
 
+  const acceptCredits = useCallback(async (params?: CreditParams) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await creditService.acceptCredits(params);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
   const setCreditType = useCallback(async (creditId: number, typeId?: number) => {
     try {
       await creditService.setCreditType(creditId, typeId);
@@ -222,7 +235,8 @@ const useCredit = () => {
     getCreditListByClient,
     getCreditById,
     setCreditType,
-    acceptCredit
+    acceptCredit,
+    acceptCredits
   };
 };
 

@@ -188,7 +188,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
       );
 
       if (printReceipt && paymentId && onPrintReceipt) {
-        onPrintReceipt(paymentId);
+        await onPrintReceipt(paymentId);
       }
 
       onClose();

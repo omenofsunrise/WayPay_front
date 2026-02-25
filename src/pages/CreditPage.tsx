@@ -40,6 +40,7 @@ import DeleteButton from '../components/ui/Buttons/DeleteButton';
 import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
 import type { ContextMenuItem } from '../components/modal/ContextMenu';
 import { createWhatsAppMessageWithoutPhone, sendWhatsAppMessageToPhone } from '../utils/sendWhatsAppMessage';
+import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 
 // Интерфейс для модалки "Поделиться"
 interface ShareOptionModalProps {
@@ -144,6 +145,7 @@ const CreditPage = () => {
   const [fromCreationDate, setFromCreationDate] = useState<string>(() => savedFilters?.fromCreationDate ?? '');
   const [toCreationDate, setToCreationDate] = useState<string>(() => savedFilters?.toCreationDate ?? '');
   const [objectType, setObjectType] = useState<string>(() => savedFilters?.objectType ?? '');
+  const [isConfirmingAll, setIsConfirmingAll] = useState(false);
   const [creditTypeId, setCreditTypeId] = useState<number | null>(() => (typeof savedFilters?.creditTypeId === 'number' ? savedFilters.creditTypeId : null));
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
@@ -173,7 +175,7 @@ const CreditPage = () => {
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource, acceptCredit } = useCredit();
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource, acceptCredit, acceptCredits } = useCredit();
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
@@ -855,6 +857,53 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     }
   };
 
+  const handleConfirmAllCredits = useCallback(async () => {
+
+  // Подтверждение у пользователя
+  const confirmMessage = `Вы действительно хотите подтвердить ВСЕ договоры, соответствующие текущим фильтрам?
+
+Это действие нельзя отменить. Продолжить?`;
+
+  if (!window.confirm(confirmMessage)) {
+    return;
+  }
+
+  setIsConfirmingAll(true);
+  
+  try {
+    // Формируем параметры фильтрации для подтверждения
+    const params = {
+      name: contractNumber || undefined,
+      clientFullname: clientFullName || undefined,
+      includeAllStates: includeAllStates ? true : undefined,
+      investorNickname: selectedInvestmentSource?.type === 'pool' ? undefined : (investorName || undefined),
+      investorPoolId: selectedInvestmentSource?.type === 'pool' ? selectedInvestmentSource.id : undefined,
+      dateFrom: fromDate ? new Date(fromDate) : undefined,
+      dateTo: toDate ? new Date(toDate) : undefined,
+      CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
+      CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
+      creditTypeId: creditTypeId || undefined,
+      ...filters
+    };
+
+    await acceptCredits(params);
+    
+    // Показываем сообщение об успехе
+    alert('Все договоры по указанным фильтрам успешно подтверждены');
+    
+    // Обновляем список договоров
+    await loadCredits();
+    
+  } catch (error) {
+    console.error('Ошибка при массовом подтверждении договоров:', error);
+    alert('Произошла ошибка при подтверждении договоров. Пожалуйста, попробуйте еще раз.');
+  } finally {
+    setIsConfirmingAll(false);
+  }
+}, [acceptCredits, hasActiveFilters, contractNumber, clientFullName, investorName, 
+    objectType, fromDate, toDate, fromCreationDate, toCreationDate, activeTab, 
+    filters, includeAllStates, selectedInvestmentSource, creditTypeId, loadCredits]);
+
   const tableActions = [
     {
       label: 'Подтвердить договор',
@@ -1109,6 +1158,21 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     <PageLayout>
       <TitleField>
         <CustomTitle>Договоры</CustomTitle>
+        {hasPermission('MANAGE_ACCOUNTING', true) && (
+          <DarkCyanButton 
+            onClick={handleConfirmAllCredits}
+            disabled={isConfirmingAll}
+          >
+            {isConfirmingAll ? (
+              <>
+                <SpinnerIcon />
+                Подтверждение...
+              </>
+            ) : (
+              'Подтвердить все по фильтрам'
+            )}
+          </DarkCyanButton>
+        )}
         <ExportButton 
           onClick={(e) => {
             e.preventDefault();
@@ -1576,6 +1640,19 @@ const PrintOption = styled.button<{ disabled?: boolean }>`
   &:hover {
     background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#e9e9e9'};
     border-color: ${({ disabled }) => disabled ? '#eee' : 'rgba(0, 125, 136, 1)'};
+  }
+`;
+const SpinnerIcon = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 `;
 
