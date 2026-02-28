@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
@@ -161,6 +161,7 @@ const CreditPage = () => {
   const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
   const [customTabs, setCustomTabs] = useState<ObjectType[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'date',
@@ -733,7 +734,15 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
   }, [contractNumber, clientFullName, investorName, objectType, selectedInvestmentSource, creditTypeId]);
 
   const loadCredits = useCallback(async () => {
-    const shouldInclude = includeAllStates; 
+    // Отменяем предыдущий запрос, если он есть
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Создаем новый AbortController
+    abortControllerRef.current = new AbortController();
+
+    const shouldInclude = includeAllStates;
 
     const params = {
       page: currentPage,
@@ -753,9 +762,17 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       ...filters
     };
 
-    await getCredits(params);
+    await getCredits(params, abortControllerRef.current.signal);
   }, [currentPage, includeAllStates, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
 
+  // Очистка при размонтировании
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
   useEffect(() => {
     loadCredits();
   }, [loadCredits]);

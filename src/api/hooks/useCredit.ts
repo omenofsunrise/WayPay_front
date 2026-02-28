@@ -9,18 +9,47 @@ const useCredit = () => {
   const [data, setData] = useState<CreditResponse | null>(null);
   const [investorCredits, setInvestorCredits] = useState<PaginatedResponse<Credit> | null>(null);
 
-  const getCredits = useCallback(async (params?: CreditParams): Promise<CreditResponse | null> => {
+  const getCredits = useCallback(async (
+    params?: CreditParams,
+    signal?: AbortSignal
+  ): Promise<CreditResponse | null> => {
     setIsLoading(true);
     setError(null);
+    
     try {
-      const result = await creditService.getCredits(params);
+      const result = await creditService.getCredits(params, signal);
+      
+      // Проверяем, не был ли запрос отменен
+      if (signal?.aborted) {
+        console.log('Request was aborted, skipping state update');
+        return null;
+      }
+      
       setData(result);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      // Игнорируем ошибки от отмененных запросов
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Request was aborted, skipping error state');
+        return null;
+      }
+      
+      // Обновляем состояние ошибки только если запрос не был отменен
+      if (!signal?.aborted) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
+      
       return null;
     } finally {
-      setIsLoading(false);
+      // Устанавливаем isLoading в false только если запрос не был отменен
+      // или если это был последний запрос
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      } else {
+        // Даже для отмененных запросов нужно сбросить isLoading,
+        // но только если нет активных запросов
+        setIsLoading(false);
+      }
     }
   }, []);
 

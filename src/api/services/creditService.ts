@@ -3,8 +3,11 @@ import type { PaginatedResponse, PaginationParams } from '../types/common';
 import type { Credit, CreditParams, CreateCreditRequest, CreditResponse, CreditDocs, UpdateCreditRequest, SetInvestmentSourceRequest, CreditListResponse, } from '../types/credit';
 
 class CreditService {
-  async getCredits(params?: CreditParams): Promise<CreditResponse> {
-    const response = await apiClient.get<CreditResponse>('/Credit', { params });
+  async getCredits(params?: CreditParams, signal?: AbortSignal): Promise<CreditResponse> {
+    const response = await apiClient.get<CreditResponse>('/Credit', { 
+      params,
+      signal // Передаем signal в axios
+    });
     return response.data;
   }
 

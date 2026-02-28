@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
@@ -63,6 +63,7 @@ const CreditControlPage = () => {
   const [rublesIncomeTo, setRublesIncomeTo] = useState<string>(() => savedFilters?.rublesIncomeTo ?? '');
   const [percentsIncomeFrom, setPercentsIncomeFrom] = useState<string>(() => savedFilters?.percentsIncomeFrom ?? '');
   const [percentsIncomeTo, setPercentsIncomeTo] = useState<string>(() => savedFilters?.percentsIncomeTo ?? '');
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [objectType, setObjectType] = useState<string>(() => savedFilters?.objectType ?? '');
   const [creditTypeId, setCreditTypeId] = useState<number | null>(() => (typeof savedFilters?.creditTypeId === 'number' ? savedFilters.creditTypeId : null));
   const [sortConfig, setSortConfig] = useState<{
@@ -222,6 +223,14 @@ const CreditControlPage = () => {
   ];
 
   const loadCredits = useCallback(async () => {
+    // Отменяем предыдущий запрос
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Создаем новый AbortController
+    abortControllerRef.current = new AbortController();
+
     const params = {
       page: currentPage,
       pageSize: itemsPerPage,
@@ -254,8 +263,7 @@ const CreditControlPage = () => {
       ...filters
     };
 
-    console.log('Параметры запроса:', params); 
-    await getCredits(params);
+    await getCredits(params, abortControllerRef.current.signal);
   }, [
     currentPage, contractNumber, clientFullName, investorName, selectedInvestmentSource,
     fromDate, toDate, rublesIncomeFrom, rublesIncomeTo, 
