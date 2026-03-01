@@ -316,7 +316,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       setIsPaymentModalOpen(false);
       setSelectedScheduleForPayment(null);
       
-      return result.id;
+      return result;
     } catch (error) {
       console.error('Ошибка при сохранении платежа:', error);
       throw error;
