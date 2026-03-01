@@ -30,6 +30,9 @@ import type { Credit } from '../api/types/credit';
 import { useAuth } from '../сontext/AuthContext';
 import ViewCreditModal from '../components/modal/ViewCreditModal';
 import { sendWhatsAppMessage } from '../utils/sendWhatsAppMessage';
+import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
+import type { PaymentTab } from '../api/types/payment';
+import paymentService from '../api/services/paymentService';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -150,6 +153,16 @@ const SchedulePage = () => {
         setViewingCreditId(null);
     };
 
+    const handlePrintReceipt = async (paymentId: number) => {
+        try {
+        await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
+        console.log('Чек успешно сгенерирован');
+        } catch (error) {
+        console.error('Ошибка при печати чека:', error);
+        alert('Платёж создан, но произошла ошибка при печати чека');
+        }
+    };
+
     const handleDotClick = (index: number) => {
         setCurrentChartIndex(index);
         const container = chartsContainerRef.current;
@@ -198,7 +211,7 @@ const SchedulePage = () => {
             setSelectedScheduleForPayment(null);
             setSelectedCredit(null);
             
-            return result.id;
+            return result;
         } catch (error) {
             console.error('Ошибка при сохранении платежа:', error);
             throw error;
@@ -261,6 +274,18 @@ const SchedulePage = () => {
         }
     };
         
+    const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
+        try {
+            const result = await paymentService.getPaymentTab(paymentId);
+            return result;
+        } catch (err) {
+            console.error('Ошибка при получении данных для документа:', err);
+            return null;
+        }
+    }, []);
+
+    const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
+
     const loadSchedules = useCallback(async () => {
         const params: ScheduleParams = {
             page: currentPage,
@@ -653,7 +678,7 @@ const SchedulePage = () => {
                 clientPhone={selectedScheduleForPayment?.clientPhone || ''}
                 currentDebt={selectedCredit?.rest || 0}
                 currentMonthDebt={selectedScheduleForPayment?.paymentAmount || 0}
-                onPrintReceipt={() => {}}
+                onPrintReceipt={handlePrintReceipt}
             />
 
             <ViewCreditModal
