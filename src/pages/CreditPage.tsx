@@ -1192,7 +1192,6 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
           </DarkCyanButton>
         )}
         <ExportButton 
-          icon={<ShareIcon />}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1662,19 +1661,6 @@ const PrintOption = styled.button<{ disabled?: boolean }>`
     border-color: ${({ disabled }) => disabled ? '#eee' : 'rgba(0, 125, 136, 1)'};
   }
 `;
-
-const ShareIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M14.5 1.5L7 9M14.5 1.5L10 14.5L7 9L1.5 6L14.5 1.5Z"
-      stroke="black"
-      strokeWidth="1.4"
-      strokeLinejoin="round"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 const SpinnerIcon = styled.div`
   width: 16px;
   height: 16px;
