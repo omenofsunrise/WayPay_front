@@ -215,7 +215,7 @@ const SideMenu = () => {
       'investors-report': 'Отчёт для инвесторов',
       'investors-pool': 'Пулы инвесторов',
       'products': 'Товары',
-      'black-catalog': 'Чёрный каталог',
+      'black-catalog': 'ЧС+',
       'registration-requests': 'Заявки на регистрацию',
     };
     
@@ -604,7 +604,7 @@ const SideMenu = () => {
                 onClick={() => handleSubMenuItemClick('black-catalog', '/black-catalog')}
                 $selected={selectedSideMenuItem === 'black-catalog'}
               >
-                Чёрный каталог
+                ЧС+
               </SubMenuItem>
               {(isSuperAdminCompany()) && (
                 <SubMenuItem 

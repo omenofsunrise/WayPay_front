@@ -396,13 +396,13 @@ const BlackCatalogPage = () => {
             return (
                 <EmptyStateContainer>
                     <EmptyStateIcon>📋</EmptyStateIcon>
-                    <EmptyStateTitle>Чёрный каталог</EmptyStateTitle>
+                    <EmptyStateTitle>ЧС+</EmptyStateTitle>
                     <EmptyStateText>
                         Введите ФИО клиента (минимум 3 символа) или полный номер телефона для поиска в чёрном каталоге.
                     </EmptyStateText>
                     {isSuperAdminCompany() && (
                         <DarkCyanButton onClick={handleAddToBlacklist}>
-                            + Добавить в чёрный каталог
+                            + Добавить в ЧС+
                         </DarkCyanButton>
                     )}
                 </EmptyStateContainer>
@@ -419,7 +419,7 @@ const BlackCatalogPage = () => {
                     </EmptyStateText>
                     {isSuperAdminCompany() && (
                         <DarkCyanButton onClick={handleAddToBlacklist}>
-                            + Добавить в чёрный каталог
+                            + Добавить в ЧС+
                         </DarkCyanButton>
                     )}
                     <ResetButton onClick={resetFilters} style={{ marginTop: '16px' }}>
@@ -472,7 +472,7 @@ const BlackCatalogPage = () => {
                 <>
                     <TitleContainer style={{ position: "sticky"}}>
                         <TitleContainer style={{maxWidth: "290px"}}>
-                            <CustomTitle>Чёрный каталог</CustomTitle>
+                            <CustomTitle>ЧС+</CustomTitle>
                             {blacklistData && blacklistData.items.length > 0 && (
                                 <ClientCount>({blacklistData.totalItemsCount})</ClientCount>
                             )}
