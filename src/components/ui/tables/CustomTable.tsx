@@ -679,9 +679,9 @@ const BodyCell = styled.td<{
   $isTotalsCell?: boolean;
   $isBeforeTotals?: boolean;
 }>`
-  padding: 16px;
-  padding-left: ${({ $isFirst }) => ($isFirst ? '16px' : '16px')};
-  padding-right: ${({ $isLast }) => ($isLast ? '16px' : '16px')};
+  padding: 3px;
+  padding-left: ${({ $isFirst }) => ($isFirst ? '8px' : '8px')};
+  padding-right: ${({ $isLast }) => ($isLast ? '8px' : '8px')};
   text-align: ${({ $align }) => $align};
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) => 
