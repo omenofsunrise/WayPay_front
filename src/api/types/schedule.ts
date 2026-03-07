@@ -1,3 +1,4 @@
+import type { ButtonTypeMap } from '@mui/material';
 import type { PaginationParams } from './common';
 
 export interface ScheduleItem {
@@ -24,6 +25,8 @@ export interface ScheduleParams extends PaginationParams {
     dateTo?: Date;
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
+    investorId?: number;
+    poolId?: number;
 }
 
 export interface ScheduleDetails {
