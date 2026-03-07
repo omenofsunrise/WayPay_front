@@ -50,6 +50,13 @@ type TabType = 'schedule' | 'table';
 
 const ACTIVE_TAB_STORAGE_KEY = 'schedule_page_active_tab';
 
+// Добавляем интерфейс для выбранной сущности
+interface SelectedEntity {
+  id: number;
+  name: string;
+  type: 'investor' | 'pool';
+}
+
 const SchedulePage = () => {
     const [activeTab, setActiveTab] = useState<TabType>(() => {
         const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
@@ -60,6 +67,7 @@ const SchedulePage = () => {
     
     const [clientNameFilter, setClientNameFilter] = useState('');
     const [investorFilter, setInvestorFilter] = useState('');
+    const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null); // Добавляем состояние для выбранной сущности
     const [dateFromFilter, setDateFromFilter] = useState('');
     const [dateToFilter, setDateToFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -291,10 +299,17 @@ const SchedulePage = () => {
             page: currentPage,
             pageSize,
             clientName: clientNameFilter || undefined,
-            investorNickname: investorFilter || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
         };
+
+        if (selectedEntity && selectedEntity.id != 0) {
+            if (selectedEntity.type === 'investor') {
+                params.investorId = selectedEntity.id;
+            } else if (selectedEntity.type === 'pool') {
+                params.poolId = selectedEntity.id;
+            }
+        }
 
         if (sortConfig.key !== null) {
             params.sortBy = columnToApiSortMap[sortConfig.key];
@@ -302,21 +317,44 @@ const SchedulePage = () => {
         }
 
         await getList(params);
-    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, getList]);
+    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, selectedEntity, getList]);
     
     useEffect(() => {
         if (activeTab === 'table') {
             loadSchedules();
         }
-    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules, activeTab]);
+    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules, activeTab, selectedEntity]);
 
     const handleClientNameFilterChange = (value: string) => {
         setClientNameFilter(value);
         setCurrentPage(1);
     };
 
+    // Обновляем обработчик для InvestorSelect
     const handleInvestorFilterChange = (value: string) => {
         setInvestorFilter(value);
+        // Очищаем выбранную сущность при ручном вводе
+        setSelectedEntity(null);
+        setCurrentPage(1);
+    };
+
+    // Добавляем обработчик выбора инвестора/пула
+    const handleEntitySelect = (investor: { 
+        id: number; 
+        nickname: string; 
+        fullName: string; 
+        phoneNumber: string;
+        investorPie: number;
+        investmentAmount: number;
+        balance: number;
+        type?: 'investor' | 'pool';
+    }) => {
+        setInvestorFilter(investor.nickname || investor.fullName);
+        setSelectedEntity({
+            id: investor.id,
+            name: investor.nickname || investor.fullName,
+            type: investor.type || 'investor'
+        });
         setCurrentPage(1);
     };
 
@@ -361,6 +399,15 @@ const SchedulePage = () => {
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
+
+                    // Добавляем ID выбранной сущности для экспорта
+                    if (selectedEntity) {
+                        if (selectedEntity.type === 'investor') {
+                            params.investorId = selectedEntity.id;
+                        } else if (selectedEntity.type === 'pool') {
+                            params.poolId = selectedEntity.id;
+                        }
+                    }
                     
                     const result = await scheduleService.getList(params);
                     return {
@@ -580,12 +627,11 @@ const SchedulePage = () => {
                             </InputWrapper>
                             <InputWrapper>
                                 <InvestorSelect
-                                    placeholder="Инвестор"
+                                    placeholder="Инвестор или пул"
                                     value={investorFilter}
-                                    onChange={(value) => handleInvestorFilterChange(value)}
-                                    onInvestorSelect={(investor) => {
-                                        console.log('Selected investor:', investor);
-                                    }}
+                                    onChange={handleInvestorFilterChange}
+                                    onInvestorSelect={handleEntitySelect}
+                                    includePools={true} // Добавляем возможность выбора пулов
                                 />
                             </InputWrapper>
                             <DateInputWrapper>
@@ -775,6 +821,17 @@ const InputWrapper = styled.div`
 const DateInputWrapper = styled.div`
   flex: 1;
   min-width: 180px;
+`;
+
+// Добавляем стиль для информационного сообщения о фильтре
+const FilterInfo = styled.div`
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background-color: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  color: #0050b3;
+  font-size: 14px;
 `;
 
 export default SchedulePage;
