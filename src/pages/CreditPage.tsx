@@ -41,6 +41,15 @@ import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTyp
 import type { ContextMenuItem } from '../components/modal/ContextMenu';
 import { createWhatsAppMessageWithoutPhone, sendWhatsAppMessageToPhone } from '../utils/sendWhatsAppMessage';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
+import { useResponsivePageSize } from '../utils/useResponsivePageSize';
+
+// Иконка для кнопки сворачивания
+const FilterToggleIcon = styled.svg<{ $isOpen: boolean }>`
+  width: 20px;
+  height: 20px;
+  transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
+  transition: transform 0.3s ease;
+`;
 
 // Интерфейс для модалки "Поделиться"
 interface ShareOptionModalProps {
@@ -112,6 +121,7 @@ const CreditPage = () => {
     primary: '#007D88'
   };
   const FILTERS_STORAGE_KEY = 'creditsFilters';
+  const FILTERS_VISIBLE_KEY = 'creditsFiltersVisible';
   const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const savedFilters = useMemo(() => {
     try {
@@ -120,6 +130,16 @@ const CreditPage = () => {
     } catch (error) {
       console.error('Ошибка чтения фильтров договоров из localStorage:', error);
       return null;
+    }
+  }, []);
+
+  const savedFiltersVisible = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(FILTERS_VISIBLE_KEY);
+      return raw ? JSON.parse(raw) : true;
+    } catch (error) {
+      console.error('Ошибка чтения состояния фильтров из localStorage:', error);
+      return true;
     }
   }, []);
 
@@ -134,6 +154,9 @@ const CreditPage = () => {
 
     return typeof savedFilters?.activeTab === 'string' ? savedFilters.activeTab : 'all';
   }, [tab, savedFilters]);
+
+  // Состояние для сворачивания фильтров
+  const [isFiltersVisible, setIsFiltersVisible] = useState(savedFiltersVisible);
 
   const [contractNumber, setContractNumber] = useState(() => savedFilters?.contractNumber ?? '');
   const [currentPage, setCurrentPage] = useState(1);
@@ -151,7 +174,6 @@ const CreditPage = () => {
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
-  const itemsPerPage = 10;
   const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>(() => savedFilters?.filters ?? {});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -162,6 +184,17 @@ const CreditPage = () => {
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
   const [customTabs, setCustomTabs] = useState<ObjectType[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [isPageSizeReady, setIsPageSizeReady] = useState(false);
+  const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
+    defaultPageSize: 10,
+    minPageSize: 1,
+    maxPageSize: 50,
+    rowHeight: 56,
+    headerHeight: 300,
+    paginationHeight: 60,
+  });
+  const pageSizeRef = useRef(responsivePageSize);
+  const itemsPerPage = responsivePageSize;
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'date',
@@ -191,6 +224,11 @@ const CreditPage = () => {
     getAll: getAllObjectTypes 
   } = useObjectTypes();
 
+  useEffect(() => {
+    pageSizeRef.current = responsivePageSize;
+    setIsPageSizeReady(true);
+  }, [responsivePageSize]);
+
   const shouldShowMyCreditsTab = hasRole('директор') || 
                                 hasRole('суперадмин') || 
                                 hasPermission('VIEW_ALL_CREDITS', true);
@@ -202,6 +240,10 @@ const CreditPage = () => {
   const handleMultiSelectChange = useCallback((selectedIndices: number[]) => {
     setSelectedRows(selectedIndices);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(FILTERS_VISIBLE_KEY, JSON.stringify(isFiltersVisible));
+  }, [isFiltersVisible]);
 
   const handlePrintButtonClick = () => {
     if (selectedRows.length === 0) {
@@ -570,6 +612,37 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     filters
   ]);
 
+  // Функция для подсчета количества активных фильтров
+  const getActiveFiltersCount = useMemo(() => {
+    let count = 0;
+    if (contractNumber) count++;
+    if (investorName || selectedInvestmentSource) count++;
+    if (clientFullName) count++;
+    if (fromDate) count++;
+    if (toDate) count++;
+    if (fromCreationDate) count++;
+    if (toCreationDate) count++;
+    if (objectType) count++;
+    if (creditTypeId) count++;
+    if (activeTab !== 'all') count++;
+    if (filters && Object.keys(filters).length > 0) count++;
+    
+    return count;
+  }, [
+    contractNumber,
+    investorName,
+    selectedInvestmentSource,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    objectType,
+    creditTypeId,
+    activeTab,
+    filters
+  ]);
+
   const hasActiveFilters = useMemo(() => {
     return Boolean(
       contractNumber ||
@@ -734,6 +807,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
   }, [contractNumber, clientFullName, investorName, objectType, selectedInvestmentSource, creditTypeId]);
 
   const loadCredits = useCallback(async () => {
+    if (!isPageSizeReady) return;
     // Отменяем предыдущий запрос, если он есть
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -763,7 +837,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     };
 
     await getCredits(params, abortControllerRef.current.signal);
-  }, [currentPage, includeAllStates, clientFullName, investorName, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
+  }, [currentPage, includeAllStates, clientFullName, investorName, isPageSizeReady, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
 
   // Очистка при размонтировании
   useEffect(() => {
@@ -773,9 +847,12 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       }
     };
   }, []);
+
   useEffect(() => {
-    loadCredits();
-  }, [loadCredits]);
+    if (isPageSizeReady) {
+      loadCredits();
+    }
+  }, [loadCredits, isPageSizeReady]);
 
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
@@ -1173,9 +1250,38 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
   };
 
   return (
-    <PageLayout>
+    <PageLayout ref={containerRef}>
       <TitleField>
         <CustomTitle>Договоры</CustomTitle>
+        <FilterHeader>
+          <FilterToggleButton 
+            onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+            $isOpen={isFiltersVisible}
+            $hasActiveFilters={hasActiveFilters}
+          >
+            <FilterToggleIcon 
+              $isOpen={isFiltersVisible} 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                d="M6 9L12 15L18 9" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </FilterToggleIcon>
+            Фильтры
+            {hasActiveFilters && getActiveFiltersCount > 0 && (
+              <FilterBadge>
+                {getActiveFiltersCount}
+              </FilterBadge>
+            )}
+          </FilterToggleButton>
+        </FilterHeader>
+
         {hasPermission('MANAGE_ACCOUNTING', true) && (
           <DarkCyanButton 
             onClick={handleConfirmAllCredits}
@@ -1216,124 +1322,128 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
         </ExportButton>
       </TitleField>
 
-      <FilterField>
-        <InputWrapper>
-          <CustomInput
-            inputType="text"
-            placeholder="№ Договора"
-            value={contractNumber}
-            onChange={(e) => {
-              setContractNumber(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
-        
-        <InputWrapper>
-          <CustomInput 
-            style={{ marginRight: "auto", display: "flex"}}
-            inputType="fullname"
-            placeholder="ФИО"
-            value={clientFullName}
-            onChange={(e) => {
-              setClientFullName(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
+      {isFiltersVisible && (
+        <>
+          <FilterField>
+            <InputWrapper>
+              <CustomInput
+                inputType="text"
+                placeholder="№ Договора"
+                value={contractNumber}
+                onChange={(e) => {
+                  setContractNumber(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </InputWrapper>
+            
+            <InputWrapper>
+              <CustomInput 
+                style={{ marginRight: "auto", display: "flex"}}
+                inputType="fullname"
+                placeholder="ФИО"
+                value={clientFullName}
+                onChange={(e) => {
+                  setClientFullName(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </InputWrapper>
 
-        <InputWrapper>
-          <InvestorSelect 
-            placeholder="Инвестор"
-            value={investorName}
-            onChange={(name) => {
-              setInvestorName(name);
-              setSelectedInvestmentSource(null);
-              setCurrentPage(1);
-            }}
-            onInvestorSelect={(investor) => {
-              setInvestorName(investor.nickname || investor.fullName || '');
-              setSelectedInvestmentSource({
-                type: investor.type || 'investor',
-                id: investor.id,
-                name: investor.nickname || investor.fullName || ''
-              });
-              setCurrentPage(1);
-            }}
-            includePools
-          />
-        </InputWrapper>
+            <InputWrapper>
+              <InvestorSelect 
+                placeholder="Инвестор"
+                value={investorName}
+                onChange={(name) => {
+                  setInvestorName(name);
+                  setSelectedInvestmentSource(null);
+                  setCurrentPage(1);
+                }}
+                onInvestorSelect={(investor) => {
+                  setInvestorName(investor.nickname || investor.fullName || '');
+                  setSelectedInvestmentSource({
+                    type: investor.type || 'investor',
+                    id: investor.id,
+                    name: investor.nickname || investor.fullName || ''
+                  });
+                  setCurrentPage(1);
+                }}
+                includePools
+              />
+            </InputWrapper>
 
-        <InputWrapper>
-          <ObjectTypeSelect 
-            value={objectType}
-            onChange={handleObjectTypeChange}
-            onObjectTypeSelect={handleObjectTypeSelect}
-            placeholder="Каталог"
-            customPlaceholder="Каталог"
-            hideClearButton={false}
-          />
-        </InputWrapper>
+            <InputWrapper>
+              <ObjectTypeSelect 
+                value={objectType}
+                onChange={handleObjectTypeChange}
+                onObjectTypeSelect={handleObjectTypeSelect}
+                placeholder="Каталог"
+                customPlaceholder="Каталог"
+                hideClearButton={false}
+              />
+            </InputWrapper>
 
-        <DarkCyanButton
-          type="button"
-          onClick={resetFilters}
-          disabled={!hasActiveFilters}
-        >
-          Сбросить фильтры
-        </DarkCyanButton>
-        
-      </FilterField>
+            <DarkCyanButton
+              type="button"
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+            >
+              Сбросить фильтры
+            </DarkCyanButton>
+            
+          </FilterField>
 
-      <SecondRaw style={{ color: "white", gap: "15px" }}>
-        <InputWrapper>
-          <CustomCalendar 
-            prefix="от:"
-            placeholder='Дата договора'
-            value={fromDate}
-            onChange={(date) => {
-              setFromDate(date);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
-        
-        <InputWrapper>
-          <CustomCalendar 
-            prefix="до:"
-            placeholder='Дата договора'
-            value={toDate}
-            onChange={(date) => {
-              setToDate(date);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
+          <SecondRaw style={{ color: "white", gap: "15px" }}>
+            <InputWrapper>
+              <CustomCalendar 
+                prefix="от:"
+                placeholder='Дата договора'
+                value={fromDate}
+                onChange={(date) => {
+                  setFromDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </InputWrapper>
+            
+            <InputWrapper>
+              <CustomCalendar 
+                prefix="до:"
+                placeholder='Дата договора'
+                value={toDate}
+                onChange={(date) => {
+                  setToDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </InputWrapper>
 
-        <InputWrapper>
-          <CustomCalendar 
-            prefix="от:"
-            placeholder='Дата создания'
-            value={fromCreationDate}
-            onChange={(date) => {
-              setFromCreationDate(date);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
-        
-        <InputWrapper>
-          <CustomCalendar 
-            prefix="до:"
-            placeholder='Дата создания'
-            value={toCreationDate}
-            onChange={(date) => {
-              setToCreationDate(date);
-              setCurrentPage(1);
-            }}
-          />
-        </InputWrapper>
-      </SecondRaw>
+            <InputWrapper>
+              <CustomCalendar 
+                prefix="от:"
+                placeholder='Дата создания'
+                value={fromCreationDate}
+                onChange={(date) => {
+                  setFromCreationDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </InputWrapper>
+            
+            <InputWrapper>
+              <CustomCalendar 
+                prefix="до:"
+                placeholder='Дата создания'
+                value={toCreationDate}
+                onChange={(date) => {
+                  setToCreationDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </InputWrapper>
+          </SecondRaw>
+        </>
+      )}
 
       <SecondRaw style={{ color: "white" }}>
         <Tabs 
@@ -1476,11 +1586,63 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
   );
 };
 
+const FilterHeader = styled.div`
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 15px;
+  margin-left: auto;
+  margin-right: 20px;
+  margin-bottom: 0;
+`;
+
+const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: ${props => props.$isOpen ? '#007D88' : '#f5f5f5'};
+  border: 1px solid ${props => props.$isOpen ? '#007D88' : '#ddd'};
+  border-radius: 30px;
+  cursor: pointer;
+  color: ${props => props.$isOpen ? 'white' : '#333'};
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &:hover {
+    background: ${props => props.$isOpen ? '#00666f' : '#e9e9e9'};
+    border-color: ${props => props.$isOpen ? '#00666f' : '#007D88'};
+  }
+
+  svg {
+    color: ${props => props.$isOpen ? 'white' : '#007D88'};
+  }
+`;
+
+const FilterBadge = styled.span`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background-color: #ff4444;
+  color: white;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 const FilterField = styled.div`
   display: flex;
   gap: 12px;
   width: 100%;
   position: relative;
+  margin-top: 0;
 `;
 
 const ResetFiltersButton = styled.button`
@@ -1514,7 +1676,7 @@ const InputWrapper = styled.div`
 const SecondRaw = styled.div`
   display: flex;
   height: 60px;
-  margin: 15px 0 0;
+  margin: 7px 0 0;
   background-color: transparent;
   justify-content: space-between;
   align-items: center;
