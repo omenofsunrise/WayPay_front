@@ -780,13 +780,13 @@ const CreditControlPage = () => {
             disabled={false}
           />
         </InputWrapper>
-        <ResetFiltersButton
+        <DarkCyanButton
           type="button"
           onClick={resetFilters}
           disabled={!hasActiveFilters}
         >
           Сбросить фильтры
-        </ResetFiltersButton>
+        </DarkCyanButton>
       </FilterField>
 
       <SecondRaw>

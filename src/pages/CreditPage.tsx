@@ -1275,13 +1275,13 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
           />
         </InputWrapper>
 
-        <ResetFiltersButton
+        <DarkCyanButton
           type="button"
           onClick={resetFilters}
           disabled={!hasActiveFilters}
         >
           Сбросить фильтры
-        </ResetFiltersButton>
+        </DarkCyanButton>
         
       </FilterField>
 
