@@ -862,6 +862,15 @@ const CreditControlPage = () => {
                   </FilterBadge>
                 )}
               </FilterToggleButton>
+
+              <DarkCyanButton
+                style={{marginLeft: "6px"}}
+                type="button"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+              >
+                X
+              </DarkCyanButton>
             </FilterHeader>
 
             {/* Новая кнопка для подтверждения всех договоров по фильтрам */}
@@ -967,13 +976,6 @@ const CreditControlPage = () => {
                 disabled={false}
               />
             </InputWrapper>
-            <DarkCyanButton
-              type="button"
-              onClick={resetFilters}
-              disabled={!hasActiveFilters}
-            >
-              Сбросить фильтры
-            </DarkCyanButton>
           </FilterField>
 
           <SecondRaw>
