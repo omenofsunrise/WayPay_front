@@ -41,7 +41,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
   '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
   '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
-  '/queue': { mainItem: 'clients', subItems: { '/queue': 'queue' } },
+  // '/queue': { mainItem: 'clients', subItems: { '/queue': 'queue' } },
   '/schedules': { mainItem: 'payments', subItems: { '/schedules': 'pending-payments' } },
   '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
   '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
@@ -255,7 +255,7 @@ const SideMenu = () => {
       'clients': 'Клиенты',
       'blacklist': 'Чёрный список',
       'credit-application': 'Заявки',
-      'queue': 'Очередь',
+      // 'queue': 'Очередь',
       'pending-payments': 'Ожидаемые',
       'payments-journal': 'Журнал',
       'investors': 'Инвесторы',
@@ -472,12 +472,12 @@ const SideMenu = () => {
                   Заявки
                 </SubMenuItem>
               )}
-              <SubMenuItem 
+              {/* <SubMenuItem 
                 onClick={() => handleSubMenuItemClick('queue', '/queue')}
                 $selected={selectedSideMenuItem === 'queue'}
               >
                 Очередь
-              </SubMenuItem>
+              </SubMenuItem> */}
             </SubMenu>
           )}
           
