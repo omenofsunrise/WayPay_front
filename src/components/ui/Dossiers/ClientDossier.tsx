@@ -779,7 +779,7 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
       await getCredits({
         page: creditHistoryPage,
         pageSize: itemsPerPage,
-        clientFullname: client.fullName,
+        clientId: client.id,
         includeAllStates: true
       });
     }
