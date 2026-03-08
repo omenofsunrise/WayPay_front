@@ -79,7 +79,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   const longPressTimer = useRef<number | null>(null);
   const LONG_PRESS_DURATION = 500;
 
-  // Преобразуем externalSelectedRow в массив, если это одиночное значение
   const externalSelectedRows = externalSelectedRow === undefined 
     ? undefined 
     : Array.isArray(externalSelectedRow) 
@@ -113,21 +112,17 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   };
 
   const handleRowClick = (rowIndex: number, isTotalsRow: boolean, event: React.MouseEvent) => {
-    // Пропускаем клик по итоговой строке
     if (isTotalsRow) return;
     
-    // Проверяем, можно ли выделить строку
     if (!isRowSelectable(rowIndex, isTotalsRow)) return;
 
     let newSelectedRows: number[] = [];
 
     if (multiSelect) {
-      // Мультиселект с поддержкой Ctrl и Shift
       const isCtrlPressed = event.ctrlKey || event.metaKey;
       const isShiftPressed = event.shiftKey;
 
       if (isShiftPressed && selectedRows.length > 0) {
-        // Выделение диапазона
         const lastSelected = selectedRows[selectedRows.length - 1];
         const start = Math.min(lastSelected, rowIndex);
         const end = Math.max(lastSelected, rowIndex);
@@ -139,38 +134,30 @@ const CustomTable: React.FC<CreditsTableProps> = ({
           }
         }
       } else if (isCtrlPressed) {
-        // Добавление/удаление из выделения
         if (selectedRows.includes(rowIndex)) {
           newSelectedRows = selectedRows.filter(idx => idx !== rowIndex);
         } else {
           newSelectedRows = [...selectedRows, rowIndex];
         }
       } else {
-        // Одиночное выделение
         newSelectedRows = [rowIndex];
       }
     } else {
-      // Одиночное выделение
       newSelectedRows = [rowIndex];
     }
 
-    // Сортируем индексы для удобства
     newSelectedRows.sort((a, b) => a - b);
 
-    // Обновляем внутреннее состояние, если не управляется извне
     if (externalSelectedRows === undefined) {
       setInternalSelectedRows(newSelectedRows);
     }
 
-    // Вызываем колбэк с массивом выделенных строк
     if (onMultiSelectChange && multiSelect) {
       onMultiSelectChange(newSelectedRows);
     }
 
-    // Вызываем колбэк клика по строке
     if (onRowClick) {
       if (multiSelect) {
-        // Для мультиселекта передаем последнюю выбранную строку
         onRowClick(data[rowIndex], rowIndex);
       } else {
         onRowClick(data[rowIndex], rowIndex);
@@ -269,7 +256,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     };
   };
 
-  // Helper function to get hover background color
   const getHoverBackgroundColor = (rowIndex: number, isTotalsRow: boolean, isDebtRow: boolean): string => {
     if (isTotalsRow) return '#FFFFFF';
     
@@ -279,8 +265,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     if (rowStyle.hoverBackgroundColor) return rowStyle.hoverBackgroundColor;
     
     if (selectedRows.includes(rowIndex)) return '#007D88';
-    // if (isDebtRow) return '#E8D8D8CC'; // Adding transparency for hover effect
-    if (data[rowIndex][data[rowIndex].length - 1] === false) return '#51D5B4CC'; // Adding transparency
+    if (data[rowIndex][data[rowIndex].length - 1] === false) return '#51D5B4CC';
     
     return '#F3F4F6';
   };
@@ -324,14 +309,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({
               disabled: action.disabled
             };
 
-            // Если у действия есть подменю и оно должно показываться при наведении
             if (action.getSubmenu && action.showOnHover) {
               menuItem.submenu = action.getSubmenu(rowData);
             } else if (action.getSubmenu) {
-              // Если подменю должно показываться по клику (старая логика)
               menuItem.submenu = action.getSubmenu(rowData);
             } else if (action.action) {
-              // Обычное действие
               menuItem.action = () => {
                 action.action(rowData, contextMenu.rowIndex!);
                 closeContextMenu();
@@ -348,7 +330,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     );
   };
 
-  // Обработчик клика по документу для снятия выделения
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
       if (!multiSelect) return;
@@ -357,7 +338,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       const isClickInsideTable = tableRef.current?.contains(target);
       
       if (!isClickInsideTable && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-        // Снимаем выделение при клике вне таблицы без модификаторов
         if (externalSelectedRows === undefined && internalSelectedRows.length > 0) {
           setInternalSelectedRows([]);
         }
@@ -686,26 +666,6 @@ const BodyCell = styled.td<{
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) => 
     ($isBeforeTotals || $isTotalsCell) ? 'none' : '0.5px solid #D1D5DB'};
-`;
-
-const CheckboxHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-`;
-
-const MultiSelectIndicator = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background-color: #007D88;
-  color: white;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
 `;
 
 const CheckboxContainer = styled.div`

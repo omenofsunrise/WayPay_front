@@ -952,7 +952,7 @@ const UserDate = styled.div<{ $color?: string }>`
   font-size: 9px;
   color: ${({ $color }) => $color || '#9CA3AF'};
   margin-top: 2px;
-  text-align: center;
+  text-align: left;
 `;
 
 const CollapsedUserDate = styled.div<{ $color?: string }>`

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV, FaExclamationTriangle } from 'react-icons/fa';
 import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
+import CreditBriefModal from '../../modal/CrudInherited/CreditBrief';
 
 const Card = styled.div`
   background: white;
@@ -98,13 +99,24 @@ const ContractsGrid = styled.div`
   margin-top: 8px;
 `;
 
-const ContractCard = styled.div`
+const ContractCard = styled.div<{ $isClickable?: boolean }>`
   background: rgba(254, 226, 226, 0.3);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 8px;
   padding: 10px;
   display: flex;
   flex-direction: column;
+  transition: all 0.2s ease;
+  cursor: ${props => props.$isClickable ? 'pointer' : 'default'};
+  
+  &:hover {
+    ${props => props.$isClickable && `
+      background: rgba(0, 125, 136, 0.1);
+      border-color: #007D88;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    `}
+  }
 `;
 
 const ContractNumber = styled.span`
@@ -118,6 +130,15 @@ const ContractTerm = styled.span`
   font-size: 13px;
   color: #EF4444;
   font-weight: 600;
+`;
+
+const ContractViewBadge = styled.span`
+  font-size: 11px;
+  color: #007D88;
+  background: rgba(0, 125, 136, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: normal;
 `;
 
 const IconWrapper = styled.span`
@@ -283,6 +304,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
 }) => {
   const { createPrivateChat } = useChat();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [selectedContractModal, setSelectedContractModal] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   
   React.useEffect(() => {
@@ -372,148 +394,178 @@ const ClientCard: React.FC<ClientCardProps> = ({
     onRightClick(e, client);
   };
 
+  // Обработчик клика по бейджу договора
+  const handleContractClick = (e: React.MouseEvent, creditId: string) => {
+    e.stopPropagation(); // Предотвращаем открытие досье клиента
+    const id = parseInt(creditId);
+    if (!isNaN(id)) {
+      setSelectedContractModal(id);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedContractModal(null);
+  };
+
   const hasContracts = client.creditIds && client.creditIds.length > 0;
   const safeCreditIds = client.creditIds || [];
   const safeCreditRestTerms = client.creditRestTerms || [];
   const isBlacklisted = client.blacklist === true;
 
   return (
-    <Card 
-      key={client.id} 
-      onClick={handleCardClick}
-      onContextMenu={handleRightClick}
-      style={isBlacklisted ? { 
-        borderColor: '#EF4444',
-        background: 'linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)'
-      } : {}}
-    >
-      {isBlacklisted && (
-        <BlacklistBadge>
-          <FaExclamationTriangle size={14} />
-          Чёрный список
-        </BlacklistBadge>
-      )}
-      
-      <CardContent>
-        <CardTitle>
-          <CardTitleText $hasBlacklistBadge={isBlacklisted}>
-            {client.fullName || 'Не указано'}
-          </CardTitleText>
-        </CardTitle>
-        
-        {showMenu && (
-          <>
-            <MenuButton onClick={handleMenuClick}>
-              <FaEllipsisV size={16} />
-            </MenuButton>
-
-            <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
-              <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
-              <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem>
-            </ContextMenu>
-          </>
+    <>
+      <Card 
+        key={client.id} 
+        onClick={handleCardClick}
+        onContextMenu={handleRightClick}
+        style={isBlacklisted ? { 
+          borderColor: '#EF4444',
+          background: 'linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)'
+        } : {}}
+      >
+        {isBlacklisted && (
+          <BlacklistBadge>
+            <FaExclamationTriangle size={14} />
+            Чёрный список
+          </BlacklistBadge>
         )}
+        
+        <CardContent>
+          <CardTitle>
+            <CardTitleText $hasBlacklistBadge={isBlacklisted}>
+              {client.fullName || 'Не указано'}
+            </CardTitleText>
+          </CardTitle>
+          
+          {showMenu && (
+            <>
+              <MenuButton onClick={handleMenuClick}>
+                <FaEllipsisV size={16} />
+              </MenuButton>
 
-        {/* <MessageButton onClick={handleMessageClick}>
-          <FaComment size={30} />
-        </MessageButton> */}
-        
-        <InfoGrid>
-          <InfoItem>
-            <InfoLabel>
-              <IconWrapper><FaIdCard size={12} /></IconWrapper>
-              ID клиента
-            </InfoLabel>
-            <InfoValue>
-              {client.id || 'Не указан'}
-            </InfoValue>
-          </InfoItem>
+              <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
+                <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
+                <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem>
+              </ContextMenu>
+            </>
+          )}
+
+          {/* <MessageButton onClick={handleMessageClick}>
+            <FaComment size={30} />
+          </MessageButton> */}
           
-          <InfoItem>
-            <InfoLabel>
-              <IconWrapper><FaPhone size={12} /></IconWrapper>
-              Телефон
-            </InfoLabel>
-            <InfoValue>
-              {client.phone ? (
-                <PhoneLink 
-                  href={formatPhoneHref(client.phone)} 
-                  onClick={(e) => e.stopPropagation()}
-                  style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
-                >
-                  {formatPhone(client.phone)}
-                </PhoneLink>
-              ) : (
-                'Не указан'
-              )}
-            </InfoValue>
-          </InfoItem>
-          
-          <InfoItem>
-            <InfoLabel>
-              <IconWrapper><FaWhatsapp size={13} /></IconWrapper>
-              WhatsApp
-            </InfoLabel>
-            <InfoValue>
-              {client.secondPhone ? (
-                <WhatsAppLink 
-                  href={`https://wa.me/${client.secondPhone.replace(/\D/g, '')}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
-                >
-                  {formatPhone(client.secondPhone)}
-                </WhatsAppLink>
-              ) : (
-                'Не указан'
-              )}
-            </InfoValue>
-          </InfoItem>
-          
-          <InfoItem>
-            <InfoLabel>
-              <IconWrapper><FaBirthdayCake size={12} /></IconWrapper>
-              Дата рождения
-            </InfoLabel>
-            <InfoValue>{formatDate(client.birthdate)}</InfoValue>
-          </InfoItem>
-          
-          <InfoItem>
-            <InfoLabel>Адрес регистрации</InfoLabel>
-            <InfoValue>{client.registrationAddress || 'Не указан'}</InfoValue>
-          </InfoItem>
-        </InfoGrid>
-        
-        {hasContracts && (
-          <ContractsSection>
-            <ContractsHeader>
-              <InfoLabel>Договоры</InfoLabel>
-            </ContractsHeader>
+          <InfoGrid>
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaIdCard size={12} /></IconWrapper>
+                ID клиента
+              </InfoLabel>
+              <InfoValue>
+                {client.id || 'Не указан'}
+              </InfoValue>
+            </InfoItem>
             
-            <ContractsGrid>
-              {safeCreditIds.map((contractId, index) => {
-                const restTerm = safeCreditRestTerms[index] || '0';
-                const months = parseInt(restTerm) || 0;
-                const isUrgent = months > 0 && months < 3;
-                
-                return (
-                  <ContractCard key={index} style={isBlacklisted ? { 
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    borderColor: '#EF4444'
-                  } : {}}>
-                    <ContractNumber>{contractId || 'Без номера'}</ContractNumber>
-                    <ContractTerm>
-                      Остаток: {months} мес.
-                    </ContractTerm>
-                  </ContractCard>
-                );
-              })}
-            </ContractsGrid>
-          </ContractsSection>
-        )}
-      </CardContent>
-    </Card>
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaPhone size={12} /></IconWrapper>
+                Телефон
+              </InfoLabel>
+              <InfoValue>
+                {client.phone ? (
+                  <PhoneLink 
+                    href={formatPhoneHref(client.phone)} 
+                    onClick={(e) => e.stopPropagation()}
+                    style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
+                  >
+                    {formatPhone(client.phone)}
+                  </PhoneLink>
+                ) : (
+                  'Не указан'
+                )}
+              </InfoValue>
+            </InfoItem>
+            
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaWhatsapp size={13} /></IconWrapper>
+                WhatsApp
+              </InfoLabel>
+              <InfoValue>
+                {client.secondPhone ? (
+                  <WhatsAppLink 
+                    href={`https://wa.me/${client.secondPhone.replace(/\D/g, '')}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
+                  >
+                    {formatPhone(client.secondPhone)}
+                  </WhatsAppLink>
+                ) : (
+                  'Не указан'
+                )}
+              </InfoValue>
+            </InfoItem>
+            
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaBirthdayCake size={12} /></IconWrapper>
+                Дата рождения
+              </InfoLabel>
+              <InfoValue>{formatDate(client.birthdate)}</InfoValue>
+            </InfoItem>
+            
+            <InfoItem>
+              <InfoLabel>Адрес регистрации</InfoLabel>
+              <InfoValue>{client.registrationAddress || 'Не указан'}</InfoValue>
+            </InfoItem>
+          </InfoGrid>
+          
+          {hasContracts && (
+            <ContractsSection>
+              <ContractsHeader>
+                <InfoLabel>Договоры</InfoLabel>
+              </ContractsHeader>
+              
+              <ContractsGrid>
+                {safeCreditIds.map((contractId, index) => {
+                  const restTerm = safeCreditRestTerms[index] || '0';
+                  const months = parseInt(restTerm) || 0;
+                  const isUrgent = months > 0 && months < 3;
+                  
+                  return (
+                    <ContractCard 
+                      key={index} 
+                      $isClickable={true}
+                      onClick={(e) => handleContractClick(e, contractId)}
+                      style={isBlacklisted ? { 
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        borderColor: '#EF4444'
+                      } : {}}
+                    >
+                      <ContractNumber>
+                        {contractId || 'Без номера'}
+                      </ContractNumber>
+                      <ContractTerm>
+                        Остаток: {months} мес.
+                      </ContractTerm>
+                    </ContractCard>
+                  );
+                })}
+              </ContractsGrid>
+            </ContractsSection>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Модальное окно с расписанием платежей */}
+      {selectedContractModal && (
+        <CreditBriefModal
+          creditId={selectedContractModal}
+          onClose={handleCloseModal}
+        />
+      )}
+    </>
   );
 };
 
