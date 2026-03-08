@@ -559,7 +559,27 @@ const ClientModal: React.FC<ClientModalProps> = ({
           )}
           
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
-          
+          <InputRow>
+            <InputLabel>Телефон:</InputLabel>
+            <InputContainer>
+              {mode === 'view' ? (
+                <PhoneLink href={formatPhoneHref(formData.phone)}>
+                  {formData.phone}
+                </PhoneLink>
+              ) : (
+                <PhoneModalInput
+                  name="phone"
+                  placeholder="Телефон"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  disabled={mode === 'view'}
+                  hasError={touchedFields.phone && validationErrors.phone}
+                  errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
+                />
+              )}
+            </InputContainer>
+          </InputRow>
+
           <InputRow>
             <InputLabel>ФИО:</InputLabel>
             <InputContainer>
@@ -673,28 +693,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
             </InputContainer>
           </InputRow>
 
-          <ModalInfoTitle>Контактные данные</ModalInfoTitle>
-          <InputRow>
-            <InputLabel>Телефон:</InputLabel>
-            <InputContainer>
-              {mode === 'view' ? (
-                <PhoneLink href={formatPhoneHref(formData.phone)}>
-                  {formData.phone}
-                </PhoneLink>
-              ) : (
-                <PhoneModalInput
-                  name="phone"
-                  placeholder="Телефон"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  disabled={mode === 'view'}
-                  hasError={touchedFields.phone && validationErrors.phone}
-                  errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
-                />
-              )}
-            </InputContainer>
-          </InputRow>
-
+          <ModalInfoTitle>Дополнительные данные</ModalInfoTitle>
           <InputRow>
             <InputLabel>WhatsApp:</InputLabel>
             <InputContainer>
