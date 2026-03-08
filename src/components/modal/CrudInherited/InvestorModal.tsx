@@ -415,23 +415,39 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           )}
           
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
-          
+            {(mode == 'create-pool') && (
+                <div style={{ 
+                  backgroundColor: "#fff3cd", 
+                  color: "#856404",
+                  padding: "12px 16px",
+                  borderRadius: "4px",
+                  marginBottom: "20px",
+                  border: "1px solid #ffeeba",
+                  fontSize: "14px"
+                }}>
+                  ⚠️ Рекомендуется сначала сделать реинвестицию, 
+                  а затем добавлять новую инвестицию
+                </div>
+            )}
+
           {(mode !== 'create-pool' && mode !== 'edit-pool') && (
-            <InputRow>
-              <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
-              <InputContainer >
-                <CustomInput
-                  name="nickname"
-                  inputType="text"
-                  placeholder={formData.isCompany ? "Название компании" : "Никнейм"}
-                  value={formData.nickname}
-                  onChange={handleInputChange}
-                  disabled={mode === 'view'}
-                  hasError={touchedFields.nickname && validationErrors.nickname}
-                  errorMessage={touchedFields.nickname ? errorMessages.nickname : undefined}
-                />
-              </InputContainer>
-            </InputRow>
+              <>                
+              <InputRow>
+                <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
+                <InputContainer >
+                  <CustomInput
+                    name="nickname"
+                    inputType="text"
+                    placeholder={formData.isCompany ? "Название компании" : "Никнейм"}
+                    value={formData.nickname}
+                    onChange={handleInputChange}
+                    disabled={mode === 'view'}
+                    hasError={touchedFields.nickname && validationErrors.nickname}
+                    errorMessage={touchedFields.nickname ? errorMessages.nickname : undefined}
+                  />
+                </InputContainer>
+              </InputRow>
+            </>
           )}
           
           {(hasRole("директор") || hasRole("суперадмин")) && (

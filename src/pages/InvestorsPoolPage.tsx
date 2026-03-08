@@ -2149,6 +2149,20 @@ const InvestorsPoolPage = () => {
             mode="edit"
           >
             <form onSubmit={handleSubmitInvestment} style={{ padding: "20px" }}>
+              {/* Предупредительная надпись */}
+              <div style={{ 
+                backgroundColor: "#fff3cd", 
+                color: "#856404",
+                padding: "12px 16px",
+                borderRadius: "4px",
+                marginBottom: "20px",
+                border: "1px solid #ffeeba",
+                fontSize: "14px"
+              }}>
+                ⚠️ Рекомендуется сначала сделать реинвестицию, 
+                а затем добавлять новую инвестицию
+              </div>
+              
               <InputRow>
                 <InputLabel>Сумма инвестиции:</InputLabel>
                 <InputContainer>
