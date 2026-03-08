@@ -1179,7 +1179,8 @@ const InputWrapper = styled.div`
 
 const SecondRaw = styled.div`
   display: flex;
-  margin: 15px 0 0;
+  height: 60px;
+  margin: 7px 0 0;
   gap: 15px;
   background-color: transparent;
   justify-content: space-between;
