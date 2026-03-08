@@ -452,6 +452,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputRow>
           )}
 
+          {(mode !== 'create-pool' && mode !== 'edit-pool') && (
           <InputRow>
             <InputLabel>Дата окончания договора:</InputLabel>
             <InputContainer>
@@ -461,6 +462,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
               />
             </InputContainer>
           </InputRow>
+          )}
 
           <InputRow>
             <InputLabel>Телефон:</InputLabel>

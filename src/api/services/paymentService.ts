@@ -42,7 +42,7 @@ class PaymentService {
       await apiClient.delete(`/Payment/${id}`);
     } catch (err) {
       console.error('Ошибка при удалении платежа:', err);
-      alert('Нельзя удалить платёж');
+      alert('Нельзя удалить платёж после реинвестиции');
     }
   }
 }
