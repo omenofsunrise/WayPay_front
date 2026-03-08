@@ -174,7 +174,7 @@ const CreditPage = () => {
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean }>(() => savedFilters?.filters ?? {});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean; objectTypeId?: number }>(() => savedFilters?.filters ?? {});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -612,20 +612,29 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     filters
   ]);
 
-  // Функция для подсчета количества активных фильтров
+  // Функция для подсчета количества активных фильтров (исключая выбранную вкладку)
   const getActiveFiltersCount = useMemo(() => {
     let count = 0;
     if (contractNumber) count++;
-    if (investorName || selectedInvestmentSource) count++;
+    if (investorName) count++;
     if (clientFullName) count++;
     if (fromDate) count++;
     if (toDate) count++;
     if (fromCreationDate) count++;
     if (toCreationDate) count++;
     if (objectType) count++;
-    if (creditTypeId) count++;
-    if (activeTab !== 'all') count++;
-    if (filters && Object.keys(filters).length > 0) count++;
+    
+    // Исключаем фильтры от вкладок из подсчета
+    const filterKeys = Object.keys(filters);
+    if (filterKeys.length > 0) {
+      // Проверяем, что это не фильтры от вкладок
+      const hasNonTabFilters = filterKeys.some(key => 
+        !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'objectTypeId'].includes(key) || 
+        (key === 'objectTypeId' && !activeTab.startsWith('tab-'))
+      );
+      
+      if (hasNonTabFilters) count++;
+    }
     
     return count;
   }, [
@@ -639,11 +648,12 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     toCreationDate,
     objectType,
     creditTypeId,
-    activeTab,
-    filters
+    filters,
+    activeTab
   ]);
 
   const hasActiveFilters = useMemo(() => {
+    // Проверяем наличие активных фильтров, исключая фильтры от вкладок
     return Boolean(
       contractNumber ||
       investorName ||
@@ -654,10 +664,12 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       fromCreationDate ||
       toCreationDate ||
       objectType ||
-      (creditTypeId !== null && creditTypeId !== undefined) ||
-      activeTab !== 'all' ||
-      (filters && Object.keys(filters).length > 0)
-    );
+      (creditTypeId !== null && creditTypeId !== undefined)
+    ) || (Object.keys(filters).length > 0 && 
+         // Проверяем, что это не фильтры от вкладок
+         Object.keys(filters).some(key => 
+           !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'objectTypeId'].includes(key)
+         ));
   }, [
     contractNumber,
     investorName,
@@ -669,7 +681,6 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     toCreationDate,
     objectType,
     creditTypeId,
-    activeTab,
     filters
   ]);
 
@@ -684,13 +695,57 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     setToCreationDate('');
     setObjectType('');
     setCreditTypeId(null);
-    setFilters({});
-    setActiveTab('all');
+    
+    // Сохраняем только фильтры от текущей вкладки
+    let newFilters = {};
+    if (activeTab.startsWith('tab-')) {
+      const objectTypeId = parseInt(activeTab.replace('tab-', ''));
+      newFilters = { objectTypeId };
+    } else {
+      switch (activeTab) {
+        case 'my':
+          newFilters = { myCredits: true };
+          break;
+        case 'favourite':
+          newFilters = { isFavourite: true };
+          break;
+        case 'archive':
+          newFilters = { isActive: false };
+          break;
+        case 'debtors':
+          newFilters = { debt: true };
+          break;
+        case 'inDebt':
+          newFilters = { inDebt: true };
+          break;
+        default:
+          newFilters = {};
+          break;
+      }
+    }
+    
+    setFilters(newFilters);
     setSortConfig({ key: null, direction: 'desc' });
     setCurrentPage(1);
     setSelectedRows([]);
-    localStorage.removeItem(FILTERS_STORAGE_KEY);
-  }, []);
+    
+    // Не удаляем фильтры полностью из localStorage, обновляем их
+    const payload = {
+      contractNumber: '',
+      investorName: '',
+      selectedInvestmentSource: null,
+      clientFullName: '',
+      fromDate: '',
+      toDate: '',
+      fromCreationDate: '',
+      toCreationDate: '',
+      objectType: '',
+      creditTypeId: null,
+      activeTab,
+      filters: newFilters
+    };
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(payload));
+  }, [activeTab]);
 
   const handleAccept = async (rowData: any[]) => {
     const [_, id] = rowData;
@@ -874,32 +929,34 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     
+    let newFilters = {};
     if (tabId.startsWith('tab-')) {
       const objectTypeId = parseInt(tabId.replace('tab-', ''));
-      setFilters({ objectTypeId });
+      newFilters = { objectTypeId };
     } else {
       switch (tabId) {
         case 'my':
-          setFilters({ myCredits: true });
+          newFilters = { myCredits: true };
           break;
         case 'favourite':
-          setFilters({ isFavourite: true });
+          newFilters = { isFavourite: true };
           break;
         case 'archive':
-          setFilters({ isActive: false });
+          newFilters = { isActive: false };
           break;
         case 'debtors':
-          setFilters({ debt: true });
+          newFilters = { debt: true };
           break;
         case 'inDebt':
-          setFilters({ inDebt: true });
+          newFilters = { inDebt: true };
           break;
         default:
-          setFilters({});
+          newFilters = {};
           break;
       }
     }
     
+    setFilters(newFilters);
     setCurrentPage(1);
     setSelectedRows([]); // Сбрасываем выбор при смене вкладки
   };
@@ -1253,73 +1310,90 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
     <PageLayout ref={containerRef}>
       <TitleField>
         <CustomTitle>Договоры</CustomTitle>
-        <FilterHeader>
-          <FilterToggleButton 
-            onClick={() => setIsFiltersVisible(!isFiltersVisible)}
-            $isOpen={isFiltersVisible}
-            $hasActiveFilters={hasActiveFilters}
-          >
-            <FilterToggleIcon 
-              $isOpen={isFiltersVisible} 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                d="M6 9L12 15L18 9" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              />
-            </FilterToggleIcon>
-            Фильтры
-            {hasActiveFilters && getActiveFiltersCount > 0 && (
-              <FilterBadge>
-                {getActiveFiltersCount}
-              </FilterBadge>
-            )}
-          </FilterToggleButton>
-        </FilterHeader>
+        
+        <HeaderControls>
+          <LeftControls>
+            <FilterHeader>
+              <FilterToggleButton 
+                onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+                $isOpen={isFiltersVisible}
+                $hasActiveFilters={hasActiveFilters}
+              >
+                <FilterToggleIcon 
+                  $isOpen={isFiltersVisible} 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    d="M6 9L12 15L18 9" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </FilterToggleIcon>
+                Фильтры
+                {hasActiveFilters && getActiveFiltersCount > 0 && (
+                  <FilterBadge>
+                    {getActiveFiltersCount}
+                  </FilterBadge>
+                )}
+              </FilterToggleButton>
 
-        {hasPermission('MANAGE_ACCOUNTING', true) && (
-          <DarkCyanButton 
-            onClick={handleConfirmAllCredits}
-            disabled={isConfirmingAll}
-          >
-            {isConfirmingAll ? (
-              <>
-                <SpinnerIcon />
-                Подтверждение...
-              </>
-            ) : (
-              'Подтвердить все по фильтрам'
+              <DarkCyanButton
+                style={{marginLeft: "5px"}}
+                type="button"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+              >
+                X
+              </DarkCyanButton>
+            </FilterHeader>
+
+            {hasPermission('MANAGE_ACCOUNTING', true) && (
+              <DarkCyanButton 
+                onClick={handleConfirmAllCredits}
+                disabled={isConfirmingAll}
+              >
+                {isConfirmingAll ? (
+                  <>
+                    <SpinnerIcon />
+                    Подтверждение...
+                  </>
+                ) : (
+                  'Подтвердить все по фильтрам'
+                )}
+              </DarkCyanButton>
             )}
-          </DarkCyanButton>
-        )}
-        <ExportButton 
-          icon={<ShareIcon />}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleShareButtonClick();
-          }}
-        >
-          Поделиться
-        </ExportButton>
-        <ExportButton 
-          icon={<PrintIcon />} 
-          onClick={() => { handlePrintButtonClick(); }}
-        >
-          Печать
-        </ExportButton>
-        <ExportButton 
-          onClick={handleExport}
-          isExporting={isExporting}
-          exportProgress={exportProgress}
-        >
-          Экспорт
-        </ExportButton>
+          </LeftControls>
+
+          <RightControls>
+            <ExportButton 
+              icon={<ShareIcon />}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleShareButtonClick();
+              }}
+            >
+              Поделиться
+            </ExportButton>
+            <ExportButton 
+              icon={<PrintIcon />} 
+              onClick={() => { handlePrintButtonClick(); }}
+            >
+              Печать
+            </ExportButton>
+            <ExportButton 
+              onClick={handleExport}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            >
+              Экспорт
+            </ExportButton>
+          </RightControls>
+        </HeaderControls>
       </TitleField>
 
       {isFiltersVisible && (
@@ -1382,15 +1456,6 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
                 hideClearButton={false}
               />
             </InputWrapper>
-
-            <DarkCyanButton
-              type="button"
-              onClick={resetFilters}
-              disabled={!hasActiveFilters}
-            >
-              Сбросить фильтры
-            </DarkCyanButton>
-            
           </FilterField>
 
           <SecondRaw style={{ color: "white", gap: "15px" }}>
@@ -1588,11 +1653,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
 
 const FilterHeader = styled.div`
   display: flex;
-  justify-content: flex-start;
-  margin-bottom: 15px;
-  margin-left: auto;
-  margin-right: 20px;
-  margin-bottom: 0;
+  align-items: center;
 `;
 
 const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
@@ -1609,6 +1670,7 @@ const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: 
   font-weight: 500;
   transition: all 0.2s ease;
   position: relative;
+  height: 40px;
 
   &:hover {
     background: ${props => props.$isOpen ? '#00666f' : '#e9e9e9'};
@@ -1637,34 +1699,32 @@ const FilterBadge = styled.span`
   justify-content: center;
 `;
 
+const HeaderControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-left: auto;
+`;
+
+const LeftControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const RightControls = styled.div`
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
 const FilterField = styled.div`
   display: flex;
   gap: 12px;
   width: 100%;
   position: relative;
   margin-top: 0;
-`;
-
-const ResetFiltersButton = styled.button`
-  align-self: center;
-  height: 40px;
-  padding: 0 14px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  color: #111827;
-  border-radius: 10px;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    background: #f3f4f6;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
 `;
 
 const InputWrapper = styled.div`
@@ -1687,26 +1747,6 @@ const TotalControls = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-`;
-
-const ResetFiltersLink = styled.button<{ $primaryColor: string }>`
-  background: none;
-  border: 0;
-  padding: 0;
-  color: ${props => props.$primaryColor};
-  font-size: 13px;
-  text-decoration: underline;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    opacity: 0.85;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
 `;
 
 const StarIcon = styled.div`
@@ -1834,7 +1874,7 @@ const ShareIcon = () => (
     xmlns="http://www.w3.org/2000/svg"
   >
     <path
-      d="M9.00001 2.50216C8.99998 1.91022 9.20982 1.33743 9.59224 0.885601C9.97466 0.43377 10.5049 0.132162 11.0887 0.0343785C11.6725 -0.0634049 12.2721 0.0489702 12.7809 0.351533C13.2896 0.654095 13.6747 1.12725 13.8675 1.6869C14.0604 2.24655 14.0485 2.85645 13.8341 3.4082C13.6197 3.95995 13.2167 4.41782 12.6965 4.70044C12.1764 4.98305 11.5729 5.0721 10.9934 4.95176C10.4138 4.83141 9.89563 4.50948 9.53101 4.04316L4.91502 6.35116C5.02912 6.77597 5.02912 7.22336 4.91502 7.64816L9.53302 9.95816C9.91574 9.47098 10.4657 9.14326 11.0764 9.03854C11.687 8.93382 12.3147 9.05956 12.8379 9.39139C13.3611 9.72321 13.7424 10.2375 13.908 10.8345C14.0736 11.4315 14.0116 12.0687 13.734 12.6226C13.4564 13.1765 12.9831 13.6076 12.4057 13.8323C11.8284 14.057 11.1882 14.0594 10.6092 13.8389C10.0302 13.6184 9.55374 13.1908 9.27213 12.6389C8.99051 12.0871 8.92383 11.4504 9.08502 10.8522L4.46702 8.54216C4.14602 8.95136 3.7054 9.25027 3.20652 9.39725C2.70765 9.54423 2.17535 9.53196 1.68377 9.36216C1.19219 9.19236 0.765807 8.87348 0.464002 8.44992C0.162198 8.02637 0 7.51924 0 6.99916C0 6.47908 0.162198 5.97195 0.464002 5.5484C0.765807 5.12485 1.19219 4.80596 1.68377 4.63616C2.17535 4.46636 2.70765 4.45409 3.20652 4.60107C3.7054 4.74805 4.14602 5.04696 4.46702 5.45616L9.08502 3.14916C9.02854 2.93813 8.99996 2.72062 9.00001 2.50216ZM11.502 1.00016C11.1038 1.00016 10.7219 1.15835 10.4403 1.43994C10.1587 1.72153 10.0005 2.10344 10.0005 2.50166C10.0005 2.89988 10.1587 3.2818 10.4403 3.56338C10.7219 3.84497 11.1038 4.00316 11.502 4.00316C11.9002 4.00316 12.2821 3.84497 12.5637 3.56338C12.8453 3.2818 13.0035 2.89988 13.0035 2.50166C13.0035 2.10344 12.8453 1.72153 12.5637 1.43994C12.2821 1.15835 11.9002 1.00016 11.502 1.00016ZM11.5 10.0002C11.1022 10.0002 10.7207 10.1582 10.4394 10.4395C10.1581 10.7208 10 11.1023 10 11.5002C10 11.898 10.1581 12.2795 10.4394 12.5608C10.7207 12.8421 11.1022 13.0002 11.5 13.0002C11.8978 13.0002 12.2794 12.8421 12.5607 12.5608C12.842 12.2795 13 11.898 13 11.5002C13 11.1023 12.842 10.7208 12.5607 10.4395C12.2794 10.1582 11.8978 10.0002 11.5 10.0002ZM1.00002 7.00016C1.00002 7.19714 1.03881 7.3922 1.1142 7.57419C1.18958 7.75617 1.30007 7.92153 1.43936 8.06082C1.57864 8.20011 1.744 8.3106 1.92599 8.38598C2.10798 8.46136 2.30303 8.50016 2.50002 8.50016C2.697 8.50016 2.89205 8.46136 3.07404 8.38598C3.25603 8.3106 3.42139 8.20011 3.56068 8.06082C3.69996 7.92153 3.81045 7.75617 3.88583 7.57419C3.96122 7.3922 4.00002 7.19714 4.00002 7.00016C4.00002 6.60234 3.84198 6.22081 3.56068 5.9395C3.27937 5.6582 2.89784 5.50016 2.50002 5.50016C2.10219 5.50016 1.72066 5.6582 1.43936 5.9395C1.15805 6.22081 1.00002 6.60234 1.00002 7.00016Z"
+      d="M9.00001 2.50216C9.00098 1.91022 9.20982 1.33743 9.59224 0.885601C9.97466 0.43377 10.5049 0.132162 11.0887 0.0343785C11.6725 -0.0634049 12.2721 0.0489702 12.7809 0.351533C13.2896 0.654095 13.6747 1.12725 13.8675 1.6869C14.0604 2.24655 14.0485 2.85645 13.8341 3.4082C13.6197 3.95995 13.2167 4.41782 12.6965 4.70044C12.1764 4.98305 11.5729 5.0721 10.9934 4.95176C10.4138 4.83141 9.89563 4.50948 9.53101 4.04316L4.91502 6.35116C5.02912 6.77597 5.02912 7.22336 4.91502 7.64816L9.53302 9.95816C9.91574 9.47098 10.4657 9.14326 11.0764 9.03854C11.687 8.93382 12.3147 9.05956 12.8379 9.39139C13.3611 9.72321 13.7424 10.2375 13.908 10.8345C14.0736 11.4315 14.0116 12.0687 13.734 12.6226C13.4564 13.1765 12.9831 13.6076 12.4057 13.8323C11.8284 14.057 11.1882 14.0594 10.6092 13.8389C10.0302 13.6184 9.55374 13.1908 9.27213 12.6389C8.99051 12.0871 8.92383 11.4504 9.08502 10.8522L4.46702 8.54216C4.14602 8.95136 3.7054 9.25027 3.20652 9.39725C2.70765 9.54423 2.17535 9.53196 1.68377 9.36216C1.19219 9.19236 0.765807 8.87348 0.464002 8.44992C0.162198 8.02637 0 7.51924 0 6.99916C0 6.47908 0.162198 5.97195 0.464002 5.5484C0.765807 5.12485 1.19219 4.80596 1.68377 4.63616C2.17535 4.46636 2.70765 4.45409 3.20652 4.60107C3.7054 4.74805 4.14602 5.04696 4.46702 5.45616L9.08502 3.14916C9.02854 2.93813 8.99996 2.72062 9.00001 2.50216ZM11.502 1.00016C11.1038 1.00016 10.7219 1.15835 10.4403 1.43994C10.1587 1.72153 10.0005 2.10344 10.0005 2.50166C10.0005 2.89988 10.1587 3.2818 10.4403 3.56338C10.7219 3.84497 11.1038 4.00316 11.502 4.00316C11.9002 4.00316 12.2821 3.84497 12.5637 3.56338C12.8453 3.2818 13.0035 2.89988 13.0035 2.50166C13.0035 2.10344 12.8453 1.72153 12.5637 1.43994C12.2821 1.15835 11.9002 1.00016 11.502 1.00016ZM11.5 10.0002C11.1022 10.0002 10.7207 10.1582 10.4394 10.4395C10.1581 10.7208 10 11.1023 10 11.5002C10 11.898 10.1581 12.2795 10.4394 12.5608C10.7207 12.8421 11.1022 13.0002 11.5 13.0002C11.8978 13.0002 12.2794 12.8421 12.5607 12.5608C12.842 12.2795 13 11.898 13 11.5002C13 11.1023 12.842 10.7208 12.5607 10.4395C12.2794 10.1582 11.8978 10.0002 11.5 10.0002ZM1.00002 7.00016C1.00002 7.19714 1.03881 7.3922 1.1142 7.57419C1.18958 7.75617 1.30007 7.92153 1.43936 8.06082C1.57864 8.20011 1.744 8.3106 1.92599 8.38598C2.10798 8.46136 2.30303 8.50016 2.50002 8.50016C2.697 8.50016 2.89205 8.46136 3.07404 8.38598C3.25603 8.3106 3.42139 8.20011 3.56068 8.06082C3.69996 7.92153 3.81045 7.75617 3.88583 7.57419C3.96122 7.3922 4.00002 7.19714 4.00002 7.00016C4.00002 6.60234 3.84198 6.22081 3.56068 5.9395C3.27937 5.6582 2.89784 5.50016 2.50002 5.50016C2.10219 5.50016 1.72066 5.6582 1.43936 5.9395C1.15805 6.22081 1.00002 6.60234 1.00002 7.00016Z"
       fill="black"
     />
   </svg>
@@ -1847,6 +1887,7 @@ const SpinnerIcon = styled.div`
   border-top: 2px solid transparent;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-right: 8px;
   
   @keyframes spin {
     0% { transform: rotate(0deg); }
