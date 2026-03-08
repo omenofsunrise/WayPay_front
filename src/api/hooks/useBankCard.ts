@@ -82,6 +82,19 @@ const useBankCards = () => {
     }
   }, []);
 
+  const setCurrentCard = useCallback(async (id: number): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await bankCardService.setCurrent(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const deleteBankCard = useCallback(async (id: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -125,7 +138,8 @@ const useBankCards = () => {
       setPagedResult(null);
     },
     getWithdraws,
-    deleteWithdraw
+    deleteWithdraw,
+    setCurrentCard
   };
 };
 

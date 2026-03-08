@@ -320,14 +320,6 @@ const CompanyPage = () => {
                     </InputContainer>
                     
                     <InputContainer>
-                        <InputGroup>
-                            <Label>Банк</Label>
-                            <StyledInput 
-                                name="bank"
-                                value={formData.bank}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
                         <InputGroup style={{width: "100%"}}>
                             <Label>Email</Label>
                             <StyledInput 
@@ -337,18 +329,6 @@ const CompanyPage = () => {
                                 onChange={handleInputChange}
                             />
                         </InputGroup>
-                    </InputContainer>
-                    
-                    <InputContainer>
-                        <InputGroup>
-                            <Label>Текущая карточка</Label>
-                            <BankCardSelect 
-                                value={displayBankCard}
-                                onChange={handleBankCardChange}
-                                onBankCardSelect={handleBankCardSelect}
-                                selectedCardId={currentBankCardId}
-                                placeholder="Выберите банковскую карту"
-                            />                        </InputGroup>
                         <InputGroup style={{width: "100%", maxWidth: "100%" }}>
                             <Label>Телефон</Label>
                             <PhoneModalInput 

@@ -20,6 +20,7 @@ import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import { formatDate } from '../../utils/dateFormatter';
 import Tabs from '../../components/ui/fields/Tabs';
 import { number } from 'framer-motion';
+import Checkbox from '../../components/ui/CheckBoxes/Checkbox';
 
 const BankCardsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,9 +36,9 @@ const BankCardsPage = () => {
   const [isWithdrawsLoading, setIsWithdrawsLoading] = useState(false);
   const [historyFilterCardId, setHistoryFilterCardId] = useState<number | null>(null);
   const [historyFilterCardName, setHistoryFilterCardName] = useState<string>('');
+  const [isSettingCurrent, setIsSettingCurrent] = useState(false);
   
   const pageSize = 10;
-  const { authInfo } = useAuth();
   
   const { 
     isLoading, 
@@ -50,7 +51,8 @@ const BankCardsPage = () => {
     deleteBankCard,
     addWithdraw,
     getWithdraws,
-    deleteWithdraw
+    deleteWithdraw,
+    setCurrentCard
   } = useBankCards();
 
   const { exportData, isExporting, exportProgress } = useExport<BankCard>();
@@ -133,6 +135,19 @@ const BankCardsPage = () => {
     }
   };
 
+  const handleSetCurrentCard = async (cardId: number) => {
+    setIsSettingCurrent(true);
+    try {
+      await setCurrentCard(cardId);
+      // Обновляем данные после изменения текущей карты
+      await loadBankCards();
+    } catch (err) {
+      console.error('Ошибка при установке текущей карты:', err);
+    } finally {
+      setIsSettingCurrent(false);
+    }
+  };
+
   const formatBankCardsData = (cards: BankCard[] | undefined) => {
     if (!cards) return [];
 
@@ -143,6 +158,14 @@ const BankCardsPage = () => {
       formatMoney(card.balance.toString()),
       formatMoney(card.limit === null ? '0' : card.limit.toString()),
       card.usageCount === null ? '0' : card.usageCount.toString(),
+      <CheckboxCell key={`checkbox-${card.id}`}>
+        <Checkbox
+          checked={card.isCurrent || false}
+          onChange={() => handleSetCurrentCard(card.id)}
+          disabled={isSettingCurrent}
+        />
+        {card.isCurrent && <CurrentBadge>Текущая</CurrentBadge>}
+      </CheckboxCell>,
     ]);
   };
 
@@ -196,7 +219,6 @@ const BankCardsPage = () => {
     
     if (!card) return;
     
-    // Устанавливаем фильтр для истории по выбранной карте
     setHistoryFilterCardId(card.id);
     setHistoryFilterCardName(card.details);
     setWithdrawsCurrentPage(1);
@@ -333,6 +355,7 @@ const BankCardsPage = () => {
               { name: "Баланс", isSortable: true, align: "right" },
               { name: "Лимит", align: "right" },
               { name: "Отправлено раз", align: "right" },
+              { name: "Текущая", align: "center" },
             ]} 
             data={tableData}
             contextMenuActions={cardsTableActions}
@@ -432,7 +455,6 @@ const BankCardsPage = () => {
       {activeTab === 'cards' && isLoading && <LoadingMessage>Загрузка...</LoadingMessage>}
       {activeTab === 'cards' && error && <ErrorMessage>Ошибка: {error}</ErrorMessage>}
 
-      {/* Модалка для создания/редактирования карты */}
       {isModalOpen && (
         <BaseModal
           title={modalMode === 'create' ? 'Добавить карту' : 'Редактировать карту'}
@@ -467,7 +489,6 @@ const BankCardsPage = () => {
         </BaseModal>
       )}
 
-      {/* Модалка для снятия средств */}
       {isWithdrawModalOpen && selectedCard && (
         <BaseModal
           title="Снять средства"
@@ -507,21 +528,22 @@ const BankCardsPage = () => {
 
 export default BankCardsPage;
 
-const SummaryInfo = styled.div`
+// Стили для новых компонентов
+const CheckboxCell = styled.div`
   display: flex;
-  gap: 30px;
-  margin-bottom: 30px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 `;
 
-const TableTitle = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  color: #6b7280;
-  margin-bottom: 8px;
+const CurrentBadge = styled.span`
+  background-color: #007D88;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
 `;
 
 const FormField = styled.div`
@@ -599,11 +621,6 @@ const FilterInfo = styled.div`
   gap: 10px;
 `;
 
-const FilterLabel = styled.span`
-  font-weight: 500;
-  color: #333;
-`;
-
 const FilterCardInfo = styled.span`
   font-weight: 600;
   color: #007D88;
@@ -623,34 +640,6 @@ const ClearFilterButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: #e5e7eb;
-    border-color: #9ca3af;
-  }
-`;
-
-const SelectCardMessage = styled.div`
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
-  font-size: 16px;
-`;
-
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background-color: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  color: #4b5563;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 30px;
   
   &:hover {
     background-color: #e5e7eb;

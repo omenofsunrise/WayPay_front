@@ -60,6 +60,11 @@ class BankCardService {
     return response.data;
   }
 
+  async setCurrent(id: number): Promise<void> {
+    const response = await apiClient.patch(`/BankCard/make-current-card/${id}`, null);
+    return;
+  }
+
   async delete(id: number): Promise<void> {
     await apiClient.delete(`/BankCard/${id}`);
   }

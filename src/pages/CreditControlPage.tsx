@@ -873,7 +873,6 @@ const CreditControlPage = () => {
               </DarkCyanButton>
             </FilterHeader>
 
-            {/* Новая кнопка для подтверждения всех договоров по фильтрам */}
             {hasPermission('MANAGE_ACCOUNTING', true) && (
               <DarkCyanButton 
                 onClick={handleConfirmAllCredits}

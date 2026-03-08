@@ -7,6 +7,7 @@ export interface BankCard {
   paymentsAmount: number;
   limit?: number;
   usageCount?: number;
+  isCurrent: boolean;
 }
 
 export interface BankCardRequest {
