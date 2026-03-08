@@ -1167,7 +1167,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               entityType="credit"
             />
           </FieldGroup>
-          <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
+          {/* <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
             <Label>Категория (необязательно)</Label>
             <ObjectTypeSelect
               value={tabTypeName}
@@ -1176,7 +1176,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               placeholder="Выберите категорию"
               entityType="creditTab"
             />
-          </FieldGroup>
+          </FieldGroup> */}
         </FormRow>
             
         <ModalInfoTitle>Сведения о покупателе</ModalInfoTitle>
