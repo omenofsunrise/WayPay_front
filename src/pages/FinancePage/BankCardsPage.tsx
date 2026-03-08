@@ -164,7 +164,6 @@ const BankCardsPage = () => {
           onChange={() => handleSetCurrentCard(card.id)}
           disabled={isSettingCurrent}
         />
-        {card.isCurrent && <CurrentBadge>Текущая</CurrentBadge>}
       </CheckboxCell>,
     ]);
   };
