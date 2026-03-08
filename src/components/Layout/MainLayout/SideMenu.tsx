@@ -21,7 +21,7 @@ import { authStorage } from '../../../api/utils/auth-storage';
 import useCompany from '../../../api/hooks/useCompany';
 import React from 'react';
 import type { CommonInfo } from '../../../api/types/company';
-import { formatDate } from '../../../utils/dateFormatter';
+import { formatDate, getLicenseDateColor } from '../../../utils/dateFormatter';
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -48,7 +48,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
   '/investors-pool': { mainItem: 'investors', subItems: { '/investors-pool': 'investors-pool' } },
   '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
-  '/black-catalog': { mainItem: 'black-catalog' }, // Теперь как отдельный пункт
+  '/black-catalog': { mainItem: 'black-catalog' },
   '/registration-requests': { mainItem: 'references', subItems: { '/registration-requests': 'registration-requests' } },
   '/finance': { mainItem: 'finance' },
   '/profile': { mainItem: 'profile' },
@@ -89,12 +89,31 @@ const SideMenu = () => {
       fetchData();
   }, [getCommonInfo]);
 
+  const getDaysUntilExpiry = (dateString: string): string => {
+    const targetDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 0) return `Осталось ${diffDays} дней`;
+    if (diffDays === 0) return 'Срок истекает сегодня';
+    return `Просрочено на ${Math.abs(diffDays)} дней`;
+  };
+
   // Данные для блока профиля
   const employee = authInfo?.employee;
-  const currentDate = formatDate(commonInfo?.licenceDate ?? new Date);
+  const licenceDate = commonInfo?.licenceDate ?? new Date();
+  const currentDate = formatDate(licenceDate);
+  const daysUntilExpiry = getDaysUntilExpiry(licenceDate);
+  const licenseDateColor = getLicenseDateColor(daysUntilExpiry);
+  
+  // Получаем первое слово из ФИО
+  const firstName = employee?.fullName ? employee.fullName.split(' ')[0] : '';
   
   const avatarSrc = employee?.photoPath 
-    ? `${FILE_BASE_URL}${employee.photoPath}?${Date.now()}`
+    ? `${FILE_BASE_URL}${employee.photoPath}`
     : generateAvatar(getInitials(employee?.fullName || ''), 40);
 
   const menuItemPermissions: Record<string, () => boolean> = {
@@ -111,7 +130,7 @@ const SideMenu = () => {
     'investors-report': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'investors-pool': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'products': () => true,
-    'black-catalog': () => true, // Всегда доступен
+    'black-catalog': () => true,
     'registration-requests': () => isSuperAdminCompany(),
     'finance': () => hasPermission('MANAGE_ACCOUNTING', true),
     'profile': () => true,
@@ -586,7 +605,6 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
-          {/* References Menu (без ЧС+) */}
           <MenuItem 
             onClick={(e) => {
               if (collapsed) {
@@ -731,13 +749,26 @@ const SideMenu = () => {
           )}
         </BottomMenuSection>
 
-          {!collapsed && employee && (
+        {employee && (
+          collapsed ? (
+            <CollapsedUserProfileBlock>
+              <CollapsedUserAvatar src={avatarSrc} alt={employee.fullName} />
+              <CollapsedUserInfo>
+                <CollapsedUserFullName title={employee.fullName}>
+                  {firstName}
+                </CollapsedUserFullName>
+                <CollapsedUserDate $color={licenseDateColor}>
+                  {currentDate}
+                </CollapsedUserDate>
+              </CollapsedUserInfo>
+            </CollapsedUserProfileBlock>
+          ) : (
             <UserProfileBlock>
               <UserAvatar src={avatarSrc} alt={employee.fullName} />
               <UserInfo>
                 <UserFullName>{employee.fullName}</UserFullName>
                 <UserRole>{employee.role}</UserRole>
-                <UserDate>{currentDate}</UserDate>
+                <UserDate $color={licenseDateColor}>{currentDate}</UserDate>
               </UserInfo>
               <LogoutButton onClick={handleLogout} title="Выйти">
                 <svg width="18" height="18" viewBox="0 0 16 17" fill="none">
@@ -745,7 +776,8 @@ const SideMenu = () => {
                 </svg>
               </LogoutButton>
             </UserProfileBlock>
-          )}
+          )
+        )}
         
         {/* About - всегда в самом низу */}
         <MenuItem
@@ -829,11 +861,11 @@ const SideMenu = () => {
   );
 };
 
-// Новые стили для блока профиля пользователя
+// Обновленные и новые стили для блока профиля пользователя
 const UserProfileBlock = styled.div`
   display: flex;
   align-items: center;
-  padding: 16px 17px;
+  padding: 1px 17px;
   margin: 8px 0;
   background-color: #F3F4F6;
   border-radius: 8px;
@@ -842,14 +874,44 @@ const UserProfileBlock = styled.div`
   gap: 12px;
 `;
 
+const CollapsedUserProfileBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+
+  margin: 8px 0 10px -15px;
+  border-radius: 8px;
+  width: 68px;
+  box-sizing: border-box;
+  gap: 6px;
+  heigth: 100%;
+`;
+
+const CollapsedUserAvatar = styled.img`
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+`;
+
 const UserAvatar = styled.img`
   width: 40px;
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 `;
 
 const UserInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`;
+
+const CollapsedUserInfo = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -866,6 +928,17 @@ const UserFullName = styled.div`
   text-align: left;
 `;
 
+const CollapsedUserFullName = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: #1F2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  line-height: 1.2;
+`;
+
 const UserRole = styled.div`
   font-size: 12px;
   color: #6B7280;
@@ -875,11 +948,21 @@ const UserRole = styled.div`
   text-align: left;
 `;
 
-const UserDate = styled.div`
-  font-size: 11px;
-  color: #9CA3AF;
+const UserDate = styled.div<{ $color?: string }>`
+  font-size: 9px;
+  color: ${({ $color }) => $color || '#9CA3AF'};
   margin-top: 2px;
+  text-align: center;
+`;
+
+const CollapsedUserDate = styled.div<{ $color?: string }>`
+  font-size: 12px;
+  color: ${({ $color }) => $color || '#9CA3AF'};
   text-align: left;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const LogoutButton = styled.button`
@@ -891,6 +974,7 @@ const LogoutButton = styled.button`
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
+  flex-shrink: 0;
   
   &:hover {
     background-color: rgba(0, 0, 0, 0.05);
@@ -1048,7 +1132,7 @@ const Logo = styled.img`
   width: 85%;
   max-width: 196px;
   align-self: center;
-  margin-bottom: 42px;
+  margin-bottom: 22px;
 `;
 
 const MenuItemText = styled.span`

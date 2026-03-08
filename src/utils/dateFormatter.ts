@@ -12,6 +12,23 @@ export const formatDate = (dateString: string | Date): string => {
   return `${day}-${month}-${year}`;
 };
 
+/**
+ * Возвращает цвет для даты лицензии в зависимости от количества дней до истечения
+ * @param daysUntilExpiry - количество дней до истечения
+ * @returns цвет в формате HEX или CSS-переменной
+ */
+export const getLicenseDateColor = (daysUntilExpiry: number): string => {
+  if (daysUntilExpiry <= 0) {
+    return '#EF4444'; // Красный - просрочено
+  } else if (daysUntilExpiry <= 7) {
+    return '#F97316'; // Оранжевый - меньше недели
+  } else if (daysUntilExpiry <= 30) {
+    return '#EAB308'; // Желтый - меньше месяца
+  } else {
+    return '#10B981'; // Зеленый - больше месяца
+  }
+};
+
 export function parseDateInput(dateString: string): Date {
     return new Date(dateString);
 }
