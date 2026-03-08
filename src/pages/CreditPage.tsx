@@ -187,7 +187,7 @@ const CreditPage = () => {
   const [isPageSizeReady, setIsPageSizeReady] = useState(false);
   const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
     defaultPageSize: 10,
-    minPageSize: 1,
+    minPageSize: 3,
     maxPageSize: 50,
     rowHeight: 56,
     headerHeight: 300,

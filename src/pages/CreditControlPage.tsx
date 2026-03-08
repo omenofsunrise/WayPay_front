@@ -145,11 +145,11 @@ const CreditControlPage = () => {
   
   const [activeTab, setActiveTab] = useState<string>(() => (typeof savedFilters?.activeTab === 'string' ? savedFilters.activeTab : 'all'));
 
-  // Функция для подсчета количества активных фильтров
+  // Функция для подсчета количества активных фильтров (исключая выбранную вкладку)
   const getActiveFiltersCount = useMemo(() => {
     let count = 0;
     if (contractNumber) count++;
-    if (investorName || selectedInvestmentSource) count++;
+    if (investorName) count++;
     if (clientFullName) count++;
     if (fromDate) count++;
     if (toDate) count++;
@@ -161,9 +161,17 @@ const CreditControlPage = () => {
     if (percentsIncomeTo) count++;
     if (objectType) count++;
     if (approvalStatus) count++;
-    if (creditTypeId) count++;
-    if (activeTab !== 'all') count++;
-    if (filters && Object.keys(filters).length > 0) count++;
+    
+    // Исключаем фильтры от вкладок из подсчета
+    const filterKeys = Object.keys(filters);
+    if (filterKeys.length > 0) {
+      // Проверяем, что это не фильтры от вкладок
+      const hasNonTabFilters = filterKeys.some(key => 
+        !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive'].includes(key)
+      );
+      
+      if (hasNonTabFilters) count++;
+    }
     
     return count;
   }, [
@@ -182,7 +190,6 @@ const CreditControlPage = () => {
     objectType,
     approvalStatus,
     creditTypeId,
-    activeTab,
     filters
   ]);
 
@@ -238,6 +245,7 @@ const CreditControlPage = () => {
   ]);
 
   const hasActiveFilters = useMemo(() => {
+    // Проверяем наличие активных фильтров, исключая фильтры от вкладок
     return Boolean(
       contractNumber ||
       investorName ||
@@ -253,10 +261,12 @@ const CreditControlPage = () => {
       percentsIncomeTo ||
       objectType ||
       approvalStatus ||
-      (creditTypeId !== null && creditTypeId !== undefined) ||
-      activeTab !== 'all' ||
-      (filters && Object.keys(filters).length > 0)
-    );
+      (creditTypeId !== null && creditTypeId !== undefined)
+    ) || (Object.keys(filters).length > 0 && 
+         // Проверяем, что это не фильтры от вкладок
+         Object.keys(filters).some(key => 
+           !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive'].includes(key)
+         ));
   }, [
     contractNumber,
     investorName,
@@ -273,7 +283,6 @@ const CreditControlPage = () => {
     objectType,
     approvalStatus,
     creditTypeId,
-    activeTab,
     filters
   ]);
 
@@ -293,12 +302,56 @@ const CreditControlPage = () => {
     setObjectType('');
     setCreditTypeId(null);
     setApprovalStatus('');
-    setFilters({});
-    setActiveTab('all');
+    
+    // Сохраняем только фильтры от текущей вкладки
+    let newFilters = {};
+    switch (activeTab) {
+      case 'my':
+        newFilters = { myCredits: true };
+        break;
+      case 'favourite':
+        newFilters = { isFavourite: true };
+        break;
+      case 'archive':
+        newFilters = { isActive: false };
+        break;
+      case 'debtors':
+        newFilters = { debt: true };
+        break;
+      case 'inDebt':
+        newFilters = { inDebt: true };
+        break;
+      default:
+        newFilters = {};
+        break;
+    }
+    
+    setFilters(newFilters);
     setSortConfig({ key: null, direction: 'desc' });
     setCurrentPage(1);
-    localStorage.removeItem(FILTERS_STORAGE_KEY);
-  }, []);
+    
+    // Не удаляем фильтры полностью из localStorage, обновляем их
+    const payload = {
+      contractNumber: '',
+      investorName: '',
+      selectedInvestmentSource: null,
+      clientFullName: '',
+      fromDate: '',
+      toDate: '',
+      fromCreationDate: '',
+      toCreationDate: '',
+      rublesIncomeFrom: '',
+      rublesIncomeTo: '',
+      percentsIncomeFrom: '',
+      percentsIncomeTo: '',
+      objectType: '',
+      creditTypeId: null,
+      approvalStatus: '',
+      activeTab,
+      filters: newFilters
+    };
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(payload));
+  }, [activeTab]);
 
   const approvalOptions = [
     { value: '', label: 'Все' },
@@ -391,27 +444,29 @@ const CreditControlPage = () => {
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     
+    let newFilters = {};
     switch (tabId) {
       case 'my':
-        setFilters({ myCredits: true });
+        newFilters = { myCredits: true };
         break;
       case 'favourite':
-        setFilters({ isFavourite: true });
+        newFilters = { isFavourite: true };
         break;
       case 'archive':
-        setFilters({ isActive: false });
+        newFilters = { isActive: false };
         break;
       case 'debtors':
-        setFilters({ debt: true });
+        newFilters = { debt: true };
         break;
       case 'inDebt':
-        setFilters({ inDebt: true });
+        newFilters = { inDebt: true };
         break;
       default:
-        setFilters({});
+        newFilters = {};
         break;
     }
     
+    setFilters(newFilters);
     setCurrentPage(1);
   };
 
@@ -778,59 +833,65 @@ const CreditControlPage = () => {
       <TitleField>
         <CustomTitle>Контроль договоров</CustomTitle>
         
-        <FilterHeader>
-          <FilterToggleButton 
-            onClick={() => setIsFiltersVisible(!isFiltersVisible)}
-            $isOpen={isFiltersVisible}
-            $hasActiveFilters={hasActiveFilters}
-          >
-            <FilterToggleIcon 
-              $isOpen={isFiltersVisible} 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                d="M6 9L12 15L18 9" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              />
-            </FilterToggleIcon>
-            Фильтры
-            {hasActiveFilters && getActiveFiltersCount > 0 && (
-              <FilterBadge>
-                {getActiveFiltersCount}
-              </FilterBadge>
-            )}
-          </FilterToggleButton>
-        </FilterHeader>
+        <HeaderControls>
+          <LeftControls>
+            <FilterHeader>
+              <FilterToggleButton 
+                onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+                $isOpen={isFiltersVisible}
+                $hasActiveFilters={hasActiveFilters}
+              >
+                <FilterToggleIcon 
+                  $isOpen={isFiltersVisible} 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    d="M6 9L12 15L18 9" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </FilterToggleIcon>
+                Фильтры
+                {hasActiveFilters && getActiveFiltersCount > 0 && (
+                  <FilterBadge>
+                    {getActiveFiltersCount}
+                  </FilterBadge>
+                )}
+              </FilterToggleButton>
+            </FilterHeader>
 
-        {/* Новая кнопка для подтверждения всех договоров по фильтрам */}
-        {hasPermission('MANAGE_ACCOUNTING', true) && (
-          <DarkCyanButton 
-            onClick={handleConfirmAllCredits}
-            disabled={isConfirmingAll}
-          >
-            {isConfirmingAll ? (
-              <>
-                <SpinnerIcon />
-                Подтверждение...
-              </>
-            ) : (
-              'Подтвердить все по фильтрам'
+            {/* Новая кнопка для подтверждения всех договоров по фильтрам */}
+            {hasPermission('MANAGE_ACCOUNTING', true) && (
+              <DarkCyanButton 
+                onClick={handleConfirmAllCredits}
+                disabled={isConfirmingAll}
+              >
+                {isConfirmingAll ? (
+                  <>
+                    <SpinnerIcon />
+                    Подтверждение...
+                  </>
+                ) : (
+                  'Подтвердить все по фильтрам'
+                )}
+              </DarkCyanButton>
             )}
-          </DarkCyanButton>
-        )}
-        
-        <ExportButton 
-          onClick={handleExport}
-          isExporting={isExporting}
-          exportProgress={exportProgress}
-        >
-          Экспорт
-        </ExportButton>
+          </LeftControls>
+
+          <RightControls style={{marginTop: "10px" }}>
+            <ExportButton 
+              onClick={handleExport}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            >
+              Экспорт
+            </ExportButton>
+          </RightControls>
+        </HeaderControls>
       </TitleField>
 
       {isFiltersVisible && (
@@ -1093,11 +1154,7 @@ const CreditControlPage = () => {
 
 const FilterHeader = styled.div`
   display: flex;
-  justify-content: flex-start;
-  margin-bottom: 15px;
-  margin-left: auto;
-  margin-right: 20px;
-  margin-bottom: 0;
+  align-items: center;
 `;
 
 const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
@@ -1114,6 +1171,7 @@ const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: 
   font-weight: 500;
   transition: all 0.2s ease;
   position: relative;
+  height: 40px;
 
   &:hover {
     background: ${props => props.$isOpen ? '#00666f' : '#e9e9e9'};
@@ -1142,33 +1200,31 @@ const FilterBadge = styled.span`
   justify-content: center;
 `;
 
+const HeaderControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-left: auto;
+`;
+
+const LeftControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const RightControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
 const FilterField = styled.div`
   display: flex;
   gap: 12px;
   width: 100%;
   margin-top: 0;
-`;
-
-const ResetFiltersButton = styled.button`
-  align-self: center;
-  height: 40px;
-  padding: 0 14px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  color: #111827;
-  border-radius: 10px;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    background: #f3f4f6;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
+  align-items: center;
 `;
 
 const InputWrapper = styled.div`
@@ -1191,26 +1247,6 @@ const TotalControls = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-`;
-
-const ResetFiltersLink = styled.button<{ $primaryColor: string }>`
-  background: none;
-  border: 0;
-  padding: 0;
-  color: ${props => props.$primaryColor};
-  font-size: 13px;
-  text-decoration: underline;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    opacity: 0.85;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
 `;
 
 const StarIcon = styled.div`
@@ -1263,34 +1299,6 @@ const IncomeContainer = styled.div`
   flex-grow: 1;
 `;
 
-const ConfirmAllButton = styled.button<{ $isConfirming?: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 16px;
-  background-color: ${({ $isConfirming }) => $isConfirming ? '#f0f0f0' : '#28a745'};
-  color: ${({ $isConfirming }) => $isConfirming ? '#666' : 'white'};
-  border: 1px solid ${({ $isConfirming }) => $isConfirming ? '#ddd' : '#218838'};
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
-  transition: all 0.2s;
-  white-space: nowrap;
-  
-  &:hover:not(:disabled) {
-    background-color: #218838;
-    border-color: #1e7e34;
-  }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
 const SpinnerIcon = styled.div`
   width: 16px;
   height: 16px;
@@ -1298,6 +1306,7 @@ const SpinnerIcon = styled.div`
   border-top: 2px solid transparent;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-right: 8px;
   
   @keyframes spin {
     0% { transform: rotate(0deg); }
