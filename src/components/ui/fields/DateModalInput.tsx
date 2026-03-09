@@ -1,17 +1,19 @@
 import styled from 'styled-components';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-interface DateModalInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface DateModalInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   placeholder?: string;
   customPlaceholder?: string;
   hasError?: boolean;
   errorMessage?: string;
+  value: string | null;
+  onChange: (date: string | null) => void;
 }
 
 const DateModalInput: React.FC<DateModalInputProps> = ({
   placeholder = 'дд.мм.гггг',
   customPlaceholder,
-  value = '',
+  value,
   onChange,
   hasError = false,
   errorMessage,
@@ -20,91 +22,96 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
   const [displayValue, setDisplayValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const showCustomPlaceholder = Boolean(customPlaceholder && !value && !isFocused);
+  const showCustomPlaceholder = Boolean(customPlaceholder && !displayValue && !isFocused);
 
+  // Конвертация ISO даты в формат ДД.ММ.ГГГГ для отображения
   useEffect(() => {
     if (value && typeof value === 'string') {
       try {
-        const date = new Date(value);
-        if (!isNaN(date.getTime())) {
-          const day = String(date.getDate()).padStart(2, '0');
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const year = date.getFullYear();
-          setDisplayValue(`${day}.${month}.${year}`);
-          return;
+        // Разбираем ISO дату (YYYY-MM-DD)
+        const [year, month, day] = value.split('-').map(Number);
+        
+        // Проверяем, что все части даты корректны
+        if (year && month && day && !isNaN(year) && !isNaN(month) && !isNaN(day)) {
+          // Создаем дату в локальном времени, чтобы избежать проблем с часовыми поясами
+          const localDate = new Date(year, month - 1, day);
+          
+          if (!isNaN(localDate.getTime())) {
+            const formattedDay = String(day).padStart(2, '0');
+            const formattedMonth = String(month).padStart(2, '0');
+            setDisplayValue(`${formattedDay}.${formattedMonth}.${year}`);
+            return;
+          }
         }
       } catch {
+        // Игнорируем ошибки парсинга
       }
     }
     setDisplayValue('');
   }, [value]);
 
+  // Конвертация ДД.ММ.ГГГГ в ISO формат (YYYY-MM-DD) без потери дня
+  const convertToISO = useCallback((dateStr: string): string | null => {
+    if (dateStr.length !== 10) return null;
+    
+    const [day, month, year] = dateStr.split('.');
+    const dayNum = parseInt(day, 10);
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+    
+    // Проверяем корректность даты
+    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900 && yearNum <= 2100) {
+      // Возвращаем дату в формате YYYY-MM-DD без создания объекта Date
+      // чтобы избежать проблем с часовыми поясами
+      return `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    }
+    
+    return null;
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     
+    // Удаляем все не-цифры, кроме точек
     const cleanedValue = input.replace(/[^\d.]/g, '');
     
-    const parts = cleanedValue.split('.').filter(part => part !== '');
-    
+    // Автоматическое форматирование при вводе
     let formattedValue = '';
-    if (parts.length > 0) {
-      const day = parts[0].slice(0, 2);
-      formattedValue = day;
-      
-      if (parts.length > 1 || (parts[0].length > 2 && parts.length === 1)) {
-        const monthPart = parts.length > 1 ? parts[1] : parts[0].slice(2);
-        const month = monthPart.slice(0, 2);
-        formattedValue += `.${month}`;
-        
-        if (parts.length > 2 || (monthPart.length > 2 && parts.length === 2) || 
-            (parts.length === 1 && parts[0].length > 4)) {
-          const yearPart = parts.length > 2 ? parts[2] : 
-                         parts.length === 2 ? parts[1].slice(2) : 
-                         parts[0].slice(4);
-          const year = yearPart.slice(0, 4);
-          formattedValue += `.${year}`;
-        }
+    const digits = cleanedValue.replace(/\./g, '');
+    
+    for (let i = 0; i < digits.length && i < 8; i++) {
+      if (i === 2 || i === 4) {
+        formattedValue += '.';
       }
+      formattedValue += digits[i];
     }
     
     setDisplayValue(formattedValue);
     
+    // Если дата полная, конвертируем и отправляем в родительский компонент
     if (formattedValue.length === 10) {
-      const [day, month, year] = formattedValue.split('.');
-      const dayNum = parseInt(day, 10);
-      const monthNum = parseInt(month, 10) - 1;
-      const yearNum = parseInt(year, 10);
-      
-      const date = new Date(yearNum, monthNum, dayNum);
-      if (!isNaN(date.getTime())) {
-        const isoDate = date.toISOString().split('T')[0];
-        onChange?.({
-            ...e,
-            target: {
-                ...e.target,
-                value: formattedValue
-          }
-        });
-        return;
-      }
+      const isoDate = convertToISO(formattedValue);
+      onChange(isoDate);
+    } else {
+      // Если дата неполная, отправляем null
+      onChange(null);
     }
-    
-    onChange?.({
-      ...e,
-      target: {
-        ...e.target,
-        value: formattedValue
-      }
-    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Разрешаем специальные клавиши
     if ([8, 9, 27, 13, 46].includes(e.keyCode) || 
         (e.keyCode >= 37 && e.keyCode <= 40)) {
       return;
     }
 
+    // Разрешаем только цифры и точку
     if (!/[0-9.]/.test(e.key)) {
+      e.preventDefault();
+    }
+    
+    // Ограничиваем количество точек
+    if (e.key === '.' && displayValue.split('.').length >= 3) {
       e.preventDefault();
     }
   };
@@ -112,18 +119,24 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
   const handleBlur = () => {
     setIsFocused(false);
     
+    // При потере фокуса проверяем и конвертируем дату
     if (displayValue.length === 10) {
-      const [day, month, year] = displayValue.split('.');
-      const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-      if (!isNaN(date.getTime())) {
-        const isoDate = date.toISOString().split('T')[0];
-        onChange?.({
-          target: {
-            value: isoDate,
-          },
-        } as React.ChangeEvent<HTMLInputElement>);
+      const isoDate = convertToISO(displayValue);
+      if (isoDate) {
+        onChange(isoDate);
+      } else {
+        setDisplayValue('');
+        onChange(null);
       }
+    } else if (displayValue.length > 0) {
+      // Если дата неполная, очищаем поле
+      setDisplayValue('');
+      onChange(null);
     }
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
   };
 
   return (
@@ -131,9 +144,10 @@ const DateModalInput: React.FC<DateModalInputProps> = ({
       <StyledInput
         {...props}
         ref={inputRef}
+        type="text"
         value={displayValue}
         placeholder={showCustomPlaceholder ? '' : placeholder}
-        onFocus={() => setIsFocused(true)}
+        onFocus={handleFocus}
         onBlur={handleBlur}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -198,7 +212,7 @@ const PlaceholderLabel = styled.label<{ isVisible: boolean }>`
   transform: translateY(-50%);
   color: rgba(80, 85, 92, 1);
   pointer-events: none;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
   font-size: 14px;
   opacity: ${({ isVisible }) => (isVisible ? 1 : 0)};
   background-color: white;

@@ -13,7 +13,6 @@ import InvestorSelectModal from '../components/modal/CrudInherited/InvestorSelec
 import ProductsTable from '../components/ui/tables/ProductTable';
 import PaymentScheduleTable, { type PaymentScheduleItem } from '../components/ui/tables/PaymentScheduleTable';
 import CustomInput from '../components/ui/fields/CustomInput';
-import CustomSelect from '../components/ui/fields/CustomSelect';
 import useSchedule from '../api/hooks/useSchedule';
 import useCredit from '../api/hooks/useCredit';
 import type { CreateCreditRequest, UpdateCreditRequest } from '../api/types/credit';
@@ -25,6 +24,7 @@ import Checkbox from '../components/ui/CheckBoxes/Checkbox';
 import type { EntityType } from '../api/types/objectType';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import { formatMoney } from '../utils/formatPrice';
+import DateModalInput from '../components/ui/fields/DateModalInput';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 const TURN_OF_ROUNDING_KEY = 'turn_of_rounding';
@@ -76,6 +76,7 @@ const NewCreditPage = () => {
   const [isGuarantorClientModalOpen, setIsGuarantorClientModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  let isMounted = true;
   const [totalSum, setTotalSum] = useState(0);
   const [initialPaymentPercent, setInitialPaymentPercent] = useState<string>('');
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
@@ -87,6 +88,7 @@ const NewCreditPage = () => {
   });
   const [debtComment, setDebtComment] = useState<string>('');
   const [paymentDue, setPaymentDue] = useState<string>('1');
+  const [startPaymentDate, setStartPaymentDate] = useState<string | null>(null);
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
   const { createCredit, updateCredit, getCreateCreditRequest, isLoading: isCreditLoading, error } = useCredit();
@@ -136,6 +138,7 @@ const NewCreditPage = () => {
         setInitialPaymentAmount(draft.initialPaymentAmount ?? '');
         setMonths(draft.months ?? '');
         setCreditName(draft.creditName ?? '');
+        setStartPaymentDate(draft.startPaymentDate ?? null);
         setDebtComment(draft.debtComment ?? '');
         setPaymentDue(draft.paymentDue ?? '1');
         setNextMonthStart(draft.nextMonthStart ?? false);
@@ -159,14 +162,23 @@ const NewCreditPage = () => {
 useEffect(() => {
   const loadCreditData = async () => {
     if (!isEditMode || !id) return;
-    
+
     try {
       const creditData = await getCreateCreditRequest(parseInt(id));
+      if (!isMounted) return;
+
       if (creditData) {
         setCreditName(creditData.name || '');
         setContractDate(creditData.creditDate ? new Date(creditData.creditDate).toISOString().split('T')[0] : null);
-        setNextMonthStart(creditData.nextMonthStart);
         setTurnOfRounding(creditData.turnOfRounding);
+        
+        setStartPaymentDate(creditData.startPaymentDay ? new Date(creditData.startPaymentDay).toISOString().split('T')[0] : null);
+        
+        if (creditData.startPaymentDay.toString() === '0001-01-01T00:00:00') {
+          console.log("alert)");
+          window.alert('Внимание: Начало выплат у старых договоров нужно ввести заново для редактирования!');
+        }
+        
         setInDebt(creditData.inDebt || false);
         setDebtComment(creditData.debtComment);
 
@@ -240,15 +252,6 @@ useEffect(() => {
           setObjectTypeName(creditData.creditTypeName);
         }
         
-        if (creditData.creditTabTypeId) {
-          setSelectedTabType({
-            id: creditData.creditTabTypeId,
-            name: creditData.creditTypeName,
-            entityType: 'credit'
-          });
-          setObjectTypeName(creditData.creditTypeName);
-        }
-        
         const formattedProducts = creditData.products.map(product => {
           let markup = 0;
           let totalPrice = product.price;
@@ -273,7 +276,6 @@ useEffect(() => {
         
         setProducts(formattedProducts);
         
-        // Пересчитываем общую сумму
         const newTotalSum = formattedProducts.reduce((sum, product) => sum + product.totalPrice, 0);
         setTotalSum(newTotalSum);
         
@@ -293,14 +295,8 @@ useEffect(() => {
         if (creditData.termMonths) {
           setMonths(creditData.termMonths.toString());
         }
-        
-        if (creditData.paymentDay) {
-          setPaymentDue(creditData.paymentDay.toString());
-        }
-        
-        if (creditData.nextMonthStart !== undefined) {
-          setNextMonthStart(creditData.nextMonthStart);
-        }
+
+        isMounted = false;
       }
     } catch (error) {
       console.error('Ошибка при загрузке данных кредита:', error);
@@ -309,7 +305,7 @@ useEffect(() => {
   };
 
   loadCreditData();
-}, [isEditMode, id, getCreateCreditRequest, editMarkupType]);
+}, [id]);
 
   useEffect(() => {
     if (creditApplicationData) {
@@ -358,7 +354,8 @@ useEffect(() => {
   }, [creditApplicationData]);
 
   useEffect(() => {
-  }, [initialPaymentAmount]);
+    console.log(startPaymentDate);
+  }, [startPaymentDate]);
 
   // Сохранение черновика
   useEffect(() => {
@@ -385,7 +382,8 @@ useEffect(() => {
       selectedObjectType,
       selectedTabType,
       paymentSchedule,
-      turnOfRounding
+      turnOfRounding,
+      startPaymentDate
     };
     try {
       localStorage.setItem(CREDIT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -402,6 +400,7 @@ useEffect(() => {
     guarantorClient,
     investor,
     selectedPool,
+    startPaymentDate,
     products,
     totalSum,
     initialPaymentPercent,
@@ -423,11 +422,6 @@ useEffect(() => {
   const handleMarkupTypeChange = useCallback((type: 'percent' | 'fixed') => {
     setMarkupType(type);
     localStorage.setItem(MARKUP_TYPE_STORAGE_KEY, type);
-  }, []);
-
-  const handleNextMonthStartChange = useCallback((checked: boolean) => {
-    setNextMonthStart(checked);
-    localStorage.setItem(NEXT_MONTH_START_STORAGE_KEY, checked.toString());
   }, []);
 
   const handleTurnOfRoundingChange = useCallback((checked: boolean) => {
@@ -469,6 +463,7 @@ useEffect(() => {
     setSelectedObjectType(null);
     setSelectedTabType(null);
     setPaymentSchedule([]);
+    setStartPaymentDate(null);
   }, []);
 
   useEffect(() => {
@@ -493,18 +488,6 @@ useEffect(() => {
     setObjectTypeName(value);
     if (!value) {
       setSelectedObjectType(null);
-    }
-  }, []);
-
-  const handleTabTypeSelect = useCallback((objectType: SelectedObjectType) => {
-    setSelectedTabType(objectType);
-    setTabTypeName(objectType.name);
-  }, []);
-
-  const handleTabTypeNameChange = useCallback((value: string) => {
-    setTabTypeName(value);
-    if (!value) {
-      setSelectedTabType(null);
     }
   }, []);
 
@@ -630,8 +613,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       creditDate: new Date(contractDate),
       firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
       termMonths: parseInt(months),
-      paymentDay: parseInt(paymentDue),
-      nextMonthStart: nextMonthStart,
+      startPaymentDay: new Date(startPaymentDate),
       turnOfRounding: turnOfRounding,
       inDebt: inDebt,
       products: products
@@ -650,10 +632,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     
     if (selectedObjectType && selectedObjectType.id) {
       creditData.creditTypeId = selectedObjectType.id;
-    }
-    
-    if (selectedTabType && selectedTabType.id) {
-      creditData.creditTabTypeId = selectedObjectType.id;
     }
 
     if (guarantorClient) {
@@ -711,6 +689,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     guarantorClient,
     initialPaymentAmount,
     months,
+    startPaymentDate,
     paymentDue,
     nextMonthStart,
     turnOfRounding,
@@ -752,61 +731,29 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
       const creditAmount = totalSum - initialPayment;
 
-      console.log('[PaymentSchedule] 🔄 Генерация превью графика платежей:', {
-        contractDate,
-        months,
-        paymentDue,
-        totalSum,
-        initialPayment,
-        creditAmount,
-        nextMonthStart
-      });
-
       const previewParams = {
-        creditDate: new Date(contractDate),
         termMonths: parseInt(months),
-        paymentDay: parseInt(paymentDue),
         totalAmount: creditAmount,
-        nextMonthStart: nextMonthStart,
-        turnOfRounding: turnOfRounding
+        turnOfRounding: turnOfRounding,
+        startDate: new Date(startPaymentDate)
       };
 
-      console.log('[PaymentSchedule] 📤 Отправка запроса на превью:', previewParams);
       await getPreview(previewParams);
     } catch (error) {
       console.error('[PaymentSchedule] ❌ Ошибка при генерации превью:', error);
     }
-  }, [contractDate, months, paymentDue, totalSum, initialPaymentAmount, nextMonthStart, parseAmount, getPreview, turnOfRounding]);
+  }, [contractDate, months, startPaymentDate, paymentDue, totalSum, initialPaymentAmount, parseAmount, getPreview, turnOfRounding]);
 
   useEffect(() => {
     if (previewData) {
-      console.log('[PaymentSchedule] 📥 Получены данные превью от API:', {
-        previewDataCount: previewData.length,
-        previewData: previewData.slice(0, 3) // Показываем первые 3 элемента для отладки
-      });
-
       const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
       const creditAmount = totalSum - initialPayment;
-      
-      console.log('[PaymentSchedule] 📊 Расчеты для формирования графика:', {
-        initialPayment,
-        creditAmount,
-        totalSum
-      });
       
       const formattedSchedule = previewData.map((item, index) => {
         const previousPayments = previewData
           .slice(0, index)
           .reduce((sum, payment) => sum + payment.paymentAmount, 0);
         const remainingAmount = creditAmount - previousPayments;
-        
-        console.log(`[PaymentSchedule] 📅 Элемент ${index + 1}:`, {
-          paymentDate: item.paymentDate,
-          paymentAmount: item.paymentAmount,
-          comment: item.comment,
-          remainingAmount,
-          previousPayments
-        });
         
         return {
           id: index + 1,
@@ -817,13 +764,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         };
       });
       
-      console.log('[PaymentSchedule] 📋 Сформирован основной график:', {
-        count: formattedSchedule.length,
-        items: formattedSchedule.slice(0, 3)
-      });
-      
       if (initialPayment > 0) {
-        console.log('[PaymentSchedule] 💰 Добавление первоначального взноса:', initialPayment);
         formattedSchedule.unshift({
           id: 0,
           date: new Date(contractDate!).toLocaleDateString('ru-RU'),
@@ -833,33 +774,15 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         });
       }
       
-      console.log('[PaymentSchedule] ✅ Итоговый график платежей:', {
-        totalItems: formattedSchedule.length,
-        firstItem: formattedSchedule[0],
-        lastItem: formattedSchedule[formattedSchedule.length - 1],
-        allItems: formattedSchedule
-      });
-      
       setPaymentSchedule(formattedSchedule);
     }
   }, [previewData, totalSum, initialPaymentAmount, contractDate, parseAmount]);
 
-  useEffect(() => {
-    console.log('[PaymentSchedule] 🔍 Проверка условий для генерации графика:', {
-      contractDate,
-      months,
-      paymentDue,
-      totalSum,
-      conditionsMet: contractDate && months && paymentDue && totalSum > 0
-    });
-    
+  useEffect(() => {  
     if (contractDate && months && paymentDue && totalSum > 0) {
-      console.log('[PaymentSchedule] 🚀 Запуск генерации графика...');
       generateSchedulePreview();
     } else {
-      console.log('[PaymentSchedule] ⏸️ Условия не выполнены, график не генерируется');
       if (paymentSchedule.length > 0) {
-        console.log('[PaymentSchedule] 🧹 Очистка существующего графика');
         setPaymentSchedule([]);
       }
     }
@@ -932,6 +855,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
   const isFormValid = 
     client && 
     contractDate && 
+    startPaymentDate &&
     (inDebt || investor || selectedPool) && 
     !validationError &&
     !hasEmptyProductNames &&
@@ -939,49 +863,49 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     products.some(product => product.name.trim() !== '' && product.price > 0);
 
   const handleSelectInvestor = (selectedEntity: { 
-  id: number; 
-  nickname?: string; 
-  name?: string;
-  fullName?: string; 
-  phoneNumber?: string;
-  investorPie?: number;
-  pie?: number;
-  investmentAmount?: number;
-  balance?: number;
-  type: 'investor' | 'pool';
-  activeUntil?: string;
-}) => {
-  if (selectedEntity.type === 'pool') {
-    setSelectedPool({
-      id: selectedEntity.id,
-      nickname: selectedEntity.name || selectedEntity.nickname || '',
-      fullName: selectedEntity.fullName || selectedEntity.name || '',
-      phoneNumber: selectedEntity.phoneNumber || '',
-      investorPie: selectedEntity.pie || 0,
-      investmentAmount: selectedEntity.investmentAmount || 0,
-      balance: selectedEntity.balance || 0,
-      activeUntil: selectedEntity.activeUntil,
-      isPool: true
-    });
-    setInvestor(null);
-  
-  } else {
-    setInvestor({
-      id: selectedEntity.id,
-      nickname: selectedEntity.nickname || '',
-      fullName: selectedEntity.fullName || '',
-      phoneNumber: selectedEntity.phoneNumber || '',
-      investorPie: selectedEntity.investorPie || 0,
-      investmentAmount: selectedEntity.investmentAmount || 0,
-      balance: selectedEntity.balance || 0,
-      activeUntil: selectedEntity.activeUntil,
-      isPool: false
-    });
-    setSelectedPool(null);
-  }
-  setIsInvestorModalOpen(false);
-  setValidationError(null);
-};
+    id: number; 
+    nickname?: string; 
+    name?: string;
+    fullName?: string; 
+    phoneNumber?: string;
+    investorPie?: number;
+    pie?: number;
+    investmentAmount?: number;
+    balance?: number;
+    type: 'investor' | 'pool';
+    activeUntil?: string;
+  }) => {
+    if (selectedEntity.type === 'pool') {
+      setSelectedPool({
+        id: selectedEntity.id,
+        nickname: selectedEntity.name || selectedEntity.nickname || '',
+        fullName: selectedEntity.fullName || selectedEntity.name || '',
+        phoneNumber: selectedEntity.phoneNumber || '',
+        investorPie: selectedEntity.pie || 0,
+        investmentAmount: selectedEntity.investmentAmount || 0,
+        balance: selectedEntity.balance || 0,
+        activeUntil: selectedEntity.activeUntil,
+        isPool: true
+      });
+      setInvestor(null);
+    
+    } else {
+      setInvestor({
+        id: selectedEntity.id,
+        nickname: selectedEntity.nickname || '',
+        fullName: selectedEntity.fullName || '',
+        phoneNumber: selectedEntity.phoneNumber || '',
+        investorPie: selectedEntity.investorPie || 0,
+        investmentAmount: selectedEntity.investmentAmount || 0,
+        balance: selectedEntity.balance || 0,
+        activeUntil: selectedEntity.activeUntil,
+        isPool: false
+      });
+      setSelectedPool(null);
+    }
+    setIsInvestorModalOpen(false);
+    setValidationError(null);
+  };
 
   const openClientModal = (type: 'client' | 'guarantorClient') => {
     setModalType(type);
@@ -1266,20 +1190,15 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         </ProductsTableWrapper>
         <TotalSumContainer>
           Итого товаров на сумму: {formatMoney(totalSum.toString())} 
-        </TotalSumContainer>
-
-        <CheckboxContainer>
-          <ModalInfoTitle style={{marginRight: '32px'}}>График выплат</ModalInfoTitle>
-          <Checkbox 
-            label='Начинать выплаты со следующего месяца'
-            checked={nextMonthStart}
-            onChange={handleNextMonthStartChange}
-          />
           <Checkbox 
             label='Отключить округление'
             checked={turnOfRounding} 
             onChange={handleTurnOfRoundingChange} 
           />
+        </TotalSumContainer>
+
+        <CheckboxContainer>
+          <ModalInfoTitle style={{marginRight: '32px'}}>График выплат</ModalInfoTitle>
         </CheckboxContainer>
 
         <PaymentScheduleContainer>
@@ -1287,7 +1206,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <InputGroup>
               <InputRow>
                 <InputLabel style={{ flex: 1 }}>Первоначальный взнос, %</InputLabel>
-                <InputLabel1 style={{ flex: 1 }}>Сумма</InputLabel1>
+                <InputLabel style={{ flex: 1 }}>Сумма</InputLabel>
               </InputRow>
               <InputRow>
                 <CustomInput 
@@ -1309,7 +1228,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <InputGroup>
               <InputRow>
                 <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
-                <InputLabel1 style={{ flex: 1 }}>Уплата до</InputLabel1>
+                <InputLabel style={{ flex: 1 }}>Начало выплат</InputLabel>
               </InputRow>
               <InputRow>
                 <CustomInput 
@@ -1322,13 +1241,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                   min="1"
                   max="60"
                 />
-                <CustomSelect
-                  options={Array.from({ length: 31 }, (_, i) => ({
-                    value: String(i + 1),
-                    label: String(i + 1)
-                  }))}
-                  onChange={(e) => setPaymentDue(e.target.value)}
-                  value={paymentDue}
+                <DateModalInput
+                  onChange={(e) => setStartPaymentDate(e)}
+                  value={startPaymentDate}
                 />
               </InputRow>
             </InputGroup>
@@ -1576,6 +1491,9 @@ const TotalSumContainer = styled.div`
   color: black;
   margin-top: 10px;
   font-size: 14px;
+  display: flex;
+  display-direction: row;
+  gap: 15px;
 
   @media (min-width: 576px) {
     font-size: 16px;
@@ -1622,17 +1540,6 @@ const InputLabel = styled.label`
   font-weight: 500;
   margin-right: auto;
   text-align: left;
-  margin-bottom: 0;
-  padding-bottom: 0;
-`;
-
-const InputLabel1 = styled.label`
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-  margin-right: auto;
-  text-align: left;
-  margin-left: 0;
   margin-bottom: 0;
   padding-bottom: 0;
 `;

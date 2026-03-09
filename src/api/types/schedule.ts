@@ -8,11 +8,9 @@ export interface ScheduleItem {
 }
 
 export interface SchedulePreviewParams {
-    creditDate: Date;
+    startDate: Date;
     termMonths: number;
-    paymentDay: number;
     totalAmount: number;
-    nextMonthStart: boolean;
     turnOfRounding: boolean;
 }
 

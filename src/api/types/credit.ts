@@ -46,7 +46,6 @@ export interface CreateCreditRequest {
   clientId: number;
   name: string;
   creditTypeId: number;
-  creditTabTypeId: number;
   
   GuarantorClientId: number;
   guarantor?: {
@@ -62,8 +61,7 @@ export interface CreateCreditRequest {
   creditDate: Date;
   firstPayment: number;
   termMonths: number;
-  paymentDay: number;
-  nextMonthStart: boolean;
+  startPaymentDay: Date;
   turnOfRounding: boolean;
   inDebt: boolean;
   debtComment?: string;

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import BaseModal from "../BASE/modalCRUBase";
-import DateModalInput from "../../ui/fields/DateModalInput";
 import PhoneModalInput from "../../ui/fields/PhoneModalInput";
 import CustomCalendar from "../../ui/fields/CustomCalendar";
 import CustomInput from "../../ui/fields/CustomInput";

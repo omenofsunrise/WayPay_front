@@ -20,12 +20,6 @@ interface PaymentScheduleTableProps {
 const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps) => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
-  console.log('[PaymentScheduleTable] 📊 Рендеринг таблицы с данными:', {
-    dataCount: data.length,
-    data: data,
-    isLoading: onDataChange
-  });
-
   return (
     <TableContainer>
       <StyledTable>
@@ -39,13 +33,6 @@ const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps)
         </TableHeader>
         <TableBody>
           {data.map((item) => {
-            console.log(`[PaymentScheduleTable] 📋 Рендеринг строки ${item.id}:`, {
-              date: item.date,
-              remainingAmount: item.remainingAmount,
-              requiredPayment: item.requiredPayment,
-              comment: item.comment
-            });
-            
             return (
               <StyledTableRow 
                 key={item.id}
