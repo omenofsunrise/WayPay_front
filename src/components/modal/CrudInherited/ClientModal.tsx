@@ -641,7 +641,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
             </InputContainer>
           </InputRow>
           
-          <InputRow>
+          {/* <InputRow>
             <InputLabel>Дата выдачи:</InputLabel>
             <InputContainer>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -675,7 +675,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 )}
               </div>
             </InputContainer>
-          </InputRow>
+          </InputRow> */}
 
           <InputRow>
             <InputLabel>Адрес регистрации:</InputLabel>
