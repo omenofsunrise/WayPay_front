@@ -659,7 +659,7 @@ const BodyCell = styled.td<{
   $isTotalsCell?: boolean;
   $isBeforeTotals?: boolean;
 }>`
-  padding: 3px;
+  padding: 5px;
   padding-left: ${({ $isFirst }) => ($isFirst ? '12px' : '12px')};
   padding-right: ${({ $isLast }) => ($isLast ? '12px' : '12px')};
   text-align: ${({ $align }) => $align};
