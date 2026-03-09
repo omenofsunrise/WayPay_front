@@ -349,7 +349,7 @@ const AnalyticsWrapper = styled.div`
 const AnalyticsContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
+  gap: 22px;
   width: 100%;
   padding: 10px 80px;
   background-color: white;
