@@ -26,15 +26,25 @@ const CreditBriefModal: React.FC<CreditBriefModalProps> = ({
     }, [creditId, getByCreditId]);
 
     const tableData = scheduleData?.items.map(item => {
-        let comment = item.comment;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const paymentDate = new Date(item.paymentDate);
+        paymentDate.setHours(0, 0, 0, 0);
+            
+        let status = "";
         if (item.payed) {
-            comment = ' ОПЛАЧЕНО';
+            status = 'ОПЛАЧЕНО';
+        } else if (paymentDate < today) {
+            status = 'ПРОСРОЧЕНО';
+        } else {
+            status = 'Ожидается'
         }
 
         return [
             new Date(item.paymentDate).toLocaleDateString('ru-RU'),
-            `${item.paymentAmount.toLocaleString('ru-RU')}`,
-            comment
+            item.comment,
+            status,
         ];
     }) || [];
 
@@ -82,8 +92,8 @@ const CreditBriefModal: React.FC<CreditBriefModalProps> = ({
                             <CustomTable
                                 columns={[
                                     { name: "Дата", },
-                                    { name: "Сумма", align: "right" },
-                                    { name: "Примечание", align: "center" },
+                                    { name: "Платёж", align: "right" },
+                                    { name: "Статус", align: "center" },
                                 ]} 
                                 data={tableData}
                                 rowStyles={getRowStyles()}
