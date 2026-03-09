@@ -42,7 +42,7 @@ const ObjectTypeSelect = ({
   value,
   onChange,
   onObjectTypeSelect,
-  placeholder = 'Выберите каталог',
+  placeholder = 'Выберите папку',
   customPlaceholder,
   hasError = false,
   errorMessage,
@@ -228,7 +228,7 @@ const ObjectTypeSelect = ({
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (window.confirm(`Вы уверены, что хотите удалить каталог "${name}"?`)) {
+    if (window.confirm(`Вы уверены, что хотите удалить папку "${name}"?`)) {
       try {
         await deleteObjectType(id);
         // Обновляем данные после удаления
@@ -348,7 +348,7 @@ const ObjectTypeSelect = ({
               </ClearButton>
             )}
             {!disabled && (
-              <ModalButton type="button" onClick={handleOpenModal} title="Открыть список каталогов">
+              <ModalButton type="button" onClick={handleOpenModal} title="Открыть список папок">
                 <FaList size={14} />
               </ModalButton>
             )}
@@ -381,7 +381,7 @@ const ObjectTypeSelect = ({
               >
                 <DropdownContent>
                   {isLoading ? (
-                    <DropdownItem>Загрузка каталогов...</DropdownItem>
+                    <DropdownItem>Загрузка папок...</DropdownItem>
                   ) : displayObjectTypes.length > 0 ? (
                     <>
                       {displayObjectTypes.map((objectType) => (
@@ -411,14 +411,14 @@ const ObjectTypeSelect = ({
                       ))}
                     </>
                   ) : (
-                    <DropdownItem>Каталоги не найдены</DropdownItem>
+                    <DropdownItem>папки не найдены</DropdownItem>
                   )}
                 </DropdownContent>
                 
                 <DropdownFooter>
                   <AddButton type="button" onClick={handleCreateNew}>
                     <FaPlus size={12} />
-                    <span>Создать новый каталог</span>
+                    <span>Создать новую папку</span>
                   </AddButton>
                 </DropdownFooter>
               </DropdownMenu>
@@ -435,7 +435,7 @@ const ObjectTypeSelect = ({
       <AnimatePresence>
         {isModalOpen && (
           <BaseModal
-            title="Выбор каталога"
+            title="Выбор папки"
             onClose={handleCloseModal}
             onCancel={handleCloseModal}
             width="800px"
@@ -444,7 +444,6 @@ const ObjectTypeSelect = ({
             saveButtonText=""
           >
             <ModalContentWrapper>
-              {/* Кнопка создания каталога сверху справа */}
               <TopActions>
                 <ModalActionButton 
                   type="button"
@@ -452,14 +451,13 @@ const ObjectTypeSelect = ({
                   onClick={handleCreateNew}
                 >
                   <FaPlus size={14} />
-                  Создать каталог
+                  Создать папку
                 </ModalActionButton>
               </TopActions>
 
-              {/* Список существующих каталогов */}
               <ListSection>
                 {isLoading ? (
-                  <LoadingMessage>Загрузка каталогов...</LoadingMessage>
+                  <LoadingMessage>Загрузка папок...</LoadingMessage>
                 ) : displayObjectTypes.length > 0 ? (
                   <>
                     <ObjectTypeList>
@@ -503,7 +501,7 @@ const ObjectTypeSelect = ({
                     )}
                   </>
                 ) : (
-                  <EmptyMessage>Каталоги не найдены</EmptyMessage>
+                  <EmptyMessage>Папки не найдены</EmptyMessage>
                 )}
               </ListSection>
             </ModalContentWrapper>
@@ -511,11 +509,10 @@ const ObjectTypeSelect = ({
         )}
       </AnimatePresence>
 
-      {/* Модалка создания/редактирования каталога */}
       <AnimatePresence>
         {manageModalMode && (
           <BaseModal
-            title={manageModalMode === 'create' ? 'Создать каталог' : 'Редактировать каталог'}
+            title={manageModalMode === 'create' ? 'Создать папку' : 'Редактировать папку'}
             onClose={handleCloseManageModal}
             onCancel={handleCloseManageModal}
             onSave={handleManageSubmit}
@@ -528,7 +525,7 @@ const ObjectTypeSelect = ({
               <CustomInput
                 value={manageName}
                 onChange={(e) => setManageName(e.target.value)}
-                placeholder="Введите название каталога"
+                placeholder="Введите название папки"
                 autoFocus
               />
             </CreateForm>

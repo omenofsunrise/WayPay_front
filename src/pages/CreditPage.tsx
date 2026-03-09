@@ -1451,8 +1451,8 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
                 value={objectType}
                 onChange={handleObjectTypeChange}
                 onObjectTypeSelect={handleObjectTypeSelect}
-                placeholder="Каталог"
-                customPlaceholder="Каталог"
+                placeholder="Папка"
+                customPlaceholder="Папка"
                 hideClearButton={false}
               />
             </InputWrapper>

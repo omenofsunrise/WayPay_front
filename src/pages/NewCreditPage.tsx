@@ -1082,7 +1082,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
           </FieldGroup>
 
           <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
-            <Label>Каталог (необязательно)</Label>
+            <Label>Папка (необязательно)</Label>
             <ObjectTypeSelect
               value={objectTypeName}
               onChange={handleObjectTypeNameChange}

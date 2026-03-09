@@ -161,7 +161,6 @@ const BlackCatalogPage = () => {
     const [editingClient, setEditingClient] = useState<Partial<BlacklistClient> | null>(null);
     const [selectedClientDossier, setSelectedClientDossier] = useState<BlacklistClient | null>(null);
     
-    // Добавляем состояние для общего количества клиентов в черном каталоге
     const [totalBlackCatalogCount, setTotalBlackCatalogCount] = useState<number>(0);
     
     const { 
@@ -180,7 +179,6 @@ const BlackCatalogPage = () => {
         client: BlacklistClient | null;
     } | null>(null);
 
-    // Загружаем общее количество клиентов в черном каталоге при инициализации
     useEffect(() => {
         const loadTotalBlackCatalogCount = async () => {
             try {
@@ -195,7 +193,7 @@ const BlackCatalogPage = () => {
                 const response = await getBlackCatalog(params);
                 setTotalBlackCatalogCount(response.totalCount || 0);
             } catch (err) {
-                console.error('Ошибка при загрузке общего количества клиентов в черном каталоге:', err);
+                console.error('Ошибка при загрузке общего количества клиентов в чс+:', err);
                 setTotalBlackCatalogCount(0);
             }
         };
@@ -333,7 +331,7 @@ const BlackCatalogPage = () => {
     };
 
     const handleDeleteFromBlackCatalog = async (client: BlacklistClient) => {
-        if (window.confirm('Вы уверены, что хотите убрать этого клиента из чёрного каталога?')) {
+        if (window.confirm('Вы уверены, что хотите убрать этого клиента из чс+?')) {
             try {
                 await deleteFromBlackCatalog(client.id);
                 loadBlacklist();
@@ -398,7 +396,7 @@ const BlackCatalogPage = () => {
                     <EmptyStateIcon>📋</EmptyStateIcon>
                     <EmptyStateTitle>ЧС+</EmptyStateTitle>
                     <EmptyStateText>
-                        Введите ФИО клиента (минимум 3 символа) или полный номер телефона для поиска в чёрном каталоге.
+                        Введите ФИО клиента (минимум 3 символа) или полный номер телефона для поиска в чс+.
                     </EmptyStateText>
                     {isSuperAdminCompany() && (
                         <DarkCyanButton onClick={handleAddToBlacklist}>
@@ -413,9 +411,9 @@ const BlackCatalogPage = () => {
             return (
                 <EmptyStateContainer>
                     <EmptyStateIcon>🔍</EmptyStateIcon>
-                    <EmptyStateTitle>Клиент в чёрном каталоге не найден</EmptyStateTitle>
+                    <EmptyStateTitle>Клиент в чс+ не найден</EmptyStateTitle>
                     <EmptyStateText>
-                        По вашему запросу "{nameFilter || phoneFilter}" ничего не найдено в чёрном каталоге.
+                        По вашему запросу "{nameFilter || phoneFilter}" ничего не найдено в чс+.
                     </EmptyStateText>
                     {isSuperAdminCompany() && (
                         <DarkCyanButton onClick={handleAddToBlacklist}>
@@ -544,7 +542,7 @@ const BlackCatalogPage = () => {
                                     danger 
                                     onClick={() => handleContextMenuAction('delete')}
                                 >
-                                    Удалить из чёрного каталога
+                                    Удалить из чс+
                                 </MenuItem>
                             </ContextMenu>
                         </>
