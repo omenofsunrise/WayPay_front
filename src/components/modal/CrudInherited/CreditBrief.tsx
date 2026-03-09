@@ -92,7 +92,7 @@ const CreditBriefModal: React.FC<CreditBriefModalProps> = ({
                             <CustomTable
                                 columns={[
                                     { name: "Дата", },
-                                    { name: "Платёж", align: "right" },
+                                    { name: "Платёж", align: "center" },
                                     { name: "Статус", align: "center" },
                                 ]} 
                                 data={tableData}
