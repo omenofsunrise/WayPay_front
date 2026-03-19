@@ -41,6 +41,7 @@ import CreditApplicationPage from './pages/CreditApplicationPage';
 import NotificationHandler from './components/NotificationHandler/NotificationHandler';
 import { DISABLE_NOTIFICATIONS_KEY, getDisableNotificationsSetting, useLocalStorageSetting } from './components/modal/SettingsModal';
 import FinancePage from './pages/FinancePage/FinancePage';
+import SettingsPage from './pages/SettingsPage.tsx/SettingsPage';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -341,6 +342,12 @@ function App() {
             <Route path="profile" element={
                 <MainLayout>
                   <ProfilePage />
+                </MainLayout>
+            } />
+
+            <Route path="settings" element={
+                <MainLayout>
+                  <SettingsPage />
                 </MainLayout>
             } />
 

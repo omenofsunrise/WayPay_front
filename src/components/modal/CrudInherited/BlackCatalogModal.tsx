@@ -188,16 +188,6 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
           disabled={mode === 'view'}
         />
 
-        <PhoneModalInput
-          name="phone"
-          value={formData.phone}
-          onChange={handlePhoneChange('phone')}
-          disabled={mode === 'view'}
-          hasError={!!validationErrors.phone}
-          errorMessage={validationErrors.phone}
-          placeholder="Основной телефон"
-        />
-
         <CustomInput
           inputType="date"
           placeholder="Дата рождения"
@@ -214,16 +204,6 @@ export const BlackCatalogModal: React.FC<BlacklistModalProps> = ({
           value={formData.doc}
           onChange={(e) => handleInputChange('doc', e.target.value)}
           disabled={mode === 'view'}
-        />
-
-        <CustomInput
-          inputType="date"
-          placeholder="Дата выдачи документа"
-          value={formData.docIssueDate}
-          onChange={(e) => handleInputChange('docIssueDate', e.target.value)}
-          disabled={mode === 'view'}
-          hasError={!!validationErrors.docIssueDate}
-          errorMessage={validationErrors.docIssueDate}
         />
 
         <CustomInput

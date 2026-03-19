@@ -34,14 +34,12 @@ type MenuItemProps = CollapsibleProps & {
 
 const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string, string> }> = {
   '/admin': { mainItem: 'admin' },
-  '/about': { mainItem: 'about' },
   '/analytics': { mainItem: 'analytics' },
   '/credits': { mainItem: 'contracts', subItems: { '/credits': 'contracts' } },
   '/credit-control': { mainItem: 'contracts', subItems: { '/credit-control': 'contracts-control' } },
   '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
   '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
   '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
-  // '/queue': { mainItem: 'clients', subItems: { '/queue': 'queue' } },
   '/schedules': { mainItem: 'payments', subItems: { '/schedules': 'pending-payments' } },
   '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
   '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
@@ -52,6 +50,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/registration-requests': { mainItem: 'references', subItems: { '/registration-requests': 'registration-requests' } },
   '/finance': { mainItem: 'finance' },
   '/profile': { mainItem: 'profile' },
+  '/settings': { mainItem: 'settings' },
 };
 
 const SideMenu = () => {
@@ -102,14 +101,12 @@ const SideMenu = () => {
     return `Просрочено на ${Math.abs(diffDays)} дней`;
   };
 
-  // Данные для блока профиля
   const employee = authInfo?.employee;
   const licenceDate = commonInfo?.licenceDate ?? new Date();
   const currentDate = formatDate(licenceDate);
   const daysUntilExpiry = getDaysUntilExpiry(licenceDate);
   const licenseDateColor = getLicenseDateColor(daysUntilExpiry);
   
-  // Получаем первое слово из ФИО
   const firstName = employee?.fullName ? employee.fullName.split(' ')[0] : '';
   
   const avatarSrc = employee?.photoPath 
@@ -123,7 +120,6 @@ const SideMenu = () => {
     'clients': () => true,
     'blacklist': () => true,
     'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
-    'queue': () => true,
     'pending-payments': () => true,
     'payments-journal': () => true,
     'investors': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
@@ -134,8 +130,8 @@ const SideMenu = () => {
     'registration-requests': () => isSuperAdminCompany(),
     'finance': () => hasPermission('MANAGE_ACCOUNTING', true),
     'profile': () => true,
+    'settings': () => true,
     'admin': () => hasRole('суперадмин'),
-    'about': () => true,
   };
 
   const checkMenuItemPermission = (menuItemKey: string): boolean => {
@@ -255,7 +251,6 @@ const SideMenu = () => {
       'clients': 'Клиенты',
       'blacklist': 'Чёрный список',
       'credit-application': 'Заявки',
-      // 'queue': 'Очередь',
       'pending-payments': 'Ожидаемые',
       'payments-journal': 'Журнал',
       'investors': 'Инвесторы',
@@ -317,6 +312,10 @@ const SideMenu = () => {
     window.location.href = '/auth';
   };
 
+  const handleProfileClick = () => {
+    navigate('/profile');
+  };
+
   return (
     <SideMenuContainer $collapsed={collapsed}>
       <ArrowIcon 
@@ -348,7 +347,6 @@ const SideMenu = () => {
           
           {!collapsed && <Divider />}
           
-          {/* Contracts Menu */}
           <MenuItem 
             onClick={(e) => {
               if (collapsed) {
@@ -407,7 +405,6 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
-          {/* Clients Menu */}
           <MenuItem 
             onClick={(e) => {
               if (collapsed) {
@@ -418,15 +415,13 @@ const SideMenu = () => {
             }}
             $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'clients' || 
-                      selectedSideMenuItem === 'blacklist' ||
-                      selectedSideMenuItem === 'queue'}
+                      selectedSideMenuItem === 'blacklist'}
           >
             <Icon 
               src={clientsIcon} 
               $collapsed={collapsed} 
               $selected={selectedSideMenuItem === 'clients' || 
-                        selectedSideMenuItem === 'blacklist' ||
-                        selectedSideMenuItem === 'queue'} 
+                        selectedSideMenuItem === 'blacklist'} 
             />
             {!collapsed && (
               <>
@@ -472,16 +467,9 @@ const SideMenu = () => {
                   Заявки
                 </SubMenuItem>
               )}
-              {/* <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('queue', '/queue')}
-                $selected={selectedSideMenuItem === 'queue'}
-              >
-                Очередь
-              </SubMenuItem> */}
             </SubMenu>
           )}
           
-          {/* Payments Menu */}
           <MenuItem 
             onClick={(e) => {
               if (collapsed) {
@@ -539,7 +527,6 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
-          {/* Investors Menu */}
           {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
             <MenuItem 
               onClick={(e) => {
@@ -664,7 +651,6 @@ const SideMenu = () => {
             </SubMenu>
           )}
 
-          {/* Finance */}
           {(hasPermission('MANAGE_ACCOUNTING', true)) && (
             <MenuItem 
               onClick={(e) => {
@@ -685,12 +671,7 @@ const SideMenu = () => {
               {!collapsed && <MenuItemText>Финансы</MenuItemText>}
             </MenuItem>
           )}
-        </ScrollableMenuContent>
-
-        <BottomMenuSection>
-          {!collapsed && <Divider />}
           
-          {/* Black Catalog - отдельная кнопка под Профиль */}
           <MenuItem 
             onClick={(e) => {
               if (collapsed) {
@@ -710,23 +691,22 @@ const SideMenu = () => {
             {!collapsed && <MenuItemText>ЧС+</MenuItemText>}
           </MenuItem>
 
-          {/* Profile */}
+          {/* Пункт "Настройки" ведет на /settings */}
           <MenuItem 
             onClick={(e) => {
               if (collapsed) {
-                handleCollapsedMenuClick(e, 'profile', false);
+                handleCollapsedMenuClick(e, 'settings', false);
               } else {
-                handleMenuItemClick('profile', '/profile');
+                handleMenuItemClick('settings', '/settings');
               }
             }}
             $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'profile'}
+            $selected={selectedSideMenuItem === 'settings'}
           >
-            <Icon src={profileIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'profile'} />
-            {!collapsed && <MenuItemText>Профиль</MenuItemText>}
+            <Icon src={profileIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'settings'} />
+            {!collapsed && <MenuItemText>Настройки</MenuItemText>}
           </MenuItem>
 
-          {/* Admin Panel */}
           {hasRole('суперадмин') && (
             <MenuItem 
               onClick={(e) => {
@@ -747,96 +727,32 @@ const SideMenu = () => {
               {!collapsed && <MenuItemText>Админ-панель</MenuItemText>}
             </MenuItem>
           )}
-        </BottomMenuSection>
-
-        {employee && (
-          collapsed ? (
-            <CollapsedUserProfileBlock>
-              <CollapsedUserAvatar src={avatarSrc} alt={employee.fullName} />
-              <CollapsedUserInfo>
-                <CollapsedUserFullName title={employee.fullName}>
-                  {firstName}
-                </CollapsedUserFullName>
-                <CollapsedUserDate $color={licenseDateColor}>
-                  {currentDate}
-                </CollapsedUserDate>
-              </CollapsedUserInfo>
-            </CollapsedUserProfileBlock>
-          ) : (
-            <UserProfileBlock>
-              <UserAvatar src={avatarSrc} alt={employee.fullName} />
-              <UserInfo>
-                <UserFullName>{employee.fullName}</UserFullName>
-                <UserRole>{employee.role}</UserRole>
-                <UserDate $color={licenseDateColor}>{currentDate}</UserDate>
-              </UserInfo>
-              <LogoutButton onClick={handleLogout} title="Выйти">
-                <svg width="18" height="18" viewBox="0 0 16 17" fill="none">
-                  <path d="M7.5 0.625C7.72302 0.625247 7.93753 0.710644 8.0997 0.863742C8.26187 1.01684 8.35946 1.22608 8.37253 1.44872C8.3856 1.67136 8.31316 1.89058 8.17002 2.0616C8.02688 2.23262 7.82383 2.34253 7.60237 2.36888L7.5 2.375H3.125C2.91068 2.37503 2.70383 2.45371 2.54367 2.59613C2.38352 2.73854 2.2812 2.93478 2.25612 3.14762L2.25 3.25V13.75C2.25003 13.9643 2.32871 14.1712 2.47113 14.3313C2.61354 14.4915 2.80978 14.5938 3.02262 14.6189L3.125 14.625H7.0625C7.28552 14.6252 7.50003 14.7106 7.6622 14.8637C7.82437 15.0168 7.92196 15.2261 7.93503 15.4487C7.9481 15.6714 7.87566 15.8906 7.73252 16.0616C7.58938 16.2326 7.38633 16.3425 7.16487 16.3689L7.0625 16.375H3.125C2.45544 16.375 1.81117 16.1192 1.32402 15.6599C0.836869 15.2005 0.543656 14.5724 0.504375 13.904L0.5 13.75V3.25C0.499963 2.58044 0.755785 1.93617 1.21512 1.44902C1.67446 0.961869 2.30259 0.668656 2.971 0.629375L3.125 0.625H7.5ZM12.4936 5.406L14.9681 7.88138C15.1322 8.04546 15.2243 8.26798 15.2243 8.5C15.2243 8.73202 15.1322 8.95454 14.9681 9.11862L12.4936 11.594C12.3294 11.7581 12.1068 11.8502 11.8747 11.8501C11.6426 11.85 11.42 11.7577 11.2559 11.5936C11.0919 11.4294 10.9997 11.2067 10.9998 10.9746C10.9999 10.7425 11.0922 10.5199 11.2564 10.3559L12.2372 9.375H7.5C7.26794 9.375 7.04538 9.28281 6.88128 9.11872C6.71719 8.95462 6.625 8.73206 6.625 8.5C6.625 8.26794 6.71719 8.04538 6.88128 7.88128C7.04538 7.71719 7.26794 7.625 7.5 7.625H12.2372L11.2564 6.64412C11.0922 6.48006 10.9999 6.25748 10.9998 6.02537C10.9997 5.79326 11.0919 5.57062 11.2559 5.40644C11.42 5.24225 11.6426 5.14997 11.8747 5.14989C12.1068 5.1498 12.3294 5.24193 12.4936 5.406Z" fill="#50555C"/>
-                </svg>
-              </LogoutButton>
-            </UserProfileBlock>
-          )
-        )}
-        
-        {/* About - всегда в самом низу */}
-        <MenuItem
-          onClick={(e) => {
-            if (collapsed) {
-              handleCollapsedMenuClick(e, 'about', false);
-            } else {
-              handleMenuItemClick('about', '/about');
-            }
-          }}
-          $collapsed={collapsed}
-          $selected={selectedSideMenuItem === 'about'}
-        >
-          {!collapsed ? (
-            <>
-              <AboutIcon $selected={selectedSideMenuItem === 'about'}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
-                        stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                        strokeWidth="1.25" 
-                        strokeLinecap="round"/>
-                  <path d="M11 12V16C11 16.5523 11.4477 17 12 17C12.5523 17 13 16.5523 13 16V12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" 
-                        fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                        stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                        strokeWidth="1.25" 
-                        strokeLinecap="round"/>
-                  <path d="M13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55229 11.4477 9 12 9C12.5523 9 13 8.55229 13 8Z" 
-                        fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                        stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                        strokeWidth="1.25" 
-                        strokeLinecap="round"/>
-                </svg>
-              </AboutIcon>
-              <MenuItemText>О программе</MenuItemText>
-            </>
-          ) : (
-            <AboutIconCollapsed $selected={selectedSideMenuItem === 'about'}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
-                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      strokeWidth="1.25" 
-                      strokeLinecap="round"/>
-                <path d="M11 12V16C11 16.5523 11.4477 17 12 17C12.5523 17 13 16.5523 13 16V12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12Z" 
-                      fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      strokeWidth="1.25" 
-                      strokeLinecap="round"/>
-                <path d="M13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55229 11.4477 9 12 9C12.5523 9 13 8.55229 13 8Z" 
-                      fill={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      stroke={selectedSideMenuItem === 'about' ? "#000" : "#50555C"} 
-                      strokeWidth="1.25" 
-                      strokeLinecap="round"/>
-              </svg>
-            </AboutIconCollapsed>
-          )}
-        </MenuItem>
+        </ScrollableMenuContent>
       </MenuList>
+
+      {/* Блок с профилем - теперь всегда в самом низу */}
+      {employee && (
+        collapsed ? (
+          <CollapsedUserProfileBlock onClick={handleProfileClick} $selected={selectedSideMenuItem === 'profile'}>
+            <CollapsedUserAvatar src={avatarSrc} alt={employee.fullName} />
+          </CollapsedUserProfileBlock>
+        ) : (
+          <UserProfileBlock onClick={handleProfileClick} $selected={selectedSideMenuItem === 'profile'}>
+            <UserAvatar src={avatarSrc} alt={employee.fullName} />
+            <UserInfo>
+              <UserFullName>{employee.fullName}</UserFullName>
+              <UserRole>{employee.role}</UserRole>
+              <UserDate $color={licenseDateColor}>{currentDate}</UserDate>
+            </UserInfo>
+            <LogoutButton onClick={(e) => { e.stopPropagation(); handleLogout(); }} title="Выйти">
+              <svg width="18" height="18" viewBox="0 0 16 17" fill="none">
+                <path d="M7.5 0.625C7.72302 0.625247 7.93753 0.710644 8.0997 0.863742C8.26187 1.01684 8.35946 1.22608 8.37253 1.44872C8.3856 1.67136 8.31316 1.89058 8.17002 2.0616C8.02688 2.23262 7.82383 2.34253 7.60237 2.36888L7.5 2.375H3.125C2.91068 2.37503 2.70383 2.45371 2.54367 2.59613C2.38352 2.73854 2.2812 2.93478 2.25612 3.14762L2.25 3.25V13.75C2.25003 13.9643 2.32871 14.1712 2.47113 14.3313C2.61354 14.4915 2.80978 14.5938 3.02262 14.6189L3.125 14.625H7.0625C7.28552 14.6252 7.50003 14.7106 7.6622 14.8637C7.82437 15.0168 7.92196 15.2261 7.93503 15.4487C7.9481 15.6714 7.87566 15.8906 7.73252 16.0616C7.58938 16.2326 7.38633 16.3425 7.16487 16.3689L7.0625 16.375H3.125C2.45544 16.375 1.81117 16.1192 1.32402 15.6599C0.836869 15.2005 0.543656 14.5724 0.504375 13.904L0.5 13.75V3.25C0.499963 2.58044 0.755785 1.93617 1.21512 1.44902C1.67446 0.961869 2.30259 0.668656 2.971 0.629375L3.125 0.625H7.5ZM12.4936 5.406L14.9681 7.88138C15.1322 8.04546 15.2243 8.26798 15.2243 8.5C15.2243 8.73202 15.1322 8.95454 14.9681 9.11862L12.4936 11.594C12.3294 11.7581 12.1068 11.8502 11.8747 11.8501C11.6426 11.85 11.42 11.7577 11.2559 11.5936C11.0919 11.4294 10.9997 11.2067 10.9998 10.9746C10.9999 10.7425 11.0922 10.5199 11.2564 10.3559L12.2372 9.375H7.5C7.26794 9.375 7.04538 9.28281 6.88128 9.11872C6.71719 8.95462 6.625 8.73206 6.625 8.5C6.625 8.26794 6.71719 8.04538 6.88128 7.88128C7.04538 7.71719 7.26794 7.625 7.5 7.625H12.2372L11.2564 6.64412C11.0922 6.48006 10.9999 6.25748 10.9998 6.02537C10.9997 5.79326 11.0919 5.57062 11.2559 5.40644C11.42 5.24225 11.6426 5.14997 11.8747 5.14989C12.1068 5.1498 12.3294 5.24193 12.4936 5.406Z" fill="#50555C"/>
+              </svg>
+            </LogoutButton>
+          </UserProfileBlock>
+        )
+      )}
       
-      {/* Context Menu для свернутого состояния */}
       {contextMenu.visible && (
         <ContextMenu
           style={{
@@ -861,32 +777,44 @@ const SideMenu = () => {
   );
 };
 
-// Обновленные и новые стили для блока профиля пользователя
-const UserProfileBlock = styled.div`
+const UserProfileBlock = styled.div<{ $selected?: boolean }>`
   display: flex;
   align-items: center;
   padding: 1px 17px;
   margin: 8px 0;
-  background-color: #F3F4F6;
+  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : '#F3F4F6'};
   border-radius: 8px;
   width: 100%;
   box-sizing: border-box;
   gap: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : '#E5E7EB'};
+  }
 `;
 
-const CollapsedUserProfileBlock = styled.div`
+const CollapsedUserProfileBlock = styled.div<{ $selected?: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-
-  margin: 8px 0 10px -15px;
+  justify-content: center;
+  margin: 8px 0;
   border-radius: 8px;
-  width: 68px;
+  width: 100%;
+  height: 40px;
   box-sizing: border-box;
-  gap: 6px;
-  heigth: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
+  padding: ${({ $selected }) => $selected ? '8px 0' : '8px 0'};
+
+  &:hover {
+    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
+  }
 `;
+
 
 const CollapsedUserAvatar = styled.img`
   width: 35px;
@@ -911,13 +839,6 @@ const UserInfo = styled.div`
   min-width: 0;
 `;
 
-const CollapsedUserInfo = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-`;
-
 const UserFullName = styled.div`
   font-size: 14px;
   font-weight: 600;
@@ -926,17 +847,6 @@ const UserFullName = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
-`;
-
-const CollapsedUserFullName = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: #1F2937;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-  line-height: 1.2;
 `;
 
 const UserRole = styled.div`
@@ -949,20 +859,10 @@ const UserRole = styled.div`
 `;
 
 const UserDate = styled.div<{ $color?: string }>`
-  font-size: 9px;
+  font-size: 12px;
   color: ${({ $color }) => $color || '#9CA3AF'};
   margin-top: 2px;
   text-align: left;
-`;
-
-const CollapsedUserDate = styled.div<{ $color?: string }>`
-  font-size: 12px;
-  color: ${({ $color }) => $color || '#9CA3AF'};
-  text-align: left;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 `;
 
 const LogoutButton = styled.button`
@@ -1021,11 +921,6 @@ const ScrollableMenuContent = styled.div`
   
   -ms-overflow-style: none;
   scrollbar-width: none;
-`;
-
-const BottomMenuSection = styled.div`
-  width: 100%;
-  margin-bottom: auto;
 `;
 
 const MenuItem = styled.div<MenuItemProps>`
@@ -1113,10 +1008,12 @@ const SideMenuContainer = styled.div<CollapsibleProps>`
 
 const MenuList = styled.div<CollapsibleProps>`
   width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
 `;
 
 const ArrowIcon = styled.img<CollapsibleProps>`
@@ -1170,23 +1067,6 @@ const ExpandArrow = styled.svg<{ $expanded: boolean }>`
   margin-left: auto;
   transition: transform 0.2s ease;
   transform: ${({ $expanded }) => ($expanded ? 'rotate(180deg)' : 'rotate(0)')};
-`;
-
-const AboutIcon = styled.div<{ $selected?: boolean }>`
-  width: 24px;
-  height: 24px;
-  margin-right: 17px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const AboutIconCollapsed = styled.div<{ $selected?: boolean }>`
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 `;
 
 export default SideMenu;

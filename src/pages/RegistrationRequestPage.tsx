@@ -398,14 +398,6 @@ const RegistrationRequestPage = () => {
                             )}
                           </FormField>
                           <FormField>
-                            <Label>Дата выдачи *</Label>
-                            <CustomInput
-                              inputType="date"
-                              value={passportData.issueDate}
-                              onChange={(e) => setPassportData(prev => ({...prev, issueDate: e.target.value}))}
-                            />
-                          </FormField>
-                          <FormField>
                             <Label>ФИО *</Label>
                             <CustomInput
                               inputType="fullname"
