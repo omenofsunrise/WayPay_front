@@ -9,6 +9,7 @@ export interface Blacklist {
     docIssueDate: Date,
     address: string,
     debt: number,
+    debtEndingAt: Date
 }
 
 export interface BlacklistParams {

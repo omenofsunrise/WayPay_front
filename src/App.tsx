@@ -35,13 +35,13 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import InvestorsPoolPage from './pages/InvestorsPoolPage';
 import { DesktopOnlyContent } from './components/DesktopOnly';
-import BlackCatalogPage from './pages/BlackCatalog';
 import RegistrationRequestPage from './pages/RegistrationRequestPage';
 import CreditApplicationPage from './pages/CreditApplicationPage';
 import NotificationHandler from './components/NotificationHandler/NotificationHandler';
 import { DISABLE_NOTIFICATIONS_KEY, getDisableNotificationsSetting, useLocalStorageSetting } from './components/modal/SettingsModal';
 import FinancePage from './pages/FinancePage/FinancePage';
 import SettingsPage from './pages/SettingsPage.tsx/SettingsPage';
+import BlackCatalogPage from './pages/BlackCatalogPage/BlackCatalogPage';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
