@@ -400,8 +400,7 @@ const SchedulePage = () => {
                         sortDirection: sortConfig.direction
                     };
 
-                    // Добавляем ID выбранной сущности для экспорта
-                    if (selectedEntity) {
+                    if (selectedEntity && selectedEntity.id != 0) {
                         if (selectedEntity.type === 'investor') {
                             params.investorId = selectedEntity.id;
                         } else if (selectedEntity.type === 'pool') {
