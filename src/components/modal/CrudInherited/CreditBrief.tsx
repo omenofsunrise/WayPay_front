@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import useSchedule from '../../../api/hooks/useSchedule';
 import styled from 'styled-components';
-import CustomTable, { type Column } from '../../ui/tables/CustomTable';
+import CustomTable from '../../ui/tables/CustomTable';
+import Portal from '../../../utils/Portal';
 
 interface CreditBriefModalProps {
     onClose: () => void;
@@ -75,7 +76,7 @@ const CreditBriefModal: React.FC<CreditBriefModalProps> = ({
         return styles;
     };
 
-    return (
+    const modalContent = (
         <BaseModal
             title={`Договор №${scheduleData?.items[0]?.creditId || creditId}`}
             onClose={onClose}
@@ -89,23 +90,25 @@ const CreditBriefModal: React.FC<CreditBriefModalProps> = ({
                     <EmptyContainer>Нет данных по расписанию платежей</EmptyContainer>
                 ) : (
                     <>
-                            <CustomTable
-                                columns={[
-                                    { name: "Дата", },
-                                    { name: "Платёж", align: "center" },
-                                    { name: "Статус", align: "center" },
-                                ]} 
-                                data={tableData}
-                                rowStyles={getRowStyles()}
-                                isLoading={isLoading}
-                                multiSelect={false}
-                                hasTotalsRow={false}
-                            />
+                        <CustomTable
+                            columns={[
+                                { name: "Дата" },
+                                { name: "Платёж", align: "center" },
+                                { name: "Статус", align: "center" },
+                            ]} 
+                            data={tableData}
+                            rowStyles={getRowStyles()}
+                            isLoading={isLoading}
+                            multiSelect={false}
+                            hasTotalsRow={false}
+                        />
                     </>
                 )}
             </ModalContent>
         </BaseModal>
     );
+
+    return <Portal>{modalContent}</Portal>;
 };
 
 const ModalContent = styled.div`
@@ -113,34 +116,6 @@ const ModalContent = styled.div`
     flex-direction: column;
     gap: 16px;
     min-height: 500px;
-`;
-
-const SummaryInfo = styled.div`
-    display: flex;
-    gap: 24px;
-    padding: 16px;
-    background-color: #F9FAFB;
-    border-radius: 8px;
-    border: 1px solid #E5E7EB;
-`;
-
-const SummaryItem = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-`;
-
-const Label = styled.span`
-    font-size: 12px;
-    color: #6B7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-`;
-
-const Value = styled.span`
-    font-size: 20px;
-    font-weight: 600;
-    color: #111827;
 `;
 
 const LoadingContainer = styled.div`
