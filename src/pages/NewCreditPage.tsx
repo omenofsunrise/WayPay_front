@@ -168,13 +168,27 @@ useEffect(() => {
       if (!isMounted) return;
 
       if (creditData) {
+        // Логируем полученные данные
+        console.log('Received credit data:', creditData);
+        console.log('Products:', creditData.products);
+        
+        // Проверяем первый продукт
+        if (creditData.products && creditData.products[0]) {
+          const firstProduct = creditData.products[0];
+          console.log('First product:', {
+            surcharge: firstProduct.surcharge,
+            surchargeAmount: firstProduct.surchargeAmount,
+            price: firstProduct.price
+          });
+        }
+        
         setCreditName(creditData.name || '');
         setContractDate(creditData.creditDate ? new Date(creditData.creditDate).toISOString().split('T')[0] : null);
         setTurnOfRounding(creditData.turnOfRounding);
         
         setStartPaymentDate(creditData.startPaymentDay ? new Date(creditData.startPaymentDay).toISOString().split('T')[0] : null);
         
-        if (creditData.startPaymentDay.toString() === '0001-01-01T00:00:00') {
+        if (creditData.startPaymentDay && creditData.startPaymentDay.toString() === '0001-01-01T00:00:00') {
           console.log("alert)");
           window.alert('Внимание: Начало выплат у старых договоров нужно ввести заново для редактирования!');
         }
@@ -182,16 +196,23 @@ useEffect(() => {
         setInDebt(creditData.inDebt || false);
         setDebtComment(creditData.debtComment);
 
-        const firstProduct = creditData.products[0];
+        // Determine markup type from the first product
+        const firstProduct = creditData.products && creditData.products[0];
+        let determinedMarkupType: 'percent' | 'fixed' = 'percent';
+        
         if (firstProduct) {
           if (firstProduct.surchargeAmount !== undefined && firstProduct.surchargeAmount !== null) {
-            setMarkupType('fixed');
-            setEditMarkupType('fixed');
-          } else {
-            setMarkupType('percent');
-            setEditMarkupType('percent');
+            determinedMarkupType = 'fixed';
+            console.log('Markup type determined as FIXED, surchargeAmount:', firstProduct.surchargeAmount);
+          } else if (firstProduct.surcharge !== undefined && firstProduct.surcharge !== null) {
+            determinedMarkupType = 'percent';
+            console.log('Markup type determined as PERCENT, surcharge:', firstProduct.surcharge);
           }
         }
+        
+        // Set markup type states
+        setMarkupType(determinedMarkupType);
+        setEditMarkupType(determinedMarkupType);
         
         setClient({
           id: creditData.clientId,
@@ -252,20 +273,33 @@ useEffect(() => {
           setObjectTypeName(creditData.creditTypeName);
         }
         
-        const formattedProducts = creditData.products.map(product => {
+        // Format products using the determined markup type
+        const formattedProducts = creditData.products.map((product, index) => {
           let markup = 0;
           let totalPrice = product.price;
           
-          if (editMarkupType === 'percent') {
+          console.log(`Processing product ${index}:`, {
+            name: product.name,
+            price: product.price,
+            surcharge: product.surcharge,
+            surchargeAmount: product.surchargeAmount,
+            determinedMarkupType
+          });
+          
+          if (determinedMarkupType === 'percent') {
+            // For percent markup
             markup = product.surcharge || 0;
             totalPrice = product.price * (1 + (product.surcharge || 0) / 100);
+            console.log(`Percent markup: ${markup}% = ${totalPrice} total`);
           } else {
+            // For fixed amount markup
             markup = product.surchargeAmount || 0;
             totalPrice = product.price + (product.surchargeAmount || 0);
+            console.log(`Fixed markup: ${markup} ₽ = ${totalPrice} total`);
           }
           
           return {
-            id: product.id || Date.now(),
+            id: index + 1,
             name: product.name,
             price: product.price,
             quantity: 1,
@@ -274,6 +308,7 @@ useEffect(() => {
           };
         });
         
+        console.log('Formatted products:', formattedProducts);
         setProducts(formattedProducts);
         
         const newTotalSum = formattedProducts.reduce((sum, product) => sum + product.totalPrice, 0);
@@ -295,8 +330,6 @@ useEffect(() => {
         if (creditData.termMonths) {
           setMonths(creditData.termMonths.toString());
         }
-
-        isMounted = false;
       }
     } catch (error) {
       console.error('Ошибка при загрузке данных кредита:', error);
@@ -1091,16 +1124,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               entityType="credit"
             />
           </FieldGroup>
-          {/* <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
-            <Label>Категория (необязательно)</Label>
-            <ObjectTypeSelect
-              value={tabTypeName}
-              onChange={handleTabTypeNameChange}
-              onObjectTypeSelect={handleTabTypeSelect}
-              placeholder="Выберите категорию"
-              entityType="creditTab"
-            />
-          </FieldGroup> */}
         </FormRow>
             
         <ModalInfoTitle>Сведения о покупателе</ModalInfoTitle>
@@ -1189,7 +1212,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
           />
         </ProductsTableWrapper>
         <TotalSumContainer>
-          Итого товаров на сумму: {formatMoney(totalSum.toString())} 
+          Итого товаров на сумму: {formatMoney(totalSum.toString())}
           <Checkbox 
             label='Отключить округление'
             checked={turnOfRounding} 
