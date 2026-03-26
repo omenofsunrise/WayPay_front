@@ -124,15 +124,16 @@ interface PayoutModalProps {
 }
 
 const PayoutModal = ({ isOpen, onClose, onConfirm, partnerName, isSubmitting }: PayoutModalProps) => {
-  const [amount, setAmount] = useState<number>(0);
+  const [amount, setAmount] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount <= 0) {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
       alert('Сумма должна быть больше 0');
       return;
     }
-    onConfirm(amount);
+    onConfirm(numericAmount);
   };
 
   if (!isOpen) return null;
@@ -150,12 +151,10 @@ const PayoutModal = ({ isOpen, onClose, onConfirm, partnerName, isSubmitting }: 
           Сумма выплаты (₽):
         </label>
         <CustomInput
-          type="number"
-          value={amount.toString()}
-          onChange={(e) => setAmount(Number(e.target.value))}
+          type="text"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
           placeholder="Введите сумму"
-          min={0}
-          step={100}
         />
       </div>
     </BaseModal>
