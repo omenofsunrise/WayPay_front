@@ -43,14 +43,13 @@ export interface WorkScheduleRequest {
 }
 
 export const formatTimeForInput = (timeString: string): string => {
-  return timeString.substring(0, 5); // "09:00" для input[type="time"]
+  return timeString.substring(0, 5);
 };
 
 export const formatTimeForApi = (timeInput: string): string => {
   return timeInput.length === 5 ? `${timeInput}:00` : timeInput;
 };
 
-// Хелпер для дней недели
 export const daysOfWeek = [
   'Sunday',
   'Monday', 

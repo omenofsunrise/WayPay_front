@@ -236,7 +236,6 @@ const ClientSelectModal = ({
               onChange={(e) => handlePhoneFilterChange(e.target.value)}
               onKeyPress={handleKeyPress}
               name="phone"
-              style={{ marginLeft: '16px', maxWidth: "none" }}
             />
             <DarkCyanButton 
               style={{ marginLeft: '16px', width: "auto" }}
@@ -275,11 +274,11 @@ const ClientSelectModal = ({
                       >
                         <ClientCard 
                           client={transformClientData(client)}
-                          onEdit={() => {}} // Пустые функции, так как в модальном окне редактирование не нужно
+                          onEdit={() => {}}
                           onDelete={() => {}}
                           onRightClick={() => {}}
                           onOpenDossier={() => {}}
-                          showMenu={false} // Скрываем меню в модальном окне выбора
+                          showMenu={false}
                         />
                       </ClientCardWrapper>
                     ))}

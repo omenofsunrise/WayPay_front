@@ -27,8 +27,10 @@ class CompanyService {
     return response.data;
   }
 
-  async getAllCompanies(): Promise<Company[]> {
-    const response = await apiClient.get<Company[]>('/Company/all');
+  async getAllCompanies(partners: boolean): Promise<Company[]> {
+    const response = await apiClient.get<Company[]>('/Company/all', {
+      params: { partners }
+    });
     return response.data;
   }
 
@@ -62,6 +64,19 @@ class CompanyService {
     return response.data;
   }
 
+  async payoutPartner(partnerId: number, amount: number): Promise<void> {
+    const response = await apiClient.patch<Company>(
+      '/Company/partner/payout',
+      null,
+      {
+        params: {
+          partnerId,
+          amount
+        }
+      }
+    );
+  }
+
   async deleteCompanyPhoto(): Promise<void> {
     await apiClient.delete('/Company/photo');
   }
@@ -76,6 +91,7 @@ class CompanyService {
     LicenceDate: Date;
     AdminName: string;
     CompanyName: string;
+    IsPartner: boolean;
   }): Promise<Company> {
     const response = await apiClient.post<Company>('/Company', companyData);
     return response.data;

@@ -65,11 +65,11 @@ const useCompany = () => {
     }
   }, []);
 
-  const getAllCompanies = useCallback(async (): Promise<Company[] | null> => {
+  const getAllCompanies = useCallback(async (isPartner: boolean): Promise<Company[] | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await companyService.getAllCompanies();
+      const result = await companyService.getAllCompanies(isPartner);
       setCompanies(result);
       return result;
     } catch (err) {
@@ -79,6 +79,18 @@ const useCompany = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const payoutPartner = async (partnerId: number, amount: number) : Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await companyService.payoutPartner(partnerId, amount);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }    
+  }
 
   const updateCompany = async (companyData: Partial<Company>): Promise<Company | null> => {
     setIsLoading(true);
@@ -128,6 +140,7 @@ const useCompany = () => {
     LicenceDate: Date;
     AdminName: string;
     CompanyName: string;
+    IsPartner: boolean;
   }): Promise<Company | null> => {
     setIsLoading(true);
     setError(null);
@@ -222,7 +235,8 @@ const useCompany = () => {
     deleteCompanyPhoto,
     getCompanyPhotoUrl,
     getCommonInfo,
-    getAccountDetails
+    getAccountDetails,
+    payoutPartner
   };
 };
 

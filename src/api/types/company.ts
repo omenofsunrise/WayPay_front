@@ -15,6 +15,7 @@ export interface Company {
   totalCredits?: number;
   currentBankCardId?: number;
   supportPhone?: string;
+  balance?: number;
 }
 
 export interface CompanyCreateRequest {
