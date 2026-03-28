@@ -125,7 +125,7 @@ const CardFront = styled.div`
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
 `;
@@ -142,6 +142,7 @@ const CardBack = styled.div`
   display: flex;
   flex-direction: column;
   color: white;
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
 
   &::-webkit-scrollbar {
     width: 6px;
