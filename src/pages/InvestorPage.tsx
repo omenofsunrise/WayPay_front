@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
@@ -26,6 +26,7 @@ import PrintOptionModal from '../components/modal/PrintOptionModal';
 import PrintIcon from '../assets/ui/print.svg?react';
 import InvestorDocxGenerator from '../utils/doxcUtils/investorDocxGenerator';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import { useResponsivePageSize } from '../utils/useResponsivePageSize';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -34,7 +35,7 @@ const InvestorPage = () => {
         key: number | null;
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
-    const pageSize = 10;
+    const [isPageSizeReady, setIsPageSizeReady] = useState(false);
     const { hasRole } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
@@ -43,6 +44,19 @@ const InvestorPage = () => {
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [investorForPrint, setInvestorForPrint] = useState<Investor | null>(null);
     const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(null);
+    
+    // Используем хук для адаптивного размера страницы
+    const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
+        defaultPageSize: 10,
+        minPageSize: 1,
+        maxPageSize: 50,
+        rowHeight: 32,
+        headerHeight: 300,
+        paginationHeight: 60,
+    });
+
+    const pageSizeRef = useRef(responsivePageSize);
+    const itemsPerPage = responsivePageSize;
         
     const columnToApiSortMap: Record<number, string> = {
         0: 'id',
@@ -75,9 +89,15 @@ const InvestorPage = () => {
     const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
     const [investmentAmount, setInvestmentAmount] = useState('');
     const [investmentDate, setInvestmentDate] = useState(() => {
-    const today = new Date();
+        const today = new Date();
         return today.toISOString().split('T')[0];
     });
+    
+    // Обновляем ref при изменении pageSize
+    useEffect(() => {
+        pageSizeRef.current = responsivePageSize;
+        setIsPageSizeReady(true);
+    }, [responsivePageSize]);
     
     const handleAddInvestment = (rowData: any[]) => {
         if (!canEdit) return;
@@ -132,9 +152,11 @@ const InvestorPage = () => {
     };
 
     const loadInvestors = useCallback(async () => {
+        if (!isPageSizeReady) return;
+        
         const params: InvestorParams = {
             page: currentPage,
-            pageSize,
+            pageSize: itemsPerPage,
             name: nameFilter || undefined
         };
 
@@ -144,11 +166,13 @@ const InvestorPage = () => {
         }
 
         await getInvestors(params);
-    }, [currentPage, nameFilter, sortConfig, getInvestors]);
+    }, [currentPage, nameFilter, sortConfig, getInvestors, itemsPerPage, isPageSizeReady]);
     
     useEffect(() => {
-        loadInvestors();
-    }, [currentPage, nameFilter, sortConfig, loadInvestors]);
+        if (isPageSizeReady) {
+            loadInvestors();
+        }
+    }, [currentPage, nameFilter, sortConfig, loadInvestors, isPageSizeReady]);
 
     const handleFilterChange = (value: string) => {
         setNameFilter(value);
@@ -306,17 +330,17 @@ const InvestorPage = () => {
 
     const handlePrintContract = async (option: string, investor: Investor) => {
         try {
-        if (option === 'investorContract') {
-            const agreementData = await getInvestorAgreement(investor.id);
-            
-            await investorDocGenerator.generateInvestorContract(
-            agreementData,
-            investor.nickname || investor.fullName || 'Инвестор'
-            );
-        }
+            if (option === 'investorContract') {
+                const agreementData = await getInvestorAgreement(investor.id);
+                
+                await investorDocGenerator.generateInvestorContract(
+                    agreementData,
+                    investor.nickname || investor.fullName || 'Инвестор'
+                );
+            }
         } catch (error) {
-        console.error('Ошибка при печати договора:', error);
-        alert('Отказано в доступа к данным для печати');
+            console.error('Ошибка при печати договора:', error);
+            alert('Отказано в доступа к данным для печати');
         }
     };
 
@@ -520,7 +544,7 @@ const InvestorPage = () => {
     ];
 
     return (
-        <PageLayout>
+        <PageLayout ref={containerRef}>
             <TitleField>
                 <CustomTitle>Инвесторы</CustomTitle>
                 {/* Кнопка печати добавлена слева от экспорта */}
@@ -582,7 +606,7 @@ const InvestorPage = () => {
                             total={investorsData?.totalCount || 0}
                             current={currentPage}
                             onChange={setCurrentPage}
-                            itemsPerPage={pageSize}
+                            itemsPerPage={itemsPerPage}
                         />
                     </PaginationLayout>
                 </>
@@ -650,7 +674,7 @@ const InvestorPage = () => {
                 selectedCredit={null}
                 selectedInvestor={investorForPrint}
                 printOptions={[
-                { key: 'investorContract', label: 'Договор с инвестором', enabled: true }
+                    { key: 'investorContract', label: 'Договор с инвестором', enabled: true }
                 ]}
                 modalTitle="Выберите тип договора для печати"
             />
