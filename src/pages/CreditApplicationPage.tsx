@@ -861,12 +861,12 @@ const CreditApplicationPage: React.FC = () => {
                     <FinancialCard>
                       <FinancialItem>
                         <span>Надбавка:</span>
-                        <span>{formatMoney(application.markup.toString())}</span>
+                        <span>{formatMoney(application.markupAmount.toString())}</span>
                       </FinancialItem>
                       <FinancialItem>
                         <span>Ежемесячный платеж:</span>
                         <span style={{ fontWeight: 600, color: '#007D88' }}>
-                          {formatMoney(application.monthPayment.toString())}
+                          {formatMoney(application.monthlyPayment.toString())}
                         </span>
                       </FinancialItem>
                     </FinancialCard>
@@ -907,7 +907,7 @@ const CreditApplicationPage: React.FC = () => {
                     </FinancialDetailItem>
                     <FinancialDetailItem>
                       <FinancialDetailLabel>Надбавка</FinancialDetailLabel>
-                      <FinancialDetailValue>{formatMoney(application.markup.toString())}</FinancialDetailValue>
+                      <FinancialDetailValue>{formatMoney(application.markupAmount.toString())}</FinancialDetailValue>
                     </FinancialDetailItem>
                     <FinancialDetailItem>
                       <FinancialDetailLabel>Общая сумма к возврату</FinancialDetailLabel>
@@ -920,7 +920,7 @@ const CreditApplicationPage: React.FC = () => {
                     <FinancialDetailItem>
                       <FinancialDetailLabel>Ежемесячный платеж</FinancialDetailLabel>
                       <FinancialDetailValue style={{ fontSize: 18, color: '#FFD966' }}>
-                        {formatMoney(application.monthPayment.toString())}
+                        {formatMoney(application.monthlyPayment.toString())}
                       </FinancialDetailValue>
                     </FinancialDetailItem>
                   </BackContent>
