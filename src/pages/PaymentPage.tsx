@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
@@ -26,6 +26,7 @@ import { useEmployee } from '../api/hooks/useEmployee';
 import CustomSelect from '../components/ui/fields/CustomSelect';
 import type { EmployeeFullnames } from '../api/types/employee';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
+import { useResponsivePageSize } from '../utils/useResponsivePageSize';
 
 const PaymentPage = () => {
     const [fullnameFilter, setFullnameFilter] = useState('');
@@ -34,7 +35,6 @@ const PaymentPage = () => {
         key: number | null;
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
-    const pageSize = 10;
     const { authInfo, denyPermission, refresh } = useAuth();
     const [investorName, setInvestorName] = useState('');
     const [investorId, setInvestorId] = useState<number | null>(null);
@@ -42,6 +42,7 @@ const PaymentPage = () => {
     const [employeeFullname, setEmployeeFullname] = useState('');
     const [confirmedFilter, setConfirmedFilter] = useState<string>('all');
     const [employees, setEmployees] = useState<EmployeeFullnames[]>([]);
+    const [isPageSizeReady, setIsPageSizeReady] = useState(false);
     const columnToApiSortMap: Record<number, string> = {
         0: 'creditId',
         1: 'clientFullname',
@@ -55,6 +56,18 @@ const PaymentPage = () => {
     const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
     const { exportData, isExporting, exportProgress } = useExport<Payment>();
 
+    const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
+        defaultPageSize: 10,
+        minPageSize: 1,
+        maxPageSize: 50,
+        rowHeight: 30,
+        headerHeight: 300,
+        paginationHeight: 60,
+    });
+
+    const pageSizeRef = useRef(responsivePageSize);
+    const itemsPerPage = responsivePageSize;
+
     const { fetchEmployeeFullnames } = useEmployee();
         
     const { 
@@ -66,6 +79,12 @@ const PaymentPage = () => {
         confirmPaymentList,
         deletePayment
     } = usePayment();
+
+    // Обновляем ref при изменении pageSize
+    useEffect(() => {
+        pageSizeRef.current = responsivePageSize;
+        setIsPageSizeReady(true);
+    }, [responsivePageSize]);
 
     useEffect(() => {
         if (authInfo) {
@@ -131,7 +150,7 @@ const PaymentPage = () => {
     const formParams = (): PaymentParams => {
         const params: PaymentParams = {
             page: currentPage,
-            pageSize,
+            pageSize: itemsPerPage,
             clientFullname: fullnameFilter.trim() || undefined,
             employeeFullname: employeeFullname.trim() || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
@@ -151,6 +170,8 @@ const PaymentPage = () => {
     }
 
     const loadPayments = useCallback(async () => {
+        if (!isPageSizeReady) return;
+        
         const params: PaymentParams = formParams();
 
         if (confirmedFilter === 'confirmed') {
@@ -168,23 +189,27 @@ const PaymentPage = () => {
     }, [
         currentPage, 
         fullnameFilter, 
-        investorId, // Используем investorId вместо investorName
-        isPool, // Добавляем зависимость от типа
+        investorId,
+        isPool,
         employeeFullname,
         confirmedFilter,
         dateFromFilter, 
         dateToFilter, 
         sortConfig, 
-        getPayments
+        getPayments,
+        itemsPerPage,
+        isPageSizeReady
     ]);
     
     useEffect(() => {
         const timer = setTimeout(() => {
-            loadPayments();
+            if (isPageSizeReady) {
+                loadPayments();
+            }
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [currentPage, fullnameFilter, investorId, isPool, employeeFullname, confirmedFilter, dateFromFilter, dateToFilter, sortConfig, loadPayments]);
+    }, [currentPage, fullnameFilter, investorId, isPool, employeeFullname, confirmedFilter, dateFromFilter, dateToFilter, sortConfig, loadPayments, isPageSizeReady]);
 
     const handleFilterChange = (value: string) => {
         setFullnameFilter(value);
@@ -490,7 +515,7 @@ const PaymentPage = () => {
     ];
 
     return (
-        <PageLayout>
+        <PageLayout ref={containerRef}>
             <TitleField>
                 <CustomTitle>История платежей</CustomTitle>
                 {(authInfo?.employee.permissions.includes('MANAGE_ACCOUNTING') && 
@@ -609,7 +634,7 @@ const PaymentPage = () => {
                             total={paymentsData?.totalCount || 0}
                             current={currentPage}
                             onChange={setCurrentPage}
-                            itemsPerPage={pageSize}
+                            itemsPerPage={itemsPerPage}
                         />
                     </PaginationLayout>
                 </>

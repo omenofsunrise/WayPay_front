@@ -33,6 +33,7 @@ import { sendWhatsAppMessage } from '../utils/sendWhatsAppMessage';
 import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
 import type { PaymentTab } from '../api/types/payment';
 import paymentService from '../api/services/paymentService';
+import { useResponsivePageSize } from '../utils/useResponsivePageSize';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -50,7 +51,7 @@ type TabType = 'schedule' | 'table';
 
 const ACTIVE_TAB_STORAGE_KEY = 'schedule_page_active_tab';
 
-// Добавляем интерфейс для выбранной сущности
+// Интерфейс для выбранной сущности
 interface SelectedEntity {
   id: number;
   name: string;
@@ -67,7 +68,7 @@ const SchedulePage = () => {
     
     const [clientNameFilter, setClientNameFilter] = useState('');
     const [investorFilter, setInvestorFilter] = useState('');
-    const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null); // Добавляем состояние для выбранной сущности
+    const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
     const [dateFromFilter, setDateFromFilter] = useState('');
     const [dateToFilter, setDateToFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -83,7 +84,7 @@ const SchedulePage = () => {
     const { hasRole, hasPermission } = useAuth();
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
-    const pageSize = 10;
+    const [isPageSizeReady, setIsPageSizeReady] = useState(false);
     const { getScheduleAnalityc } = useAnalytic();
     const { createPayment } = usePayment();
     const [scheduleAnalytics, setScheduleAnalytics] = useState<ScheduleAnalitycResponse[]>([]);
@@ -96,6 +97,19 @@ const SchedulePage = () => {
         3: 'date'
     };
     
+    // Используем хук для адаптивного размера страницы
+    const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
+        defaultPageSize: 10,
+        minPageSize: 1,
+        maxPageSize: 50,
+        rowHeight: 30,
+        headerHeight: 300,
+        paginationHeight: 65,
+    });
+    
+    const pageSizeRef = useRef(responsivePageSize);
+    const itemsPerPage = responsivePageSize;
+    
     const { exportData, isExporting, exportProgress } = useExport<ScheduleDetails>();
 
     const { 
@@ -104,10 +118,18 @@ const SchedulePage = () => {
         scheduleData, 
         getList
     } = useSchedule();
+    
     const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true) || hasRole('админ');
+    
     const saveActiveTabToStorage = useCallback((tab: TabType) => {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
     }, []);
+
+    // Обновляем ref при изменении pageSize
+    useEffect(() => {
+        pageSizeRef.current = responsivePageSize;
+        setIsPageSizeReady(true);
+    }, [responsivePageSize]);
 
     useEffect(() => {
         if (!shouldShowScheduleTab && activeTab === 'schedule') {
@@ -295,9 +317,11 @@ const SchedulePage = () => {
     const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
 
     const loadSchedules = useCallback(async () => {
+        if (!isPageSizeReady) return;
+        
         const params: ScheduleParams = {
             page: currentPage,
-            pageSize,
+            pageSize: itemsPerPage,
             clientName: clientNameFilter || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
@@ -317,28 +341,25 @@ const SchedulePage = () => {
         }
 
         await getList(params);
-    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, selectedEntity, getList]);
+    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, selectedEntity, getList, itemsPerPage, isPageSizeReady]);
     
     useEffect(() => {
-        if (activeTab === 'table') {
+        if (activeTab === 'table' && isPageSizeReady) {
             loadSchedules();
         }
-    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules, activeTab, selectedEntity]);
+    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules, activeTab, selectedEntity, isPageSizeReady]);
 
     const handleClientNameFilterChange = (value: string) => {
         setClientNameFilter(value);
         setCurrentPage(1);
     };
 
-    // Обновляем обработчик для InvestorSelect
     const handleInvestorFilterChange = (value: string) => {
         setInvestorFilter(value);
-        // Очищаем выбранную сущность при ручном вводе
         setSelectedEntity(null);
         setCurrentPage(1);
     };
 
-    // Добавляем обработчик выбора инвестора/пула
     const handleEntitySelect = (investor: { 
         id: number; 
         nickname: string; 
@@ -630,7 +651,7 @@ const SchedulePage = () => {
                                     value={investorFilter}
                                     onChange={handleInvestorFilterChange}
                                     onInvestorSelect={handleEntitySelect}
-                                    includePools={true} // Добавляем возможность выбора пулов
+                                    includePools={true}
                                 />
                             </InputWrapper>
                             <DateInputWrapper>
@@ -682,7 +703,7 @@ const SchedulePage = () => {
                                     total={scheduleData?.totalCount || 0}
                                     current={currentPage}
                                     onChange={setCurrentPage}
-                                    itemsPerPage={pageSize}
+                                    itemsPerPage={itemsPerPage}
                                 />
                             </PaginationLayout>
                         </>
@@ -693,7 +714,7 @@ const SchedulePage = () => {
     ];
 
     return (
-        <PageLayout>
+        <PageLayout ref={containerRef}>
             <TitleField>
                 <CustomTitle>Ожидаемые платежи</CustomTitle>
                 <ExportButton 
@@ -822,7 +843,6 @@ const DateInputWrapper = styled.div`
   min-width: 180px;
 `;
 
-// Добавляем стиль для информационного сообщения о фильтре
 const FilterInfo = styled.div`
   margin-bottom: 16px;
   padding: 8px 12px;
