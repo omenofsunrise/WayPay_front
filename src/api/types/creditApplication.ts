@@ -1,6 +1,7 @@
 import type { PaginationParams } from "./common";
 
 export type ApplicationStatus = typeof ApplicationStatus[keyof typeof ApplicationStatus];
+export type RejectReason = typeof RejectReason[keyof typeof RejectReason];
 
 export const ApplicationStatus = {
     Pending: 1,
@@ -8,6 +9,17 @@ export const ApplicationStatus = {
     Decline: 3,
 } as const;
 
+export const RejectReason = {
+    NotIntrested: 0,
+    BlackClient: 1,
+    BlackGuarantor: 2,
+    ClientHasDebt: 3,
+} as const;
+
+export interface RejectApplicationRequest {
+    reason: RejectReason;
+    comment: string;
+}
 export interface CreditApplicationResponse {
     id: number;
 

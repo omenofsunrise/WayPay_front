@@ -1,10 +1,10 @@
 import apiClient from '../client';
 import type { PaginatedResponse, PaginationParams } from '../types/common';
-import type { CreditApplicationResponse, GetCreditApplicationsQuery, SelfCreditApplicationResponse } from '../types/creditApplication';
+import type { CreditApplicationResponse, GetCreditApplicationsQuery, RejectApplicationRequest, SelfCreditApplicationResponse } from '../types/creditApplication';
 
 class CreditApplicationService {
-  async getCreditApplications(params?: GetCreditApplicationsQuery): Promise<PaginatedResponse<CreditApplicationResponse>> {
-    const response = await apiClient.get<PaginatedResponse<CreditApplicationResponse>>('/CreditApplication', { params });
+  async getCreditApplications(params?: GetCreditApplicationsQuery): Promise<CreditApplicationResponse[]> {
+    const response = await apiClient.get<CreditApplicationResponse[]>('/CreditApplication', { params });
     return response.data;
   }
 
@@ -15,6 +15,10 @@ class CreditApplicationService {
 
   async acceptCreditApplications(id: number) {
     await apiClient.patch(`CreditApplication/accept/${id}`);
+  }
+
+  async rejectCreditApplication(id, body: RejectApplicationRequest) {
+    await apiClient.patch(`CreditApplication/reject/${id}`, body);
   }
 
   async cancelCreditApplications(id: number) {

@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { FaCheck, FaTimes, FaUserCircle, FaSearch, FaMoneyBillWave, FaCalendarAlt, FaComment, FaFileContract, FaUserFriends, FaUserPlus, FaBuilding, FaMapMarkerAlt, FaBox, FaPercent, FaFlipboard, FaInfoCircle } from 'react-icons/fa';
-import { Pagination } from 'react-bootstrap';
+import { FaCheck, FaTimes, FaMoneyBillWave, FaComment, FaFileContract, FaUserFriends, FaBuilding, FaMapMarkerAlt, FaBox, FaFlipboard, FaInfoCircle, FaSync } from 'react-icons/fa';
 import useCreditApplication from '../api/hooks/useCreditApplication';
-import type { CreditApplicationResponse, GetCreditApplicationsQuery, SelfCreditApplicationResponse } from '../api/types/creditApplication';
+import type { CreditApplicationResponse, GetCreditApplicationsQuery, SelfCreditApplicationResponse, RejectApplicationRequest, RejectReason } from '../api/types/creditApplication';
 import ClientDossier from '../components/ui/Dossiers/ClientDossier';
-import CustomTable from '../components/ui/tables/CustomTable';
 import { formatMoney } from '../utils/formatPrice';
 import CustomTitle from '../components/ui/Text/CustomTitle';
 import useClient from '../api/hooks/useClient';
@@ -19,21 +17,7 @@ import type { PaginatedResponse } from '../api/types/common';
 import Tabs from '../components/ui/fields/Tabs';
 import useChat from '../api/hooks/useChat';
 import { useNavigate } from 'react-router-dom';
-
-const PageContainer = styled.div`
-  padding: 24px;
-  background: #f8f9fa;
-  min-height: 100vh;
-  position: relative;
-`;
-
-const FilterField = styled.div`
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-`;
+import PageLayout from '../components/ui/Layouts/PageLayout';
 
 const InputWrapper = styled.div`
   flex: 1;
@@ -100,11 +84,13 @@ const CardsGrid = styled.div`
   margin-bottom: 24px;
 `;
 
-const CardContainer = styled.div`
+const CardContainer = styled.div<{ isProcessed?: boolean }>`
   background: transparent;
   perspective: 1500px;
   height: 700px;
   cursor: pointer;
+  opacity: ${props => props.isProcessed ? 0.7 : 1};
+  position: relative;
 `;
 
 const CardInner = styled.div<{ isFlipped: boolean }>`
@@ -117,12 +103,12 @@ const CardInner = styled.div<{ isFlipped: boolean }>`
   transform: ${props => props.isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'};
 `;
 
-const CardFront = styled.div`
+const CardFront = styled.div<{ isProcessed?: boolean }>`
   position: absolute;
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  background: white;
+  background: ${props => props.isProcessed ? '#f3f4f6' : 'white'};
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
@@ -172,8 +158,11 @@ const PartnerBadge = styled.div`
   width: fit-content;
 `;
 
-const CardHeader = styled.div<{ isPartner?: boolean }>`
-  background: linear-gradient(135deg, #007D88 0%, #006670 100%);
+const CardHeader = styled.div<{ isPartner?: boolean; isProcessed?: boolean }>`
+  background: ${props => props.isProcessed 
+    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+    : 'linear-gradient(135deg, #007D88 0%, #006670 100%)'
+  };
   color: white;
   padding: 16px;
   display: flex;
@@ -292,16 +281,18 @@ const FinancialItem = styled.div`
   }
 `;
 
-const CardActions = styled.div`
+const CardActions = styled.div<{ isProcessed?: boolean }>`
   padding: 16px;
   background: #f9fafb;
   display: flex;
   gap: 12px;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
+  pointer-events: ${props => props.isProcessed ? 'none' : 'auto'};
+  opacity: ${props => props.isProcessed ? 0.5 : 1};
 `;
 
-const ActionButton = styled.button<{ variant?: 'primary' | 'success' | 'danger' | 'info' }>`
+const ActionButton = styled.button<{ variant?: 'primary' | 'success' | 'danger' | 'info' | 'warning' }>`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -339,6 +330,14 @@ const ActionButton = styled.button<{ variant?: 'primary' | 'success' | 'danger' 
           color: white;
           &:hover {
             background: #006670;
+          }
+        `;
+      case 'warning':
+        return `
+          background: #f59e0b;
+          color: white;
+          &:hover {
+            background: #d97706;
           }
         `;
       default:
@@ -417,19 +416,6 @@ const FinancialDetailValue = styled.span`
   font-weight: 600;
 `;
 
-const GuarantorCard = styled.div`
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px;
-  margin-top: 8px;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-`;
-
 const LoadingOverlay = styled.div`
   position: absolute;
   top: 0;
@@ -459,6 +445,194 @@ const EmptyState = styled.div`
   font-size: 16px;
 `;
 
+const RefreshButton = styled.button`
+  background: white;
+  color: #007D88;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ type: 'success' | 'error' | 'warning' }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 300px;
+  max-width: 400px;
+
+  ${props => {
+    switch (props.type) {
+      case 'success':
+        return `background: #10b981;`;
+      case 'error':
+        return `background: #ef4444;`;
+      case 'warning':
+        return `background: #f59e0b;`;
+      default:
+        return `background: #007D88;`;
+    }
+  }}
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+`;
+
+const ModalTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #111827;
+`;
+
+const ModalButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  justify-content: flex-end;
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  margin-top: 12px;
+
+  &:focus {
+    outline: none;
+    border-color: #007D88;
+    ring: 2px solid #007D88;
+  }
+`;
+
+const TabsContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
+const FiltersWrapper = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+  justify-content: flex-end;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  margin-top: 12px;
+
+  &:focus {
+    outline: none;
+    border-color: #007D88;
+  }
+`;
+
+const HeaderContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
+const SimpleCompactBanner = styled.div<{ isComplete: boolean }>`
+  background: ${props => props.isComplete ? '#10b981' : '#007D88'};
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+`;
+
+type ProcessStatus = 'pending' | 'approved' | 'rejected' | 'error';
+
+interface ToastMessage {
+  id: number;
+  type: 'success' | 'error' | 'warning';
+  message: string;
+}
+
 const CreditApplicationPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
@@ -466,6 +640,16 @@ const CreditApplicationPage: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [selectedGuarantor, setSelectedGuarantor] = useState<any>(null);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [isProgressExpanded, setIsProgressExpanded] = useState(false);
+  const [processedApplications, setProcessedApplications] = useState<Map<number, ProcessStatus>>(new Map());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState<RejectReason>(0);
+  const [rejectComment, setRejectComment] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const [clientName, setClientName] = useState('');
   const [minPrice, setMinPrice] = useState<string>('');
@@ -489,17 +673,25 @@ const CreditApplicationPage: React.FC = () => {
     getCreditApplications,
     getMyCompanyCreditApplications,
     approveCreditApplication,
-    cancelCreditApplication
+    cancelCreditApplication,
+    rejectCreditApplication
   } = useCreditApplication();
 
   const {
     getClientById,
-    isLoading: isClientLoading
   } = useClient();
+
+  const addToast = useCallback((type: 'success' | 'error' | 'warning', message: string) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 5000);
+  }, []);
 
   useEffect(() => {
     loadApplications();
-  }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, selectedRegion, selectedDistrict, activeTab]);
+  }, [currentPage, minPrice, maxPrice, minTerm, maxTerm, selectedRegion, selectedDistrict, activeTab]);
 
   const {
     isLoading: isRegionLoading,
@@ -551,6 +743,7 @@ const CreditApplicationPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Ошибка при создании чата:', error);
+      addToast('error', 'Не удалось создать чат');
     }
   };
 
@@ -600,10 +793,90 @@ const CreditApplicationPage: React.FC = () => {
   }, [currentPage, clientName, minPrice, maxPrice, minTerm, maxTerm, fromDate, toDate, selectedRegion, selectedDistrict, activeTab, getCreditApplications, getMyCompanyCreditApplications]);
 
   const handleApprove = async (id: number) => {
-    if (window.confirm('Стоимость одобрения заявки 3 дня лицензии! Вы уверены, что хотите одобрить эту заявку?')) {
-      await approveCreditApplication(id);
-      await loadApplications();
+    if (processedApplications.has(id)) {
+      addToast('warning', `⚠️ Заявка #${id} уже обработана`);
+      return;
     }
+
+    if (window.confirm('Стоимость одобрения заявки 3 дня лицензии! Вы уверены, что хотите одобрить эту заявку?')) {
+      try {
+        await approveCreditApplication(id);
+        setProcessedApplications(prev => new Map(prev).set(id, 'approved'));
+        addToast('success', `✅ Заявка #${id} успешно одобрена!`);
+      } catch (error: any) {
+        console.error('Ошибка при одобрении заявки:', error);
+        
+        if (error?.response?.status === 400 || error?.message?.includes('уже обработана') || error?.message?.includes('already processed')) {
+          setProcessedApplications(prev => new Map(prev).set(id, 'error'));
+          addToast('warning', `⚠️ Заявка #${id} уже была обработана`);
+        } else {
+          setProcessedApplications(prev => new Map(prev).set(id, 'error'));
+          addToast('error', `❌ Не удалось одобрить заявку #${id}`);
+        }
+      }
+    }
+  };
+
+  const handleRejectClick = (id: number) => {
+    if (processedApplications.has(id)) {
+      addToast('warning', `⚠️ Заявка #${id} уже обработана`);
+      return;
+    }
+    setSelectedApplicationId(id);
+    setRejectReason(0);
+    setRejectComment('');
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!selectedApplicationId) return;
+
+    if (processedApplications.has(selectedApplicationId)) {
+      addToast('warning', `⚠️ Заявка #${selectedApplicationId} уже обработана`);
+      setRejectModalOpen(false);
+      return;
+    }
+
+    setIsRejecting(true);
+    try {
+      const request: RejectApplicationRequest = {
+        reason: rejectReason,
+        comment: rejectComment
+      };
+      await rejectCreditApplication(selectedApplicationId, request);
+      
+      setProcessedApplications(prev => new Map(prev).set(selectedApplicationId, 'rejected'));
+      
+      const reasonText = rejectReason === 0 ? 'Не заинтересован' : 
+                        rejectReason === 1 ? 'Черный клиент' : 
+                        rejectReason === 2 ? 'Черный поручитель' : 'Клиент имеет задолженность';
+      addToast('success', `📝 Заявка #${selectedApplicationId} отклонена. Причина: ${reasonText}`);
+      
+      setRejectModalOpen(false);
+      setSelectedApplicationId(null);
+      setRejectReason(0);
+      setRejectComment('');
+    } catch (error: any) {
+      console.error('Ошибка при отклонении заявки:', error);
+      
+      if (error?.response?.status === 400 || error?.message?.includes('уже обработана') || error?.message?.includes('already processed')) {
+        setProcessedApplications(prev => new Map(prev).set(selectedApplicationId, 'error'));
+        addToast('warning', `⚠️ Заявка #${selectedApplicationId} уже была обработана`);
+      } else {
+        setProcessedApplications(prev => new Map(prev).set(selectedApplicationId, 'error'));
+        addToast('error', `❌ Не удалось отклонить заявку #${selectedApplicationId}`);
+      }
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  const handleRefreshApplications = async () => {
+    setIsRefreshing(true);
+    await loadApplications();
+    setProcessedApplications(new Map());
+    setFlippedCards(new Set());
+    setIsRefreshing(false);
   };
 
   const handleClearFilter = (filterType: string) => {
@@ -635,6 +908,7 @@ const CreditApplicationPage: React.FC = () => {
     setActiveTab(tabId);
     setCurrentPage(1);
     setFlippedCards(new Set());
+    setProcessedApplications(new Map());
   };
 
   const handleViewClient = async (clientId: number, clientName?: string, clientPhone?: string) => {
@@ -752,9 +1026,9 @@ const CreditApplicationPage: React.FC = () => {
     const productPrice = application.productPrice || 0;
     const firstPayment = application.firstPayment || 0;
     const loanAmount = productPrice - firstPayment;
-    const markup = 'markupAmount' in application ? application.markupAmount || 0 : 0;
+    const markup = 'markupAmount' in application ? application.markupAmount || 0 : 'markup' in application ? application.markup || 0 : 0;
     const totalAmount = loanAmount + markup;
-    const monthlyPayment = application.monthlyPayment || 0;
+    const monthlyPayment = ('monthlyPayment' in application ? application.monthlyPayment : application.monthPayment) || 0;
     const termMonths = application.termMonths || 0;
     const totalPayment = monthlyPayment * termMonths;
 
@@ -768,171 +1042,17 @@ const CreditApplicationPage: React.FC = () => {
     };
   };
 
-  const renderAllApplicationsCards = () => {
-    if (!data?.items || data.items.length === 0) {
-      return <EmptyState>Нет доступных заявок</EmptyState>;
-    }
-
-    return (
-      <CardsGrid>
-        {data.items.map(application => {
-          const initials = getInitials(application.fullname);
-          const avatarUrl = application.avatarPath ? FILE_BASE_URL + application.avatarPath : generateAvatar(initials, 48);
-          const financials = calculateFinancialDetails(application);
-          const isFlipped = flippedCards.has(application.id);
-
-          return (
-            <CardContainer key={application.id}>
-              <CardInner isFlipped={isFlipped}>
-                {/* Front Side */}
-                <CardFront>
-                  <CardHeader isPartner={application.isPartner}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
-                      <CardId>Заявка #{application.id}</CardId>
-                      {application.isPartner && (
-                        <PartnerBadge>
-                          <FaBuilding size={10} />
-                          От партнёра
-                        </PartnerBadge>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <CardDate>{formatDate(application.createdDate)}</CardDate>
-                      <FlipButton onClick={(e) => handleFlipCard(e, application.id)}>
-                        <FaFlipboard />
-                        Детали
-                      </FlipButton>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardBody>
-                    <ClientInfo onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewClient(application.clientId, application.fullname);
-                    }}>
-                      <ClientAvatar src={avatarUrl} />
-                      <ClientDetails>
-                        <ClientName>{application.fullname}</ClientName>
-                      </ClientDetails>
-                    </ClientInfo>
-
-                    {application.guarantorId && application.guarantorName && (
-                      <ClientInfo onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewGuarantor(application.guarantorId!, application.guarantorName);
-                      }}>
-                        <InfoLabel style={{ color: '#6b7280' }}>
-                          <FaUserFriends />
-                          Поручитель
-                        </InfoLabel>
-                        <ClientName style={{ marginTop: 4, fontSize: 14 }}>{application.guarantorName}</ClientName>
-                      </ClientInfo>
-                    )}
-
-                    <InfoRow>
-                      <InfoLabel><FaBox /> Товар</InfoLabel>
-                      <InfoValue>{application.productName}</InfoValue>
-                    </InfoRow>
-
-                    <InfoRow>
-                      <InfoLabel><FaMoneyBillWave /> Стоимость</InfoLabel>
-                      <InfoValue>{formatMoney(application.productPrice?.toString() ?? "0")}</InfoValue>
-                    </InfoRow>
-
-                    <InfoRow>
-                      <InfoLabel>Первый взнос</InfoLabel>
-                      <InfoValue>{formatMoney(application.firstPayment?.toString() ?? "0")}</InfoValue>
-                    </InfoRow>
-
-                    <InfoRow>
-                      <InfoLabel>Срок</InfoLabel>
-                      <InfoValue>{application.termMonths} мес.</InfoValue>
-                    </InfoRow>
-
-                    <InfoRow>
-                      <InfoLabel><FaMapMarkerAlt /> Регион</InfoLabel>
-                      <InfoValue>{application.region}</InfoValue>
-                    </InfoRow>
-
-                    <InfoRow>
-                      <InfoLabel>Район</InfoLabel>
-                      <InfoValue>{application.district}</InfoValue>
-                    </InfoRow>
-
-                    <FinancialCard>
-                      <FinancialItem>
-                        <span>Надбавка:</span>
-                        <span>{formatMoney(application.markupAmount.toString())}</span>
-                      </FinancialItem>
-                      <FinancialItem>
-                        <span>Ежемесячный платеж:</span>
-                        <span style={{ fontWeight: 600, color: '#007D88' }}>
-                          {formatMoney(application.monthlyPayment.toString())}
-                        </span>
-                      </FinancialItem>
-                    </FinancialCard>
-                  </CardBody>
-
-                  <CardActions>
-                    <ActionButton
-                      variant="primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleApprove(application.id);
-                      }}
-                      disabled={isLoading}
-                    >
-                      <FaCheck />
-                      Одобрить
-                    </ActionButton>
-                  </CardActions>
-                </CardFront>
-
-                {/* Back Side - Financial Details */}
-                <CardBack>
-                  <BackHeader>
-                    <BackTitle>Финансовые детали</BackTitle>
-                    <FlipButton onClick={(e) => handleFlipCard(e, application.id)}>
-                      <FaInfoCircle />
-                      Назад
-                    </FlipButton>
-                  </BackHeader>
-                  <BackContent>
-                    <FinancialDetailItem>
-                      <FinancialDetailLabel>Стоимость товара</FinancialDetailLabel>
-                      <FinancialDetailValue>{formatMoney(application.productPrice?.toString() ?? "0")}</FinancialDetailValue>
-                    </FinancialDetailItem>
-                    <FinancialDetailItem>
-                      <FinancialDetailLabel>Первоначальный взнос</FinancialDetailLabel>
-                      <FinancialDetailValue>{formatMoney(application.firstPayment?.toString() ?? "0")}</FinancialDetailValue>
-                    </FinancialDetailItem>
-                    <FinancialDetailItem>
-                      <FinancialDetailLabel>Надбавка</FinancialDetailLabel>
-                      <FinancialDetailValue>{formatMoney(application.markupAmount.toString())}</FinancialDetailValue>
-                    </FinancialDetailItem>
-                    <FinancialDetailItem>
-                      <FinancialDetailLabel>Общая сумма к возврату</FinancialDetailLabel>
-                      <FinancialDetailValue>{formatMoney(financials.totalAmount.toString())}</FinancialDetailValue>
-                    </FinancialDetailItem>
-                    <FinancialDetailItem>
-                      <FinancialDetailLabel>Срок месяцев</FinancialDetailLabel>
-                      <FinancialDetailValue>{application.termMonths} месяцев</FinancialDetailValue>
-                    </FinancialDetailItem>
-                    <FinancialDetailItem>
-                      <FinancialDetailLabel>Ежемесячный платеж</FinancialDetailLabel>
-                      <FinancialDetailValue style={{ fontSize: 18, color: '#FFD966' }}>
-                        {formatMoney(application.monthlyPayment.toString())}
-                      </FinancialDetailValue>
-                    </FinancialDetailItem>
-                  </BackContent>
-                </CardBack>
-              </CardInner>
-            </CardContainer>
-          );
-        })}
-      </CardsGrid>
-    );
+  const getProcessStats = () => {
+    const total = data?.length || 0;
+    const processed = processedApplications.size;
+    const approved = Array.from(processedApplications.values()).filter(v => v === 'approved').length;
+    const rejected = Array.from(processedApplications.values()).filter(v => v === 'rejected').length;
+    const errors = Array.from(processedApplications.values()).filter(v => v === 'error').length;
+    return { total, processed, approved, rejected, errors };
   };
+
+  const stats = getProcessStats();
+  const isAllProcessed = stats.total > 0 && stats.processed === stats.total;
 
   const renderMyApplicationsCards = () => {
     if (!myApplicationsData?.items || myApplicationsData.items.length === 0) {
@@ -946,8 +1066,9 @@ const CreditApplicationPage: React.FC = () => {
           const employeeAvatarUrl = application.employeeAvatar ? FILE_BASE_URL + application.employeeAvatar : generateAvatar(employeeInitials, 48);
           const clientInitials = getInitials(application.clientName || '');
           const clientAvatarUrl = generateAvatar(clientInitials, 48);
-          const financials = calculateFinancialDetails(application);
           const isFlipped = flippedCards.has(application.id);
+          const isProcessed = processedApplications.has(application.id);
+          const processStatus = processedApplications.get(application.id);
 
           const handleDeleteApplication = async (e: React.MouseEvent, app: SelfCreditApplicationResponse) => {
             e.stopPropagation();
@@ -957,7 +1078,8 @@ const CreditApplicationPage: React.FC = () => {
 
             try {
               await cancelCreditApplication(app.id);
-              await loadApplications();
+              setProcessedApplications(prev => new Map(prev).set(app.id, 'approved'));
+              addToast('success', `🗑️ Заявка #${app.id} успешно удалена`);
               if (flippedCards.has(app.id)) {
                 setFlippedCards(prev => {
                   const newSet = new Set(prev);
@@ -967,16 +1089,16 @@ const CreditApplicationPage: React.FC = () => {
               }
             } catch (error) {
               console.error('Ошибка при удалении заявки:', error);
-              alert('Не удалось удалить заявку. Попробуйте еще раз.');
+              setProcessedApplications(prev => new Map(prev).set(app.id, 'error'));
+              addToast('error', `❌ Не удалось удалить заявку #${app.id}`);
             }
           };
 
           return (
-            <CardContainer key={application.id}>
+            <CardContainer key={application.id} isProcessed={isProcessed}>
               <CardInner isFlipped={isFlipped}>
-                {/* Front Side */}
-                <CardFront>
-                  <CardHeader isPartner={application.isPartner}>
+                <CardFront isProcessed={isProcessed}>
+                  <CardHeader isPartner={application.isPartner} isProcessed={isProcessed}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
                       <CardId>Заявка #{application.id}</CardId>
                       {application.isPartner && (
@@ -985,6 +1107,18 @@ const CreditApplicationPage: React.FC = () => {
                           {application.partnerPhone && (
                             <> {application.partnerPhone}</>
                           )}
+                        </PartnerBadge>
+                      )}
+                      {isProcessed && processStatus === 'approved' && (
+                        <PartnerBadge style={{ background: '#10b981' }}>
+                          <FaCheck size={10} />
+                          Удалена
+                        </PartnerBadge>
+                      )}
+                      {isProcessed && processStatus === 'error' && (
+                        <PartnerBadge style={{ background: '#f59e0b' }}>
+                          <FaTimes size={10} />
+                          Ошибка
                         </PartnerBadge>
                       )}
                     </div>
@@ -1071,7 +1205,7 @@ const CreditApplicationPage: React.FC = () => {
                     </FinancialCard>
                   </CardBody>
 
-                  <CardActions>
+                  <CardActions isProcessed={isProcessed}>
                     <ActionButton
                       variant="info"
                       onClick={(e) => {
@@ -1097,6 +1231,7 @@ const CreditApplicationPage: React.FC = () => {
                     <ActionButton
                       variant="danger"
                       onClick={(e) => handleDeleteApplication(e, application)}
+                      disabled={isProcessed}
                     >
                       <FaTimes />
                       Удалить
@@ -1104,7 +1239,6 @@ const CreditApplicationPage: React.FC = () => {
                   </CardActions>
                 </CardFront>
 
-                {/* Back Side - Financial Details */}
                 <CardBack>
                   <BackHeader>
                     <BackTitle>Финансовые детали</BackTitle>
@@ -1152,211 +1286,200 @@ const CreditApplicationPage: React.FC = () => {
     );
   };
 
-  const PaginationComponent = () => {
-    const totalItems = activeTab === 'all' ? data?.totalCount : myApplicationsData?.totalCount;
-    if (!totalItems || totalItems <= itemsPerPage) return null;
+  const renderAllApplicationsCards = () => {
+    if (!data || data.length === 0) {
+      return <EmptyState>Нет доступных заявок</EmptyState>;
+    }
 
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    
     return (
-      <div style={{ padding: '24px', display: 'flex', justifyContent: 'center' }}>
-        <Pagination>
-          <Pagination.Prev 
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          />
-          {[...Array(Math.min(totalPages, 7))].map((_, index) => {
-            let pageNum: number;
-            if (totalPages <= 7) {
-              pageNum = index + 1;
-            } else if (currentPage <= 4) {
-              pageNum = index + 1;
-              if (index === 6) pageNum = totalPages;
-            } else if (currentPage >= totalPages - 3) {
-              pageNum = totalPages - 6 + index;
-            } else {
-              pageNum = currentPage - 3 + index;
-            }
-            
-            if (index === 5 && totalPages > 7 && currentPage <= 4) {
-              return <Pagination.Ellipsis key="ellipsis" />;
-            }
-            if (index === 1 && totalPages > 7 && currentPage >= totalPages - 3) {
-              return <Pagination.Ellipsis key="ellipsis" />;
-            }
-            
-            return (
-              <Pagination.Item
-                key={pageNum}
-                active={pageNum === currentPage}
-                onClick={() => setCurrentPage(pageNum)}
-              >
-                {pageNum}
-              </Pagination.Item>
-            );
-          })}
-          <Pagination.Next 
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          />
-        </Pagination>
-      </div>
+      <CardsGrid>
+        {data.map(application => {
+          const initials = getInitials(application.fullname);
+          const avatarUrl = application.avatarPath ? FILE_BASE_URL + application.avatarPath : generateAvatar(initials, 48);
+          const financials = calculateFinancialDetails(application);
+          const isFlipped = flippedCards.has(application.id);
+          const isProcessed = processedApplications.has(application.id);
+          const processStatus = processedApplications.get(application.id);
+
+          return (
+            <CardContainer key={application.id} isProcessed={isProcessed}>
+              <CardInner isFlipped={isFlipped}>
+                <CardFront isProcessed={isProcessed}>
+                  <CardHeader isPartner={application.isPartner} isProcessed={isProcessed}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                      <CardId>Заявка #{application.id}</CardId>
+                      {application.isPartner && (
+                        <PartnerBadge>
+                          <FaBuilding size={10} />
+                          От партнёра
+                        </PartnerBadge>
+                      )}
+                      {isProcessed && processStatus === 'approved' && (
+                        <PartnerBadge style={{ background: '#10b981' }}>
+                          <FaCheck size={10} />
+                          Одобрена
+                        </PartnerBadge>
+                      )}
+                      {isProcessed && processStatus === 'rejected' && (
+                        <PartnerBadge style={{ background: '#ef4444' }}>
+                          <FaTimes size={10} />
+                          Отклонена
+                        </PartnerBadge>
+                      )}
+                      {isProcessed && processStatus === 'error' && (
+                        <PartnerBadge style={{ background: '#f59e0b' }}>
+                          <FaTimes size={10} />
+                          Ошибка
+                        </PartnerBadge>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <CardDate>{formatDate(application.createdDate)}</CardDate>
+                      <FlipButton onClick={(e) => handleFlipCard(e, application.id)}>
+                        <FaFlipboard />
+                        Детали
+                      </FlipButton>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardBody>
+                    <ClientInfo onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewClient(application.clientId, application.fullname);
+                    }}>
+                      <ClientAvatar src={avatarUrl} />
+                      <ClientDetails>
+                        <ClientName>{application.fullname}</ClientName>
+                      </ClientDetails>
+                    </ClientInfo>
+
+                    {application.guarantorId && application.guarantorName && (
+                      <ClientInfo onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewGuarantor(application.guarantorId!, application.guarantorName);
+                      }}>
+                        <InfoLabel style={{ color: '#6b7280' }}>
+                          <FaUserFriends />
+                          Поручитель
+                        </InfoLabel>
+                        <ClientName style={{ marginTop: 4, fontSize: 14 }}>{application.guarantorName}</ClientName>
+                      </ClientInfo>
+                    )}
+
+                    <InfoRow>
+                      <InfoLabel><FaBox /> Товар</InfoLabel>
+                      <InfoValue>{application.productName}</InfoValue>
+                    </InfoRow>
+
+                    <InfoRow>
+                      <InfoLabel><FaMoneyBillWave /> Стоимость</InfoLabel>
+                      <InfoValue>{formatMoney(application.productPrice?.toString() ?? "0")}</InfoValue>
+                    </InfoRow>
+
+                    <InfoRow>
+                      <InfoLabel>Первый взнос</InfoLabel>
+                      <InfoValue>{formatMoney(application.firstPayment?.toString() ?? "0")}</InfoValue>
+                    </InfoRow>
+
+                    <InfoRow>
+                      <InfoLabel>Срок</InfoLabel>
+                      <InfoValue>{application.termMonths} мес.</InfoValue>
+                    </InfoRow>
+
+                    <InfoRow>
+                      <InfoLabel><FaMapMarkerAlt /> Регион</InfoLabel>
+                      <InfoValue>{application.region}</InfoValue>
+                    </InfoRow>
+
+                    <InfoRow>
+                      <InfoLabel>Район</InfoLabel>
+                      <InfoValue>{application.district}</InfoValue>
+                    </InfoRow>
+
+                    <FinancialCard>
+                      <FinancialItem>
+                        <span>Надбавка:</span>
+                        <span>{formatMoney(application.markupAmount.toString())}</span>
+                      </FinancialItem>
+                      <FinancialItem>
+                        <span>Ежемесячный платеж:</span>
+                        <span style={{ fontWeight: 600, color: '#007D88' }}>
+                          {formatMoney(application.monthlyPayment.toString())}
+                        </span>
+                      </FinancialItem>
+                    </FinancialCard>
+                  </CardBody>
+
+                  <CardActions isProcessed={isProcessed}>
+                    <ActionButton
+                      variant="success"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApprove(application.id);
+                      }}
+                      disabled={isLoading || isProcessed}
+                    >
+                      <FaCheck />
+                      Одобрить
+                    </ActionButton>
+                    <ActionButton
+                      variant="danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectClick(application.id);
+                      }}
+                      disabled={isLoading || isProcessed}
+                    >
+                      <FaTimes />
+                      Отклонить
+                    </ActionButton>
+                  </CardActions>
+                </CardFront>
+
+                <CardBack>
+                  <BackHeader>
+                    <BackTitle>Финансовые детали</BackTitle>
+                    <FlipButton onClick={(e) => handleFlipCard(e, application.id)}>
+                      <FaInfoCircle />
+                      Назад
+                    </FlipButton>
+                  </BackHeader>
+                  <BackContent>
+                    <FinancialDetailItem>
+                      <FinancialDetailLabel>Стоимость товара</FinancialDetailLabel>
+                      <FinancialDetailValue>{formatMoney(application.productPrice?.toString() ?? "0")}</FinancialDetailValue>
+                    </FinancialDetailItem>
+                    <FinancialDetailItem>
+                      <FinancialDetailLabel>Первоначальный взнос</FinancialDetailLabel>
+                      <FinancialDetailValue>{formatMoney(application.firstPayment?.toString() ?? "0")}</FinancialDetailValue>
+                    </FinancialDetailItem>
+                    <FinancialDetailItem>
+                      <FinancialDetailLabel>Надбавка</FinancialDetailLabel>
+                      <FinancialDetailValue>{formatMoney(application.markupAmount.toString())}</FinancialDetailValue>
+                    </FinancialDetailItem>
+                    <FinancialDetailItem>
+                      <FinancialDetailLabel>Общая сумма к возврату</FinancialDetailLabel>
+                      <FinancialDetailValue>{formatMoney(financials.totalAmount.toString())}</FinancialDetailValue>
+                    </FinancialDetailItem>
+                    <FinancialDetailItem>
+                      <FinancialDetailLabel>Срок месяцев</FinancialDetailLabel>
+                      <FinancialDetailValue>{application.termMonths} месяцев</FinancialDetailValue>
+                    </FinancialDetailItem>
+                    <FinancialDetailItem>
+                      <FinancialDetailLabel>Ежемесячный платеж</FinancialDetailLabel>
+                      <FinancialDetailValue style={{ fontSize: 18, color: '#FFD966' }}>
+                        {formatMoney(application.monthlyPayment.toString())}
+                      </FinancialDetailValue>
+                    </FinancialDetailItem>
+                  </BackContent>
+                </CardBack>
+              </CardInner>
+            </CardContainer>
+          );
+        })}
+      </CardsGrid>
     );
   };
-
-  const renderAllApplicationsContent = () => (
-    <>
-      <FilterField>
-        <InputWrapper>
-          <CustomInput
-            inputType="number"
-            placeholder="Мин. стоимость"
-            value={minPrice}
-            onChange={(e) => {
-              setMinPrice(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          {minPrice && (
-            <ClearFilterButton onClick={() => handleClearFilter('minPrice')}>
-              ×
-            </ClearFilterButton>
-          )}
-        </InputWrapper>
-
-        <InputWrapper>
-          <CustomInput
-            inputType="number"
-            placeholder="Макс. стоимость"
-            value={maxPrice}
-            onChange={(e) => {
-              setMaxPrice(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          {maxPrice && (
-            <ClearFilterButton onClick={() => handleClearFilter('maxPrice')}>
-              ×
-            </ClearFilterButton>
-          )}
-        </InputWrapper>
-
-        <InputWrapper>
-          <CustomInput
-            inputType="number"
-            placeholder="Мин. срок (мес)"
-            value={minTerm}
-            onChange={(e) => {
-              setMinTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          {minTerm && (
-            <ClearFilterButton onClick={() => handleClearFilter('minTerm')}>
-              ×
-            </ClearFilterButton>
-          )}
-        </InputWrapper>
-
-        <InputWrapper>
-          <CustomInput
-            inputType="number"
-            placeholder="Макс. срок (мес)"
-            value={maxTerm}
-            onChange={(e) => {
-              setMaxTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          {maxTerm && (
-            <ClearFilterButton onClick={() => handleClearFilter('maxTerm')}>
-              ×
-            </ClearFilterButton>
-          )}
-        </InputWrapper>
-
-        <InputWrapper>
-          <CustomSelect
-            placeholder="Выберите регион"
-            value={selectedRegion}
-            onChange={(e) => {
-              setSelectedRegion(e.target.value);
-              setCurrentPage(1);
-            }}
-            options={regionData ? regionData.map(region => ({
-              value: region.id.toString(),
-              label: region.name
-            })) : []}
-            disabled={isRegionLoading}
-          />
-          {selectedRegion && (
-            <ClearFilterButton onClick={() => handleClearFilter('region')}>
-              ×
-            </ClearFilterButton>
-          )}
-        </InputWrapper>
-
-        <InputWrapper>
-          <TooltipWrapper
-            onMouseEnter={() => !selectedRegion && setShowDistrictTooltip(true)}
-            onMouseLeave={() => setShowDistrictTooltip(false)}
-          >
-            <CustomSelect
-              placeholder="Выберите район"
-              value={selectedDistrict}
-              onChange={(e) => {
-                setSelectedDistrict(e.target.value);
-                setCurrentPage(1);
-              }}
-              options={districtData ? districtData.map(district => ({
-                value: district.id.toString(),
-                label: district.name
-              })) : []}
-              disabled={!selectedRegion || isRegionLoading}
-            />
-            {showDistrictTooltip && !selectedRegion && (
-              <Tooltip>
-                Сначала выберите регион
-              </Tooltip>
-            )}
-          </TooltipWrapper>
-          {selectedDistrict && (
-            <ClearFilterButton onClick={() => handleClearFilter('district')}>
-              ×
-            </ClearFilterButton>
-          )}
-        </InputWrapper>
-      </FilterField>
-
-      {(isLoading || isLoadingMyApplications) && (
-        <LoadingOverlay>
-          <div>Загрузка заявок...</div>
-        </LoadingOverlay>
-      )}
-
-      {error && !isLoading && (
-        <ErrorMessage>
-          Ошибка загрузки заявок: {error}
-        </ErrorMessage>
-      )}
-
-      {!isLoading && renderAllApplicationsCards()}
-      {!isLoading && data && data.totalCount > itemsPerPage && <PaginationComponent />}
-    </>
-  );
-
-  const renderMyApplicationsContent = () => (
-    <>
-      {(isLoading || isLoadingMyApplications) && (
-        <LoadingOverlay>
-          <div>Загрузка заявок...</div>
-        </LoadingOverlay>
-      )}
-
-      {!isLoadingMyApplications && renderMyApplicationsCards()}
-      {!isLoadingMyApplications && myApplicationsData && myApplicationsData.totalCount > itemsPerPage && <PaginationComponent />}
-    </>
-  );
 
   if (selectedClient) {
     return (
@@ -1386,27 +1509,262 @@ const CreditApplicationPage: React.FC = () => {
     {
       id: 'all',
       label: 'Все заявки',
-      content: renderAllApplicationsContent()
     },
     {
       id: 'my',
       label: 'Свои заявки',
-      content: renderMyApplicationsContent()
     }
   ];
 
   return (
-    <PageContainer>
-      <TitleField>
-        <CustomTitle>Заявки</CustomTitle>
-      </TitleField>
+    <PageLayout>
+      <ToastContainer>
+        {toasts.map(toast => (
+          <Toast key={toast.id} type={toast.type}>
+            {toast.type === 'success' && '✅ '}
+            {toast.type === 'error' && '❌ '}
+            {toast.type === 'warning' && '⚠️ '}
+            {toast.message}
+          </Toast>
+        ))}
+      </ToastContainer>
 
-      <Tabs
-        tabs={tabs}
-        activeTab={activeTab}
-        onChange={handleTabChange}
-      />
-    </PageContainer>
+      <HeaderContainer>
+        <TitleField>
+          <CustomTitle>Заявки</CustomTitle>
+        </TitleField>
+
+        {activeTab === 'all' && stats.total > 0 && (
+          <SimpleCompactBanner isComplete={isAllProcessed}>
+            <span>{stats.processed}/{stats.total}</span>
+            {stats.approved > 0 && <span>✅ {stats.approved}</span>}
+            {stats.rejected > 0 && <span>❌ {stats.rejected}</span>}
+            {isAllProcessed && (
+              <RefreshButton 
+                onClick={handleRefreshApplications} 
+                disabled={isRefreshing}
+                style={{ 
+                  background: 'white', 
+                  color: '#007D88', 
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  margin: 0
+                }}
+              >
+                <FaSync size={10} />
+                Обновить
+              </RefreshButton>
+            )}
+          </SimpleCompactBanner>
+        )}
+      </HeaderContainer>
+      <TabsContainer>
+        <Tabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+        />
+        
+        {activeTab === 'all' && (
+          <FiltersWrapper>
+            <InputWrapper style={{ minWidth: '120px' }}>
+              <CustomInput
+                inputType="number"
+                placeholder="Мин. стоимость"
+                value={minPrice}
+                onChange={(e) => {
+                  setMinPrice(e.target.value);
+                  setCurrentPage(1);
+                  setProcessedApplications(new Map());
+                }}
+              />
+              {minPrice && (
+                <ClearFilterButton onClick={() => handleClearFilter('minPrice')}>
+                  ×
+                </ClearFilterButton>
+              )}
+            </InputWrapper>
+
+            <InputWrapper style={{ minWidth: '120px' }}>
+              <CustomInput
+                inputType="number"
+                placeholder="Макс. стоимость"
+                value={maxPrice}
+                onChange={(e) => {
+                  setMaxPrice(e.target.value);
+                  setCurrentPage(1);
+                  setProcessedApplications(new Map());
+                }}
+              />
+              {maxPrice && (
+                <ClearFilterButton onClick={() => handleClearFilter('maxPrice')}>
+                  ×
+                </ClearFilterButton>
+              )}
+            </InputWrapper>
+
+            <InputWrapper style={{ minWidth: '120px' }}>
+              <CustomInput
+                inputType="number"
+                placeholder="Мин. срок"
+                value={minTerm}
+                onChange={(e) => {
+                  setMinTerm(e.target.value);
+                  setCurrentPage(1);
+                  setProcessedApplications(new Map());
+                }}
+              />
+              {minTerm && (
+                <ClearFilterButton onClick={() => handleClearFilter('minTerm')}>
+                  ×
+                </ClearFilterButton>
+              )}
+            </InputWrapper>
+
+            <InputWrapper style={{ minWidth: '120px' }}>
+              <CustomInput
+                inputType="number"
+                placeholder="Макс. срок"
+                value={maxTerm}
+                onChange={(e) => {
+                  setMaxTerm(e.target.value);
+                  setCurrentPage(1);
+                  setProcessedApplications(new Map());
+                }}
+              />
+              {maxTerm && (
+                <ClearFilterButton onClick={() => handleClearFilter('maxTerm')}>
+                  ×
+                </ClearFilterButton>
+              )}
+            </InputWrapper>
+
+            <InputWrapper style={{ minWidth: '150px' }}>
+              <CustomSelect
+                placeholder="Регион"
+                value={selectedRegion}
+                onChange={(e) => {
+                  setSelectedRegion(e.target.value);
+                  setCurrentPage(1);
+                  setProcessedApplications(new Map());
+                }}
+                options={regionData ? regionData.map(region => ({
+                  value: region.id.toString(),
+                  label: region.name
+                })) : []}
+                disabled={isRegionLoading}
+              />
+              {selectedRegion && (
+                <ClearFilterButton onClick={() => handleClearFilter('region')}>
+                  ×
+                </ClearFilterButton>
+              )}
+            </InputWrapper>
+
+            <InputWrapper style={{ minWidth: '150px' }}>
+              <TooltipWrapper
+                onMouseEnter={() => !selectedRegion && setShowDistrictTooltip(true)}
+                onMouseLeave={() => setShowDistrictTooltip(false)}
+              >
+                <CustomSelect
+                  placeholder="Район"
+                  value={selectedDistrict}
+                  onChange={(e) => {
+                    setSelectedDistrict(e.target.value);
+                    setCurrentPage(1);
+                    setProcessedApplications(new Map());
+                  }}
+                  options={districtData ? districtData.map(district => ({
+                    value: district.id.toString(),
+                    label: district.name
+                  })) : []}
+                  disabled={!selectedRegion || isRegionLoading}
+                />
+                {showDistrictTooltip && !selectedRegion && (
+                  <Tooltip>
+                    Сначала выберите регион
+                  </Tooltip>
+                )}
+              </TooltipWrapper>
+              {selectedDistrict && (
+                <ClearFilterButton onClick={() => handleClearFilter('district')}>
+                  ×
+                </ClearFilterButton>
+              )}
+            </InputWrapper>
+          </FiltersWrapper>
+        )}
+      </TabsContainer>
+
+{activeTab === 'all' ? (
+  <>
+    {(isLoading || isLoadingMyApplications) && (
+      <LoadingOverlay>
+        <div>Загрузка заявок...</div>
+      </LoadingOverlay>
+    )}
+
+    {error && !isLoading && (
+      <ErrorMessage>
+        Ошибка загрузки заявок: {error}
+      </ErrorMessage>
+    )}
+
+    {!isLoading && renderAllApplicationsCards()}
+  </>
+) : (
+  <>
+    {(isLoading || isLoadingMyApplications) && (
+      <LoadingOverlay>
+        <div>Загрузка заявок...</div>
+      </LoadingOverlay>
+    )}
+
+    {!isLoadingMyApplications && renderMyApplicationsCards()}
+  </>
+)}
+
+      {rejectModalOpen && (
+        <ModalOverlay onClick={() => setRejectModalOpen(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>Отклонение заявки</ModalTitle>
+            
+            <Select
+              value={rejectReason}
+              onChange={(e) => setRejectReason(Number(e.target.value) as RejectReason)}
+            >
+              <option value={0}>Не заинтересован</option>
+              <option value={1}>Черный клиент</option>
+              <option value={2}>Черный поручитель</option>
+              <option value={3}>Клиент имеет задолженность</option>
+            </Select>
+            
+            <TextArea
+              placeholder="Комментарий (необязательно)"
+              value={rejectComment}
+              onChange={(e) => setRejectComment(e.target.value)}
+            />
+            
+            <ModalButtons>
+              <ActionButton
+                variant="danger"
+                onClick={() => setRejectModalOpen(false)}
+                disabled={isRejecting}
+              >
+                Отмена
+              </ActionButton>
+              <ActionButton
+                variant="primary"
+                onClick={handleConfirmReject}
+                disabled={isRejecting}
+              >
+                {isRejecting ? 'Отклонение...' : 'Отклонить'}
+              </ActionButton>
+            </ModalButtons>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+    </PageLayout>
   );
 };
 

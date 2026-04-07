@@ -1,14 +1,14 @@
 import { useState, useCallback } from 'react';
 import type { PaginatedResponse, PaginationParams } from '../types/common';
-import type { CreditApplicationResponse, GetCreditApplicationsQuery, SelfCreditApplicationResponse } from '../types/creditApplication';
+import type { CreditApplicationResponse, GetCreditApplicationsQuery, RejectApplicationRequest, SelfCreditApplicationResponse } from '../types/creditApplication';
 import creditApplicationService from '../services/creditApplicationService';
 
 const useCreditApplication = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<PaginatedResponse<CreditApplicationResponse> | null>(null);
+  const [data, setData] = useState<CreditApplicationResponse[] | null>(null);
 
-  const getCreditApplications = useCallback(async (params?: GetCreditApplicationsQuery): Promise<PaginatedResponse<CreditApplicationResponse> | null> => {
+  const getCreditApplications = useCallback(async (params?: GetCreditApplicationsQuery): Promise<CreditApplicationResponse[] | null> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -47,6 +47,16 @@ const useCreditApplication = () => {
       }
   }, []);
 
+  const rejectCreditApplication = useCallback(async (id: number, request: RejectApplicationRequest) => {
+    try {
+          await creditApplicationService.rejectCreditApplication(id, request);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+          setIsLoading(false);
+      }
+  }, []);
+
   const cancelCreditApplication = useCallback(async (id: number) => {
     try {
           await creditApplicationService.cancelCreditApplications(id);
@@ -64,7 +74,8 @@ const useCreditApplication = () => {
     getCreditApplications,
     getMyCompanyCreditApplications,
     approveCreditApplication,
-    cancelCreditApplication
+    cancelCreditApplication,
+    rejectCreditApplication
   };
 };
 
