@@ -1,16 +1,23 @@
+// AboutPage.tsx
 import React from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import useCompany from '../api/hooks/useCompany';
+import { useAuth } from '../сontext/AuthContext';
 import type { CommonInfo } from '../api/types/company';
 import { formatPhoneHref } from '../utils/phoneUtils';
 import PhoneLink from '../components/ui/links/PhoneLink';
+import SubscriptionBlock from '../components/Subscription/SubscriptionBlock';
+import SubscriptionPendingPage from '../components/Subscription/SubscriptionPending';
 
 const AboutPage: React.FC = () => {
   const { getCommonInfo } = useCompany();
+  const { authInfo } = useAuth();
+  const navigate = useNavigate();
+  
   const [commonInfo, setCommonInfo] = React.useState<CommonInfo | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [copied, setCopied] = React.useState(false);
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -28,23 +35,13 @@ const AboutPage: React.FC = () => {
     fetchData();
   }, [getCommonInfo]);
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('ru-RU');
+  // Функция для перезагрузки страницы после успешной оплаты
+  const handlePaymentComplete = () => {
+    window.location.reload();
   };
 
-  const handlePhoneClick = async () => {
-    try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText('89957022304');
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-      if ('ontouchstart' in window) {
-        window.location.href = 'tel:+79957022304';
-      }
-    } catch (err) {
-      console.error('Failed to copy number', err);
-    }
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('ru-RU');
   };
 
   const getDaysRemaining = (dateString: string): string => {
@@ -55,202 +52,209 @@ const AboutPage: React.FC = () => {
     const diffTime = targetDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays > 0) return `Осталось ${diffDays} дней`;
-    if (diffDays === 0) return 'Срок истекает сегодня';
-    return `Просрочено на ${Math.abs(diffDays)} дней`;
+    if (diffDays > 0) return `Осталось ${diffDays} дн.`;
+    if (diffDays === 0) return 'Истекает сегодня';
+    return `Просрочено на ${Math.abs(diffDays)} дн.`;
   };
 
-  if (loading) return <div>Загрузка...</div>;
-  if (error) return <div>{error}</div>;
+  // Проверяем наличие paymentUrl
+  const hasPaymentUrl = authInfo?.employee?.paymentUrl && authInfo.employee.paymentUrl.trim() !== '';
+
+  if (loading) return <LoadingState>Загрузка...</LoadingState>;
+  if (error) return <ErrorState>{error}</ErrorState>;
 
   return (
-    <Container>
-      <Content>
-        <Title>О приложении</Title>
-        
-        <InfoCard>
-          <InfoItem>
-            <Label>Версия:</Label>
-            <Value>beta</Value>
-          </InfoItem>
-          
-          <InfoItem>
-            <Label>Директор:</Label>
-            <Value>{commonInfo.directorFullname}</Value>
-          </InfoItem>
+    <PageWrapper>
+      <MainContent>
+        <Header>
+          <Title>О приложении</Title>
+        </Header>
 
-          <InfoItem>
-            <Label>Телефон:</Label>
-            <PhoneContainer>
-              <PhoneLink href={formatPhoneHref(commonInfo.phone)} onClick={handlePhoneClick}>
-                {commonInfo.phone}
-              </PhoneLink>
-              {copied && <CopiedMessage>Скопировано!</CopiedMessage>}
-            </PhoneContainer>
-          </InfoItem>
-          
-          <InfoItem>
-            <Label>Срок лицензии:</Label>
+        <InfoGrid>
+          <InfoRow>
+            <Label>Версия</Label>
+            <Value>beta</Value>
+          </InfoRow>
+          <InfoRow>
+            <Label>Директор</Label>
+            <Value>{commonInfo?.directorFullname}</Value>
+          </InfoRow>
+          <InfoRow>
+            <Label>Телефон</Label>
+            <PhoneLink href={formatPhoneHref(commonInfo?.phone || '')}>
+              {commonInfo?.phone}
+            </PhoneLink>
+          </InfoRow>
+          <InfoRow>
+            <Label>Лицензия</Label>
             <Value>
               {commonInfo ? (
-                `${formatDate(commonInfo.licenceDate)} (${getDaysRemaining(commonInfo.licenceDate.toString())})`
+                <>
+                  {formatDate(commonInfo.licenceDate)}
+                  <StatusBadge 
+                    $daysRemaining={getDaysRemaining(commonInfo.licenceDate.toString())}
+                    $hasPaymentUrl={hasPaymentUrl}
+                  >
+                    {getDaysRemaining(commonInfo.licenceDate.toString())}
+                  </StatusBadge>
+                </>
               ) : 'Нет данных'}
             </Value>
-          </InfoItem>
-        </InfoCard>
-        
-        <LinksContainer>
-          <PolicyLink href="/privacy-policy">Политика конфиденциальности</PolicyLink>
-        </LinksContainer>
-      </Content>
+          </InfoRow>
+        </InfoGrid>
 
-      <Content>
-        <Title>Оплата</Title>
-        <QrCode src="/paymentQr.jpg" alt="QR код для оплаты" />
-        <InstructionTitle>Для продления подписки в сообщении <strong>Обязательно укажите ФИО директора и его номер телефона</strong></InstructionTitle>
-      </Content>
-    </Container>
+        <PrivacyLink href="/privacy-policy">
+          Политика конфиденциальности
+        </PrivacyLink>
+      </MainContent>
+
+      {hasPaymentUrl ? (
+        <PaymentContainer>
+          <SubscriptionPendingPage 
+            paymentUrl={authInfo.employee.paymentUrl}
+            onPaymentComplete={handlePaymentComplete}
+            expiresAt={authInfo?.employee?.licenceExpire?.toString() || undefined}
+            status={authInfo?.employee?.transactionStatus}
+          />
+        </PaymentContainer>
+      ) : (
+        <SubscriptionBlock />
+      )}
+    </PageWrapper>
   );
 };
 
-const InstructionTitle = styled.h3`
-  color: rgba(0, 125, 136, 1);
-  font-size: 18px;
-  margin-bottom: 10px;
-  font-weight: 600;
-`;
-
-
-const QrCode = styled.img`
-  width: 350px;
-  height: 350px;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  padding: 10px;
-  background: white;
-`;
-
-const Container = styled.div`
-  display: flex;
-  gap: 20px;
-  padding: 20px;
-  flex-direction: row;
-  max-width: 1100px;
+const PageWrapper = styled.div`
+  max-width: 1200px;
   margin: 0 auto;
-`;
+  padding: 40px 20px;
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 40px;
 
-const Content = styled.div`
-  background-color: white;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  margin-top: 40px;
-  flex: 1;
-  min-width: 0;
-`;
-
-const Title = styled.h1`
-  color: rgba(0, 125, 136, 1);
-  font-size: 28px;
-  margin-bottom: 30px;
-  text-align: center;
-  font-weight: 600;
-  position: relative;
-  padding-bottom: 15px;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 3px;
-    background: rgba(37, 203, 161, 1);
-    border-radius: 3px;
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 `;
 
-const InfoCard = styled.div`
-  border-radius: 12px;
-  padding: 25px;
-  margin-bottom: 30px;
-  border: 1px solid rgba(209, 213, 219, 1);
+const MainContent = styled.div`
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f0f0f0;
 `;
 
-const InfoItem = styled.div`
+const Header = styled.div`
+  margin-bottom: 32px;
+`;
+
+const Title = styled.h1`
+  font-size: 28px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  letter-spacing: -0.01em;
+`;
+
+const InfoGrid = styled.div`
   display: flex;
-  margin-bottom: 18px;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 32px;
+`;
+
+const InfoRow = styled.div`
+  display: flex;
   align-items: baseline;
-  flex-wrap: wrap;
-  
+  gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+
   &:last-child {
-    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 8px;
   }
 `;
 
 const Label = styled.span`
-  font-weight: 600;
-  max-width: 160px;
-  color: rgba(0, 125, 136, 0.9);
-  margin-right: 20px;
-  margin-bottom: 5px;
-  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: #8c8c8c;
+  min-width: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 const Value = styled.span`
-  color: #333;
-  flex: 1;
-  line-height: 1.5;
+  font-size: 16px;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 `;
 
-const PhoneContainer = styled.div`
-  position: relative;
-  display: inline-block;
-    flex: 1;
-`;
-
-
-const CopiedMessage = styled.span`
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 125, 136, 0.9);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
+const StatusBadge = styled.span<{ $daysRemaining: string; $hasPaymentUrl: boolean }>`
   font-size: 12px;
-  white-space: nowrap;
-  animation: fadeInOut 2s ease-in-out;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: ${props => {
+    if (props.$hasPaymentUrl) return '#fff3e0';
+    if (props.$daysRemaining.includes('Просрочено')) return '#fee';
+    if (props.$daysRemaining.includes('сегодня')) return '#fff3e0';
+    return '#e8f5e9';
+  }};
+  color: ${props => {
+    if (props.$hasPaymentUrl) return '#ed6c02';
+    if (props.$daysRemaining.includes('Просрочено')) return '#e53935';
+    if (props.$daysRemaining.includes('сегодня')) return '#ed6c02';
+    return '#2e7d32';
+  }};
+`;
 
-  @keyframes fadeInOut {
-    0% { opacity: 0; }
-    20% { opacity: 1; }
-    80% { opacity: 1; }
-    100% { opacity: 0; }
+const PrivacyLink = styled.a`
+  display: inline-block;
+  font-size: 14px;
+  color: #007D88;
+  text-decoration: none;
+  padding: 8px 0;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.7;
   }
 `;
 
-const LinksContainer = styled.div`
+const LoadingState = styled.div`
   display: flex;
   justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #8c8c8c;
 `;
 
-const PolicyLink = styled.a`
-  color: rgba(0, 125, 136, 1);
-  text-decoration: none;
-  font-weight: 500;
-  padding: 10px 20px;
-  border-radius: 8px;
-  transition: all 0.3s;
-  border: 1px solid rgba(0, 125, 136, 0.2);
-  
-  &:hover {
-    background: rgba(0, 125, 136, 0.1);
-    color: rgba(0, 125, 136, 0.9);
-    border-color: rgba(0, 125, 136, 0.4);
-  }
+const ErrorState = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #e53935;
+`;
+
+const PaymentContainer = styled.div`
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  height: fit-content;
 `;
 
 export default AboutPage;

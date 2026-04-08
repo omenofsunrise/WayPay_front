@@ -21,8 +21,14 @@ export interface AuthInfo {
     fullName: string;
     role: Role;
     permissions: Permission[];
+    phone?: string;
     minSurcharge: number;
     companyId: number;
+    licenceExpire?: Date;
+    licenceActive?: boolean;
+    paymentUrl?: string;
+    status?: string;
+    transactionStatus?: string;
   };
 }
 

@@ -57,8 +57,10 @@ function App() {
   const [showPinModal, setShowPinModal] = useState(false);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const [isMobile, setIsMobile] = useState<boolean>(false);
-
+  const [isLicenseValid, setIsLicenseValid] = useState<boolean>(true);
   const disableNotifications = useLocalStorageSetting(DISABLE_NOTIFICATIONS_KEY, false);
+
+  const currentPath = window.location.pathname;
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
@@ -71,6 +73,27 @@ function App() {
   const updateActivity = useCallback(() => {
     setLastActivity(Date.now());
   }, []);
+
+  useEffect(() => {
+    const checkLicense = async () => {
+      console.log(currentPath); 
+      if (currentPath === '/licence-out') {
+        return;
+      }
+      console.log('{L{L L{'); 
+      if (isAuthenticated && authInfo) {
+        const licenceActive = authInfo.employee.licenceActive;
+        if (!licenceActive) {
+          setIsLicenseValid(false);
+          window.location.href = '/licence-out';
+        } else {
+          setIsLicenseValid(true);
+        }
+      }
+    };
+
+    checkLicense();
+  }, [isAuthenticated, authInfo]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if ((event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'l') || (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'д')) {
@@ -185,6 +208,7 @@ function App() {
         apiClient.get<AuthInfo>('/Auth/info')
           .then(response => {
             setAuthInfo(response.data);
+            
             const savedActivity = sessionStorage.getItem('lastActivity');
             if (!savedActivity || (savedActivity && Date.now() - parseInt(savedActivity, 10) > INACTIVITY_TIMEOUT)) {
               setShowPinModal(true);
