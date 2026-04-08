@@ -96,7 +96,7 @@ const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitti
             }}
           >
             <option value={PaymentType.CASH}>Наличные</option>
-            <option value={PaymentType.FREE}>Бесплатно (подарок)</option>
+            <option value={PaymentType.FREE}>Бесплатно по акции</option>
           </select>
         </div>
 
@@ -125,18 +125,6 @@ const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitti
               placeholder="Введите стоимость"
               min="0"
             />
-          </div>
-        )}
-
-        {paymentType === PaymentType.FREE && (
-          <div style={{ 
-            padding: '10px', 
-            backgroundColor: '#e8f5e9', 
-            borderRadius: '4px',
-            color: '#2e7d32',
-            marginTop: '10px'
-          }}>
-            Бесплатная подписка будет добавлена без списания средств
           </div>
         )}
       </div>
