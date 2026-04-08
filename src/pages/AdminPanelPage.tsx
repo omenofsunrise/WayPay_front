@@ -64,7 +64,7 @@ const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitti
     if (paymentType === PaymentType.FREE) {
       onConfirm(numericDays, 0, paymentType);
     } else {
-      onConfirm(numericDays, numericCost, paymentType);
+      onConfirm(numericDays, numericCost * 100, paymentType);
     }
   };
 
