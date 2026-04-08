@@ -23,6 +23,128 @@ import { NotificationType, type SendNotificationRequest } from '../api/types/not
 import styled from 'styled-components';
 import { useEmployee } from '../api/hooks/useEmployee';
 
+// Константы для типов оплаты
+const PaymentType = {
+  ACQUIRING: 0,
+  CASH: 1,
+  FREE: 2
+} as const;
+
+type PaymentTypeValue = typeof PaymentType[keyof typeof PaymentType];
+
+// Модальное окно для добавления подписки
+interface SubscriptionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (days: number, cost: number, paymentType: PaymentTypeValue) => void;
+  companyName: string;
+  isSubmitting: boolean;
+}
+
+const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitting }: SubscriptionModalProps) => {
+  const [days, setDays] = useState<string>('');
+  const [cost, setCost] = useState<string>('');
+  const [paymentType, setPaymentType] = useState<PaymentTypeValue>(PaymentType.CASH);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numericDays = parseInt(days);
+    const numericCost = parseInt(cost);
+    
+    if (isNaN(numericDays) || numericDays <= 0) {
+      alert('Количество дней должно быть больше 0');
+      return;
+    }
+    
+    if (paymentType === PaymentType.CASH && (isNaN(numericCost) || numericCost <= 0)) {
+      alert('При оплате наличными сумма должна быть больше 0');
+      return;
+    }
+    
+    if (paymentType === PaymentType.FREE) {
+      onConfirm(numericDays, 0, paymentType);
+    } else {
+      onConfirm(numericDays, numericCost, paymentType);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <BaseModal
+      title={`Добавление подписки для: ${companyName}`}
+      onClose={onClose}
+      onCancel={onClose}
+      onSave={handleSubmit}
+      isSubmitting={isSubmitting}
+    >
+      <div style={{ padding: '20px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+            Тип оплаты:
+          </label>
+          <select 
+            value={paymentType}
+            onChange={(e) => setPaymentType(parseInt(e.target.value) as PaymentTypeValue)}
+            style={{ 
+              width: '100%', 
+              padding: '10px', 
+              border: '1px solid #ccc', 
+              backgroundColor: 'white',
+              color: 'black',
+              borderRadius: '4px' 
+            }}
+          >
+            <option value={PaymentType.CASH}>Наличные</option>
+            <option value={PaymentType.FREE}>Бесплатно (подарок)</option>
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+            Количество дней:
+          </label>
+          <CustomInput
+            type="number"
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+            placeholder="Введите количество дней"
+            min="1"
+          />
+        </div>
+
+        {paymentType === PaymentType.CASH && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+              Стоимость (₽):
+            </label>
+            <CustomInput
+              type="number"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              placeholder="Введите стоимость"
+              min="0"
+            />
+          </div>
+        )}
+
+        {paymentType === PaymentType.FREE && (
+          <div style={{ 
+            padding: '10px', 
+            backgroundColor: '#e8f5e9', 
+            borderRadius: '4px',
+            color: '#2e7d32',
+            marginTop: '10px'
+          }}>
+            Бесплатная подписка будет добавлена без списания средств
+          </div>
+        )}
+      </div>
+    </BaseModal>
+  );
+};
+
+// Остальные интерфейсы и стили остаются без изменений...
 interface Tab {
   id: string;
   label: string;
@@ -114,7 +236,7 @@ const TabContentContainer = styled.div`
   margin-top: 20px;
 `;
 
-// Модальное окно для выплаты партнеру
+// Модальное окно для выплаты партнеру (без изменений)
 interface PayoutModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -176,13 +298,13 @@ const AdminPanelPage = () => {
   const [selectedCompany, setSelectedCompany] = useState<CompanyModalData | null>(null);
   
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false); // Изменено с isDateModalOpen
   const [isDirectorModalOpen, setIsDirectorModalOpen] = useState(false);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
+  const [selectedCompanyName, setSelectedCompanyName] = useState('');
   const [selectedPartnerName, setSelectedPartnerName] = useState('');
   const [phoneValue, setPhoneValue] = useState('');
-  const [dateValue, setDateValue] = useState<string>(formatDate(new Date()));
   const [directorValue, setDirectorValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
@@ -246,7 +368,7 @@ const AdminPanelPage = () => {
     setModalMode('create');
     setSelectedCompany({
       phone: '',
-      licenceDate: new Date('2099-12-31'), // Max date for partners
+      licenceDate: new Date('2099-12-31'),
       chief: '',
       company: ''
     });
@@ -259,10 +381,11 @@ const AdminPanelPage = () => {
     setIsPhoneModalOpen(true);
   };
 
-  const handleOpenDateEdit = (companyId: number, currentDate: Date) => {
+  // Изменено: открытие модального окна для добавления подписки
+  const handleOpenSubscriptionAdd = (companyId: number, companyName: string) => {
     setEditingCompanyId(companyId);
-    setDateValue(formatDate(currentDate));
-    setIsDateModalOpen(true);
+    setSelectedCompanyName(companyName);
+    setIsSubscriptionModalOpen(true);
   };
 
   const handleOpenDirectorEdit = (companyId: number, currentDirector: string) => {
@@ -302,28 +425,23 @@ const AdminPanelPage = () => {
     }
   };
 
-  const handleSaveDate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Изменено: сохранение подписки
+  const handleSaveSubscription = async (days: number, cost: number, paymentType: PaymentTypeValue) => {
     if (!editingCompanyId) return;
 
     setIsSaving(true);
     try {
-      const date = new Date(dateValue);
-      if (isNaN(date.getTime())) {
-        alert('Неверный формат даты');
-        return;
-      }
-      
-      const success = await changeLicenceDate(editingCompanyId, date);
+      const success = await changeLicenceDate(editingCompanyId, days, cost, paymentType);
       if (success) {
+        alert(`Подписка успешно добавлена!`);
         await loadCompanies(activeTab === 'partners');
-        setIsDateModalOpen(false);
+        setIsSubscriptionModalOpen(false);
       } else {
-        alert('Не удалось сохранить изменения');
+        alert('Не удалось добавить подписку');
       }
     } catch (err) {
-      console.error('Ошибка при изменении даты:', err);
-      alert('Произошла ошибка при сохранении');
+      console.error('Ошибка при добавлении подписки:', err);
+      alert('Произошла ошибка при добавлении подписки');
     } finally {
       setIsSaving(false);
     }
@@ -353,7 +471,7 @@ const AdminPanelPage = () => {
     try {
       await payoutPartner(editingCompanyId, amount);
       alert(`Выплата ${amount} ₽ успешно выполнена!`);
-      await loadCompanies(true); // Reload partners list
+      await loadCompanies(true);
       setIsPayoutModalOpen(false);
     } catch (err) {
       console.error('Ошибка при выплате:', err);
@@ -449,7 +567,6 @@ const AdminPanelPage = () => {
       await sendNotification(notificationData);
       alert('Рассылка отправлена успешно!');
       
-      // Очистка формы после успешной отправки
       setNotificationTitle('');
       setNotificationMessage('');
       setTargetId('');
@@ -586,6 +703,7 @@ const AdminPanelPage = () => {
     return styles;
   }, {} as Record<number, RowStyle>);
 
+  // Изменено: добавлена кнопка для добавления подписки
   const tableActions = hasRole('суперадмин') 
     ? activeTab === 'partners'
       ? [
@@ -595,9 +713,14 @@ const AdminPanelPage = () => {
             color: '#EF4444'
           },
           {
+            label: 'Добавить подписку',
+            action: (rowData: any[]) => handleOpenSubscriptionAdd(Number(rowData[0]), rowData[1]),
+            color: '#10B981'
+          },
+          {
             label: 'Выплатить',
             action: (rowData: any[]) => handleOpenPayoutModal(Number(rowData[0]), rowData[1]),
-            color: '#10B981'
+            color: '#3B82F6'
           },
           {
             label: 'Изм. директора',
@@ -620,6 +743,11 @@ const AdminPanelPage = () => {
             label: 'Зайти в компанию',
             action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
             color: '#EF4444'
+          },
+          {
+            label: 'Добавить подписку',
+            action: (rowData: any[]) => handleOpenSubscriptionAdd(Number(rowData[0]), rowData[1]),
+            color: '#10B981'
           },
           {
             label: 'Изм. директора',
@@ -763,7 +891,6 @@ const AdminPanelPage = () => {
     }
   ];
 
-  // Кнопка добавления (разная для компаний и партнеров)
   const addButton = activeTab === 'companies' && hasRole('суперадмин') ? (
     <DarkCyanButton 
       style={{ width: "15vw", maxHeight: "50px" }}
@@ -815,8 +942,8 @@ const AdminPanelPage = () => {
         activeTab={activeTab}
         onChange={(tabId) => {
           setActiveTab(tabId as 'companies' | 'partners' | 'notifications');
-          setCurrentPage(1); // Reset pagination when switching tabs
-          setNameFilter(''); // Reset filter when switching tabs
+          setCurrentPage(1);
+          setNameFilter('');
         }}
         addButton={addButton}
       />
@@ -824,7 +951,7 @@ const AdminPanelPage = () => {
       {isLoading && (activeTab === 'companies' || activeTab === 'partners') && <div>Загрузка...</div>}
       {error && (activeTab === 'companies' || activeTab === 'partners') && <div>Ошибка: {error}</div>}
 
-      {/* Модальные окна для компаний */}
+      {/* Модальные окна */}
       {isCompanyModalOpen && (
         <CompanyModal
             mode={modalMode}
@@ -850,23 +977,15 @@ const AdminPanelPage = () => {
         </BaseModal>
       )}
 
-      {isDateModalOpen && (
-        <BaseModal
-          title="Изменение даты лицензии"
-          onClose={() => setIsDateModalOpen(false)}
-          onCancel={() => setIsDateModalOpen(false)}
-          onSave={handleSaveDate}
+      {/* Новое модальное окно для добавления подписки */}
+      {isSubscriptionModalOpen && (
+        <SubscriptionModal
+          isOpen={isSubscriptionModalOpen}
+          onClose={() => setIsSubscriptionModalOpen(false)}
+          onConfirm={handleSaveSubscription}
+          companyName={selectedCompanyName}
           isSubmitting={isSaving}
-        >
-          <Container style={{margin: "30px 25px"}}>
-            <CustomCalendar
-              value={dateValue}
-              onChange={(dateString) => {
-                setDateValue(dateString);
-              }}
-            />
-          </Container>
-        </BaseModal>
+        />
       )}
 
       {isDirectorModalOpen && (

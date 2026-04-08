@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import companyService from '../services/companyService';
+import companyService, { type AddSubscriptionRequest, type PaymentTypeValue } from '../services/companyService';
 import type { CommonInfo, CompaneAccountDetails, Company } from '../types/company';
 
 const useCompany = () => {
@@ -155,18 +155,23 @@ const useCompany = () => {
     }
   };
 
-  const changeLicenceDate = useCallback(async (id: number, licenceDate: Date): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const success = await companyService.changeLicenceDate(id, licenceDate);
-      return success;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+  const changeLicenceDate = useCallback(async (id: number, days: number, cost: number, paymentType: PaymentTypeValue): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+          const request: AddSubscriptionRequest = {
+              cost: cost,
+              days: days,
+              paymentType: paymentType
+          };
+          const success = await companyService.addSubscription(id, request);
+          return success;
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+          return false;
+      } finally {
+          setIsLoading(false);
+      }
   }, []);
 
   const updateCompanyPhoto = useCallback(async (photo: File): Promise<Company | null> => {

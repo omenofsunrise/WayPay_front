@@ -97,18 +97,18 @@ class CompanyService {
     return response.data;
   }
 
-  async changeLicenceDate(id: number, licenceDate: Date): Promise<boolean> {
-    try {
-      const dateOnlyStr = licenceDate.toISOString().split('T')[0];
-      await apiClient.patch(`/Company/licence-date/${id}`, dateOnlyStr, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return true;
-    } catch {
-      return false;
-    }
+  async addSubscription(id: number, request: AddSubscriptionRequest): Promise<boolean> {
+      try {
+          await apiClient.patch(`/Company/licence-date/${id}`, request, {
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+          });
+          return true;
+      } catch (error) {
+          console.error('Failed to add subscription:', error);
+          return false;
+      }
   }
 
   async changePhone(id: number, phone: string): Promise<boolean> {
@@ -128,5 +128,19 @@ class CompanyService {
     }
   }
 }
+
+export interface AddSubscriptionRequest {
+  cost: number;
+  days: number;
+  paymentType: number;
+}
+
+const PaymentType = {
+  ACQUIRING: 0,
+  CASH: 1,
+  FREE: 2
+} as const;
+
+export type PaymentTypeValue = typeof PaymentType[keyof typeof PaymentType];
 
 export default new CompanyService();
