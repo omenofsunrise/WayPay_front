@@ -538,12 +538,7 @@ const AdminPanelPage = () => {
           >
             {company.phone}
           </PhoneLink>,
-          <span 
-            onClick={() => handleOpenDateEdit(company.id, company.licenceDate || new Date())}
-            style={{ cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            {company.licenceDate ? formatDate(company.licenceDate) : 'Нет данных'}
-          </span>,
+          company.licenceDate ? formatDate(company.licenceDate) : 'Нет данных',
           company.createdCreditsCount,
           company.totalCredits,
           new Date(company.lastActive).toLocaleString('ru-RU', {
@@ -634,11 +629,6 @@ const AdminPanelPage = () => {
           {
             label: 'Изм. телефон',
             action: (rowData: any[]) => handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
-            color: '#3B82F6'
-          },
-          {
-            label: 'Изм. дату',
-            action: (rowData: any[]) => handleOpenDateEdit(Number(rowData[0]), rowData[4] ? new Date(rowData[4]) : new Date()),
             color: '#3B82F6'
           },
           {
