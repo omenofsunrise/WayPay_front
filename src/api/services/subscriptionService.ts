@@ -22,15 +22,33 @@ export interface CancelSubscriptionResponse {
   message: string;
 }
 
+interface UniversalSubscribeRequest {
+    tariffType: TariffType;
+    days: number;
+    ones?: number;
+}
+
+type TariffType = 'WaypayCrm';
+
 class SubscriptionService {
   /**
    * Создать подписку
    * @param days - количество дней (30, 90, 180, 365)
    * @returns Promise с данными подписки и ссылкой на оплату
    */
-  async subscribe(days: number): Promise<CreateSubscriptionResponse> {
-    const response = await apiClient.post<CreateSubscriptionResponse>('/Pay/subscribe', { days });
-    return response.data;
+  async subscribe(days: number, tariffType: TariffType = 'WaypayCrm', ones?: number): Promise<CreateSubscriptionResponse> {
+      const request: UniversalSubscribeRequest = {
+          tariffType: tariffType,
+          days: days
+      };
+      
+      // Добавляем ones только если он передан (для некоторых тарифов)
+      if (ones !== undefined) {
+          request.ones = ones;
+      }
+      
+      const response = await apiClient.post<CreateSubscriptionResponse>('/Pay/subscribe', request);
+      return response.data;
   }
 
   /**
