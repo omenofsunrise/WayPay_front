@@ -27,6 +27,7 @@ import NewPaymentModal from './NewPaymentModal';
 import { sendWhatsAppMessage } from '../../utils/sendWhatsAppMessage';
 import { formatPhoneHref } from '../../utils/phoneUtils';
 import PhoneLink from '../ui/links/PhoneLink';
+import WhatsAppChat from '../WhatsAppChat';
 
 interface ViewCreditModalProps {
   id: number;
@@ -769,11 +770,14 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               <CustomTitle style={{ marginTop: 0 }}>
                 Договор №{id}
               </CustomTitle>
-              <MessageButton onClick={handleMessageClick}>
-                <svg width="22" height="20" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M2.464 14.828C1 13.657 1 12.771 1 9C1 5.229 1 3.343 2.464 2.172C3.93 1 6.286 1 11 1C15.714 1 18.071 1 19.535 2.172C20.999 3.344 21 5.229 21 9C21 12.771 21 13.657 19.535 14.828C18.072 16 15.714 16 11 16C8.49 16 7.2 17.738 5 19V15.788C3.906 15.625 3.101 15.338 2.464 14.828Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </MessageButton>
+              {creditData && (
+                <WhatsAppChat
+                  isOpen={true}
+                  onClose={() => console.log(false)}
+                  phoneNumber={creditData?.clientPhone}
+                  clientName={creditData?.clientFullName}
+                />
+              )}
             </TitleField>
 
             <div>
@@ -781,12 +785,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 <VerticalContainer>
                   <ModalInfoTitle style={{marginBottom: "5px"}}>Сведения о договоре</ModalInfoTitle>
                   <Label>{creditData && creditData.name && 'Договор'}</Label>
-                  <Value>{creditData && creditData.name && creditData.name}</Value>
+                  <Value>{creditData && creditData.name && creditData.name}</Value> 
 
                   <Label>Дата</Label>
                   <Value>{creditData && formatDate(creditData.creditDate)}</Value>
 
-                  <Label>Покупатель</Label>
+                  <Label>Покупатель</Label> 
                   <Value>{creditData && creditData.clientFullName}</Value>
 
                   <Label>Телефон</Label>
