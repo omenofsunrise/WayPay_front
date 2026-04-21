@@ -39,7 +39,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/credit-control': { mainItem: 'contracts', subItems: { '/credit-control': 'contracts-control' } },
   '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
   '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
-  '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
+  // '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
   '/schedules': { mainItem: 'payments', subItems: { '/schedules': 'pending-payments' } },
   '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
   '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
@@ -119,7 +119,7 @@ const SideMenu = () => {
     'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'clients': () => true,
     'blacklist': () => true,
-    'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
+    // 'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
     'pending-payments': () => true,
     'payments-journal': () => true,
     'investors': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
@@ -250,7 +250,7 @@ const SideMenu = () => {
       'contracts-control': 'Контроль договоров',
       'clients': 'Клиенты',
       'blacklist': 'Чёрный список',
-      'credit-application': 'Заявки',
+      // 'credit-application': 'Заявки',
       'pending-payments': 'Ожидаемые',
       'payments-journal': 'Журнал',
       'investors': 'Инвесторы',
@@ -459,14 +459,6 @@ const SideMenu = () => {
               >
                 Чёрный список
               </SubMenuItem>
-              {(denyPermission('FORBID_CREDIT_APPLICATIONS', true) && 
-                <SubMenuItem 
-                  onClick={() => handleSubMenuItemClick('credit-application', '/credit-application')}
-                  $selected={selectedSideMenuItem === 'credit-application'}
-                >
-                  Заявки
-                </SubMenuItem>
-              )}
             </SubMenu>
           )}
           
