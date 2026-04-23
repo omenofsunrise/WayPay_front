@@ -12,8 +12,6 @@ import CustomInput from '../components/ui/fields/CustomInput';
 import { formatDate } from '../utils/dateFormatter';
 import { formatPhoneHref } from '../utils/phoneUtils';
 import PhoneLink from '../components/ui/links/PhoneLink';
-import CustomCalendar from '../components/ui/fields/CustomCalendar';
-import { Container } from 'react-bootstrap';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
@@ -22,8 +20,8 @@ import useAdminPanel from '../api/hooks/useAdminPanel';
 import { NotificationType, type SendNotificationRequest } from '../api/types/notification';
 import styled from 'styled-components';
 import { useEmployee } from '../api/hooks/useEmployee';
+import CreditApplicationCompaniesManager from '../components/CreditApplicationCompaniesManager';
 
-// Константы для типов оплаты
 const PaymentType = {
   ACQUIRING: 0,
   CASH: 1,
@@ -32,7 +30,6 @@ const PaymentType = {
 
 type PaymentTypeValue = typeof PaymentType[keyof typeof PaymentType];
 
-// Модальное окно для добавления подписки
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -132,7 +129,6 @@ const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitti
   );
 };
 
-// Остальные интерфейсы и стили остаются без изменений...
 interface Tab {
   id: string;
   label: string;
@@ -224,7 +220,6 @@ const TabContentContainer = styled.div`
   margin-top: 20px;
 `;
 
-// Модальное окно для выплаты партнеру (без изменений)
 interface PayoutModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -277,16 +272,14 @@ const AdminPanelPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   
-  // Состояния для табов
-  const [activeTab, setActiveTab] = useState<'companies' | 'partners' | 'notifications'>('companies');
+  const [activeTab, setActiveTab] = useState<'companies' | 'partners' | 'credit-applications' | 'notifications'>('companies');
   
-  // Состояния для компаний
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
   const [selectedCompany, setSelectedCompany] = useState<CompanyModalData | null>(null);
   
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false); // Изменено с isDateModalOpen
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isDirectorModalOpen, setIsDirectorModalOpen] = useState(false);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
@@ -296,7 +289,6 @@ const AdminPanelPage = () => {
   const [directorValue, setDirectorValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
-  // Состояния для рассылки
   const [notificationType, setNotificationType] = useState<NotificationType>(NotificationType.AllUsers);
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -308,7 +300,6 @@ const AdminPanelPage = () => {
     error, 
     company,
     companies, 
-    getCompany,
     getAllCompanies,
     createCompany,
     deleteCompany,
@@ -340,7 +331,6 @@ const AdminPanelPage = () => {
     }
   }, [loadCompanies, activeTab]);
 
-  // Обработчики для компаний
   const handleCreateCompany = () => {
     setModalMode('create');
     setSelectedCompany({
@@ -413,7 +403,6 @@ const AdminPanelPage = () => {
     }
   };
 
-  // Изменено: сохранение подписки
   const handleSaveSubscription = async (days: number, cost: number, paymentType: PaymentTypeValue) => {
     if (!editingCompanyId) return;
 
@@ -531,7 +520,6 @@ const AdminPanelPage = () => {
     }
   };
 
-  // Обработчики для рассылки
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -691,7 +679,6 @@ const AdminPanelPage = () => {
     return styles;
   }, {} as Record<number, RowStyle>);
 
-  // Изменено: добавлена кнопка для добавления подписки
   const tableActions = hasRole('суперадмин') 
     ? activeTab === 'partners'
       ? [
@@ -783,7 +770,10 @@ const AdminPanelPage = () => {
     </>
   );
 
-  // Контент для таба рассылки
+  const creditApplicationsContent = (
+    <CreditApplicationCompaniesManager />
+  );
+
   const notificationsContent = (
     <div style={{ padding: '20px', maxWidth: '600px' }}>
       <form onSubmit={handleSendNotification}>
@@ -860,7 +850,6 @@ const AdminPanelPage = () => {
     </div>
   );
 
-  // Табы для страницы
   const tabs = [
     {
       id: 'companies',
@@ -871,6 +860,11 @@ const AdminPanelPage = () => {
       id: 'partners',
       label: 'Партнёры',
       content: companiesContent
+    },
+    {
+      id: 'credit-applications',
+      label: 'Заявкополучатели',
+      content: creditApplicationsContent
     },
     {
       id: 'notifications',
@@ -893,6 +887,8 @@ const AdminPanelPage = () => {
     >
       + Новый партнер
     </DarkCyanButton>
+  ) : activeTab === 'credit-applications' && hasRole('суперадмин') ? (
+    null
   ) : null;
 
   if (!hasRole('суперадмин')) {
@@ -929,7 +925,7 @@ const AdminPanelPage = () => {
         tabs={tabs}
         activeTab={activeTab}
         onChange={(tabId) => {
-          setActiveTab(tabId as 'companies' | 'partners' | 'notifications');
+          setActiveTab(tabId as 'companies' | 'partners' | 'notifications' | 'credit-applications');
           setCurrentPage(1);
           setNameFilter('');
         }}
@@ -939,7 +935,6 @@ const AdminPanelPage = () => {
       {isLoading && (activeTab === 'companies' || activeTab === 'partners') && <div>Загрузка...</div>}
       {error && (activeTab === 'companies' || activeTab === 'partners') && <div>Ошибка: {error}</div>}
 
-      {/* Модальные окна */}
       {isCompanyModalOpen && (
         <CompanyModal
             mode={modalMode}
@@ -965,7 +960,6 @@ const AdminPanelPage = () => {
         </BaseModal>
       )}
 
-      {/* Новое модальное окно для добавления подписки */}
       {isSubscriptionModalOpen && (
         <SubscriptionModal
           isOpen={isSubscriptionModalOpen}
