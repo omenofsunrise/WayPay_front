@@ -8,7 +8,8 @@ import type {
   SendMessageResponse,
   FindChatByPhoneResponse,
   ChatHistoryResponse,
-  ChatMessage
+  ChatMessage,
+  SendMediaFormRequest
 } from '../types/whatsapp';
 import whatsappService from '../services/whatsappService';
 
@@ -32,6 +33,7 @@ const useWhatsApp = () => {
     setMessages(prev => [...prev, message]);
   }, []);
 
+  // Отправка текстового сообщения
   const sendMessage = useCallback(async (request: SendMessageRequest): Promise<SendMessageResponse | null> => {
     setIsLoading(true);
     setError(null);
@@ -51,9 +53,9 @@ const useWhatsApp = () => {
       deviceId: 0,
       type: 'text',
       subtype: '',
-      displayText: request.body,
+      displayText: request.body || '',
       text: {
-        body: request.body,
+        body: request.body || '',
         buttons: [],
         viewOnce: false
       },
@@ -85,7 +87,7 @@ const useWhatsApp = () => {
       } else if (!result.success) {
         setMessages(prev => prev.map(msg => 
           msg.id === tempId 
-            ? { ...msg, status: 'FAILED' as const }
+            ? { ...msg, status: 'FAILED' as const, displayText: `[Ошибка] ${msg.displayText}` }
             : msg
         ));
       }
@@ -94,7 +96,7 @@ const useWhatsApp = () => {
     } catch (err) {
       setMessages(prev => prev.map(msg => 
         msg.id === tempId 
-          ? { ...msg, status: 'FAILED' as const }
+          ? { ...msg, status: 'FAILED' as const, displayText: `[Ошибка] ${msg.displayText}` }
           : msg
       ));
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -103,6 +105,182 @@ const useWhatsApp = () => {
       setIsLoading(false);
     }
   }, [channelStatus, foundChat, addOptimisticMessage]);
+
+  // Отправка медиа сообщения через FormData (рекомендуется)
+  const sendMediaMessage = useCallback(async (
+    to: string,
+    file: File,
+    mediaKind: string,
+    caption?: string
+  ): Promise<SendMessageResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const displayText = caption || getMediaDisplayText(mediaKind, file.name);
+    
+    const optimisticMessage: ChatMessage = {
+      id: tempId,
+      from: channelStatus?.phoneNumber || 'currentUser',
+      to: to,
+      chatId: foundChat?.chatId || '',
+      chatName: foundChat?.clientName || to,
+      fromName: 'Вы',
+      timestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+      isFromMe: true,
+      source: 'web',
+      deviceId: 0,
+      type: mediaKind,
+      subtype: '',
+      displayText: displayText,
+      reactions: [],
+      labels: []
+    };
+    
+    // Добавляем соответствующий контент в зависимости от типа
+    if (mediaKind === 'image') {
+      optimisticMessage.image = {
+        id: tempId,
+        link: '',
+        mimeType: file.type,
+        fileSize: file.size,
+        fileName: file.name,
+        sha256: '',
+        timestamp: Math.floor(Date.now() / 1000),
+        caption: caption || '',
+        preview: '',
+        width: 0,
+        height: 0,
+        viewOnce: false,
+        buttons: []
+      };
+    } else if (mediaKind === 'video') {
+      optimisticMessage.video = {
+        id: tempId,
+        link: '',
+        mimeType: file.type,
+        fileSize: file.size,
+        fileName: file.name,
+        sha256: '',
+        timestamp: Math.floor(Date.now() / 1000),
+        caption: caption || '',
+        preview: '',
+        width: 0,
+        height: 0,
+        viewOnce: false,
+        seconds: 0,
+        autoplay: false,
+        buttons: []
+      };
+    } else if (mediaKind === 'document') {
+      optimisticMessage.document = {
+        id: tempId,
+        link: '',
+        mimeType: file.type,
+        fileSize: file.size,
+        fileName: file.name,
+        sha256: '',
+        timestamp: Math.floor(Date.now() / 1000),
+        caption: caption || '',
+        preview: '',
+        width: 0,
+        height: 0,
+        viewOnce: false,
+        pageCount: 0,
+        buttons: []
+      };
+    } else if (mediaKind === 'audio') {
+      optimisticMessage.audio = {
+        id: tempId,
+        link: '',
+        mimeType: file.type,
+        fileSize: file.size,
+        fileName: file.name,
+        sha256: '',
+        timestamp: Math.floor(Date.now() / 1000),
+        seconds: 0,
+        recordingTime: 0,
+        waveform: '',
+        viewOnce: false
+      };
+    } else if (mediaKind === 'voice') {
+      optimisticMessage.voice = {
+        id: tempId,
+        link: '',
+        mimeType: file.type,
+        fileSize: file.size,
+        fileName: file.name,
+        sha256: '',
+        timestamp: Math.floor(Date.now() / 1000),
+        seconds: 0,
+        recordingTime: 0,
+        waveform: '',
+        viewOnce: false
+      };
+    }
+    
+    addOptimisticMessage(optimisticMessage);
+    
+    try {
+      const request: SendMediaFormRequest = {
+        to,
+        file,
+        mediaKind,
+        caption
+      };
+      
+      const result = await whatsappService.sendMediaFormData(request);
+      setSendResult(result);
+      
+      if (result.success && result.messageId) {
+        setMessages(prev => prev.map(msg => 
+          msg.id === tempId 
+            ? { ...msg, id: result.messageId!, status: 'SENT' as const }
+            : msg
+        ));
+        
+        setTimeout(() => {
+          setMessages(prev => prev.map(msg => 
+            msg.id === result.messageId 
+              ? { ...msg, status: 'DELIVERED' as const }
+              : msg
+          ));
+        }, 1000);
+        
+      } else if (!result.success) {
+        setMessages(prev => prev.map(msg => 
+          msg.id === tempId 
+            ? { ...msg, status: 'FAILED' as const, displayText: `[Ошибка] ${msg.displayText}` }
+            : msg
+        ));
+      }
+      
+      return result;
+    } catch (err) {
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempId 
+          ? { ...msg, status: 'FAILED' as const, displayText: `[Ошибка] ${msg.displayText}` }
+          : msg
+      ));
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [channelStatus, foundChat, addOptimisticMessage]);
+
+  // Вспомогательная функция для отображения типа медиа
+  const getMediaDisplayText = (mediaKind: string, fileName: string): string => {
+    switch (mediaKind) {
+      case 'image': return `📷 Изображение: ${fileName}`;
+      case 'video': return `🎥 Видео: ${fileName}`;
+      case 'document': return `📄 Документ: ${fileName}`;
+      case 'audio': return `🎵 Аудио: ${fileName}`;
+      case 'voice': return `🎙️ Голосовое сообщение`;
+      default: return `📎 Файл: ${fileName}`;
+    }
+  };
 
   const markAsRead = useCallback(async (request: MarkAsReadRequest): Promise<boolean> => {
     setIsLoading(true);
@@ -261,6 +439,7 @@ const useWhatsApp = () => {
     currentOffset,
     
     sendMessage,
+    sendMediaMessage,
     markAsRead,
     deleteMessage,
     getQR,

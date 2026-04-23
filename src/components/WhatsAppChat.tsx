@@ -5,17 +5,21 @@ import useWhatsApp from '../api/hooks/useWhatsApp';
 import MessageContent from './MessageContent';
 
 interface WhatsAppChatProps {
-  isOpen: boolean;
-  onClose: () => void;
   phoneNumber: string;
   clientName?: string;
+  height?: string | number;
+  width?: string | number;
+  showHeader?: boolean;
+  className?: string;
 }
 
 const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
-  isOpen,
-  onClose,
   phoneNumber,
-  clientName
+  clientName,
+  height = '600px',
+  width = '100%',
+  showHeader = true,
+  className
 }) => {
   const {
     isLoading,
@@ -24,6 +28,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     foundChat,
     channelStatus,
     sendMessage,
+    sendMediaMessage,
     findChatByPhone,
     loadChatWithClient,
     getChannelStatus,
@@ -35,9 +40,12 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
 
   const [newMessage, setNewMessage] = useState('');
   const [isInitializing, setIsInitializing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScrollingUp, setIsScrollingUp] = useState(false);
 
   const formatPhoneForDisplay = (phone: string): string => {
@@ -56,23 +64,25 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   const chatExists = foundChat?.exists ?? false;
   const displayName = clientName || foundChat?.clientName || displayPhoneNumber;
 
+  // Инициализация чата при изменении phoneNumber
   useEffect(() => {
-    if (isOpen) {
-      initializeChat();
-    } else {
+    initializeChat();
+    
+    // Очистка при размонтировании
+    return () => {
       clearChatData();
-    }
-  }, [isOpen, phoneNumber]);
+    };
+  }, [phoneNumber]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && chatExists && !isLoading && inputRef.current) {
+    if (chatExists && !isLoading && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, chatExists, isLoading]);
+  }, [chatExists, isLoading]);
   
   const initializeChat = async () => {
     setIsInitializing(true);
@@ -132,16 +142,81 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     }
   };
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setShowAttachmentMenu(false);
+
+    try {
+      let mediaKind = 'document';
+      if (file.type.startsWith('image/')) {
+        mediaKind = 'image';
+      } else if (file.type.startsWith('video/')) {
+        mediaKind = 'video';
+      } else if (file.type.startsWith('audio/')) {
+        if (file.type.includes('ogg') || file.size < 1024 * 1024) {
+          mediaKind = 'voice';
+        } else {
+          mediaKind = 'audio';
+        }
+      }
+
+      const result = await sendMediaMessage(
+        cleanPhoneNumber,
+        file,
+        mediaKind,
+        `📎 ${file.name}`
+      );
+
+      if (!result?.success) {
+        alert('Ошибка при отправке файла: ' + (result?.error || 'Неизвестная ошибка'));
+      }
+    } catch (error) {
+      console.error('Error sending file:', error);
+      alert('Ошибка при отправке файла');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          setIsUploading(true);
+          try {
+            const result = await sendMediaMessage(
+              cleanPhoneNumber,
+              file,
+              'image',
+              '📷 Изображение из буфера обмена'
+            );
+            if (!result?.success) {
+              alert('Ошибка при отправке изображения');
+            }
+          } finally {
+            setIsUploading(false);
+          }
+        }
+        break;
+      }
+    }
+  }, [cleanPhoneNumber, sendMediaMessage]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
-    }
-  };
-
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
     }
   };
 
@@ -185,44 +260,31 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     switch (status) {
       case 'FAILED':
         return <span style={{ color: '#ff4444' }}>⚠️</span>;
+      case 'PENDING':
+        return <span style={{ color: '#8696A0' }}>⏱️</span>;
       default:
         return null;
     }
   };
 
   const getConnectionStatusText = () => {
-    return channelStatus?.name ? `Подключено ${channelStatus.name}` : `Подключение...`;
+    return `WhatsApp • ${channelStatus?.name || channelStatus?.phoneNumber || 'Подключение...'}`;
   };
 
   const getConnectionStatusColor = () => {
-    return channelStatus?.name ? '#25D366' : 'FFA500';
+    return channelStatus?.connected ? '#25D366' : '#FFA500';
   };
 
-  const isConnected = channelStatus?.name !== 'CONNECTED';
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+  const isConnected = channelStatus?.name ?? false;
 
   const showLoading = isInitializing || (isLoading && messages.length === 0);
   const showEmptyState = !showLoading && messages.length === 0 && chatExists;
   const showNoChatState = !showLoading && !chatExists && !isInitializing;
 
   return (
-    <ModalOverlay isOpen={isOpen} onClick={handleOverlayClick}>
-      <ModalContent>
-        {/* Header */}
+    <Container className={className} style={{ width, height }}>
+      {/* Header */}
+      {showHeader && (
         <ChatHeader>
           <HeaderInfo>
             <Avatar>
@@ -237,150 +299,165 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
               </StatusIndicator>
             </HeaderText>
           </HeaderInfo>
-          <CloseButton onClick={onClose}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="#fff"/>
-            </svg>
-          </CloseButton>
         </ChatHeader>
+      )}
 
-        {/* Connection Status Bar */}
-        {!isConnected && (
-          <ConnectionWarning>
-            <WarningIcon>⚠️</WarningIcon>
-            <WarningText>
-              {channelStatus?.status === 'AWAITING_SCAN' && 'Требуется сканирование QR-кода для подключения к WhatsApp'}
-              {channelStatus?.status === 'CONNECTING' && 'Подключение к WhatsApp...'}
-              {channelStatus?.status === 'EXPIRED' && 'Сессия WhatsApp истекла. Пожалуйста, переподключитесь.'}
-              {channelStatus?.status === 'DISCONNECTED' && 'WhatsApp аккаунт не подключен. Пожалуйста, подключите аккаунт в настройках.'}
-              {!channelStatus?.status && 'Проверка подключения...'}
-            </WarningText>
-            <RetryButton onClick={initializeChat}>Проверить</RetryButton>
-          </ConnectionWarning>
+      {/* Messages Area */}
+      <MessagesArea ref={messagesContainerRef} onScroll={handleScroll}>
+        {isLoadingMore && (
+          <LoadingOlderIndicator>
+            <Spinner size="small" />
+            <span>Загрузка старых сообщений...</span>
+          </LoadingOlderIndicator>
         )}
 
-        {/* Messages Area */}
-        <MessagesArea ref={messagesContainerRef} onScroll={handleScroll}>
-          {isLoadingMore && (
-            <LoadingOlderIndicator>
-              <Spinner size="small" />
-              <span>Загрузка старых сообщений...</span>
-            </LoadingOlderIndicator>
-          )}
+        {showEmptyState && (
+          <EmptyState>
+            <EmptyIcon>💬</EmptyIcon>
+            <EmptyText>Нет сообщений</EmptyText>
+            <EmptySubtext>Напишите первое сообщение</EmptySubtext>
+          </EmptyState>
+        )}
 
-          {showEmptyState && (
-            <EmptyState>
-              <EmptyIcon>💬</EmptyIcon>
-              <EmptyText>Нет сообщений</EmptyText>
-              <EmptySubtext>Напишите первое сообщение</EmptySubtext>
-            </EmptyState>
-          )}
+        {showNoChatState && (
+          <EmptyState>
+            <EmptyIcon>📱</EmptyIcon>
+            <EmptyText>Клиент не в WhatsApp</EmptyText>
+            <EmptySubtext>
+              Номер {displayPhoneNumber} не зарегистрирован в WhatsApp
+            </EmptySubtext>
+            {isConnected && (
+              <SendFirstMessageButton onClick={handleSendMessage}>
+                Отправить первое сообщение
+              </SendFirstMessageButton>
+            )}
+          </EmptyState>
+        )}
 
-          {showNoChatState && (
-            <EmptyState>
-              <EmptyIcon>📱</EmptyIcon>
-              <EmptyText>Клиент не в WhatsApp</EmptyText>
-              <EmptySubtext>
-                Номер {displayPhoneNumber} не зарегистрирован в WhatsApp
-              </EmptySubtext>
-              {isConnected && (
-                <SendFirstMessageButton onClick={() => {
-                  // Автоматически отправить приветственное сообщение
-                  handleSendMessage();
-                }}>
-                  Отправить первое сообщение
-                </SendFirstMessageButton>
-              )}
-            </EmptyState>
-          )}
+        {!showLoading && !showEmptyState && !showNoChatState && messages.length > 0 && (
+          <>
+            {Object.entries(groupMessagesByDate()).map(([date, dateMessages]) => (
+              <React.Fragment key={date}>
+                <DateDivider>
+                  <DateDividerText>{date}</DateDividerText>
+                </DateDivider>
+                {dateMessages.map((message) => (
+                  <MessageBubble key={message.id} isOwn={message.isFromMe}>
+                    <MessageContent message={message} />
+                    <MessageMeta>
+                      <MessageTime>{formatTime(message.timestamp)}</MessageTime>
+                      {getStatusIcon(message.status, message.isFromMe)}
+                    </MessageMeta>
+                  </MessageBubble>
+                ))}
+              </React.Fragment>
+            ))}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+        
+        {canLoadMore && !isLoadingMore && messages.length > 0 && (
+          <LoadMoreButton onClick={() => loadOlderMessages(cleanPhoneNumber)}>
+            Загрузить предыдущие сообщения
+          </LoadMoreButton>
+        )}
+      </MessagesArea>
 
-          {!showLoading && !showEmptyState && !showNoChatState && messages.length > 0 && (
-            <>
-              {Object.entries(groupMessagesByDate()).map(([date, dateMessages]) => (
-                <React.Fragment key={date}>
-                  <DateDivider>
-                    <DateDividerText>{date}</DateDividerText>
-                  </DateDivider>
-                  {dateMessages.map((message) => (
-                    <MessageBubble key={message.id} isOwn={message.isFromMe}>
-                      <MessageContent message={message} />
-                      <MessageMeta>
-                        <MessageTime>{formatTime(message.timestamp)}</MessageTime>
-                        {getStatusIcon(message.status, message.isFromMe)}
-                      </MessageMeta>
-                    </MessageBubble>
-                  ))}
-                </React.Fragment>
-              ))}
-              <div ref={messagesEndRef} />
-            </>
-          )}
-          {canLoadMore && !isLoadingMore && messages.length > 0 && (
-            <LoadMoreButton onClick={() => loadOlderMessages(cleanPhoneNumber)}>
-              Загрузить предыдущие сообщения
-            </LoadMoreButton>
-          )}
-        </MessagesArea>
+      {/* Input Area */}
+      <InputArea>
+        <AttachmentButton
+          onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+          disabled={!isConnected || isLoading}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" fill="#075E54"/>
+          </svg>
+        </AttachmentButton>
 
-        {/* Input Area */}
-        <InputArea>
-          <MessageInput
-            ref={inputRef}
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={
-              !isConnected 
-                ? "Подключите WhatsApp для отправки сообщений"
-                : !chatExists
-                ? "Номер не в WhatsApp, но можно отправить сообщение"
-                : "Введите сообщение..."
-            }
-            disabled={!isConnected || isLoading}
-          />
+        {showAttachmentMenu && (
+          <AttachmentMenu>
+            <AttachmentMenuItem onClick={() => fileInputRef.current?.click()}>
+              <span>📷</span> Фото/Видео
+            </AttachmentMenuItem>
+            <AttachmentMenuItem onClick={() => {
+              if (fileInputRef.current) {
+                fileInputRef.current.accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt';
+                fileInputRef.current.click();
+              }
+            }}>
+              <span>📄</span> Документ
+            </AttachmentMenuItem>
+            <AttachmentMenuItem onClick={() => {
+              if (fileInputRef.current) {
+                fileInputRef.current.accept = 'audio/*';
+                fileInputRef.current.click();
+              }
+            }}>
+              <span>🎵</span> Аудио
+            </AttachmentMenuItem>
+          </AttachmentMenu>
+        )}
+
+        <MessageInput
+          ref={inputRef}
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          onPaste={handlePaste}
+          placeholder={
+            !isConnected 
+              ? "Подключите WhatsApp для отправки сообщений"
+              : !chatExists
+              ? "Номер не в WhatsApp, но можно отправить сообщение"
+              : isUploading
+              ? "Отправка файла..."
+              : "Введите сообщение..."
+          }
+          disabled={!isConnected || isLoading || isUploading}
+        />
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+          accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
+        />
+
+        {(newMessage.trim() || isUploading) ? (
           <SendButton 
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || !isConnected || isLoading}
+            disabled={(!newMessage.trim() && !isUploading) || !isConnected || isLoading || isUploading}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="#fff"/>
-            </svg>
+            {isUploading ? (
+              <Spinner size="small" />
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="#fff"/>
+              </svg>
+            )}
           </SendButton>
-        </InputArea>
-      </ModalContent>
-    </ModalOverlay>
+        ) : (
+          <VoiceButton disabled={!isConnected || isLoading}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H6c0 3.66 2.95 6.68 6.5 7.16V21h-2v2h6v-2h-2v-2.84c3.55-.48 6.5-3.5 6.5-7.16h-2z" fill="#075E54"/>
+            </svg>
+          </VoiceButton>
+        )}
+      </InputArea>
+    </Container>
   );
 };
 
-const ModalOverlay = styled.div<{ isOpen: boolean }>`
-  display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
-  width: 450px;
-  height: 650px;
-  background-color: #fff;
-  border-radius: 12px;
+// Обновленные стили
+const Container = styled.div`
   display: flex;
   flex-direction: column;
+  background-color: #fff;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  
-  @media (max-width: 768px) {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-  }
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `;
 
 const ChatHeader = styled.div`
@@ -390,6 +467,7 @@ const ChatHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 `;
 
 const HeaderInfo = styled.div`
@@ -422,53 +500,6 @@ const StatusIndicator = styled.div<{ color: string }>`
   font-size: 12px;
   opacity: 0.8;
   color: ${props => props.color};
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  &:hover {
-    opacity: 0.8;
-  }
-`;
-
-const ConnectionWarning = styled.div`
-  background-color: #fff3cd;
-  border-bottom: 1px solid #ffeeba;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const WarningIcon = styled.span`
-  font-size: 20px;
-`;
-
-const WarningText = styled.div`
-  flex: 1;
-  font-size: 12px;
-  color: #856404;
-`;
-
-const RetryButton = styled.button`
-  background-color: #856404;
-  color: white;
-  border: none;
-  padding: 4px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  
-  &:hover {
-    background-color: #6b4c02;
-  }
 `;
 
 const MessagesArea = styled.div`
@@ -505,12 +536,6 @@ const MessageBubble = styled.div<{ isOwn: boolean }>`
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 `;
 
-const MessageText = styled.div`
-  font-size: 14px;
-  line-height: 1.4;
-  word-wrap: break-word;
-`;
-
 const MessageMeta = styled.div`
   display: flex;
   align-items: center;
@@ -532,6 +557,56 @@ const InputArea = styled.div`
   gap: 12px;
   align-items: center;
   border-top: 1px solid #ddd;
+  position: relative;
+  flex-shrink: 0;
+`;
+
+const AttachmentButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  
+  &:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const AttachmentMenu = styled.div`
+  position: absolute;
+  bottom: 60px;
+  left: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  z-index: 10;
+`;
+
+const AttachmentMenuItem = styled.div`
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: #f0f0f0;
+  }
+  
+  span {
+    font-size: 20px;
+  }
 `;
 
 const MessageInput = styled.input`
@@ -569,14 +644,25 @@ const SendButton = styled.button`
   }
 `;
 
-const LoadingIndicator = styled.div`
+const VoiceButton = styled.button`
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  gap: 16px;
-  color: #666;
+  cursor: pointer;
+  
+  &:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const Spinner = styled.div<{ size?: 'small' | 'normal' }>`
@@ -656,14 +742,6 @@ const LoadMoreButton = styled.button`
   &:hover {
     background-color: #128C7E;
   }
-`;
-
-const MessagesInfo = styled.div`
-  text-align: center;
-  font-size: 11px;
-  color: #8696A0;
-  padding: 8px;
-  margin-top: 8px;
 `;
 
 export default WhatsAppChat;

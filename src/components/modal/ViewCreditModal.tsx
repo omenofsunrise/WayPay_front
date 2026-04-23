@@ -766,18 +766,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       <ModalOverlay isOpen={isOpen} onClick={handleOverlayClick}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <ModalWrapper>
+            <TwoColumnLayout>
+            <LeftColumn>
             <TitleField style={{marginTop: 0, paddingTop: 0}}>
               <CustomTitle style={{ marginTop: 0 }}>
                 Договор №{id}
               </CustomTitle>
-              {creditData && (
-                <WhatsAppChat
-                  isOpen={true}
-                  onClose={() => console.log(false)}
-                  phoneNumber={creditData?.clientPhone}
-                  clientName={creditData?.clientFullName}
-                />
-              )}
             </TitleField>
 
             <div>
@@ -872,7 +866,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                   )}
 
                 </VerticalContainer>
-                <VerticalContainer style={{ width: "100%", minWidth: "700px", marginLeft: "60px"}}>
+                <VerticalContainer style={{ width: "100%", marginLeft: "60px"}}>
                   <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
                     <ModalInfoTitle>Заметки</ModalInfoTitle>
                     <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
@@ -942,6 +936,17 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 onRowContextMenu={handleRowContextMenu}
               />
             </div>
+            </LeftColumn>
+
+            <RightColumn>
+              {creditData && (
+                <WhatsAppChat
+                  phoneNumber={creditData?.clientPhone}
+                  clientName={creditData?.clientFullName}
+                />
+              )}
+            </RightColumn>
+            </TwoColumnLayout>
           </ModalWrapper>
         </ModalContent>
       </ModalOverlay>
@@ -1000,6 +1005,45 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   );
 };
 
+const TwoColumnLayout = styled.div`
+  display: flex;
+  gap: 24px;
+  height: 100%;
+`;
+
+const LeftColumn = styled.div`
+  flex: 1.5;
+  overflow-y: auto;
+  padding-right: 12px;
+  
+  /* Стилизация скроллбара для левой колонки */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+  }
+`;
+
+const RightColumn = styled.div`
+  flex: 1;
+  min-width: 450px;
+  display: flex;
+  flex-direction: column;
+  
+  /* Фиксируем высоту чата */
+  & > div {
+    height: 100%;
+  }
+`;
+
 const ContextMenu = styled.div`
   background: white;
   border: 1px solid #e2e8f0;
@@ -1052,8 +1096,8 @@ const ModalContent = styled.div`
   padding: 24px;
   border-radius: 8px;
   width: auto;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: 90vw;
+  height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;
   

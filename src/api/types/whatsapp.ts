@@ -1,8 +1,27 @@
-// types/whatsapp.ts
+export interface SendMediaRequest {
+  to: string;
+  mediaData?: string;
+  fileName?: string;
+  mediaKind?: string;
+  caption?: string;
+}
 
 export interface SendMessageRequest {
   to: string;
-  body: string;
+  body?: string;
+  mediaData?: string;
+  fileName?: string;
+  mediaKind?: string;
+  caption?: string;
+  
+  isMedia?: boolean;
+}
+
+export interface SendMediaFormRequest {
+  to: string;
+  file: File;
+  mediaKind: string;
+  caption?: string;
 }
 
 export interface SendMessageResponse {

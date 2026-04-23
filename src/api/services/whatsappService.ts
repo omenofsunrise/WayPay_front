@@ -10,11 +10,47 @@ import type {
   FindChatByPhoneResponse,
   GetChatWithClientRequest,
   ChatHistoryResponse,
+  SendMediaFormRequest,
 } from '../types/whatsapp';
 
 class WhatsAppService {
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
-    const response = await apiClient.post<SendMessageResponse>('/WhatsApp/send', request);
+    if (request.mediaData && request.fileName && request.mediaKind) {
+      return this.sendMediaMessage(request);
+    }
+    
+    const response = await apiClient.post<SendMessageResponse>('/WhatsApp/send', {
+      to: request.to,
+      body: request.body
+    });
+    return response.data;
+  }
+
+  async sendMediaMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
+    const response = await apiClient.post<SendMessageResponse>('/WhatsApp/send', {
+      to: request.to,
+      mediaData: request.mediaData,
+      fileName: request.fileName,
+      mediaKind: request.mediaKind,
+      caption: request.caption
+    });
+    return response.data;
+  }
+
+  async sendMediaFormData(request: SendMediaFormRequest): Promise<SendMessageResponse> {
+    const formData = new FormData();
+    formData.append('To', request.to);
+    formData.append('File', request.file);
+    formData.append('MediaKind', request.mediaKind);
+    if (request.caption) {
+      formData.append('Caption', request.caption);
+    }
+    
+    const response = await apiClient.post<SendMessageResponse>('/WhatsApp/send-media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 
