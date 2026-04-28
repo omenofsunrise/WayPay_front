@@ -297,13 +297,13 @@ class EmployeeService {
     }
   }
 
-static async revokeSession(tokenId?: number): Promise<void> {
+  static async revokeSession(tokenId?: number): Promise<void> {
     try {
-      await apiClient.post('/Auth/revoke-session', tokenId !== undefined ? tokenId : null);
+      await apiClient.post('/Auth/session/revoke', { tokenId: tokenId ?? null });
     } catch (error) {
       throw error;
     }
-}
+  }
 
   static async revokeAllSessions(): Promise<void> {
     try {
