@@ -9,7 +9,8 @@ import type {
   FindChatByPhoneResponse,
   ChatHistoryResponse,
   ChatMessage,
-  SendMediaFormRequest
+  SendMediaFormRequest,
+  ChannelResponse
 } from '../types/whatsapp';
 import whatsappService from '../services/whatsappService';
 
@@ -28,12 +29,85 @@ const useWhatsApp = () => {
   const [totalMessages, setTotalMessages] = useState(0);
   const [currentOffset, setCurrentOffset] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [channels, setChannels] = useState<ChannelResponse[]>([]);
+  const [selectedChannel, setSelectedChannel] = useState<ChannelResponse | null>(null);
 
   const addOptimisticMessage = useCallback((message: ChatMessage) => {
     setMessages(prev => [...prev, message]);
   }, []);
 
-  // Отправка текстового сообщения
+  const getChannels = useCallback(async (): Promise<ChannelResponse[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await whatsappService.getChannels();
+      setChannels(result.chanelResponses);
+      return result.chanelResponses;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const createChannel = useCallback(async (name: string, employeeIds: number[]): Promise<ChannelResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const newChannel = await whatsappService.createChannel(name, employeeIds);
+      setChannels(prev => [...prev, newChannel]);
+      return newChannel;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const deleteChannel = useCallback(async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.deleteChannel(id);
+      setChannels(prev => prev.filter(channel => channel.id !== id));
+      if (selectedChannel?.id === id) {
+        setSelectedChannel(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedChannel]);
+
+  const setChannelEmployees = useCallback(async (channelId: string, employeeIds: number[]): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.setChannelEmployees(channelId, employeeIds);
+      
+      setChannels(prev => prev.map(channel => 
+        channel.id === channelId 
+          ? { ...channel, employeeIds: employeeIds }
+          : channel
+      ));
+      
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel(prev => prev ? { ...prev, employeeIds: employeeIds } : null);
+      }
+      
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedChannel]);
+
   const sendMessage = useCallback(async (request: SendMessageRequest): Promise<SendMessageResponse | null> => {
     setIsLoading(true);
     setError(null);
@@ -106,7 +180,6 @@ const useWhatsApp = () => {
     }
   }, [channelStatus, foundChat, addOptimisticMessage]);
 
-  // Отправка медиа сообщения через FormData (рекомендуется)
   const sendMediaMessage = useCallback(async (
     to: string,
     file: File,
@@ -138,7 +211,6 @@ const useWhatsApp = () => {
       labels: []
     };
     
-    // Добавляем соответствующий контент в зависимости от типа
     if (mediaKind === 'image') {
       optimisticMessage.image = {
         id: tempId,
@@ -270,7 +342,6 @@ const useWhatsApp = () => {
     }
   }, [channelStatus, foundChat, addOptimisticMessage]);
 
-  // Вспомогательная функция для отображения типа медиа
   const getMediaDisplayText = (mediaKind: string, fileName: string): string => {
     switch (mediaKind) {
       case 'image': return `📷 Изображение: ${fileName}`;
@@ -310,11 +381,11 @@ const useWhatsApp = () => {
     }
   }, []);
 
-  const getQR = useCallback(async (userId: string): Promise<QRResponse | null> => {
+  const getQR = useCallback(async (channelId: string): Promise<QRResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await whatsappService.getQR(userId);
+      const result = await whatsappService.getQR(channelId);
       setQrData(result);
       return result;
     } catch (err) {
@@ -324,6 +395,20 @@ const useWhatsApp = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const logout = useCallback(async (channelId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.logout(channelId);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedChannel]);
 
   const getChannelStatus = useCallback(async (): Promise<ChannelStatusResponse | null> => {
     setIsLoading(true);
@@ -347,6 +432,20 @@ const useWhatsApp = () => {
       const result = await whatsappService.findChatByPhone({ clientPhone });
       setFoundChat(result);
       return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const extendChannel = useCallback(async (days: number, channelId: string): Promise<string | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const paymentUrl = await whatsappService.extendChannel(days, channelId);
+      return paymentUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       return null;
@@ -407,6 +506,28 @@ const useWhatsApp = () => {
     return result?.canLoadMore ?? false;
   }, [canLoadMore, isLoadingMore, currentOffset, loadChatWithClient]);
 
+  const setCurrentChannel = useCallback(async (channelId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.setCurrentChannel(channelId);
+      
+      const channel = channels.find(c => c.id === channelId);
+      if (channel) {
+        setSelectedChannel(channel);
+      }
+      
+      await getChannelStatus();
+      
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [channels, getChannelStatus]);
+
   const clearChatData = useCallback(() => {
     setFoundChat(null);
     setChatHistory(null);
@@ -446,9 +567,18 @@ const useWhatsApp = () => {
     getChannelStatus,
     findChatByPhone,
     loadChatWithClient,
-    loadOlderMessages,    
+    loadOlderMessages,
     clearChatData,
-    clearResults
+    clearResults,
+    channels,
+    selectedChannel,
+    getChannels,
+    createChannel,
+    deleteChannel,
+    setCurrentChannel,
+    setChannelEmployees,
+    extendChannel,
+    logout
   };
 };
 

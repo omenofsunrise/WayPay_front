@@ -277,3 +277,34 @@ export interface QRResponse {
   qrString: string;
   status: 'UNKNOWN' | 'AWAITING_SCAN' | 'CONNECTED' | 'EXPIRED';
 }
+
+export interface ChannelResponse {
+  activeTill?: string;
+  creationTs?: string;
+  id: string;
+  ownerId: string;
+  stopped: boolean;
+  trial?: string;
+  blocked: boolean;
+  name: string;
+  projectId: string;
+  employeeIds: number[];
+}
+
+export interface ChannelsResponse {
+  chanelResponses: ChannelResponse[];
+}
+
+export interface CreateChannelRequest {
+  name: string;
+  employeeIds: number[];
+}
+
+export interface EmployeeListRequest {
+  employeesList: number[];
+}
+
+export interface ExtendChannelRequest {
+  days: number;
+  channelId: string;
+}

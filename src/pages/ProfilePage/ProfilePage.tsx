@@ -6,6 +6,7 @@ import { useAuth } from '../../сontext/AuthContext';
 import type { Tab } from '../../components/ui/fields/Tabs';
 import Tabs from '../../components/ui/fields/Tabs';
 import QRCodeAuth from '../../components/WhatsAppLogin';
+import EmployeeWhatsAppPage from './EmployeeWhatsAppPage';
 
 const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -25,13 +26,10 @@ const ProfilePage = () => {
 
     const handleWhatsAppSuccess = () => {
         console.log('WhatsApp успешно подключен!');
-        // Можно добавить уведомление для пользователя
-        // или обновить какие-то данные
     };
 
     const handleWhatsAppError = (error: string) => {
         console.error('Ошибка подключения WhatsApp:', error);
-        // Можно показать toast уведомление об ошибке
     };
 
     const renderTabContent = () => {
@@ -43,12 +41,7 @@ const ProfilePage = () => {
             case "WhatsApp":
                 return (
                     <div style={{ padding: '20px 0' }}>
-                        <QRCodeAuth 
-                            userId={authInfo?.employee?.id.toString() ?? ''}
-                            onSuccess={handleWhatsAppSuccess}
-                            onError={handleWhatsAppError}
-                            pollingInterval={3000}
-                        />
+                        <EmployeeWhatsAppPage />
                     </div>
                 );
             default:

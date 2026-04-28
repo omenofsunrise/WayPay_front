@@ -11,6 +11,11 @@ import type {
   GetChatWithClientRequest,
   ChatHistoryResponse,
   SendMediaFormRequest,
+  ChannelsResponse,
+  CreateChannelRequest,
+  ChannelResponse,
+  EmployeeListRequest,
+  ExtendChannelRequest
 } from '../types/whatsapp';
 
 class WhatsAppService {
@@ -62,9 +67,9 @@ class WhatsAppService {
     await apiClient.delete('/WhatsApp/message', { data: request });
   }
 
-  async getQR(userId: string): Promise<QRResponse> {
+  async getQR(channelId: string): Promise<QRResponse> {
     const response = await apiClient.get<QRResponse>('/WhatsApp/qr', {
-      params: { userId }
+      params: { channelId }
     });
     return response.data;
   }
@@ -89,6 +94,40 @@ class WhatsAppService {
         offset: request.offset || 0
       }
     });
+    return response.data;
+  }
+
+  async getChannels(): Promise<ChannelsResponse> {
+    const response = await apiClient.get<ChannelsResponse>('/WhatsApp');
+    return response.data;
+  }
+
+  async createChannel(name: string, employeeIds: number[]): Promise<ChannelResponse> {
+    const request: CreateChannelRequest = { name, employeeIds };
+    const response = await apiClient.post<ChannelResponse>('/WhatsApp', request);
+    return response.data;
+  }
+
+  async setCurrentChannel(channelId: string): Promise<void> {
+    await apiClient.patch(`/WhatsApp/${channelId}`, {});
+  }
+
+  async logout(channelId: string): Promise<void> {
+    await apiClient.post(`/WhatsApp/logout/${channelId}`);
+  }
+
+  async setChannelEmployees(channelId: string, employeeIds: number[]): Promise<void> {
+    const request: EmployeeListRequest = { employeesList: employeeIds };
+    await apiClient.patch(`/WhatsApp/set/${channelId}`, request);
+  }
+        
+  async deleteChannel(id: string) {
+    await apiClient.delete(`/WhatsApp/${id}`);
+  }
+
+  async extendChannel(days: number, channelId: string): Promise<string> {
+    const request: ExtendChannelRequest = { days, channelId };
+    const response = await apiClient.post<string>('/WhatsApp/extend', request);
     return response.data;
   }
 }

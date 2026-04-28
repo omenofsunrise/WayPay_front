@@ -5,7 +5,7 @@ interface QRCodeAuthProps {
   userId: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
-  pollingInterval?: number; // в миллисекундах
+  pollingInterval?: number;
 }
 
 const QRCodeAuth: React.FC<QRCodeAuthProps> = ({

@@ -10,6 +10,7 @@ import CompanyPage from './CompanyPage';
 import BranchPage from './BranchPage';
 import SenderPage from './SenderPage';
 import AboutPage from '../AboutPage';
+import WhatsAppSettingsPage from './WhatsAppSettingsPage'; // Добавляем импорт
 
 const SettingsPage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -58,14 +59,17 @@ const SettingsPage = () => {
             { id: "Данные компании", label: "Данные компании" },
             { id: "Отделения", label: "Отделения" },
             { id: "Рассылка", label: "Рассылка" },
+            { id: "WhatsApp", label: "WhatsApp" }, // Добавляем вкладку WhatsApp
             { id: "О программе", label: "О программе" }
         );
     } else if (hasRole("админ")) {
         tabs.push(
+            { id: "WhatsApp", label: "WhatsApp" }, // Добавляем для админа
             { id: "О программе", label: "О программе" }
         );
     } else {
         tabs.push(
+            { id: "WhatsApp", label: "WhatsApp" }, // Добавляем для обычных сотрудников (если нужно)
             { id: "О программе", label: "О программе" }
         );
     }
@@ -91,6 +95,8 @@ const SettingsPage = () => {
                 return <BranchPage />;
             case "Рассылка":
                 return <SenderPage />;
+            case "WhatsApp": // Добавляем кейс для WhatsApp
+                return <WhatsAppSettingsPage />;
             case "О программе":
                 return <AboutPage />;
             default:
