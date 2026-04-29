@@ -625,6 +625,7 @@ const SendButton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  color: white;
   
   &:hover:not(:disabled) {
     background-color: #128C7E;
