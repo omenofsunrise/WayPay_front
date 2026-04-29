@@ -21,16 +21,7 @@ const ProfilePage = () => {
     const tabs: Tab[] = [
         { id: "Мой профиль", label: "Мой профиль" },
         { id: "Активные сессии", label: "Активные сессии" },
-        { id: "WhatsApp", label: "WhatsApp" }
     ];
-
-    const handleWhatsAppSuccess = () => {
-        console.log('WhatsApp успешно подключен!');
-    };
-
-    const handleWhatsAppError = (error: string) => {
-        console.error('Ошибка подключения WhatsApp:', error);
-    };
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -38,12 +29,6 @@ const ProfilePage = () => {
                 return <EmployeeProfilePage />;
             case "Активные сессии":
                 return <SessionsPage />;
-            case "WhatsApp":
-                return (
-                    <div style={{ padding: '20px 0' }}>
-                        <EmployeeWhatsAppPage />
-                    </div>
-                );
             default:
                 return <EmployeeProfilePage />;
         }

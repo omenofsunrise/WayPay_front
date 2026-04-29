@@ -675,16 +675,15 @@ const WhatsAppSettingsPage: React.FC = () => {
                   )}
                 </EmployeesGrid>
               )}
-              <Hint>Нажмите на сотрудника для выбора/снятия выбора</Hint>
             </FormGroup>
 
             <ModalActions>
-              <CancelButton onClick={() => !isCreating && setShowAddModal(false)} disabled={isCreating}>
+              <GrayButton onClick={() => !isCreating && setShowAddModal(false)} disabled={isCreating}>
                 Отмена
-              </CancelButton>
-              <ConfirmButton onClick={handleAddNumber} disabled={isCreating || newNumber.assignedTo.length === 0}>
+              </GrayButton>
+              <DarkCyanButton onClick={handleAddNumber} disabled={isCreating || newNumber.assignedTo.length === 0}>
                 {isCreating ? 'Создание...' : 'Создать канал'}
-              </ConfirmButton>
+              </DarkCyanButton>
             </ModalActions>
           </ModalContent>
         </ModalOverlay>
@@ -756,13 +755,6 @@ const WhatsAppSettingsPage: React.FC = () => {
 
             {!paymentUrl ? (
               <>
-                <InfoBox>
-                  <InfoIcon>💰</InfoIcon>
-                  <InfoText>
-                    Продление подписки для канала <strong>"{extendChannelName}"</strong>
-                  </InfoText>
-                </InfoBox>
-
                 <FormGroup>
                   <Label>Выберите срок продления:</Label>
                   <DaysSelector>
@@ -780,8 +772,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                       disabled={isExtending}
                     >
                       <DaysValue>90 дней</DaysValue>
-                      <DaysPrice>2700 ₽</DaysPrice>
-                      <DaysDiscount>-10%</DaysDiscount>
+                      <DaysPrice>3000 ₽</DaysPrice>
                     </DayOption>
                     <DayOption 
                       selected={extendDays === 365}
@@ -789,47 +780,22 @@ const WhatsAppSettingsPage: React.FC = () => {
                       disabled={isExtending}
                     >
                       <DaysValue>365 дней</DaysValue>
-                      <DaysPrice>10000 ₽</DaysPrice>
-                      <DaysDiscount>-15%</DaysDiscount>
+                      <DaysPrice>12000 ₽</DaysPrice>
                     </DayOption>
                   </DaysSelector>
-                  <Hint>Выберите удобный для вас срок подписки</Hint>
                 </FormGroup>
 
-                <PriceSummary>
-                  <SummaryText>Итого к оплате:</SummaryText>
-                  <SummaryPrice>
-                    {extendDays === 30 && '1000 ₽'}
-                    {extendDays === 90 && '2700 ₽'}
-                    {extendDays === 365 && '10000 ₽'}
-                  </SummaryPrice>
-                </PriceSummary>
-
-                <InfoBox>
-                  <InfoIcon>💳</InfoIcon>
-                  <InfoText>
-                    После нажатия кнопки "Создать платеж" будет сформирована ссылка для оплаты
-                  </InfoText>
-                </InfoBox>
-
                 <ModalActions>
-                  <CancelButton onClick={() => setShowExtendModal(false)} disabled={isExtending}>
+                  <GrayButton onClick={() => setShowExtendModal(false)} disabled={isExtending}>
                     Отмена
-                  </CancelButton>
-                  <ConfirmButton onClick={handleCreatePaymentLink} disabled={isExtending}>
+                  </GrayButton>
+                  <DarkCyanButton onClick={handleCreatePaymentLink} disabled={isExtending}>
                     {isExtending ? 'Создание платежа...' : 'Создать платеж'}
-                  </ConfirmButton>
+                  </DarkCyanButton>
                 </ModalActions>
               </>
             ) : (
               <>
-                <InfoBox>
-                  <InfoIcon>✅</InfoIcon>
-                  <InfoText>
-                    Платежная ссылка создана! Нажмите на кнопку ниже, чтобы перейти к оплате.
-                  </InfoText>
-                </InfoBox>
-
                 <PaymentLinkContainer>
                   <PaymentLinkLabel>Ссылка для оплаты:</PaymentLinkLabel>
                   <PaymentLinkValue>{paymentUrl}</PaymentLinkValue>
@@ -838,13 +804,13 @@ const WhatsAppSettingsPage: React.FC = () => {
                 <InfoBox>
                   <InfoIcon>🔒</InfoIcon>
                   <InfoText>
-                    Вы будете перенаправлены на защищенную страницу оплаты. 
-                    Подписка будет активирована сразу после успешной оплаты.
+                    Вы будете перенаправлены на страницу оплаты. 
+                    Подписка будет активирована после оплаты и подтверждения транзакции банком.
                   </InfoText>
                 </InfoBox>
 
                 <ModalActions>
-                  <CancelButton onClick={() => {
+                  <GrayButton onClick={() => {
                     setShowExtendModal(false);
                     setPaymentUrl(null);
                     setExtendChannelId(null);
@@ -852,10 +818,10 @@ const WhatsAppSettingsPage: React.FC = () => {
                     setExtendChannelName('');
                   }}>
                     Закрыть
-                  </CancelButton>
-                  <PaymentButton onClick={handleGoToPayment}>
-                    💳 Перейти к оплате
-                  </PaymentButton>
+                  </GrayButton>
+                  <DarkCyanButton onClick={handleGoToPayment}>
+                    Перейти к оплате
+                  </DarkCyanButton>
                 </ModalActions>
               </>
             )}
@@ -1345,16 +1311,16 @@ const DaysSelector = styled.div`
 
 const DayOption = styled.div<{ selected: boolean; disabled: boolean }>`
   padding: 16px;
-  border: 2px solid ${props => props.selected ? '#1890ff' : '#e8e8e8'};
+  border: 2px solid ${props => props.selected ? '#128C7E' : '#e8e8e8'};
   border-radius: 8px;
   text-align: center;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  background: ${props => props.selected ? '#f0f9ff' : 'white'};
+  background: white;
   transition: all 0.2s;
   position: relative;
   
   &:hover {
-    border-color: ${props => props.disabled ? '#e8e8e8' : '#1890ff'};
+    border-color: ${props => props.disabled ? '#e8e8e8' : '#128C7E'};
     transform: ${props => props.disabled ? 'none' : 'translateY(-2px)'};
   }
 `;
@@ -1369,14 +1335,14 @@ const DaysValue = styled.div`
 const DaysPrice = styled.div`
   font-size: 20px;
   font-weight: bold;
-  color: #faad14;
+  color: #128C7E;
 `;
 
 const DaysDiscount = styled.div`
   position: absolute;
   top: -10px;
   right: -10px;
-  background: #52c41a;
+  background: #075E54;
   color: white;
   padding: 2px 6px;
   border-radius: 12px;
