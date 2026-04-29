@@ -4,6 +4,8 @@ import CustomTitle from '../../components/ui/Text/CustomTitle';
 import useWhatsApp from '../../api/hooks/useWhatsApp';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
+import GrayButton from '../../components/ui/Buttons/GrayButton';
+import CustomInput from '../../components/ui/fields/CustomInput';
 
 interface WhatsAppNumber {
   id: string;
@@ -46,13 +48,14 @@ const WhatsAppSettingsPage: React.FC = () => {
   const [selectedNumber, setSelectedNumber] = useState<WhatsAppNumber | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
-  const [isExtending, setIsExtending] = useState<string | null>(null);
+  const [isExtending, setIsExtending] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState<string | null>(null);
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [extendChannelId, setExtendChannelId] = useState<string | null>(null);
   const [extendDays, setExtendDays] = useState<number>(30);
   const [extendChannelName, setExtendChannelName] = useState<string>('');
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string>('');
   const [qrStatus, setQrStatus] = useState<string>('');
   const [newNumber, setNewNumber] = useState({
@@ -279,35 +282,42 @@ const WhatsAppSettingsPage: React.FC = () => {
   const handleExtendSubscription = async (channelId: string, channelName: string) => {
     setExtendChannelId(channelId);
     setExtendChannelName(channelName);
+    setPaymentUrl(null);
     setShowExtendModal(true);
   };
 
-  const handleConfirmExtend = async () => {
+  const handleCreatePaymentLink = async () => {
     if (!extendChannelId) return;
     
-    setIsExtending(extendChannelId);
+    setIsExtending(true);
     try {
-      const paymentUrl = await extendChannel(extendDays, extendChannelId);
+      const url = await extendChannel(1, extendChannelId);
       
-      if (paymentUrl) {
-        alert(`Переход к оплате продления на ${extendDays} дней`);
-        window.open(paymentUrl, '_blank');
-        setShowExtendModal(false);
-        setExtendChannelId(null);
-        setExtendDays(30);
-        setExtendChannelName('');
-        
-        setTimeout(() => {
-          loadChannels();
-        }, 3000);
+      if (url) {
+        setPaymentUrl(url);
       } else {
         alert('Ошибка при создании платежной ссылки. Попробуйте позже.');
       }
     } catch (error) {
       console.error('Error extending channel:', error);
-      alert('Произошла ошибка при продлении подписки');
+      alert('Произошла ошибка при создании платежной ссылки');
     } finally {
-      setIsExtending(null);
+      setIsExtending(false);
+    }
+  };
+
+  const handleGoToPayment = () => {
+    if (paymentUrl) {
+      window.open(paymentUrl, '_blank');
+      setShowExtendModal(false);
+      setExtendChannelId(null);
+      setExtendDays(30);
+      setExtendChannelName('');
+      setPaymentUrl(null);
+      
+      setTimeout(() => {
+        loadChannels();
+      }, 3000);
     }
   };
 
@@ -438,39 +448,10 @@ const WhatsAppSettingsPage: React.FC = () => {
             + Добавить WhatsApp
           </DarkCyanButton>
         </HeaderTop>
-        <Description>
-          Управление подключенными WhatsApp номерами. Стоимость подключения одного номера - 1000 ₽/месяц
-        </Description>
       </Header>
-
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{activeNumbersCount}</StatValue>
-          <StatLabel>Активных номеров</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{totalCost} ₽</StatValue>
-          <StatLabel>В месяц</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{whatsAppNumbers.length}</StatValue>
-          <StatLabel>Всего номеров</StatLabel>
-        </StatCard>
-        {expiredCount > 0 && (
-          <StatCard warning>
-            <StatValue warning>{expiredCount}</StatValue>
-            <StatLabel>С истекшей подпиской</StatLabel>
-          </StatCard>
-        )}
-        <StatCard>
-          <StatValue>{employeeList.length}</StatValue>
-          <StatLabel>Сотрудников</StatLabel>
-        </StatCard>
-      </StatsGrid>
 
       {whatsAppNumbers.length === 0 ? (
         <EmptyState>
-          <EmptyIcon>📱</EmptyIcon>
           <EmptyTitle>Нет WhatsApp каналов</EmptyTitle>
           <EmptyDescription>
             У вас пока нет подключенных WhatsApp номеров. Нажмите кнопку "Добавить WhatsApp", чтобы начать.
@@ -486,7 +467,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                   <NumberInfo>
                     <NumberName>
                       {number.name}
-                      {number.isMain && <MainBadge>Основной</MainBadge>}
+                      {number.isMain && <MainBadge>Текущий</MainBadge>}
                       {number.stopped && <StoppedBadge>Остановлен</StoppedBadge>}
                       {number.blocked && <BlockedBadge>Заблокирован</BlockedBadge>}
                       {number.isSubscriptionExpired && <ExpiredBadge>Подписка истекла</ExpiredBadge>}
@@ -514,7 +495,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                       )}
                     </EmployeesList>
                     {!number.isSubscriptionExpired && !number.stopped && !number.blocked && (
-                      <EditButton onClick={() => {
+                      <GrayButton onClick={() => {
                         setSelectedNumber({
                           ...number,
                           assignedToNames: employeeNames
@@ -522,7 +503,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                         setShowAssignModal(true);
                       }}>
                         Назначить
-                      </EditButton>
+                      </GrayButton>
                     )}
                   </InfoRow>
 
@@ -556,39 +537,38 @@ const WhatsAppSettingsPage: React.FC = () => {
                 </CardContent>
 
                 <CardActions>
-                  <LoginButton 
-                    onClick={() => handleLogin(number.id, number.name)}
-                    isLoggingIn={isLoggingIn === number.id}
-                    disabled={isLoggingIn === number.id || isLoggingOut === number.id}
-                  >
-                    {isLoggingIn === number.id ? 'Получение QR...' : '📱 Войти по QR'}
-                  </LoginButton>
-                  
-                  <LogoutButton 
-                    onClick={() => handleLogout(number.id, number.name)}
-                    isLoggingOut={isLoggingOut === number.id}
-                    disabled={isLoggingIn === number.id || isLoggingOut === number.id}
-                  >
-                    {isLoggingOut === number.id ? 'Выход...' : '🚪 Выйти'}
-                  </LogoutButton>
-                  
-                  <ExtendButton 
+                  {!number.isSubscriptionExpired && (
+                    <>
+                      <DarkCyanButton
+                        onClick={() => handleLogin(number.id, number.name)}
+                        isLoggingIn={isLoggingIn === number.id}
+                        disabled={isLoggingIn === number.id || isLoggingOut === number.id}
+                      >
+                        {isLoggingIn === number.id ? 'Получение QR...' : '📱 Войти по QR'}
+                      </DarkCyanButton>
+                      <GrayButton 
+                        onClick={() => handleLogout(number.id, number.name)}
+                        disabled={isLoggingIn === number.id || isLoggingOut === number.id}
+                      >
+                        {isLoggingOut === number.id ? 'Выход...' : 'Выйти'}
+                      </GrayButton>
+                    </>
+                  )}
+                  <DarkCyanButton 
                     onClick={() => handleExtendSubscription(number.id, number.name)}
-                    isExtending={isExtending === number.id}
-                    disabled={isExtending === number.id}
                   >
-                    {isExtending === number.id ? 'Обработка...' : '💰 Продлить'}
-                  </ExtendButton>
+                    Продлить
+                  </DarkCyanButton>
                   
                   {!number.isSubscriptionExpired && !number.stopped && !number.blocked && (
-                    <ConnectButton onClick={() => handleSetMainNumber(number.id)}>
+                    <DarkCyanButton onClick={() => handleSetMainNumber(number.id)}>
                       Сделать основным
-                    </ConnectButton>
+                    </DarkCyanButton>
                   )}
                   
-                  <DangerButton onClick={() => handleDisconnectNumber(number.id)}>
+                  <GrayButton onClick={() => handleDisconnectNumber(number.id)}>
                     Удалить
-                  </DangerButton>
+                  </GrayButton>
                 </CardActions>
               </NumberCard>
             );
@@ -642,7 +622,7 @@ const WhatsAppSettingsPage: React.FC = () => {
         </ModalOverlay>
       )}
 
-      {/* Modal для добавления канала */}
+      {/* Modal для добавления канала - обновлен с использованием EmployeesGrid */}
       {showAddModal && (
         <ModalOverlay onClick={() => !isCreating && setShowAddModal(false)}>
           <ModalContent onClick={e => e.stopPropagation()}>
@@ -652,44 +632,51 @@ const WhatsAppSettingsPage: React.FC = () => {
             </ModalHeader>
             
             <FormGroup>
-              <Label>Название канала *</Label>
-              <Input 
+              <CustomInput
                 type="text"
                 value={newNumber.name}
                 onChange={e => setNewNumber({...newNumber, name: e.target.value})}
-                placeholder="Например: Отдел продаж"
+                placeholder="Название канала"
                 disabled={isCreating}
                 autoFocus
               />
-              <Hint>Введите название для нового WhatsApp канала</Hint>
             </FormGroup>
 
             <FormGroup>
-              <Label>Доступ сотрудникам *</Label>
-              <Select 
-                multiple
-                value={newNumber.assignedTo.map(String)}
-                onChange={e => {
-                  const values = Array.from(e.target.selectedOptions, option => Number(option.value));
-                  setNewNumber({...newNumber, assignedTo: values});
-                }}
-                disabled={isCreating || employeesLoading}
-              >
-                {employeeList.map(emp => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.fullName} - {emp.role}
-                  </option>
-                ))}
-              </Select>
-              <Hint>Hold Ctrl (Cmd) для выбора нескольких сотрудников</Hint>
+              <Label>Доступ сотрудникам</Label>
+              {employeesLoading ? (
+                <LoadingText>Загрузка сотрудников...</LoadingText>
+              ) : (
+                <EmployeesGrid>
+                  {employeeList.map(emp => (
+                    <EmployeeCheckbox 
+                      key={emp.id}
+                      active={newNumber.assignedTo.includes(emp.id)}
+                      onClick={() => {
+                        setNewNumber({
+                          ...newNumber,
+                          assignedTo: newNumber.assignedTo.includes(emp.id)
+                            ? newNumber.assignedTo.filter(id => id !== emp.id)
+                            : [...newNumber.assignedTo, emp.id]
+                        });
+                      }}
+                    >
+                      <CheckIcon active={newNumber.assignedTo.includes(emp.id)}>
+                        {newNumber.assignedTo.includes(emp.id) && '✓'}
+                      </CheckIcon>
+                      <EmployeeInfo>
+                        <EmployeeName>{emp.fullName}</EmployeeName>
+                        <EmployeePosition>{emp.role}</EmployeePosition>
+                      </EmployeeInfo>
+                    </EmployeeCheckbox>
+                  ))}
+                  {employeeList.length === 0 && (
+                    <EmptyText>Нет доступных сотрудников</EmptyText>
+                  )}
+                </EmployeesGrid>
+              )}
+              <Hint>Нажмите на сотрудника для выбора/снятия выбора</Hint>
             </FormGroup>
-
-            <InfoBox>
-              <InfoIcon>📱</InfoIcon>
-              <InfoText>
-                После создания канала вы сможете подключить к нему WhatsApp номер через кнопку "Войти по QR"
-              </InfoText>
-            </InfoBox>
 
             <ModalActions>
               <CancelButton onClick={() => !isCreating && setShowAddModal(false)} disabled={isCreating}>
@@ -713,7 +700,6 @@ const WhatsAppSettingsPage: React.FC = () => {
             </ModalHeader>
 
             <FormGroup>
-              <Label>Выберите сотрудников, которые будут использовать этот канал</Label>
               {employeesLoading ? (
                 <LoadingText>Загрузка сотрудников...</LoadingText>
               ) : (
@@ -747,20 +733,13 @@ const WhatsAppSettingsPage: React.FC = () => {
               )}
             </FormGroup>
 
-            <InfoBox>
-              <InfoIcon>💡</InfoIcon>
-              <InfoText>
-                Назначенные сотрудники смогут отправлять и получать сообщения от лица этого WhatsApp канала
-              </InfoText>
-            </InfoBox>
-
             <ModalActions>
-              <CancelButton onClick={() => !isAssigning && setShowAssignModal(false)} disabled={isAssigning}>
+              <GrayButton onClick={() => !isAssigning && setShowAssignModal(false)} disabled={isAssigning}>
                 Отмена
-              </CancelButton>
-              <ConfirmButton onClick={handleAssignEmployees} disabled={isAssigning}>
+              </GrayButton>
+              <DarkCyanButton onClick={handleAssignEmployees} disabled={isAssigning}>
                 {isAssigning ? 'Сохранение...' : 'Сохранить'}
-              </ConfirmButton>
+              </DarkCyanButton>
             </ModalActions>
           </ModalContent>
         </ModalOverlay>
@@ -768,78 +747,118 @@ const WhatsAppSettingsPage: React.FC = () => {
 
       {/* Modal для продления подписки */}
       {showExtendModal && extendChannelId && (
-        <ModalOverlay onClick={() => !isExtending && setShowExtendModal(false)}>
+        <ModalOverlay onClick={() => !isExtending && !paymentUrl && setShowExtendModal(false)}>
           <ModalContent onClick={e => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Продление подписки</ModalTitle>
-              <CloseButton onClick={() => !isExtending && setShowExtendModal(false)}>×</CloseButton>
+              <CloseButton onClick={() => !isExtending && !paymentUrl && setShowExtendModal(false)}>×</CloseButton>
             </ModalHeader>
 
-            <InfoBox>
-              <InfoIcon>💰</InfoIcon>
-              <InfoText>
-                Продление подписки для канала <strong>"{extendChannelName}"</strong>
-              </InfoText>
-            </InfoBox>
+            {!paymentUrl ? (
+              <>
+                <InfoBox>
+                  <InfoIcon>💰</InfoIcon>
+                  <InfoText>
+                    Продление подписки для канала <strong>"{extendChannelName}"</strong>
+                  </InfoText>
+                </InfoBox>
 
-            <FormGroup>
-              <Label>Выберите срок продления:</Label>
-              <DaysSelector>
-                <DayOption 
-                  selected={extendDays === 30}
-                  onClick={() => setExtendDays(30)}
-                  disabled={isExtending !== null}
-                >
-                  <DaysValue>30 дней</DaysValue>
-                  <DaysPrice>1000 ₽</DaysPrice>
-                </DayOption>
-                <DayOption 
-                  selected={extendDays === 90}
-                  onClick={() => setExtendDays(90)}
-                  disabled={isExtending !== null}
-                >
-                  <DaysValue>90 дней</DaysValue>
-                  <DaysPrice>2700 ₽</DaysPrice>
-                  <DaysDiscount>-10%</DaysDiscount>
-                </DayOption>
-                <DayOption 
-                  selected={extendDays === 365}
-                  onClick={() => setExtendDays(365)}
-                  disabled={isExtending !== null}
-                >
-                  <DaysValue>365 дней</DaysValue>
-                  <DaysPrice>10000 ₽</DaysPrice>
-                  <DaysDiscount>-15%</DaysDiscount>
-                </DayOption>
-              </DaysSelector>
-              <Hint>Выберите удобный для вас срок подписки</Hint>
-            </FormGroup>
+                <FormGroup>
+                  <Label>Выберите срок продления:</Label>
+                  <DaysSelector>
+                    <DayOption 
+                      selected={extendDays === 30}
+                      onClick={() => setExtendDays(30)}
+                      disabled={isExtending}
+                    >
+                      <DaysValue>30 дней</DaysValue>
+                      <DaysPrice>1000 ₽</DaysPrice>
+                    </DayOption>
+                    <DayOption 
+                      selected={extendDays === 90}
+                      onClick={() => setExtendDays(90)}
+                      disabled={isExtending}
+                    >
+                      <DaysValue>90 дней</DaysValue>
+                      <DaysPrice>2700 ₽</DaysPrice>
+                      <DaysDiscount>-10%</DaysDiscount>
+                    </DayOption>
+                    <DayOption 
+                      selected={extendDays === 365}
+                      onClick={() => setExtendDays(365)}
+                      disabled={isExtending}
+                    >
+                      <DaysValue>365 дней</DaysValue>
+                      <DaysPrice>10000 ₽</DaysPrice>
+                      <DaysDiscount>-15%</DaysDiscount>
+                    </DayOption>
+                  </DaysSelector>
+                  <Hint>Выберите удобный для вас срок подписки</Hint>
+                </FormGroup>
 
-            <PriceSummary>
-              <SummaryText>Итого к оплате:</SummaryText>
-              <SummaryPrice>
-                {extendDays === 30 && '1000 ₽'}
-                {extendDays === 90 && '2700 ₽'}
-                {extendDays === 365 && '10000 ₽'}
-              </SummaryPrice>
-            </PriceSummary>
+                <PriceSummary>
+                  <SummaryText>Итого к оплате:</SummaryText>
+                  <SummaryPrice>
+                    {extendDays === 30 && '1000 ₽'}
+                    {extendDays === 90 && '2700 ₽'}
+                    {extendDays === 365 && '10000 ₽'}
+                  </SummaryPrice>
+                </PriceSummary>
 
-            <InfoBox>
-              <InfoIcon>💳</InfoIcon>
-              <InfoText>
-                После нажатия кнопки "Перейти к оплате" вы будете перенаправлены на защищенную страницу оплаты.
-                Подписка будет активирована сразу после успешной оплаты.
-              </InfoText>
-            </InfoBox>
+                <InfoBox>
+                  <InfoIcon>💳</InfoIcon>
+                  <InfoText>
+                    После нажатия кнопки "Создать платеж" будет сформирована ссылка для оплаты
+                  </InfoText>
+                </InfoBox>
 
-            <ModalActions>
-              <CancelButton onClick={() => !isExtending && setShowExtendModal(false)} disabled={isExtending !== null}>
-                Отмена
-              </CancelButton>
-              <ConfirmButton onClick={handleConfirmExtend} disabled={isExtending !== null}>
-                {isExtending !== null ? 'Обработка...' : 'Перейти к оплате'}
-              </ConfirmButton>
-            </ModalActions>
+                <ModalActions>
+                  <CancelButton onClick={() => setShowExtendModal(false)} disabled={isExtending}>
+                    Отмена
+                  </CancelButton>
+                  <ConfirmButton onClick={handleCreatePaymentLink} disabled={isExtending}>
+                    {isExtending ? 'Создание платежа...' : 'Создать платеж'}
+                  </ConfirmButton>
+                </ModalActions>
+              </>
+            ) : (
+              <>
+                <InfoBox>
+                  <InfoIcon>✅</InfoIcon>
+                  <InfoText>
+                    Платежная ссылка создана! Нажмите на кнопку ниже, чтобы перейти к оплате.
+                  </InfoText>
+                </InfoBox>
+
+                <PaymentLinkContainer>
+                  <PaymentLinkLabel>Ссылка для оплаты:</PaymentLinkLabel>
+                  <PaymentLinkValue>{paymentUrl}</PaymentLinkValue>
+                </PaymentLinkContainer>
+
+                <InfoBox>
+                  <InfoIcon>🔒</InfoIcon>
+                  <InfoText>
+                    Вы будете перенаправлены на защищенную страницу оплаты. 
+                    Подписка будет активирована сразу после успешной оплаты.
+                  </InfoText>
+                </InfoBox>
+
+                <ModalActions>
+                  <CancelButton onClick={() => {
+                    setShowExtendModal(false);
+                    setPaymentUrl(null);
+                    setExtendChannelId(null);
+                    setExtendDays(30);
+                    setExtendChannelName('');
+                  }}>
+                    Закрыть
+                  </CancelButton>
+                  <PaymentButton onClick={handleGoToPayment}>
+                    💳 Перейти к оплате
+                  </PaymentButton>
+                </ModalActions>
+              </>
+            )}
           </ModalContent>
         </ModalOverlay>
       )}
@@ -1100,79 +1119,6 @@ const CardActions = styled.div`
   flex-wrap: wrap;
 `;
 
-const LoginButton = styled.button<{ isLoggingIn?: boolean }>`
-  padding: 6px 16px;
-  background: ${props => props.isLoggingIn ? '#d9d9d9' : '#52c41a'};
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: ${props => props.isLoggingIn ? 'not-allowed' : 'pointer'};
-  font-size: 13px;
-  font-weight: 500;
-  
-  &:hover {
-    background: ${props => props.isLoggingIn ? '#d9d9d9' : '#73d13d'};
-  }
-`;
-
-const LogoutButton = styled.button<{ isLoggingOut?: boolean }>`
-  padding: 6px 16px;
-  background: ${props => props.isLoggingOut ? '#d9d9d9' : '#ff4d4f'};
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: ${props => props.isLoggingOut ? 'not-allowed' : 'pointer'};
-  font-size: 13px;
-  font-weight: 500;
-  
-  &:hover {
-    background: ${props => props.isLoggingOut ? '#d9d9d9' : '#ff7875'};
-  }
-`;
-
-const ConnectButton = styled.button`
-  padding: 6px 16px;
-  background: #1890ff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  
-  &:hover {
-    background: #40a9ff;
-  }
-`;
-
-const ExtendButton = styled.button<{ isExtending?: boolean }>`
-  padding: 6px 16px;
-  background: ${props => props.isExtending ? '#d9d9d9' : '#faad14'};
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: ${props => props.isExtending ? 'not-allowed' : 'pointer'};
-  font-size: 13px;
-  font-weight: 500;
-  
-  &:hover {
-    background: ${props => props.isExtending ? '#d9d9d9' : '#ffc53d'};
-  }
-`;
-
-const DangerButton = styled.button`
-  padding: 6px 16px;
-  background: #8c8c8c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  
-  &:hover {
-    background: #bfbfbf;
-  }
-`;
-
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -1191,7 +1137,6 @@ const ModalContent = styled.div`
   border-radius: 12px;
   width: 550px;
   max-width: 90%;
-  max-height: 80vh;
   overflow-y: auto;
   padding: 24px;
 `;
@@ -1200,7 +1145,6 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 `;
 
 const ModalTitle = styled.h3`
@@ -1230,38 +1174,7 @@ const Label = styled.label`
   margin-bottom: 8px;
   font-weight: 500;
   color: #333;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 14px;
-  
-  &:focus {
-    outline: none;
-    border-color: #1890ff;
-  }
-  
-  &:disabled {
-    background: #f5f5f5;
-    cursor: not-allowed;
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 14px;
-  min-height: 120px;
-  
-  &:disabled {
-    background: #f5f5f5;
-    cursor: not-allowed;
-  }
+  text-align: left;
 `;
 
 const Hint = styled.div`
@@ -1319,6 +1232,20 @@ const ConfirmButton = styled.button`
   }
 `;
 
+const PaymentButton = styled.button`
+  padding: 8px 20px;
+  background: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  
+  &:hover {
+    background: #73d13d;
+  }
+`;
+
 const EmployeesGrid = styled.div`
   display: flex;
   flex-direction: column;
@@ -1332,27 +1259,26 @@ const EmployeeCheckbox = styled.div<{ active: boolean }>`
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border: 1px solid ${props => props.active ? '#1890ff' : '#e8e8e8'};
+  border: 1px solid ${props => props.active ? 'rgba(0, 125, 136, 1)' : '#e8e8e8'};
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  background: ${props => props.active ? '#f0f9ff' : 'white'};
-  
+  background: white;
+
   &:hover {
-    border-color: #1890ff;
-    background: #f0f9ff;
+    border-color: rgba(0, 125, 136, 1);
   }
 `;
 
 const CheckIcon = styled.div<{ active: boolean }>`
   width: 20px;
   height: 20px;
-  border: 2px solid ${props => props.active ? '#1890ff' : '#d9d9d9'};
+  border: 2px solid ${props => props.active ? 'rgba(0, 125, 136, 1)' : '#d9d9d9'};
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.active ? '#1890ff' : 'transparent'};
+  color: ${props => props.active ? 'rgba(0, 125, 136, 1)' : 'transparent'};
   font-weight: bold;
 `;
 
@@ -1372,8 +1298,7 @@ const EmployeePosition = styled.div`
 `;
 
 const InfoBox = styled.div`
-  background: #e6f7ff;
-  border: 1px solid #91d5ff;
+  border: 1px solid rgba(0, 125, 136, 1);
   border-radius: 8px;
   padding: 12px 16px;
   display: flex;
@@ -1388,7 +1313,7 @@ const InfoIcon = styled.div`
 const InfoText = styled.div`
   flex: 1;
   font-size: 13px;
-  color: #0050b3;
+  color: black;
   line-height: 1.5;
 `;
 
@@ -1398,11 +1323,6 @@ const EmptyState = styled.div`
   background: white;
   border-radius: 12px;
   margin-top: 20px;
-`;
-
-const EmptyIcon = styled.div`
-  font-size: 64px;
-  margin-bottom: 20px;
 `;
 
 const EmptyTitle = styled.h3`
@@ -1485,6 +1405,26 @@ const SummaryPrice = styled.div`
   color: #faad14;
 `;
 
+const PaymentLinkContainer = styled.div`
+  margin: 20px 0;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  word-break: break-all;
+`;
+
+const PaymentLinkLabel = styled.div`
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+`;
+
+const PaymentLinkValue = styled.div`
+  font-size: 12px;
+  color: #1890ff;
+  font-family: monospace;
+`;
+
 const QRContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -1514,7 +1454,7 @@ const QRInstruction = styled.div`
 const StepIcon = styled.div`
   width: 28px;
   height: 28px;
-  background: #1890ff;
+  background: rgba(102, 177, 184, 1);
   color: white;
   border-radius: 50%;
   display: flex;

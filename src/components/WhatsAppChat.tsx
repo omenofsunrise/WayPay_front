@@ -51,12 +51,12 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   const formatPhoneForDisplay = (phone: string): string => {
     const digits = phone.replace(/\D/g, '');
     if (digits.length === 11 && digits.startsWith('7')) {
-      return `+${digits.slice(0, 1)} ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`;
+      return `${digits.slice(0, 1)} ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`;
     }
     if (digits.length === 10) {
       return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8, 10)}`;
     }
-    return `+${digits}`;
+    return `${digits}`;
   };
 
   const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
@@ -326,11 +326,6 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             <EmptySubtext>
               Номер {displayPhoneNumber} не зарегистрирован в WhatsApp
             </EmptySubtext>
-            {isConnected && (
-              <SendFirstMessageButton onClick={handleSendMessage}>
-                Отправить первое сообщение
-              </SendFirstMessageButton>
-            )}
           </EmptyState>
         )}
 
@@ -433,8 +428,8 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             {isUploading ? (
               <Spinner size="small" />
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="#fff"/>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L15 9M22 2L15 9M22 2L11 13M22 2L22 13L15 9M22 2L2 9L11 13M11 13L2 21L11 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
               </svg>
             )}
           </SendButton>
@@ -626,9 +621,6 @@ const MessageInput = styled.input`
 const SendButton = styled.button`
   background-color: #075E54;
   border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -66,7 +66,6 @@ export interface ChatHistoryResponse {
   canLoadMore: boolean;
 }
 
-// Типы контента сообщений
 export interface InteractiveButton {
   type: string;
   title: string;
@@ -77,7 +76,6 @@ export interface InteractiveButton {
   merchantUrl: string;
 }
 
-// ИСПРАВЛЕНО: убран MediaContent, все поля на верхнем уровне
 export interface ImageContent {
   id: string;
   link: string;
@@ -94,7 +92,6 @@ export interface ImageContent {
   buttons: InteractiveButton[];
 }
 
-// ИСПРАВЛЕНО: убран MediaContent, все поля на верхнем уровне
 export interface VideoContent {
   id: string;
   link: string;
@@ -289,6 +286,7 @@ export interface ChannelResponse {
   name: string;
   projectId: string;
   employeeIds: number[];
+  status: string;
 }
 
 export interface ChannelsResponse {
