@@ -182,7 +182,7 @@ const WhatsAppSettingsPage: React.FC = () => {
         
         pollConnectionStatus(numberId);
       } else {
-        alert('Необходимо продлить подписку у канала для подключения номера!');
+        alert('Попробуйте снова через 10 секунд!');
       }
     } catch (error) {
       console.error('Error getting QR:', error);
