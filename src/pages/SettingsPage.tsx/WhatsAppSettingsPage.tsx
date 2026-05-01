@@ -6,24 +6,7 @@ import { useEmployee } from '../../api/hooks/useEmployee';
 import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
 import GrayButton from '../../components/ui/Buttons/GrayButton';
 import CustomInput from '../../components/ui/fields/CustomInput';
-
-interface WhatsAppNumber {
-  id: string;
-  phoneNumber: string;
-  name: string;
-  isActive: boolean;
-  isMain: boolean;
-  assignedTo: number[];
-  assignedToNames: string[];
-  status: 'connected' | 'connecting' | 'disconnected' | 'error' | 'expired';
-  lastMessage: string;
-  qrCode?: string;
-  subscriptionEndDate: string;
-  pricePerMonth: number;
-  blocked: boolean;
-  stopped: boolean;
-  isSubscriptionExpired: boolean;
-}
+import type { ChannelResponse } from '../../api/types/whatsapp';
 
 const WhatsAppSettingsPage: React.FC = () => {
   const { 
@@ -41,11 +24,11 @@ const WhatsAppSettingsPage: React.FC = () => {
 
   const { employees, fetchEmployees, employeesLoading } = useEmployee();
 
-  const [whatsAppNumbers, setWhatsAppNumbers] = useState<WhatsAppNumber[]>([]);
+  const [whatsAppNumbers, setWhatsAppNumbers] = useState<ChannelResponse[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [selectedNumber, setSelectedNumber] = useState<WhatsAppNumber | null>(null);
+  const [selectedNumber, setSelectedNumber] = useState<ChannelResponse | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
@@ -84,78 +67,27 @@ const WhatsAppSettingsPage: React.FC = () => {
     return expiryDate < today;
   };
 
-  const getChannelStatus = (channel: any): { status: WhatsAppNumber['status'], lastMessage: string, isActive: boolean } => {
-    const expired = isSubscriptionExpired(channel.activeTill);
-    
-    if (expired) {
-      return {
-        status: 'expired',
-        lastMessage: '❌ Необходимо оплатить подписку',
-        isActive: false
-      };
-    }
-    
-    if (channel.stopped) {
-      return {
-        status: 'disconnected',
-        lastMessage: '⏸ Остановлен',
-        isActive: false
-      };
-    }
-    
-    if (channel.blocked) {
-      return {
-        status: 'error',
-        lastMessage: '🚫 Заблокирован',
-        isActive: false
-      };
-    }
-    
-    return {
-      status: 'connected',
-      lastMessage: '✅ Активен и работает',
-      isActive: true
-    };
-  };
-
   const loadChannels = async () => {
     const result = await getChannels();
     if (result && result.length > 0) {
-      const convertedNumbers: WhatsAppNumber[] = result.map((channel, index) => {
-        const expired = isSubscriptionExpired(channel.activeTill);
-        const { status, lastMessage, isActive } = getChannelStatus(channel);
-        
-        return {
-          id: channel.id,
-          phoneNumber: channel.name || `Канал ${index + 1}`,
-          name: channel.name || `Канал ${index + 1}`,
-          isActive: isActive && !expired,
-          isMain: index === 0,
-          assignedTo: channel.employeeIds || [],
-          assignedToNames: [],
-          status: status,
-          lastMessage: lastMessage,
-          subscriptionEndDate: channel.activeTill || '',
-          pricePerMonth: 1000,
-          blocked: channel.blocked || false,
-          stopped: channel.stopped || false,
-          isSubscriptionExpired: expired
-        };
-      });
-      setWhatsAppNumbers(convertedNumbers);
+      setWhatsAppNumbers(result);
     } else {
       setWhatsAppNumbers([]);
     }
   };
 
   // Проверка можно ли выполнить действие с каналом
-  const canPerformAction = (number: WhatsAppNumber): boolean => {
+  const canPerformAction = (number: ChannelResponse): boolean => {
     if (number.stopped) {
       alert('Невозможно выполнить действие: канал остановлен');
       return false;
     }
     if (number.blocked) {
       alert('Невозможно выполнить действие: канал заблокирован');
+      return false;
+    }
+    if (isSubscriptionExpired(number.activeTill)) {
+      alert('Невозможно выполнить действие: подписка истекла. Необходимо продлить подписку');
       return false;
     }
     return true;
@@ -261,7 +193,7 @@ const WhatsAppSettingsPage: React.FC = () => {
 
   const handleDisconnectNumber = async (numberId: string) => {
     const number = whatsAppNumbers.find(n => n.id === numberId);
-    if (number && number.isSubscriptionExpired) {
+    if (number && isSubscriptionExpired(number.activeTill)) {
       if (!window.confirm('У этого канала истекла подписка. Удалить канал?')) {
         return;
       }
@@ -291,7 +223,7 @@ const WhatsAppSettingsPage: React.FC = () => {
     
     setIsExtending(true);
     try {
-      const url = await extendChannel(1, extendChannelId);
+      const url = await extendChannel(extendDays, extendChannelId);
       
       if (url) {
         setPaymentUrl(url);
@@ -363,7 +295,7 @@ const WhatsAppSettingsPage: React.FC = () => {
 
     setIsAssigning(true);
     try {
-      const success = await setChannelEmployees(selectedNumber.id, selectedNumber.assignedTo);
+      const success = await setChannelEmployees(selectedNumber.id, selectedNumber.employeeIds);
       
       if (success) {
         alert('Сотрудники успешно назначены!');
@@ -399,13 +331,6 @@ const WhatsAppSettingsPage: React.FC = () => {
     }
   };
 
-  const totalCost = whatsAppNumbers
-    .filter(num => num.isActive && num.status === 'connected')
-    .reduce((sum, num) => sum + num.pricePerMonth, 0);
-
-  const activeNumbersCount = whatsAppNumbers.filter(num => num.isActive && num.status === 'connected').length;
-  const expiredCount = whatsAppNumbers.filter(num => num.isSubscriptionExpired).length;
-
   const employeeList = employees?.items || [];
 
   const getEmployeeNames = (employeeIds: number[]): string[] => {
@@ -426,6 +351,30 @@ const WhatsAppSettingsPage: React.FC = () => {
     
     const formattedDate = date.toLocaleDateString('ru-RU');
     return isExpired ? `${formattedDate} (истекла)` : formattedDate;
+  };
+
+  // Определяем, показывать ли кнопку подключения
+  const shouldShowConnectButton = (channel: ChannelResponse): boolean => {
+    const subscriptionExpired = isSubscriptionExpired(channel.activeTill);
+    if (subscriptionExpired) return false;
+    
+    // Показываем кнопку "Подключить" если статус Disconnected и не истекла подписка
+    return channel.status === 'Disconnected' && !channel.stopped && !channel.blocked;
+  };
+
+  // Определяем, показывать ли кнопку выхода
+  const shouldShowLogoutButton = (channel: ChannelResponse): boolean => {
+    const subscriptionExpired = isSubscriptionExpired(channel.activeTill);
+    if (subscriptionExpired) return false;
+    
+    // Показываем кнопку "Выйти" если статус Connected и не истекла подписка
+    return channel.status === 'Connected' && !channel.stopped && !channel.blocked;
+  };
+
+  // Определяем, активен ли канал для управления
+  const isChannelActive = (channel: ChannelResponse): boolean => {
+    const subscriptionExpired = isSubscriptionExpired(channel.activeTill);
+    return !subscriptionExpired && !channel.stopped && !channel.blocked;
   };
 
   if (isLoading && whatsAppNumbers.length === 0) {
@@ -460,27 +409,24 @@ const WhatsAppSettingsPage: React.FC = () => {
       ) : (
         <NumbersList>
           {whatsAppNumbers.map(number => {
-            const employeeNames = getEmployeeNames(number.assignedTo);
+            const employeeNames = getEmployeeNames(number.employeeIds);
+            const subscriptionExpired = isSubscriptionExpired(number.activeTill);
+            const channelActive = isChannelActive(number);
+            
             return (
-              <NumberCard key={number.id} isActive={number.isActive} isExpired={number.isSubscriptionExpired}>
+              <NumberCard key={number.id} isActive={!subscriptionExpired} isExpired={subscriptionExpired}>
                 <CardHeader>
                   <NumberInfo>
                     <NumberName>
                       {number.name}
-                      {number.isMain && <MainBadge>Текущий</MainBadge>}
+                      {number.isCurrent && <MainBadge>Ваш текущий</MainBadge>}
                       {number.stopped && <StoppedBadge>Остановлен</StoppedBadge>}
                       {number.blocked && <BlockedBadge>Заблокирован</BlockedBadge>}
-                      {number.isSubscriptionExpired && <ExpiredBadge>Подписка истекла</ExpiredBadge>}
+                      {subscriptionExpired && <ExpiredBadge>Подписка истекла</ExpiredBadge>}
+                      {number.status === 'Connected' && <ConnectedBadge>Подключен</ConnectedBadge>}
+                      {number.status === 'Disconnected' && !subscriptionExpired && <DisconnectedBadge>Не подключен</DisconnectedBadge>}
                     </NumberName>
-                    <PhoneNumber>{number.phoneNumber}</PhoneNumber>
                   </NumberInfo>
-                  <StatusBadge status={number.status}>
-                    {number.status === 'connected' && '✓ Подключен'}
-                    {number.status === 'connecting' && '⏳ Подключение...'}
-                    {number.status === 'disconnected' && '○ Не подключен'}
-                    {number.status === 'error' && '⚠ Ошибка'}
-                    {number.status === 'expired' && '⌛ Подписка истекла'}
-                  </StatusBadge>
                 </CardHeader>
 
                 <CardContent>
@@ -494,11 +440,10 @@ const WhatsAppSettingsPage: React.FC = () => {
                         <EmptyText>Не назначен</EmptyText>
                       )}
                     </EmployeesList>
-                    {!number.isSubscriptionExpired && !number.stopped && !number.blocked && (
+                    {channelActive && (
                       <GrayButton onClick={() => {
                         setSelectedNumber({
-                          ...number,
-                          assignedToNames: employeeNames
+                          ...number
                         });
                         setShowAssignModal(true);
                       }}>
@@ -507,65 +452,52 @@ const WhatsAppSettingsPage: React.FC = () => {
                     )}
                   </InfoRow>
 
-                  {number.subscriptionEndDate && (
+                  {number.activeTill && (
                     <InfoRow>
                       <InfoLabel>Подписка до:</InfoLabel>
-                      <InfoValue expired={number.isSubscriptionExpired}>
-                        {formatExpiryDate(number.subscriptionEndDate)}
+                      <InfoValue expired={subscriptionExpired}>
+                        {formatExpiryDate(number.activeTill)}
                       </InfoValue>
                     </InfoRow>
-                  )}
-
-                  <InfoRow>
-                    <InfoLabel>Статус:</InfoLabel>
-                    <InfoValue>{number.lastMessage}</InfoValue>
-                  </InfoRow>
-
-                  <InfoRow>
-                    <InfoLabel>Стоимость:</InfoLabel>
-                    <InfoValue>{number.pricePerMonth} ₽/месяц</InfoValue>
-                  </InfoRow>
-
-                  {number.isSubscriptionExpired && (
-                    <WarningRow>
-                      <WarningIcon>⚠️</WarningIcon>
-                      <WarningText>
-                        Для продолжения работы канала необходимо продлить подписку
-                      </WarningText>
-                    </WarningRow>
                   )}
                 </CardContent>
 
                 <CardActions>
-                  {!number.isSubscriptionExpired && (
-                    <>
-                      <DarkCyanButton
-                        onClick={() => handleLogin(number.id, number.name)}
-                        isLoggingIn={isLoggingIn === number.id}
-                        disabled={isLoggingIn === number.id || isLoggingOut === number.id}
-                      >
-                        {isLoggingIn === number.id ? 'Получение QR...' : '📱 Войти по QR'}
-                      </DarkCyanButton>
-                      <GrayButton 
-                        onClick={() => handleLogout(number.id, number.name)}
-                        disabled={isLoggingIn === number.id || isLoggingOut === number.id}
-                      >
-                        {isLoggingOut === number.id ? 'Выход...' : 'Выйти'}
-                      </GrayButton>
-                    </>
+                  {/* Кнопка подключения - показываем только если статус Disconnected и подписка активна */}
+                  {shouldShowConnectButton(number) && (
+                    <DarkCyanButton
+                      onClick={() => handleLogin(number.id, number.name)}
+                      disabled={isLoggingIn === number.id || isLoggingOut === number.id}
+                    >
+                      {isLoggingIn === number.id ? 'Получение QR...' : '📱 Подключить'}
+                    </DarkCyanButton>
                   )}
+
+                  {/* Кнопка выхода - показываем только если статус Connected и подписка активна */}
+                  {shouldShowLogoutButton(number) && (
+                    <GrayButton 
+                      onClick={() => handleLogout(number.id, number.name)}
+                      disabled={isLoggingIn === number.id || isLoggingOut === number.id}
+                    >
+                      {isLoggingOut === number.id ? 'Выход...' : 'Выйти'}
+                    </GrayButton>
+                  )}
+
+                  {/* Кнопка продления - всегда активна, даже если подписка истекла */}
                   <DarkCyanButton 
                     onClick={() => handleExtendSubscription(number.id, number.name)}
                   >
                     Продлить
                   </DarkCyanButton>
                   
-                  {!number.isSubscriptionExpired && !number.stopped && !number.blocked && (
+                  {/* Кнопка "Сделать основным" - только для активных каналов */}
+                  {channelActive && number.status === 'Connected' && (
                     <DarkCyanButton onClick={() => handleSetMainNumber(number.id)}>
                       Сделать основным
                     </DarkCyanButton>
                   )}
                   
+                  {/* Кнопка удаления - всегда доступна */}
                   <GrayButton onClick={() => handleDisconnectNumber(number.id)}>
                     Удалить
                   </GrayButton>
@@ -622,7 +554,7 @@ const WhatsAppSettingsPage: React.FC = () => {
         </ModalOverlay>
       )}
 
-      {/* Modal для добавления канала - обновлен с использованием EmployeesGrid */}
+      {/* Modal для добавления канала */}
       {showAddModal && (
         <ModalOverlay onClick={() => !isCreating && setShowAddModal(false)}>
           <ModalContent onClick={e => e.stopPropagation()}>
@@ -706,18 +638,18 @@ const WhatsAppSettingsPage: React.FC = () => {
                   {employeeList.map(emp => (
                     <EmployeeCheckbox 
                       key={emp.id}
-                      active={selectedNumber.assignedTo.includes(emp.id)}
+                      active={selectedNumber.employeeIds.includes(emp.id)}
                       onClick={() => {
                         setSelectedNumber({
                           ...selectedNumber,
-                          assignedTo: selectedNumber.assignedTo.includes(emp.id)
-                            ? selectedNumber.assignedTo.filter(id => id !== emp.id)
-                            : [...selectedNumber.assignedTo, emp.id]
+                          employeeIds: selectedNumber.employeeIds.includes(emp.id)
+                            ? selectedNumber.employeeIds.filter(id => id !== emp.id)
+                            : [...selectedNumber.employeeIds, emp.id]
                         });
                       }}
                     >
-                      <CheckIcon active={selectedNumber.assignedTo.includes(emp.id)}>
-                        {selectedNumber.assignedTo.includes(emp.id) && '✓'}
+                      <CheckIcon active={selectedNumber.employeeIds.includes(emp.id)}>
+                        {selectedNumber.employeeIds.includes(emp.id) && '✓'}
                       </CheckIcon>
                       <EmployeeInfo>
                         <EmployeeName>{emp.fullName}</EmployeeName>
@@ -854,38 +786,6 @@ const Description = styled.p`
   font-size: 14px;
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
-`;
-
-const StatCard = styled.div<{ warning?: boolean }>`
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  
-  ${props => props.warning && `
-    background: #fff7e6;
-    border: 1px solid #ffd666;
-  `}
-`;
-
-const StatValue = styled.div<{ warning?: boolean }>`
-  font-size: 32px;
-  font-weight: bold;
-  color: ${props => props.warning ? '#faad14' : '#333'};
-  margin-bottom: 8px;
-`;
-
-const StatLabel = styled.div`
-  font-size: 14px;
-  color: #666;
-`;
-
 const NumbersList = styled.div`
   display: flex;
   flex-direction: column;
@@ -968,9 +868,22 @@ const ExpiredBadge = styled.span`
   font-weight: normal;
 `;
 
-const PhoneNumber = styled.div`
-  font-size: 14px;
-  color: #666;
+const ConnectedBadge = styled.span`
+  background: #52c41a;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: normal;
+`;
+
+const DisconnectedBadge = styled.span`
+  background: #8c8c8c;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: normal;
 `;
 
 const StatusBadge = styled.span<{ status: string }>`
@@ -980,19 +893,17 @@ const StatusBadge = styled.span<{ status: string }>`
   font-weight: 500;
   background: ${props => {
     switch(props.status) {
-      case 'connected': return '#e6f7e6';
-      case 'connecting': return '#fff7e6';
-      case 'disconnected': return '#f5f5f5';
-      case 'expired': return '#fff7e6';
+      case 'Connected': return '#e6f7e6';
+      case 'Connecting': return '#fff7e6';
+      case 'Disconnected': return '#f5f5f5';
       default: return '#fff2f0';
     }
   }};
   color: ${props => {
     switch(props.status) {
-      case 'connected': return '#52c41a';
-      case 'connecting': return '#faad14';
-      case 'disconnected': return '#999';
-      case 'expired': return '#faad14';
+      case 'Connected': return '#52c41a';
+      case 'Connecting': return '#faad14';
+      case 'Disconnected': return '#999';
       default: return '#ff4d4f';
     }
   }};
@@ -1014,6 +925,7 @@ const InfoLabel = styled.span`
   font-size: 13px;
   min-width: 130px;
   color: #666;
+  text-align: left;
 `;
 
 const InfoValue = styled.span<{ expired?: boolean }>`
@@ -1058,19 +970,6 @@ const EmployeeBadge = styled.span`
   color: #666;
 `;
 
-const EditButton = styled.button`
-  background: none;
-  border: none;
-  color: #1890ff;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px 8px;
-  
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
 const EmptyText = styled.span`
   color: #999;
   font-size: 13px;
@@ -1111,6 +1010,7 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
 `;
 
 const ModalTitle = styled.h3`
@@ -1133,6 +1033,7 @@ const CloseButton = styled.button`
 
 const FormGroup = styled.div`
   margin-bottom: 20px;
+  margin-right: auto;
 `;
 
 const Label = styled.label`
@@ -1141,12 +1042,6 @@ const Label = styled.label`
   font-weight: 500;
   color: #333;
   text-align: left;
-`;
-
-const Hint = styled.div`
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
 `;
 
 const LoadingText = styled.div`
@@ -1177,38 +1072,6 @@ const CancelButton = styled.button`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-`;
-
-const ConfirmButton = styled.button`
-  padding: 8px 20px;
-  background: #1890ff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  
-  &:hover {
-    background: #40a9ff;
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-const PaymentButton = styled.button`
-  padding: 8px 20px;
-  background: #52c41a;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  
-  &:hover {
-    background: #73d13d;
   }
 `;
 
@@ -1336,39 +1199,6 @@ const DaysPrice = styled.div`
   font-size: 20px;
   font-weight: bold;
   color: #128C7E;
-`;
-
-const DaysDiscount = styled.div`
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  background: #075E54;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: bold;
-`;
-
-const PriceSummary = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  margin: 20px 0;
-`;
-
-const SummaryText = styled.div`
-  font-size: 16px;
-  color: #666;
-`;
-
-const SummaryPrice = styled.div`
-  font-size: 24px;
-  font-weight: bold;
-  color: #faad14;
 `;
 
 const PaymentLinkContainer = styled.div`

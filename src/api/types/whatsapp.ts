@@ -279,14 +279,12 @@ export interface ChannelResponse {
   activeTill?: string;
   creationTs?: string;
   id: string;
-  ownerId: string;
   stopped: boolean;
-  trial?: string;
   blocked: boolean;
   name: string;
-  projectId: string;
   employeeIds: number[];
-  status: string;
+  status: string; // 'connected' | 'disconnected'
+  isCurrent: boolean;
 }
 
 export interface ChannelsResponse {
