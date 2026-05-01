@@ -99,12 +99,6 @@ const WhatsAppSettingsPage: React.FC = () => {
 
     setIsLoggingIn(numberId);
     try {
-      const success = await setCurrentChannel(numberId);
-      if (!success) {
-        alert('Ошибка при выборе канала');
-        return;
-      }
-
       const qrResult = await getQR(numberId);
       if (qrResult && qrResult.qrString) {
         setQrCode(qrResult.qrString);
@@ -170,24 +164,6 @@ const WhatsAppSettingsPage: React.FC = () => {
       alert('Произошла ошибка при выходе из канала');
     } finally {
       setIsLoggingOut(null);
-    }
-  };
-
-  const handleConnectNumber = async (numberId: string) => {
-    const number = whatsAppNumbers.find(n => n.id === numberId);
-    if (number && !canPerformAction(number)) return;
-
-    try {
-      const success = await setCurrentChannel(numberId);
-      if (success) {
-        alert('Канал успешно выбран как текущий!');
-        await loadChannels();
-      } else {
-        alert('Ошибка при выборе канала');
-      }
-    } catch (error) {
-      console.error('Error setting current channel:', error);
-      alert('Произошла ошибка при подключении канала');
     }
   };
 
@@ -377,6 +353,17 @@ const WhatsAppSettingsPage: React.FC = () => {
     return !subscriptionExpired && !channel.stopped && !channel.blocked;
   };
 
+  // Форматирование номера телефона для отображения
+  const formatPhoneNumber = (phone: string | undefined): string => {
+    if (!phone) return '';
+    // Убираем знак + если есть и форматируем
+    let cleanPhone = phone.replace(/\+/g, '');
+    if (cleanPhone.length === 11) {
+      return `+${cleanPhone[0]} (${cleanPhone.slice(1, 4)}) ${cleanPhone.slice(4, 7)}-${cleanPhone.slice(7, 9)}-${cleanPhone.slice(9, 11)}`;
+    }
+    return `+${cleanPhone}`;
+  };
+
   if (isLoading && whatsAppNumbers.length === 0) {
     return (
       <SettingsContainer>
@@ -412,6 +399,7 @@ const WhatsAppSettingsPage: React.FC = () => {
             const employeeNames = getEmployeeNames(number.employeeIds);
             const subscriptionExpired = isSubscriptionExpired(number.activeTill);
             const channelActive = isChannelActive(number);
+            const formattedPhone = formatPhoneNumber(number.phone);
             
             return (
               <NumberCard key={number.id} isActive={!subscriptionExpired} isExpired={subscriptionExpired}>
@@ -426,6 +414,11 @@ const WhatsAppSettingsPage: React.FC = () => {
                       {number.status === 'Connected' && <ConnectedBadge>Подключен</ConnectedBadge>}
                       {number.status === 'Disconnected' && !subscriptionExpired && <DisconnectedBadge>Не подключен</DisconnectedBadge>}
                     </NumberName>
+                    {formattedPhone && (
+                      <PhoneNumberDisplay>
+                        {formattedPhone}
+                      </PhoneNumberDisplay>
+                    )}
                   </NumberInfo>
                 </CardHeader>
 
@@ -469,7 +462,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                       onClick={() => handleLogin(number.id, number.name)}
                       disabled={isLoggingIn === number.id || isLoggingOut === number.id}
                     >
-                      {isLoggingIn === number.id ? 'Получение QR...' : '📱 Подключить'}
+                      {isLoggingIn === number.id ? 'Получение QR...' : 'Подключить'}
                     </DarkCyanButton>
                   )}
 
@@ -825,11 +818,28 @@ const NumberName = styled.div`
   font-size: 18px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+`;
+
+const PhoneNumberDisplay = styled.div`
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f5f5f5;
+  padding: 4px 12px;
+  border-radius: 16px;
+  width: fit-content;
+`;
+
+const PhoneIcon = styled.span`
+  font-size: 14px;
 `;
 
 const MainBadge = styled.span`

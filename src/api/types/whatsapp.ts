@@ -285,6 +285,7 @@ export interface ChannelResponse {
   employeeIds: number[];
   status: string; // 'connected' | 'disconnected'
   isCurrent: boolean;
+  phone?: string;
 }
 
 export interface ChannelsResponse {
