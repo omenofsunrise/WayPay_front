@@ -21,6 +21,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   showHeader = true,
   className
 }) => {
+  // Все хуки вызываются до любых условий
   const {
     isLoading,
     error,
@@ -275,11 +276,27 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     return channelStatus?.connected ? '#25D366' : '#FFA500';
   };
 
-  const isConnected = channelStatus?.name ?? false;
+  const isConnected = channelStatus?.status !== 'NotSupported';
+  const isNotSupported = channelStatus?.status === 'NotSupported';
 
   const showLoading = isInitializing || (isLoading && messages.length === 0);
-  const showEmptyState = !showLoading && messages.length === 0 && chatExists;
-  const showNoChatState = !showLoading && !chatExists && !isInitializing;
+  const showEmptyState = !showLoading && messages.length === 0 && chatExists && isConnected;
+  const showNoChatState = !showLoading && !chatExists && !isInitializing && isConnected;
+  const showWhatsAppPromo = !isConnected && !isNotSupported;
+
+  if (isNotSupported) {
+    return (
+      <PromoContainer className={className} style={{ width, height }}>
+        <PromoTitle>WhatsApp не настроен</PromoTitle>
+        <PromoDescription>
+          Для использования чата необходимо подключить и оплатить WhatsApp в настройках
+        </PromoDescription>
+        <PromoButton onClick={() => window.open('/settings/', '_blank')}>
+          Настроить интеграцию
+        </PromoButton>
+      </PromoContainer>
+    );
+  }
 
   return (
     <Container className={className} style={{ width, height }}>
@@ -311,7 +328,20 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
           </LoadingOlderIndicator>
         )}
 
-        {showEmptyState && (
+        {showWhatsAppPromo && (
+          <PromoBanner>
+            <PromoBannerIcon>💬</PromoBannerIcon>
+            <PromoBannerTitle>WhatsApp не подключен</PromoBannerTitle>
+            <PromoBannerText>
+              Подключите WhatsApp Business, чтобы общаться с клиентами прямо из системы.
+            </PromoBannerText>
+            <PromoBannerButton onClick={() => window.open('/settings/integrations', '_blank')}>
+              Подключить WhatsApp
+            </PromoBannerButton>
+          </PromoBanner>
+        )}
+
+        {showEmptyState && isConnected && (
           <EmptyState>
             <EmptyIcon>💬</EmptyIcon>
             <EmptyText>Нет сообщений</EmptyText>
@@ -319,7 +349,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
           </EmptyState>
         )}
 
-        {showNoChatState && (
+        {showNoChatState && isConnected && (
           <EmptyState>
             <EmptyIcon>📱</EmptyIcon>
             <EmptyText>Клиент не в WhatsApp</EmptyText>
@@ -329,7 +359,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
           </EmptyState>
         )}
 
-        {!showLoading && !showEmptyState && !showNoChatState && messages.length > 0 && (
+        {!showLoading && !showEmptyState && !showNoChatState && !showWhatsAppPromo && messages.length > 0 && (
           <>
             {Object.entries(groupMessagesByDate()).map(([date, dateMessages]) => (
               <React.Fragment key={date}>
@@ -351,101 +381,238 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
           </>
         )}
         
-        {canLoadMore && !isLoadingMore && messages.length > 0 && (
+        {canLoadMore && !isLoadingMore && messages.length > 0 && !showWhatsAppPromo && (
           <LoadMoreButton onClick={() => loadOlderMessages(cleanPhoneNumber)}>
             Загрузить предыдущие сообщения
           </LoadMoreButton>
         )}
       </MessagesArea>
 
-      {/* Input Area */}
-      <InputArea>
-        <AttachmentButton
-          onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-          disabled={!isConnected || isLoading}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" fill="#075E54"/>
-          </svg>
-        </AttachmentButton>
-
-        {showAttachmentMenu && (
-          <AttachmentMenu>
-            <AttachmentMenuItem onClick={() => fileInputRef.current?.click()}>
-              <span>📷</span> Фото/Видео
-            </AttachmentMenuItem>
-            <AttachmentMenuItem onClick={() => {
-              if (fileInputRef.current) {
-                fileInputRef.current.accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt';
-                fileInputRef.current.click();
-              }
-            }}>
-              <span>📄</span> Документ
-            </AttachmentMenuItem>
-            <AttachmentMenuItem onClick={() => {
-              if (fileInputRef.current) {
-                fileInputRef.current.accept = 'audio/*';
-                fileInputRef.current.click();
-              }
-            }}>
-              <span>🎵</span> Аудио
-            </AttachmentMenuItem>
-          </AttachmentMenu>
-        )}
-
-        <MessageInput
-          ref={inputRef}
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          onPaste={handlePaste}
-          placeholder={
-            !isConnected 
-              ? "Подключите WhatsApp для отправки сообщений"
-              : !chatExists
-              ? "Номер не в WhatsApp, но можно отправить сообщение"
-              : isUploading
-              ? "Отправка файла..."
-              : "Введите сообщение..."
-          }
-          disabled={!isConnected || isLoading || isUploading}
-        />
-        
-        <input
-          ref={fileInputRef}
-          type="file"
-          style={{ display: 'none' }}
-          onChange={handleFileSelect}
-          accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
-        />
-
-        {(newMessage.trim() || isUploading) ? (
-          <SendButton 
-            onClick={handleSendMessage}
-            disabled={(!newMessage.trim() && !isUploading) || !isConnected || isLoading || isUploading}
+      {/* Input Area - показываем только если WhatsApp подключен */}
+      {isConnected ? (
+        <InputArea>
+          <AttachmentButton
+            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+            disabled={!isConnected || isLoading}
           >
-            {isUploading ? (
-              <Spinner size="small" />
-            ) : (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22 2L15 9M22 2L15 9M22 2L11 13M22 2L22 13L15 9M22 2L2 9L11 13M11 13L2 21L11 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              </svg>
-            )}
-          </SendButton>
-        ) : (
-          <VoiceButton disabled={!isConnected || isLoading}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H6c0 3.66 2.95 6.68 6.5 7.16V21h-2v2h6v-2h-2v-2.84c3.55-.48 6.5-3.5 6.5-7.16h-2z" fill="#075E54"/>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" fill="#075E54"/>
             </svg>
-          </VoiceButton>
-        )}
-      </InputArea>
+          </AttachmentButton>
+
+          {showAttachmentMenu && (
+            <AttachmentMenu>
+              <AttachmentMenuItem onClick={() => fileInputRef.current?.click()}>
+                <span>📷</span> Фото/Видео
+              </AttachmentMenuItem>
+              <AttachmentMenuItem onClick={() => {
+                if (fileInputRef.current) {
+                  fileInputRef.current.accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt';
+                  fileInputRef.current.click();
+                }
+              }}>
+                <span>📄</span> Документ
+              </AttachmentMenuItem>
+              <AttachmentMenuItem onClick={() => {
+                if (fileInputRef.current) {
+                  fileInputRef.current.accept = 'audio/*';
+                  fileInputRef.current.click();
+                }
+              }}>
+                <span>🎵</span> Аудио
+              </AttachmentMenuItem>
+            </AttachmentMenu>
+          )}
+
+          <MessageInput
+            ref={inputRef}
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            onPaste={handlePaste}
+            placeholder={
+              !isConnected 
+                ? "Подключите WhatsApp для отправки сообщений"
+                : !chatExists
+                ? "Номер не в WhatsApp"
+                : isUploading
+                ? "Отправка файла..."
+                : "Введите сообщение..."
+            }
+            disabled={!isConnected || isLoading || isUploading || !chatExists}
+          />
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+            accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
+          />
+
+          {(newMessage.trim() || isUploading) ? (
+            <SendButton 
+              onClick={handleSendMessage}
+              disabled={(!newMessage.trim() && !isUploading) || !isConnected || isLoading || isUploading}
+            >
+              {isUploading ? (
+                <Spinner size="small" />
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22 2L15 9M22 2L15 9M22 2L11 13M22 2L22 13L15 9M22 2L2 9L11 13M11 13L2 21L11 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                </svg>
+              )}
+            </SendButton>
+          ) : (
+            <VoiceButton disabled={!isConnected || isLoading}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H6c0 3.66 2.95 6.68 6.5 7.16V21h-2v2h6v-2h-2v-2.84c3.55-.48 6.5-3.5 6.5-7.16h-2z" fill="#075E54"/>
+              </svg>
+            </VoiceButton>
+          )}
+        </InputArea>
+      ) : (
+        <PromoFooter>
+          <PromoFooterText>💬 Для отправки сообщений подключите WhatsApp</PromoFooterText>
+          <PromoFooterButton onClick={() => window.open('/settings/integrations', '_blank')}>
+            Подключить
+          </PromoFooterButton>
+        </PromoFooter>
+      )}
     </Container>
   );
 };
 
-// Обновленные стили
+// Дополнительные стили для промо-блоков
+const PromoContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  gap: 16px;
+`;
+
+const PromoIcon = styled.div`
+  font-size: 64px;
+`;
+
+const PromoTitle = styled.h3`
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+`;
+
+const PromoDescription = styled.p`
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+`;
+
+const PromoButton = styled.button`
+  background-color: #075E54;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: #128C7E;
+  }
+`;
+
+const PromoBanner = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+  border-radius: 16px;
+  margin: 16px;
+  color: white;
+  gap: 12px;
+`;
+
+const PromoBannerIcon = styled.div`
+  font-size: 48px;
+`;
+
+const PromoBannerTitle = styled.h4`
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+`;
+
+const PromoBannerText = styled.p`
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+  max-width: 280px;
+`;
+
+const PromoBannerButton = styled.button`
+  background-color: white;
+  color: #075E54;
+  border: none;
+  border-radius: 24px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.02);
+  }
+`;
+
+const PromoFooter = styled.div`
+  padding: 12px 16px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #ddd;
+  flex-shrink: 0;
+`;
+
+const PromoFooterText = styled.span`
+  font-size: 13px;
+  color: #666;
+  flex: 1;
+`;
+
+const PromoFooterButton = styled.button`
+  background-color: #075E54;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  
+  &:hover {
+    background-color: #128C7E;
+  }
+`;
+
+// Остальные стили без изменений
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -621,6 +788,9 @@ const MessageInput = styled.input`
 const SendButton = styled.button`
   background-color: #075E54;
   border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -694,21 +864,6 @@ const EmptyText = styled.div`
 const EmptySubtext = styled.div`
   font-size: 12px;
   color: #999;
-`;
-
-const SendFirstMessageButton = styled.button`
-  margin-top: 16px;
-  padding: 8px 20px;
-  background-color: #075E54;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  
-  &:hover {
-    background-color: #128C7E;
-  }
 `;
 
 const LoadingOlderIndicator = styled.div`
