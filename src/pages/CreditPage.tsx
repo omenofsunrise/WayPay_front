@@ -1079,7 +1079,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       label: 'Выбрать источник финансирования',
       action: handleSelectFundingSource,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
+      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Установить категорию',
@@ -1104,7 +1104,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
+      shouldShow: (rowData: any[]) => (hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
     },
     {
       label: 'Удалить',
