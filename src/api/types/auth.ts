@@ -1,6 +1,7 @@
 export type Permission = 
   | 'CREATE_CREDITS'
   | 'DELETE_CREDITS'
+  | 'EDIT_CREDITS'
   | 'VIEW_CREDITS'
   | 'VIEW_ANALYTIC'
   | 'VIEW_ALL_CREDITS'

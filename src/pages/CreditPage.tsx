@@ -1104,7 +1104,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => (hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
+      shouldShow: (rowData: any[]) => hasPermission('EDIT_CREDITS', true)
     },
     {
       label: 'Удалить',

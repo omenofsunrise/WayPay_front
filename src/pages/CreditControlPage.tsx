@@ -594,7 +594,7 @@ const CreditControlPage = () => {
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: () => (hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
+      shouldShow: () => hasPermission('EDIT_CREDITS', true)
     },
     {
       label: 'Удалить',
