@@ -1104,7 +1104,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
       label: 'Редактировать',
       action: handleEditCredit,
       color: '#007d88',
-      shouldShow: (rowData: any[]) => (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
+      shouldShow: (rowData: any[]) => hasPermission('EDIT_CREDITS', true)
     },
     {
       label: 'Удалить',
@@ -1150,6 +1150,7 @@ ${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(
             'ФИО покупателя': credit.clientFullName,
             'Телефон': credit.clientPhone || 'Нет данных',
             'Стоимость товара': formatMoney(credit.totalClean?.toString()),
+            'Первоначальный взнос': formatMoney(credit.firstPayment?.toString()),
             'Начислено': formatMoney(credit.totalAmount?.toString() || '0'),
             'Уплачено': formatMoney(credit.payed?.toString() || '0'),
             'Остаток': formatMoney(credit.rest?.toString() || '0'),
