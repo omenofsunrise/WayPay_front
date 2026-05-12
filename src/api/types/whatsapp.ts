@@ -90,6 +90,7 @@ export interface ImageContent {
   height: number;
   viewOnce: boolean;
   buttons: InteractiveButton[];
+  data?: string;
 }
 
 export interface VideoContent {
@@ -108,6 +109,7 @@ export interface VideoContent {
   seconds: number;
   autoplay: boolean;
   buttons: InteractiveButton[];
+  data?: string;
 }
 
 export interface DocumentContent {
@@ -125,6 +127,7 @@ export interface DocumentContent {
   viewOnce: boolean;
   pageCount: number;
   buttons: InteractiveButton[];
+  data?: string;
 }
 
 export interface AudioContent {
@@ -139,6 +142,7 @@ export interface AudioContent {
   recordingTime: number;
   waveform: string;
   viewOnce: boolean;
+  data?: string;
 }
 
 export interface VoiceContent {
@@ -153,6 +157,7 @@ export interface VoiceContent {
   recordingTime: number;
   waveform: string;
   viewOnce: boolean;
+  data?: string;
 }
 
 export interface StickerContent {
@@ -168,6 +173,7 @@ export interface StickerContent {
   height: number;
   preview: string;
   viewOnce: boolean;
+  data?: string;
 }
 
 export interface LocationContent {

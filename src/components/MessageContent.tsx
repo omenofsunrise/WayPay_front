@@ -8,6 +8,7 @@ interface MessageContentProps {
 
 const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
   const [imageError, setImageError] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
 
   // Текстовое сообщение
   if (message.text) {
@@ -27,15 +28,19 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     );
   }
 
-  // ИСПРАВЛЕНО: Изображение - прямой доступ к полям, без .media
+  // ИЗОБРАЖЕНИЕ - поддерживает как link, так и data (base64)
   if (message.image) {
     const image = message.image;
+    const imageSrc = image.data 
+      ? `data:${image.mimeType || 'image/jpeg'};base64,${image.data}`
+      : image.link;
+    
     return (
       <MediaContainer>
         {image.caption && <Caption>{image.caption}</Caption>}
-        {!imageError && image.link ? (
+        {!imageError && imageSrc ? (
           <Image 
-            src={image.link} 
+            src={imageSrc} 
             alt={image.caption || 'Image'}
             onError={() => setImageError(true)}
             loading="lazy"
@@ -54,15 +59,19 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     );
   }
 
-  // ИСПРАВЛЕНО: Видео - прямой доступ к полям, без .media
+  // ВИДЕО - поддерживает как link, так и data (base64)
   if (message.video) {
     const video = message.video;
+    const videoSrc = video.data 
+      ? `data:${video.mimeType || 'video/mp4'};base64,${video.data}`
+      : video.link;
+    
     return (
       <MediaContainer>
         {video.caption && <Caption>{video.caption}</Caption>}
-        {video.link ? (
-          <Video controls>
-            <source src={video.link} type={video.mimeType} />
+        {!mediaError && videoSrc ? (
+          <Video controls preload="metadata">
+            <source src={videoSrc} type={video.mimeType} />
             Ваш браузер не поддерживает видео
           </Video>
         ) : (
@@ -79,53 +88,95 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     );
   }
 
-  // Аудио
+  // АУДИО - поддерживает как link, так и data (base64)
   if (message.audio) {
+    const audio = message.audio;
+    const audioSrc = audio.data 
+      ? `data:${audio.mimeType || 'audio/mpeg'};base64,${audio.data}`
+      : audio.link;
+    
     return (
       <MediaContainer>
-        <Audio controls>
-          <source src={message.audio.link} type={message.audio.mimeType} />
-          Ваш браузер не поддерживает аудио
-        </Audio>
+        {!mediaError && audioSrc ? (
+          <Audio controls>
+            <source src={audioSrc} type={audio.mimeType} />
+            Ваш браузер не поддерживает аудио
+          </Audio>
+        ) : (
+          <MediaPlaceholder>
+            <span>🎵</span>
+            <span>Аудио недоступно</span>
+          </MediaPlaceholder>
+        )}
         <AudioInfo>
-          {message.audio.seconds > 0 && (
-            <span>⏱️ {formatDuration(message.audio.seconds)}</span>
+          {audio.seconds > 0 && (
+            <span>⏱️ {formatDuration(audio.seconds)}</span>
           )}
-          {message.audio.fileName && (
-            <span>📄 {message.audio.fileName}</span>
+          {audio.fileName && (
+            <span>📄 {audio.fileName}</span>
           )}
         </AudioInfo>
       </MediaContainer>
     );
   }
 
-  // Голосовое сообщение
+  // ГОЛОСОВОЕ СООБЩЕНИЕ - поддерживает как link, так и data (base64)
   if (message.voice) {
+    const voice = message.voice;
+    const voiceSrc = voice.data 
+      ? `data:${voice.mimeType || 'audio/ogg'};base64,${voice.data}`
+      : voice.link;
+    
     return (
       <MediaContainer>
-        <Audio controls>
-          <source src={message.voice.link} type={message.voice.mimeType} />
-          Ваш браузер не поддерживает аудио
-        </Audio>
+        {!mediaError && voiceSrc ? (
+          <Audio controls>
+            <source src={voiceSrc} type={voice.mimeType} />
+            Ваш браузер не поддерживает аудио
+          </Audio>
+        ) : (
+          <MediaPlaceholder>
+            <span>🎙️</span>
+            <span>Голосовое сообщение недоступно</span>
+          </MediaPlaceholder>
+        )}
         <VoiceInfo>
           <span>🎙️ Голосовое сообщение</span>
-          {message.voice.seconds > 0 && (
-            <span>{formatDuration(message.voice.seconds)}</span>
+          {voice.seconds > 0 && (
+            <span>{formatDuration(voice.seconds)}</span>
           )}
         </VoiceInfo>
       </MediaContainer>
     );
   }
 
-  // ИСПРАВЛЕНО: Документ - прямой доступ к полям, без .media
+  // ДОКУМЕНТ - поддерживает как link, так и data (base64)
   if (message.document) {
     const doc = message.document;
     const fileIcon = getFileIcon(doc.mimeType);
     const displayName = doc.fileName || 'Документ';
+    const downloadUrl = doc.data 
+      ? `data:${doc.mimeType || 'application/octet-stream'};base64,${doc.data}`
+      : doc.link;
+    
+    const handleDownload = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (downloadUrl) {
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = displayName;
+        a.click();
+      }
+    };
+    
+    const handleOpen = () => {
+      if (downloadUrl && !doc.data) {
+        window.open(downloadUrl, '_blank');
+      }
+    };
+    
     return (
-      <DocumentContainer 
-        onClick={() => doc.link && window.open(doc.link, '_blank')}
-      >
+      <DocumentContainer onClick={handleOpen}>
         <DocumentIcon>{fileIcon}</DocumentIcon>
         <DocumentInfo>
           <DocumentName>{displayName}</DocumentName>
@@ -134,26 +185,33 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
             {doc.pageCount > 0 && ` • ${doc.pageCount} стр.`}
           </DocumentMeta>
         </DocumentInfo>
-        <DownloadIcon>📥</DownloadIcon>
+        <DownloadIcon onClick={handleDownload}>📥</DownloadIcon>
       </DocumentContainer>
     );
   }
 
-  // Стикер
+  // СТИКЕР - поддерживает как link, так и data (base64)
   if (message.sticker) {
+    const sticker = message.sticker;
+    const stickerSrc = sticker.data 
+      ? `data:${sticker.mimeType || 'image/webp'};base64,${sticker.data}`
+      : sticker.link;
+    
     return (
       <StickerContainer>
-        <StickerImage 
-          src={message.sticker.link} 
-          alt="Sticker"
-          loading="lazy"
-        />
-        {message.sticker.animated && <AnimatedBadge>GIF</AnimatedBadge>}
+        {stickerSrc && (
+          <StickerImage 
+            src={stickerSrc} 
+            alt="Sticker"
+            loading="lazy"
+          />
+        )}
+        {sticker.animated && <AnimatedBadge>GIF</AnimatedBadge>}
       </StickerContainer>
     );
   }
 
-  // Локация
+  // Локация (без изменений)
   if (message.location) {
     const location = message.location;
     const mapsUrl = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
@@ -173,7 +231,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     );
   }
 
-  // Контакт
+  // Контакт (без изменений)
   if (message.contact) {
     return (
       <ContactContainer>
@@ -195,7 +253,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     );
   }
 
-  // Опрос
+  // Опрос (без изменений)
   if (message.poll) {
     const totalVotes = message.poll.results.reduce((sum, r) => sum + r.count, 0);
     return (
@@ -214,7 +272,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     );
   }
 
-  // Реакции
+  // Реакции (без изменений)
   if (message.reactions.length > 0) {
     return (
       <ReactionsContainer>
@@ -280,7 +338,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
   }
 };
 
-// Стили (остаются без изменений)
+// Стили (оставляем как есть)
 const MessageText = styled.div`
   font-size: 14px;
   line-height: 1.4;
@@ -415,6 +473,11 @@ const DocumentMeta = styled.div`
 
 const DownloadIcon = styled.div`
   font-size: 20px;
+  cursor: pointer;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
 `;
 
 const StickerContainer = styled.div`
