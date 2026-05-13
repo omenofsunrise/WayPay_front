@@ -109,7 +109,7 @@ class WhatsAppService {
   }
 
   async setCurrentChannel(channelId: string): Promise<void> {
-    await apiClient.patch(`/WhatsApp/${channelId}`, {});
+    await apiClient.patch(`/WhatsApp/set-current-channel/${channelId}`, {});
   }
 
   async logout(channelId: string): Promise<void> {
@@ -122,7 +122,7 @@ class WhatsAppService {
   }
         
   async deleteChannel(id: string) {
-    await apiClient.delete(`/WhatsApp/${id}`);
+    await apiClient.delete(`/WhatsApp/channel/${id}`);
   }
 
   async extendChannel(days: number, channelId: string): Promise<string> {
