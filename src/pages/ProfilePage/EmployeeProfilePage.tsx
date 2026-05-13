@@ -93,6 +93,11 @@ const EmployeeProfilePage = ({ employeeId }: EmployeeProfilePageProps) => {
             label: 'Запретить просмотр заявок',
             roles: ['сотрудник', 'админ']
         },
+                {
+            code: 'EDIT_CREDITS',
+            label: 'Редактировать все доступные договоры',
+            roles: ['сотрудник', 'админ']
+        },
     ], []);
     
     const roleOptions = useMemo(() => {
