@@ -319,7 +319,6 @@ const CreditPage = () => {
     }
   };
 
-  // Функция для массовой рассылки
   const handleMassShare = async (selectedIndices: number[]) => {
     try {
       let combinedMessage = ``;

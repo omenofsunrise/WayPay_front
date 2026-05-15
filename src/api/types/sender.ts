@@ -10,6 +10,10 @@ export type TextPatternType = typeof TextPatternType[keyof typeof TextPatternTyp
 export const TextPatternType = {
     ComingPayment: 1,
     OverduePayment: 2,
+    WhatsAppBotResponse: 3,
+    WhatsAppCreditShare: 4,
+    WhatsAppCreditsShare: 5,
+    WhatsAppSchedulesShare: 6
 } as const;
 
 export interface SenderInfoResponse {
