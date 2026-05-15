@@ -15,7 +15,14 @@ import type {
   CreateChannelRequest,
   ChannelResponse,
   EmployeeListRequest,
-  ExtendChannelRequest
+  ExtendChannelRequest,
+  CreateBotRequest,
+  BotResponse,
+  UpdateBotRequest,
+  AddBotResponseRequest,
+  AddBotKeywordRequest,
+  BotKeywordResponse,
+  GetBotsResponse
 } from '../types/whatsapp';
 
 class WhatsAppService {
@@ -129,6 +136,42 @@ class WhatsAppService {
     const request: ExtendChannelRequest = { days, channelId };
     const response = await apiClient.post<string>('/WhatsApp/extend', request);
     return response.data;
+  }
+
+  async createBot(channelId: string, name: string): Promise<BotResponse> {
+    const request: CreateBotRequest = { channelId, name };
+    const response = await apiClient.post<BotResponse>('/WhatsApp/bot', request);
+    return response.data;
+  }
+
+  async updateBot(name: string, id: number, active: boolean): Promise<BotResponse> {
+    const request: UpdateBotRequest = { name, id, active };
+    const response = await apiClient.put<BotResponse>('/WhatsApp/bot', request);
+    return response.data;
+  }
+
+  async deleteBot(id: number): Promise<void> {
+    await apiClient.delete(`/WhatsApp/bot/${id}`);
+  }
+
+  async setBotResponse(botId: number, response: string): Promise<void> {
+    const request: AddBotResponseRequest = { botId, response };
+    await apiClient.post('/WhatsApp/bot/response', request);
+  }
+
+  async addBotKeyword(botId: number, type: AddBotKeywordRequest['type'], keyword: string): Promise<BotKeywordResponse> {
+    const request: AddBotKeywordRequest = { botId, type, keyword };
+    const response = await apiClient.post<BotKeywordResponse>('/WhatsApp/bot/keyword', request);
+    return response.data;
+  }
+
+  async deleteBotKeyword(id: number): Promise<void> {
+    await apiClient.delete(`/WhatsApp/bot/keyword/${id}`);
+  }
+
+  async getBotsByChannel(channelId: string): Promise<BotResponse[]> {
+    const response = await apiClient.get<GetBotsResponse>(`/WhatsApp/channel/${channelId}/bots`);
+    return response.data.bots;
   }
 }
 

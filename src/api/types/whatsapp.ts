@@ -311,3 +311,56 @@ export interface ExtendChannelRequest {
   days: number;
   channelId: string;
 }
+
+export interface CreateBotRequest {
+  channelId: string;
+  name: string;
+}
+
+export interface UpdateBotRequest {
+  name: string;
+  id: number;
+  active: boolean;
+}
+
+export interface AddBotResponseRequest {
+  botId: number;
+  response: string;
+}
+
+export interface AddBotKeywordRequest {
+  botId: number;
+  type: 'Exact' | 'Contains' | 'StartsWith';
+  keyword: string;
+}
+
+export interface BotKeywordResponse {
+  id: number;
+  botId: number;
+  type: string;
+  keyword: string;
+  createdAt?: string;
+}
+
+export interface DeleteBotKeywordRequest {
+  id: number;
+}
+
+export interface BotListResponse {
+  bots: BotResponse[];
+}
+
+export interface BotResponse {
+  id: number;
+  name: string;
+  channelId: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  keywords?: BotKeywordResponse[];
+  botResponse?: string;
+}
+
+export interface GetBotsResponse {
+  bots: BotResponse[];
+}

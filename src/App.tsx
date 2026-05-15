@@ -42,6 +42,7 @@ import { DISABLE_NOTIFICATIONS_KEY, getDisableNotificationsSetting, useLocalStor
 import FinancePage from './pages/FinancePage/FinancePage';
 import SettingsPage from './pages/SettingsPage.tsx/SettingsPage';
 import BlackCatalogPage from './pages/BlackCatalogPage/BlackCatalogPage';
+import BotManagementPage from './pages/SettingsPage.tsx/BotManagementPage';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 
@@ -378,6 +379,12 @@ function App() {
             <Route path="investors-report" element={
                 <MainLayout>
                   <InvestorReportPage />
+                </MainLayout>
+            } />
+
+            <Route path="/whatsapp/channel/:channelId/bots" element={
+                <MainLayout>
+                  <BotManagementPage />
                 </MainLayout>
             } />
 

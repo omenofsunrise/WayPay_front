@@ -7,6 +7,7 @@ import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
 import GrayButton from '../../components/ui/Buttons/GrayButton';
 import CustomInput from '../../components/ui/fields/CustomInput';
 import type { ChannelResponse } from '../../api/types/whatsapp';
+import { useNavigate } from 'react-router-dom';
 
 const WhatsAppSettingsPage: React.FC = () => {
   const { 
@@ -41,6 +42,7 @@ const WhatsAppSettingsPage: React.FC = () => {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string>('');
   const [qrStatus, setQrStatus] = useState<string>('');
+  const navigate = useNavigate(); 
   const [newNumber, setNewNumber] = useState({
     name: '',
     assignedTo: [] as number[]
@@ -490,6 +492,12 @@ const WhatsAppSettingsPage: React.FC = () => {
                     </DarkCyanButton>
                   )}
                   
+                  {channelActive && number.status === 'Connected' && (
+                    <DarkCyanButton onClick={() => navigate(`/whatsapp/channel/${number.id}/bots`)}>
+                      Настроить бота
+                    </DarkCyanButton>
+                  )}
+
                   {/* Кнопка удаления - всегда доступна */}
                   <GrayButton onClick={() => handleDisconnectNumber(number.id)}>
                     Удалить

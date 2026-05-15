@@ -154,21 +154,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     const element = containerRef.current;
     if (!element) return;
 
-    if (!observerRef.current) {
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting && currentMedia && !loadAttemptedRef.current.has(currentMedia.id)) {
-              loadMediaAsync(currentMedia.id);
-              if (observerRef.current) {
-                observerRef.current.disconnect();
-              }
-            }
-          });
-        },
-        { threshold: 0.1, rootMargin: '50px' }
-      );
-    }
+
 
     observerRef.current.observe(element);
 

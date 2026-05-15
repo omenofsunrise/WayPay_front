@@ -10,7 +10,10 @@ import type {
   ChatHistoryResponse,
   ChatMessage,
   SendMediaFormRequest,
-  ChannelResponse
+  ChannelResponse,
+  BotResponse,
+  BotKeywordResponse,
+  AddBotKeywordRequest
 } from '../types/whatsapp';
 import whatsappService from '../services/whatsappService';
 
@@ -31,6 +34,10 @@ const useWhatsApp = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [channels, setChannels] = useState<ChannelResponse[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<ChannelResponse | null>(null);
+
+  const [bots, setBots] = useState<BotResponse[]>([]);
+  const [selectedBot, setSelectedBot] = useState<BotResponse | null>(null);
+  const [botKeywords, setBotKeywords] = useState<Map<number, BotKeywordResponse[]>>(new Map());
 
   const addOptimisticMessage = useCallback((message: ChatMessage) => {
     setMessages(prev => [...prev, message]);
@@ -528,6 +535,142 @@ const useWhatsApp = () => {
     }
   }, [channels, getChannelStatus]);
 
+  const createBot = useCallback(async (channelId: string, name: string): Promise<BotResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const newBot = await whatsappService.createBot(channelId, name);
+      setBots(prev => [...prev, newBot]);
+      return newBot;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const updateBot = useCallback(async (name: string, id: number, active: boolean): Promise<BotResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedBot = await whatsappService.updateBot(name, id, active);
+      setBots(prev => prev.map(bot => bot.id === id ? updatedBot : bot));
+      if (selectedBot?.id === id) {
+        setSelectedBot(updatedBot);
+      }
+      return updatedBot;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedBot]);
+
+  const deleteBot = useCallback(async (id: number): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.deleteBot(id);
+      setBots(prev => prev.filter(bot => bot.id !== id));
+      if (selectedBot?.id === id) {
+        setSelectedBot(null);
+      }
+      // Also remove keywords for this bot
+      setBotKeywords(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(id);
+        return newMap;
+      });
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedBot]);
+
+  const setBotResponse = useCallback(async (botId: number, response: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.setBotResponse(botId, response);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const addBotKeyword = useCallback(async (
+    botId: number, 
+    type: AddBotKeywordRequest['type'], 
+    keyword: string
+  ): Promise<BotKeywordResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const newKeyword = await whatsappService.addBotKeyword(botId, type, keyword);
+      
+      // Update local keywords cache
+      setBotKeywords(prev => {
+        const newMap = new Map(prev);
+        const existingKeywords = newMap.get(botId) || [];
+        newMap.set(botId, [...existingKeywords, newKeyword]);
+        return newMap;
+      });
+      
+      return newKeyword;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const deleteBotKeyword = useCallback(async (id: number, botId: number): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.deleteBotKeyword(id);
+      
+      // Update local keywords cache
+      setBotKeywords(prev => {
+        const newMap = new Map(prev);
+        const existingKeywords = newMap.get(botId) || [];
+        newMap.set(botId, existingKeywords.filter(kw => kw.id !== id));
+        return newMap;
+      });
+      
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const loadBotsByChannel = useCallback(async (channelId: string): Promise<BotResponse[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const botsList = await whatsappService.getBotsByChannel(channelId);
+      setBots(botsList);
+      return botsList;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const clearChatData = useCallback(() => {
     setFoundChat(null);
     setChatHistory(null);
@@ -578,7 +721,17 @@ const useWhatsApp = () => {
     setCurrentChannel,
     setChannelEmployees,
     extendChannel,
-    logout
+    logout,
+    bots,
+    selectedBot,
+    createBot,
+    updateBot,
+    deleteBot,
+    setBotResponse,
+    addBotKeyword,
+    deleteBotKeyword,
+    loadBotsByChannel,
+    setSelectedBot,
   };
 };
 
