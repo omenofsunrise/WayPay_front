@@ -119,34 +119,42 @@ const ImageMessage: React.FC<{ image: ImageContent }> = ({ image }) => {
   const { src, isLoading, hasError, retry } = useMediaSrc(image);
   const [renderError, setRenderError] = React.useState(false);
   const fallback = toDataUrl(image.preview, image.mimeType || 'image/jpeg');
-  const displaySrc = src || fallback;
-  const showError = (hasError && !displaySrc) || renderError;
+  // main src failed but we still have a preview → show preview as best-effort
+  const effectiveSrc = renderError && fallback ? fallback : (src || fallback);
+  const isPreviewOnly = !src || (renderError && fallback === effectiveSrc);
+  const showError = (hasError && !effectiveSrc) || (renderError && !fallback);
 
   React.useEffect(() => { setRenderError(false); }, [src]);
 
   return (
     <MediaContainer>
-      {displaySrc && !showError && (
-        <ImageWrap onClick={() => src && window.open(src, '_blank')}>
+      {effectiveSrc && !showError && (
+        <ImageWrap onClick={() => !isPreviewOnly && src && window.open(src, '_blank')} $clickable={!isPreviewOnly}>
           <ImageEl
-            src={displaySrc}
+            src={effectiveSrc}
             alt={image.caption || 'image'}
             loading="lazy"
+            $stretched={isPreviewOnly}
             onError={() => {
               console.warn('[ImageMessage] img failed to render', JSON.stringify({
                 id: image.id,
                 mimeType: image.mimeType,
-                srcHead: displaySrc.slice(0, 80),
-                srcLength: displaySrc.length,
+                srcHead: effectiveSrc.slice(0, 80),
+                srcLength: effectiveSrc.length,
               }));
               setRenderError(true);
             }}
           />
-          {isLoading && <ImageOverlay><Spinner /></ImageOverlay>}
+          {(isLoading || isPreviewOnly) && (
+            <ImageOverlay>
+              {isLoading && <Spinner />}
+              {isPreviewOnly && !isLoading && <PreviewBadge>превью</PreviewBadge>}
+            </ImageOverlay>
+          )}
         </ImageWrap>
       )}
 
-      {!displaySrc && isLoading && (
+      {!effectiveSrc && isLoading && (
         <MediaSkeleton>
           <Spinner />
         </MediaSkeleton>
@@ -471,25 +479,32 @@ const MediaContainer = styled.div`
   max-width: 320px;
 `;
 
-const ImageWrap = styled.div`
+const ImageWrap = styled.div<{ $clickable?: boolean }>`
   position: relative;
+  width: 260px;
+  max-width: 100%;
+  min-height: 180px;
   border-radius: 10px;
   overflow: hidden;
-  cursor: zoom-in;
+  cursor: ${p => p.$clickable ? 'zoom-in' : 'default'};
   background: ${BG_LIGHT};
   line-height: 0;
 `;
 
-const ImageEl = styled.img`
+const ImageEl = styled.img<{ $stretched?: boolean }>`
   display: block;
-  max-width: 100%;
-  max-height: 320px;
-  width: auto;
+  width: 100%;
   height: auto;
+  max-height: 360px;
   border-radius: 10px;
   transition: transform 0.2s ease;
+  ${p => p.$stretched && `
+    min-height: 180px;
+    object-fit: cover;
+    filter: blur(1px);
+  `}
 
-  ${ImageWrap}:hover & { transform: scale(1.01); }
+  ${ImageWrap}:hover & { transform: ${p => p.$stretched ? 'none' : 'scale(1.01)'}; }
 `;
 
 const ImageOverlay = styled.div`
@@ -498,7 +513,22 @@ const ImageOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  background: linear-gradient(transparent 60%, rgba(0, 0, 0, 0.15));
+`;
+
+const PreviewBadge = styled.span`
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 `;
 
 const VideoEl = styled.video`

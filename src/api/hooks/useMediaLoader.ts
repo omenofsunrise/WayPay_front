@@ -5,7 +5,7 @@ import { toDataUrl } from '../utils/mediaUrl';
 // NOTE: link-priority temporarily disabled — backend doesn't reliably send `link`
 // yet and we need to verify the base64/id pipeline first.
 // Re-enable by setting USE_LINK_PRIORITY = true once backend stabilises.
-const USE_LINK_PRIORITY = false;
+const USE_LINK_PRIORITY = true;
 
 interface MediaInput {
   id?: string;
