@@ -464,8 +464,8 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
               {isUploading ? (
                 <Spinner size="small" />
               ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22 2L15 9M22 2L15 9M22 2L11 13M22 2L22 13L15 9M22 2L2 9L11 13M11 13L2 21L11 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                 </svg>
               )}
             </SendButton>

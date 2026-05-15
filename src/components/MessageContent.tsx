@@ -1,191 +1,95 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled from 'styled-components';
-import type { ChatMessage, InteractiveButton } from '../api/types/whatsapp';
-import { useMediaLoader } from '../api/hooks/useMediaLoader';
+import React from 'react';
+import styled, { keyframes } from 'styled-components';
+import type {
+  ChatMessage,
+  InteractiveButton,
+  ImageContent,
+  VideoContent,
+  AudioContent,
+  VoiceContent,
+  DocumentContent,
+  StickerContent,
+  LocationContent,
+  ContactContent,
+  PollContent,
+  Reaction,
+} from '../api/types/whatsapp';
+import { useMediaSrc } from '../api/hooks/useMediaLoader';
 
 interface MessageContentProps {
   message: ChatMessage;
 }
 
+const formatFileSize = (bytes: number): string => {
+  if (!bytes) return '';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
+
+const formatDuration = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const getFileIcon = (mimeType?: string, fileName?: string): string => {
+  const m = (mimeType || '').toLowerCase();
+  const n = (fileName || '').toLowerCase();
+  if (m.includes('pdf') || n.endsWith('.pdf')) return '📕';
+  if (m.includes('word') || n.endsWith('.doc') || n.endsWith('.docx')) return '📘';
+  if (m.includes('excel') || m.includes('sheet') || n.endsWith('.xls') || n.endsWith('.xlsx')) return '📗';
+  if (m.includes('presentation') || n.endsWith('.ppt') || n.endsWith('.pptx')) return '📙';
+  if (m.includes('zip') || m.includes('rar') || m.includes('7z')) return '📦';
+  if (m.startsWith('image/')) return '🖼️';
+  if (m.startsWith('video/')) return '🎬';
+  if (m.startsWith('audio/')) return '🎵';
+  if (m.includes('text') || n.endsWith('.txt')) return '📝';
+  return '📄';
+};
+
+const handleButtonClick = (button: InteractiveButton) => {
+  if (button.url) {
+    window.open(button.url, '_blank');
+  } else if (button.phoneNumber) {
+    window.location.href = `tel:${button.phoneNumber}`;
+  } else if (button.copyCode) {
+    navigator.clipboard.writeText(button.copyCode);
+  }
+};
+
+const downloadVCard = (vcard: string, name: string) => {
+  const blob = new Blob([vcard], { type: 'text/vcard' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name}.vcf`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const triggerDownload = (src: string, fileName: string) => {
+  const a = document.createElement('a');
+  a.href = src;
+  a.download = fileName;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
 const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
-  const { loadMedia } = useMediaLoader();
-  
-  const [mediaData, setMediaData] = useState<Record<string, {
-    data: string | null;
-    isLoading: boolean;
-    hasError: boolean;
-  }>>({});
-  
-  const isMounted = useRef(true);
-  const loadAttemptedRef = useRef<Set<string>>(new Set());
-  const containerRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => { 
-      isMounted.current = false;
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, []);
-
-  const getCurrentMedia = useCallback(() => {
-    if (message.image?.id) return { id: message.image.id, type: 'image', data: message.image };
-    if (message.video?.id) return { id: message.video.id, type: 'video', data: message.video };
-    if (message.audio?.id) return { id: message.audio.id, type: 'audio', data: message.audio };
-    if (message.voice?.id) return { id: message.voice.id, type: 'voice', data: message.voice };
-    if (message.document?.id) return { id: message.document.id, type: 'document', data: message.document };
-    if (message.sticker?.id) return { id: message.sticker.id, type: 'sticker', data: message.sticker };
-    return null;
-  }, [message.image, message.video, message.audio, message.voice, message.document, message.sticker]);
-
-  const currentMedia = getCurrentMedia();
-  const mediaKey = currentMedia?.id || '';
-  const currentMediaState = mediaData[mediaKey] || { data: null, isLoading: false, hasError: false };
-
-  const loadMediaAsync = useCallback(async (mediaId: string) => {
-    if (loadAttemptedRef.current.has(mediaId)) {
-      return;
-    }
-    
-    if (!isMounted.current) return;
-    
-    // Проверяем текущее состояние
-    if (currentMediaState.isLoading || currentMediaState.data || currentMediaState.hasError) {
-      return;
-    }
-    
-    loadAttemptedRef.current.add(mediaId);
-    
-    setMediaData(prev => ({
-      ...prev,
-      [mediaId]: { data: null, isLoading: true, hasError: false }
-    }));
-    
-    try {
-      const result = await loadMedia(mediaId);
-
-      if (isMounted.current && result && result.data && result.data.length > 0) {
-        let base64Data = result.data;
-        
-        if (base64Data.startsWith('data:')) {
-          setMediaData(prev => ({
-            ...prev,
-            [mediaId]: { data: base64Data, isLoading: false, hasError: false }
-          }));
-        } else {
-          const dataUrl = `data:${result.mimeType || 'image/jpeg'};base64,${base64Data}`;
-          setMediaData(prev => ({
-            ...prev,
-            [mediaId]: { data: dataUrl, isLoading: false, hasError: false }
-          }));
-
-          try {
-            const testString = base64Data.substring(0, 100);
-            const decoded = atob(testString);
-          } catch (e) {
-            console.error('❌ Invalid base64 data:', e);
-          }
-          
-          setMediaData(prev => ({
-            ...prev,
-            [mediaId]: { data: dataUrl, isLoading: false, hasError: false }
-          }));
-        }
-      } else if (isMounted.current) {
-        console.error('No data in response');
-        setMediaData(prev => ({
-          ...prev,
-          [mediaId]: { data: null, isLoading: false, hasError: true }
-        }));
-      }
-
-    } catch (error) {
-      console.error('Error loading media:', error);
-      if (isMounted.current) {
-        setMediaData(prev => ({
-          ...prev,
-          [mediaId]: { data: null, isLoading: false, hasError: true }
-        }));
-      }
-    }
-  }, [loadMedia, currentMediaState.isLoading, currentMediaState.data, currentMediaState.hasError]);
-
-  useEffect(() => {
-    if (mediaData[mediaKey]?.data) {
-      console.log(`✅ Media ${mediaKey} loaded:`, mediaData[mediaKey].data);
-    }
-  }, [mediaData, mediaKey]);
-
-  useEffect(() => {
-    if (!currentMedia) return;
-
-    let inlineData: string | null = null;
-    if (currentMedia.type === 'image' && message.image?.data) inlineData = message.image.data;
-    else if (currentMedia.type === 'video' && message.video?.data) inlineData = message.video.data;
-    else if (currentMedia.type === 'audio' && message.audio?.data) inlineData = message.audio.data;
-    else if (currentMedia.type === 'voice' && message.voice?.data) inlineData = message.voice.data;
-    else if (currentMedia.type === 'document' && message.document?.data) inlineData = message.document.data;
-    else if (currentMedia.type === 'sticker' && message.sticker?.data) inlineData = message.sticker.data;
-    
-    if (inlineData) {
-      setMediaData(prev => ({
-        ...prev,
-        [currentMedia.id]: { data: inlineData, isLoading: false, hasError: false }
-      }));
-      loadAttemptedRef.current.add(currentMedia.id);
-      return;
-    }
-  }, [currentMedia, message.image?.data, message.video?.data, message.audio?.data, message.voice?.data, message.document?.data, message.sticker?.data]);
-
-  useEffect(() => {
-    if (!currentMedia) return;
-    
-    if (currentMediaState.data || currentMediaState.hasError || currentMediaState.isLoading) {
-      return;
-    }
-    
-    if (loadAttemptedRef.current.has(currentMedia.id)) {
-      return;
-    }
-
-    const element = containerRef.current;
-    if (!element) return;
-
-
-
-    observerRef.current.observe(element);
-
-    return () => {
-      if (observerRef.current && element) {
-        observerRef.current.unobserve(element);
-      }
-    };
-  }, [currentMedia, currentMediaState.data, currentMediaState.hasError, currentMediaState.isLoading, loadMediaAsync]);
-
-  const handleRetry = useCallback(() => {
-    if (!currentMedia) return;
-    
-    setMediaData(prev => ({
-      ...prev,
-      [currentMedia.id]: { data: null, isLoading: false, hasError: false }
-    }));
-    loadAttemptedRef.current.delete(currentMedia.id);
-    loadMediaAsync(currentMedia.id);
-  }, [currentMedia, loadMediaAsync]);
-
   if (message.text) {
     return (
       <MessageText>
-        {message.text.body}
+        <TextBody>{message.text.body}</TextBody>
         {message.text.buttons.length > 0 && (
           <ButtonsContainer>
             {message.text.buttons.map((button, idx) => (
-              <Button key={idx} onClick={() => handleButtonClick(button)}>
+              <ActionButton key={idx} onClick={() => handleButtonClick(button)}>
                 {button.title}
-              </Button>
+              </ActionButton>
             ))}
           </ButtonsContainer>
         )}
@@ -193,788 +97,847 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
     );
   }
 
-  if (message.image && currentMedia) {
-    const image = message.image;
-    const finalSrc = currentMediaState.data || image.link || image.preview;
-    const showLoading = currentMediaState.isLoading && !currentMediaState.data && !currentMediaState.hasError;
-    const showError = currentMediaState.hasError && !currentMediaState.data;
-    const showImage = finalSrc && !currentMediaState.hasError;
-    
-    return (
-      <MediaContainer ref={containerRef}>
-        {image.caption && <Caption>{image.caption}</Caption>}
-        
-        {showLoading && (
-          <MediaPlaceholder>
-            <Spinner size="small" />
-            <LoadingText>Загрузка изображения...</LoadingText>
-          </MediaPlaceholder>
-        )}
-        
-        {showError && (
-          <MediaPlaceholder>
-            <span>🖼️</span>
-            <span>Не удалось загрузить изображение</span>
-            {image.link && (
-              <RetryLink href={image.link} target="_blank" rel="noopener noreferrer">
-                Открыть оригинал
-              </RetryLink>
-            )}
-            <RetryButton onClick={handleRetry}>
-              🔄 Повторить
-            </RetryButton>
-          </MediaPlaceholder>
-        )}
-        
-        {showImage && (
-          <Image 
-            src={finalSrc} 
-            alt={image.caption || 'Image'}
-            onError={() => {
-              setMediaData(prev => ({
-                ...prev,
-                [currentMedia.id]: { ...prev[currentMedia.id], data: null, hasError: true }
-              }));
-            }}
-            loading="lazy"
-          />
-        )}
-        
-        {image.fileSize > 0 && (
-          <FileInfo>{formatFileSize(image.fileSize)}</FileInfo>
-        )}
-      </MediaContainer>
-    );
+  if (message.image) return <ImageMessage image={message.image} />;
+  if (message.video) return <VideoMessage video={message.video} />;
+  if (message.audio) return <AudioMessage audio={message.audio} />;
+  if (message.voice) return <VoiceMessage voice={message.voice} />;
+  if (message.document) return <DocumentMessage document={message.document} />;
+  if (message.sticker) return <StickerMessage sticker={message.sticker} />;
+  if (message.location) return <LocationMessage location={message.location} />;
+  if (message.contact) return <ContactMessage contact={message.contact} />;
+  if (message.poll) return <PollMessage poll={message.poll} />;
+
+  if (message.reactions.length > 0) {
+    return <ReactionsRow reactions={message.reactions} />;
   }
 
-  if (message.video && currentMedia) {
-    const video = message.video;
-    const videoSrc = currentMediaState.data || video.link;
-    const showLoading = currentMediaState.isLoading && !currentMediaState.data && !currentMediaState.hasError;
-    const showError = currentMediaState.hasError && !currentMediaState.data;
-    
-    return (
-      <MediaContainer ref={containerRef}>
-        {video.caption && <Caption>{video.caption}</Caption>}
-        
-        {showLoading && (
-          <MediaPlaceholder>
-            <Spinner size="small" />
-            <LoadingText>Загрузка видео...</LoadingText>
-          </MediaPlaceholder>
-        )}
-        
-        {showError && (
-          <MediaPlaceholder>
-            <span>🎥</span>
-            <span>Видео недоступно</span>
-            {video.link && (
-              <RetryLink href={video.link} target="_blank" rel="noopener noreferrer">
-                Открыть оригинал
-              </RetryLink>
-            )}
-            <RetryButton onClick={handleRetry}>
-              🔄 Повторить
-            </RetryButton>
-          </MediaPlaceholder>
-        )}
-        
-        {videoSrc && !currentMediaState.hasError && (
-          <Video controls preload="metadata">
-            <source src={videoSrc} type={video.mimeType} />
-            Ваш браузер не поддерживает видео
-          </Video>
-        )}
-        
-        {video.seconds > 0 && <VideoDuration>{formatDuration(video.seconds)}</VideoDuration>}
-        {video.fileSize > 0 && (
-          <FileInfo>{formatFileSize(video.fileSize)}</FileInfo>
-        )}
-      </MediaContainer>
-    );
-  }
+  return <MessageText>{message.displayText || '[Неизвестный тип сообщения]'}</MessageText>;
+};
 
-  if (message.audio && currentMedia) {
-    const audio = message.audio;
-    const audioSrc = currentMediaState.data || audio.link;
-    const showLoading = currentMediaState.isLoading && !currentMediaState.data && !currentMediaState.hasError;
-    const showError = currentMediaState.hasError && !currentMediaState.data;
-    
-    return (
-      <MediaContainer ref={containerRef}>
-        {showLoading && (
-          <MediaPlaceholder>
-            <Spinner size="small" />
-            <LoadingText>Загрузка аудио...</LoadingText>
-          </MediaPlaceholder>
-        )}
-        
-        {audioSrc && !currentMediaState.hasError && (
-          <Audio controls preload="metadata">
-            <source src={audioSrc} type={audio.mimeType} />
-            Ваш браузер не поддерживает аудио
-          </Audio>
-        )}
-        
-        {showError && (
-          <MediaPlaceholder>
-            <span>🎵</span>
-            <span>Аудио недоступно</span>
-            <RetryButton onClick={handleRetry}>
-              🔄 Повторить
-            </RetryButton>
-          </MediaPlaceholder>
-        )}
-        
-        <AudioInfo>
-          {audio.seconds > 0 && (
-            <span>⏱️ {formatDuration(audio.seconds)}</span>
-          )}
-          {audio.fileName && (
-            <span>📄 {audio.fileName}</span>
-          )}
-        </AudioInfo>
-      </MediaContainer>
-    );
-  }
-
-  if (message.voice && currentMedia) {
-    const voice = message.voice;
-    const voiceSrc = currentMediaState.data || voice.link;
-    const showLoading = currentMediaState.isLoading && !currentMediaState.data && !currentMediaState.hasError;
-    const showError = currentMediaState.hasError && !currentMediaState.data;
-    
-    return (
-      <MediaContainer ref={containerRef}>
-        {showLoading && (
-          <MediaPlaceholder>
-            <Spinner size="small" />
-            <LoadingText>Загрузка голосового...</LoadingText>
-          </MediaPlaceholder>
-        )}
-        
-        {voiceSrc && !currentMediaState.hasError && (
-          <Audio controls preload="metadata">
-            <source src={voiceSrc} type={voice.mimeType} />
-            Ваш браузер не поддерживает аудио
-          </Audio>
-        )}
-        
-        {showError && (
-          <MediaPlaceholder>
-            <span>🎙️</span>
-            <span>Голосовое недоступно</span>
-            <RetryButton onClick={handleRetry}>
-              🔄 Повторить
-            </RetryButton>
-          </MediaPlaceholder>
-        )}
-        
-        <VoiceInfo>
-          <span>🎙️ Голосовое сообщение</span>
-          {voice.seconds > 0 && (
-            <span>{formatDuration(voice.seconds)}</span>
-          )}
-        </VoiceInfo>
-      </MediaContainer>
-    );
-  }
-
-  if (message.document && currentMedia) {
-    const doc = message.document;
-    const fileIcon = getFileIcon(doc.mimeType);
-    const displayName = doc.fileName || 'Документ';
-    const showLoading = currentMediaState.isLoading && !currentMediaState.data && !currentMediaState.hasError;
-    
-    const handleDownload = async (e: React.MouseEvent) => {
-      e.stopPropagation();
-      
-      if (currentMediaState.data) {
-        downloadFromBase64(currentMediaState.data, displayName);
-      } else if (doc.link) {
-        window.open(doc.link, '_blank');
-      } else if (doc.id && !currentMediaState.isLoading) {
-        handleRetry();
-      }
-    };
-    
-    const handleOpen = () => {
-      if (doc.link && !doc.id) {
-        window.open(doc.link, '_blank');
-      } else if (currentMediaState.data) {
-        downloadFromBase64(currentMediaState.data, displayName);
-      }
-    };
-    
-    return (
-      <DocumentContainer ref={containerRef} onClick={handleOpen}>
-        <DocumentIcon>{fileIcon}</DocumentIcon>
-        <DocumentInfo>
-          <DocumentName>{displayName}</DocumentName>
-          <DocumentMeta>
-            {doc.fileSize > 0 && formatFileSize(doc.fileSize)}
-            {doc.pageCount > 0 && ` • ${doc.pageCount} стр.`}
-          </DocumentMeta>
-          {showLoading && <LoadingText small>Загрузка...</LoadingText>}
-          {currentMediaState.hasError && <ErrorText>Ошибка загрузки</ErrorText>}
-        </DocumentInfo>
-        <DownloadIcon onClick={handleDownload}>
-          {showLoading ? <Spinner size="small" /> : '📥'}
-        </DownloadIcon>
-      </DocumentContainer>
-    );
-  }
-
-  if (message.sticker && currentMedia) {
-    const sticker = message.sticker;
-    const stickerSrc = currentMediaState.data || sticker.link || sticker.preview;
-    const showLoading = currentMediaState.isLoading && !currentMediaState.data && !currentMediaState.hasError;
-    
-    return (
-      <StickerContainer ref={containerRef}>
-        {showLoading && (
-          <StickerPlaceholder>
-            <Spinner size="small" />
-          </StickerPlaceholder>
-        )}
-        
-        {stickerSrc && !currentMediaState.hasError && (
-          <StickerImage 
-            src={stickerSrc} 
-            alt="Sticker"
-            loading="lazy"
-            onError={() => {
-              setMediaData(prev => ({
-                ...prev,
-                [currentMedia.id]: { ...prev[currentMedia.id], data: null, hasError: true }
-              }));
-            }}
-          />
-        )}
-        
-        {currentMediaState.hasError && !currentMediaState.data && (
-          <StickerPlaceholder onClick={handleRetry}>
-            <span>😊</span>
-            <RetryText>Повторить</RetryText>
-          </StickerPlaceholder>
-        )}
-        
-        {sticker.animated && <AnimatedBadge>GIF</AnimatedBadge>}
-      </StickerContainer>
-    );
-  }
-
-  if (message.location) {
-    const location = message.location;
-    const mapsUrl = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
-    return (
-      <LocationContainer onClick={() => window.open(mapsUrl, '_blank')}>
-        <LocationIcon>📍</LocationIcon>
-        <LocationInfo>
-          {location.name && <LocationName>{location.name}</LocationName>}
-          {location.address && <LocationAddress>{location.address}</LocationAddress>}
-          {!location.name && !location.address && (
-            <LocationCoords>
-              {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-            </LocationCoords>
-          )}
-        </LocationInfo>
-      </LocationContainer>
-    );
-  }
-
-  if (message.contact) {
-    return (
-      <ContactContainer>
-        <ContactIcon>👤</ContactIcon>
-        <ContactInfo>
-          <ContactName>{message.contact.name}</ContactName>
-          {message.contact.vcard && (
-            <ContactVcard 
-              onClick={(e) => {
-                e.stopPropagation();
-                downloadVCard(message.contact!.vcard, message.contact!.name);
-              }}
-            >
-              📇 Сохранить контакт
-            </ContactVcard>
-          )}
-        </ContactInfo>
-      </ContactContainer>
-    );
-  }
-
-  if (message.poll) {
-    const totalVotes = message.poll.results?.reduce((sum, r) => sum + r.count, 0) || 0;
-    return (
-      <PollContainer>
-        <PollTitle>{message.poll.title}</PollTitle>
-        {message.poll.results?.map((result) => (
-          <PollOption key={result.id}>
-            <PollOptionText>{result.name}</PollOptionText>
-            <PollBarContainer>
-              <PollBar width={totalVotes > 0 ? (result.count / totalVotes) * 100 : 0}>
-                <PollCount>{result.count}</PollCount>
-              </PollBar>
-            </PollBarContainer>
-          </PollOption>
-        ))}
-        <PollTotal>Всего голосов: {totalVotes}</PollTotal>
-      </PollContainer>
-    );
-  }
-
-  if (message.reactions.length > 0 && !message.text && !message.image && !message.video) {
-    return (
-      <ReactionsContainer>
-        {message.reactions.map((reaction) => (
-          <Reaction key={reaction.id}>
-            {reaction.emoji} {reaction.count > 1 && reaction.count}
-          </Reaction>
-        ))}
-      </ReactionsContainer>
-    );
-  }
+const ImageMessage: React.FC<{ image: ImageContent }> = ({ image }) => {
+  const { src, isLoading, hasError, retry } = useMediaSrc(image);
+  const fallback = image.preview ? `data:image/jpeg;base64,${image.preview}` : null;
+  const displaySrc = src || fallback;
 
   return (
-    <MessageText>
-      {message.displayText || '[Неизвестный тип сообщения]'}
-    </MessageText>
+    <MediaContainer>
+      {displaySrc && !hasError && (
+        <ImageWrap onClick={() => src && window.open(src, '_blank')}>
+          <ImageEl src={displaySrc} alt={image.caption || 'image'} loading="lazy" />
+          {isLoading && <ImageOverlay><Spinner /></ImageOverlay>}
+        </ImageWrap>
+      )}
+
+      {!displaySrc && isLoading && (
+        <MediaSkeleton>
+          <Spinner />
+        </MediaSkeleton>
+      )}
+
+      {hasError && !displaySrc && (
+        <ErrorBox>
+          <ErrorIcon>🖼️</ErrorIcon>
+          <ErrorText>Не удалось загрузить изображение</ErrorText>
+          <RetryButton onClick={retry}>Повторить</RetryButton>
+        </ErrorBox>
+      )}
+
+      {image.caption && <Caption>{image.caption}</Caption>}
+      {image.fileSize > 0 && <MetaLine>{formatFileSize(image.fileSize)}</MetaLine>}
+    </MediaContainer>
   );
-
-  function handleButtonClick(button: InteractiveButton) {
-    if (button.url) {
-      window.open(button.url, '_blank');
-    } else if (button.phoneNumber) {
-      window.location.href = `tel:${button.phoneNumber}`;
-    } else if (button.copyCode) {
-      navigator.clipboard.writeText(button.copyCode);
-      alert('Код скопирован!');
-    }
-  }
-
-  function formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
-
-  function formatDuration(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  function getFileIcon(mimeType?: string): string {
-    if (!mimeType) return '📄';
-    if (mimeType.includes('pdf')) return '📕';
-    if (mimeType.includes('word') || mimeType.includes('document')) return '📘';
-    if (mimeType.includes('excel') || mimeType.includes('sheet')) return '📗';
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return '📦';
-    if (mimeType.includes('image')) return '🖼️';
-    if (mimeType.includes('video')) return '🎥';
-    if (mimeType.includes('audio')) return '🎵';
-    return '📄';
-  }
-
-  function downloadFromBase64(dataUrl: string, fileName: string) {
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  function downloadVCard(vcard: string, name: string) {
-    const blob = new Blob([vcard], { type: 'text/vcard' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${name}.vcf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
 };
+
+const VideoMessage: React.FC<{ video: VideoContent }> = ({ video }) => {
+  const { src, isLoading, hasError, retry } = useMediaSrc(video);
+
+  return (
+    <MediaContainer>
+      {src && !hasError && (
+        <VideoEl controls preload="metadata">
+          <source src={src} type={video.mimeType} />
+          Ваш браузер не поддерживает видео
+        </VideoEl>
+      )}
+
+      {!src && isLoading && (
+        <MediaSkeleton>
+          <Spinner />
+          <SkeletonLabel>Загрузка видео…</SkeletonLabel>
+        </MediaSkeleton>
+      )}
+
+      {hasError && !src && (
+        <ErrorBox>
+          <ErrorIcon>🎬</ErrorIcon>
+          <ErrorText>Видео недоступно</ErrorText>
+          <RetryButton onClick={retry}>Повторить</RetryButton>
+        </ErrorBox>
+      )}
+
+      {video.caption && <Caption>{video.caption}</Caption>}
+      <MetaRow>
+        {video.seconds > 0 && <MetaLine>{formatDuration(video.seconds)}</MetaLine>}
+        {video.fileSize > 0 && <MetaLine>{formatFileSize(video.fileSize)}</MetaLine>}
+      </MetaRow>
+    </MediaContainer>
+  );
+};
+
+const AudioMessage: React.FC<{ audio: AudioContent }> = ({ audio }) => {
+  const { src, isLoading, hasError, retry } = useMediaSrc(audio);
+
+  return (
+    <AudioContainer>
+      <AudioIcon>🎵</AudioIcon>
+      <AudioBody>
+        {src && !hasError ? (
+          <AudioEl controls preload="metadata">
+            <source src={src} type={audio.mimeType} />
+          </AudioEl>
+        ) : isLoading ? (
+          <AudioLoading>
+            <Spinner size="small" />
+            <SkeletonLabel>Загрузка аудио…</SkeletonLabel>
+          </AudioLoading>
+        ) : (
+          <AudioError onClick={retry}>
+            <ErrorText>Аудио недоступно</ErrorText>
+            <RetryButton onClick={retry}>Повторить</RetryButton>
+          </AudioError>
+        )}
+        <AudioMeta>
+          {audio.fileName && <span>{audio.fileName}</span>}
+          {audio.seconds > 0 && <span>· {formatDuration(audio.seconds)}</span>}
+          {audio.fileSize > 0 && <span>· {formatFileSize(audio.fileSize)}</span>}
+        </AudioMeta>
+      </AudioBody>
+    </AudioContainer>
+  );
+};
+
+const VoiceMessage: React.FC<{ voice: VoiceContent }> = ({ voice }) => {
+  const { src, isLoading, hasError, retry } = useMediaSrc(voice);
+
+  return (
+    <VoiceContainer>
+      <VoiceIcon>🎙️</VoiceIcon>
+      <VoiceBody>
+        {src && !hasError ? (
+          <AudioEl controls preload="metadata">
+            <source src={src} type={voice.mimeType} />
+          </AudioEl>
+        ) : isLoading ? (
+          <AudioLoading>
+            <Spinner size="small" />
+            <SkeletonLabel>Загрузка…</SkeletonLabel>
+          </AudioLoading>
+        ) : (
+          <AudioError>
+            <ErrorText>Голосовое недоступно</ErrorText>
+            <RetryButton onClick={retry}>Повторить</RetryButton>
+          </AudioError>
+        )}
+        <AudioMeta>
+          <span>Голосовое сообщение</span>
+          {voice.seconds > 0 && <span>· {formatDuration(voice.seconds)}</span>}
+        </AudioMeta>
+      </VoiceBody>
+    </VoiceContainer>
+  );
+};
+
+const DocumentMessage: React.FC<{ document: DocumentContent }> = ({ document: doc }) => {
+  const { src, isLoading, hasError, retry } = useMediaSrc(doc);
+  const fileName = doc.fileName || 'Документ';
+  const icon = getFileIcon(doc.mimeType, doc.fileName);
+
+  const handleClick = () => {
+    if (src) {
+      if (doc.link && !doc.id) {
+        window.open(src, '_blank');
+      } else {
+        triggerDownload(src, fileName);
+      }
+    } else if (hasError) {
+      retry();
+    }
+  };
+
+  return (
+    <DocumentCard onClick={handleClick} role="button">
+      <DocumentIconBox>{icon}</DocumentIconBox>
+      <DocumentBody>
+        <DocumentName>{fileName}</DocumentName>
+        <DocumentMeta>
+          {doc.fileSize > 0 && <span>{formatFileSize(doc.fileSize)}</span>}
+          {doc.pageCount > 0 && <span>· {doc.pageCount} стр.</span>}
+          {doc.mimeType && <span>· {doc.mimeType.split('/').pop()?.toUpperCase()}</span>}
+        </DocumentMeta>
+        {doc.caption && <DocumentCaption>{doc.caption}</DocumentCaption>}
+        {isLoading && <DocumentStatus>Загрузка…</DocumentStatus>}
+        {hasError && <DocumentStatusError>Ошибка — нажмите, чтобы повторить</DocumentStatusError>}
+      </DocumentBody>
+      <DocumentAction>
+        {isLoading ? <Spinner size="small" /> : <ActionIcon>{src ? '⬇' : '↻'}</ActionIcon>}
+      </DocumentAction>
+    </DocumentCard>
+  );
+};
+
+const StickerMessage: React.FC<{ sticker: StickerContent }> = ({ sticker }) => {
+  const { src, isLoading, hasError, retry } = useMediaSrc(sticker);
+  const fallback = sticker.preview ? `data:image/png;base64,${sticker.preview}` : null;
+  const displaySrc = src || fallback;
+
+  return (
+    <StickerContainer>
+      {displaySrc && !hasError && <StickerImage src={displaySrc} alt="Sticker" loading="lazy" />}
+      {!displaySrc && isLoading && (
+        <StickerPlaceholder>
+          <Spinner size="small" />
+        </StickerPlaceholder>
+      )}
+      {hasError && !displaySrc && (
+        <StickerPlaceholder onClick={retry}>
+          <span style={{ fontSize: '24px' }}>😊</span>
+          <RetryLabel>Повторить</RetryLabel>
+        </StickerPlaceholder>
+      )}
+      {sticker.animated && <AnimatedBadge>GIF</AnimatedBadge>}
+    </StickerContainer>
+  );
+};
+
+const LocationMessage: React.FC<{ location: LocationContent }> = ({ location }) => {
+  const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+  return (
+    <LocationCard onClick={() => window.open(url, '_blank')}>
+      <LocationIconBox>📍</LocationIconBox>
+      <LocationBody>
+        {location.name && <LocationName>{location.name}</LocationName>}
+        {location.address && <LocationAddress>{location.address}</LocationAddress>}
+        {!location.name && !location.address && (
+          <LocationCoords>
+            {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+          </LocationCoords>
+        )}
+        <LocationOpen>Открыть на карте →</LocationOpen>
+      </LocationBody>
+    </LocationCard>
+  );
+};
+
+const ContactMessage: React.FC<{ contact: ContactContent }> = ({ contact }) => {
+  return (
+    <ContactCard>
+      <ContactAvatar>👤</ContactAvatar>
+      <ContactBody>
+        <ContactName>{contact.name}</ContactName>
+        {contact.vcard && (
+          <ContactSave onClick={(e) => { e.stopPropagation(); downloadVCard(contact.vcard, contact.name); }}>
+            📇 Сохранить контакт
+          </ContactSave>
+        )}
+      </ContactBody>
+    </ContactCard>
+  );
+};
+
+const PollMessage: React.FC<{ poll: PollContent }> = ({ poll }) => {
+  const total = poll.results?.reduce((sum, r) => sum + r.count, 0) || 0;
+  return (
+    <PollCard>
+      <PollTitle>{poll.title}</PollTitle>
+      {poll.results?.map((r) => {
+        const pct = total > 0 ? (r.count / total) * 100 : 0;
+        return (
+          <PollOption key={r.id}>
+            <PollOptionHeader>
+              <PollOptionText>{r.name}</PollOptionText>
+              <PollOptionCount>{r.count}</PollOptionCount>
+            </PollOptionHeader>
+            <PollBarTrack>
+              <PollBarFill width={pct} />
+            </PollBarTrack>
+          </PollOption>
+        );
+      })}
+      <PollTotal>Всего голосов: {total}</PollTotal>
+    </PollCard>
+  );
+};
+
+const ReactionsRow: React.FC<{ reactions: Reaction[] }> = ({ reactions }) => (
+  <ReactionsContainer>
+    {reactions.map((r) => (
+      <ReactionPill key={r.id}>
+        {r.emoji} {r.count > 1 && <ReactionCount>{r.count}</ReactionCount>}
+      </ReactionPill>
+    ))}
+  </ReactionsContainer>
+);
+
+export default MessageContent;
+
+const WA_GREEN = '#075E54';
+const WA_GREEN_LIGHT = '#128C7E';
+const META_GREY = '#8696A0';
+const BG_LIGHT = '#F5F6F8';
+const BG_HOVER = '#ECEEF1';
+
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const Spinner = styled.div<{ size?: 'small' | 'normal' }>`
+  width: ${p => p.size === 'small' ? '18px' : '32px'};
+  height: ${p => p.size === 'small' ? '18px' : '32px'};
+  border: 2px solid rgba(7, 94, 84, 0.15);
+  border-top-color: ${WA_GREEN};
+  border-radius: 50%;
+  animation: ${spin} 0.9s linear infinite;
+`;
 
 const MessageText = styled.div`
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
   word-wrap: break-word;
+  white-space: pre-wrap;
+`;
+
+const TextBody = styled.span`
+  color: #111B21;
 `;
 
 const ButtonsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin-top: 8px;
 `;
 
-const Button = styled.button`
-  background-color: #075E54;
+const ActionButton = styled.button`
+  background-color: ${WA_GREEN};
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 18px;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  
-  &:hover {
-    background-color: #128C7E;
-  }
+  transition: background-color 0.15s;
+
+  &:hover { background-color: ${WA_GREEN_LIGHT}; }
 `;
 
 const MediaContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 320px;
+`;
+
+const ImageWrap = styled.div`
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: zoom-in;
+  background: ${BG_LIGHT};
+  line-height: 0;
+`;
+
+const ImageEl = styled.img`
+  display: block;
   max-width: 100%;
+  max-height: 320px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  transition: transform 0.2s ease;
+
+  ${ImageWrap}:hover & { transform: scale(1.01); }
 `;
 
-const Caption = styled.div`
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 8px;
+const ImageOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.4);
 `;
 
-const Image = styled.img`
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 8px;
-  cursor: pointer;
-  
-  &:hover {
-    opacity: 0.9;
-  }
+const VideoEl = styled.video`
+  width: 100%;
+  max-height: 320px;
+  border-radius: 10px;
+  background: #000;
 `;
 
-const Video = styled.video`
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 8px;
-`;
-
-const Audio = styled.audio`
-  width: 200px;
-  height: 40px;
-`;
-
-const MediaPlaceholder = styled.div`
+const MediaSkeleton = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 20px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
+  min-width: 200px;
+  min-height: 140px;
+  background: ${BG_LIGHT};
+  border-radius: 10px;
+  color: ${META_GREY};
+`;
+
+const SkeletonLabel = styled.span`
   font-size: 12px;
-  color: #666;
+  color: ${META_GREY};
 `;
 
-const LoadingText = styled.span<{ small?: boolean }>`
-  font-size: ${props => props.small ? '10px' : '12px'};
-  color: #666;
+const ErrorBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 20px;
+  background: ${BG_LIGHT};
+  border-radius: 10px;
+  color: ${META_GREY};
 `;
 
-const FileInfo = styled.div`
-  font-size: 10px;
-  color: #8696A0;
-  margin-top: 4px;
+const ErrorIcon = styled.span`
+  font-size: 28px;
 `;
 
-const VideoDuration = styled.div`
-  font-size: 10px;
-  color: #8696A0;
-  margin-top: 4px;
+const ErrorText = styled.span`
+  font-size: 13px;
+  color: ${META_GREY};
 `;
 
-const AudioInfo = styled.div`
+const RetryButton = styled.button`
+  padding: 6px 14px;
+  background: ${WA_GREEN};
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover { background: ${WA_GREEN_LIGHT}; }
+`;
+
+const Caption = styled.div`
+  font-size: 13px;
+  color: #111B21;
+  line-height: 1.4;
+  margin-top: 2px;
+  word-wrap: break-word;
+`;
+
+const MetaRow = styled.div`
   display: flex;
   gap: 8px;
-  font-size: 10px;
-  color: #8696A0;
-  margin-top: 4px;
+  flex-wrap: wrap;
 `;
 
-const VoiceInfo = styled.div`
-  display: flex;
-  gap: 8px;
-  font-size: 10px;
-  color: #8696A0;
-  margin-top: 4px;
+const MetaLine = styled.div`
+  font-size: 11px;
+  color: ${META_GREY};
 `;
 
-const DocumentContainer = styled.div`
+const AudioContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
-  cursor: pointer;
-  min-width: 200px;
-  
-  &:hover {
-    background-color: #e0e0e0;
+  padding: 10px 12px;
+  background: ${BG_LIGHT};
+  border-radius: 12px;
+  min-width: 240px;
+  max-width: 320px;
+`;
+
+const AudioIcon = styled.div`
+  font-size: 24px;
+  flex-shrink: 0;
+`;
+
+const AudioBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const AudioEl = styled.audio`
+  width: 100%;
+  height: 36px;
+`;
+
+const AudioLoading = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+`;
+
+const AudioError = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+`;
+
+const AudioMeta = styled.div`
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: ${META_GREY};
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 `;
 
-const DocumentIcon = styled.div`
-  font-size: 32px;
+const VoiceContainer = styled(AudioContainer)`
+  background: rgba(7, 94, 84, 0.06);
 `;
 
-const DocumentInfo = styled.div`
+const VoiceIcon = styled(AudioIcon)`
+  color: ${WA_GREEN};
+`;
+
+const VoiceBody = styled(AudioBody)``;
+
+const DocumentCard = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: ${BG_LIGHT};
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 240px;
+  max-width: 320px;
+  transition: background-color 0.15s;
+
+  &:hover { background: ${BG_HOVER}; }
+`;
+
+const DocumentIconBox = styled.div`
+  font-size: 28px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 8px;
+  flex-shrink: 0;
+`;
+
+const DocumentBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   flex: 1;
+  min-width: 0;
 `;
 
 const DocumentName = styled.div`
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  margin-bottom: 4px;
-  word-break: break-word;
+  color: #111B21;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const DocumentMeta = styled.div`
-  font-size: 10px;
-  color: #666;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: ${META_GREY};
+
+  span { white-space: nowrap; }
 `;
 
-const ErrorText = styled.div`
-  font-size: 10px;
-  color: #ff4444;
+const DocumentCaption = styled.div`
+  font-size: 12px;
+  color: #54656F;
   margin-top: 4px;
 `;
 
-const DownloadIcon = styled.div`
-  font-size: 20px;
-  cursor: pointer;
-  padding: 4px;
-  
-  &:hover {
-    transform: scale(1.1);
-  }
+const DocumentStatus = styled.div`
+  font-size: 11px;
+  color: ${META_GREY};
+  margin-top: 2px;
+`;
+
+const DocumentStatusError = styled(DocumentStatus)`
+  color: #D33;
+`;
+
+const DocumentAction = styled.div`
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: white;
+  color: ${WA_GREEN};
+  flex-shrink: 0;
+
+  ${DocumentCard}:hover & { background: ${WA_GREEN}; color: white; }
+`;
+
+const ActionIcon = styled.span`
+  font-size: 14px;
+  font-weight: 600;
 `;
 
 const StickerContainer = styled.div`
   position: relative;
   display: inline-block;
-  cursor: pointer;
 `;
 
 const StickerImage = styled.img`
-  max-width: 128px;
-  max-height: 128px;
+  max-width: 140px;
+  max-height: 140px;
+  display: block;
 `;
 
 const StickerPlaceholder = styled.div`
-  width: 96px;
-  height: 96px;
+  width: 110px;
+  height: 110px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  background-color: #f0f0f0;
+  gap: 6px;
+  background: ${BG_LIGHT};
   border-radius: 12px;
-  font-size: 32px;
   cursor: pointer;
-  
-  &:hover {
-    background-color: #e0e0e0;
-  }
+
+  &:hover { background: ${BG_HOVER}; }
 `;
 
-const RetryText = styled.span`
-  font-size: 10px;
-  color: #666;
+const RetryLabel = styled.span`
+  font-size: 11px;
+  color: ${META_GREY};
 `;
 
 const AnimatedBadge = styled.span`
   position: absolute;
-  top: 4px;
-  right: 4px;
-  background-color: rgba(0, 0, 0, 0.6);
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.65);
   color: white;
   font-size: 10px;
-  padding: 2px 4px;
+  font-weight: 600;
+  padding: 2px 6px;
   border-radius: 4px;
 `;
 
-const LocationContainer = styled.div`
+const LocationCard = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
+  padding: 10px 12px;
+  background: ${BG_LIGHT};
+  border-radius: 10px;
   cursor: pointer;
-  
-  &:hover {
-    background-color: #e0e0e0;
-  }
+  min-width: 220px;
+  max-width: 320px;
+  transition: background-color 0.15s;
+
+  &:hover { background: ${BG_HOVER}; }
 `;
 
-const LocationIcon = styled.div`
+const LocationIconBox = styled.div`
   font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  flex-shrink: 0;
 `;
 
-const LocationInfo = styled.div`
+const LocationBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   flex: 1;
+  min-width: 0;
 `;
 
 const LocationName = styled.div`
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
+  color: #111B21;
 `;
 
 const LocationAddress = styled.div`
   font-size: 12px;
-  color: #666;
+  color: #54656F;
 `;
 
 const LocationCoords = styled.div`
   font-size: 12px;
   font-family: monospace;
+  color: #54656F;
 `;
 
-const ContactContainer = styled.div`
+const LocationOpen = styled.div`
+  font-size: 11px;
+  color: ${WA_GREEN};
+  margin-top: 2px;
+  font-weight: 500;
+`;
+
+const ContactCard = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
+  padding: 10px 12px;
+  background: ${BG_LIGHT};
+  border-radius: 10px;
+  min-width: 220px;
+  max-width: 320px;
 `;
 
-const ContactIcon = styled.div`
-  font-size: 32px;
+const ContactAvatar = styled.div`
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  flex-shrink: 0;
 `;
 
-const ContactInfo = styled.div`
+const ContactBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   flex: 1;
 `;
 
 const ContactName = styled.div`
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  margin-bottom: 4px;
+  color: #111B21;
 `;
 
-const ContactVcard = styled.button`
+const ContactSave = styled.button`
   background: none;
   border: none;
-  color: #075E54;
+  color: ${WA_GREEN};
   font-size: 12px;
   cursor: pointer;
   padding: 0;
-  
-  &:hover {
-    text-decoration: underline;
-  }
+  text-align: left;
+  font-weight: 500;
+
+  &:hover { text-decoration: underline; }
 `;
 
-const PollContainer = styled.div`
+const PollCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
-  min-width: 200px;
+  background: ${BG_LIGHT};
+  border-radius: 10px;
+  min-width: 240px;
+  max-width: 320px;
 `;
 
 const PollTitle = styled.div`
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 12px;
-`;
-
-const PollOption = styled.div`
-  margin-bottom: 8px;
-`;
-
-const PollOptionText = styled.div`
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111B21;
   margin-bottom: 4px;
 `;
 
-const PollBarContainer = styled.div`
-  background-color: #e0e0e0;
-  border-radius: 12px;
-  overflow: hidden;
-`;
-
-const PollBar = styled.div<{ width: number }>`
-  background-color: #075E54;
-  width: ${props => Math.min(props.width, 100)}%;
-  height: 24px;
-  border-radius: 12px;
+const PollOption = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 8px;
-  transition: width 0.3s ease;
+  flex-direction: column;
+  gap: 4px;
 `;
 
-const PollCount = styled.span`
-  color: white;
+const PollOptionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+`;
+
+const PollOptionText = styled.span`
+  font-size: 12px;
+  color: #111B21;
+`;
+
+const PollOptionCount = styled.span`
   font-size: 11px;
+  color: ${META_GREY};
   font-weight: 500;
 `;
 
+const PollBarTrack = styled.div`
+  height: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+`;
+
+const PollBarFill = styled.div<{ width: number }>`
+  width: ${p => Math.min(p.width, 100)}%;
+  height: 100%;
+  background: ${WA_GREEN};
+  border-radius: 3px;
+  transition: width 0.3s ease;
+`;
+
 const PollTotal = styled.div`
-  font-size: 10px;
-  color: #666;
-  margin-top: 8px;
+  font-size: 11px;
+  color: ${META_GREY};
+  margin-top: 4px;
   text-align: right;
 `;
 
 const ReactionsContainer = styled.div`
   display: flex;
   gap: 4px;
-  margin-top: 4px;
+  flex-wrap: wrap;
 `;
 
-const Reaction = styled.span`
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 2px 6px;
+const ReactionPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 8px;
   border-radius: 12px;
-  font-size: 11px;
-`;
-
-const Spinner = styled.div<{ size?: 'small' | 'normal' }>`
-  width: ${props => props.size === 'small' ? '20px' : '40px'};
-  height: ${props => props.size === 'small' ? '20px' : '40px'};
-  border: 2px solid #e0e0e0;
-  border-top: 2px solid #075E54;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-
-const RetryButton = styled.button`
-  margin-top: 8px;
-  padding: 4px 12px;
-  background-color: #075E54;
-  color: white;
-  border: none;
-  border-radius: 16px;
-  font-size: 11px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #128C7E;
-  }
-`;
-
-const RetryLink = styled.a`
-  color: #075E54;
   font-size: 12px;
-  text-decoration: none;
-  
-  &:hover {
-    text-decoration: underline;
-  }
 `;
 
-export default MessageContent;
+const ReactionCount = styled.span`
+  font-size: 10px;
+  color: ${META_GREY};
+`;
