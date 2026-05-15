@@ -62,6 +62,7 @@ class WhatsAppService {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 5 * 60 * 1000, // uploads can be slow; override the 10s global default
     });
     return response.data;
   }
