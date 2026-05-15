@@ -198,7 +198,8 @@ const useWhatsApp = () => {
     
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const displayText = caption || getMediaDisplayText(mediaKind, file.name);
-    
+    const localUrl = URL.createObjectURL(file);
+
     const optimisticMessage: ChatMessage = {
       id: tempId,
       from: channelStatus?.phoneNumber || 'currentUser',
@@ -217,11 +218,13 @@ const useWhatsApp = () => {
       reactions: [],
       labels: []
     };
-    
+
+    // For optimistic media: use a local blob URL as `link` and leave `id` empty so
+    // the loader does NOT try to GET /WhatsApp/media-by-id with a temp id (which 400s).
     if (mediaKind === 'image') {
       optimisticMessage.image = {
-        id: tempId,
-        link: '',
+        id: '',
+        link: localUrl,
         mimeType: file.type,
         fileSize: file.size,
         fileName: file.name,
@@ -236,8 +239,8 @@ const useWhatsApp = () => {
       };
     } else if (mediaKind === 'video') {
       optimisticMessage.video = {
-        id: tempId,
-        link: '',
+        id: '',
+        link: localUrl,
         mimeType: file.type,
         fileSize: file.size,
         fileName: file.name,
@@ -254,8 +257,8 @@ const useWhatsApp = () => {
       };
     } else if (mediaKind === 'document') {
       optimisticMessage.document = {
-        id: tempId,
-        link: '',
+        id: '',
+        link: localUrl,
         mimeType: file.type,
         fileSize: file.size,
         fileName: file.name,
@@ -271,8 +274,8 @@ const useWhatsApp = () => {
       };
     } else if (mediaKind === 'audio') {
       optimisticMessage.audio = {
-        id: tempId,
-        link: '',
+        id: '',
+        link: localUrl,
         mimeType: file.type,
         fileSize: file.size,
         fileName: file.name,
@@ -285,8 +288,8 @@ const useWhatsApp = () => {
       };
     } else if (mediaKind === 'voice') {
       optimisticMessage.voice = {
-        id: tempId,
-        link: '',
+        id: '',
+        link: localUrl,
         mimeType: file.type,
         fileSize: file.size,
         fileName: file.name,
