@@ -116,14 +116,30 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
 
 const ImageMessage: React.FC<{ image: ImageContent }> = ({ image }) => {
   const { src, isLoading, hasError, retry } = useMediaSrc(image);
+  const [renderError, setRenderError] = React.useState(false);
   const fallback = image.preview ? `data:image/jpeg;base64,${image.preview}` : null;
   const displaySrc = src || fallback;
+  const showError = (hasError && !displaySrc) || renderError;
+
+  React.useEffect(() => { setRenderError(false); }, [src]);
 
   return (
     <MediaContainer>
-      {displaySrc && !hasError && (
+      {displaySrc && !showError && (
         <ImageWrap onClick={() => src && window.open(src, '_blank')}>
-          <ImageEl src={displaySrc} alt={image.caption || 'image'} loading="lazy" />
+          <ImageEl
+            src={displaySrc}
+            alt={image.caption || 'image'}
+            loading="lazy"
+            onError={() => {
+              console.warn('[ImageMessage] img failed to render', {
+                id: image.id,
+                mimeType: image.mimeType,
+                srcPreview: displaySrc.slice(0, 80),
+              });
+              setRenderError(true);
+            }}
+          />
           {isLoading && <ImageOverlay><Spinner /></ImageOverlay>}
         </ImageWrap>
       )}
@@ -134,11 +150,11 @@ const ImageMessage: React.FC<{ image: ImageContent }> = ({ image }) => {
         </MediaSkeleton>
       )}
 
-      {hasError && !displaySrc && (
+      {showError && (
         <ErrorBox>
           <ErrorIcon>🖼️</ErrorIcon>
           <ErrorText>Не удалось загрузить изображение</ErrorText>
-          <RetryButton onClick={retry}>Повторить</RetryButton>
+          <RetryButton onClick={() => { setRenderError(false); retry(); }}>Повторить</RetryButton>
         </ErrorBox>
       )}
 
@@ -150,11 +166,25 @@ const ImageMessage: React.FC<{ image: ImageContent }> = ({ image }) => {
 
 const VideoMessage: React.FC<{ video: VideoContent }> = ({ video }) => {
   const { src, isLoading, hasError, retry } = useMediaSrc(video);
+  const [renderError, setRenderError] = React.useState(false);
+  const showError = (hasError && !src) || renderError;
+
+  React.useEffect(() => { setRenderError(false); }, [src]);
 
   return (
     <MediaContainer>
-      {src && !hasError && (
-        <VideoEl controls preload="metadata">
+      {src && !showError && (
+        <VideoEl
+          controls
+          preload="metadata"
+          onError={() => {
+            console.warn('[VideoMessage] video failed to render', {
+              id: video.id,
+              mimeType: video.mimeType,
+            });
+            setRenderError(true);
+          }}
+        >
           <source src={src} type={video.mimeType} />
           Ваш браузер не поддерживает видео
         </VideoEl>
@@ -167,11 +197,11 @@ const VideoMessage: React.FC<{ video: VideoContent }> = ({ video }) => {
         </MediaSkeleton>
       )}
 
-      {hasError && !src && (
+      {showError && (
         <ErrorBox>
           <ErrorIcon>🎬</ErrorIcon>
           <ErrorText>Видео недоступно</ErrorText>
-          <RetryButton onClick={retry}>Повторить</RetryButton>
+          <RetryButton onClick={() => { setRenderError(false); retry(); }}>Повторить</RetryButton>
         </ErrorBox>
       )}
 

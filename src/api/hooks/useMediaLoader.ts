@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../client';
+import { toDataUrl } from '../utils/mediaUrl';
+
+// NOTE: link-priority temporarily disabled — backend doesn't reliably send `link`
+// yet and we need to verify the base64/id pipeline first.
+// Re-enable by setting USE_LINK_PRIORITY = true once backend stabilises.
+const USE_LINK_PRIORITY = false;
 
 interface MediaInput {
   id?: string;
@@ -23,11 +29,6 @@ interface MediaApiResponse {
 const mediaCache = new Map<string, string>();
 const inflight = new Map<string, Promise<string | null>>();
 
-const toDataUrl = (data: string, mimeType?: string): string => {
-  if (data.startsWith('data:')) return data;
-  return `data:${mimeType || 'application/octet-stream'};base64,${data}`;
-};
-
 const fetchMediaById = (id: string): Promise<string | null> => {
   const cached = mediaCache.get(id);
   if (cached) return Promise.resolve(cached);
@@ -37,14 +38,26 @@ const fetchMediaById = (id: string): Promise<string | null> => {
 
   const promise = apiClient
     .get<MediaApiResponse>('/WhatsApp/media-by-id', { params: { mediaId: id } })
-    .then(({ data }) => {
-      if (!data?.data) return null;
-      const src = toDataUrl(data.data, data.mimeType);
+    .then((response) => {
+      const body = response.data;
+      console.log('[useMediaLoader] media-by-id response', {
+        id,
+        keys: body && typeof body === 'object' ? Object.keys(body) : typeof body,
+        mimeType: body?.mimeType,
+        dataType: typeof body?.data,
+        dataLength: typeof body?.data === 'string' ? body.data.length : undefined,
+        dataPreview: typeof body?.data === 'string' ? body.data.slice(0, 60) : body?.data,
+        fileSize: body?.fileSize,
+      });
+
+      if (!body?.data) return null;
+      const src = toDataUrl(body.data, body.mimeType);
+      if (!src) return null;
       mediaCache.set(id, src);
       return src;
     })
-    .catch(err => {
-      console.error('Failed to load media:', err);
+    .catch((err) => {
+      console.error('[useMediaLoader] failed to load media', id, err);
       return null;
     })
     .finally(() => {
@@ -58,12 +71,22 @@ const fetchMediaById = (id: string): Promise<string | null> => {
 export const useMediaSrc = (media: MediaInput | undefined | null): MediaState & { retry: () => void } => {
   const compute = (): MediaState => {
     if (!media) return { src: null, isLoading: false, hasError: false };
-    if (media.link) return { src: media.link, isLoading: false, hasError: false };
-    if (media.data) return { src: toDataUrl(media.data, media.mimeType), isLoading: false, hasError: false };
+    if (USE_LINK_PRIORITY && media.link) {
+      return { src: media.link, isLoading: false, hasError: false };
+    }
+    if (media.data) {
+      const src = toDataUrl(media.data, media.mimeType);
+      return src
+        ? { src, isLoading: false, hasError: false }
+        : { src: null, isLoading: false, hasError: true };
+    }
     if (media.id && mediaCache.has(media.id)) {
       return { src: mediaCache.get(media.id)!, isLoading: false, hasError: false };
     }
     if (media.id) return { src: null, isLoading: true, hasError: false };
+    if (!USE_LINK_PRIORITY && media.link) {
+      return { src: media.link, isLoading: false, hasError: false };
+    }
     return { src: null, isLoading: false, hasError: false };
   };
 
@@ -78,18 +101,25 @@ export const useMediaSrc = (media: MediaInput | undefined | null): MediaState & 
       return;
     }
 
-    if (media.link) {
+    if (USE_LINK_PRIORITY && media.link) {
       setState({ src: media.link, isLoading: false, hasError: false });
       return;
     }
 
     if (media.data) {
-      setState({ src: toDataUrl(media.data, media.mimeType), isLoading: false, hasError: false });
+      const src = toDataUrl(media.data, media.mimeType);
+      setState(src
+        ? { src, isLoading: false, hasError: false }
+        : { src: null, isLoading: false, hasError: true });
       return;
     }
 
     if (!media.id) {
-      setState({ src: null, isLoading: false, hasError: false });
+      if (media.link) {
+        setState({ src: media.link, isLoading: false, hasError: false });
+      } else {
+        setState({ src: null, isLoading: false, hasError: false });
+      }
       return;
     }
 
@@ -101,11 +131,15 @@ export const useMediaSrc = (media: MediaInput | undefined | null): MediaState & 
 
     setState({ src: null, isLoading: true, hasError: false });
 
-    fetchMediaById(media.id).then(src => {
+    fetchMediaById(media.id).then((src) => {
       if (cancelled) return;
-      setState(src
-        ? { src, isLoading: false, hasError: false }
-        : { src: null, isLoading: false, hasError: true });
+      if (src) {
+        setState({ src, isLoading: false, hasError: false });
+      } else if (!USE_LINK_PRIORITY && media.link) {
+        setState({ src: media.link, isLoading: false, hasError: false });
+      } else {
+        setState({ src: null, isLoading: false, hasError: true });
+      }
     });
 
     return () => { cancelled = true; };
@@ -116,7 +150,7 @@ export const useMediaSrc = (media: MediaInput | undefined | null): MediaState & 
       mediaCache.delete(media.id);
       inflight.delete(media.id);
     }
-    setReloadKey(k => k + 1);
+    setReloadKey((k) => k + 1);
   };
 
   return { ...state, retry };
