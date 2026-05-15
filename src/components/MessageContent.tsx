@@ -15,6 +15,7 @@ import type {
   Reaction,
 } from '../api/types/whatsapp';
 import { useMediaSrc } from '../api/hooks/useMediaLoader';
+import { toDataUrl } from '../api/utils/mediaUrl';
 
 interface MessageContentProps {
   message: ChatMessage;
@@ -117,7 +118,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
 const ImageMessage: React.FC<{ image: ImageContent }> = ({ image }) => {
   const { src, isLoading, hasError, retry } = useMediaSrc(image);
   const [renderError, setRenderError] = React.useState(false);
-  const fallback = image.preview ? `data:image/jpeg;base64,${image.preview}` : null;
+  const fallback = toDataUrl(image.preview, image.mimeType || 'image/jpeg');
   const displaySrc = src || fallback;
   const showError = (hasError && !displaySrc) || renderError;
 
@@ -132,11 +133,12 @@ const ImageMessage: React.FC<{ image: ImageContent }> = ({ image }) => {
             alt={image.caption || 'image'}
             loading="lazy"
             onError={() => {
-              console.warn('[ImageMessage] img failed to render', {
+              console.warn('[ImageMessage] img failed to render', JSON.stringify({
                 id: image.id,
                 mimeType: image.mimeType,
-                srcPreview: displaySrc.slice(0, 80),
-              });
+                srcHead: displaySrc.slice(0, 80),
+                srcLength: displaySrc.length,
+              }));
               setRenderError(true);
             }}
           />
@@ -317,7 +319,7 @@ const DocumentMessage: React.FC<{ document: DocumentContent }> = ({ document: do
 
 const StickerMessage: React.FC<{ sticker: StickerContent }> = ({ sticker }) => {
   const { src, isLoading, hasError, retry } = useMediaSrc(sticker);
-  const fallback = sticker.preview ? `data:image/png;base64,${sticker.preview}` : null;
+  const fallback = toDataUrl(sticker.preview, sticker.mimeType || 'image/png');
   const displaySrc = src || fallback;
 
   return (

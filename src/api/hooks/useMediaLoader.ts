@@ -40,18 +40,24 @@ const fetchMediaById = (id: string): Promise<string | null> => {
     .get<MediaApiResponse>('/WhatsApp/media-by-id', { params: { mediaId: id } })
     .then((response) => {
       const body = response.data;
-      console.log('[useMediaLoader] media-by-id response', {
+      const info = {
         id,
         keys: body && typeof body === 'object' ? Object.keys(body) : typeof body,
         mimeType: body?.mimeType,
         dataType: typeof body?.data,
         dataLength: typeof body?.data === 'string' ? body.data.length : undefined,
-        dataPreview: typeof body?.data === 'string' ? body.data.slice(0, 60) : body?.data,
+        dataHead: typeof body?.data === 'string' ? body.data.slice(0, 60) : body?.data,
         fileSize: body?.fileSize,
-      });
+      };
+      // stringified so Chrome doesn't collapse to "Object"
+      console.log('[useMediaLoader] media-by-id response', JSON.stringify(info));
 
       if (!body?.data) return null;
       const src = toDataUrl(body.data, body.mimeType);
+      console.log('[useMediaLoader] built src for', id, JSON.stringify({
+        ok: !!src,
+        srcHead: src?.slice(0, 80),
+      }));
       if (!src) return null;
       mediaCache.set(id, src);
       return src;
