@@ -22,8 +22,11 @@ export interface SenderInfoResponse {
     licenceDays: number;
     currentAccountDetails: string;
 
-    comingPaymentContent: boolean;
-    overduePaymentContent: number;
+    comingPaymentContent: string;
+    overduePaymentContent: string;
+    shareCreditContent: string;
+    shareCreditsContent: string;
+    shareSchedulesContent: string;
 
     messagesCount: number;
 

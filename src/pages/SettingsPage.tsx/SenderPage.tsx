@@ -7,10 +7,136 @@ import useSender from '../../api/hooks/useSender';
 import { TextPatternType } from '../../api/types/sender';
 import DefaultContainer from '../../components/ui/containers/defaultContainer';
 
-interface SenderSettings {
-  upcomingPaymentText: string;
-  overduePaymentText: string;
+type TemplateKey =
+  | 'upcomingPaymentText'
+  | 'overduePaymentText'
+  | 'shareCreditText'
+  | 'shareCreditsText'
+  | 'shareSchedulesText';
+
+interface Variable {
+  key: string;
+  label: string;
+  preview: string;
 }
+
+interface TemplateConfig {
+  key: TemplateKey;
+  title: string;
+  patternType: TextPatternType;
+  variables: Variable[];
+  placeholder: string;
+}
+
+type SenderSettings = Record<TemplateKey, string>;
+
+const paymentVariables: Variable[] = [
+  { key: 'fullname', label: 'ФИО', preview: 'Иванов Иван Иванович' },
+  { key: 'company', label: 'Компания', preview: 'ООО "Пример"' },
+  { key: 'amount', label: 'Сумма', preview: '15 000 ₽' },
+  { key: 'date', label: 'Дата платежа', preview: '15.12.2024' },
+  { key: 'credit_date', label: 'Дата договора', preview: '01.01.2024' },
+  { key: 'account_details', label: 'Карта', preview: '**** 1234' },
+  { key: 'rest', label: 'Остаток', preview: '50 000 ₽' },
+  { key: 'product', label: 'Товар', preview: 'Ноутбук Dell XPS 15' },
+  { key: 'payment_day', label: 'День платежа', preview: '15 число' },
+  { key: 'overdue', label: 'Просрочка', preview: '3 дня' },
+  { key: 'support_number', label: 'Поддержка', preview: '+7 (999) 123-45-67' }
+];
+
+const shareCreditVariables: Variable[] = [
+  { key: 'name', label: 'Договор', preview: '№123' },
+  { key: 'date', label: 'Дата оформления', preview: '01.01.2024' },
+  { key: 'client_fullname', label: 'ФИО клиента', preview: 'Иванов Иван Иванович' },
+  { key: 'terms', label: 'Срок', preview: '12' },
+  { key: 'total_clean', label: 'Стоимость товара', preview: '100 000 ₽' },
+  { key: 'total_amount', label: 'Общая сумма', preview: '120 000 ₽' }
+];
+
+const shareCreditsVariables: Variable[] = [
+  { key: 'name', label: 'Договор', preview: '№123' },
+  { key: 'client_fullname', label: 'ФИО клиента', preview: 'Иванов Иван Иванович' },
+  { key: 'date', label: 'Дата', preview: '01.01.2024' },
+  { key: 'total_amount', label: 'Сумма', preview: '120 000 ₽' },
+  { key: 'rest', label: 'Остаток', preview: '50 000 ₽' }
+];
+
+const shareSchedulesVariables: Variable[] = [
+  { key: 'number', label: 'Номер платежа', preview: '1' },
+  { key: 'date', label: 'Дата', preview: '15.12.2024' },
+  { key: 'amount', label: 'Сумма', preview: '15 000 ₽' },
+  { key: 'payment_type', label: 'Способ оплаты', preview: 'Наличные' },
+  { key: 'employee', label: 'Сотрудник', preview: 'Петров П.П.' }
+];
+
+const templateConfigs: TemplateConfig[] = [
+  {
+    key: 'upcomingPaymentText',
+    title: 'Текст для приближающегося платежа',
+    patternType: TextPatternType.ComingPayment,
+    variables: paymentVariables,
+    placeholder: `Пример:
+Уважаемый {fullname}!
+Напоминаем, что {date} ожидается платеж в размере {amount} по договору от {credit_date}.
+Остаток задолженности: {rest}
+Товар: {product}`
+  },
+  {
+    key: 'overduePaymentText',
+    title: 'Текст для просроченного платежа',
+    patternType: TextPatternType.OverduePayment,
+    variables: paymentVariables,
+    placeholder: `Пример:
+Уважаемый {fullname}!
+У Вас просрочка платежа на {amount} с {date}.
+Просрочка составляет {overdue}.
+Пожалуйста, произведите оплату на карту {account_details}.
+Для уточнений звоните {support_number}`
+  },
+  {
+    key: 'shareCreditText',
+    title: 'Текст для отправки договора',
+    patternType: TextPatternType.WhatsAppCreditShare,
+    variables: shareCreditVariables,
+    placeholder: `Пример:
+Договор {name}
+Дата оформления договора: {date}
+Клиент: {client_fullname}
+Срок: {terms} месяцев
+Стоимость товара: {total_clean} ₽
+Общая сумма договора: {total_amount} ₽`
+  },
+  {
+    key: 'shareCreditsText',
+    title: 'Текст для отправки списка договоров',
+    patternType: TextPatternType.WhatsAppCreditsShare,
+    variables: shareCreditsVariables,
+    placeholder: `Пример:
+*Договор {name}*
+Клиент: {client_fullname}
+Дата: {date}
+Сумма: {total_amount} ₽
+Остаток: {rest} ₽`
+  },
+  {
+    key: 'shareSchedulesText',
+    title: 'Текст для отправки графика платежей',
+    patternType: TextPatternType.WhatsAppSchedulesShare,
+    variables: shareSchedulesVariables,
+    placeholder: `Пример:
+{number}. {date}    Сумма: {amount} ₽
+   Способ: {payment_type}
+   Сотрудник: {employee}`
+  }
+];
+
+const initialSettings: SenderSettings = {
+  upcomingPaymentText: '',
+  overduePaymentText: '',
+  shareCreditText: '',
+  shareCreditsText: '',
+  shareSchedulesText: ''
+};
 
 const SenderPage = () => {
   const {
@@ -20,12 +146,14 @@ const SenderPage = () => {
     SetSenderTextPattern
   } = useSender();
 
-  const [settings, setSettings] = useState<SenderSettings>({
-    upcomingPaymentText: '',
-    overduePaymentText: ''
+  const [settings, setSettings] = useState<SenderSettings>(initialSettings);
+  const [changedFlags, setChangedFlags] = useState<Record<TemplateKey, boolean>>({
+    upcomingPaymentText: false,
+    overduePaymentText: false,
+    shareCreditText: false,
+    shareCreditsText: false,
+    shareSchedulesText: false
   });
-
-  const [textChanged, setTextChanged] = useState({ upcoming: false, overdue: false });
 
   useEffect(() => {
     loadSenderData();
@@ -34,75 +162,64 @@ const SenderPage = () => {
   const loadSenderData = async () => {
     const data = await GetMyCompanySenderInfo();
     if (data) {
-      setSettings(prev => ({
-        ...prev,
-        upcomingPaymentText: data.comingPaymentContent?.toString() || prev.upcomingPaymentText,
-        overduePaymentText: data.overduePaymentContent?.toString() || prev.overduePaymentText
-      }));
+      setSettings({
+        upcomingPaymentText: data.comingPaymentContent?.toString() || '',
+        overduePaymentText: data.overduePaymentContent?.toString() || '',
+        shareCreditText: data.shareCreditContent?.toString() || '',
+        shareCreditsText: data.shareCreditsContent?.toString() || '',
+        shareSchedulesText: data.shareSchedulesContent?.toString() || ''
+      });
+      setChangedFlags({
+        upcomingPaymentText: false,
+        overduePaymentText: false,
+        shareCreditText: false,
+        shareCreditsText: false,
+        shareSchedulesText: false
+      });
     }
   };
 
-  const saveTextPattern = async (key: 'upcomingPaymentText' | 'overduePaymentText', value: string) => {
-    const patternType = key === 'upcomingPaymentText' ? TextPatternType.ComingPayment : TextPatternType.OverduePayment;
-    
+  const handleTextChange = (key: TemplateKey, value: string) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+    setChangedFlags(prev => ({ ...prev, [key]: true }));
+  };
+
+  const handleSaveText = async (config: TemplateConfig) => {
     try {
       await SetSenderTextPattern({
-        newText: value,
-        patternType: patternType
+        newText: settings[config.key],
+        patternType: config.patternType
       });
-      console.log(`${key} saved successfully`);
-      
-      setTextChanged(prev => ({ 
-        ...prev, 
-        [key === 'upcomingPaymentText' ? 'upcoming' : 'overdue']: false 
-      }));
-    } catch (error) {
-      console.error('Error saving text pattern:', error);
+      setChangedFlags(prev => ({ ...prev, [config.key]: false }));
+    } catch (e) {
+      console.error('Error saving text pattern:', e);
     }
   };
 
-  const handleTextChange = (key: 'upcomingPaymentText' | 'overduePaymentText', value: string) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-    setTextChanged(prev => ({ 
-      ...prev, 
-      [key === 'upcomingPaymentText' ? 'upcoming' : 'overdue']: true 
-    }));
-  };
-
-  const handleSaveText = async (key: 'upcomingPaymentText' | 'overduePaymentText') => {
-    await saveTextPattern(key, settings[key]);
-  };
-
-  const insertVariable = (textKey: 'upcomingPaymentText' | 'overduePaymentText', variable: string) => {
-    const textarea = document.getElementById(textKey) as HTMLTextAreaElement;
+  const insertVariable = (key: TemplateKey, variable: string) => {
+    const textarea = document.getElementById(key) as HTMLTextAreaElement | null;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const variableText = `{${variable}}`;
-    
+
     const newText = textarea.value.substring(0, start) + variableText + textarea.value.substring(end);
-    handleTextChange(textKey, newText);
-    
+    handleTextChange(key, newText);
+
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + variableText.length, start + variableText.length);
     }, 0);
   };
 
-  const variables = [
-    { key: 'fullname', label: 'ФИО' },
-    { key: 'company', label: 'Компания' },
-    { key: 'amount', label: 'Сумма' },
-    { key: 'date', label: 'Дата платежа' },
-    { key: 'credit_date', label: 'Дата договора' },
-    { key: 'account_details', label: 'Карта' },
-    { key: 'rest', label: 'Остаток' },
-    { key: 'product', label: 'Товар' },
-    { key: 'payment_day', label: 'День платежа' },
-    { key: 'overdue', label: 'Просрочка' },
-    { key: 'support_number', label: 'Поддержка' }
-  ];
+  const renderPreview = (config: TemplateConfig): string => {
+    let text = settings[config.key];
+    for (const v of config.variables) {
+      text = text.split(`{${v.key}}`).join(v.preview);
+    }
+    return text;
+  };
 
   if (error) {
     console.error('API Error:', error);
@@ -111,138 +228,55 @@ const SenderPage = () => {
   return (
     <PageLayout>
       <PageContainer>
-        {/* Левая колонка - Приближающийся платеж */}
-        <MessageColumn>
-          <DefaultContainer>
-            <MessageHeader>
-              <ModalInfoTitle>Текст для приближающегося платежа</ModalInfoTitle>
-              <DarkCyanButton
-                onClick={() => handleSaveText('upcomingPaymentText')}
-                disabled={isLoading || !textChanged.upcoming}
-                style={{ minWidth: '100px', flexShrink: 0 }}
-              >
-                {isLoading ? '...' : 'Сохранить'}
-              </DarkCyanButton>
-            </MessageHeader>
-            
-            <ContentWrapper>
-              <SectionTitle>Шаблон сообщения</SectionTitle>
-              <VariableSection>
-                <VariableButtons>
-                  {variables.map(variable => (
-                    <VariableButton 
-                      key={`upcoming-${variable.key}`}
-                      onClick={() => insertVariable('upcomingPaymentText', variable.key)}
-                      disabled={isLoading}
-                      title={`Вставить {${variable.key}}`}
-                    >
-                      {variable.label}
-                    </VariableButton>
-                  ))}
-                </VariableButtons>
-              </VariableSection>
-              
-              <MessageTextarea
-                id="upcomingPaymentText"
-                value={settings.upcomingPaymentText}
-                onChange={(e) => handleTextChange('upcomingPaymentText', e.target.value)}
-                placeholder={`Пример:
-Уважаемый {fullname}!
-Напоминаем, что {date} ожидается платеж в размере {amount} по договору от {credit_date}.
-Остаток задолженности: {rest}
-Товар: {product}`}
-                disabled={isLoading}
-              />
-              
-              <PreviewSection>
-                <SectionTitle>Предпросмотр</SectionTitle>
-                <MessagePreview>
-                  <PreviewText>
-                    {settings.upcomingPaymentText
-                      .replace(/{fullname}/g, 'Иванов Иван Иванович')
-                      .replace(/{company}/g, 'ООО "Пример"')
-                      .replace(/{amount}/g, '15 000 ₽')
-                      .replace(/{date}/g, '15.12.2024')
-                      .replace(/{credit_date}/g, '01.01.2024')
-                      .replace(/{account_details}/g, '12341413212 Сбербанк')
-                      .replace(/{rest}/g, '50 000 ₽')
-                      .replace(/{product}/g, 'Ноутбук Dell XPS 15')
-                      .replace(/{payment_day}/g, '15 число')
-                      .replace(/{overdue}/g, '0 дней')
-                      .replace(/{support_number}/g, '+7 (999) 123-45-67')}
-                  </PreviewText>
-                </MessagePreview>
-              </PreviewSection>
-            </ContentWrapper>
-          </DefaultContainer>
-        </MessageColumn>
+        {templateConfigs.map(config => (
+          <MessageColumn key={config.key}>
+            <DefaultContainer>
+              <MessageHeader>
+                <ModalInfoTitle>{config.title}</ModalInfoTitle>
+                <DarkCyanButton
+                  onClick={() => handleSaveText(config)}
+                  disabled={isLoading || !changedFlags[config.key]}
+                  style={{ minWidth: '100px', flexShrink: 0 }}
+                >
+                  {isLoading ? '...' : 'Сохранить'}
+                </DarkCyanButton>
+              </MessageHeader>
 
-        {/* Правая колонка - Просрочка платежа */}
-        <MessageColumn>
-          <DefaultContainer>
-            <MessageHeader>
-              <ModalInfoTitle>Текст для просроченного платежа</ModalInfoTitle>
-              <DarkCyanButton
-                onClick={() => handleSaveText('overduePaymentText')}
-                disabled={isLoading || !textChanged.overdue}
-                style={{ minWidth: '100px', flexShrink: 0 }}
-              >
-                {isLoading ? '...' : 'Сохранить'}
-              </DarkCyanButton>
-            </MessageHeader>
-            
-            <ContentWrapper>
-              <SectionTitle>Шаблон сообщения</SectionTitle>
-              <VariableSection>
-                <VariableButtons>
-                  {variables.map(variable => (
-                    <VariableButton 
-                      key={`overdue-${variable.key}`}
-                      onClick={() => insertVariable('overduePaymentText', variable.key)}
-                      disabled={isLoading}
-                      title={`Вставить {${variable.key}}`}
-                    >
-                      {variable.label}
-                    </VariableButton>
-                  ))}
-                </VariableButtons>
-              </VariableSection>
-              
-              <MessageTextarea
-                id="overduePaymentText"
-                value={settings.overduePaymentText}
-                onChange={(e) => handleTextChange('overduePaymentText', e.target.value)}
-                placeholder={`Пример:
-Уважаемый {fullname}!
-У Вас просрочка платежа на {amount} с {date}.
-Просрочка составляет {overdue}.
-Пожалуйста, произведите оплату на карту {account_details}.
-Для уточнений звоните {support_number}`}
-                disabled={isLoading}
-              />
-              
-              <PreviewSection>
-                <SectionTitle>Предпросмотр</SectionTitle>
-                <MessagePreview>
-                  <PreviewText>
-                    {settings.overduePaymentText
-                      .replace(/{fullname}/g, 'Иванов Иван Иванович')
-                      .replace(/{company}/g, 'ООО "Пример"')
-                      .replace(/{amount}/g, '15 000 ₽')
-                      .replace(/{date}/g, '15.12.2024')
-                      .replace(/{credit_date}/g, '01.01.2024')
-                      .replace(/{account_details}/g, '**** 1234')
-                      .replace(/{rest}/g, '50 000 ₽')
-                      .replace(/{product}/g, 'Ноутбук Dell XPS 15')
-                      .replace(/{payment_day}/g, '15 число')
-                      .replace(/{overdue}/g, '3 дня')
-                      .replace(/{support_number}/g, '+7 (999) 123-45-67')}
-                  </PreviewText>
-                </MessagePreview>
-              </PreviewSection>
-            </ContentWrapper>
-          </DefaultContainer>
-        </MessageColumn>
+              <ContentWrapper>
+                <SectionTitle>Шаблон сообщения</SectionTitle>
+                <VariableSection>
+                  <VariableButtons>
+                    {config.variables.map(variable => (
+                      <VariableButton
+                        key={`${config.key}-${variable.key}`}
+                        onClick={() => insertVariable(config.key, variable.key)}
+                        disabled={isLoading}
+                        title={`Вставить {${variable.key}}`}
+                      >
+                        {variable.label}
+                      </VariableButton>
+                    ))}
+                  </VariableButtons>
+                </VariableSection>
+
+                <MessageTextarea
+                  id={config.key}
+                  value={settings[config.key]}
+                  onChange={(e) => handleTextChange(config.key, e.target.value)}
+                  placeholder={config.placeholder}
+                  disabled={isLoading}
+                />
+
+                <PreviewSection>
+                  <SectionTitle>Предпросмотр</SectionTitle>
+                  <MessagePreview>
+                    <PreviewText>{renderPreview(config)}</PreviewText>
+                  </MessagePreview>
+                </PreviewSection>
+              </ContentWrapper>
+            </DefaultContainer>
+          </MessageColumn>
+        ))}
       </PageContainer>
     </PageLayout>
   );
@@ -251,35 +285,25 @@ const SenderPage = () => {
 export default SenderPage;
 
 const PageContainer = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   gap: 24px;
   padding: 24px 16px;
-  height: calc(100vh - 200px); // Учитываем высоту хедера
-  max-height: 100vh;
-  overflow: hidden;
 
-  @media (max-width: 1200px) {
-    flex-direction: column;
-    height: auto;
-    overflow-y: auto;
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
   }
 `;
 
-// Колонка для сообщения
 const MessageColumn = styled.div`
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0; // Важно для правильного скроллинга внутри
+  min-height: 0;
 
-  > div { // Стиль для DefaultContainer
+  > div {
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: 0;
-  }
-
-  @media (max-width: 1200px) {
     min-height: 600px;
   }
 `;
@@ -372,13 +396,13 @@ const MessageTextarea = styled.textarea<{ disabled?: boolean }>`
   line-height: 1.5;
   margin-bottom: 24px;
   flex-shrink: 0;
-  
+
   &:focus {
     outline: none;
     border-color: #007D88;
     box-shadow: 0 0 0 3px rgba(0, 125, 136, 0.1);
   }
-  
+
   &::placeholder {
     color: #9ca3af;
     font-size: 13px;
@@ -416,7 +440,6 @@ const PreviewText = styled.div`
   padding: 2px;
   font-family: 'Inter', 'Segoe UI', sans-serif;
 
-  /* Стилизация скроллбара для предпросмотра */
   &::-webkit-scrollbar {
     width: 6px;
   }
