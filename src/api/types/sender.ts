@@ -8,12 +8,12 @@ export const DateDirection = {
 export type TextPatternType = typeof TextPatternType[keyof typeof TextPatternType];
 
 export const TextPatternType = {
-    ComingPayment: 4,
-    OverduePayment: 5,
-    WhatsAppBotResponse: 30,
-    WhatsAppCreditShare: 40,
-    WhatsAppCreditsShare: 50,
-    WhatsAppSchedulesShare: 60
+    ComingPayment: 1,
+    OverduePayment: 2,
+    WhatsAppBotResponse: 3,
+    WhatsAppCreditShare: 4,
+    WhatsAppCreditsShare: 5,
+    WhatsAppSchedulesShare: 6
 } as const;
 
 export interface SenderInfoResponse {
