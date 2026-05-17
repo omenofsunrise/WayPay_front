@@ -48,9 +48,18 @@ const shareCreditVariables: Variable[] = [
   { key: 'name', label: 'Договор', preview: '№123' },
   { key: 'date', label: 'Дата оформления', preview: '01.01.2024' },
   { key: 'client_fullname', label: 'ФИО клиента', preview: 'Иванов Иван Иванович' },
+  { key: 'client_phone', label: 'Телефон клиента', preview: '+7 (999) 123-45-67' },
+  { key: 'guarantor_fullname', label: 'ФИО поручителя', preview: 'Петров Пётр Петрович' },
+  { key: 'guarantor_phone', label: 'Телефон поручителя', preview: '+7 (999) 765-43-21' },
+  { key: 'address', label: 'Адрес', preview: 'г. Москва, ул. Ленина, д. 1' },
+  { key: 'product', label: 'Товар', preview: 'Ноутбук Dell XPS 15' },
   { key: 'terms', label: 'Срок', preview: '12' },
   { key: 'total_clean', label: 'Стоимость товара', preview: '100 000 ₽' },
-  { key: 'total_amount', label: 'Общая сумма', preview: '120 000 ₽' }
+  { key: 'total_amount', label: 'Общая сумма', preview: '120 000 ₽' },
+  { key: 'first_payment', label: 'Первоначальный взнос', preview: '20 000 ₽' },
+  { key: 'avarage_payment', label: 'Средний платёж', preview: '10 000 ₽' },
+  { key: 'first_payment_date', label: 'Дата первого платежа', preview: '01.02.2024' },
+  { key: 'last_payment_date', label: 'Дата последнего платежа', preview: '01.01.2025' }
 ];
 
 const shareCreditsVariables: Variable[] = [
