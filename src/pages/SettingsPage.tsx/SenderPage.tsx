@@ -12,7 +12,7 @@ type TemplateKey =
   | 'overduePaymentText'
   | 'shareCreditText'
   | 'shareCreditsText'
-  | 'shareSchedulesText';
+  | 'sharePaymentsText';
 
 interface Variable {
   key: string;
@@ -61,7 +61,7 @@ const shareCreditsVariables: Variable[] = [
   { key: 'rest', label: 'Остаток', preview: '50 000 ₽' }
 ];
 
-const shareSchedulesVariables: Variable[] = [
+const sharePaymentsVariables: Variable[] = [
   { key: 'number', label: 'Номер платежа', preview: '1' },
   { key: 'date', label: 'Дата', preview: '15.12.2024' },
   { key: 'amount', label: 'Сумма', preview: '15 000 ₽' },
@@ -119,10 +119,10 @@ const templateConfigs: TemplateConfig[] = [
 Остаток: {rest} ₽`
   },
   {
-    key: 'shareSchedulesText',
+    key: 'sharePaymentsText',
     title: 'Текст для отправки истории платежей',
     patternType: TextPatternType.WhatsAppSchedulesShare,
-    variables: shareSchedulesVariables,
+    variables: sharePaymentsVariables,
     placeholder: `Пример:
 {number}. {date}    Сумма: {amount} ₽
    Способ: {payment_type}
@@ -135,7 +135,7 @@ const initialSettings: SenderSettings = {
   overduePaymentText: '',
   shareCreditText: '',
   shareCreditsText: '',
-  shareSchedulesText: ''
+  sharePaymentsText: ''
 };
 
 const SenderPage = () => {
@@ -152,7 +152,7 @@ const SenderPage = () => {
     overduePaymentText: false,
     shareCreditText: false,
     shareCreditsText: false,
-    shareSchedulesText: false
+    sharePaymentsText: false
   });
 
   useEffect(() => {
@@ -167,14 +167,14 @@ const SenderPage = () => {
         overduePaymentText: data.overduePaymentContent?.toString() || '',
         shareCreditText: data.shareCreditContent?.toString() || '',
         shareCreditsText: data.shareCreditsContent?.toString() || '',
-        shareSchedulesText: data.sharePaymentsContent?.toString() || ''
+        sharePaymentsText: data.sharePaymentsContent?.toString() || ''
       });
       setChangedFlags({
         upcomingPaymentText: false,
         overduePaymentText: false,
         shareCreditText: false,
         shareCreditsText: false,
-        shareSchedulesText: false
+        sharePaymentsText: false
       });
     }
   };
