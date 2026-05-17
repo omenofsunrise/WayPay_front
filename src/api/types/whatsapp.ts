@@ -312,9 +312,31 @@ export interface ExtendChannelRequest {
   channelId: string;
 }
 
+export type BotType = 'Keywords' | 'Events';
+
+export const BotType = {
+  Keywords: 'Keywords',
+  Events: 'Events',
+} as const;
+
+export type BotEventType = 'CreatedCredit' | 'CreatedPayment' | 'ClientBirthdate';
+
+export const BotEventType = {
+  CreatedCredit: 'CreatedCredit',
+  CreatedPayment: 'CreatedPayment',
+  ClientBirthdate: 'ClientBirthdate',
+} as const;
+
+export type BotResponseTextType = 'WhatsAppBotNoClientResponse';
+
+export const BotResponseTextType = {
+  WhatsAppBotNoClientResponse: 'WhatsAppBotNoClientResponse',
+} as const;
+
 export interface CreateBotRequest {
   channelId: string;
   name: string;
+  botType: BotType;
 }
 
 export interface UpdateBotRequest {
@@ -326,18 +348,24 @@ export interface UpdateBotRequest {
 export interface AddBotResponseRequest {
   botId: number;
   response: string;
+  type?: BotResponseTextType;
+}
+
+export interface SetBotEventRequest {
+  botId: number;
+  eventType: BotEventType;
 }
 
 export interface AddBotKeywordRequest {
   botId: number;
-  type: 'Exact' | 'Contains' | 'StartsWith';
+  matchType: 'Exact' | 'Contains' | 'StartsWith';
   keyword: string;
 }
 
 export interface BotKeywordResponse {
   id: number;
   botId: number;
-  type: string;
+  matchType: 'Exact' | 'Contains' | 'StartsWith';
   keyword: string;
   createdAt?: string;
 }
@@ -359,6 +387,9 @@ export interface BotResponse {
   updatedAt?: string;
   keywords?: BotKeywordResponse[];
   botResponse?: string;
+  botNoClientResponse?: string;
+  botType: BotType;
+  event?: BotEventType | null;
 }
 
 export interface GetBotsResponse {

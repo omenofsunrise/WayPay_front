@@ -22,6 +22,10 @@ import type {
   AddBotResponseRequest,
   AddBotKeywordRequest,
   BotKeywordResponse,
+  BotType,
+  BotEventType,
+  BotResponseTextType,
+  SetBotEventRequest,
   GetBotsResponse
 } from '../types/whatsapp';
 
@@ -139,8 +143,8 @@ class WhatsAppService {
     return response.data;
   }
 
-  async createBot(channelId: string, name: string): Promise<BotResponse> {
-    const request: CreateBotRequest = { channelId, name };
+  async createBot(channelId: string, name: string, botType: BotType): Promise<BotResponse> {
+    const request: CreateBotRequest = { channelId, name, botType };
     const response = await apiClient.post<BotResponse>('/WhatsApp/bot', request);
     return response.data;
   }
@@ -155,13 +159,18 @@ class WhatsAppService {
     await apiClient.delete(`/WhatsApp/bot/${id}`);
   }
 
-  async setBotResponse(botId: number, response: string): Promise<void> {
-    const request: AddBotResponseRequest = { botId, response };
+  async setBotResponse(botId: number, response: string, type?: BotResponseTextType): Promise<void> {
+    const request: AddBotResponseRequest = type ? { botId, response, type } : { botId, response };
     await apiClient.post('/WhatsApp/bot/response', request);
   }
 
-  async addBotKeyword(botId: number, type: AddBotKeywordRequest['type'], keyword: string): Promise<BotKeywordResponse> {
-    const request: AddBotKeywordRequest = { botId, type, keyword };
+  async setBotEvent(botId: number, eventType: BotEventType): Promise<void> {
+    const request: SetBotEventRequest = { botId, eventType };
+    await apiClient.patch('/WhatsApp/bot/event', request);
+  }
+
+  async addBotKeyword(botId: number, matchType: AddBotKeywordRequest['matchType'], keyword: string): Promise<BotKeywordResponse> {
+    const request: AddBotKeywordRequest = { botId, matchType, keyword };
     const response = await apiClient.post<BotKeywordResponse>('/WhatsApp/bot/keyword', request);
     return response.data;
   }

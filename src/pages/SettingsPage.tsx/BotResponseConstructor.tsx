@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import styled, { css } from 'styled-components';
+import type { BotEventType } from '../../api/types/whatsapp';
 import {
   BOT_LOOPS,
   BOT_TEMPLATES,
@@ -16,6 +17,8 @@ interface BotResponseConstructorProps {
   value: string;
   onChange: (next: string) => void;
   disabled?: boolean;
+  mode?: 'default' | 'companyOnly';
+  event?: BotEventType | null;
 }
 
 const SCOPE_ACCENTS: Record<'global' | LoopType, string> = {
@@ -23,7 +26,8 @@ const SCOPE_ACCENTS: Record<'global' | LoopType, string> = {
   foreachLoan: '#E07B00',
   foreachPaymentInLoan: '#C2410C',
   foreachPayment: '#9333EA',
-  foreachSchedule: '#0EA5E9'
+  foreachSchedule: '#0EA5E9',
+  foreachPaymentInCurrentLoan: '#DC2626'
 };
 
 const SCOPE_BG: Record<'global' | LoopType, string> = {
@@ -31,14 +35,16 @@ const SCOPE_BG: Record<'global' | LoopType, string> = {
   foreachLoan: 'rgba(224, 123, 0, 0.08)',
   foreachPaymentInLoan: 'rgba(194, 65, 12, 0.08)',
   foreachPayment: 'rgba(147, 51, 234, 0.08)',
-  foreachSchedule: 'rgba(14, 165, 233, 0.08)'
+  foreachSchedule: 'rgba(14, 165, 233, 0.08)',
+  foreachPaymentInCurrentLoan: 'rgba(220, 38, 38, 0.08)'
 };
 
 const LOOP_TYPE_SET = new Set<LoopType>([
   'foreachLoan',
   'foreachPaymentInLoan',
   'foreachPayment',
-  'foreachSchedule'
+  'foreachSchedule',
+  'foreachPaymentInCurrentLoan'
 ]);
 
 const VARIABLE_SCOPE: Record<string, 'global' | LoopType> = (() => {
@@ -79,10 +85,17 @@ function tokenizeTemplate(template: string): HighlightToken[] {
   return tokens;
 }
 
-const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstructorProps) => {
+const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', event = null }: BotResponseConstructorProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [cursorPos, setCursorPos] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
+  const isCompanyOnly = mode === 'companyOnly';
+  const matchesEvent = (required?: BotEventType): boolean => !required || required === event;
+  const visibleTemplates = isCompanyOnly ? [] : BOT_TEMPLATES;
+  const visibleLoops = isCompanyOnly ? [] : BOT_LOOPS.filter(l => matchesEvent(l.requiredEvent));
+  const visibleVarGroups = isCompanyOnly
+    ? BOT_VARIABLE_GROUPS.filter(g => g.title === 'Глобальные — Компания')
+    : BOT_VARIABLE_GROUPS.filter(g => matchesEvent(g.requiredEvent));
 
   const handleSelect = () => {
     const el = textareaRef.current;
@@ -152,6 +165,7 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
   return (
     <Layout>
       <EditorColumn>
+        {visibleTemplates.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>
@@ -160,7 +174,7 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
             <CardHint>Кликни — подставит шаблон в редактор</CardHint>
           </CardHeader>
           <TemplatesGrid>
-            {BOT_TEMPLATES.map(template => (
+            {visibleTemplates.map(template => (
               <TemplateCard
                 key={template.id}
                 onClick={() => applyTemplate(template)}
@@ -173,7 +187,9 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
             ))}
           </TemplatesGrid>
         </Card>
+        )}
 
+        {visibleLoops.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>
@@ -182,7 +198,7 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
             <CardHint>Кликни — вставится парный блок с курсором внутри</CardHint>
           </CardHeader>
           <LoopGrid>
-            {BOT_LOOPS.map(loop => {
+            {visibleLoops.map(loop => {
               const isNested = loop.parent !== undefined;
               const canInsert = isNestingAllowed(loop.type, cursorContext);
               const top = cursorContext[cursorContext.length - 1];
@@ -214,6 +230,7 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
             })}
           </LoopGrid>
         </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -308,7 +325,7 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
             </CardTitle>
           </CardHeader>
           <VarGroupsList>
-            {BOT_VARIABLE_GROUPS.map(group => {
+            {visibleVarGroups.map(group => {
               const accent = SCOPE_ACCENTS[group.scope];
               const bg = SCOPE_BG[group.scope];
               const isAvailable =
@@ -357,7 +374,7 @@ function pluralize(n: number): string {
 
 function detectCursorContext(template: string, cursorPos: number): LoopType[] {
   const stack: LoopType[] = [];
-  const tagRegex = /\{(\/?)(foreachLoan|foreachPaymentInLoan|foreachPayment|foreachSchedule)\}/g;
+  const tagRegex = /\{(\/?)(foreachLoan|foreachPaymentInLoan|foreachPaymentInCurrentLoan|foreachPayment|foreachSchedule)\}/g;
   let match: RegExpExecArray | null;
 
   while ((match = tagRegex.exec(template)) !== null) {

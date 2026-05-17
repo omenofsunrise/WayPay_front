@@ -13,7 +13,10 @@ import type {
   ChannelResponse,
   BotResponse,
   BotKeywordResponse,
-  AddBotKeywordRequest
+  AddBotKeywordRequest,
+  BotType,
+  BotEventType,
+  BotResponseTextType
 } from '../types/whatsapp';
 import whatsappService from '../services/whatsappService';
 
@@ -538,11 +541,11 @@ const useWhatsApp = () => {
     }
   }, [channels, getChannelStatus]);
 
-  const createBot = useCallback(async (channelId: string, name: string): Promise<BotResponse | null> => {
+  const createBot = useCallback(async (channelId: string, name: string, botType: BotType): Promise<BotResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const newBot = await whatsappService.createBot(channelId, name);
+      const newBot = await whatsappService.createBot(channelId, name, botType);
       setBots(prev => [...prev, newBot]);
       return newBot;
     } catch (err) {
@@ -595,11 +598,25 @@ const useWhatsApp = () => {
     }
   }, [selectedBot]);
 
-  const setBotResponse = useCallback(async (botId: number, response: string): Promise<boolean> => {
+  const setBotResponse = useCallback(async (botId: number, response: string, type?: BotResponseTextType): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
-      await whatsappService.setBotResponse(botId, response);
+      await whatsappService.setBotResponse(botId, response, type);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const setBotEvent = useCallback(async (botId: number, eventType: BotEventType): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await whatsappService.setBotEvent(botId, eventType);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -610,15 +627,15 @@ const useWhatsApp = () => {
   }, []);
 
   const addBotKeyword = useCallback(async (
-    botId: number, 
-    type: AddBotKeywordRequest['type'], 
+    botId: number,
+    matchType: AddBotKeywordRequest['matchType'],
     keyword: string
   ): Promise<BotKeywordResponse | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const newKeyword = await whatsappService.addBotKeyword(botId, type, keyword);
-      
+      const newKeyword = await whatsappService.addBotKeyword(botId, matchType, keyword);
+
       // Update local keywords cache
       setBotKeywords(prev => {
         const newMap = new Map(prev);
@@ -626,7 +643,7 @@ const useWhatsApp = () => {
         newMap.set(botId, [...existingKeywords, newKeyword]);
         return newMap;
       });
-      
+
       return newKeyword;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -731,6 +748,7 @@ const useWhatsApp = () => {
     updateBot,
     deleteBot,
     setBotResponse,
+    setBotEvent,
     addBotKeyword,
     deleteBotKeyword,
     loadBotsByChannel,

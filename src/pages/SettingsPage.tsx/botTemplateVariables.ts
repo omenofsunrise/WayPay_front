@@ -1,3 +1,5 @@
+import type { BotEventType } from '../../api/types/whatsapp';
+
 export interface BotVariable {
   key: string;
   label: string;
@@ -8,13 +10,15 @@ export type LoopType =
   | 'foreachLoan'
   | 'foreachPaymentInLoan'
   | 'foreachPayment'
-  | 'foreachSchedule';
+  | 'foreachSchedule'
+  | 'foreachPaymentInCurrentLoan';
 
 export interface BotLoop {
   type: LoopType;
   label: string;
   description: string;
   parent?: LoopType;
+  requiredEvent?: BotEventType;
 }
 
 export interface BotVariableGroup {
@@ -22,6 +26,7 @@ export interface BotVariableGroup {
   scope: 'global' | LoopType;
   description?: string;
   variables: BotVariable[];
+  requiredEvent?: BotEventType;
 }
 
 export const BOT_LOOPS: BotLoop[] = [
@@ -45,6 +50,12 @@ export const BOT_LOOPS: BotLoop[] = [
     type: 'foreachSchedule',
     label: 'Цикл по графикам платежей',
     description: 'Перебор будущих платежей по графику'
+  },
+  {
+    type: 'foreachPaymentInCurrentLoan',
+    label: 'Цикл по платежам текущей рассрочки',
+    description: 'Платежи внутри рассрочки, по которой сработал ивент CreatedCredit',
+    requiredEvent: 'CreatedCredit'
   }
 ];
 
@@ -219,6 +230,58 @@ export const BOT_VARIABLE_GROUPS: BotVariableGroup[] = [
       { key: 'loan_schedule_guarantor_fullname', label: 'Рассрочка — ФИО поручителя', preview: 'Петров Пётр Петрович' },
       { key: 'loan_schedule_guarantor_phone', label: 'Рассрочка — телефон поручителя', preview: '+7 (999) 765-43-21' }
     ]
+  },
+  {
+    title: 'Текущая рассрочка (ивент CreatedCredit)',
+    scope: 'global',
+    description: 'Доступны только когда выбран ивент «Создание рассрочки»',
+    requiredEvent: 'CreatedCredit',
+    variables: [
+      { key: 'current_name', label: 'Номер рассрочки', preview: '№999' },
+      { key: 'current_loan_date', label: 'Дата выдачи', preview: '17.05.2026' },
+      { key: 'current_total_clean', label: 'Стоимость товаров', preview: '150 000 ₽' },
+      { key: 'current_total_amount', label: 'Сумма с надбавкой', preview: '180 000 ₽' },
+      { key: 'current_first_payment', label: 'Первый взнос', preview: '30 000 ₽' },
+      { key: 'current_term', label: 'Срок (мес)', preview: '12' },
+      { key: 'current_start_date', label: 'Дата начала', preview: '17.06.2026' },
+      { key: 'current_month_payment', label: 'Ежемесячный платёж', preview: '15 000 ₽' },
+      { key: 'current_guarantor_fullname', label: 'ФИО поручителя', preview: 'Сидоров С.С.' },
+      { key: 'current_guarantor_phone', label: 'Телефон поручителя', preview: '+7 (999) 555-44-33' }
+    ]
+  },
+  {
+    title: 'Внутри {foreachPaymentInCurrentLoan}',
+    scope: 'foreachPaymentInCurrentLoan',
+    description: 'Платежи внутри рассрочки, по которой сработал ивент CreatedCredit',
+    requiredEvent: 'CreatedCredit',
+    variables: [
+      { key: 'payment_in_current_loan_date', label: 'Дата платежа', preview: '17.07.2026' },
+      { key: 'payment_in_current_loan_amount', label: 'Сумма платежа', preview: '15 000 ₽' },
+      { key: 'payment_in_current_loan_employee', label: 'Сотрудник', preview: 'Петров П.П.' },
+      { key: 'payment_in_current_loan_type', label: 'Тип платежа', preview: 'Картой' }
+    ]
+  },
+  {
+    title: 'Текущий платёж (ивент CreatedPayment)',
+    scope: 'global',
+    description: 'Доступны только когда выбран ивент «Создание платежа»',
+    requiredEvent: 'CreatedPayment',
+    variables: [
+      { key: 'current_payment_date', label: 'Дата платежа', preview: '17.05.2026' },
+      { key: 'current_payment_type', label: 'Тип платежа', preview: 'Наличными' },
+      { key: 'current_employee', label: 'Сотрудник', preview: 'Петров П.П.' },
+      { key: 'current_payment_amount', label: 'Сумма платежа', preview: '12 500 ₽' },
+      { key: 'current_loan_payment_name', label: 'Рассрочка — номер', preview: '№888' },
+      { key: 'current_loan_payment_date', label: 'Рассрочка — дата выдачи', preview: '01.03.2026' },
+      { key: 'current_loan_payment_total_clean', label: 'Рассрочка — стоимость товаров', preview: '120 000 ₽' },
+      { key: 'current_loan_payment_total_amount', label: 'Рассрочка — сумма с надбавкой', preview: '150 000 ₽' },
+      { key: 'current_loan_payment_first_payment', label: 'Рассрочка — первый взнос', preview: '25 000 ₽' },
+      { key: 'current_loan_payment_term', label: 'Рассрочка — срок', preview: '12' },
+      { key: 'current_loan_payment_start_date', label: 'Рассрочка — дата начала', preview: '01.04.2026' },
+      { key: 'current_loan_payment_month_payment', label: 'Рассрочка — ежемесячный платёж', preview: '12 500 ₽' },
+      { key: 'current_loan_payment_guarantor_fullname', label: 'Рассрочка — ФИО поручителя', preview: 'Сидоров С.С.' },
+      { key: 'current_loan_payment_guarantor_phone', label: 'Рассрочка — телефон поручителя', preview: '+7 (999) 555-44-33' }
+    ]
   }
 ];
 
@@ -350,12 +413,25 @@ function renderScheduleLoop(template: string): string {
   );
 }
 
+const SAMPLE_PAYMENTS_IN_CURRENT_LOAN: SimpleRecord[] = [
+  { payment_in_current_loan_date: '17.07.2026', payment_in_current_loan_amount: '15 000 ₽', payment_in_current_loan_employee: 'Петров П.П.', payment_in_current_loan_type: 'Картой' },
+  { payment_in_current_loan_date: '17.08.2026', payment_in_current_loan_amount: '15 000 ₽', payment_in_current_loan_employee: 'Иванов И.И.', payment_in_current_loan_type: 'Наличными' }
+];
+
+function renderPaymentInCurrentLoanLoop(template: string): string {
+  return template.replace(
+    /\{foreachPaymentInCurrentLoan\}([\s\S]*?)\{\/foreachPaymentInCurrentLoan\}/g,
+    (_m, body: string) => SAMPLE_PAYMENTS_IN_CURRENT_LOAN.map(p => substituteRecord(body, p)).join('')
+  );
+}
+
 export function renderBotTemplate(template: string): string {
   if (!template) return '';
   let result = substituteGlobals(template);
   result = renderLoanLoop(result);
   result = renderPaymentLoop(result);
   result = renderScheduleLoop(result);
+  result = renderPaymentInCurrentLoanLoop(result);
   return result;
 }
 
@@ -376,7 +452,7 @@ export function isNestingAllowed(loop: LoopType, parentContext: LoopType[]): boo
 export function validateBotTemplate(template: string): TemplateValidationIssue[] {
   const issues: TemplateValidationIssue[] = [];
   const stack: LoopType[] = [];
-  const tagRegex = /\{(\/?)(foreachLoan|foreachPaymentInLoan|foreachPayment|foreachSchedule)\}/g;
+  const tagRegex = /\{(\/?)(foreachLoan|foreachPaymentInLoan|foreachPaymentInCurrentLoan|foreachPayment|foreachSchedule)\}/g;
   let match: RegExpExecArray | null;
 
   while ((match = tagRegex.exec(template)) !== null) {
