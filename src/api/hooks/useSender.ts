@@ -130,11 +130,11 @@ const useSender = () => {
         }
     }, []);
 
-    const GetFilledGuarantorCredit = useCallback(async (creditId: number): Promise<string | null> => {
+    const GetFilledGuarantorSchedule = useCallback(async (scheduleId: number): Promise<string | null> => {
         setIsLoading(true);
         setError(null);
         try {
-            return await senderService.getFilledGuarantorCredit(creditId);
+            return await senderService.getFilledGuarantorSchedule(scheduleId);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load');
             return null;
@@ -168,7 +168,7 @@ const useSender = () => {
         BuyMessages,
         GetFilledPayments,
         GetFilledCredit,
-        GetFilledGuarantorCredit,
+        GetFilledGuarantorSchedule,
         GetFilledCredits
     };
 };

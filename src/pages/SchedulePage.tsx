@@ -109,7 +109,7 @@ const SchedulePage = () => {
     const [isPageSizeReady, setIsPageSizeReady] = useState(false);
     const { getScheduleAnalityc } = useAnalytic();
     const { createPayment } = usePayment();
-    const { GetFilledGuarantorCredit } = useSender();
+    const { GetFilledGuarantorSchedule } = useSender();
     const [scheduleAnalytics, setScheduleAnalytics] = useState<ScheduleAnalitycResponse[]>([]);
     const chartsContainerRef = useRef<HTMLDivElement>(null);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -531,7 +531,7 @@ const SchedulePage = () => {
 
         const handleGuarantorWhatsAppClick = async () => {
             if (!schedule.guarantorPhone) return;
-            const message = await GetFilledGuarantorCredit(schedule.creditId);
+            const message = await GetFilledGuarantorSchedule(schedule.id);
             if (!message) {
                 alert('Не удалось получить сообщение для поручителя');
                 return;

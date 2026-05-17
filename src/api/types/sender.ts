@@ -14,7 +14,8 @@ export const TextPatternType = {
     WhatsAppCreditShare: 4,
     WhatsAppCreditsShare: 5,
     WhatsAppSchedulesShare: 6,
-    WhatsAppForGuarantorCreditShare: 7
+    GuarantorComingPayment: 7,
+    GuarantorOverduePayment: 8
 } as const;
 
 export interface SenderInfoResponse {
@@ -28,7 +29,8 @@ export interface SenderInfoResponse {
     shareCreditContent: string;
     shareCreditsContent: string;
     sharePaymentsContent: string;
-    shareCreditForGuarantorContent: string;
+    guarantorComingPaymentContent: string;
+    guarantorOverduePaymentContent: string;
 
     messagesCount: number;
 

@@ -10,6 +10,8 @@ import DefaultContainer from '../../components/ui/containers/defaultContainer';
 type TemplateKey =
   | 'upcomingPaymentText'
   | 'overduePaymentText'
+  | 'guarantorUpcomingPaymentText'
+  | 'guarantorOverduePaymentText'
   | 'shareCreditText'
   | 'shareCreditsText'
   | 'sharePaymentsText';
@@ -103,6 +105,29 @@ const templateConfigs: TemplateConfig[] = [
 Для уточнений звоните {support_number}`
   },
   {
+    key: 'guarantorUpcomingPaymentText',
+    title: 'Текст для приближающегося платежа (поручитель)',
+    patternType: TextPatternType.GuarantorComingPayment,
+    variables: paymentVariables,
+    placeholder: `Пример:
+Уважаемый {fullname}!
+Напоминаем, что {date} по договору, в котором Вы выступаете поручителем, ожидается платеж в размере {amount}.
+Остаток задолженности: {rest}
+Товар: {product}`
+  },
+  {
+    key: 'guarantorOverduePaymentText',
+    title: 'Текст для просроченного платежа (поручитель)',
+    patternType: TextPatternType.GuarantorOverduePayment,
+    variables: paymentVariables,
+    placeholder: `Пример:
+Уважаемый {fullname}!
+По договору, в котором Вы выступаете поручителем, просрочка платежа на {amount} с {date}.
+Просрочка составляет {overdue}.
+Пожалуйста, свяжитесь с заёмщиком или произведите оплату на карту {account_details}.
+Для уточнений звоните {support_number}`
+  },
+  {
     key: 'shareCreditText',
     title: 'Текст для отправки договора',
     patternType: TextPatternType.WhatsAppCreditShare,
@@ -142,6 +167,8 @@ const templateConfigs: TemplateConfig[] = [
 const initialSettings: SenderSettings = {
   upcomingPaymentText: '',
   overduePaymentText: '',
+  guarantorUpcomingPaymentText: '',
+  guarantorOverduePaymentText: '',
   shareCreditText: '',
   shareCreditsText: '',
   sharePaymentsText: ''
@@ -159,6 +186,8 @@ const SenderPage = () => {
   const [changedFlags, setChangedFlags] = useState<Record<TemplateKey, boolean>>({
     upcomingPaymentText: false,
     overduePaymentText: false,
+    guarantorUpcomingPaymentText: false,
+    guarantorOverduePaymentText: false,
     shareCreditText: false,
     shareCreditsText: false,
     sharePaymentsText: false
@@ -174,6 +203,8 @@ const SenderPage = () => {
       setSettings({
         upcomingPaymentText: data.comingPaymentContent?.toString() || '',
         overduePaymentText: data.overduePaymentContent?.toString() || '',
+        guarantorUpcomingPaymentText: data.guarantorComingPaymentContent?.toString() || '',
+        guarantorOverduePaymentText: data.guarantorOverduePaymentContent?.toString() || '',
         shareCreditText: data.shareCreditContent?.toString() || '',
         shareCreditsText: data.shareCreditsContent?.toString() || '',
         sharePaymentsText: data.sharePaymentsContent?.toString() || ''
@@ -181,6 +212,8 @@ const SenderPage = () => {
       setChangedFlags({
         upcomingPaymentText: false,
         overduePaymentText: false,
+        guarantorUpcomingPaymentText: false,
+        guarantorOverduePaymentText: false,
         shareCreditText: false,
         shareCreditsText: false,
         sharePaymentsText: false

@@ -43,8 +43,8 @@ class SenderService {
         return response.data;
     }
 
-    async getFilledGuarantorCredit(creditId: number): Promise<string> {
-        const response = await apiClient.get<string>(`/SenderSettings/guarantor/credit/filled/${creditId}`);
+    async getFilledGuarantorSchedule(scheduleId: number): Promise<string> {
+        const response = await apiClient.get<string>(`/SenderSettings/guarantor/schedule/filled/${scheduleId}`);
         return response.data;
     }
 
