@@ -94,18 +94,19 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
                   onClick={() => insertLoop(loop)}
                   disabled={disabled || !canInsert}
                   $accent={accent}
-                  $nested={isNested}
                   title={
                     canInsert
                       ? loop.description
                       : `Можно вставить только внутри {${loop.parent}}`
                   }
                 >
-                  <LoopCardTitle>{loop.label}</LoopCardTitle>
+                  <LoopCardTopRow>
+                    <LoopCardTitle>{loop.label}</LoopCardTitle>
+                    {isNested && <LoopCardBadge>вложенный</LoopCardBadge>}
+                  </LoopCardTopRow>
                   <LoopCardTag>
                     {'{' + loop.type + '}'} … {'{/' + loop.type + '}'}
                   </LoopCardTag>
-                  {isNested && <LoopCardBadge>вложенный</LoopCardBadge>}
                 </LoopCard>
               );
             })}
@@ -336,8 +337,7 @@ const LoopGrid = styled.div`
   gap: 10px;
 `;
 
-const LoopCard = styled.button<{ $accent: string; $nested?: boolean; disabled?: boolean }>`
-  position: relative;
+const LoopCard = styled.button<{ $accent: string; disabled?: boolean }>`
   background: white;
   border: 1px solid ${p => p.$accent}55;
   border-left: 4px solid ${p => p.$accent};
@@ -349,8 +349,9 @@ const LoopCard = styled.button<{ $accent: string; $nested?: boolean; disabled?: 
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-height: 60px;
+  overflow: hidden;
 
   &:hover:not(:disabled) {
     background: ${p => p.$accent}10;
@@ -363,10 +364,21 @@ const LoopCard = styled.button<{ $accent: string; $nested?: boolean; disabled?: 
   }
 `;
 
+const LoopCardTopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+`;
+
 const LoopCardTitle = styled.span`
   font-size: 12px;
   font-weight: 600;
   color: #0f172a;
+  line-height: 1.3;
+  min-width: 0;
+  flex: 1;
 `;
 
 const LoopCardTag = styled.code`
@@ -374,20 +386,21 @@ const LoopCardTag = styled.code`
   color: #64748b;
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   word-break: break-all;
+  line-height: 1.3;
 `;
 
 const LoopCardBadge = styled.span`
-  position: absolute;
-  top: 8px;
-  right: 8px;
+  flex-shrink: 0;
   font-size: 9px;
   color: #c2410c;
-  background: rgba(194, 65, 12, 0.1);
+  background: rgba(194, 65, 12, 0.12);
   padding: 2px 6px;
   border-radius: 10px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   font-weight: 600;
+  white-space: nowrap;
+  align-self: flex-start;
 `;
 
 const ContextChip = styled.span<{ $context: LoopType[] }>`
