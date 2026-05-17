@@ -120,7 +120,7 @@ const templateConfigs: TemplateConfig[] = [
   },
   {
     key: 'shareSchedulesText',
-    title: 'Текст для отправки графика платежей',
+    title: 'Текст для отправки истории платежей',
     patternType: TextPatternType.WhatsAppSchedulesShare,
     variables: shareSchedulesVariables,
     placeholder: `Пример:
@@ -167,7 +167,7 @@ const SenderPage = () => {
         overduePaymentText: data.overduePaymentContent?.toString() || '',
         shareCreditText: data.shareCreditContent?.toString() || '',
         shareCreditsText: data.shareCreditsContent?.toString() || '',
-        shareSchedulesText: data.shareSchedulesContent?.toString() || ''
+        shareSchedulesText: data.sharePaymentsContent?.toString() || ''
       });
       setChangedFlags({
         upcomingPaymentText: false,

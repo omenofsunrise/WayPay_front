@@ -104,6 +104,58 @@ const useSender = () => {
         }
     }, []);
 
+    const GetFilledPayments = useCallback(async (creditId: number): Promise<string | null> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            return await senderService.getFilledPayments(creditId);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const GetFilledCredit = useCallback(async (creditId: number): Promise<string | null> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            return await senderService.getFilledCredit(creditId);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const GetFilledGuarantorCredit = useCallback(async (creditId: number): Promise<string | null> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            return await senderService.getFilledGuarantorCredit(creditId);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const GetFilledCredits = useCallback(async (creditIds: number[]): Promise<string | null> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            return await senderService.getFilledCredits(creditIds);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     return {
         isLoading,
         error,
@@ -113,7 +165,11 @@ const useSender = () => {
         SetSenderTextPattern,
         CreateNewSenderSetting,
         DeleteSenderSetting,
-        BuyMessages
+        BuyMessages,
+        GetFilledPayments,
+        GetFilledCredit,
+        GetFilledGuarantorCredit,
+        GetFilledCredits
     };
 };
 

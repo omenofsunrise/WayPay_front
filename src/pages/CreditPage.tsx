@@ -42,6 +42,7 @@ import type { ContextMenuItem } from '../components/modal/ContextMenu';
 import { createWhatsAppMessageWithoutPhone, sendWhatsAppMessageToPhone } from '../utils/sendWhatsAppMessage';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import { useResponsivePageSize } from '../utils/useResponsivePageSize';
+import useSender from '../api/hooks/useSender';
 
 // Иконка для кнопки сворачивания
 const FilterToggleIcon = styled.svg<{ $isOpen: boolean }>`
@@ -52,30 +53,32 @@ const FilterToggleIcon = styled.svg<{ $isOpen: boolean }>`
 `;
 
 // Интерфейс для модалки "Поделиться"
+type ShareOption = 'contractData' | 'paymentHistory' | 'paymentSchedule';
+
 interface ShareOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: 'contractData' | 'paymentHistory' | 'paymentSchedule') => void;
+  onSelect: (option: ShareOption) => void;
   selectedCredit?: Credit | null;
   modalTitle?: string;
 }
 
 // Компонент модалки "Поделиться"
-const ShareOptionModal = ({ 
-  isOpen, 
-  onClose, 
-  onSelect, 
+const ShareOptionModal = ({
+  isOpen,
+  onClose,
+  onSelect,
   selectedCredit,
-  modalTitle = "Поделиться" 
+  modalTitle = "Поделиться"
 }: ShareOptionModalProps) => {
-  
+
   const options = [
     { key: 'contractData', label: 'Данными договора', enabled: !!selectedCredit },
     { key: 'paymentHistory', label: 'Историей платежей', enabled: !!selectedCredit },
     // { key: 'paymentSchedule', label: 'Расписанием платежей', enabled: !!selectedCredit }
   ];
 
-  const handleSelect = (optionKey: 'contractData' | 'paymentHistory' | 'paymentSchedule') => {
+  const handleSelect = (optionKey: ShareOption) => {
     if (selectedCredit) {
       onSelect(optionKey);
     } else {
@@ -179,6 +182,7 @@ const CreditPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
   const { createPayment, generatePaymentHistoryMessage } = usePayment();
+  const { GetFilledPayments, GetFilledCredit, GetFilledCredits } = useSender();
   const [isCreateTabModalOpen, setIsCreateTabModalOpen] = useState(false);
   const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
@@ -321,91 +325,79 @@ const CreditPage = () => {
 
   const handleMassShare = async (selectedIndices: number[]) => {
     try {
-      let combinedMessage = ``;
-      
-      for (const rowIndex of selectedIndices) {
-        const credit = creditsData?.items[rowIndex];
-        if (credit) {
-          combinedMessage += `*Договор №${credit.id}*\n`;
-          combinedMessage += `Клиент: ${credit.clientFullName}\n`;
-          combinedMessage += `Дата: ${formatDate(credit.creditDate)}\n`;
-          combinedMessage += `Сумма: ${formatMoney(credit.totalAmount?.toString() || '0')}\n`;
-          combinedMessage += `Остаток: ${formatMoney(credit.rest?.toString() || '0')}\n`;
-          combinedMessage += `---\n`;
-        }
+      const creditIds = selectedIndices
+        .map(rowIndex => creditsData?.items[rowIndex]?.id)
+        .filter((id): id is number => typeof id === 'number');
+
+      if (creditIds.length === 0) {
+        alert('Не удалось определить выбранные договоры');
+        return;
       }
-      
-      const whatsappUrl = createWhatsAppMessageWithoutPhone(combinedMessage);
+
+      const message = await GetFilledCredits(creditIds);
+      if (!message) {
+        alert('Не удалось получить сообщение для отправки');
+        return;
+      }
+
+      const whatsappUrl = createWhatsAppMessageWithoutPhone(message);
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-      
     } catch (error) {
       console.error('Ошибка при массовой рассылке:', error);
       alert('Произошла ошибка при подготовке сообщения');
     }
   };
 
-  const generateShareMessage = useCallback(async (option: 'contractData' | 'paymentHistory' | 'paymentSchedule'): Promise<string> => {
+  const generateShareMessage = useCallback(async (option: ShareOption): Promise<string> => {
     if (!selectedCreditForPrint) return '';
-    
+
     const credit = selectedCreditForPrint;
-    const today = new Date().toLocaleDateString('ru-RU');
     switch (option) {
       case 'contractData':
-        return `Договор №${credit.id}
+        return (await GetFilledCredit(credit.id)) || '';
 
-Дата оформления договора: ${formatDate(credit.creditDate)}
-Клиент: ${credit.clientFullName}
-${credit.guarantorFullName ? `Поручитель: ${credit.guarantorFullName}\n` : ''}Срок: ${credit.termMonths} месяцев
-Стоимость товара: ${formatMoney(credit.totalClean?.toString())}
-${credit.firstPayment ? `Первоначальный взнос: ${formatMoney(credit.firstPayment?.toString())}\n` : ''}Общая сумма договора: ${formatMoney(credit.totalAmount?.toString() || '0')}`;
-               
-    case 'paymentHistory':
-      return await generatePaymentHistoryMessage(credit);
-               
+      case 'paymentHistory':
+        return (await GetFilledPayments(credit.id)) || '';
+
       case 'paymentSchedule':
-        return `📅 *Расписание платежей по договору #${credit.id}*\n\n` +
-               `Клиент: ${credit.clientFullName}\n` +
-               `Дата договора: ${formatDate(credit.creditDate)}\n` +
-               `Общая сумма: ${formatMoney(credit.totalAmount?.toString() || '0')}\n` +
-               `_Для получения детального графика платежей обратитесь к менеджеру._\n` +
-               `_Отправлено ${today}_`;
-               
+        return await generatePaymentHistoryMessage(credit);
+
       default:
         return '';
     }
-  }, [selectedCreditForPrint]);
+  }, [selectedCreditForPrint, GetFilledCredit, GetFilledPayments, generatePaymentHistoryMessage]);
 
-  const handleShareOptionSelect = useCallback(async (option: 'contractData' | 'paymentHistory' | 'paymentSchedule', e?: React.MouseEvent) => {
+  const handleShareOptionSelect = useCallback(async (option: ShareOption, e?: React.MouseEvent) => {
       if (e) {
           e.preventDefault();
           e.stopPropagation();
       }
-      
+
       if (!selectedCreditForPrint) {
           alert('Договор не выбран');
           setIsShareModalOpen(false);
           return;
       }
-      
-      // Получаем номер телефона клиента
+
       const clientPhone = selectedCreditForPrint.clientPhone;
-      
+
       if (!clientPhone) {
           alert('У клиента не указан номер телефона');
           setIsShareModalOpen(false);
           return;
       }
-      
+
       const message = await generateShareMessage(option);
       if (message) {
-          // Используем новую функцию для отправки на конкретный номер
           const success = sendWhatsAppMessageToPhone(clientPhone, message);
-          
+
           if (success) {
               console.log(`Сообщение отправлено на номер: ${clientPhone}`);
           } else {
               alert('Не удалось открыть WhatsApp. Проверьте номер телефона.');
           }
+      } else {
+          alert('Не удалось получить сообщение для отправки');
       }
       setIsShareModalOpen(false);
   }, [generateShareMessage, selectedCreditForPrint]);
