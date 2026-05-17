@@ -7,6 +7,8 @@ import GrayButton from '../../components/ui/Buttons/GrayButton';
 import CustomInput from '../../components/ui/fields/CustomInput';
 import useWhatsApp from '../../api/hooks/useWhatsApp';
 import type { BotResponse } from '../../api/types/whatsapp';
+import BotResponseConstructor from './BotResponseConstructor';
+import { validateBotTemplate } from './botTemplateVariables';
 
 const BotManagementPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
@@ -178,8 +180,16 @@ const BotManagementPage: React.FC = () => {
 
     if (!responseModal.rule) return;
 
+    const issues = validateBotTemplate(responseModal.response);
+    if (issues.length > 0) {
+      const confirmSave = confirm(
+        `Найдены проблемы в шаблоне:\n\n${issues.map(i => '• ' + i.message).join('\n')}\n\nСохранить всё равно?`
+      );
+      if (!confirmSave) return;
+    }
+
     setResponseModal(prev => ({ ...prev, saving: true }));
-    
+
     try {
       await setBotResponse(responseModal.rule.id, responseModal.response);
       await loadRules();
@@ -369,25 +379,20 @@ const BotManagementPage: React.FC = () => {
         </ModalOverlay>
       )}
 
-      {/* Модалка редактирования ответа */}
+      {/* Модалка редактирования ответа — конструктор */}
       {responseModal.isOpen && responseModal.rule && (
         <ModalOverlay onClick={() => !responseModal.saving && setResponseModal(prev => ({ ...prev, isOpen: false }))}>
-          <ModalContent onClick={e => e.stopPropagation()}>
+          <WideModalContent onClick={e => e.stopPropagation()}>
             <ModalHeader>
-              <ModalTitle>Редактировать ответ — {responseModal.rule.name}</ModalTitle>
+              <ModalTitle>Конструктор ответа — {responseModal.rule.name}</ModalTitle>
               <CloseBtn onClick={() => !responseModal.saving && setResponseModal(prev => ({ ...prev, isOpen: false }))}>✖</CloseBtn>
             </ModalHeader>
 
-            <FormField>
-              <Label>Текст ответа</Label>
-              <Textarea
-                value={responseModal.response}
-                onChange={e => setResponseModal(prev => ({ ...prev, response: e.target.value }))}
-                placeholder="Введите текст ответа бота..."
-                rows={6}
-                disabled={responseModal.saving}
-              />
-            </FormField>
+            <BotResponseConstructor
+              value={responseModal.response}
+              onChange={next => setResponseModal(prev => ({ ...prev, response: next }))}
+              disabled={responseModal.saving}
+            />
 
             <ModalActions>
               <GrayButton onClick={() => setResponseModal(prev => ({ ...prev, isOpen: false }))} disabled={responseModal.saving}>
@@ -397,7 +402,7 @@ const BotManagementPage: React.FC = () => {
                 {responseModal.saving ? '💾 Сохранение...' : 'Сохранить ответ'}
               </DarkCyanButton>
             </ModalActions>
-          </ModalContent>
+          </WideModalContent>
         </ModalOverlay>
       )}
 
@@ -773,6 +778,12 @@ const ModalContent = styled.div`
   padding: 28px;
 `;
 
+const WideModalContent = styled(ModalContent)`
+  width: 1100px;
+  max-width: 95vw;
+  max-height: 92vh;
+`;
+
 const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -811,27 +822,6 @@ const Label = styled.label`
   color: #333;
   font-size: 14px;
   text-align: left;
-`;
-
-const Textarea = styled.textarea`
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  resize: vertical;
-  transition: all 0.2s;
-  
-  &:focus {
-    outline: none;
-    border-color: #007d88;
-    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.1);
-  }
-  
-  &:disabled {
-    background: #f5f5f5;
-  }
 `;
 
 const ModalActions = styled.div`
