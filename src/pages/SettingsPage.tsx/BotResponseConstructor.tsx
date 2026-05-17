@@ -3,6 +3,7 @@ import styled, { css } from 'styled-components';
 import {
   BOT_LOOPS,
   BOT_VARIABLE_GROUPS,
+  isNestingAllowed,
   renderBotTemplate,
   validateBotTemplate,
   type BotLoop,
@@ -31,13 +32,64 @@ const SCOPE_BG: Record<'global' | LoopType, string> = {
   foreachSchedule: 'rgba(14, 165, 233, 0.08)'
 };
 
+const LOOP_TYPE_SET = new Set<LoopType>([
+  'foreachLoan',
+  'foreachPaymentInLoan',
+  'foreachPayment',
+  'foreachSchedule'
+]);
+
+const VARIABLE_SCOPE: Record<string, 'global' | LoopType> = (() => {
+  const map: Record<string, 'global' | LoopType> = {};
+  for (const group of BOT_VARIABLE_GROUPS) {
+    for (const v of group.variables) map[v.key] = group.scope;
+  }
+  return map;
+})();
+
+interface HighlightToken {
+  text: string;
+  color?: string;
+  bg?: string;
+}
+
+function tokenizeTemplate(template: string): HighlightToken[] {
+  const tokens: HighlightToken[] = [];
+  const regex = /\{(\/?)([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(template)) !== null) {
+    if (m.index > last) tokens.push({ text: template.slice(last, m.index) });
+    const isClose = m[1] === '/';
+    const name = m[2];
+    if (LOOP_TYPE_SET.has(name as LoopType)) {
+      const accent = SCOPE_ACCENTS[name as LoopType];
+      tokens.push({ text: m[0], color: accent, bg: SCOPE_BG[name as LoopType] });
+    } else if (!isClose && VARIABLE_SCOPE[name]) {
+      const scope = VARIABLE_SCOPE[name];
+      tokens.push({ text: m[0], color: SCOPE_ACCENTS[scope], bg: SCOPE_BG[scope] });
+    } else {
+      tokens.push({ text: m[0], color: '#dc2626' });
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < template.length) tokens.push({ text: template.slice(last) });
+  return tokens;
+}
+
 const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstructorProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [cursorPos, setCursorPos] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
 
   const handleSelect = () => {
     const el = textareaRef.current;
     if (el) setCursorPos(el.selectionStart ?? 0);
+  };
+
+  const handleScroll = () => {
+    const el = textareaRef.current;
+    if (el) setScrollTop(el.scrollTop);
   };
 
   const insertAtCursor = (snippet: string, cursorOffset?: number) => {
@@ -71,6 +123,7 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
   const cursorContext = useMemo(() => detectCursorContext(value, cursorPos), [value, cursorPos]);
   const issues = useMemo(() => validateBotTemplate(value), [value]);
   const preview = useMemo(() => renderBotTemplate(value), [value]);
+  const tokens = useMemo(() => tokenizeTemplate(value), [value]);
   const charCount = value.length;
 
   return (
@@ -86,19 +139,23 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
           <LoopGrid>
             {BOT_LOOPS.map(loop => {
               const isNested = loop.parent !== undefined;
-              const canInsert = !isNested || cursorContext.includes(loop.parent!);
+              const canInsert = isNestingAllowed(loop.type, cursorContext);
+              const top = cursorContext[cursorContext.length - 1];
               const accent = SCOPE_ACCENTS[loop.type];
+              const blockedReason = !canInsert
+                ? isNested
+                  ? top
+                    ? `Можно вставить только внутри {${loop.parent}}, а курсор сейчас в {${top}}`
+                    : `Можно вставить только внутри {${loop.parent}}`
+                  : `Циклы нельзя вкладывать друг в друга — курсор внутри {${top}}`
+                : null;
               return (
                 <LoopCard
                   key={loop.type}
                   onClick={() => insertLoop(loop)}
                   disabled={disabled || !canInsert}
                   $accent={accent}
-                  title={
-                    canInsert
-                      ? loop.description
-                      : `Можно вставить только внутри {${loop.parent}}`
-                  }
+                  title={blockedReason ?? loop.description}
                 >
                   <LoopCardTopRow>
                     <LoopCardTitle>{loop.label}</LoopCardTitle>
@@ -126,17 +183,37 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
           </CardHeader>
 
           <EditorShell $hasIssues={issues.length > 0}>
-            <Textarea
-              ref={textareaRef}
-              value={value}
-              onChange={e => onChange(e.target.value)}
-              onSelect={handleSelect}
-              onKeyUp={handleSelect}
-              onClick={handleSelect}
-              placeholder={`Привет, {client_fullname}!\n\n{foreachLoan}\nРассрочка {name} — остаток {total_amount}\n{/foreachLoan}`}
-              disabled={disabled}
-              spellCheck={false}
-            />
+            <TextareaStage>
+              <Highlight aria-hidden>
+                <HighlightInner style={{ transform: `translateY(${-scrollTop}px)` }}>
+                  {tokens.map((t, i) => (
+                    <HighlightToken
+                      key={i}
+                      style={
+                        t.color || t.bg
+                          ? { color: t.color, background: t.bg }
+                          : undefined
+                      }
+                    >
+                      {t.text}
+                    </HighlightToken>
+                  ))}
+                  {value.endsWith('\n') && '​'}
+                </HighlightInner>
+              </Highlight>
+              <Textarea
+                ref={textareaRef}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                onSelect={handleSelect}
+                onKeyUp={handleSelect}
+                onClick={handleSelect}
+                onScroll={handleScroll}
+                placeholder={`Привет, {client_fullname}!\n\n{foreachLoan}\nРассрочка {name} — остаток {total_amount}\n{/foreachLoan}`}
+                disabled={disabled}
+                spellCheck={false}
+              />
+            </TextareaStage>
             <EditorFooter>
               <span>{charCount} симв.</span>
               {issues.length > 0 ? (
@@ -427,6 +504,38 @@ const EditorShell = styled.div<{ $hasIssues: boolean }>`
   }
 `;
 
+const TextareaStage = styled.div`
+  position: relative;
+`;
+
+const Highlight = styled.div`
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+`;
+
+const HighlightInner = styled.div`
+  padding: 14px 16px;
+  font-size: 13px;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  line-height: 1.6;
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  color: #0f172a;
+  box-sizing: border-box;
+  min-height: 100%;
+  will-change: transform;
+`;
+
+const HighlightToken = styled.span`
+  border-radius: 3px;
+  padding: 0 1px;
+`;
+
 const Textarea = styled.textarea<{ disabled?: boolean }>`
   width: 100%;
   min-height: 260px;
@@ -435,11 +544,15 @@ const Textarea = styled.textarea<{ disabled?: boolean }>`
   font-size: 13px;
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   line-height: 1.6;
+  letter-spacing: 0;
   resize: vertical;
   box-sizing: border-box;
   background: transparent;
-  color: #0f172a;
+  color: transparent;
+  caret-color: #0f172a;
   display: block;
+  position: relative;
+  z-index: 1;
 
   &:focus {
     outline: none;
@@ -448,10 +561,17 @@ const Textarea = styled.textarea<{ disabled?: boolean }>`
   &:disabled {
     background: #f1f5f9;
     cursor: not-allowed;
+    color: #475569;
+    caret-color: transparent;
   }
 
   &::placeholder {
     color: #94a3b8;
+  }
+
+  &::selection {
+    background: rgba(0, 125, 136, 0.25);
+    color: transparent;
   }
 `;
 

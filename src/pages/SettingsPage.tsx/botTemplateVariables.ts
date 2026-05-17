@@ -285,9 +285,17 @@ export function renderBotTemplate(template: string): string {
 }
 
 export interface TemplateValidationIssue {
-  type: 'unclosed' | 'unopened' | 'misnested';
+  type: 'unclosed' | 'unopened' | 'misnested' | 'nested';
   loop: LoopType;
   message: string;
+}
+
+export function isNestingAllowed(loop: LoopType, parentContext: LoopType[]): boolean {
+  const top = parentContext[parentContext.length - 1];
+  if (top === undefined) {
+    return loop !== 'foreachPaymentInLoan';
+  }
+  return loop === 'foreachPaymentInLoan' && top === 'foreachLoan';
 }
 
 export function validateBotTemplate(template: string): TemplateValidationIssue[] {
@@ -301,11 +309,22 @@ export function validateBotTemplate(template: string): TemplateValidationIssue[]
     const loop = match[2] as LoopType;
 
     if (!isClose) {
-      if (loop === 'foreachPaymentInLoan' && stack[stack.length - 1] !== 'foreachLoan') {
+      const top = stack[stack.length - 1];
+      if (loop === 'foreachPaymentInLoan') {
+        if (top !== 'foreachLoan') {
+          issues.push({
+            type: 'misnested',
+            loop,
+            message: top
+              ? `{foreachPaymentInLoan} нельзя помещать внутри {${top}} — только внутри {foreachLoan}`
+              : '{foreachPaymentInLoan} должен быть внутри {foreachLoan}'
+          });
+        }
+      } else if (top !== undefined) {
         issues.push({
-          type: 'misnested',
+          type: 'nested',
           loop,
-          message: '{foreachPaymentInLoan} должен быть внутри {foreachLoan}'
+          message: `{${loop}} нельзя вкладывать в {${top}} — циклы внутри циклов не поддерживаются`
         });
       }
       stack.push(loop);
