@@ -48,6 +48,81 @@ export const BOT_LOOPS: BotLoop[] = [
   }
 ];
 
+export interface BotTemplate {
+  id: string;
+  title: string;
+  description: string;
+  body: string;
+}
+
+export const BOT_TEMPLATES: BotTemplate[] = [
+  {
+    id: 'empty',
+    title: 'Пустой шаблон',
+    description: 'Очистить редактор и начать с нуля',
+    body: ''
+  },
+  {
+    id: 'welcome',
+    title: 'Приветствие',
+    description: 'Короткое сообщение для нового клиента',
+    body: 'Здравствуйте, {client_fullname}!\n\nСпасибо, что выбрали {company}. По любым вопросам обращайтесь: {support_phone}.'
+  },
+  {
+    id: 'payment-reminder',
+    title: 'Напоминание о платеже',
+    description: 'Ближайшие платежи по графику',
+    body:
+      '{client_fullname}, напоминаем о ближайших платежах:\n\n' +
+      '{foreachSchedule}\n' +
+      '• {schedule_date} — {scheduled_amount} (рассрочка {schedule_schedule_name}, остаток {rest})\n' +
+      '{/foreachSchedule}\n' +
+      'Оплатить можно по реквизитам: {company_card}.'
+  },
+  {
+    id: 'loans-summary',
+    title: 'Сводка по рассрочкам',
+    description: 'Перечень всех активных рассрочек клиента',
+    body:
+      'Здравствуйте, {client_fullname}!\n\nВаши рассрочки в {company}:\n\n' +
+      '{foreachLoan}\n' +
+      '— №{name} от {loan_date}: {total_amount}, ежемесячно {month_payment}\n' +
+      '{/foreachLoan}\n' +
+      'Телефон поддержки: {support_phone}.'
+  },
+  {
+    id: 'loan-payments-detailed',
+    title: 'Платежи по каждой рассрочке',
+    description: 'Вложенный цикл — все платежи внутри каждой рассрочки',
+    body:
+      '{client_fullname}, история платежей в {company}:\n\n' +
+      '{foreachLoan}\n' +
+      'Рассрочка {name} (выдана {loan_date}):\n' +
+      '{foreachPaymentInLoan}\n' +
+      '  • {payment_in_loan_date} — {payment_in_loan_amount} ({payment_in_loan_type})\n' +
+      '{/foreachPaymentInLoan}\n' +
+      '{/foreachLoan}'
+  },
+  {
+    id: 'payments-history',
+    title: 'История всех платежей',
+    description: 'Плоский список последних платежей клиента',
+    body:
+      '{client_fullname}, ваши последние платежи в {company}:\n\n' +
+      '{foreachPayment}\n' +
+      '• {payment_date} — {payment_amount} ({payment_type}), рассрочка {loan_payment_name}\n' +
+      '{/foreachPayment}'
+  },
+  {
+    id: 'birthday',
+    title: 'Поздравление с днём рождения',
+    description: 'Использует имя клиента и название компании',
+    body:
+      '{client_fullname}, поздравляем с днём рождения!\n\n' +
+      'Команда {company} желает здоровья, успехов и приятных покупок. С праздником!'
+  }
+];
+
 export const BOT_VARIABLE_GROUPS: BotVariableGroup[] = [
   {
     title: 'Глобальные — Клиент',

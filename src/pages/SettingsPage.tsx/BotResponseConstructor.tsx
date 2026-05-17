@@ -2,11 +2,13 @@ import { useMemo, useRef, useState } from 'react';
 import styled, { css } from 'styled-components';
 import {
   BOT_LOOPS,
+  BOT_TEMPLATES,
   BOT_VARIABLE_GROUPS,
   isNestingAllowed,
   renderBotTemplate,
   validateBotTemplate,
   type BotLoop,
+  type BotTemplate,
   type LoopType
 } from './botTemplateVariables';
 
@@ -120,6 +122,27 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
     insertAtCursor(snippet, cursorOffset);
   };
 
+  const applyTemplate = (template: BotTemplate) => {
+    if (
+      value.trim() &&
+      !window.confirm(`Заменить текущий шаблон на «${template.title}»?`)
+    ) {
+      return;
+    }
+    onChange(template.body);
+    const pos = template.body.length;
+    setCursorPos(pos);
+    setTimeout(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(pos, pos);
+        el.scrollTop = 0;
+        setScrollTop(0);
+      }
+    }, 0);
+  };
+
   const cursorContext = useMemo(() => detectCursorContext(value, cursorPos), [value, cursorPos]);
   const issues = useMemo(() => validateBotTemplate(value), [value]);
   const preview = useMemo(() => renderBotTemplate(value), [value]);
@@ -129,6 +152,28 @@ const BotResponseConstructor = ({ value, onChange, disabled }: BotResponseConstr
   return (
     <Layout>
       <EditorColumn>
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Dot $color="#7C3AED" /> Готовые шаблоны
+            </CardTitle>
+            <CardHint>Кликни — подставит шаблон в редактор</CardHint>
+          </CardHeader>
+          <TemplatesGrid>
+            {BOT_TEMPLATES.map(template => (
+              <TemplateCard
+                key={template.id}
+                onClick={() => applyTemplate(template)}
+                disabled={disabled}
+                title={template.description}
+              >
+                <TemplateTitle>{template.title}</TemplateTitle>
+                <TemplateDescription>{template.description}</TemplateDescription>
+              </TemplateCard>
+            ))}
+          </TemplatesGrid>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>
@@ -414,6 +459,52 @@ const LoopGrid = styled.div`
   gap: 10px;
 `;
 
+const TemplatesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+`;
+
+const TemplateCard = styled.button<{ disabled?: boolean }>`
+  background: white;
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-left: 4px solid #7C3AED;
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: ${p => (p.disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${p => (p.disabled ? 0.45 : 1)};
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 60px;
+  overflow: hidden;
+
+  &:hover:not(:disabled) {
+    background: rgba(124, 58, 237, 0.06);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(124, 58, 237, 0.18);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+`;
+
+const TemplateTitle = styled.span`
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.3;
+`;
+
+const TemplateDescription = styled.span`
+  font-size: 10.5px;
+  color: #64748b;
+  line-height: 1.3;
+`;
+
 const LoopCard = styled.button<{ $accent: string; disabled?: boolean }>`
   background: white;
   border: 1px solid ${p => p.$accent}55;
@@ -522,6 +613,8 @@ const HighlightInner = styled.div`
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   line-height: 1.6;
   letter-spacing: 0;
+  text-align: left;
+  direction: ltr;
   white-space: pre-wrap;
   overflow-wrap: break-word;
   word-break: normal;
@@ -545,6 +638,8 @@ const Textarea = styled.textarea<{ disabled?: boolean }>`
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   line-height: 1.6;
   letter-spacing: 0;
+  text-align: left;
+  direction: ltr;
   resize: vertical;
   box-sizing: border-box;
   background: transparent;
