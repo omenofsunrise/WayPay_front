@@ -218,7 +218,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 <InfoText>
                     Хотите получить доступ к нашим продуктам?<br />
                     Обратитесь по номеру <InfoPhone href="tel:89899242424">8 989 924 24 24</InfoPhone><br />
-                    или оставьте заявку на <InfoLink href="https://info.waypay.one" target="_blank">info.waypay.one</InfoLink>
+                    или оставьте заявку на <InfoLink href="https://waypay.one" target="_blank">waypay.one</InfoLink>
                 </InfoText>
             </AuthCard>
 
