@@ -141,7 +141,9 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   }, [currentPage, nameFilter, roleFilter, sortConfig, loadEmployees]);
 
   const filteredEmployees = useMemo(() => {
-    return localEmployees.filter(emp => !isSuperAdminIdUser(emp.id));
+    return localEmployees.filter(
+      emp => !isSuperAdminIdUser(emp.id) && emp.role !== 'суперадмин'
+    );
   }, [localEmployees, isSuperAdminIdUser]);
   const filteredOutCount = localEmployees.length - filteredEmployees.length;
 

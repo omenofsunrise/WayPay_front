@@ -5,7 +5,10 @@ import { authStorage } from '../api/utils/auth-storage';
 import logoImage from '../assets/logos/logo.svg';
 import CustomPhoneInput from '../components/ui/fields/PhoneInput';
 import AuthCallModal from '../components/modal/AuthCallModal';
+import AuthWhatsAppModal from '../components/modal/AuthWhatsAppModal';
 import PinCodeModal from '../components/modal/PinCodeModal';
+
+type AuthWay = 'CallCheck' | 'WhatsAppCode';
 
 interface AuthPageProps {
   onLoginSuccess: (token: string) => void;
@@ -14,7 +17,9 @@ interface AuthPageProps {
 const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [rawPhone, setRawPhone] = useState('');
+    const [authWay, setAuthWay] = useState<AuthWay>('CallCheck');
     const [showCallModal, setShowCallModal] = useState(false);
+    const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
     const [callPhone, setCallPhone] = useState('');
     const [checkId, setCheckId] = useState('');
     const [verificationError, setVerificationError] = useState('');
@@ -31,28 +36,46 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         };
     }, []);
 
-    const closeModal = () => {
-        setShowCallModal(false);
+    const stopPolling = () => {
         if (verificationInterval.current) {
             window.clearInterval(verificationInterval.current);
+            verificationInterval.current = undefined;
         }
+    };
+
+    const closeCallModal = () => {
+        setShowCallModal(false);
+        stopPolling();
+    };
+
+    const closeWhatsAppModal = () => {
+        setShowWhatsAppModal(false);
+        setVerificationError('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!rawPhone) return;
-        
+
         setIsLoading(true);
+        setVerificationError('');
         try {
             const response = await apiClient.post('/Auth/start', {
                 phone: rawPhone,
                 userType: 'employee',
+                authWay,
             });
-            
-            setCheckId(response.data.checkId);
-            setCallPhone(response.data.callPhone);
-            setShowCallModal(true);
-            startVerificationPolling(rawPhone, response.data.checkId);
+
+            if (authWay === 'WhatsAppCode') {
+                setCheckId('');
+                setCallPhone('');
+                setShowWhatsAppModal(true);
+            } else {
+                setCheckId(response.data.checkId);
+                setCallPhone(response.data.callPhone);
+                setShowCallModal(true);
+                startVerificationPolling(rawPhone, response.data.checkId);
+            }
         } catch (error: any) {
             console.error('Auth error:', error);
             if (error.response?.status === 400) {
@@ -66,39 +89,67 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     };
 
     const startVerificationPolling = (phone: string, id: string) => {
-        if (verificationInterval.current) {
-            window.clearInterval(verificationInterval.current);
-        }
-        
+        stopPolling();
+
         verificationInterval.current = window.setInterval(() => {
-            verifyAuth(phone, id);
+            verifyCallAuth(phone, id);
         }, 3000);
     };
-    
-    const verifyAuth = async (phone: string, id: string) => {
+
+    const handleAuthSuccess = (accessToken: string, refreshToken: string) => {
+        authStorage.setTokens(accessToken, refreshToken);
+        stopPolling();
+        setShowCallModal(false);
+        setShowWhatsAppModal(false);
+        setShowPinModal(true);
+    };
+
+    const verifyCallAuth = async (phone: string, id: string) => {
         if (isVerifying) return;
-        
+
         setIsVerifying(true);
         try {
             const response = await apiClient.post('/Auth/confirm', {
                 phone: phone,
                 checkId: id,
                 userType: 'employee',
+                authWay: 'CallCheck',
             });
-            
+
             if (response.data.accessToken && response.data.refreshToken) {
-                authStorage.setTokens(response.data.accessToken, response.data.refreshToken);
-                
-                if (verificationInterval.current) {
-                    window.clearInterval(verificationInterval.current);
-                }
-                setShowCallModal(false);
-                
-                setShowPinModal(true);
+                handleAuthSuccess(response.data.accessToken, response.data.refreshToken);
             }
         } catch (error) {
             console.error('Verification error:', error);
             setVerificationError('Ошибка проверки авторизации');
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    const verifyWhatsAppCode = async (code: string) => {
+        if (isVerifying) return;
+
+        setIsVerifying(true);
+        setVerificationError('');
+        try {
+            const response = await apiClient.post('/Auth/confirm', {
+                phone: rawPhone,
+                checkId: code,
+                userType: 'employee',
+                authWay: 'WhatsAppCode',
+            });
+
+            if (response.data.accessToken && response.data.refreshToken) {
+                handleAuthSuccess(response.data.accessToken, response.data.refreshToken);
+            } else {
+                setVerificationError('Неверный код. Попробуйте ещё раз.');
+            }
+        } catch (error: any) {
+            console.error('WhatsApp verification error:', error);
+            setVerificationError(
+                error.response?.data?.message || error.response?.data || 'Неверный код. Попробуйте ещё раз.'
+            );
         } finally {
             setIsVerifying(false);
         }
@@ -123,13 +174,34 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
                     <FormGroup>
                         <InputContainer>
-                            <CustomPhoneInput 
+                            <CustomPhoneInput
                                 value={rawPhone}
                                 onChange={(value: string) => setRawPhone(value)}
                                 placeholder="8 (xxx) xxx-xx-xx"
                             />
                         </InputContainer>
                     </FormGroup>
+
+                    <MethodToggle role="tablist" aria-label="Способ авторизации">
+                        <MethodOption
+                            type="button"
+                            role="tab"
+                            aria-selected={authWay === 'CallCheck'}
+                            $active={authWay === 'CallCheck'}
+                            onClick={() => setAuthWay('CallCheck')}
+                        >
+                            Звонок
+                        </MethodOption>
+                        <MethodOption
+                            type="button"
+                            role="tab"
+                            aria-selected={authWay === 'WhatsAppCode'}
+                            $active={authWay === 'WhatsAppCode'}
+                            onClick={() => setAuthWay('WhatsAppCode')}
+                        >
+                            WhatsApp
+                        </MethodOption>
+                    </MethodToggle>
 
                     <SubmitButton type="submit" disabled={isLoading}>
                         {isLoading ? (
@@ -152,13 +224,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
             <AuthCallModal
                 isOpen={showCallModal}
-                onClose={closeModal}
+                onClose={closeCallModal}
                 callPhone={callPhone}
                 isVerifying={isVerifying}
                 error={verificationError}
             />
 
-            <PinCodeModal 
+            <AuthWhatsAppModal
+                isOpen={showWhatsAppModal}
+                onClose={closeWhatsAppModal}
+                onSubmit={verifyWhatsAppCode}
+                phone={rawPhone}
+                isVerifying={isVerifying}
+                error={verificationError}
+            />
+
+            <PinCodeModal
                 isOpen={showPinModal}
                 onSuccess={handlePinSuccess}
                 mode='setup'
@@ -269,40 +350,31 @@ const InputContainer = styled.div`
     width: auto;
 `;
 
-const RadioGroup = styled.div`
+const MethodToggle = styled.div`
     display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-
-    @media (max-width: 480px) {
-        flex-direction: column;
-    }
+    gap: 8px;
+    margin-bottom: 25px;
+    padding: 4px;
+    background: #f5f5f5;
+    border-radius: 10px;
 `;
 
-const RadioOption = styled.div<{ active?: boolean }>`
+const MethodOption = styled.button<{ $active?: boolean }>`
     flex: 1;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-radius: 8px;
-    border: 1px solid ${props => props.active ? 'rgba(0, 125, 136, 0.3)' : '#e0e0e0'};
-    background: ${props => props.active ? 'rgba(0, 125, 136, 0.05)' : 'transparent'};
+    border: none;
+    background: ${props => props.$active ? 'white' : 'transparent'};
+    color: ${props => props.$active ? 'rgba(0, 125, 136, 1)' : '#777'};
+    font-size: 14px;
+    font-weight: ${props => props.$active ? 600 : 500};
     cursor: pointer;
     transition: all 0.2s;
+    box-shadow: ${props => props.$active ? '0 1px 4px rgba(0, 0, 0, 0.08)' : 'none'};
 
     &:hover {
-        border-color: rgba(0, 125, 136, 0.5);
+        color: rgba(0, 125, 136, 1);
     }
-`;
-
-const RadioInput = styled.input`
-    display: none;
-`;
-
-const RadioLabel = styled.label`
-    display: block;
-    font-size: 14px;
-    color: #555;
-    cursor: pointer;
-    text-align: center;
 `;
 
 const SubmitButton = styled.button`

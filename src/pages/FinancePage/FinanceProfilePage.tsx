@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import Pagination from "../../components/ui/fields/CustomPagination";
@@ -125,6 +125,12 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
   useEffect(() => {
     loadEmployees();
   }, [currentPage, nameFilter, roleFilter, sortConfig, loadEmployees]);
+
+  const filteredEmployees = useMemo(
+    () => localEmployees.filter((emp) => emp.role !== "суперадмин"),
+    [localEmployees]
+  );
+  const filteredOutCount = localEmployees.length - filteredEmployees.length;
 
   const handleFilterChange = (value: string) => {
     setNameFilter(value);
@@ -462,7 +468,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
     return actions;
   };
 
-  const tableData = localEmployees.map((employee, index) => [
+  const tableData = filteredEmployees.map((employee, index) => [
     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       <Avatar
         src={employee.photoPath ? FILE_BASE_URL + employee.photoPath : null}
@@ -504,7 +510,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
   ]);
 
   const rowStyles: { [rowIndex: number]: RowStyle } = {};
-  localEmployees.forEach((employee, index) => {
+  filteredEmployees.forEach((employee, index) => {
     if (isEmployeeBlocked(employee)) {
       rowStyles[index] = {
         backgroundColor: "rgba(254, 202, 202, 0.3)",
@@ -555,10 +561,10 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
           />
 
           <PaginationLayout>
-            <CountInfoTitle total={totalCount} />
+            <CountInfoTitle total={totalCount - filteredOutCount} />
 
             <Pagination
-              total={totalCount}
+              total={totalCount - filteredOutCount}
               current={currentPage}
               onChange={setCurrentPage}
               itemsPerPage={pageSize}
