@@ -1,6 +1,7 @@
 import apiClient from '../client';
 import type { AutoSelectInvestorResponse, Investor, InvestorAgreementResponse, InvestorParams, InvestorReport } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
+import type { DeletedInvestorInfo } from '../types/deletedInvestor';
 
 class ProductService {
   async getInvestors(params?: InvestorParams): Promise<PaginatedResponse<Investor>> {
@@ -66,6 +67,11 @@ class ProductService {
 
   async clearInvestor(id: number): Promise<void> {
     await apiClient.patch(`/Investor/clear/${id}`);
+  }
+
+  async getDeletedInfo(): Promise<DeletedInvestorInfo> {
+    const response = await apiClient.get<DeletedInvestorInfo>('/Investor/deleted/info');
+    return response.data;
   }
 }
 

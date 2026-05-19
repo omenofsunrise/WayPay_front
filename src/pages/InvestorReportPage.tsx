@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import PageLayout from "../components/ui/Layouts/PageLayout";
@@ -52,9 +52,14 @@ import {
 } from "../components/Containers/InputComponents";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
+import type { DeletedInvestorInfo } from '../api/types/deletedInvestor';
+import { deleteInvestorPayout } from '../api/services/investorPayoutService';
+import investorContributionService from '../api/services/investorContributionService';
+
+const DELETED_OPTION_VALUE = 'deleted';
 
 const InvestorReportPage = () => {
-    const { getInvestors, currentInvestor, getInvestorById, getInvestorReport, updateInvestment } = useInvestor();
+    const { getInvestors, currentInvestor, getInvestorById, getInvestorReport, updateInvestment, getDeletedInfo } = useInvestor();
     const { 
         payouts, 
         isLoading: isPayoutsLoading, 
@@ -106,6 +111,24 @@ const InvestorReportPage = () => {
     const [payoutsPage, setPayoutsPage] = useState(1);
     const pageSize = 5;
 
+    const [deletedInfo, setDeletedInfo] = useState<DeletedInvestorInfo | null>(null);
+    const [isDeletedLoading, setIsDeletedLoading] = useState(false);
+    const [deletedPayoutsPage, setDeletedPayoutsPage] = useState(1);
+    const [deletedContributionsPage, setDeletedContributionsPage] = useState(1);
+    const [deletedOperationsTab, setDeletedOperationsTab] = useState<'payouts' | 'contributions'>('payouts');
+
+    const isDeletedView = selectedInvestorId === DELETED_OPTION_VALUE;
+
+    const fetchDeletedInfo = useCallback(async () => {
+        setIsDeletedLoading(true);
+        try {
+            const result = await getDeletedInfo();
+            setDeletedInfo(result);
+        } finally {
+            setIsDeletedLoading(false);
+        }
+    }, [getDeletedInfo]);
+
     useEffect(() => {
         const fetchInvestors = async () => {
             setIsLoading(true);
@@ -128,27 +151,31 @@ const InvestorReportPage = () => {
     const isSuperUser = hasRole('директор') || hasRole('суперадмин');
     
     useEffect(() => {
-        if (selectedInvestorId) {
-            const fetchReportData = async () => {
-                setIsLoading(true);
-                try {
-                    await getInvestorById(Number(selectedInvestorId));
-                    const reportData = await getInvestorReport(Number(selectedInvestorId));
-                    setReport(reportData);
-                    fetchPayouts(Number(selectedInvestorId));
-                    getCreditsByInvestorId(Number(selectedInvestorId), creditsPage, pageSize);
-                    
-                    getContributions(Number(selectedInvestorId), { 
-                        page: contributionsPage, 
-                        pageSize: pageSize 
-                    });
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchReportData();
+        if (!selectedInvestorId) return;
+        if (isDeletedView) {
+            setReport(null);
+            fetchDeletedInfo();
+            return;
         }
-    }, [selectedInvestorId, creditsPage, payoutsPage, contributionsPage, getContributions]);
+        const fetchReportData = async () => {
+            setIsLoading(true);
+            try {
+                await getInvestorById(Number(selectedInvestorId));
+                const reportData = await getInvestorReport(Number(selectedInvestorId));
+                setReport(reportData);
+                fetchPayouts(Number(selectedInvestorId));
+                getCreditsByInvestorId(Number(selectedInvestorId), creditsPage, pageSize);
+
+                getContributions(Number(selectedInvestorId), {
+                    page: contributionsPage,
+                    pageSize: pageSize
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchReportData();
+    }, [selectedInvestorId, creditsPage, payoutsPage, contributionsPage, getContributions, isDeletedView, fetchDeletedInfo]);
 
     // Обработчик редактирования инвестиции
     const handleEditInvestment = (contribution: InvestorContribution) => {
@@ -224,6 +251,27 @@ const InvestorReportPage = () => {
         setCreditsPage(1);
         setPayoutsPage(1);
         setContributionsPage(1);
+        setDeletedPayoutsPage(1);
+        setDeletedContributionsPage(1);
+        setDeletedOperationsTab('payouts');
+    };
+
+    const handleDeleteDeletedPayout = async (id: number) => {
+        try {
+            await deleteInvestorPayout(id);
+            await fetchDeletedInfo();
+        } catch (error) {
+            console.error('Delete deleted payout error:', error);
+        }
+    };
+
+    const handleDeleteDeletedContribution = async (id: number) => {
+        try {
+            await investorContributionService.makeAction(id, 'reject');
+            await fetchDeletedInfo();
+        } catch (error) {
+            console.error('Delete deleted contribution error:', error);
+        }
     };
 
     const handleContributionAction = async (id: number, action: 'confirm' | 'reject') => {
@@ -673,10 +721,51 @@ const InvestorReportPage = () => {
         }
     };
 
-    const investorOptions = investors.map(investor => ({
-        value: investor.id.toString(),
-        label: investor.nickname || `Investor ${investor.id}`
-    }));
+    const investorOptions = [
+        ...investors.map(investor => ({
+            value: investor.id.toString(),
+            label: investor.nickname || `Investor ${investor.id}`
+        })),
+        { value: DELETED_OPTION_VALUE, label: 'Удалённые' }
+    ];
+
+    const deletedPayoutsPaged = (deletedInfo?.payouts ?? []).slice(
+        (deletedPayoutsPage - 1) * pageSize,
+        deletedPayoutsPage * pageSize
+    );
+
+    const deletedContributionsPaged = (deletedInfo?.contributions ?? []).slice(
+        (deletedContributionsPage - 1) * pageSize,
+        deletedContributionsPage * pageSize
+    );
+
+    const deletedPayoutsTableData = deletedPayoutsPaged.map((payout) => [
+        formatDate(payout.payoutDate),
+        payout.investor?.nickname || payout.investor?.fullName || `Investor ${payout.investorId}`,
+        formatMoney(payout.amount.toString()),
+        <ActionButtons>
+            <GrayButton
+                onClick={() => handleDeleteDeletedPayout(payout.id)}
+                disabled={isDeletedLoading}
+            >
+                Удалить
+            </GrayButton>
+        </ActionButtons>
+    ]);
+
+    const deletedContributionsTableData = deletedContributionsPaged.map((contribution) => [
+        formatDate(contribution.date),
+        contribution.investor?.nickname || contribution.investor?.fullName || `Investor ${contribution.investorId}`,
+        formatMoney(contribution.amount.toString()),
+        <ActionButtons>
+            <GrayButton
+                onClick={() => handleDeleteDeletedContribution(contribution.id)}
+                disabled={isDeletedLoading}
+            >
+                Удалить
+            </GrayButton>
+        </ActionButtons>
+    ]);
 
     const payoutTableData = payouts.map((payout: InvestorPayout) => [
         formatDate(payout.payoutDate),
@@ -896,16 +985,16 @@ const InvestorReportPage = () => {
         <PageLayout>
             <TitleField>
                 <CustomTitle>Отчёт для инвесторов</CustomTitle>
-                {isSuperUser && (
+                {isSuperUser && !isDeletedView && (
                     <>
-                        <ExportButton 
-                            onClick={() => report && currentInvestor && exportToPdf(report, currentInvestor, payouts)} 
+                        <ExportButton
+                            onClick={() => report && currentInvestor && exportToPdf(report, currentInvestor, payouts)}
                             disabled={!report}
                         />
                         <ExportButton
                             children={"Поделиться"}
                             icon={<ShareIcon />}
-                            onClick={handleShareClick} 
+                            onClick={handleShareClick}
                             disabled={!report}
                         />
                     </>
@@ -913,7 +1002,7 @@ const InvestorReportPage = () => {
             </TitleField>
 
             <ContentContainer>
-                {report && (
+                {report && !isDeletedView && (
                     <CreationDate>
                         Инвестор создан {formatDate(report.createdAt)}
                     </CreationDate>
@@ -931,34 +1020,38 @@ const InvestorReportPage = () => {
                                 disabled={isLoading}
                             />
                         </SelectWrapper>
-                        {isSuperUser && (
-                            <ViewButton 
-                                onClick={() => setIsViewInvestorModalOpen(true)} 
+                        {isSuperUser && !isDeletedView && (
+                            <ViewButton
+                                onClick={() => setIsViewInvestorModalOpen(true)}
                                 disabled={!selectedInvestorId}
                             />
                         )}
                     </SelectWithViewWrapper>
-                    <DarkCyanButton 
-                        onClick={() => setIsPayoutModalOpen(true)}
-                        style={{marginLeft: "auto"}}
-                    >
-                        Выплатить инвестору
-                    </DarkCyanButton>
+                    {!isDeletedView && (
+                        <DarkCyanButton
+                            onClick={() => setIsPayoutModalOpen(true)}
+                            style={{marginLeft: "auto"}}
+                        >
+                            Выплатить инвестору
+                        </DarkCyanButton>
+                    )}
                 </InvestorInfoContainer>
 
-                <TabsContainer>
-                    <Tabs<'general' | 'expected' | 'current'>
-                        tabs={[
-                            { id: 'general', label: 'Общие данные' },
-                            { id: 'expected', label: 'Ожидаемый доход' },
-                            { id: 'current', label: 'Текущий доход' }
-                        ]}
-                        activeTab={dataTab}
-                        onChange={(tabId) => setDataTab(tabId)}
-                    />
-                </TabsContainer>
+                {!isDeletedView && (
+                    <TabsContainer>
+                        <Tabs<'general' | 'expected' | 'current'>
+                            tabs={[
+                                { id: 'general', label: 'Общие данные' },
+                                { id: 'expected', label: 'Ожидаемый доход' },
+                                { id: 'current', label: 'Текущий доход' }
+                            ]}
+                            activeTab={dataTab}
+                            onChange={(tabId) => setDataTab(tabId)}
+                        />
+                    </TabsContainer>
+                )}
 
-                {report && (
+                {report && !isDeletedView && (
                     <ReportDataContainer>
                         {dataTab === 'general' && renderGeneralCards()}
                         {dataTab === 'expected' && renderExpectedIncomeCards()}
@@ -968,6 +1061,71 @@ const InvestorReportPage = () => {
 
                 <ModalInfoTitle>История операций</ModalInfoTitle>
 
+                {isDeletedView ? (
+                    <>
+                        <TabsContainer>
+                            <Tabs<'payouts' | 'contributions'>
+                                tabs={[
+                                    { id: 'payouts', label: 'История выплат' },
+                                    { id: 'contributions', label: 'История инвестиций' }
+                                ]}
+                                activeTab={deletedOperationsTab}
+                                onChange={(tabId) => setDeletedOperationsTab(tabId)}
+                            />
+                        </TabsContainer>
+
+                        {deletedOperationsTab === 'payouts' ? (
+                            <>
+                                <CustomTable
+                                    columns={[
+                                        { name: "Дата выплаты", isSortable: true },
+                                        { name: "Инвестор (удалён)", align: "left" },
+                                        { name: "Выплата, руб", isSortable: true, align: "left" },
+                                        { name: "Действия", align: "center" }
+                                    ]}
+                                    data={deletedPayoutsTableData}
+                                    isLoading={isDeletedLoading}
+                                />
+                                <PaginationLayout>
+                                    <CountInfoTitle
+                                        total={deletedInfo?.payouts?.length || 0}
+                                    />
+                                    <Pagination
+                                        total={deletedInfo?.payouts?.length || 0}
+                                        current={deletedPayoutsPage}
+                                        onChange={(page) => setDeletedPayoutsPage(page)}
+                                        itemsPerPage={pageSize}
+                                    />
+                                </PaginationLayout>
+                            </>
+                        ) : (
+                            <>
+                                <CustomTable
+                                    columns={[
+                                        { name: "Дата", isSortable: true },
+                                        { name: "Инвестор (удалён)", align: "left" },
+                                        { name: "Сумма инвестиции, руб", isSortable: true, align: "left" },
+                                        { name: "Действия", align: "center" }
+                                    ]}
+                                    data={deletedContributionsTableData}
+                                    isLoading={isDeletedLoading}
+                                />
+                                <PaginationLayout>
+                                    <CountInfoTitle
+                                        total={deletedInfo?.contributions?.length || 0}
+                                    />
+                                    <Pagination
+                                        total={deletedInfo?.contributions?.length || 0}
+                                        current={deletedContributionsPage}
+                                        onChange={(page) => setDeletedContributionsPage(page)}
+                                        itemsPerPage={pageSize}
+                                    />
+                                </PaginationLayout>
+                            </>
+                        )}
+                    </>
+                ) : (
+                <>
                 <TabsContainer>
                     <Tabs<'payouts' | 'credits' | 'contributions'>
                         tabs={[
@@ -1057,6 +1215,8 @@ const InvestorReportPage = () => {
                             />
                         </PaginationLayout>
                     </>
+                )}
+                </>
                 )}
 
                 {/* Модальное окно редактирования инвестиции */}
