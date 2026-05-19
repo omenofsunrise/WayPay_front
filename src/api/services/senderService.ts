@@ -32,6 +32,31 @@ class SenderService {
     async BuyMessages(days: number): Promise<void> {
         await apiClient.post(`/SenderSettings/buy-messages`, days);
     }
+
+    async getFilledPayments(creditId: number): Promise<string> {
+        const response = await apiClient.get<string>(`/SenderSettings/filled/payments/${creditId}`);
+        return response.data;
+    }
+
+    async getFilledCredit(creditId: number): Promise<string> {
+        const response = await apiClient.get<string>(`/SenderSettings/credit/filled/${creditId}`);
+        return response.data;
+    }
+
+    async getFilledGuarantorSchedule(scheduleId: number): Promise<string> {
+        const response = await apiClient.get<string>(`/SenderSettings/guarantor/schedule/filled/${scheduleId}`);
+        return response.data;
+    }
+
+    async getFilledCredits(creditIds: number[]): Promise<string> {
+        const response = await apiClient.get<string>(`/SenderSettings/credits/filled`, {
+            params: { creditIds },
+            paramsSerializer: {
+                indexes: null
+            }
+        });
+        return response.data;
+    }
 }
 
 export default new SenderService();

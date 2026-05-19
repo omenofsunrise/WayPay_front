@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import investorService from '../services/investorService';
 import type { AutoSelectInvestorResponse, Investor, InvestorAgreementResponse, InvestorParams, InvestorReport } from '../types/investor';
 import type { PaginatedResponse } from '../types/common';
+import type { DeletedInvestorInfo } from '../types/deletedInvestor';
 
 const useInvestor = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -215,6 +216,20 @@ const useInvestor = () => {
     }
   }
 
+  const getDeletedInfo = useCallback(async (): Promise<DeletedInvestorInfo | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await investorService.getDeletedInfo();
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     isLoading,
     error,
@@ -233,7 +248,8 @@ const useInvestor = () => {
     blockInvestor,
     clearInvestor,
     getInvestorAgreement,
-    updateInvestment
+    updateInvestment,
+    getDeletedInfo
   };
 };
 
