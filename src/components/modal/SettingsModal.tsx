@@ -5,6 +5,11 @@ import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import GrayButton from '../ui/Buttons/GrayButton';
 import Checkbox from '../ui/CheckBoxes/Checkbox';
 import Tabs from '../ui/fields/Tabs';
+import {
+  getUiSettings,
+  setUiSettings,
+  type CreditsDisplayMode,
+} from '../../utils/uiSettings';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -113,6 +118,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [autoCollapseMenu, setAutoCollapseMenu] = useState(false);
   const [disableNotifications, setDisableNotifications] = useState(false);
   const [showContractCreationNotification, setShowContractCreationNotification] = useState(true);
+  const [creditsDisplayMode, setCreditsDisplayMode] = useState<CreditsDisplayMode>('pagination');
   const [activeTab, setActiveTab] = useState<SettingsTab>('interface');
 
   useEffect(() => {
@@ -120,18 +126,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     setAutoCollapseMenu(getAutoCollapseMenuSetting());
     setDisableNotifications(getDisableNotificationsSetting());
     setShowContractCreationNotification(getShowContractCreationNotificationSetting());
+    setCreditsDisplayMode(getUiSettings().creditsDisplayMode);
   }, []);
 
   const handleSave = () => {
-    console.log('Настройка "Убрать знак ₽":', hideCurrency);
-    console.log('Настройка "Сворачивать меню после выбора":', autoCollapseMenu);
-    console.log('Настройка "Выключить уведомления":', disableNotifications);
-    console.log('Настройка "Показывать уведомление при создании договора":', showContractCreationNotification);
-    
     setHideCurrencySetting(hideCurrency);
     setAutoCollapseMenuSetting(autoCollapseMenu);
     setDisableNotificationsSetting(disableNotifications);
     setShowContractCreationNotificationSetting(showContractCreationNotification);
+    setUiSettings({ creditsDisplayMode });
     onClose();
   };
 
@@ -151,6 +154,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             checked={autoCollapseMenu}
             onChange={(e) => setAutoCollapseMenu(e)}
           />
+
+          <SectionGroup>
+            <SectionGroupTitle>Отображение договоров</SectionGroupTitle>
+            <SectionGroupHint>
+              Применяется к разделам «Договоры» и «Контроль договоров».
+            </SectionGroupHint>
+
+            <DisplayModeOption
+              type="button"
+              $active={creditsDisplayMode === 'pagination'}
+              onClick={() => setCreditsDisplayMode('pagination')}
+            >
+              <Radio $active={creditsDisplayMode === 'pagination'} />
+              <OptionText>
+                <OptionTitle>Постранично</OptionTitle>
+                <OptionHint>Договоры разбиваются на страницы «1, 2, 3…».</OptionHint>
+              </OptionText>
+            </DisplayModeOption>
+
+            <DisplayModeOption
+              type="button"
+              $active={creditsDisplayMode === 'list'}
+              onClick={() => setCreditsDisplayMode('list')}
+            >
+              <Radio $active={creditsDisplayMode === 'list'} />
+              <OptionText>
+                <OptionTitle>Списком</OptionTitle>
+                <OptionHint>
+                  Единый список, новые порции подгружаются автоматически при прокрутке.
+                </OptionHint>
+              </OptionText>
+            </DisplayModeOption>
+          </SectionGroup>
         </SettingsSection>
       )
     },
@@ -245,6 +281,82 @@ const SettingsSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 15px;
+`;
+
+const SectionGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+`;
+
+const SectionGroupTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+`;
+
+const SectionGroupHint = styled.div`
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+`;
+
+const DisplayModeOption = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  background-color: ${({ $active }) => ($active ? 'rgba(0, 125, 136, 0.08)' : '#ffffff')};
+  border: 1px solid ${({ $active }) => ($active ? 'rgba(0, 125, 136, 1)' : '#e5e7eb')};
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: rgba(0, 125, 136, 1);
+  }
+`;
+
+const Radio = styled.span<{ $active: boolean }>`
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid ${({ $active }) => ($active ? 'rgba(0, 125, 136, 1)' : '#9ca3af')};
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background-color: rgba(0, 125, 136, 1);
+    opacity: ${({ $active }) => ($active ? 1 : 0)};
+    transition: opacity 0.15s ease;
+  }
+`;
+
+const OptionText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const OptionTitle = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+`;
+
+const OptionHint = styled.span`
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
 `;
 
 export default SettingsModal;
