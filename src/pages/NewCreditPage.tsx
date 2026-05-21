@@ -562,12 +562,12 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
   }
 
   const selectedInvestor = investor || selectedPool;
-  
-  if (selectedPool) {
+
+  if (selectedPool || (investor && investor.isCompany)) {
     setValidationError(null);
     return true;
   }
-  
+
   if (!selectedInvestor?.activeUntil) {
     setValidationError(null);
     return true;

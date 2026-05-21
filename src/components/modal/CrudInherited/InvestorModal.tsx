@@ -468,7 +468,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
             </InputRow>
           )}
 
-          {(mode !== 'create-pool' && mode !== 'edit-pool') && (
+          {(mode !== 'create-pool' && mode !== 'edit-pool') && !formData.isCompany && (
           <InputRow>
             <InputLabel>Дата окончания договора:</InputLabel>
             <InputContainer>
