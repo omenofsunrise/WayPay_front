@@ -43,7 +43,7 @@ import useInvestorContribution from '../api/hooks/useInvestorContribution';
 import type { InvestorContribution } from '../api/types/investorContribution';
 import GrayButton from '../components/ui/Buttons/GrayButton';
 import { getInvestorPayouts } from '../api/services/investorPayoutService';
-import EditButton from '../components/ui/Buttons/EditButton';
+import { FaLock, FaUnlock } from 'react-icons/fa';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import {
   InputContainer,
@@ -302,25 +302,40 @@ const InvestorReportPage = () => {
     const contributionsTableData = contributionsData?.items.map((contribution: InvestorContribution) => [
         formatDate(contribution.date.toString()),
         formatMoney(contribution.amount.toString()),
-        contribution.confirmed ? (
-            <ConfirmedBadge></ConfirmedBadge>
-        ) : (
-            <ActionButtons>
-                <DarkCyanButton style={{margin: "0 auto"}}
-                    onClick={() => handleContributionAction(contribution.id, 'confirm')}
+        <ContributionActions>
+            {!contribution.confirmed && (
+                <DarkCyanButton
+                    onClick={() => handleEditInvestment(contribution)}
                     disabled={isContributionsLoading}
                 >
-                    Подтвердить
+                    Редактирование
                 </DarkCyanButton>
-                <GrayButton 
-                    onClick={() => handleContributionAction(contribution.id, 'reject')}
-                    disabled={isContributionsLoading}
-                >
-                    Удалить
-                </GrayButton>
-                <EditButton onClick={() => handleEditInvestment(contribution)} />
-            </ActionButtons>
-        )
+            )}
+            <GrayButton
+                style={{ marginRight: 0 }}
+                onClick={() => handleContributionAction(contribution.id, 'reject')}
+                disabled={isContributionsLoading}
+            >
+                Удалить
+            </GrayButton>
+            <LockToggleButton
+                type="button"
+                onClick={() =>
+                    !contribution.confirmed &&
+                    handleContributionAction(contribution.id, 'confirm')
+                }
+                disabled={isContributionsLoading || contribution.confirmed}
+                $locked={contribution.confirmed}
+                title={
+                    contribution.confirmed
+                        ? 'Инвестиция закрыта — редактирование запрещено'
+                        : 'Закрыть инвестицию (после этого её нельзя будет редактировать)'
+                }
+                aria-label={contribution.confirmed ? 'Закрыто' : 'Закрыть инвестицию'}
+            >
+                {contribution.confirmed ? <FaLock /> : <FaUnlock />}
+            </LockToggleButton>
+        </ContributionActions>,
     ]) || [];
 
     const generatePdf = async (report: InvestorReport, currentInvestor: Investor | null, payouts: InvestorPayout[]) => {
@@ -1371,6 +1386,41 @@ const ConfirmedBadge = styled.span`
     border-radius: 6px;
     font-size: 12px;
     font-weight: 500;
+`;
+
+const ContributionActions = styled.div`
+    display: inline-flex;
+    align-items: center;
+    gap: 20px;
+`;
+
+const LockToggleButton = styled.button<{ $locked: boolean }>`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid ${({ $locked }) => ($locked ? 'rgba(107, 114, 128, 0.4)' : 'rgba(0, 125, 136, 1)')};
+    background: ${({ $locked }) => ($locked ? 'rgba(243, 244, 246, 1)' : 'rgba(0, 125, 136, 0.08)')};
+    color: ${({ $locked }) => ($locked ? '#6b7280' : 'rgba(0, 125, 136, 1)')};
+    cursor: ${({ $locked }) => ($locked ? 'default' : 'pointer')};
+    transition: all 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+
+    svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    &:hover:not(:disabled) {
+        background: rgba(0, 125, 136, 0.15);
+    }
+
+    &:disabled {
+        opacity: ${({ $locked }) => ($locked ? 1 : 0.5)};
+    }
 `;
 
 const ContentContainer = styled.div`

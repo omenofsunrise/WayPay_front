@@ -424,6 +424,7 @@ const InvestorPage = () => {
         const [id] = rowData;
         const investor = investorsData?.items.find(i => i.id === Number(id));
         const isBlocked = investor?.isBlocked || false;
+        const isOwnCash = investor?.isCompany || false;
 
         const actions: TableAction[] = [
             {
@@ -452,31 +453,33 @@ const InvestorPage = () => {
                         label: 'Аннулировать инвестора',
                         action: (rowData) => handleClearInvestor(rowData),
                         color: 'rgba(255, 158, 66, 1)'
-                    },
-                    {
+                    }
+                );
+                if (!isOwnCash) {
+                    actions.push({
                         label: 'Удалить',
                         action: (rowData) => handleDeleteInvestor(rowData),
                         color: '#EF4444'
-                    }
-                );
+                    });
+                }
             } else {
-                actions.push(
-                    {
-                        label: 'Добавить инвестицию',
-                        action: (rowData) => handleAddInvestment(rowData),
-                        color: '#10B981'
-                    },
-                    {
+                actions.push({
+                    label: 'Добавить инвестицию',
+                    action: (rowData) => handleAddInvestment(rowData),
+                    color: '#10B981'
+                });
+                if (!isOwnCash) {
+                    actions.push({
                         label: 'Удалить',
                         action: (rowData) => handleDeleteInvestor(rowData),
                         color: '#EF4444'
-                    },
-                    {
-                        label: 'Заблокировать инвестора',
-                        action: (rowData) => handleBlockInvestor(rowData),
-                        color: '#F59E0B'
-                    }
-                );
+                    });
+                }
+                actions.push({
+                    label: 'Заблокировать инвестора',
+                    action: (rowData) => handleBlockInvestor(rowData),
+                    color: '#F59E0B'
+                });
             }
         }
 
