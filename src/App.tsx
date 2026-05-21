@@ -31,7 +31,6 @@ import apiClient, { PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './ap
 import PinCodeModal from './components/modal/PinCodeModal';
 import { createRoot } from 'react-dom/client';
 import LicenseOutPage from './pages/LicenseOutPage';
-import MaintenancePage from './pages/MaintenancePage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import InvestorsPoolPage from './pages/InvestorsPoolPage';
@@ -277,7 +276,215 @@ function App() {
       <BrowserRouter>
         <TaskCountProvider>
           <Routes>
-            <Route path="/*" element={<MaintenancePage />} />
+            <Route path="/" element={
+              <Navigate to={isAuthenticated ? "/credits" : "/auth"} replace />
+            } />
+            
+            <Route path="/auth" element={
+              isAuthenticated ? (
+                <Navigate to="/credits" replace />
+              ) : (
+                <AuthPage onLoginSuccess={() => setIsAuthenticated(true)} />
+              )
+            } />
+
+            <Route path="/credits/:id?" element={
+              isAuthenticated ? (
+                <MainLayout>
+                  <CreditPage />
+                </MainLayout>
+              ) : (
+                <Navigate to="/auth" replace />
+              )
+            } />
+
+            <Route path="payments" element={
+                <MainLayout>
+                  <PaymentPage/>
+                </MainLayout>
+            } />
+
+            <Route path="products" element={
+                <MainLayout>
+                  <ProductPage/>
+                </MainLayout>
+            } />
+
+            <Route path="queue" element={
+                <MainLayout>
+                  <QueuePage />
+                </MainLayout>
+            } />
+
+            <Route path="clients" element={
+                <MainLayout>
+                  <ClientPage />
+                </MainLayout>
+            } />
+
+            <Route path="blacklist" element={
+                <MainLayout>
+                  <BlacklistPage />
+                </MainLayout>
+            } />
+
+            <Route path="black-catalog" element={
+                <MainLayout>
+                  <BlackCatalogPage />
+                </MainLayout>
+            } />
+
+            <Route path="investors" element={
+                <MainLayout>
+                  <InvestorPage />
+                </MainLayout>
+            } />
+
+            <Route path="new-credit" element={
+                <MainLayout>
+                  <NewCreditPage />
+                </MainLayout>
+            } />
+            
+            <Route path="new-credit/:id?" element={
+                <MainLayout>
+                  <NewCreditPage />
+                </MainLayout>
+            } />
+
+            <Route path="schedules" element={
+                <MainLayout> 
+                  <SchedulePage />
+                </MainLayout>
+            } />
+
+            <Route path="credit-control" element={
+                <MainLayout>
+                  <CreditControlPage />
+                </MainLayout>
+            } />
+
+            <Route path="profile" element={
+                <MainLayout>
+                  <ProfilePage />
+                </MainLayout>
+            } />
+
+            <Route path="settings" element={
+                <MainLayout>
+                  <SettingsPage />
+                </MainLayout>
+            } />
+
+            <Route path="investors-report" element={
+                <MainLayout>
+                  <InvestorReportPage />
+                </MainLayout>
+            } />
+
+            <Route path="/whatsapp/channel/:channelId/bots" element={
+                <MainLayout>
+                  <BotManagementPage />
+                </MainLayout>
+            } />
+
+            <Route path="investors-pool" element={
+                <MainLayout>
+                  <InvestorsPoolPage />
+                </MainLayout>
+            } />
+
+            <Route path="finance" element={
+                <MainLayout>
+                  <FinancePage />
+                </MainLayout>
+            } />
+
+            <Route path="budget" element={
+                <MainLayout>
+                  <BudgetPage />
+                </MainLayout>
+            } />
+
+            <Route path="admin" element={
+              <MainLayout>
+                <AdminPanelPage />
+              </MainLayout>
+            } />
+
+            <Route path="todo" element={
+                <MainLayout>
+                  <ToDoListPage />
+                </MainLayout>
+            } />
+
+            <Route path="payments-income" element={
+                <MainLayout>
+                  <PaymentsIncomePage />
+                </MainLayout>
+            } />
+
+            <Route path="blog" element={
+                <MainLayout>
+                    <BlogPage />
+                </MainLayout>
+            } />
+
+            <Route path="blog/:id" element={
+                <MainLayout>
+                    <BlogPage />
+                </MainLayout>
+            } />
+
+            <Route path="chat" element={
+                <MainLayout>
+                  <ChatPage />
+                </MainLayout>
+            } />
+
+            <Route path="chat/:chatId?" element={
+                <MainLayout>
+                  <ChatPage />
+                </MainLayout>
+            } />
+
+            <Route path="analytics" element={
+                <MainLayout>
+                  <AnalyticsPage />
+                </MainLayout>
+            } />
+
+            <Route path="/licence-out" element={<LicenseOutPage />} />
+
+            <Route path="about" element={
+                <MainLayout>
+                  <AboutPage />
+                </MainLayout>
+            } />
+
+            <Route path="privacy-policy" element={
+                <MainLayout>
+                  <PrivacyPolicyPage />
+                </MainLayout>
+            } />
+
+            <Route path="registration-requests" element={
+                <MainLayout>
+                  <RegistrationRequestPage />
+                </MainLayout>
+            } />
+
+            <Route path="credit-application" element={
+              <MainLayout>
+                <CreditApplicationPage />
+              </MainLayout>
+            } />
+
+            <Route path="*" element={
+                <MainLayout>
+                  <NotFoundContent />
+                </MainLayout>
+            } />
           </Routes>
         </TaskCountProvider>
       </BrowserRouter>
