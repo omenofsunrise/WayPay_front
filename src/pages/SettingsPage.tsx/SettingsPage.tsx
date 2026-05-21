@@ -10,6 +10,7 @@ import CompanyPage from './CompanyPage';
 import BranchPage from './BranchPage';
 import SenderPage from './SenderPage';
 import AboutPage from '../AboutPage';
+import InterfacePage from './InterfacePage';
 
 const SettingsPage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -58,14 +59,17 @@ const SettingsPage = () => {
             { id: "Данные компании", label: "Данные компании" },
             { id: "Отделения", label: "Отделения" },
             { id: "Рассылка", label: "Рассылка" },
+            { id: "Интерфейс", label: "Интерфейс" },
             { id: "О программе", label: "О программе" }
         );
     } else if (hasRole("админ")) {
         tabs.push(
+            { id: "Интерфейс", label: "Интерфейс" },
             { id: "О программе", label: "О программе" }
         );
     } else {
         tabs.push(
+            { id: "Интерфейс", label: "Интерфейс" },
             { id: "О программе", label: "О программе" }
         );
     }
@@ -91,6 +95,8 @@ const SettingsPage = () => {
                 return <BranchPage />;
             case "Рассылка":
                 return <SenderPage />;
+            case "Интерфейс":
+                return <InterfacePage />;
             case "О программе":
                 return <AboutPage />;
             default:
