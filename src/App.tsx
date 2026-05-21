@@ -31,6 +31,7 @@ import apiClient, { PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './ap
 import PinCodeModal from './components/modal/PinCodeModal';
 import { createRoot } from 'react-dom/client';
 import LicenseOutPage from './pages/LicenseOutPage';
+import MaintenancePage from './pages/MaintenancePage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import InvestorsPoolPage from './pages/InvestorsPoolPage';
@@ -455,6 +456,8 @@ function App() {
             } />
 
             <Route path="/licence-out" element={<LicenseOutPage />} />
+
+            <Route path="/maintenance" element={<MaintenancePage />} />
             
             <Route path="about" element={
                 <MainLayout>
