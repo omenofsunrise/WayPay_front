@@ -491,28 +491,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     setIsPhotoViewerOpen(true);
   };
 
-  const MessageButton = styled.button`
-    background: rgba(0, 125, 136, 1);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    min-width: 40px;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    margin-left: 10px;
-    padding: 8px;
-
-    &:hover {
-      background: rgba(0, 100, 110, 1);
-      transform: scale(1.05);
-    }
-  `;
-
   const formatNotesData = () => {
     return notes.map((note, index) => [
       note.employeeName,

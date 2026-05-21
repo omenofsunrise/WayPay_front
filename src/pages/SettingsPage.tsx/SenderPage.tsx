@@ -34,6 +34,7 @@ type SenderSettings = Record<TemplateKey, string>;
 
 const paymentVariables: Variable[] = [
   { key: 'fullname', label: 'ФИО', preview: 'Иванов Иван Иванович' },
+  { key: 'guarantor_fullname', label: 'Поручитель', preview: 'Петров Пётр Петрович' },
   { key: 'company', label: 'Компания', preview: 'ООО "Пример"' },
   { key: 'amount', label: 'Сумма', preview: '15 000 ₽' },
   { key: 'date', label: 'Дата платежа', preview: '15.12.2024' },

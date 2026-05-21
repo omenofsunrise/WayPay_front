@@ -197,23 +197,43 @@ const WhatsAppSettingsPage: React.FC = () => {
   };
 
   const handleCreatePaymentLink = async () => {
-    if (!extendChannelId) return;
-    
-    setIsExtending(true);
-    try {
-      const url = await extendChannel(extendDays, extendChannelId);
+      if (!extendChannelId) return;
       
-      if (url) {
-        setPaymentUrl(url);
-      } else {
-        alert('Ошибка при создании платежной ссылки. Попробуйте позже.');
+      setIsExtending(true);
+      
+      try {
+          const response = await fetch('https://web.waypay.one:5001/api/WhatsApp/days', {
+              method: 'GET',
+              headers: {
+                  'accept': '*/*'
+              }
+          });
+          
+          if (!response.ok) {
+              throw new Error('Failed to fetch available days');
+          }
+          
+          const availableDays = await response.json();
+          
+          if (extendDays > availableDays) {
+              alert('К сожалению, дни распроданы. Пожалуйста, обратитесь в поддержку для пополнения.');
+              return;
+          }
+          
+          const url = await extendChannel(extendDays, extendChannelId);
+          
+          if (url) {
+              setPaymentUrl(url);
+          } else {
+              alert('Ошибка при создании платежной ссылки. Попробуйте позже.');
+          }
+          
+      } catch (error) {
+          console.error('Error extending channel:', error);
+          alert('Произошла ошибка при создании платежной ссылки');
+      } finally {
+          setIsExtending(false);
       }
-    } catch (error) {
-      console.error('Error extending channel:', error);
-      alert('Произошла ошибка при создании платежной ссылки');
-    } finally {
-      setIsExtending(false);
-    }
   };
 
   const handleGoToPayment = () => {

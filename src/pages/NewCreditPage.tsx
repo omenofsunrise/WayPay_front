@@ -91,10 +91,11 @@ const NewCreditPage = () => {
   const [startPaymentDate, setStartPaymentDate] = useState<string | null>(null);
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
-  const { createCredit, updateCredit, getCreateCreditRequest, isLoading: isCreditLoading, error } = useCredit();
+  const { createCredit, updateCredit, getCreateCreditRequest, isLoading: isCreditLoading } = useCredit();
   const [guarantorMenuOpen, setGuarantorMenuOpen] = useState(false);
   const guarantorMenuRef = useRef<HTMLDivElement>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [objectTypeName, setObjectTypeName] = useState<string>('');
   const [tabTypeName, setTabTypeName] = useState<string>('');
   const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType | null>(null);
@@ -561,12 +562,12 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
   }
 
   const selectedInvestor = investor || selectedPool;
-  
-  if (selectedPool) {
+
+  if (selectedPool || (investor && investor.isCompany)) {
     setValidationError(null);
     return true;
   }
-  
+
   if (!selectedInvestor?.activeUntil) {
     setValidationError(null);
     return true;
@@ -689,29 +690,34 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       }
     }
 
-    let createdCredit;
-    let currentError = null;
+    setSubmitError(null);
 
-    if (isEditMode && id) {
-      const updateData = {
-        ...creditData,
-        id: parseInt(id)
-      } as UpdateCreditRequest;
-      
-    createdCredit = await updateCredit(updateData);
-    } else {
-    createdCredit = await createCredit(creditData as CreateCreditRequest);
-    }
-    currentError = error;
+    try {
+      let createdCredit;
 
-    if (createdCredit) {
-      localStorage.removeItem(CREDIT_DRAFT_STORAGE_KEY);
-      setHasDraft(false);
-      navigate('/credits');
-    } else {
-      const errorMessage = (currentError as any)?.response?.data || 
-                          'Неизвестная ошибка';
-      window.alert(errorMessage);
+      if (isEditMode && id) {
+        const updateData = {
+          ...creditData,
+          id: parseInt(id)
+        } as UpdateCreditRequest;
+
+        createdCredit = await updateCredit(updateData);
+      } else {
+        createdCredit = await createCredit(creditData as CreateCreditRequest);
+      }
+
+      if (createdCredit) {
+        localStorage.removeItem(CREDIT_DRAFT_STORAGE_KEY);
+        setHasDraft(false);
+        navigate('/credits');
+      }
+    } catch (err) {
+      const responseData = (err as any)?.response?.data;
+      const errorMessage =
+        typeof responseData === 'string' ? responseData :
+        responseData?.message ? responseData.message :
+        (err as any)?.message || 'Не удалось сохранить договор. Попробуйте ещё раз.';
+      setSubmitError(errorMessage);
     }
   }, [
     client,
@@ -733,7 +739,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     navigate,
     validateInvestorActivePeriod,
     markupType,
-    error,
     selectedObjectType,
     creditName,
     isEditMode,
@@ -1271,19 +1276,41 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               </InputRow>
             </InputGroup>
             <InputGroup style={{ margin: 0 }}>
+            {submitError && (
+              <SubmitErrorBanner role="alert" aria-live="assertive">
+                <SubmitErrorIcon aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 1.667a8.333 8.333 0 1 0 0 16.666 8.333 8.333 0 0 0 0-16.666Zm0 4.166a.833.833 0 0 1 .833.834v3.333a.833.833 0 1 1-1.666 0V6.667A.833.833 0 0 1 10 5.833Zm0 8.334a1.042 1.042 0 1 1 0-2.084 1.042 1.042 0 0 1 0 2.084Z" fill="currentColor"/>
+                  </svg>
+                </SubmitErrorIcon>
+                <SubmitErrorContent>
+                  <SubmitErrorTitle>
+                    {isEditMode ? 'Не удалось сохранить изменения' : 'Не удалось создать договор'}
+                  </SubmitErrorTitle>
+                  <SubmitErrorMessage>{submitError}</SubmitErrorMessage>
+                </SubmitErrorContent>
+                <SubmitErrorClose
+                  type="button"
+                  onClick={() => setSubmitError(null)}
+                  aria-label="Закрыть сообщение об ошибке"
+                >
+                  ×
+                </SubmitErrorClose>
+              </SubmitErrorBanner>
+            )}
             <ButtonWrapper style={{ margin: 5 }}>
               <GrayButton onClick={() => navigate(-1)}>
                 Отменить
               </GrayButton>
-                <DarkCyanButton 
+                <DarkCyanButton
                   style={{ marginRight: 'auto' }}
                   disabled={!isFormValid || isScheduleLoading || isCreditLoading}
                   onClick={handleCreateOrUpdateCredit}
                 >
-                  {isScheduleLoading || isCreditLoading 
-                    ? 'Загрузка...' 
-                    : isEditMode 
-                      ? 'Сохранить изменения' 
+                  {isScheduleLoading || isCreditLoading
+                    ? 'Загрузка...'
+                    : isEditMode
+                      ? 'Сохранить изменения'
                       : 'Создать договор'}
                 </DarkCyanButton>
             </ButtonWrapper>
@@ -1464,6 +1491,88 @@ const ValidationError = styled.div`
   max-width: 300px;
   margin: 0 auto 0 0;
   box-sizing: border-box;
+`;
+
+const SubmitErrorBanner = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 0 5px 12px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #dc2626;
+  border-radius: 8px;
+  color: #7f1d1d;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  animation: submitErrorSlideIn 180ms ease-out;
+
+  @keyframes submitErrorSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const SubmitErrorIcon = styled.span`
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  margin-top: 1px;
+`;
+
+const SubmitErrorContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const SubmitErrorTitle = styled.div`
+  font-weight: 600;
+  color: #991b1b;
+  margin-bottom: 2px;
+`;
+
+const SubmitErrorMessage = styled.div`
+  color: #7f1d1d;
+  word-wrap: break-word;
+`;
+
+const SubmitErrorClose = styled.button`
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #991b1b;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  transition: background-color 120ms ease;
+
+  &:hover {
+    background-color: rgba(220, 38, 38, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #dc2626;
+    outline-offset: 1px;
+  }
 `;
 
 const DateInputWrapper = styled.div`

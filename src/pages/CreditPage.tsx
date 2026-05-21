@@ -42,6 +42,7 @@ import type { ContextMenuItem } from '../components/modal/ContextMenu';
 import { createWhatsAppMessageWithoutPhone, sendWhatsAppMessageToPhone } from '../utils/sendWhatsAppMessage';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import { useResponsivePageSize } from '../utils/useResponsivePageSize';
+import { useUiSettings } from '../utils/uiSettings';
 import useSender from '../api/hooks/useSender';
 
 // Иконка для кнопки сворачивания
@@ -161,6 +162,13 @@ const CreditPage = () => {
   // Состояние для сворачивания фильтров
   const [isFiltersVisible, setIsFiltersVisible] = useState(savedFiltersVisible);
 
+  const uiSettings = useUiSettings();
+  const isListMode = uiSettings.creditsDisplayMode === 'list';
+  const [accumulatedItems, setAccumulatedItems] = useState<Credit[]>([]);
+  const accumulatedItemsRef = useRef<Credit[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const [contractNumber, setContractNumber] = useState(() => savedFilters?.contractNumber ?? '');
   const [currentPage, setCurrentPage] = useState(1);
   const [investorName, setInvestorName] = useState(() => savedFilters?.investorName ?? '');
@@ -214,6 +222,7 @@ const CreditPage = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource, acceptCredit, acceptCredits } = useCredit();
+  const displayedCredits = isListMode ? accumulatedItems : (creditsData?.items ?? []);
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
@@ -258,7 +267,7 @@ const CreditPage = () => {
     if (selectedRows.length === 1) {
       // Если выбран один договор - показываем модалку печати
       const selectedIndex = selectedRows[0];
-      const credit = creditsData?.items[selectedIndex];
+      const credit = displayedCredits[selectedIndex];
       if (credit) {
         setSelectedCreditForPrint(credit);
         setIsPrintModalOpen(true);
@@ -285,7 +294,7 @@ const CreditPage = () => {
     if (selectedRows.length === 1) {
       // Если выбран один договор - показываем модалку "Поделиться"
       const selectedIndex = selectedRows[0];
-      const credit = creditsData?.items[selectedIndex];
+      const credit = displayedCredits[selectedIndex];
       if (credit) {
         setSelectedCreditForPrint(credit);
         setIsShareModalOpen(true);
@@ -309,7 +318,7 @@ const CreditPage = () => {
       const docxGenerator = new DocxGenerator(getDocsData);
       
       for (const rowIndex of selectedIndices) {
-        const credit = creditsData?.items[rowIndex];
+        const credit = displayedCredits[rowIndex];
         if (credit) {
           // Генерируем стандартный договор для каждого выбранного кредита
           await docxGenerator.generateFromCreditData(credit.id);
@@ -326,7 +335,7 @@ const CreditPage = () => {
   const handleMassShare = async (selectedIndices: number[]) => {
     try {
       const creditIds = selectedIndices
-        .map(rowIndex => creditsData?.items[rowIndex]?.id)
+        .map(rowIndex => displayedCredits[rowIndex]?.id)
         .filter((id): id is number => typeof id === 'number');
 
       if (creditIds.length === 0) {
@@ -564,7 +573,7 @@ const CreditPage = () => {
 
   const handleSelectFundingSource = (rowData: any[]) => {
     const [_, id] = rowData;
-    const credit = creditsData?.items.find(c => c.id === Number(id));
+    const credit = displayedCredits.find(c => c.id === Number(id));
     if (credit) {
       setSelectedCreditForFunding(credit);
       setIsInvestorSelectModalOpen(true);
@@ -740,7 +749,7 @@ const CreditPage = () => {
 
   const handleAccept = async (rowData: any[]) => {
     const [_, id] = rowData;
-    const credit = creditsData?.items.find(c => c.id === Number(id));
+    const credit = displayedCredits.find(c => c.id === Number(id));
     if (credit) {
       try {
         await acceptCredit(credit.id);
@@ -790,7 +799,7 @@ const CreditPage = () => {
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
     const [_, id] = rowData;
-    const credit = creditsData?.items.find(c => c.id === Number(id));
+    const credit = displayedCredits.find(c => c.id === Number(id));
     if (credit) {
       // Для обратной совместимости устанавливаем selectedCreditForPrint
       setSelectedCreditForPrint(credit);
@@ -859,8 +868,10 @@ const CreditPage = () => {
       abortControllerRef.current.abort();
     }
 
-    // Создаем новый AbortController
-    abortControllerRef.current = new AbortController();
+    // Создаем новый AbortController и захватываем его локально
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
 
     const shouldInclude = includeAllStates;
 
@@ -882,8 +893,19 @@ const CreditPage = () => {
       ...filters
     };
 
-    await getCredits(params, abortControllerRef.current.signal);
-  }, [currentPage, includeAllStates, clientFullName, investorName, isPageSizeReady, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource]);
+    const result = await getCredits(params, signal);
+
+    if (isListMode && result && !signal.aborted) {
+      const items = result.items || [];
+      const next = currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
+      accumulatedItemsRef.current = next;
+      setAccumulatedItems(next);
+      setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
+    }
+    if (!signal.aborted) {
+      setIsLoadingMore(false);
+    }
+  }, [currentPage, includeAllStates, clientFullName, investorName, isPageSizeReady, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource, isListMode]);
 
   // Очистка при размонтировании
   useEffect(() => {
@@ -899,6 +921,55 @@ const CreditPage = () => {
       loadCredits();
     }
   }, [loadCredits, isPageSizeReady]);
+
+  // Сброс накопленного списка при смене фильтров/режима
+  useEffect(() => {
+    accumulatedItemsRef.current = [];
+    setAccumulatedItems([]);
+    setHasMore(true);
+    if (isListMode) {
+      setCurrentPage(1);
+    }
+  }, [
+    isListMode,
+    contractNumber,
+    investorName,
+    selectedInvestmentSource,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    objectType,
+    creditTypeId,
+    activeTab,
+    filters,
+    sortConfig,
+  ]);
+
+  // Бесконечная прокрутка: подгружаем следующую страницу при достижении сентинела
+  useEffect(() => {
+    if (!isListMode) return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+    if (!hasMore) return;
+    if (isLoading || isLoadingMore) return;
+    if (accumulatedItems.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setIsLoadingMore(true);
+          setCurrentPage(prev => prev + 1);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isListMode, hasMore, isLoading, isLoadingMore, accumulatedItems.length]);
 
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
@@ -966,7 +1037,7 @@ const CreditPage = () => {
 
   const handleOpenPaymentModal = (rowData: any[]) => {
     const [_, id, __, clientFullName] = rowData;
-    const credit = creditsData?.items.find(c => c.id === Number(id));
+    const credit = displayedCredits.find(c => c.id === Number(id));
     if (credit) {
       setSelectedCreditForPrint(credit);
       setIsPaymentModalOpen(true);
@@ -1054,7 +1125,7 @@ const CreditPage = () => {
       color: '#007d88',
       shouldShow: (rowData: any[]) => {
         const [_, id] = rowData;
-        const credit = creditsData?.items.find(c => c.id === Number(id));
+        const credit = displayedCredits.find(c => c.id === Number(id));
         
         return hasPermission('MANAGE_ACCOUNTING', true) && 
               credit && 
@@ -1156,11 +1227,11 @@ const CreditPage = () => {
   };
 
   const rowStyles = useMemo(() => {
-    if (!creditsData?.items) return {};
+    if (!displayedCredits || displayedCredits.length === 0) return {};
 
     const styles: { [rowIndex: number]: RowStyle } = {};
-    
-    creditsData.items.forEach((credit, rowIndex) => {
+
+    displayedCredits.forEach((credit, rowIndex) => {
       const baseStyle: RowStyle = {
         backgroundColor: '#FFFFFF',
         color: '#000000',
@@ -1197,11 +1268,11 @@ const CreditPage = () => {
     });
 
     return styles;
-  }, [creditsData?.items, selectedCreditForPrint, selectedRows]);
+  }, [displayedCredits, selectedCreditForPrint, selectedRows]);
 
   const formatCreditData = (credits: Credit[] | undefined) => {
     if (!credits) return [];
-    
+
     const formattedData = credits.map(credit => [
       credit.isFavourite ? (
         <StarIcon 
@@ -1527,10 +1598,10 @@ const CreditPage = () => {
         <SelectedCount />
       </SecondRaw>
 
-      {isLoading && <div>Загрузка...</div>}
+      {isLoading && (!isListMode || displayedCredits.length === 0) && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}
-      
-      {!isLoading && !error && (
+
+      {!error && (!isLoading || (isListMode && displayedCredits.length > 0)) && (
         <>
           <CustomTable 
             columns={[
@@ -1547,7 +1618,7 @@ const CreditPage = () => {
               { name: "Долг", isSortable: true, align: "right" },
               { name: "isActive", isHidden: true, align: "right" },
             ]} 
-            data={formatCreditData(creditsData?.items)}
+            data={formatCreditData(displayedCredits)}
             rowStyles={rowStyles}
             onSort={handleSort}
             multiSelect={true}
@@ -1560,17 +1631,28 @@ const CreditPage = () => {
             debtChecker={(row) => row[row.length - 2] !== '0₽' && row[row.length - 2] !== '0'}
           />
 
-          <PaginationLayout>
-            <Pagination
-              total={creditsData?.totalCount || 0}
-              current={currentPage}
-              onChange={(page) => {
-                setCurrentPage(page);
-                setSelectedRows([]); // Сбрасываем выбор при смене страницы
-              }}
-              itemsPerPage={itemsPerPage}
-            />
-          </PaginationLayout>
+          {isListMode ? (
+            <>
+              {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
+              {isLoadingMore ? (
+                <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+              ) : (
+                <ListBottomSpacer />
+              )}
+            </>
+          ) : (
+            <PaginationLayout>
+              <Pagination
+                total={creditsData?.totalCount || 0}
+                current={currentPage}
+                onChange={(page) => {
+                  setCurrentPage(page);
+                  setSelectedRows([]); // Сбрасываем выбор при смене страницы
+                }}
+                itemsPerPage={itemsPerPage}
+              />
+            </PaginationLayout>
+          )}
         </>
       )}
 
@@ -1880,11 +1962,27 @@ const SpinnerIcon = styled.div`
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-right: 8px;
-  
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+`;
+
+const LoadMoreSentinel = styled.div`
+  width: 100%;
+  height: 1px;
+`;
+
+const ListLoadingIndicator = styled.div`
+  padding: 12px 0 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+`;
+
+const ListBottomSpacer = styled.div`
+  height: 32px;
 `;
 
 export default CreditPage;

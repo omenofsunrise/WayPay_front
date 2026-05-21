@@ -31,6 +31,7 @@ import paymentService from '../api/services/paymentService';
 import type { PaymentTab } from '../api/types/payment';
 import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
 import { useResponsivePageSize } from '../utils/useResponsivePageSize';
+import { useUiSettings } from '../utils/uiSettings';
 
 // Иконка для кнопки сворачивания
 const FilterToggleIcon = styled.svg<{ $isOpen: boolean }>`
@@ -71,6 +72,13 @@ const CreditControlPage = () => {
     }
   }, []);
 
+  const uiSettings = useUiSettings();
+  const isListMode = uiSettings.creditsDisplayMode === 'list';
+  const [accumulatedItems, setAccumulatedItems] = useState<Credit[]>([]);
+  const accumulatedItemsRef = useRef<Credit[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   // Состояние для сворачивания фильтров
   const [isFiltersVisible, setIsFiltersVisible] = useState(savedFiltersVisible);
   const [contractNumber, setContractNumber] = useState(() => savedFilters?.contractNumber ?? '');
@@ -121,6 +129,7 @@ const CreditControlPage = () => {
   const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const { isLoading, error, data: creditsData, getCredits, toggleFavourite, acceptCredit, acceptCredits } = useCredit();
+  const displayedCredits = isListMode ? accumulatedItems : (creditsData?.items ?? []);
   const navigate = useNavigate();
   const [approvalStatus, setApprovalStatus] = useState<string>(() => savedFilters?.approvalStatus ?? '');
   const [isConfirmingAll, setIsConfirmingAll] = useState(false);
@@ -361,14 +370,16 @@ const CreditControlPage = () => {
 
   const loadCredits = useCallback(async () => {
     if (!isPageSizeReady) return;
-    
+
     // Отменяем предыдущий запрос
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Создаем новый AbortController
-    abortControllerRef.current = new AbortController();
+    // Создаем новый AbortController и захватываем его локально
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
 
     const params = {
       page: currentPage,
@@ -402,11 +413,23 @@ const CreditControlPage = () => {
       ...filters
     };
 
-    await getCredits(params, abortControllerRef.current.signal);
+    const result = await getCredits(params, signal);
+
+    if (isListMode && result && !signal.aborted) {
+      const items = result.items || [];
+      const next = currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
+      accumulatedItemsRef.current = next;
+      setAccumulatedItems(next);
+      setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
+    }
+    if (!signal.aborted) {
+      setIsLoadingMore(false);
+    }
   }, [
     currentPage, contractNumber, clientFullName, investorName, selectedInvestmentSource,
-    fromDate, toDate, rublesIncomeFrom, rublesIncomeTo, 
-    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters, creditTypeId, toCreationDate, fromCreationDate, approvalStatus, itemsPerPage, isPageSizeReady
+    fromDate, toDate, rublesIncomeFrom, rublesIncomeTo,
+    percentsIncomeFrom, percentsIncomeTo, sortConfig, filters, creditTypeId, toCreationDate, fromCreationDate, approvalStatus, itemsPerPage, isPageSizeReady,
+    isListMode
   ]);
 
   // Очистка при размонтировании
@@ -423,6 +446,60 @@ const CreditControlPage = () => {
       loadCredits();
     }
   }, [loadCredits, isPageSizeReady]);
+
+  // Сброс накопленного списка при смене фильтров/режима
+  useEffect(() => {
+    accumulatedItemsRef.current = [];
+    setAccumulatedItems([]);
+    setHasMore(true);
+    if (isListMode) {
+      setCurrentPage(1);
+    }
+  }, [
+    isListMode,
+    contractNumber,
+    investorName,
+    selectedInvestmentSource,
+    clientFullName,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    rublesIncomeFrom,
+    rublesIncomeTo,
+    percentsIncomeFrom,
+    percentsIncomeTo,
+    objectType,
+    creditTypeId,
+    approvalStatus,
+    activeTab,
+    filters,
+    sortConfig,
+  ]);
+
+  // Бесконечная прокрутка
+  useEffect(() => {
+    if (!isListMode) return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+    if (!hasMore) return;
+    if (isLoading || isLoadingMore) return;
+    if (accumulatedItems.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setIsLoadingMore(true);
+          setCurrentPage(prev => prev + 1);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isListMode, hasMore, isLoading, isLoadingMore, accumulatedItems.length]);
 
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
@@ -502,7 +579,7 @@ const CreditControlPage = () => {
 
   const handleOpenPaymentModal = (rowData: any[]) => {
     const [_, id, __, clientFullName] = rowData;
-    const credit = creditsData?.items.find(c => c.id === Number(id));
+    const credit = displayedCredits.find(c => c.id === Number(id));
     if (credit) {
       setSelectedCredit(credit);
       setIsPaymentModalOpen(true);
@@ -558,7 +635,7 @@ const CreditControlPage = () => {
 
   const handleAccept = async (rowData: any[]) => {
     const [_, id] = rowData;
-    const credit = creditsData?.items.find(c => c.id === Number(id));
+    const credit = displayedCredits.find(c => c.id === Number(id));
     if (credit) {
       try {
         await acceptCredit(credit.id);
@@ -577,7 +654,7 @@ const CreditControlPage = () => {
       color: '#007d88',
       shouldShow: (rowData: any[]) => {
         const [_, id] = rowData;
-        const credit = creditsData?.items.find(c => c.id === Number(id));
+        const credit = displayedCredits.find(c => c.id === Number(id));
         
         return hasPermission('MANAGE_ACCOUNTING', true) && 
               credit && 
@@ -656,7 +733,7 @@ const CreditControlPage = () => {
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
     const [_, id] = rowData;
-    const credit = creditsData?.items.find(c => c.id === Number(id));
+    const credit = displayedCredits.find(c => c.id === Number(id));
     if (credit) {
       setSelectedCredit(credit);
     }
@@ -786,11 +863,11 @@ const CreditControlPage = () => {
   ]);
 
   const rowStyles = useMemo(() => {
-    if (!creditsData?.items) return {};
+    if (!displayedCredits || displayedCredits.length === 0) return {};
 
     const styles: { [rowIndex: number]: RowStyle } = {};
-    
-    creditsData.items.forEach((credit, rowIndex) => {
+
+    displayedCredits.forEach((credit, rowIndex) => {
       const baseStyle: RowStyle = {
         backgroundColor: '#FFFFFF',
         color: '#000000',
@@ -820,7 +897,7 @@ const CreditControlPage = () => {
     });
 
     return styles;
-  }, [creditsData?.items, selectedCredit]);
+  }, [displayedCredits, selectedCredit]);
 
   const handleRowDoubleClick = (rowData: any[]) => {
     const [_, id] = rowData;
@@ -1090,12 +1167,12 @@ const CreditControlPage = () => {
         </TotalControls>
       </SecondRaw>
       
-      {isLoading && <div>Загрузка...</div>}
+      {isLoading && (!isListMode || displayedCredits.length === 0) && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}
-      
-      {!isLoading && !error && (
+
+      {!error && (!isLoading || (isListMode && displayedCredits.length > 0)) && (
         <>
-          <CustomTable 
+          <CustomTable
             columns={[
               { name: "" },
               { name: "№", isSortable: true },
@@ -1109,7 +1186,7 @@ const CreditControlPage = () => {
               { name: "isActive", isHidden: true },
               { name: "hasDebt", isHidden: true } 
             ]} 
-            data={formatCreditData(creditsData?.items)}
+            data={formatCreditData(displayedCredits)}
             onRowClick={handleRowClick}
             onSort={handleSort}
             rowStyles={rowStyles}
@@ -1119,14 +1196,25 @@ const CreditControlPage = () => {
             hasTotalsRow={true}
           />
 
-          <PaginationLayout>           
-            <Pagination
-              total={creditsData?.totalCount || 0}
-              current={currentPage}
-              onChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-            />
-          </PaginationLayout>
+          {isListMode ? (
+            <>
+              {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
+              {isLoadingMore ? (
+                <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+              ) : (
+                <ListBottomSpacer />
+              )}
+            </>
+          ) : (
+            <PaginationLayout>
+              <Pagination
+                total={creditsData?.totalCount || 0}
+                current={currentPage}
+                onChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+              />
+            </PaginationLayout>
+          )}
         </>
       )}
 
@@ -1308,11 +1396,27 @@ const SpinnerIcon = styled.div`
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-right: 8px;
-  
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+`;
+
+const LoadMoreSentinel = styled.div`
+  width: 100%;
+  height: 1px;
+`;
+
+const ListLoadingIndicator = styled.div`
+  padding: 12px 0 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+`;
+
+const ListBottomSpacer = styled.div`
+  height: 32px;
 `;
 
 export default CreditControlPage;
