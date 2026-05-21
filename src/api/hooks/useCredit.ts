@@ -74,15 +74,13 @@ const useCredit = () => {
 
   const createCredit = useCallback(async (creditData: CreateCreditRequest): Promise<Credit | null> => {
     setIsLoading(true);
-    setError(null); 
+    setError(null);
     try {
       const result = await creditService.createCredit(creditData);
       return result;
     } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('Failed to create credit');
-      setError(errorObj);
-      console.log(err);
-      return null;
+      setError(err instanceof Error ? err : new Error('Failed to create credit'));
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -95,9 +93,8 @@ const useCredit = () => {
       const result = await creditService.updateCredit(creditData);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : 'Failed to create credit');
-      console.log(err);
-      return null;
+      setError(err instanceof Error ? err : new Error('Failed to update credit'));
+      throw err;
     } finally {
       setIsLoading(false);
     }
