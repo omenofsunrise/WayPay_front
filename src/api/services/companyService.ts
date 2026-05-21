@@ -23,8 +23,18 @@ class CompanyService {
   }
 
   async getFilledSender(scheduleId: number): Promise<string> {
-    const response = await apiClient.get<string>(`/SenderSettings/filled/${scheduleId}`);
-    return response.data;
+    const response = await apiClient.get<ArrayBuffer>(`/SenderSettings/filled/${scheduleId}`, {
+      responseType: 'arraybuffer',
+    });
+    const text = new TextDecoder('utf-8').decode(response.data);
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
+    }
+    return text;
   }
 
   async getAllCompanies(partners: boolean): Promise<Company[]> {

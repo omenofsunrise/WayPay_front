@@ -1,5 +1,19 @@
 import apiClient from '../client';
+import type { AxiosRequestConfig } from 'axios';
 import type { CreateSenderSetting, SenderInfoResponse, SetSenderTextRequest } from '../types/sender';
+
+const fetchUtf8Text = async (url: string, config?: AxiosRequestConfig): Promise<string> => {
+    const response = await apiClient.get<ArrayBuffer>(url, { ...config, responseType: 'arraybuffer' });
+    const text = new TextDecoder('utf-8').decode(response.data);
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+    return text;
+};
 
 class SenderService {
     async getMyCompanySenderInfo(): Promise<SenderInfoResponse> {
@@ -34,28 +48,24 @@ class SenderService {
     }
 
     async getFilledPayments(creditId: number): Promise<string> {
-        const response = await apiClient.get<string>(`/SenderSettings/filled/payments/${creditId}`);
-        return response.data;
+        return fetchUtf8Text(`/SenderSettings/filled/payments/${creditId}`);
     }
 
     async getFilledCredit(creditId: number): Promise<string> {
-        const response = await apiClient.get<string>(`/SenderSettings/credit/filled/${creditId}`);
-        return response.data;
+        return fetchUtf8Text(`/SenderSettings/credit/filled/${creditId}`);
     }
 
     async getFilledGuarantorSchedule(scheduleId: number): Promise<string> {
-        const response = await apiClient.get<string>(`/SenderSettings/guarantor/schedule/filled/${scheduleId}`);
-        return response.data;
+        return fetchUtf8Text(`/SenderSettings/guarantor/schedule/filled/${scheduleId}`);
     }
 
     async getFilledCredits(creditIds: number[]): Promise<string> {
-        const response = await apiClient.get<string>(`/SenderSettings/credits/filled`, {
+        return fetchUtf8Text(`/SenderSettings/credits/filled`, {
             params: { creditIds },
             paramsSerializer: {
                 indexes: null
             }
         });
-        return response.data;
     }
 }
 
