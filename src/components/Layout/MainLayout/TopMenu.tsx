@@ -204,8 +204,8 @@ const TopMenu = () => {
           <SettingsIconImg src={BellIcon} alt="Уведомления" />
         </BellButton>
 
-        <SettingsButton onClick={handleSettingsClick}>
-          <SettingsIconImg src={SettingsIcon} alt="Настройки" />
+        <SettingsButton onClick={handleSettingsClick} title="Персональные настройки">
+          <SettingsIconImg src={SettingsIcon} alt="Персональные настройки" />
         </SettingsButton>
       </TopMenuContainer>
       

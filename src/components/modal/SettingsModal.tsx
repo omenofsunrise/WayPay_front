@@ -215,7 +215,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <CustomTitle style={{marginBottom: "0", paddingBottom: "0"}}>Настройки</CustomTitle>
+          <CustomTitle style={{marginBottom: "0", paddingBottom: "0"}}>Персональные настройки</CustomTitle>
         </ModalHeader>
         
         <ModalBody style={{marginTop: "0", paddingTop: "0"}}>
