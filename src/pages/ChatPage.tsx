@@ -177,7 +177,6 @@ const ChatPage = () => {
     y: number;
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { authInfo } = useEmployee();
   const currentUser = authInfo?.employee;
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -288,22 +287,9 @@ const ChatPage = () => {
   }, [currentChat, fetchChatMembers, fetchChatMessages]);
 
   useEffect(() => {
-    if (messages.length === 0) return;
-
-    const scrollToBottomNow = () => {
-      const container = messagesContainerRef.current;
-      if (!container) return;
-      container.scrollTop = container.scrollHeight;
-    };
-
-    scrollToBottomNow();
-    const rafId = requestAnimationFrame(scrollToBottomNow);
-    const timerId = window.setTimeout(scrollToBottomNow, 120);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.clearTimeout(timerId);
-    };
+    if (messagesEndRef.current && messages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+    }
   }, [messages, currentChat]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -997,7 +983,7 @@ const ChatPage = () => {
               </Box>
             </Box>
                         
-            <MessagesContainer ref={messagesContainerRef}>
+            <MessagesContainer>
               <List>
                 {messages.length > 0 ? (
                   <>

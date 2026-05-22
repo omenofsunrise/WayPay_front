@@ -47,6 +47,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScrollingUp, setIsScrollingUp] = useState(false);
+  const initialScrollDoneRef = useRef(false);
 
   const formatPhoneForDisplay = (phone: string): string => {
     const digits = phone.replace(/\D/g, '');
@@ -64,21 +65,48 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   const chatExists = foundChat?.exists ?? false;
   const displayName = clientName || foundChat?.clientName || displayPhoneNumber;
 
-  // Инициализация чата при изменении phoneNumber
   useEffect(() => {
+    initialScrollDoneRef.current = false;
     initializeChat();
-    
-    // Очистка при размонтировании
+
     return () => {
       clearChatData();
     };
   }, [phoneNumber]);
 
   useEffect(() => {
-    if (messages.length > 0 && !isLoading && !isInitializing) {
-      scrollToBottom();
+    if (messages.length === 0) {
+      initialScrollDoneRef.current = false;
+      return;
     }
-  }, [chatExists]);
+    if (isScrollingUp || isLoadingMore) return;
+
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const scrollToEnd = () => {
+      container.scrollTop = container.scrollHeight;
+    };
+
+    if (!initialScrollDoneRef.current) {
+      scrollToEnd();
+      const rafId = requestAnimationFrame(scrollToEnd);
+      const timerId = window.setTimeout(() => {
+        scrollToEnd();
+        initialScrollDoneRef.current = true;
+      }, 150);
+      return () => {
+        cancelAnimationFrame(rafId);
+        window.clearTimeout(timerId);
+      };
+    }
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 150) {
+      scrollToEnd();
+    }
+  }, [messages.length, isScrollingUp, isLoadingMore]);
 
   useEffect(() => {
     if (chatExists && !isLoading && inputRef.current) {
@@ -101,10 +129,6 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     } finally {
       setIsInitializing(false);
     }
-  };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleScroll = useCallback(async (e: React.UIEvent<HTMLDivElement>) => {
@@ -384,12 +408,6 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             ))}
             <div ref={messagesEndRef} />
           </>
-        )}
-        
-        {canLoadMore && !isLoadingMore && messages.length > 0 && !showWhatsAppPromo && (
-          <LoadMoreButton onClick={() => loadOlderMessages(cleanPhoneNumber)}>
-            Загрузить предыдущие сообщения
-          </LoadMoreButton>
         )}
       </MessagesArea>
 
@@ -879,22 +897,6 @@ const LoadingOlderIndicator = styled.div`
   padding: 16px;
   color: #666;
   font-size: 12px;
-`;
-
-const LoadMoreButton = styled.button`
-  margin: 16px auto;
-  padding: 8px 16px;
-  background-color: #075E54;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 12px;
-  display: block;
-  
-  &:hover {
-    background-color: #128C7E;
-  }
 `;
 
 export default WhatsAppChat;
