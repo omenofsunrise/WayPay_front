@@ -3,7 +3,7 @@ import styled from 'styled-components';
 
 export interface Tab {
   id: string;
-  label: string;
+  label: ReactNode;
   content?: ReactNode;
 }
 

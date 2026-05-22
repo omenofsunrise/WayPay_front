@@ -8,7 +8,8 @@ import CustomTable from '../ui/tables/CustomTable';
 import useNotes from '../../api/hooks/useNote';
 import { formatDate } from '../../utils/dateFormatter';
 import useCredit from '../../api/hooks/useCredit';
-import type { Credit } from '../../api/types/credit';
+import type { Credit, CreditListResponse } from '../../api/types/credit';
+import Tabs from '../ui/fields/Tabs';
 import { formatMoney } from '../../utils/formatPrice';
 import type { Payment, PaymentByCreditParams, PaymentTab } from '../../api/types/payment';
 import usePayment from '../../api/hooks/usePayment';
@@ -29,12 +30,56 @@ import { sendWhatsAppMessage } from '../../utils/sendWhatsAppMessage';
 import { formatPhoneHref } from '../../utils/phoneUtils';
 import PhoneLink from '../ui/links/PhoneLink';
 import WhatsAppChat from '../WhatsAppChat';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
+import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined';
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
+import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
+import SearchOffOutlinedIcon from '@mui/icons-material/SearchOffOutlined';
 
 interface ViewCreditModalProps {
   id: number;
   isOpen: boolean;
   onClose: () => void;
 }
+
+type CreditTab = 'client' | 'payments' | 'products' | 'guarantor' | 'notes' | 'related';
+
+const ACTIVE_TAB_STORAGE_KEY = 'view_credit_modal_active_tab';
+
+type CreditStatusKey = 'active' | 'overdue' | 'closed';
+
+const getCreditStatus = (credit: Credit | null): { key: CreditStatusKey; label: string } => {
+  if (!credit) return { key: 'active', label: 'Активный' };
+  if (!credit.isActive || credit.rest === 0) return { key: 'closed', label: 'Закрытый' };
+  if (credit.debtDays && credit.debtDays > 0) return { key: 'overdue', label: 'Просроченный' };
+  return { key: 'active', label: 'Активный' };
+};
+
+const getInitials = (fullName?: string): string => {
+  if (!fullName) return '?';
+  const parts = fullName.trim().split(/\s+/);
+  const first = parts[0]?.[0] || '';
+  const second = parts[1]?.[0] || '';
+  return (first + second).toUpperCase() || '?';
+};
+
+const TabLabel: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
+  <TabLabelWrapper>
+    <TabIcon>{icon}</TabIcon>
+    <span>{label}</span>
+  </TabLabelWrapper>
+);
 
 // Интерфейс для заметки с загруженным файлом
 interface NoteWithFile extends Note {
@@ -58,8 +103,54 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     getFileByNote 
   } = useNotes();
   
-  const { getCredits } = useCredit();
+  const { getCredits, getCreditListByClient } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
+  const [activeTab, setActiveTab] = useState<CreditTab>(() => {
+    const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as CreditTab | null;
+    return saved && ['client', 'payments', 'products', 'guarantor', 'notes', 'related'].includes(saved)
+      ? saved
+      : 'client';
+  });
+  const [clientCredits, setClientCredits] = useState<CreditListResponse[] | null>(null);
+  const [guarantorCredits, setGuarantorCredits] = useState<CreditListResponse[] | null>(null);
+  const [isLoadingRelated, setIsLoadingRelated] = useState(false);
+
+  const handleTabChange = useCallback((tab: CreditTab) => {
+    setActiveTab(tab);
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
+  }, []);
+
+  const loadRelatedCredits = useCallback(async () => {
+    if (!creditData) return;
+    setIsLoadingRelated(true);
+    try {
+      const clientPromise = creditData.clientId
+        ? getCreditListByClient(creditData.clientId).catch(() => null)
+        : Promise.resolve(null);
+      const guarantorPromise = creditData.guarantorId
+        ? getCreditListByClient(creditData.guarantorId).catch(() => null)
+        : Promise.resolve(null);
+
+      const [clientRes, guarantorRes] = await Promise.all([clientPromise, guarantorPromise]);
+      setClientCredits(clientRes?.items?.filter(c => c.id !== creditData.id) ?? []);
+      setGuarantorCredits(guarantorRes?.items?.filter(c => c.id !== creditData.id) ?? []);
+    } finally {
+      setIsLoadingRelated(false);
+    }
+  }, [creditData, getCreditListByClient]);
+
+  useEffect(() => {
+    if (activeTab === 'related' && creditData && clientCredits === null && guarantorCredits === null) {
+      loadRelatedCredits();
+    }
+  }, [activeTab, creditData, clientCredits, guarantorCredits, loadRelatedCredits]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setClientCredits(null);
+      setGuarantorCredits(null);
+    }
+  }, [isOpen]);
   const [notes, setNotes] = useState<NoteWithFile[]>([]);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -796,176 +887,361 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           <ModalWrapper>
             <TwoColumnLayout>
             <LeftColumn>
-            <TitleField style={{marginTop: 0, paddingTop: 0}}>
-              <CustomTitle style={{ marginTop: 0 }}>
-                Договор №{id}
-              </CustomTitle>
-            </TitleField>
+            <HeaderRow>
+              <HeaderTitle>
+                <CustomTitle style={{ marginTop: 0, marginBottom: 0 }}>
+                  Договор №{id}
+                </CustomTitle>
+                {creditData && (() => {
+                  const status = getCreditStatus(creditData);
+                  return <StatusBadge $status={status.key}>{status.label}</StatusBadge>;
+                })()}
+              </HeaderTitle>
+              {creditData?.name && <HeaderSubtitle>{creditData.name}</HeaderSubtitle>}
+            </HeaderRow>
 
-            <div>
-              <HorizontalContainer style={{ marginBottom: '30px' }}>
-                <VerticalContainer>
-                  <ModalInfoTitle style={{marginBottom: "5px"}}>Сведения о договоре</ModalInfoTitle>
-                  <Label>{creditData && creditData.name && 'Договор'}</Label>
-                  <Value>{creditData && creditData.name && creditData.name}</Value> 
+            {creditData && (
+              <SummaryHeader>
+                <SummaryCard>
+                  <SummaryIcon><CalendarMonthOutlinedIcon fontSize="small" /></SummaryIcon>
+                  <SummaryItemBody>
+                    <SummaryLabel>Дата</SummaryLabel>
+                    <SummaryValue>{formatDate(creditData.creditDate)}</SummaryValue>
+                  </SummaryItemBody>
+                </SummaryCard>
 
-                  <Label>Дата</Label>
-                  <Value>{creditData && formatDate(creditData.creditDate)}</Value>
+                {creditData.creditTypeName && (
+                  <SummaryCard>
+                    <SummaryIcon><LabelOutlinedIcon fontSize="small" /></SummaryIcon>
+                    <SummaryItemBody>
+                      <SummaryLabel>Категория</SummaryLabel>
+                      <SummaryValue>{creditData.creditTypeName}</SummaryValue>
+                    </SummaryItemBody>
+                  </SummaryCard>
+                )}
 
-                  <Label>Покупатель</Label> 
-                  <Value>{creditData && creditData.clientFullName}</Value>
+                {creditData.termMonths != null && (
+                  <SummaryCard>
+                    <SummaryIcon><AccessTimeOutlinedIcon fontSize="small" /></SummaryIcon>
+                    <SummaryItemBody>
+                      <SummaryLabel>Срок</SummaryLabel>
+                      <SummaryValue>{creditData.termMonths} мес.</SummaryValue>
+                    </SummaryItemBody>
+                  </SummaryCard>
+                )}
 
-                  <Label>Телефон</Label>
-                  <Value>
-                    {creditData?.clientPhone ? (
-                      <PhoneLink href={formatPhoneHref(creditData.clientPhone)}>
-                        {creditData.clientPhone}
-                      </PhoneLink>
-                    ) : (
-                      ''
-                    )}
-                  </Value>
+                {creditData.totalAmount != null && (
+                  <SummaryCard>
+                    <SummaryIcon><AttachMoneyOutlinedIcon fontSize="small" /></SummaryIcon>
+                    <SummaryItemBody>
+                      <SummaryLabel>Сумма</SummaryLabel>
+                      <SummaryValue>{formatMoney(creditData.totalAmount.toString())}</SummaryValue>
+                    </SummaryItemBody>
+                  </SummaryCard>
+                )}
 
-                  {creditData?.address && (
-                    <>
-                      <Label>Адрес</Label>
-                      <Value>{creditData.address}</Value>
-                    </>
-                  )}
+                {creditData.rest != null && (
+                  <SummaryCard>
+                    <SummaryIcon $accent="info"><AttachMoneyOutlinedIcon fontSize="small" /></SummaryIcon>
+                    <SummaryItemBody>
+                      <SummaryLabel>Остаток</SummaryLabel>
+                      <SummaryValue>{formatMoney(creditData.rest.toString())}</SummaryValue>
+                    </SummaryItemBody>
+                  </SummaryCard>
+                )}
 
-                  {creditData?.clientBirthdate && (
-                    <>
-                      <Label>Дата рождения</Label>
-                      <Value>{new Date(`${creditData.clientBirthdate}`).toLocaleDateString('ru-RU')}</Value>
-                    </>
-                  )}
+                {creditData.debtDays != null && creditData.debtDays > 0 && (
+                  <SummaryCard $variant="danger">
+                    <SummaryIcon $accent="danger"><WarningAmberOutlinedIcon fontSize="small" /></SummaryIcon>
+                    <SummaryItemBody>
+                      <SummaryLabel>Просрочка</SummaryLabel>
+                      <SummaryValue style={{ color: '#B71C1C' }}>{creditData.debtDays} дн.</SummaryValue>
+                    </SummaryItemBody>
+                  </SummaryCard>
+                )}
 
-                  {creditData?.termMonths && (
-                    <>
-                      <Label>Срок, месяцев</Label>
-                      <Value>{creditData.termMonths}</Value>
-                    </>
-                  )}
-                  
-                  {creditData && creditData.guarantorFullname && (
-                    <>
-                      <Label>{creditData && creditData.guarantorFullname && 'Поручитель'}</Label>
-                      <Value>{creditData && creditData.guarantorFullname && creditData.guarantorFullname}</Value>
-                    </>
-                  )}
+                {creditData.debtComment && (
+                  <SummaryCard>
+                    <SummaryIcon><DescriptionOutlinedIcon fontSize="small" /></SummaryIcon>
+                    <SummaryItemBody>
+                      <SummaryLabel>В долг выдал</SummaryLabel>
+                      <SummaryValue>{creditData.debtComment}</SummaryValue>
+                    </SummaryItemBody>
+                  </SummaryCard>
+                )}
+              </SummaryHeader>
+            )}
 
-                  {creditData && creditData.guarantorPhone && (
-                    <>
-                      <Label>{creditData && creditData.guarantorPhone && 'Телефон поручителя'}</Label>
-                      <Value>
-                        <PhoneLink href={formatPhoneHref(creditData.guarantorPhone)}>
-                          {creditData.guarantorPhone}
-                        </PhoneLink>
-                      </Value>
-                    </>
-                  )}
+            <Tabs<CreditTab>
+              activeTab={activeTab}
+              onChange={handleTabChange}
+              tabs={[
+                {
+                  id: 'client',
+                  label: <TabLabel icon={<PersonOutlineIcon fontSize="small" />} label="Клиент" />,
+                  content: (
+                    <TabPanel>
+                      <PersonCard>
+                        <Avatar>{getInitials(creditData?.clientFullName)}</Avatar>
+                        <PersonInfo>
+                          <PersonName>{creditData?.clientFullName || '—'}</PersonName>
+                          <InfoRows>
+                            <InfoRow>
+                              <InfoIcon><CallOutlinedIcon fontSize="small" /></InfoIcon>
+                              <InfoText>
+                                {creditData?.clientPhone ? (
+                                  <PhoneLink href={formatPhoneHref(creditData.clientPhone)}>
+                                    {creditData.clientPhone}
+                                  </PhoneLink>
+                                ) : '—'}
+                              </InfoText>
+                            </InfoRow>
+                            {creditData?.address && (
+                              <InfoRow>
+                                <InfoIcon><HomeOutlinedIcon fontSize="small" /></InfoIcon>
+                                <InfoText>{creditData.address}</InfoText>
+                              </InfoRow>
+                            )}
+                            {creditData?.clientBirthdate && (
+                              <InfoRow>
+                                <InfoIcon><CakeOutlinedIcon fontSize="small" /></InfoIcon>
+                                <InfoText>
+                                  {new Date(`${creditData.clientBirthdate}`).toLocaleDateString('ru-RU')}
+                                </InfoText>
+                              </InfoRow>
+                            )}
+                          </InfoRows>
+                        </PersonInfo>
+                      </PersonCard>
+                    </TabPanel>
+                  )
+                },
+                {
+                  id: 'payments',
+                  label: <TabLabel icon={<PaymentsOutlinedIcon fontSize="small" />} label="Платежи" />,
+                  content: (
+                    <TabPanel>
+                      {creditData && creditData.firstPayment !== 0 && (
+                        <Value style={{ margin: '0 0 15px' }}>
+                          {`Первоначальный взнос, руб:${' '.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
+                        </Value>
+                      )}
 
-                  {creditData?.guarantorBirthdate && (
-                    <>
-                      <Label>Дата рождения</Label>
-                      <Value>{new Date(`${creditData.guarantorBirthdate}`).toLocaleDateString('ru-RU')}</Value>
-                    </>
-                  )}
+                      {paymentsData?.items && paymentsData.items.length > 0 ? (
+                        <>
+                          <ModalInfoTitle>Платежи</ModalInfoTitle>
+                          <CustomTable
+                            columns={[
+                              { name: "Дата", align: "left" },
+                              { name: "Сумма", align: "right" },
+                              { name: "Тип платежа" },
+                              { name: "Платёж принял" },
+                              { name: "Подтверждён" },
+                            ]}
+                            data={formatPaymentsData(paymentsData?.items)}
+                          />
+                        </>
+                      ) : (
+                        <EmptyState>
+                          <PaymentsOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                          <EmptyStateText>Фактических платежей пока нет</EmptyStateText>
+                        </EmptyState>
+                      )}
 
-                  {creditData && creditData.creditTypeName && (
-                    <>
-                      <Label>{creditData && creditData.creditTypeName && 'Категория'}</Label>
-                      <Value>{creditData && creditData.creditTypeName && creditData.creditTypeName}</Value>
-                    </>
-                  )}
-                  
-                  {creditData?.debtDays > 0 && (
-                    <>
-                      <Label>Дней просрочки</Label>
-                      <Value>{creditData.debtDays}</Value>
-                    </>
-                  )}
-                  
-                  {creditData?.debtComment && (
-                    <>
-                      <Label>В долг выдал</Label>
-                      <Value>{creditData.debtComment}</Value>
-                    </>
-                  )}
-
-                </VerticalContainer>
-                <VerticalContainer style={{ width: "100%", marginLeft: "60px"}}>
-                  <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
-                    <ModalInfoTitle>Заметки</ModalInfoTitle>
-                    <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
-                  </HorizontalContainer>
-                  <TableContainer style={{ width: "100%" }}>
-                    {isNotesLoading ? (
-                      <LoadingText>Загрузка заметок...</LoadingText>
-                    ) : notesError ? (
-                      <ErrorText>{notesError}</ErrorText>
-                    ) : (
-                      <Table 
-                        columns={notesColumns} 
-                        data={formatNotesData()}
+                      <ModalInfoTitle style={{ marginTop: '15px' }}>График платежей</ModalInfoTitle>
+                      <CustomTable
+                        columns={[
+                          { name: "ID", isHidden: true },
+                          { name: "Дата", align: "left" },
+                          { name: "Сумма", align: "right" },
+                          { name: "Примечание" },
+                          { name: "Статус", align: "center" },
+                        ]}
+                        data={formatSchedulesData(scheduleData?.items)}
+                        rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
+                          acc[index] = getScheduleRowStyle(schedule, index);
+                          return acc;
+                        }, {} as { [key: number]: any }) || {}}
+                        contextMenuActions={scheduleTableActions}
+                        onRowDoubleClick={handleOpenPaymentFromSchedule}
+                        multiSelect
+                        selectedRow={selectedScheduleRows}
+                        onMultiSelectChange={setSelectedScheduleRows}
                       />
-                    )}
-                  </TableContainer>
-                </VerticalContainer>
-              </HorizontalContainer>
+                    </TabPanel>
+                  )
+                },
+                {
+                  id: 'products',
+                  label: <TabLabel icon={<Inventory2OutlinedIcon fontSize="small" />} label="Товар" />,
+                  content: (
+                    <TabPanel>
+                      {soldProductsData && soldProductsData.length > 0 ? (
+                        <CustomTable
+                          columns={[
+                            { name: "Название" },
+                            { name: "Стоимость", align: "right" },
+                            { name: "Надбавка", align: "right" },
+                            { name: "Цена", align: "right" },
+                          ]}
+                          data={formatSoldProductsData(soldProductsData)}
+                        />
+                      ) : (
+                        <EmptyState>
+                          <Inventory2OutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                          <EmptyStateText>Товаров нет</EmptyStateText>
+                        </EmptyState>
+                      )}
+                    </TabPanel>
+                  )
+                },
+                {
+                  id: 'guarantor',
+                  label: <TabLabel icon={<ShieldOutlinedIcon fontSize="small" />} label="Поручитель" />,
+                  content: (
+                    <TabPanel>
+                      {creditData?.guarantorFullname ? (
+                        <PersonCard>
+                          <Avatar $variant="guarantor">{getInitials(creditData.guarantorFullname)}</Avatar>
+                          <PersonInfo>
+                            <PersonName>{creditData.guarantorFullname}</PersonName>
+                            <InfoRows>
+                              {creditData.guarantorPhone && (
+                                <InfoRow>
+                                  <InfoIcon><CallOutlinedIcon fontSize="small" /></InfoIcon>
+                                  <InfoText>
+                                    <PhoneLink href={formatPhoneHref(creditData.guarantorPhone)}>
+                                      {creditData.guarantorPhone}
+                                    </PhoneLink>
+                                  </InfoText>
+                                </InfoRow>
+                              )}
+                              {creditData.guarantorBirthdate && (
+                                <InfoRow>
+                                  <InfoIcon><CakeOutlinedIcon fontSize="small" /></InfoIcon>
+                                  <InfoText>
+                                    {new Date(`${creditData.guarantorBirthdate}`).toLocaleDateString('ru-RU')}
+                                  </InfoText>
+                                </InfoRow>
+                              )}
+                            </InfoRows>
+                          </PersonInfo>
+                        </PersonCard>
+                      ) : (
+                        <EmptyState>
+                          <SearchOffOutlinedIcon style={{ fontSize: 48, color: '#cbd5e0' }} />
+                          <EmptyStateText>Поручитель не указан</EmptyStateText>
+                        </EmptyState>
+                      )}
+                    </TabPanel>
+                  )
+                },
+                {
+                  id: 'notes',
+                  label: <TabLabel icon={<StickyNote2OutlinedIcon fontSize="small" />} label="Заметки" />,
+                  content: (
+                    <TabPanel>
+                      <HorizontalContainer style={{ alignItems: "center", marginBottom: "15px" }}>
+                        <ModalInfoTitle>Заметки</ModalInfoTitle>
+                        <AddButton src={AddButtonImage} alt="Add Button" onClick={handleAddNoteClick} />
+                      </HorizontalContainer>
+                      <TableContainer style={{ width: "100%" }}>
+                        {isNotesLoading ? (
+                          <LoadingText>Загрузка заметок...</LoadingText>
+                        ) : notesError ? (
+                          <ErrorText>{notesError}</ErrorText>
+                        ) : notes.length === 0 ? (
+                          <EmptyState>
+                            <StickyNote2OutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                            <EmptyStateText>Заметок нет</EmptyStateText>
+                          </EmptyState>
+                        ) : (
+                          <Table
+                            columns={notesColumns}
+                            data={formatNotesData()}
+                          />
+                        )}
+                      </TableContainer>
+                    </TabPanel>
+                  )
+                },
+                {
+                  id: 'related',
+                  label: <TabLabel icon={<LinkOutlinedIcon fontSize="small" />} label="Связанные договоры" />,
+                  content: (
+                    <TabPanel>
+                      <SectionHeader>
+                        <SectionIcon><PersonOutlineIcon fontSize="small" /></SectionIcon>
+                        <SectionTitle>Договоры клиента</SectionTitle>
+                      </SectionHeader>
+                      {isLoadingRelated ? (
+                        <LoadingText>Загрузка...</LoadingText>
+                      ) : clientCredits && clientCredits.length > 0 ? (
+                        <RelatedCreditsList>
+                          {clientCredits.map(c => (
+                            <RelatedCreditCard key={`c-${c.id}`} $status={c.status}>
+                              <RelatedCardLeft>
+                                <RelatedCardIcon><DescriptionOutlinedIcon fontSize="small" /></RelatedCardIcon>
+                                <div>
+                                  <RelatedCreditTitle>Договор №{c.id}</RelatedCreditTitle>
+                                  <RelatedCreditDate>
+                                    <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
+                                    {formatDate(c.creditDate)}
+                                  </RelatedCreditDate>
+                                </div>
+                              </RelatedCardLeft>
+                              <RelatedCreditStatus $status={c.status}>{c.status}</RelatedCreditStatus>
+                            </RelatedCreditCard>
+                          ))}
+                        </RelatedCreditsList>
+                      ) : (
+                        <EmptyState>
+                          <SearchOffOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                          <EmptyStateText>Других договоров у клиента нет</EmptyStateText>
+                        </EmptyState>
+                      )}
 
-              <ModalInfoTitle>Товары</ModalInfoTitle>
+                      <SectionHeader style={{ marginTop: '24px' }}>
+                        <SectionIcon><ShieldOutlinedIcon fontSize="small" /></SectionIcon>
+                        <SectionTitle>Договоры поручителя</SectionTitle>
+                      </SectionHeader>
+                      {!creditData?.guarantorId ? (
+                        <EmptyState>
+                          <ShieldOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                          <EmptyStateText>Поручитель не указан</EmptyStateText>
+                        </EmptyState>
+                      ) : isLoadingRelated ? (
+                        <LoadingText>Загрузка...</LoadingText>
+                      ) : guarantorCredits && guarantorCredits.length > 0 ? (
+                        <RelatedCreditsList>
+                          {guarantorCredits.map(c => (
+                            <RelatedCreditCard key={`g-${c.id}`} $status={c.status}>
+                              <RelatedCardLeft>
+                                <RelatedCardIcon><DescriptionOutlinedIcon fontSize="small" /></RelatedCardIcon>
+                                <div>
+                                  <RelatedCreditTitle>Договор №{c.id}</RelatedCreditTitle>
+                                  <RelatedCreditDate>
+                                    <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
+                                    {formatDate(c.creditDate)}
+                                  </RelatedCreditDate>
+                                </div>
+                              </RelatedCardLeft>
+                              <RelatedCreditStatus $status={c.status}>{c.status}</RelatedCreditStatus>
+                            </RelatedCreditCard>
+                          ))}
+                        </RelatedCreditsList>
+                      ) : (
+                        <EmptyState>
+                          <SearchOffOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                          <EmptyStateText>Других договоров у поручителя нет</EmptyStateText>
+                        </EmptyState>
+                      )}
+                    </TabPanel>
+                  )
+                }
+              ]}
+            />
 
-              <CustomTable                         
-                columns={[
-                  { name: "Название" },
-                  { name: "Стоимость", align: "right" },
-                  { name: "Надбавка", align: "right" },
-                  { name: "Цена", align: "right" },
-                ]} 
-                data={formatSoldProductsData(soldProductsData)}
-              />
-
-              <Value style={{margin: "10px 0 15px"}}>
-                {creditData && creditData.firstPayment != 0 &&`Первоначальный взнос, руб:${'\u00A0'.repeat(10)}${formatMoney(creditData.firstPayment.toString())}`}
-              </Value>
-              {paymentsData?.items && paymentsData.items.length > 0 && (
-                <>
-                  <ModalInfoTitle>Платежи</ModalInfoTitle>
-                  <CustomTable                         
-                    columns={[
-                      { name: "Дата", align: "left" },
-                      { name: "Сумма", align: "right" },
-                      { name: "Тип платежа" },
-                      { name: "Платёж принял" },
-                      { name: "Подтверждён" },                
-                    ]} 
-                    data={formatPaymentsData(paymentsData?.items)}
-                  />
-                </>
-              )}
-
-              <ModalInfoTitle style={{marginTop: "15px"}}>График платежей</ModalInfoTitle>
-              <CustomTable
-                columns={[
-                  { name: "ID", isHidden: true },
-                  { name: "Дата", align: "left" },
-                  { name: "Сумма", align: "right" },
-                  { name: "Примечание" },
-                  { name: "Статус", align: "center" },
-                ]}
-                data={formatSchedulesData(scheduleData?.items)}
-                rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
-                  acc[index] = getScheduleRowStyle(schedule, index);
-                  return acc;
-                }, {} as { [key: number]: any }) || {}}
-                contextMenuActions={scheduleTableActions}
-                onRowDoubleClick={handleOpenPaymentFromSchedule}
-                multiSelect
-                selectedRow={selectedScheduleRows}
-                onMultiSelectChange={setSelectedScheduleRows}
-              />
-            </div>
             </LeftColumn>
 
             <RightColumn>
@@ -1296,6 +1572,312 @@ const FileName = styled.span`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+const HeaderRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+`;
+
+const HeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const HeaderSubtitle = styled.div`
+  font-size: 14px;
+  color: rgba(80, 85, 92, 1);
+`;
+
+const statusPalette: Record<CreditStatusKey, { bg: string; border: string; color: string }> = {
+  active: { bg: '#E0F2F1', border: '#80CBC4', color: '#00695C' },
+  overdue: { bg: '#FFEBEE', border: '#EF9A9A', color: '#B71C1C' },
+  closed: { bg: '#ECEFF1', border: '#CFD8DC', color: '#455A64' },
+};
+
+const StatusBadge = styled.span<{ $status: CreditStatusKey }>`
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: ${({ $status }) => statusPalette[$status].bg};
+  color: ${({ $status }) => statusPalette[$status].color};
+  border: 1px solid ${({ $status }) => statusPalette[$status].border};
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+`;
+
+const SummaryHeader = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin-bottom: 20px;
+`;
+
+type SummaryVariant = 'default' | 'danger';
+type SummaryAccent = 'default' | 'info' | 'danger';
+
+const summaryCardPalette: Record<SummaryVariant, { bg: string; border: string }> = {
+  default: { bg: '#FFFFFF', border: '#E2E8F0' },
+  danger: { bg: '#FFF5F5', border: '#FECACA' },
+};
+
+const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> = {
+  default: { bg: 'rgba(0, 125, 136, 0.1)', color: '#007D88' },
+  info: { bg: 'rgba(59, 130, 246, 0.1)', color: '#2563EB' },
+  danger: { bg: 'rgba(239, 68, 68, 0.1)', color: '#B71C1C' },
+};
+
+const SummaryCard = styled.div<{ $variant?: SummaryVariant }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: ${({ $variant = 'default' }) => summaryCardPalette[$variant].bg};
+  border: 1px solid ${({ $variant = 'default' }) => summaryCardPalette[$variant].border};
+  border-radius: 10px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+`;
+
+const SummaryIcon = styled.div<{ $accent?: SummaryAccent }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background-color: ${({ $accent = 'default' }) => summaryIconPalette[$accent].bg};
+  color: ${({ $accent = 'default' }) => summaryIconPalette[$accent].color};
+`;
+
+const SummaryItemBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`;
+
+const SummaryLabel = styled.span`
+  font-size: 11px;
+  color: rgba(80, 85, 92, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 2px;
+`;
+
+const SummaryValue = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const TabPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const TabLabelWrapper = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const TabIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  color: currentColor;
+`;
+
+const PersonCard = styled.div`
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  align-items: flex-start;
+`;
+
+const Avatar = styled.div<{ $variant?: 'client' | 'guarantor' }>`
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background-color: ${({ $variant = 'client' }) =>
+    $variant === 'guarantor' ? '#F5A623' : '#007D88'};
+  letter-spacing: 1px;
+`;
+
+const PersonInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+`;
+
+const PersonName = styled.div`
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+`;
+
+const InfoRows = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const InfoRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #000;
+`;
+
+const InfoIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(80, 85, 92, 1);
+  flex-shrink: 0;
+`;
+
+const InfoText = styled.span`
+  color: #000;
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 20px;
+  color: rgba(107, 114, 128, 1);
+`;
+
+const EmptyStateText = styled.div`
+  font-size: 14px;
+  color: rgba(107, 114, 128, 1);
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+
+const SectionIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #007D88;
+`;
+
+const SectionTitle = styled.div`
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+`;
+
+const RelatedCreditsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+`;
+
+const getRelatedStatusColors = (status: string) => {
+  const s = (status || '').toLowerCase();
+  if (s === 'закрытый') return { bg: '#ECEFF1', border: '#CFD8DC', color: '#455A64' };
+  if (s === 'просроченный') return { bg: '#FFEBEE', border: '#EF9A9A', color: '#B71C1C' };
+  return { bg: '#E0F2F1', border: '#80CBC4', color: '#00695C' };
+};
+
+const RelatedCreditCard = styled.div<{ $status: string }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    border-color: ${({ $status }) => getRelatedStatusColors($status).border};
+  }
+`;
+
+const RelatedCardLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+`;
+
+const RelatedCardIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: rgba(0, 125, 136, 0.1);
+  color: #007D88;
+  flex-shrink: 0;
+`;
+
+const RelatedCreditTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+`;
+
+const RelatedCreditDate = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(80, 85, 92, 1);
+  margin-top: 2px;
+`;
+
+const RelatedCreditStatus = styled.span<{ $status: string }>`
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: ${({ $status }) => getRelatedStatusColors($status).bg};
+  color: ${({ $status }) => getRelatedStatusColors($status).color};
+  border: 1px solid ${({ $status }) => getRelatedStatusColors($status).border};
+  white-space: nowrap;
+  text-transform: capitalize;
 `;
 
 const CheckIcon = () => (
