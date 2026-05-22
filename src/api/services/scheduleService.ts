@@ -36,6 +36,10 @@ class ScheduleService {
         await apiClient.put(`/Schedule/${id}`);
     }
 
+    async updateDate(id: number, date: string): Promise<void> {
+        await apiClient.put('/Schedule', { id, date });
+    }
+
     async getPreview(params: SchedulePreviewParams): Promise<ScheduleItem[]> {
         const response = await apiClient.post<ScheduleItem[]>(
             '/Schedule/preview',

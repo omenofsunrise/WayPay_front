@@ -24,6 +24,7 @@ import useCompany from '../../api/hooks/useCompany';
 import PaymentConfirmationGenerator from '../../utils/doxcUtils/paymentConfirmationGenerator';
 import paymentService from '../../api/services/paymentService';
 import NewPaymentModal from './NewPaymentModal';
+import EditScheduleDateModal from './EditScheduleDateModal';
 import { sendWhatsAppMessage } from '../../utils/sendWhatsAppMessage';
 import { formatPhoneHref } from '../../utils/phoneUtils';
 import PhoneLink from '../ui/links/PhoneLink';
@@ -248,11 +249,49 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     getSoldProducts
   } = useSoldProducts();
   
-  const { 
-    scheduleData, 
+  const {
+    scheduleData,
     getByCreditId: getSchedules,
-    markAsNotified
+    markAsNotified,
+    updateDates: updateScheduleDates
   } = useSchedule();
+
+  const [selectedScheduleRows, setSelectedScheduleRows] = useState<number[]>([]);
+  const [editDateModal, setEditDateModal] = useState<{
+    isOpen: boolean;
+    ids: number[];
+    initialDate?: string;
+  }>({ isOpen: false, ids: [] });
+
+  const openEditDateModal = (rowIndex: number) => {
+    if (!scheduleData?.items?.length) return;
+
+    const targetIndices = selectedScheduleRows.includes(rowIndex) && selectedScheduleRows.length > 0
+      ? selectedScheduleRows
+      : [rowIndex];
+
+    const ids = targetIndices
+      .map(idx => scheduleData.items[idx]?.id)
+      .filter((id): id is number => typeof id === 'number');
+
+    if (ids.length === 0) return;
+
+    const firstSchedule = scheduleData.items[targetIndices[0]];
+    const initialDate = ids.length === 1 && firstSchedule?.paymentDate
+      ? new Date(firstSchedule.paymentDate).toISOString()
+      : undefined;
+
+    setEditDateModal({ isOpen: true, ids, initialDate });
+  };
+
+  const handleConfirmEditDate = async (date: string) => {
+    const success = await updateScheduleDates(editDateModal.ids, date);
+    if (success) {
+      setEditDateModal({ isOpen: false, ids: [] });
+      setSelectedScheduleRows([]);
+      await loadSchedules();
+    }
+  };
 
   const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
     try {
@@ -277,6 +316,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       label: 'Добавить платёж',
       action: handleOpenPaymentFromSchedule,
       color: '#008b8b'
+    },
+    {
+      label: selectedScheduleRows.length > 1
+        ? `Изменить дату (${selectedScheduleRows.length})`
+        : 'Изменить дату',
+      action: (_rowData: any[], rowIndex: number) => openEditDateModal(rowIndex),
+      color: '#007D88'
     }
   ];
 
@@ -900,14 +946,14 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               )}
 
               <ModalInfoTitle style={{marginTop: "15px"}}>График платежей</ModalInfoTitle>
-              <CustomTable                         
+              <CustomTable
                 columns={[
                   { name: "ID", isHidden: true },
                   { name: "Дата", align: "left" },
                   { name: "Сумма", align: "right" },
                   { name: "Примечание" },
                   { name: "Статус", align: "center" },
-                ]} 
+                ]}
                 data={formatSchedulesData(scheduleData?.items)}
                 rowStyles={scheduleData?.items?.reduce((acc, schedule, index) => {
                   acc[index] = getScheduleRowStyle(schedule, index);
@@ -915,7 +961,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 }, {} as { [key: number]: any }) || {}}
                 contextMenuActions={scheduleTableActions}
                 onRowDoubleClick={handleOpenPaymentFromSchedule}
-                onRowContextMenu={handleRowContextMenu}
+                multiSelect
+                selectedRow={selectedScheduleRows}
+                onMultiSelectChange={setSelectedScheduleRows}
               />
             </div>
             </LeftColumn>
@@ -948,6 +996,14 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         currentMonthDebt={selectedScheduleForPayment?.paymentAmount || creditData?.currentMonthDebt || 0}
         onPrintReceipt={handlePrintReceipt}
         clientId={creditData?.clientId}
+      />
+
+      <EditScheduleDateModal
+        isOpen={editDateModal.isOpen}
+        ids={editDateModal.ids}
+        initialDate={editDateModal.initialDate}
+        onClose={() => setEditDateModal({ isOpen: false, ids: [] })}
+        onConfirm={handleConfirmEditDate}
       />
 
       <CreateNoteModal

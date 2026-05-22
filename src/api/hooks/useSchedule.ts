@@ -96,6 +96,34 @@ const useSchedule = () => {
         }
     }, []);
 
+    const updateDate = useCallback(async (id: number, date: string): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await scheduleService.updateDate(id, date);
+            return true;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update schedule date');
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const updateDates = useCallback(async (ids: number[], date: string): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await Promise.all(ids.map(id => scheduleService.updateDate(id, date)));
+            return true;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update schedule dates');
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     return {
         isLoading,
         error,
@@ -106,7 +134,9 @@ const useSchedule = () => {
         getByCreditId,
         getById,
         getPreview,
-        markAsNotified
+        markAsNotified,
+        updateDate,
+        updateDates
     };
 };
 
