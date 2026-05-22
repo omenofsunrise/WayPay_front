@@ -19,12 +19,7 @@ const encodeWhatsAppText = (text: string): string => {
 
 const buildWhatsAppUrl = (phone: string | null | undefined, message: string): string => {
     const encodedText = encodeWhatsAppText(message);
-    const params: string[] = [];
-    if (phone) {
-        params.push(`phone=${phone}`);
-    }
-    params.push(`text=${encodedText}`);
-    return `https://api.whatsapp.com/send?${params.join('&')}`;
+    return `https://wa.me/${phone ?? ''}?text=${encodedText}`;
 };
 
 export const sendWhatsAppMessage = async (
