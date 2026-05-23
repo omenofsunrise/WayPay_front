@@ -248,7 +248,6 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
             <HeaderCell>№</HeaderCell>
             <HeaderCell>Название</HeaderCell>
             <HeaderCell>Стоимость</HeaderCell>
-            <HeaderCell>Количество</HeaderCell>
             <HeaderCell>
               Надбавка
               {markupType === 'percent' ? ' (%)' : ' (₽)'}
@@ -344,17 +343,6 @@ const ProductsTable = ({ products, onProductsChange, onTotalSumChange, markupTyp
                       onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="0"
                       min="0"
-                      style={{ border: 'none', padding: '0' }}
-                    />
-                  </BodyCell>
-                  <BodyCell>
-                    <CustomInput
-                      inputType="number"
-                      value={product.quantity || ''}
-                      onChange={(e) => handleInputChange(product.id, 'quantity', e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, product.id)}
-                      placeholder="1"
-                      min="1"
                       style={{ border: 'none', padding: '0' }}
                     />
                   </BodyCell>
