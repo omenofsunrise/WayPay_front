@@ -552,6 +552,10 @@ const WhatsAppSettingsPage: React.FC = () => {
                 <StepIcon>3</StepIcon>
                 <StepText>Нажмите "Связать устройство" и отсканируйте QR код</StepText>
               </QRInstruction>
+              <QRInstruction>
+                <StepIcon>4</StepIcon>
+                <StepText>После успешного подключения перезагрузите страницу!</StepText>
+              </QRInstruction>
               
               {qrStatus === 'CONNECTED' && (
                 <SuccessMessage>
