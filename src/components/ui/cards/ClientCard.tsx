@@ -132,6 +132,35 @@ const ContractTerm = styled.span`
   font-weight: 600;
 `;
 
+const GuarantorCard = styled.div<{ $isClickable?: boolean }>`
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.35);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  cursor: ${props => props.$isClickable ? 'pointer' : 'default'};
+
+  &:hover {
+    ${props => props.$isClickable && `
+      background: rgba(245, 166, 35, 0.2);
+      border-color: #F5A623;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    `}
+  }
+`;
+
+const GuarantorName = styled.span`
+  font-size: 13px;
+  color: #B26A00;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
 const ContractViewBadge = styled.span`
   font-size: 11px;
   color: #007D88;
@@ -269,6 +298,12 @@ const BlacklistBadge = styled.div`
   z-index: 10;
 `;
 
+export interface GuarantorRef {
+  id: number;
+  fullname: string;
+  creditId: number;
+}
+
 export interface Client {
   id: number;
   fullName: string;
@@ -283,6 +318,7 @@ export interface Client {
   creditRestTerms?: string[] | null;
   hasPassportPhoto?: boolean | null;
   blacklist?: boolean;
+  guarantors?: GuarantorRef[] | null;
 }
 
 interface ClientCardProps {
@@ -411,6 +447,15 @@ const ClientCard: React.FC<ClientCardProps> = ({
   const safeCreditIds = client.creditIds || [];
   const safeCreditRestTerms = client.creditRestTerms || [];
   const isBlacklisted = client.blacklist === true;
+  const guarantors = client.guarantors || [];
+  const hasGuarantors = guarantors.length > 0;
+
+  const handleGuarantorClick = (e: React.MouseEvent, creditId: number) => {
+    e.stopPropagation();
+    if (!isNaN(creditId) && creditId > 0) {
+      setSelectedContractModal(creditId);
+    }
+  };
 
   return (
     <>
@@ -526,19 +571,19 @@ const ClientCard: React.FC<ClientCardProps> = ({
               <ContractsHeader>
                 <InfoLabel>Договоры</InfoLabel>
               </ContractsHeader>
-              
+
               <ContractsGrid>
                 {safeCreditIds.map((contractId, index) => {
                   const restTerm = safeCreditRestTerms[index] || '0';
                   const months = parseInt(restTerm) || 0;
                   const isUrgent = months > 0 && months < 3;
-                  
+
                   return (
-                    <ContractCard 
-                      key={index} 
+                    <ContractCard
+                      key={index}
                       $isClickable={true}
                       onClick={(e) => handleContractClick(e, contractId)}
-                      style={isBlacklisted ? { 
+                      style={isBlacklisted ? {
                         background: 'rgba(239, 68, 68, 0.1)',
                         borderColor: '#EF4444'
                       } : {}}
@@ -552,6 +597,33 @@ const ClientCard: React.FC<ClientCardProps> = ({
                     </ContractCard>
                   );
                 })}
+              </ContractsGrid>
+            </ContractsSection>
+          )}
+
+          {hasGuarantors && (
+            <ContractsSection>
+              <ContractsHeader>
+                <InfoLabel>Поручители по договорам</InfoLabel>
+              </ContractsHeader>
+
+              <ContractsGrid>
+                {guarantors.map((g) => (
+                  <GuarantorCard
+                    key={`${g.creditId}-${g.id}`}
+                    $isClickable={true}
+                    onClick={(e) => handleGuarantorClick(e, g.creditId)}
+                  >
+                    <ContractNumber>
+                      №{g.creditId || 'Без номера'}
+                    </ContractNumber>
+                    {g.fullname && (
+                      <GuarantorName title={`ФИО поручителя: ${g.fullname}`}>
+                        {g.fullname}
+                      </GuarantorName>
+                    )}
+                  </GuarantorCard>
+                ))}
               </ContractsGrid>
             </ContractsSection>
           )}

@@ -1,5 +1,11 @@
 import type { PaginationParams } from "./common";
 
+export interface GuarantorRef {
+  id: number;
+  fullname: string;
+  creditId: number;
+}
+
 export interface Client {
   id: number;
   fullName: string;
@@ -13,6 +19,7 @@ export interface Client {
   registrationAddress: string;
   secondPhone?: string;
   hasPassportPhoto?: boolean;
+  guarantors?: GuarantorRef[];
 }
 
 export interface ClientParams extends PaginationParams {

@@ -204,7 +204,8 @@ const ClientSelectModal = ({
     creditIds: client.creditIds || null,
     creditRestTerms: client.creditRestTerms || null,
     hasPassportPhoto: client.hasPassportPhoto || null,
-    blacklist: client.blacklist || false
+    blacklist: client.blacklist || false,
+    guarantors: client.guarantors || null
   });
 
   if (!isOpen) return null;
