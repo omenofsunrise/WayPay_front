@@ -35,7 +35,6 @@ import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined';
-import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import CakeOutlinedIcon from '@mui/icons-material/CakeOutlined';
@@ -53,7 +52,7 @@ interface ViewCreditModalProps {
   onClose: () => void;
 }
 
-type CreditTab = 'client' | 'payments' | 'products' | 'guarantor' | 'notes' | 'related';
+type CreditTab = 'client' | 'payments' | 'products' | 'guarantor' | 'notes';
 
 const ACTIVE_TAB_STORAGE_KEY = 'view_credit_modal_active_tab';
 
@@ -107,7 +106,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [creditData, setCreditData] = useState<Credit | null>(null);
   const [activeTab, setActiveTab] = useState<CreditTab>(() => {
     const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as CreditTab | null;
-    return saved && ['client', 'payments', 'products', 'guarantor', 'notes', 'related'].includes(saved)
+    return saved && ['client', 'payments', 'products', 'guarantor', 'notes'].includes(saved)
       ? saved
       : 'client';
   });
@@ -120,37 +119,53 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
   }, []);
 
+  const getGuarantorClientId = (credit: Credit | null): number | undefined => {
+    if (!credit) return undefined;
+    const raw =
+      credit.guarantorClientId ??
+      credit.guarantorId ??
+      (credit as unknown as { GuarantorClientId?: number }).GuarantorClientId;
+    return typeof raw === 'number' && raw > 0 ? raw : undefined;
+  };
+
   const loadRelatedCredits = useCallback(async () => {
     if (!creditData) return;
     setIsLoadingRelated(true);
     try {
-      const clientPromise = creditData.clientId
-        ? getCreditListByClient(creditData.clientId).catch(() => null)
-        : Promise.resolve(null);
-      const guarantorPromise = creditData.guarantorId
-        ? getCreditListByClient(creditData.guarantorId).catch(() => null)
-        : Promise.resolve(null);
+      if (creditData.clientId) {
+        const clientRes = await getCreditListByClient(creditData.clientId).catch(() => null);
+        setClientCredits(clientRes?.items?.filter(c => c.id !== creditData.id) ?? []);
+      } else {
+        setClientCredits([]);
+      }
 
-      const [clientRes, guarantorRes] = await Promise.all([clientPromise, guarantorPromise]);
-      setClientCredits(clientRes?.items?.filter(c => c.id !== creditData.id) ?? []);
-      setGuarantorCredits(guarantorRes?.items?.filter(c => c.id !== creditData.id) ?? []);
+      const guarantorClientId = getGuarantorClientId(creditData);
+      if (guarantorClientId) {
+        const guarantorRes = await getCreditListByClient(guarantorClientId).catch(() => null);
+        setGuarantorCredits(guarantorRes?.items?.filter(c => c.id !== creditData.id) ?? []);
+      } else {
+        setGuarantorCredits([]);
+      }
     } finally {
       setIsLoadingRelated(false);
     }
   }, [creditData, getCreditListByClient]);
 
   useEffect(() => {
-    if (activeTab === 'related' && creditData && clientCredits === null && guarantorCredits === null) {
+    if (
+      (activeTab === 'client' || activeTab === 'guarantor') &&
+      creditData &&
+      clientCredits === null &&
+      guarantorCredits === null
+    ) {
       loadRelatedCredits();
     }
   }, [activeTab, creditData, clientCredits, guarantorCredits, loadRelatedCredits]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setClientCredits(null);
-      setGuarantorCredits(null);
-    }
-  }, [isOpen]);
+    setClientCredits(null);
+    setGuarantorCredits(null);
+  }, [id, isOpen]);
   const [notes, setNotes] = useState<NoteWithFile[]>([]);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -1013,6 +1028,37 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           </InfoRows>
                         </PersonInfo>
                       </PersonCard>
+
+                      <SectionHeader style={{ marginTop: '24px' }}>
+                        <SectionIcon><DescriptionOutlinedIcon fontSize="small" /></SectionIcon>
+                        <SectionTitle>Договоры клиента</SectionTitle>
+                      </SectionHeader>
+                      {isLoadingRelated ? (
+                        <LoadingText>Загрузка...</LoadingText>
+                      ) : clientCredits && clientCredits.length > 0 ? (
+                        <RelatedCreditsList>
+                          {clientCredits.map(c => (
+                            <RelatedCreditCard key={`c-${c.id}`} $status={c.status}>
+                              <RelatedCardLeft>
+                                <RelatedCardIcon><DescriptionOutlinedIcon fontSize="small" /></RelatedCardIcon>
+                                <div>
+                                  <RelatedCreditTitle>Договор №{c.id}</RelatedCreditTitle>
+                                  <RelatedCreditDate>
+                                    <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
+                                    {formatDate(c.creditDate)}
+                                  </RelatedCreditDate>
+                                </div>
+                              </RelatedCardLeft>
+                              <RelatedCreditStatus $status={c.status}>{c.status}</RelatedCreditStatus>
+                            </RelatedCreditCard>
+                          ))}
+                        </RelatedCreditsList>
+                      ) : (
+                        <EmptyState>
+                          <SearchOffOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                          <EmptyStateText>Других договоров у клиента нет</EmptyStateText>
+                        </EmptyState>
+                      )}
                     </TabPanel>
                   )
                 },
@@ -1101,32 +1147,72 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                   content: (
                     <TabPanel>
                       {creditData?.guarantorFullname ? (
-                        <PersonCard>
-                          <Avatar $variant="guarantor">{getInitials(creditData.guarantorFullname)}</Avatar>
-                          <PersonInfo>
-                            <PersonName>{creditData.guarantorFullname}</PersonName>
-                            <InfoRows>
-                              {creditData.guarantorPhone && (
-                                <InfoRow>
-                                  <InfoIcon><CallOutlinedIcon fontSize="small" /></InfoIcon>
-                                  <InfoText>
-                                    <PhoneLink href={formatPhoneHref(creditData.guarantorPhone)}>
-                                      {creditData.guarantorPhone}
-                                    </PhoneLink>
-                                  </InfoText>
-                                </InfoRow>
-                              )}
-                              {creditData.guarantorBirthdate && (
-                                <InfoRow>
-                                  <InfoIcon><CakeOutlinedIcon fontSize="small" /></InfoIcon>
-                                  <InfoText>
-                                    {new Date(`${creditData.guarantorBirthdate}`).toLocaleDateString('ru-RU')}
-                                  </InfoText>
-                                </InfoRow>
-                              )}
-                            </InfoRows>
-                          </PersonInfo>
-                        </PersonCard>
+                        <>
+                          <PersonCard>
+                            <Avatar $variant="guarantor">{getInitials(creditData.guarantorFullname)}</Avatar>
+                            <PersonInfo>
+                              <PersonName>{creditData.guarantorFullname}</PersonName>
+                              <InfoRows>
+                                {creditData.guarantorPhone && (
+                                  <InfoRow>
+                                    <InfoIcon><CallOutlinedIcon fontSize="small" /></InfoIcon>
+                                    <InfoText>
+                                      <PhoneLink href={formatPhoneHref(creditData.guarantorPhone)}>
+                                        {creditData.guarantorPhone}
+                                      </PhoneLink>
+                                    </InfoText>
+                                  </InfoRow>
+                                )}
+                                {creditData.guarantorBirthdate && (
+                                  <InfoRow>
+                                    <InfoIcon><CakeOutlinedIcon fontSize="small" /></InfoIcon>
+                                    <InfoText>
+                                      {new Date(`${creditData.guarantorBirthdate}`).toLocaleDateString('ru-RU')}
+                                    </InfoText>
+                                  </InfoRow>
+                                )}
+                              </InfoRows>
+                            </PersonInfo>
+                          </PersonCard>
+
+                          <SectionHeader style={{ marginTop: '24px' }}>
+                            <SectionIcon><DescriptionOutlinedIcon fontSize="small" /></SectionIcon>
+                            <SectionTitle>Договоры поручителя</SectionTitle>
+                          </SectionHeader>
+                          {!getGuarantorClientId(creditData) ? (
+                            <EmptyState>
+                              <SearchOffOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                              <EmptyStateText>
+                                Поручитель не является клиентом — связанных договоров нет
+                              </EmptyStateText>
+                            </EmptyState>
+                          ) : isLoadingRelated ? (
+                            <LoadingText>Загрузка...</LoadingText>
+                          ) : guarantorCredits && guarantorCredits.length > 0 ? (
+                            <RelatedCreditsList>
+                              {guarantorCredits.map(c => (
+                                <RelatedCreditCard key={`g-${c.id}`} $status={c.status}>
+                                  <RelatedCardLeft>
+                                    <RelatedCardIcon><DescriptionOutlinedIcon fontSize="small" /></RelatedCardIcon>
+                                    <div>
+                                      <RelatedCreditTitle>Договор №{c.id}</RelatedCreditTitle>
+                                      <RelatedCreditDate>
+                                        <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
+                                        {formatDate(c.creditDate)}
+                                      </RelatedCreditDate>
+                                    </div>
+                                  </RelatedCardLeft>
+                                  <RelatedCreditStatus $status={c.status}>{c.status}</RelatedCreditStatus>
+                                </RelatedCreditCard>
+                              ))}
+                            </RelatedCreditsList>
+                          ) : (
+                            <EmptyState>
+                              <SearchOffOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
+                              <EmptyStateText>Других договоров у поручителя нет</EmptyStateText>
+                            </EmptyState>
+                          )}
+                        </>
                       ) : (
                         <EmptyState>
                           <SearchOffOutlinedIcon style={{ fontSize: 48, color: '#cbd5e0' }} />
@@ -1165,80 +1251,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                     </TabPanel>
                   )
                 },
-                {
-                  id: 'related',
-                  label: <TabLabel icon={<LinkOutlinedIcon fontSize="small" />} label="Связанные договоры" />,
-                  content: (
-                    <TabPanel>
-                      <SectionHeader>
-                        <SectionIcon><PersonOutlineIcon fontSize="small" /></SectionIcon>
-                        <SectionTitle>Договоры клиента</SectionTitle>
-                      </SectionHeader>
-                      {isLoadingRelated ? (
-                        <LoadingText>Загрузка...</LoadingText>
-                      ) : clientCredits && clientCredits.length > 0 ? (
-                        <RelatedCreditsList>
-                          {clientCredits.map(c => (
-                            <RelatedCreditCard key={`c-${c.id}`} $status={c.status}>
-                              <RelatedCardLeft>
-                                <RelatedCardIcon><DescriptionOutlinedIcon fontSize="small" /></RelatedCardIcon>
-                                <div>
-                                  <RelatedCreditTitle>Договор №{c.id}</RelatedCreditTitle>
-                                  <RelatedCreditDate>
-                                    <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
-                                    {formatDate(c.creditDate)}
-                                  </RelatedCreditDate>
-                                </div>
-                              </RelatedCardLeft>
-                              <RelatedCreditStatus $status={c.status}>{c.status}</RelatedCreditStatus>
-                            </RelatedCreditCard>
-                          ))}
-                        </RelatedCreditsList>
-                      ) : (
-                        <EmptyState>
-                          <SearchOffOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
-                          <EmptyStateText>Других договоров у клиента нет</EmptyStateText>
-                        </EmptyState>
-                      )}
-
-                      <SectionHeader style={{ marginTop: '24px' }}>
-                        <SectionIcon><ShieldOutlinedIcon fontSize="small" /></SectionIcon>
-                        <SectionTitle>Договоры поручителя</SectionTitle>
-                      </SectionHeader>
-                      {!creditData?.guarantorId ? (
-                        <EmptyState>
-                          <ShieldOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
-                          <EmptyStateText>Поручитель не указан</EmptyStateText>
-                        </EmptyState>
-                      ) : isLoadingRelated ? (
-                        <LoadingText>Загрузка...</LoadingText>
-                      ) : guarantorCredits && guarantorCredits.length > 0 ? (
-                        <RelatedCreditsList>
-                          {guarantorCredits.map(c => (
-                            <RelatedCreditCard key={`g-${c.id}`} $status={c.status}>
-                              <RelatedCardLeft>
-                                <RelatedCardIcon><DescriptionOutlinedIcon fontSize="small" /></RelatedCardIcon>
-                                <div>
-                                  <RelatedCreditTitle>Договор №{c.id}</RelatedCreditTitle>
-                                  <RelatedCreditDate>
-                                    <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
-                                    {formatDate(c.creditDate)}
-                                  </RelatedCreditDate>
-                                </div>
-                              </RelatedCardLeft>
-                              <RelatedCreditStatus $status={c.status}>{c.status}</RelatedCreditStatus>
-                            </RelatedCreditCard>
-                          ))}
-                        </RelatedCreditsList>
-                      ) : (
-                        <EmptyState>
-                          <SearchOffOutlinedIcon style={{ fontSize: 40, color: '#cbd5e0' }} />
-                          <EmptyStateText>Других договоров у поручителя нет</EmptyStateText>
-                        </EmptyState>
-                      )}
-                    </TabPanel>
-                  )
-                }
               ]}
             />
 
@@ -1601,7 +1613,7 @@ const statusPalette: Record<CreditStatusKey, { bg: string; border: string; color
 
 const StatusBadge = styled.span<{ $status: CreditStatusKey }>`
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   background-color: ${({ $status }) => statusPalette[$status].bg};

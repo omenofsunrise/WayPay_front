@@ -27,6 +27,7 @@ export interface Credit {
     clientPhone: string;
     investorNickname: string;
     guarantorId?: number;
+    guarantorClientId?: number;
     guarantorType?: GuarantorType;
     firstPayment: number;
     accured: number;
