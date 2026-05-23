@@ -18,8 +18,7 @@ import useCredit from '../api/hooks/useCredit';
 import type { CreateCreditRequest, UpdateCreditRequest } from '../api/types/credit';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import type { Investor } from '../api/types/investor';
-import GuarantorModal, { type Guarantor } from '../components/modal/CrudInherited/GuarantorModal';
-import type { GuarantorForm } from '../api/types/client';
+import { type Guarantor } from '../components/modal/CrudInherited/GuarantorModal';
 import Checkbox from '../components/ui/CheckBoxes/Checkbox';
 import type { EntityType } from '../api/types/objectType';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
@@ -70,9 +69,8 @@ const NewCreditPage = () => {
   const [guarantorClient, setGuarantorClient] = useState<Client | null>(null);
   const [investor, setInvestor] = useState<Investor | null>(null);
   const [selectedPool, setSelectedPool] = useState<Investor | null>(null);
-  const [modalType, setModalType] = useState<'client' | 'guarantor' | 'guarantorClient' | 'investor' | null>(null);
+  const [modalType, setModalType] = useState<'client' | 'guarantorClient' | 'investor' | null>(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  const [isGuarantorModalOpen, setIsGuarantorModalOpen] = useState(false);
   const [isGuarantorClientModalOpen, setIsGuarantorClientModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,8 +90,6 @@ const NewCreditPage = () => {
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
   const { createCredit, updateCredit, getCreateCreditRequest, isLoading: isCreditLoading } = useCredit();
-  const [guarantorMenuOpen, setGuarantorMenuOpen] = useState(false);
-  const guarantorMenuRef = useRef<HTMLDivElement>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [objectTypeName, setObjectTypeName] = useState<string>('');
@@ -500,19 +496,6 @@ useEffect(() => {
     setStartPaymentDate(null);
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (guarantorMenuRef.current && !guarantorMenuRef.current.contains(event.target as Node)) {
-        setGuarantorMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   const handleObjectTypeSelect = useCallback((objectType: SelectedObjectType) => {
     setSelectedObjectType(objectType);
     setObjectTypeName(objectType.name);
@@ -524,20 +507,6 @@ useEffect(() => {
       setSelectedObjectType(null);
     }
   }, []);
-
-  const openGuarantorSelectionMenu = () => {
-    setGuarantorMenuOpen(true);
-  };
-
-  const handleSelectExistingClient = () => {
-    setGuarantorMenuOpen(false);
-    openClientModal('guarantorClient');
-  };
-
-  const handleCreateNewGuarantor = () => {
-    setGuarantorMenuOpen(false);
-    openGuarantorModal();
-  };
 
   const handleInDebtChange = useCallback((checked: boolean) => {
     setInDebt(checked);
@@ -954,16 +923,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     }
   };
 
-  const openGuarantorModal = () => {
-    if (guarantor) {
-      setModalType('guarantor');
-      setIsGuarantorModalOpen(true);
-    } else {
-      setModalType('guarantor');
-      setIsGuarantorModalOpen(true);
-    }
-  };
-
   const handleMonthsBlur = (value: string) => {
     const numericValue = Number(value) || 0;
     if (numericValue > 180) {
@@ -975,27 +934,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     setTimeout(() => {
       validateInvestorActivePeriod();
     }, 0);
-  };
-
-  const handleCreateGuarantor = async (guarantorData: Omit<GuarantorForm, 'doc'>): Promise<boolean> => {
-    try {
-      const newGuarantor: Guarantor = {
-        id: Date.now(),
-        fullName: guarantorData.fullName,
-        phone: guarantorData.phone,
-        doc: guarantorData.doc,
-        birthdate: guarantorData.birthdate,
-        address: guarantorData.address
-      };
-      
-      setGuarantor(newGuarantor);
-      setGuarantorClient(null);
-      setIsGuarantorModalOpen(false);
-      return true;
-    } catch (error) {
-      console.error('Ошибка при создании поручителя:', error);
-      return false;
-    }
   };
 
   const getSelectedEntityDisplayName = () => {
@@ -1155,7 +1093,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               primaryValue={guarantorInfo.primaryValue}
               secondaryValue={guarantorInfo.secondaryValue}
               placeholder="Выберите поручителя"
-              onSelect={openGuarantorSelectionMenu}
+              onSelect={() => openClientModal('guarantorClient')}
               onClear={clearGuarantor}
               customIcon={
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1164,28 +1102,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               }
             />
           </EntitySelectWrapper>
-
-          {guarantorMenuOpen && (
-            <ContextMenu ref={guarantorMenuRef}>
-              <ContextMenuItem onClick={handleSelectExistingClient}>
-                <UserIcon>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8 8C10.2091 8 12 6.20914 12 4C12 1.79086 10.2091 0 8 0C5.79086 0 4 1.79086 4 4C4 6.20914 5.79086 8 8 8Z" fill="#50555C"/>
-                    <path d="M8 9.5C4.96243 9.5 2.5 11.9624 2.5 15C2.5 15.2761 2.72386 15.5 3 15.5H13C13.2761 15.5 13.5 15.2761 13.5 15C13.5 11.9624 11.0376 9.5 8 9.5Z" fill="#50555C"/>
-                  </svg>
-                </UserIcon>
-                Выбрать из существующих клиентов
-              </ContextMenuItem>
-              <ContextMenuItem onClick={handleCreateNewGuarantor}>
-                <PlusIcon>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8 1V15M1 8H15" stroke="#50555C" stroke-width="2" stroke-linecap="round"/>
-                  </svg>
-                </PlusIcon>
-                Создать нового поручителя
-              </ContextMenuItem>
-            </ContextMenu>
-          )}
         </FieldGroup>
       </FormRow>
 
@@ -1329,22 +1245,14 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
         onSubmit={handleSelectClient}
-        title={modalType === 'client' ? 'Выбор покупателя' : 'Выбор поручителя из клиентов'}
+        title="Выбор покупателя"
       />
 
       <ClientSelectModal
         isOpen={isGuarantorClientModalOpen}
         onClose={() => setIsGuarantorClientModalOpen(false)}
         onSubmit={handleSelectClient}
-        title="Выбор поручителя из клиентов"
-      />
-
-      <GuarantorModal
-        mode={guarantor ? 'edit' : 'create'}
-        isOpen={isGuarantorModalOpen}
-        onClose={() => setIsGuarantorModalOpen(false)}
-        onSubmit={handleCreateGuarantor}
-        initialData={guarantor || undefined}
+        title="Выбор поручителя"
       />
 
       <InvestorSelectModal
