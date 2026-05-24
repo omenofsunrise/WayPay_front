@@ -518,6 +518,8 @@ const PromoContainer = styled.div`
   padding: 32px;
   text-align: center;
   gap: 16px;
+  box-sizing: border-box;
+  max-width: 100%;
 `;
 
 const PromoIcon = styled.div`
@@ -536,6 +538,8 @@ const PromoDescription = styled.p`
   color: #666;
   font-size: 14px;
   line-height: 1.5;
+  max-width: 100%;
+  overflow-wrap: break-word;
 `;
 
 const PromoButton = styled.button`

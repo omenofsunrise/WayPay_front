@@ -65,14 +65,6 @@ const getCreditStatus = (credit: Credit | null): { key: CreditStatusKey; label: 
   return { key: 'active', label: 'Активный' };
 };
 
-const getInitials = (fullName?: string): string => {
-  if (!fullName) return '?';
-  const parts = fullName.trim().split(/\s+/);
-  const first = parts[0]?.[0] || '';
-  const second = parts[1]?.[0] || '';
-  return (first + second).toUpperCase() || '?';
-};
-
 const TabLabel: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
   <TabLabelWrapper>
     <TabIcon>{icon}</TabIcon>
@@ -997,7 +989,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                   content: (
                     <TabPanel>
                       <PersonCard>
-                        <Avatar>{getInitials(creditData?.clientFullName)}</Avatar>
+                        <Avatar />
                         <PersonInfo>
                           <PersonName>{creditData?.clientFullName || '—'}</PersonName>
                           <InfoRows>
@@ -1094,7 +1086,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                         </EmptyState>
                       )}
 
-                      <ModalInfoTitle style={{ marginTop: '15px' }}>График платежей</ModalInfoTitle>
+                      <ModalInfoTitle style={{ marginTop: '32px', marginBottom: '12px' }}>График платежей</ModalInfoTitle>
                       <CustomTable
                         columns={[
                           { name: "ID", isHidden: true },
@@ -1149,7 +1141,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       {creditData?.guarantorFullname ? (
                         <>
                           <PersonCard>
-                            <Avatar $variant="guarantor">{getInitials(creditData.guarantorFullname)}</Avatar>
+                            <Avatar $variant="guarantor" />
                             <PersonInfo>
                               <PersonName>{creditData.guarantorFullname}</PersonName>
                               <InfoRows>
@@ -1335,23 +1327,25 @@ const TwoColumnLayout = styled.div`
   display: flex;
   gap: 24px;
   height: 100%;
+  min-width: 0;
 `;
 
 const LeftColumn = styled.div`
   flex: 1.5;
+  min-width: 0;
   overflow-y: auto;
   padding-right: 12px;
-  
+
   /* Стилизация скроллбара для левой колонки */
   &::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 3px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 3px;
@@ -1360,13 +1354,16 @@ const LeftColumn = styled.div`
 
 const RightColumn = styled.div`
   flex: 1;
-  min-width: 450px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  
+  overflow: hidden;
+
   /* Фиксируем высоту чата */
   & > div {
     height: 100%;
+    width: 100%;
+    max-width: 100%;
   }
 `;
 
@@ -1724,19 +1721,12 @@ const PersonCard = styled.div`
 `;
 
 const Avatar = styled.div<{ $variant?: 'client' | 'guarantor' }>`
-  width: 64px;
-  height: 64px;
+  width: 4px;
+  align-self: stretch;
   flex-shrink: 0;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: 600;
-  color: #FFFFFF;
+  border-radius: 2px;
   background-color: ${({ $variant = 'client' }) =>
     $variant === 'guarantor' ? '#F5A623' : '#007D88'};
-  letter-spacing: 1px;
 `;
 
 const PersonInfo = styled.div`
