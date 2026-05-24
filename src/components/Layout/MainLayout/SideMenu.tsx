@@ -45,7 +45,6 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
   '/investors-pool': { mainItem: 'investors', subItems: { '/investors-pool': 'investors-pool' } },
-  '/products': { mainItem: 'references', subItems: { '/products': 'products' } },
   '/black-catalog': { mainItem: 'black-catalog' },
   '/registration-requests': { mainItem: 'references', subItems: { '/registration-requests': 'registration-requests' } },
   '/finance': { mainItem: 'finance' },
@@ -125,7 +124,6 @@ const SideMenu = () => {
     'investors': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'investors-report': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'investors-pool': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
-    'products': () => true,
     'black-catalog': () => true,
     'registration-requests': () => isSuperAdminCompany(),
     'finance': () => hasPermission('MANAGE_ACCOUNTING', true),
@@ -256,7 +254,6 @@ const SideMenu = () => {
       'investors': 'Инвесторы',
       'investors-report': 'Отчёт для инвесторов',
       'investors-pool': 'Пулы инвесторов',
-      'products': 'Товары',
       'registration-requests': 'Заявки на регистрацию',
     };
     
@@ -584,62 +581,54 @@ const SideMenu = () => {
             </SubMenu>
           )}
           
-          <MenuItem 
-            onClick={(e) => {
-              if (collapsed) {
-                handleCollapsedMenuClick(e, 'references', true);
-              } else {
-                handleMainMenuItemClick('references', undefined, true);
-              }
-            }}
-            $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'products' ||
-                      selectedSideMenuItem === 'registration-requests'}
-          >
-            <Icon 
-              src={referencesIcon} 
-              $collapsed={collapsed} 
-              $selected={selectedSideMenuItem === 'products' ||
-                        selectedSideMenuItem === 'registration-requests'} 
-            />
-            {!collapsed && (
-              <>
-                <MenuItemText>Справочники</MenuItemText>
-                <ExpandArrow 
-                  width="14" 
-                  height="8" 
-                  viewBox="0 0 14 8" 
-                  fill="none" 
-                  $expanded={expandedItem === 'references'}
-                >
-                  <path 
-                    d="M1 1.32422L7 7.32422L13 1.32422" 
-                    stroke="#50555C" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  />
-                </ExpandArrow>
-              </>
-            )}
-          </MenuItem>
-          
-          {!collapsed && expandedItem === 'references' && (
+          {isSuperAdminCompany() && (
+            <MenuItem
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, 'references', true);
+                } else {
+                  handleMainMenuItemClick('references', undefined, true);
+                }
+              }}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === 'registration-requests'}
+            >
+              <Icon
+                src={referencesIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === 'registration-requests'}
+              />
+              {!collapsed && (
+                <>
+                  <MenuItemText>Справочники</MenuItemText>
+                  <ExpandArrow
+                    width="14"
+                    height="8"
+                    viewBox="0 0 14 8"
+                    fill="none"
+                    $expanded={expandedItem === 'references'}
+                  >
+                    <path
+                      d="M1 1.32422L7 7.32422L13 1.32422"
+                      stroke="#50555C"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </ExpandArrow>
+                </>
+              )}
+            </MenuItem>
+          )}
+
+          {isSuperAdminCompany() && !collapsed && expandedItem === 'references' && (
             <SubMenu>
               <SubMenuLine />
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('products', '/products')}
-                $selected={selectedSideMenuItem === 'products'}
+              <SubMenuItem
+                onClick={() => handleSubMenuItemClick('registration-requests', '/registration-requests')}
+                $selected={selectedSideMenuItem === 'registration-requests'}
               >
-                Товары
+                Заявки на регистрацию
               </SubMenuItem>
-              {(isSuperAdminCompany()) && (
-                <SubMenuItem 
-                  onClick={() => handleSubMenuItemClick('registration-requests', '/registration-requests')}
-                  $selected={selectedSideMenuItem === 'registration-requests'}
-                >
-                  Заявки на регистрацию
-                </SubMenuItem>
-              )}
             </SubMenu>
           )}
 
