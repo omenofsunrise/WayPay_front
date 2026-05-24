@@ -319,12 +319,13 @@ export const BotType = {
   Events: 'Events',
 } as const;
 
-export type BotEventType = 'CreatedCredit' | 'CreatedPayment' | 'ClientBirthdate';
+export type BotEventType = 'CreatedCredit' | 'CreatedPayment' | 'ClientBirthdate' | 'ComingPayment';
 
 export const BotEventType = {
   CreatedCredit: 'CreatedCredit',
   CreatedPayment: 'CreatedPayment',
   ClientBirthdate: 'ClientBirthdate',
+  ComingPayment: 'ComingPayment',
 } as const;
 
 export type BotResponseTextType = 'WhatsAppBotNoClientResponse';
@@ -354,11 +355,12 @@ export interface AddBotResponseRequest {
 export interface SetBotEventRequest {
   botId: number;
   eventType: BotEventType;
+  eventDays?: number | null;
 }
 
 export interface AddBotKeywordRequest {
   botId: number;
-  matchType: 'Exact' | 'Contains' | 'StartsWith';
+  type: 'Exact' | 'Contains' | 'StartsWith';
   keyword: string;
 }
 
@@ -390,6 +392,7 @@ export interface BotResponse {
   botNoClientResponse?: string;
   botType: BotType;
   event?: BotEventType | null;
+  eventDays?: number | null;
 }
 
 export interface GetBotsResponse {

@@ -164,13 +164,16 @@ class WhatsAppService {
     await apiClient.post('/WhatsApp/bot/response', request);
   }
 
-  async setBotEvent(botId: number, eventType: BotEventType): Promise<void> {
-    const request: SetBotEventRequest = { botId, eventType };
+  async setBotEvent(botId: number, eventType: BotEventType, eventDays?: number | null): Promise<void> {
+    const request: SetBotEventRequest =
+      eventType === 'ComingPayment'
+        ? { botId, eventType, eventDays: eventDays ?? null }
+        : { botId, eventType };
     await apiClient.patch('/WhatsApp/bot/event', request);
   }
 
-  async addBotKeyword(botId: number, matchType: AddBotKeywordRequest['matchType'], keyword: string): Promise<BotKeywordResponse> {
-    const request: AddBotKeywordRequest = { botId, matchType, keyword };
+  async addBotKeyword(botId: number, matchType: AddBotKeywordRequest['type'], keyword: string): Promise<BotKeywordResponse> {
+    const request: AddBotKeywordRequest = { botId, type: matchType, keyword };
     const response = await apiClient.post<BotKeywordResponse>('/WhatsApp/bot/keyword', request);
     return response.data;
   }

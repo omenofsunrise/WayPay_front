@@ -20,9 +20,10 @@ const EVENT_LABEL: Record<BotEventType, string> = {
   CreatedCredit: 'Создание рассрочки',
   CreatedPayment: 'Создание платежа',
   ClientBirthdate: 'День рождения клиента',
+  ComingPayment: 'Приближающийся платёж',
 };
 
-const EVENT_OPTIONS: BotEventType[] = ['CreatedCredit', 'CreatedPayment', 'ClientBirthdate'];
+const EVENT_OPTIONS: BotEventType[] = ['CreatedCredit', 'CreatedPayment', 'ClientBirthdate', 'ComingPayment'];
 
 const BotManagementPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
@@ -91,11 +92,13 @@ const BotManagementPage: React.FC = () => {
     isOpen: boolean;
     rule: BotResponse | null;
     eventType: BotEventType;
+    eventDays: string;
     saving: boolean;
   }>({
     isOpen: false,
     rule: null,
     eventType: 'CreatedCredit',
+    eventDays: '',
     saving: false,
   });
 
@@ -295,15 +298,27 @@ const BotManagementPage: React.FC = () => {
       isOpen: true,
       rule,
       eventType: rule.event ?? 'CreatedCredit',
+      eventDays: rule.eventDays != null ? String(rule.eventDays) : '',
       saving: false,
     });
   };
 
   const handleSaveEvent = async () => {
     if (!eventModal.rule) return;
+
+    let eventDays: number | null = null;
+    if (eventModal.eventType === 'ComingPayment') {
+      const parsed = Number(eventModal.eventDays);
+      if (!eventModal.eventDays.trim() || !Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
+        alert('Укажите целое неотрицательное число дней до платежа');
+        return;
+      }
+      eventDays = parsed;
+    }
+
     setEventModal(prev => ({ ...prev, saving: true }));
     try {
-      await setBotEvent(eventModal.rule.id, eventModal.eventType);
+      await setBotEvent(eventModal.rule.id, eventModal.eventType, eventDays);
       await loadRules();
       alert('Событие установлено');
       setEventModal(prev => ({ ...prev, isOpen: false }));
@@ -419,6 +434,9 @@ const BotManagementPage: React.FC = () => {
                   </ResponseLabel>
                   <ResponseText>
                     {rule.event ? EVENT_LABEL[rule.event] : '— Нажмите чтобы выбрать событие —'}
+                    {rule.event === 'ComingPayment' && rule.eventDays != null && (
+                      <> · за {rule.eventDays} дн. до платежа</>
+                    )}
                   </ResponseText>
                 </EventBlock>
               ) : rule.keywords && rule.keywords.length > 0 ? (
@@ -625,6 +643,20 @@ const BotManagementPage: React.FC = () => {
                 ))}
               </Select>
             </FormField>
+
+            {eventModal.eventType === 'ComingPayment' && (
+              <FormField>
+                <Label>За сколько дней до платежа рассылать</Label>
+                <CustomInput
+                  inputType="number"
+                  value={eventModal.eventDays}
+                  onChange={e => setEventModal(prev => ({ ...prev, eventDays: e.target.value }))}
+                  placeholder="Например: 3"
+                  disabled={eventModal.saving}
+                />
+                <FieldHint>Рассылка уйдёт за указанное число дней до даты платежа по графику</FieldHint>
+              </FormField>
+            )}
 
             <ModalActions>
               <GrayButton onClick={() => setEventModal(prev => ({ ...prev, isOpen: false }))} disabled={eventModal.saving}>
@@ -995,6 +1027,13 @@ const Label = styled.label`
   color: #333;
   font-size: 14px;
   text-align: left;
+`;
+
+const FieldHint = styled.div`
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
 `;
 
 const ModalActions = styled.div`

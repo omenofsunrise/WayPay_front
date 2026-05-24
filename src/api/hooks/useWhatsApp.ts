@@ -612,11 +612,11 @@ const useWhatsApp = () => {
     }
   }, []);
 
-  const setBotEvent = useCallback(async (botId: number, eventType: BotEventType): Promise<boolean> => {
+  const setBotEvent = useCallback(async (botId: number, eventType: BotEventType, eventDays?: number | null): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
-      await whatsappService.setBotEvent(botId, eventType);
+      await whatsappService.setBotEvent(botId, eventType, eventDays);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -628,7 +628,7 @@ const useWhatsApp = () => {
 
   const addBotKeyword = useCallback(async (
     botId: number,
-    matchType: AddBotKeywordRequest['matchType'],
+    matchType: AddBotKeywordRequest['type'],
     keyword: string
   ): Promise<BotKeywordResponse | null> => {
     setIsLoading(true);
