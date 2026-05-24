@@ -8,8 +8,7 @@ import CustomInput from '../ui/fields/CustomInput';
 import CustomCalendar from '../ui/fields/CustomCalendar';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import DropdownButton from '../ui/Buttons/DropdownButton';
-import { FiCalendar } from 'react-icons/fi';
+import { loadCalculatorSettings, getCalculationModeLabel } from '../../utils/calculatorSettings';
 
 const formatMoney = (value: string): string => {
   const num = parseFloat(value.replace(/\D/g, '')) || 0;
@@ -56,52 +55,18 @@ interface CalculatorModalProps {
   onClose: () => void;
 }
 
-type CalculationMode = 'standard' | 'after-initial' | 'month-percent';
-
-// Функция для получения сохраненного режима из localStorage
-const getSavedMode = (): CalculationMode => {
-  if (typeof window === 'undefined') return 'standard';
-  
-  try {
-    const savedMode = localStorage.getItem('calculator-mode');
-    if (savedMode && ['standard', 'after-initial', 'month-percent'].includes(savedMode)) {
-      return savedMode as CalculationMode;
-    }
-  } catch (error) {
-    console.error('Error reading from localStorage:', error);
-  }
-  
-  return 'standard';
-};
-
-// Функция для сохранения режима в localStorage
-const saveMode = (mode: CalculationMode): void => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    localStorage.setItem('calculator-mode', mode);
-  } catch (error) {
-    console.error('Error saving to localStorage:', error);
-  }
-};
-
 const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
-  const [selectedMode, setSelectedMode] = useState<CalculationMode>(getSavedMode);
+  const [settings] = useState(() => loadCalculatorSettings());
+  const selectedMode = settings.mode;
   const [formData, setFormData] = useState({
     amount: '',
-    months: '',
+    months: settings.defaultMonths,
     initial: '',
-    percent: '',
-    round: '50',
+    percent: settings.defaultPercent,
+    round: settings.round || '50',
     startDate: getNextMonthDate(),
   });
-  
-  const calculatorMods = [
-    { id: '1', label: 'Стандартный (на всю сумму)', value: 'standard' },
-    { id: '2', label: 'Надбавка после вычета взноса', value: 'after-initial' },
-    { id: '3', label: 'Процент за 1 месяц (x месяцев)', value: 'month-percent' },
-  ];
-  
+
   const [displayAmount, setDisplayAmount] = useState('');
   const [displayInitial, setDisplayInitial] = useState('');
 
@@ -126,11 +91,6 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
-
-  // Сохраняем режим при изменении
-  useEffect(() => {
-    saveMode(selectedMode);
-  }, [selectedMode]);
 
   const generatePdf = async () => {
   return new Promise<Blob>(async (resolve, reject) => {
@@ -223,7 +183,7 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
           font-size: 14px;
           margin: 10px 0 0 0;
         ">
-          ${calculatorMods.find(mode => mode.value === selectedMode)?.label || 'Стандартный'}
+          ${getCalculationModeLabel(selectedMode)}
         </p>
       </div>
 
@@ -504,22 +464,12 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
     onClose();
   };
 
-  const handleModeSelect = (option: any) => {
-    setSelectedMode(option.value as CalculationMode);
-  };
-
   return createPortal(
     <ModalOverlay>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <CancelButton onClick={handleCancel} />
         <TitleField style={{ marginTop: 0, padding: "0 24px 0 24px" }}>
             <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
-              <DropdownButton
-                icon={<FiCalendar />}
-                options={calculatorMods}
-                selectedValue={selectedMode}
-                onSelect={handleModeSelect}
-              />
               <ExportButton
                 onClick={handleExportToPDF}
               />

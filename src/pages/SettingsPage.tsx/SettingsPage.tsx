@@ -11,6 +11,7 @@ import BranchPage from './BranchPage';
 import SenderPage from './SenderPage';
 import AboutPage from '../AboutPage';
 import WhatsAppSettingsPage from './WhatsAppSettingsPage';
+import CalculatorSettingsPage from './CalculatorSettingsPage';
 
 const SettingsPage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -60,16 +61,19 @@ const SettingsPage = () => {
             { id: "Отделения", label: "Отделения" },
             { id: "Рассылка", label: "Рассылка" },
             { id: "WhatsApp", label: "WhatsApp" },
+            { id: "Калькулятор", label: "Калькулятор" },
             { id: "О программе", label: "О программе" }
         );
     } else if (hasRole("админ")) {
         tabs.push(
             { id: "WhatsApp", label: "WhatsApp" },
+            { id: "Калькулятор", label: "Калькулятор" },
             { id: "О программе", label: "О программе" }
         );
     } else {
         tabs.push(
             { id: "WhatsApp", label: "WhatsApp" },
+            { id: "Калькулятор", label: "Калькулятор" },
             { id: "О программе", label: "О программе" }
         );
     }
@@ -97,6 +101,8 @@ const SettingsPage = () => {
                 return <SenderPage />;
             case "WhatsApp":
                 return <WhatsAppSettingsPage />;
+            case "Калькулятор":
+                return <CalculatorSettingsPage />;
             case "О программе":
                 return <AboutPage />;
             default:
