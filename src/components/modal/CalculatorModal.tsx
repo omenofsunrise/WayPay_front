@@ -9,6 +9,12 @@ import CustomCalendar from '../ui/fields/CustomCalendar';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { loadCalculatorSettings, getCalculationModeLabel } from '../../utils/calculatorSettings';
+import {
+  loadCalculatorTemplates,
+  saveCalculatorTemplates,
+  createTemplateId,
+  type CalculatorTemplate,
+} from '../../utils/calculatorTemplates';
 
 const formatMoney = (value: string): string => {
   const num = parseFloat(value.replace(/\D/g, '')) || 0;
@@ -69,6 +75,64 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
 
   const [displayAmount, setDisplayAmount] = useState('');
   const [displayInitial, setDisplayInitial] = useState('');
+
+  const [templates, setTemplates] = useState<CalculatorTemplate[]>(() => loadCalculatorTemplates());
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+
+  const persistTemplates = (next: CalculatorTemplate[]) => {
+    setTemplates(next);
+    saveCalculatorTemplates(next);
+  };
+
+  const handleApplyTemplate = (template: CalculatorTemplate) => {
+    setFormData(prev => ({
+      ...prev,
+      amount: template.amount,
+      months: template.months,
+      initial: template.initial,
+      percent: template.percent,
+      round: template.round,
+      startDate: template.startDate ? new Date(template.startDate) : prev.startDate,
+    }));
+    setDisplayAmount(template.amount ? formatMoney(template.amount) : '');
+    setDisplayInitial(template.initial ? formatMoney(template.initial) : '');
+  };
+
+  const handleStartSavingTemplate = () => {
+    setNewTemplateName('');
+    setIsSavingTemplate(true);
+  };
+
+  const handleCancelSavingTemplate = () => {
+    setIsSavingTemplate(false);
+    setNewTemplateName('');
+  };
+
+  const handleConfirmSaveTemplate = () => {
+    const name = newTemplateName.trim();
+    if (!name) return;
+
+    const template: CalculatorTemplate = {
+      id: createTemplateId(),
+      name,
+      amount: formData.amount,
+      months: formData.months,
+      initial: formData.initial,
+      percent: formData.percent,
+      round: formData.round,
+      startDate: formData.startDate.toISOString(),
+    };
+
+    persistTemplates([...templates, template]);
+    setIsSavingTemplate(false);
+    setNewTemplateName('');
+  };
+
+  const handleDeleteTemplate = (id: string, name: string) => {
+    if (!window.confirm(`Удалить шаблон "${name}"?`)) return;
+    persistTemplates(templates.filter(t => t.id !== id));
+  };
 
   const [results, setResults] = useState({
     monthlyPayment: '0',
@@ -476,6 +540,73 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
             </div>
         </TitleField>
         <ModalContent>
+          <TemplatesBar>
+            <TemplatesLabel>Шаблоны:</TemplatesLabel>
+            <TemplatesChips>
+              {templates.map(template => (
+                <TemplateChip
+                  key={template.id}
+                  type="button"
+                  onClick={() => handleApplyTemplate(template)}
+                  title={`Применить шаблон "${template.name}"`}
+                >
+                  <span>{template.name}</span>
+                  <TemplateDeleteButton
+                    role="button"
+                    aria-label={`Удалить шаблон ${template.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTemplate(template.id, template.name);
+                    }}
+                  >
+                    ×
+                  </TemplateDeleteButton>
+                </TemplateChip>
+              ))}
+
+              {isSavingTemplate ? (
+                <TemplateSaveForm
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleConfirmSaveTemplate();
+                  }}
+                >
+                  <TemplateNameInput
+                    autoFocus
+                    placeholder="Название (напр. Авто)"
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        handleCancelSavingTemplate();
+                      }
+                    }}
+                    maxLength={40}
+                  />
+                  <TemplateActionButton
+                    type="submit"
+                    $variant="primary"
+                    disabled={!newTemplateName.trim()}
+                  >
+                    Сохранить
+                  </TemplateActionButton>
+                  <TemplateActionButton
+                    type="button"
+                    $variant="ghost"
+                    onClick={handleCancelSavingTemplate}
+                  >
+                    Отмена
+                  </TemplateActionButton>
+                </TemplateSaveForm>
+              ) : (
+                <TemplateAddButton type="button" onClick={handleStartSavingTemplate}>
+                  + Сохранить шаблон
+                </TemplateAddButton>
+              )}
+            </TemplatesChips>
+          </TemplatesBar>
+
           <ColumnsContainer>
             <InputsColumn>
               <InputRow>
@@ -677,6 +808,132 @@ const ModalContent = styled.div`
 const ColumnsContainer = styled.div`
   display: flex;
   gap: 42px;
+`;
+
+const TemplatesBar = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(226, 232, 240, 1);
+`;
+
+const TemplatesLabel = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(80, 85, 92, 1);
+  flex-shrink: 0;
+  padding: 6px 0;
+`;
+
+const TemplatesChips = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const TemplateChip = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  background-color: rgba(0, 125, 136, 0.08);
+  color: rgba(0, 125, 136, 1);
+  border: 1px solid rgba(0, 125, 136, 0.25);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(0, 125, 136, 0.16);
+    border-color: rgba(0, 125, 136, 0.4);
+  }
+`;
+
+const TemplateDeleteButton = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(0, 125, 136, 0.7);
+
+  &:hover {
+    background-color: rgba(0, 125, 136, 0.2);
+    color: rgba(0, 125, 136, 1);
+  }
+`;
+
+const TemplateAddButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: transparent;
+  color: rgba(0, 125, 136, 1);
+  border: 1px dashed rgba(0, 125, 136, 0.5);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(0, 125, 136, 0.08);
+  }
+`;
+
+const TemplateSaveForm = styled.form`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const TemplateNameInput = styled.input`
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid rgba(0, 125, 136, 0.5);
+  border-radius: 999px;
+  outline: none;
+  min-width: 180px;
+
+  &:focus {
+    border-color: rgba(0, 125, 136, 1);
+    box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.12);
+  }
+`;
+
+const TemplateActionButton = styled.button<{ $variant: 'primary' | 'ghost' }>`
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+
+  ${({ $variant }) => $variant === 'primary' && `
+    background-color: rgba(0, 125, 136, 1);
+    color: #fff;
+    border: 1px solid rgba(0, 125, 136, 1);
+
+    &:hover { background-color: rgba(0, 105, 115, 1); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  `}
+
+  ${({ $variant }) => $variant === 'ghost' && `
+    background-color: transparent;
+    color: rgba(80, 85, 92, 1);
+    border: 1px solid rgba(209, 213, 219, 1);
+
+    &:hover { background-color: rgba(0, 0, 0, 0.04); }
+  `}
 `;
 
 const InputsColumn = styled.div`
