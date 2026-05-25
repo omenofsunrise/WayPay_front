@@ -1800,11 +1800,14 @@ const DateInputWrapper = styled.div`
 const FormRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
+  padding-top: 4px;
 
   @media (min-width: 768px) {
     flex-direction: row;
+    row-gap: 20px;
+    column-gap: 28px;
   }
 `;
 
