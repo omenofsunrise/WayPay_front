@@ -42,9 +42,49 @@ const CardTitle = styled.h3`
 
 const CardTitleText = styled.span<{ $hasBlacklistBadge?: boolean }>`
   display: inline-block;
+  cursor: copy;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(0, 125, 136, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(0, 125, 136, 0.5);
+    outline-offset: 2px;
+  }
+
   ${props => props.$hasBlacklistBadge && `
     margin-left: 170px; /* Отступ для бейджа */
   `}
+`;
+
+const TitleNameGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+`;
+
+const CopiedBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0f766e;
+  background-color: rgba(0, 125, 136, 0.12);
+  border-radius: 999px;
+  white-space: nowrap;
+  animation: copiedBadgeIn 180ms ease-out;
+
+  @keyframes copiedBadgeIn {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 `;
 
 const InfoGrid = styled.div`
@@ -341,7 +381,28 @@ const ClientCard: React.FC<ClientCardProps> = ({
   const { createPrivateChat } = useChat();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedContractModal, setSelectedContractModal] = useState<number | null>(null);
+  const [isNameCopied, setIsNameCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const copyResetTimer = useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
+    };
+  }, []);
+
+  const handleCopyName = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!client?.fullName) return;
+    try {
+      await navigator.clipboard.writeText(client.fullName);
+      setIsNameCopied(true);
+      if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
+      copyResetTimer.current = window.setTimeout(() => setIsNameCopied(false), 1500);
+    } catch (err) {
+      console.error('Не удалось скопировать ФИО:', err);
+    }
+  };
   
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -477,9 +538,24 @@ const ClientCard: React.FC<ClientCardProps> = ({
         
         <CardContent>
           <CardTitle>
-            <CardTitleText $hasBlacklistBadge={isBlacklisted}>
-              {client.fullName || 'Не указано'}
-            </CardTitleText>
+            <TitleNameGroup>
+              <CardTitleText
+                $hasBlacklistBadge={isBlacklisted}
+                onClick={handleCopyName}
+                title="Скопировать ФИО"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCopyName(e as unknown as React.MouseEvent);
+                  }
+                }}
+              >
+                {client.fullName || 'Не указано'}
+              </CardTitleText>
+              {isNameCopied && <CopiedBadge>Скопировано</CopiedBadge>}
+            </TitleNameGroup>
           </CardTitle>
           
           {showMenu && (
