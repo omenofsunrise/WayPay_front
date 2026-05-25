@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import apiClient, { API_BASE_URL } from '../../api/client';
 import { authStorage } from '../../api/utils/auth-storage';
+
+const PIN_LENGTH = 5;
 
 interface PinCodeModalProps {
   isOpen: boolean;
@@ -26,19 +28,21 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(currentAttempts);
+  const cellRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
     if (isOpen) {
       setPin('');
       setError('');
       setAttempts(0);
+      setTimeout(() => cellRefs.current[0]?.focus(), 0);
     }
   }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin.length !== 5) {
-      setError('Пин-код должен состоять из 5 цифр');
+    if (pin.length !== PIN_LENGTH) {
+      setError(`Пин-код должен состоять из ${PIN_LENGTH} цифр`);
       return;
     }
 
@@ -80,13 +84,61 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
     }
   };
 
-  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (/^\d*$/.test(value) && value.length <= 5) {
-      setPin(value);
-      if (error) setError('');
+  const updatePin = (next: string) => {
+    setPin(next);
+    if (error) setError('');
+  };
+
+  const handleCellChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    if (!raw) {
+      const next = pin.slice(0, index) + pin.slice(index + 1);
+      updatePin(next);
+      return;
+    }
+
+    // If user pastes / types multiple chars into one cell, distribute starting at this index.
+    const chars = raw.split('');
+    const before = pin.slice(0, index);
+    const merged = (before + chars.join('')).slice(0, PIN_LENGTH);
+    updatePin(merged);
+
+    const nextFocus = Math.min(merged.length, PIN_LENGTH - 1);
+    cellRefs.current[nextFocus]?.focus();
+  };
+
+  const handleCellKeyDown = (index: number) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (pin[index]) {
+        const next = pin.slice(0, index) + pin.slice(index + 1);
+        updatePin(next);
+        return;
+      }
+      if (index > 0) {
+        const next = pin.slice(0, index - 1) + pin.slice(index);
+        updatePin(next);
+        cellRefs.current[index - 1]?.focus();
+      }
+      e.preventDefault();
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      cellRefs.current[index - 1]?.focus();
+      e.preventDefault();
+    } else if (e.key === 'ArrowRight' && index < PIN_LENGTH - 1) {
+      cellRefs.current[index + 1]?.focus();
+      e.preventDefault();
     }
   };
+
+  const handleCellPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, PIN_LENGTH);
+    if (!pasted) return;
+    e.preventDefault();
+    updatePin(pasted);
+    const nextFocus = Math.min(pasted.length, PIN_LENGTH - 1);
+    cellRefs.current[nextFocus]?.focus();
+  };
+
+  const isDisabled = mode === 'verify' && attempts >= maxAttempts;
 
   if (!isOpen) return null;
 
@@ -104,29 +156,40 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
           </Description>
           
           <PinForm onSubmit={handleSubmit}>
-            <PinInput
-              type="password"
-              inputMode="numeric"
-              pattern="\d*"
-              maxLength={5}
-              value={pin}
-              onChange={handlePinChange}
-              autoFocus
-              disabled={mode === 'verify' && attempts >= 3}
-            />
-            
+            <PinCells role="group" aria-label="Пин-код">
+              {Array.from({ length: PIN_LENGTH }).map((_, index) => (
+                <PinCell
+                  key={index}
+                  ref={(el) => { cellRefs.current[index] = el; }}
+                  type="password"
+                  inputMode="numeric"
+                  pattern="\d*"
+                  maxLength={1}
+                  autoComplete="one-time-code"
+                  value={pin[index] ?? ''}
+                  onChange={handleCellChange(index)}
+                  onKeyDown={handleCellKeyDown(index)}
+                  onPaste={handleCellPaste}
+                  onFocus={(e) => e.target.select()}
+                  disabled={isDisabled}
+                  $filled={Boolean(pin[index])}
+                  aria-label={`Цифра ${index + 1}`}
+                />
+              ))}
+            </PinCells>
+
             {error && <ErrorText>{error}</ErrorText>}
-            
-            <SubmitButton 
-              type="submit" 
+
+            <SubmitButton
+              type="submit"
               disabled={
-                isLoading || 
-                pin.length !== 5 || 
-                (mode === 'verify' && attempts >= 3)
+                isLoading ||
+                pin.length !== PIN_LENGTH ||
+                isDisabled
               }
             >
-              {isLoading 
-                ? (mode === 'setup' ? 'Сохранение...' : 'Проверка...') 
+              {isLoading
+                ? (mode === 'setup' ? 'Сохранение...' : 'Проверка...')
                 : (mode === 'setup' ? 'Подтвердить' : 'Продолжить')}
             </SubmitButton>
           </PinForm>
@@ -193,22 +256,44 @@ const PinForm = styled.form`
   align-items: center;
 `;
 
-const PinInput = styled.input`
-  width: 150px;
-  padding: 15px;
-  font-size: 24px;
-  text-align: center;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+const PinCells = styled.div`
+  display: flex;
+  gap: 10px;
   margin-bottom: 20px;
-  transition: all 0.2s;
-  background: white;
-  color: black;
-  
+  justify-content: center;
+`;
+
+const PinCell = styled.input<{ $filled: boolean }>`
+  width: 48px;
+  height: 56px;
+  padding: 0;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid ${({ $filled }) => ($filled ? 'rgba(0, 125, 136, 0.5)' : '#e2e8f0')};
+  border-radius: 10px;
+  background: ${({ $filled }) => ($filled ? 'rgba(0, 125, 136, 0.05)' : '#f8fafc')};
+  color: #1f2937;
+  caret-color: rgba(0, 125, 136, 1);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+
   &:focus {
-    border-color: rgba(0, 125, 136, 0.5);
+    border-color: rgba(0, 125, 136, 1);
+    background: white;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 125, 136, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 125, 136, 0.15);
+  }
+
+  &:disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 480px) {
+    width: 44px;
+    height: 52px;
+    font-size: 22px;
   }
 `;
 
