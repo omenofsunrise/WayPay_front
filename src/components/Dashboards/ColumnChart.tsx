@@ -23,15 +23,17 @@ interface ColumnChartProps {
   step: number;
   height?: number | string;
   titleFontSize?: number | string;
+  tooltipAnchor?: 'top' | 'bar';
 }
 
-const ColumnChart: React.FC<ColumnChartProps> = ({ 
-  title, 
-  data, 
-  maxValue, 
-  step, 
+const ColumnChart: React.FC<ColumnChartProps> = ({
+  title,
+  data,
+  maxValue,
+  step,
   height = 300,
-  titleFontSize
+  titleFontSize,
+  tooltipAnchor = 'top',
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -101,8 +103,14 @@ const ColumnChart: React.FC<ColumnChartProps> = ({
                         );
                         })}
                         
-                        {hoveredIndex === index && (
-                        <Tooltip>
+                        {hoveredIndex === index && (tooltipAnchor !== 'bar' || item.total > 0) && (
+                        <Tooltip
+                          $bottomPercent={
+                            tooltipAnchor === 'bar'
+                              ? Math.min(100, (item.total / maxValue) * 100)
+                              : 100
+                          }
+                        >
                             <TooltipContent>
                             <TooltipTitle>Всего: {formatMoney(item.total.toString())}</TooltipTitle>
                             {item.bars.map((bar, barIndex) => (
@@ -257,9 +265,9 @@ const XAxisLabel = styled.span`
   text-align: center;
 `;
 
-const Tooltip = styled.div`
+const Tooltip = styled.div<{ $bottomPercent: number }>`
   position: absolute;
-  bottom: 100%;
+  bottom: ${p => p.$bottomPercent}%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;

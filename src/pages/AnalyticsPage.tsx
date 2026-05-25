@@ -7,9 +7,15 @@ import styled from "styled-components";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import ScatterPlot from "../components/Dashboards/ScatterPlot";
 import ColumnChart from "../components/Dashboards/ColumnChart";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useAnalytic from "../api/hooks/useAnalytic";
+import { useEmployee } from "../api/hooks/useEmployee";
 import type { AnalyticParams, PredefinedPeriod } from "../api/types/analytic";
+
+const SHORT_MONTHS = [
+  'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
+  'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек',
+];
 
 interface BarData {
   name: string;
@@ -38,12 +44,45 @@ const AnalyticsPage = () => {
     debtDynamicData
   } = useAnalytic();
 
+  const { paymentsStats, fetchPaymentsStats } = useEmployee();
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+
   useEffect(() => {
     getAnalyticItems({ predefinedPeriod: period });
     getSellInfo({ predefinedPeriod: period });
     getInvestmentDynamic({ predefinedPeriod: period });
     getDebtDynamic({ predefinedPeriod: period });
   }, [period, getAnalyticItems, getSellInfo, getInvestmentDynamic, getDebtDynamic]);
+
+  useEffect(() => {
+    fetchPaymentsStats(12);
+  }, [fetchPaymentsStats]);
+
+  const monthlyPaymentsData: ChartData[] = useMemo(() => {
+    const byMonth = new Map(
+      paymentsStats
+        .filter(stat => stat.year === currentYear)
+        .map(stat => [stat.month, stat])
+    );
+
+    return Array.from({ length: 12 }, (_, i) => {
+      const month = i + 1;
+      const stat = byMonth.get(month);
+      return {
+        label: SHORT_MONTHS[i],
+        total: stat?.total ?? 0,
+        bars: [
+          { name: 'Неподтверждённые, руб', value: stat?.notAssumed ?? 0, color: 'rgba(209, 213, 219, 1)' },
+          { name: 'Подтверждённые, руб', value: stat?.assumed ?? 0, color: 'rgba(0, 125, 136, 1)' },
+        ],
+      };
+    });
+  }, [paymentsStats, currentYear]);
+
+  const monthlyPaymentsMax = useMemo(
+    () => Math.max(...monthlyPaymentsData.map(d => d.total), 100000),
+    [monthlyPaymentsData]
+  );
 
   const formatNumber = (num: number | undefined): string => {
     if (num === undefined) return '0';
@@ -316,6 +355,20 @@ const handlePeriodChange = (period: string, startDate?: string, endDate?: string
             titleFontSize="20px"
           />
         </ChartSection>
+        <ChartSection>
+          <HorizontalScroll>
+            <MonthlyChartCanvas>
+              <ColumnChart
+                title={`Платежи по месяцам за ${currentYear}`}
+                data={monthlyPaymentsData}
+                maxValue={monthlyPaymentsMax}
+                step={Math.ceil(monthlyPaymentsMax / 5)}
+                titleFontSize="20px"
+                tooltipAnchor="bar"
+              />
+            </MonthlyChartCanvas>
+          </HorizontalScroll>
+        </ChartSection>
       </AnalyticsWrapper>
     </PageLayout>
   );
@@ -340,6 +393,27 @@ const AnalyticsContainer = styled.div`
 
 const ChartSection = styled.div`
   margin: 10px 0;
+`;
+
+const HorizontalScroll = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 125, 136, 0.35);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: rgba(209, 213, 219, 0.4);
+  }
+`;
+
+const MonthlyChartCanvas = styled.div`
+  min-width: 960px;
 `;
 
 export default AnalyticsPage;
