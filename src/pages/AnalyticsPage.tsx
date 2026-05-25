@@ -7,7 +7,6 @@ import styled from "styled-components";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import ScatterPlot from "../components/Dashboards/ScatterPlot";
 import ColumnChart from "../components/Dashboards/ColumnChart";
-import MiniPieChart from "../components/Dashboards/MiniPieChart";
 import { useEffect, useState } from "react";
 import useAnalytic from "../api/hooks/useAnalytic";
 import type { AnalyticParams, PredefinedPeriod } from "../api/types/analytic";
@@ -317,25 +316,6 @@ const handlePeriodChange = (period: string, startDate?: string, endDate?: string
             titleFontSize="20px"
           />
         </ChartSection>
-        <ChartsContainer>
-          <PieChartsContainer>
-            <MiniPieChart
-              title="Колво договоров"
-              total={analyticData?.totalCredits || 0}
-              data={[
-                { name: "Действующие", value: analyticData?.activeCredits || 0, color: "rgba(37, 203, 161, 1)" },
-                { name: "Закрытые", value: (analyticData?.totalCredits || 0) - (analyticData?.activeCredits || 0), color: "rgba(209, 213, 219, 1)" },
-              ]}
-            />
-            <MiniPieChart
-              title="Соотношение продаж и покупок"
-              data={[
-                { name: "Продажи", value: analyticData?.sales || 0, color: "rgba(0, 125, 136, 1)" },
-                { name: "Покупки", value: analyticData?.purchases || 0, color: "rgba(209, 213, 219, 1)" },
-              ]}
-            />
-          </PieChartsContainer>
-        </ChartsContainer>
       </AnalyticsWrapper>
     </PageLayout>
   );
@@ -358,29 +338,8 @@ const AnalyticsContainer = styled.div`
   box-sizing: border-box;
 `;
 
-const ChartsContainer = styled.div`
-  display: flex;
-  gap: 24px;
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 24px;
-`;
-
 const ChartSection = styled.div`
   margin: 10px 0;
-`;
-
-const PieChartsContainer = styled.div`
-  flex: 1;
-  display: flex;
-  gap: 16px;
-`;
-
-const ChartSection2 = styled.div`
-  flex: 1;
-  display: flex; 
-  flex-direction: row;
-  gap: 16px;
 `;
 
 export default AnalyticsPage;
