@@ -1,12 +1,10 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useEffect, useState, type ChangeEvent, useCallback, useRef } from 'react';
+import { useEffect, useState, type ChangeEvent, useCallback, useMemo } from 'react';
 import CustomTitle from '../components/ui/Text/CustomTitle';
-import TitleField from '../components/ui/Layouts/TitleLayout';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import GrayButton from '../components/ui/Buttons/GrayButton';
-import ModalInfoTitle from '../components/ui/Text/ModalInfoTitle';
 import EntitySelectContainer from '../components/ui/Layouts/EntitySelectContainer';
 import ClientSelectModal from '../components/modal/CrudInherited/ClientSelectModal';
 import InvestorSelectModal from '../components/modal/CrudInherited/InvestorSelectModal';
@@ -24,6 +22,16 @@ import type { EntityType } from '../api/types/objectType';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import { formatMoney } from '../utils/formatPrice';
 import DateModalInput from '../components/ui/fields/DateModalInput';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 const TURN_OF_ROUNDING_KEY = 'turn_of_rounding';
@@ -982,264 +990,390 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
 
   const guarantorInfo = getGuarantorDisplayInfo();
 
+  const initialPaymentNumeric = useMemo(
+    () => (initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0),
+    [initialPaymentAmount, parseAmount]
+  );
+
+  const monthlyPayment = useMemo(() => {
+    if (!previewData || previewData.length === 0) return 0;
+    const scheduledOnly = previewData.filter(p => p.paymentAmount > 0);
+    if (scheduledOnly.length === 0) return 0;
+    const total = scheduledOnly.reduce((sum, p) => sum + p.paymentAmount, 0);
+    return Math.round(total / scheduledOnly.length);
+  }, [previewData]);
+
+  const totalRepayment = useMemo(() => {
+    const scheduled = (previewData ?? []).reduce((sum, p) => sum + p.paymentAmount, 0);
+    return scheduled + initialPaymentNumeric;
+  }, [previewData, initialPaymentNumeric]);
+
+  const overpayment = useMemo(() => {
+    if (totalRepayment <= 0 || totalSum <= 0) return 0;
+    return Math.max(0, totalRepayment - totalSum);
+  }, [totalRepayment, totalSum]);
+
   return (
     <PageLayout>
-      <TitleField style={{ marginTop: "0" }}>
+      <PageHeader>
         <CustomTitle>{isEditMode ? 'Редактирование договора' : 'Новый договор'}</CustomTitle>
-        <DarkCyanButton onClick={resetDraft}>Сбросить черновик</DarkCyanButton>
-      </TitleField>
+        {hasDraft && !isEditMode && (
+          <HeaderActions>
+            <GrayButton onClick={resetDraft}>Сбросить черновик</GrayButton>
+          </HeaderActions>
+        )}
+      </PageHeader>
 
-      <ContentWrapper>
-        <CheckboxContainer>
-          <ModalInfoTitle>Основная информация</ModalInfoTitle>
-          <Checkbox 
-            label='Договор в долг'
-            checked={inDebt} 
-            onChange={handleInDebtChange} 
-          />
-        </CheckboxContainer>
-        
-        <FormRow>
-          <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
-            <Label>Дата</Label>
-            <DateInputWrapper>
-              <CustomCalendar 
-                value={contractDate} 
-                onChange={handleContractDateChange}
-              />
-            </DateInputWrapper>
-          </FieldGroup>
+      <SummaryGrid>
+        <SummaryCard>
+          <SummaryIcon $accent="default">
+            <AttachMoneyOutlinedIcon fontSize="small" />
+          </SummaryIcon>
+          <SummaryItemBody>
+            <SummaryLabel>Сумма товаров</SummaryLabel>
+            <SummaryValue>{totalSum > 0 ? formatMoney(totalSum.toString()) : '—'}</SummaryValue>
+          </SummaryItemBody>
+        </SummaryCard>
 
-            {!inDebt ? (
-              <>
-                <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
+        <SummaryCard>
+          <SummaryIcon $accent="info">
+            <AccountBalanceWalletOutlinedIcon fontSize="small" />
+          </SummaryIcon>
+          <SummaryItemBody>
+            <SummaryLabel>Первый взнос</SummaryLabel>
+            <SummaryValue>
+              {initialPaymentNumeric > 0
+                ? `${formatMoney(initialPaymentNumeric.toString())}${initialPaymentPercent ? ` · ${initialPaymentPercent}%` : ''}`
+                : '—'}
+            </SummaryValue>
+          </SummaryItemBody>
+        </SummaryCard>
 
-                <Label>Инвестор / Пул</Label>
-                <EntitySelectWrapper>
-                  <EntitySelectContainer
-                    mode="create"
-                    primaryValue={getSelectedEntityDisplayName()}
-                    secondaryValue={getSelectedEntityPhone()}
-                    placeholder="Выберите инвестора или пул"
-                    onSelect={openInvestorModal}
-                    onClear={clearSelectedEntity}
+        <SummaryCard>
+          <SummaryIcon $accent="default">
+            <CalendarMonthOutlinedIcon fontSize="small" />
+          </SummaryIcon>
+          <SummaryItemBody>
+            <SummaryLabel>Срок</SummaryLabel>
+            <SummaryValue>{months ? `${months} мес.` : '—'}</SummaryValue>
+          </SummaryItemBody>
+        </SummaryCard>
+
+        <SummaryCard>
+          <SummaryIcon $accent="info">
+            <TrendingUpOutlinedIcon fontSize="small" />
+          </SummaryIcon>
+          <SummaryItemBody>
+            <SummaryLabel>Ежемесячный платёж</SummaryLabel>
+            <SummaryValue>{monthlyPayment > 0 ? formatMoney(monthlyPayment.toString()) : '—'}</SummaryValue>
+          </SummaryItemBody>
+        </SummaryCard>
+
+        {overpayment > 0 && (
+          <SummaryCard $variant="danger">
+            <SummaryIcon $accent="danger">
+              <WarningAmberOutlinedIcon fontSize="small" />
+            </SummaryIcon>
+            <SummaryItemBody>
+              <SummaryLabel>Переплата</SummaryLabel>
+              <SummaryValue>{formatMoney(overpayment.toString())}</SummaryValue>
+            </SummaryItemBody>
+          </SummaryCard>
+        )}
+      </SummaryGrid>
+
+      <ContentStack>
+        <SectionCard $accent="teal">
+          <SectionAccentBar $accent="teal" />
+          <SectionBody>
+            <SectionTopRow>
+              <SectionHeader>
+                <SectionIcon><DescriptionOutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionTitle>Основная информация</SectionTitle>
+              </SectionHeader>
+              <SettingsCard>
+                <Checkbox
+                  label="Договор в долг"
+                  checked={inDebt}
+                  onChange={handleInDebtChange}
+                />
+              </SettingsCard>
+            </SectionTopRow>
+
+            <FormRow>
+              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
+                <Label>Дата</Label>
+                <DateInputWrapper>
+                  <CustomCalendar
+                    value={contractDate}
+                    onChange={handleContractDateChange}
                   />
-                </EntitySelectWrapper>
-                </FieldGroup>
-              </>
-            ):
-            <>
-              <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
-
-                <Label>Комментарий к долгу</Label>
-                <EntitySelectWrapper>
-                  <CustomInput
-                    placeholder="Кем выдан долг"
-                    value={debtComment}
-                    onChange={(e) => setDebtComment(e.target.value)}
-                  />
-                </EntitySelectWrapper>
+                </DateInputWrapper>
               </FieldGroup>
-            </>}
+
+              {!inDebt ? (
+                <FieldGroup style={{ maxWidth: '365px', width: '100%' }}>
+                  <Label>Инвестор / Пул</Label>
+                  <EntitySelectWrapper>
+                    <EntitySelectContainer
+                      mode="create"
+                      primaryValue={getSelectedEntityDisplayName()}
+                      secondaryValue={getSelectedEntityPhone()}
+                      placeholder="Выберите инвестора или пул"
+                      onSelect={openInvestorModal}
+                      onClear={clearSelectedEntity}
+                    />
+                  </EntitySelectWrapper>
+                </FieldGroup>
+              ) : (
+                <FieldGroup style={{ maxWidth: '365px', width: '100%' }}>
+                  <Label>Комментарий к долгу</Label>
+                  <EntitySelectWrapper>
+                    <CustomInput
+                      placeholder="Кем выдан долг"
+                      value={debtComment}
+                      onChange={(e) => setDebtComment(e.target.value)}
+                    />
+                  </EntitySelectWrapper>
+                </FieldGroup>
+              )}
+
+              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
+                <Label>Имя договора (необязательно)</Label>
+                <DateInputWrapper>
+                  <CustomInput
+                    inputType="text"
+                    placeholder="Имя договора"
+                    value={creditName}
+                    onChange={(e) => setCreditName(e.target.value)}
+                  />
+                </DateInputWrapper>
+              </FieldGroup>
+
+              <FieldGroup style={{ maxWidth: '265px', width: '100%' }}>
+                <Label>Папка (необязательно)</Label>
+                <ObjectTypeSelect
+                  value={objectTypeName}
+                  onChange={handleObjectTypeNameChange}
+                  onObjectTypeSelect={handleObjectTypeSelect}
+                  placeholder="Выберите тип договора"
+                  entityType="credit"
+                />
+              </FieldGroup>
+            </FormRow>
+
             {validationError && (
               <ValidationError>{validationError}</ValidationError>
             )}
+          </SectionBody>
+        </SectionCard>
 
-          <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
-            <Label>Имя договора (необязательно)</Label>
-            <DateInputWrapper>
-              <CustomInput 
-                inputType="text"
-                placeholder="Имя договора" 
-                value={creditName}
-                onChange={(e) => setCreditName(e.target.value)}
-              />
-            </DateInputWrapper>
-          </FieldGroup>
-
-          <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
-            <Label>Папка (необязательно)</Label>
-            <ObjectTypeSelect
-              value={objectTypeName}
-              onChange={handleObjectTypeNameChange}
-              onObjectTypeSelect={handleObjectTypeSelect}
-              placeholder="Выберите тип договора"
-              entityType="credit"
-            />
-          </FieldGroup>
-        </FormRow>
-            
-        <ModalInfoTitle>Сведения о покупателе</ModalInfoTitle>
-        <FormRow>
-          <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
-            <Label>Покупатель</Label>
-            <EntitySelectWrapper>
-              <EntitySelectContainer
-                mode="create"
-                primaryValue={client?.fullName || ''}
-                secondaryValue={client?.phone}
-                placeholder="Выберите покупателя"
-                onSelect={() => openClientModal('client')}
-                onClear={() => setClient(null)}
-              />
-            </EntitySelectWrapper>
-          </FieldGroup>
-
-          <FieldGroup style={{ maxWidth: "465px", width: "100%" }}>
-          <Label>Поручитель (не обязательно)</Label>
-          <EntitySelectWrapper>
-            <EntitySelectContainer
-              mode="create"
-              primaryValue={guarantorInfo.primaryValue}
-              secondaryValue={guarantorInfo.secondaryValue}
-              placeholder="Выберите поручителя"
-              onSelect={() => openClientModal('guarantorClient')}
-              onClear={clearGuarantor}
-              customIcon={
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-              }
-            />
-          </EntitySelectWrapper>
-        </FieldGroup>
-      </FormRow>
-
-        <ModalInfoTitle>
-          Список товаров
-          <MarkupTypeToggleContainer>
-            <MarkupTypeToggle
-              active={markupType === 'percent'}
-              onClick={() => handleMarkupTypeChange('percent')}
-            >
-              %
-            </MarkupTypeToggle>
-            <MarkupTypeToggle
-              active={markupType === 'fixed'}
-              onClick={() => handleMarkupTypeChange('fixed')}
-            >
-              ₽
-            </MarkupTypeToggle>
-          </MarkupTypeToggleContainer>
-        </ModalInfoTitle>
-
-        <ProductsTableWrapper>
-          <ProductsTable 
-            products={products} 
-            onProductsChange={setProducts}
-            onTotalSumChange={setTotalSum}
-            markupType={markupType}
-            onMarkupTypeChange={setMarkupType}
-          />
-        </ProductsTableWrapper>
-        <TotalSumContainer>
-          Итого товаров на сумму: {formatMoney(totalSum.toString())}
-          <Checkbox 
-            label='Отключить округление'
-            checked={turnOfRounding} 
-            onChange={handleTurnOfRoundingChange} 
-          />
-        </TotalSumContainer>
-
-        <CheckboxContainer>
-          <ModalInfoTitle style={{marginRight: '32px'}}>График выплат</ModalInfoTitle>
-        </CheckboxContainer>
-
-        <PaymentScheduleContainer>
-          <PaymentScheduleInputs>
-            <InputGroup>
-              <InputRow>
-                <InputLabel style={{ flex: 1 }}>Первоначальный взнос, %</InputLabel>
-                <InputLabel style={{ flex: 1 }}>Сумма</InputLabel>
-              </InputRow>
-              <InputRow>
-                <CustomInput 
-                  inputType="number" 
-                  placeholder="%" 
-                  value={initialPaymentPercent}
-                  onChange={handlePercentChange}
-                  max={100}
+        <PersonRow>
+          <SectionCard $accent="teal">
+            <SectionAccentBar $accent="teal" />
+            <SectionBody>
+              <SectionHeader>
+                <SectionIcon><PersonOutlineIcon fontSize="small" /></SectionIcon>
+                <SectionTitle>Покупатель</SectionTitle>
+              </SectionHeader>
+              <EntitySelectWrapper>
+                <EntitySelectContainer
+                  mode="create"
+                  primaryValue={client?.fullName || ''}
+                  secondaryValue={client?.phone}
+                  placeholder="Выберите покупателя"
+                  onSelect={() => openClientModal('client')}
+                  onClear={() => setClient(null)}
                 />
-                <CustomInput 
-                  inputType="rubles"
-                  placeholder="Сумма" 
-                  value={initialPaymentAmount}
-                  onChange={handleAmountChange}
-                  disabled={totalSum <= 0}
+              </EntitySelectWrapper>
+            </SectionBody>
+          </SectionCard>
+
+          <SectionCard $accent="orange">
+            <SectionAccentBar $accent="orange" />
+            <SectionBody>
+              <SectionHeader>
+                <SectionIcon $accent="orange"><ShieldOutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionTitle>Поручитель <SectionOptional>(не обязательно)</SectionOptional></SectionTitle>
+              </SectionHeader>
+              <EntitySelectWrapper>
+                <EntitySelectContainer
+                  mode="create"
+                  primaryValue={guarantorInfo.primaryValue}
+                  secondaryValue={guarantorInfo.secondaryValue}
+                  placeholder="Выберите поручителя"
+                  onSelect={() => openClientModal('guarantorClient')}
+                  onClear={clearGuarantor}
+                  customIcon={
+                    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  }
                 />
-              </InputRow>
-            </InputGroup>
-            <InputGroup>
-              <InputRow>
-                <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
-                <InputLabel style={{ flex: 1 }}>Начало выплат</InputLabel>
-              </InputRow>
-              <InputRow>
-                <CustomInput 
-                  inputType="number"
-                  placeholder="Месяцев" 
-                  value={months}
-                  onChange={(e) => setMonths(e.target.value.replace(/[^0-9]/g, ''))}
-                  onBlur={(e) => handleMonthsBlur(e.target.value)}
-                  style={{ flex: 1 }}
-                  min="1"
-                  max="60"
-                />
-                <DateModalInput
-                  onChange={(e) => setStartPaymentDate(e)}
-                  value={startPaymentDate}
-                />
-              </InputRow>
-            </InputGroup>
-            <InputGroup style={{ margin: 0 }}>
-            {submitError && (
-              <SubmitErrorBanner role="alert" aria-live="assertive">
-                <SubmitErrorIcon aria-hidden="true">
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M10 1.667a8.333 8.333 0 1 0 0 16.666 8.333 8.333 0 0 0 0-16.666Zm0 4.166a.833.833 0 0 1 .833.834v3.333a.833.833 0 1 1-1.666 0V6.667A.833.833 0 0 1 10 5.833Zm0 8.334a1.042 1.042 0 1 1 0-2.084 1.042 1.042 0 0 1 0 2.084Z" fill="currentColor"/>
-                  </svg>
-                </SubmitErrorIcon>
-                <SubmitErrorContent>
-                  <SubmitErrorTitle>
-                    {isEditMode ? 'Не удалось сохранить изменения' : 'Не удалось создать договор'}
-                  </SubmitErrorTitle>
-                  <SubmitErrorMessage>{submitError}</SubmitErrorMessage>
-                </SubmitErrorContent>
-                <SubmitErrorClose
+              </EntitySelectWrapper>
+            </SectionBody>
+          </SectionCard>
+        </PersonRow>
+
+        <SectionCard $accent="teal">
+          <SectionAccentBar $accent="teal" />
+          <SectionBody>
+            <SectionTopRow>
+              <SectionHeader>
+                <SectionIcon><Inventory2OutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionTitle>Список товаров</SectionTitle>
+              </SectionHeader>
+              <MarkupPillContainer role="group" aria-label="Тип наценки">
+                <MarkupPill
                   type="button"
-                  onClick={() => setSubmitError(null)}
-                  aria-label="Закрыть сообщение об ошибке"
+                  $active={markupType === 'percent'}
+                  onClick={() => handleMarkupTypeChange('percent')}
+                  aria-pressed={markupType === 'percent'}
                 >
-                  ×
-                </SubmitErrorClose>
-              </SubmitErrorBanner>
-            )}
-            <ButtonWrapper style={{ margin: 5 }}>
-              <GrayButton onClick={() => navigate(-1)}>
-                Отменить
-              </GrayButton>
-                <DarkCyanButton
-                  style={{ marginRight: 'auto' }}
-                  disabled={!isFormValid || isScheduleLoading || isCreditLoading}
-                  onClick={handleCreateOrUpdateCredit}
+                  %
+                </MarkupPill>
+                <MarkupPill
+                  type="button"
+                  $active={markupType === 'fixed'}
+                  onClick={() => handleMarkupTypeChange('fixed')}
+                  aria-pressed={markupType === 'fixed'}
                 >
-                  {isScheduleLoading || isCreditLoading
-                    ? 'Загрузка...'
-                    : isEditMode
-                      ? 'Сохранить изменения'
-                      : 'Создать договор'}
-                </DarkCyanButton>
-            </ButtonWrapper>
-            </InputGroup>
-          </PaymentScheduleInputs>
-          <PaymentScheduleTableWrapper>
-            <PaymentScheduleTable 
-              data={paymentSchedule} 
-              isLoading={isScheduleLoading} 
-            />
-          </PaymentScheduleTableWrapper>
-        </PaymentScheduleContainer>
-      </ContentWrapper>
+                  ₽
+                </MarkupPill>
+              </MarkupPillContainer>
+            </SectionTopRow>
+
+            <ProductsTableWrapper>
+              <ProductsTable
+                products={products}
+                onProductsChange={setProducts}
+                onTotalSumChange={setTotalSum}
+                markupType={markupType}
+                onMarkupTypeChange={setMarkupType}
+              />
+            </ProductsTableWrapper>
+
+            <TotalSumRow>
+              <TotalSumGroup>
+                <TotalSumLabel>Итого товаров на сумму</TotalSumLabel>
+                <TotalSumValue>{formatMoney(totalSum.toString())}</TotalSumValue>
+              </TotalSumGroup>
+              <SettingsCard>
+                <Checkbox
+                  label="Отключить округление"
+                  checked={turnOfRounding}
+                  onChange={handleTurnOfRoundingChange}
+                />
+              </SettingsCard>
+            </TotalSumRow>
+          </SectionBody>
+        </SectionCard>
+
+        <SectionCard $accent="teal">
+          <SectionAccentBar $accent="teal" />
+          <SectionBody>
+            <SectionHeader>
+              <SectionIcon><PaymentsOutlinedIcon fontSize="small" /></SectionIcon>
+              <SectionTitle>График выплат</SectionTitle>
+            </SectionHeader>
+
+            <PaymentScheduleContainer>
+              <PaymentScheduleInputs>
+                <InputGroup>
+                  <InputRow>
+                    <InputLabel style={{ flex: 1 }}>Первоначальный взнос, %</InputLabel>
+                    <InputLabel style={{ flex: 1 }}>Сумма</InputLabel>
+                  </InputRow>
+                  <InputRow>
+                    <CustomInput
+                      inputType="number"
+                      placeholder="%"
+                      value={initialPaymentPercent}
+                      onChange={handlePercentChange}
+                      max={100}
+                    />
+                    <CustomInput
+                      inputType="rubles"
+                      placeholder="Сумма"
+                      value={initialPaymentAmount}
+                      onChange={handleAmountChange}
+                      disabled={totalSum <= 0}
+                    />
+                  </InputRow>
+                </InputGroup>
+                <InputGroup>
+                  <InputRow>
+                    <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
+                    <InputLabel style={{ flex: 1 }}>Начало выплат</InputLabel>
+                  </InputRow>
+                  <InputRow>
+                    <CustomInput
+                      inputType="number"
+                      placeholder="Месяцев"
+                      value={months}
+                      onChange={(e) => setMonths(e.target.value.replace(/[^0-9]/g, ''))}
+                      onBlur={(e) => handleMonthsBlur(e.target.value)}
+                      style={{ flex: 1 }}
+                      min="1"
+                      max="60"
+                    />
+                    <DateModalInput
+                      onChange={(e) => setStartPaymentDate(e)}
+                      value={startPaymentDate}
+                    />
+                  </InputRow>
+                </InputGroup>
+
+                {submitError && (
+                  <SubmitErrorBanner role="alert" aria-live="assertive">
+                    <SubmitErrorIcon aria-hidden="true">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 1.667a8.333 8.333 0 1 0 0 16.666 8.333 8.333 0 0 0 0-16.666Zm0 4.166a.833.833 0 0 1 .833.834v3.333a.833.833 0 1 1-1.666 0V6.667A.833.833 0 0 1 10 5.833Zm0 8.334a1.042 1.042 0 1 1 0-2.084 1.042 1.042 0 0 1 0 2.084Z" fill="currentColor"/>
+                      </svg>
+                    </SubmitErrorIcon>
+                    <SubmitErrorContent>
+                      <SubmitErrorTitle>
+                        {isEditMode ? 'Не удалось сохранить изменения' : 'Не удалось создать договор'}
+                      </SubmitErrorTitle>
+                      <SubmitErrorMessage>{submitError}</SubmitErrorMessage>
+                    </SubmitErrorContent>
+                    <SubmitErrorClose
+                      type="button"
+                      onClick={() => setSubmitError(null)}
+                      aria-label="Закрыть сообщение об ошибке"
+                    >
+                      ×
+                    </SubmitErrorClose>
+                  </SubmitErrorBanner>
+                )}
+
+                <ButtonWrapper>
+                  <GrayButton onClick={() => navigate(-1)}>
+                    Отменить
+                  </GrayButton>
+                  <DarkCyanButton
+                    style={{ marginRight: 'auto' }}
+                    disabled={!isFormValid || isScheduleLoading || isCreditLoading}
+                    onClick={handleCreateOrUpdateCredit}
+                  >
+                    {isScheduleLoading || isCreditLoading
+                      ? 'Загрузка...'
+                      : isEditMode
+                        ? 'Сохранить изменения'
+                        : 'Создать договор'}
+                  </DarkCyanButton>
+                </ButtonWrapper>
+              </PaymentScheduleInputs>
+              <PaymentScheduleTableWrapper>
+                <PaymentScheduleTable
+                  data={paymentSchedule}
+                  isLoading={isScheduleLoading}
+                />
+              </PaymentScheduleTableWrapper>
+            </PaymentScheduleContainer>
+          </SectionBody>
+        </SectionCard>
+      </ContentStack>
 
       <ClientSelectModal
         isOpen={isClientModalOpen}
@@ -1265,118 +1399,260 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
   );
 };
 
-const ContextMenu = styled.div`
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  overflow: hidden;
-  min-width: 250px;
-  
-  position: fixed;
-  top: ${350}px;
-  left: ${1000}px;
-  
-  pointer-events: auto;
-`;
-
-const ContextMenuItem = styled.button`
+const PageHeader = styled.div`
   display: flex;
   align-items: center;
-  width: 100%;
-  padding: 12px 16px;
-  border: none;
-  background: white;
-  cursor: pointer;
-  font-size: 14px;
-  color: #333;
-  text-align: left;
   gap: 12px;
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background-color: #f7fafc;
-  }
-
-  &:not(:last-child) {
-    border-bottom: 1px solid #e2e8f0;
-  }
+  margin: 0 0 20px;
+  min-width: 0;
 `;
 
-const UserIcon = styled.span`
-  display: flex;
+const HeaderActions = styled.div`
+  margin-left: auto;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-`;
 
-const PlusIcon = styled.span`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-`;
-
-const MarkupTypeToggleContainer = styled.div`
-  display: flex;
-  margin: 0 0 0 16px;
-  align-items: center;
-`;
-
-const MarkupTypeToggle = styled.button<{ active: boolean }>`
-  padding: 4px 8px;
-  border: 1px solid #e2e8f0;
-  background: ${props => props.active ? '#007d88' : 'white'};
-  color: ${props => props.active ? 'white' : '#333'};
-  cursor: pointer;
-  font-size: 12px;
-  margin: 0;
-  
-  &:first-child {
-    border-radius: 4px 0 0 4px;
-    border-right: none;
-  }
-  
-  &:last-child {
-    border-radius: 0 4px 4px 0;
-  }
-  
-  &:hover {
-    background: ${props => props.active ? '#007d88' : '#f7fafc'};
-  }
-  
-  &:focus {
-    outline: none;
+  & > button {
+    margin: 0;
   }
 `;
 
-const DraftBanner = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f1fbfd;
-  border: 1px solid #cceef3;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin: 12px 0 16px;
-  color: #0b7285;
-  gap: 12px;
-`;
-
-const DraftActions = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const ContentWrapper = styled.div`
+const SummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
   margin-bottom: 20px;
 `;
 
+type SummaryVariant = 'default' | 'danger';
+type SummaryAccent = 'default' | 'info' | 'danger';
+
+const summaryCardPalette: Record<SummaryVariant, { bg: string; border: string }> = {
+  default: { bg: '#FFFFFF', border: '#E2E8F0' },
+  danger: { bg: '#FFF5F5', border: '#FECACA' },
+};
+
+const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> = {
+  default: { bg: 'rgba(0, 125, 136, 0.1)', color: '#007D88' },
+  info: { bg: 'rgba(59, 130, 246, 0.1)', color: '#2563EB' },
+  danger: { bg: 'rgba(239, 68, 68, 0.1)', color: '#B71C1C' },
+};
+
+const SummaryCard = styled.div<{ $variant?: SummaryVariant }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: ${({ $variant = 'default' }) => summaryCardPalette[$variant].bg};
+  border: 1px solid ${({ $variant = 'default' }) => summaryCardPalette[$variant].border};
+  border-radius: 10px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+`;
+
+const SummaryIcon = styled.div<{ $accent?: SummaryAccent }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background-color: ${({ $accent = 'default' }) => summaryIconPalette[$accent].bg};
+  color: ${({ $accent = 'default' }) => summaryIconPalette[$accent].color};
+`;
+
+const SummaryItemBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`;
+
+const SummaryLabel = styled.span`
+  font-size: 11px;
+  color: rgba(80, 85, 92, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 2px;
+`;
+
+const SummaryValue = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const ContentStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+`;
+
+const accentBarPalette: Record<'teal' | 'orange' | 'gray', string> = {
+  teal: '#007D88',
+  orange: '#F5A623',
+  gray: '#CBD5E1',
+};
+
+const SectionCard = styled.section<{ $accent?: 'teal' | 'orange' | 'gray' }>`
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  align-items: stretch;
+  min-width: 0;
+  flex: 1;
+`;
+
+const SectionAccentBar = styled.div<{ $accent?: 'teal' | 'orange' | 'gray' }>`
+  width: 4px;
+  align-self: stretch;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background-color: ${({ $accent = 'teal' }) => accentBarPalette[$accent]};
+`;
+
+const SectionBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const SectionTopRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const sectionIconPalette: Record<'teal' | 'orange' | 'gray', { bg: string; color: string }> = {
+  teal: { bg: 'rgba(0, 125, 136, 0.1)', color: '#007D88' },
+  orange: { bg: 'rgba(245, 166, 35, 0.12)', color: '#B45309' },
+  gray: { bg: '#F1F5F9', color: '#475569' },
+};
+
+const SectionIcon = styled.span<{ $accent?: 'teal' | 'orange' | 'gray' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background-color: ${({ $accent = 'teal' }) => sectionIconPalette[$accent].bg};
+  color: ${({ $accent = 'teal' }) => sectionIconPalette[$accent].color};
+`;
+
+const SectionTitle = styled.div`
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+`;
+
+const SectionOptional = styled.span`
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(80, 85, 92, 1);
+  margin-left: 4px;
+`;
+
+const PersonRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  @media (min-width: 992px) {
+    flex-direction: row;
+  }
+`;
+
+const SettingsCard = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+`;
+
+const TotalSumRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+`;
+
+const TotalSumGroup = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+`;
+
+const TotalSumLabel = styled.span`
+  font-size: 14px;
+  color: rgba(80, 85, 92, 1);
+`;
+
+const TotalSumValue = styled.span`
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+`;
+
+const MarkupPillContainer = styled.div`
+  display: inline-flex;
+  padding: 3px;
+  background-color: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 999px;
+  gap: 2px;
+`;
+
+const MarkupPill = styled.button<{ $active: boolean }>`
+  min-width: 36px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 999px;
+  background: ${({ $active }) => ($active ? '#007D88' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#FFFFFF' : '#475569')};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? '#007D88' : 'rgba(0, 125, 136, 0.08)')};
+    color: ${({ $active }) => ($active ? '#FFFFFF' : '#007D88')};
+  }
+
+  &:focus-visible {
+    outline: 2px solid #007D88;
+    outline-offset: 2px;
+  }
+`;
+
 const ProductsTableWrapper = styled.div`
-  margin-top: 16px;
   overflow-x: auto;
 `;
 
@@ -1491,8 +1767,8 @@ const DateInputWrapper = styled.div`
 const FormRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -1506,15 +1782,15 @@ const FieldGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 8px;
+  font-size: 13px;
+  color: rgba(80, 85, 92, 1);
+  margin-bottom: 6px;
   font-weight: 500;
   text-align: left;
 `;
 
 const ButtonWrapper = styled.div`
-  margin-top: 30px;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1522,21 +1798,6 @@ const ButtonWrapper = styled.div`
   @media (min-width: 576px) {
     flex-direction: row;
     align-items: center;
-  }
-`;
-
-const TotalSumContainer = styled.div`
-  text-align: left;
-  font-weight: 500;
-  color: black;
-  margin-top: 10px;
-  font-size: 14px;
-  display: flex;
-  display-direction: row;
-  gap: 15px;
-
-  @media (min-width: 576px) {
-    font-size: 16px;
   }
 `;
 
@@ -1597,13 +1858,6 @@ const InputRow = styled.div`
     width: 100%;
     max-width: 440px;
   }
-`;
-
-const CheckboxContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
 `;
 
 export default NewCreditPage;
