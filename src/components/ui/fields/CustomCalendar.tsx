@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import CalendarIcon from '../../../assets/ui/calendar.svg?react';
 
@@ -9,6 +9,34 @@ interface DateInputProps {
   onChange?: (date: string) => void;
   onReset?: () => void;
 }
+
+const formatDisplayString = (date: Date | null): string => {
+  if (!date || isNaN(date.getTime())) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}.${month}.${year}`;
+};
+
+const parseDisplayString = (text: string): { iso: string; date: Date } | null => {
+  if (text.length !== 10) return null;
+  const [d, m, y] = text.split('.');
+  const day = parseInt(d, 10);
+  const month = parseInt(m, 10);
+  const year = parseInt(y, 10);
+  if (
+    !Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year) ||
+    day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100
+  ) {
+    return null;
+  }
+  const date = new Date(year, month - 1, day);
+  if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+    return null;
+  }
+  const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return { iso, date };
+};
 
 const months = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -27,11 +55,15 @@ const CustomCalendar: React.FC<DateInputProps> = ({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(value ? new Date(value) : null);
+  const [inputValue, setInputValue] = useState<string>(() =>
+    value ? formatDisplayString(new Date(value)) : ''
+  );
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const monthDropdownRef = useRef<HTMLDivElement>(null);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -54,47 +86,88 @@ const CustomCalendar: React.FC<DateInputProps> = ({
 
   useEffect(() => {
     if (value) {
-      setSelectedDate(new Date(value));
+      const date = new Date(value);
+      setSelectedDate(date);
+      setInputValue(formatDisplayString(date));
     } else {
       setSelectedDate(null);
+      setInputValue('');
     }
   }, [value]);
 
+  const handleManualChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/[^\d.]/g, '');
+    const digits = cleaned.replace(/\./g, '');
+    let formatted = '';
+    for (let i = 0; i < digits.length && i < 8; i++) {
+      if (i === 2 || i === 4) formatted += '.';
+      formatted += digits[i];
+    }
+    setInputValue(formatted);
+
+    const parsed = parseDisplayString(formatted);
+    if (parsed) {
+      setSelectedDate(parsed.date);
+      setCurrentDate(parsed.date);
+      onChange?.(parsed.iso);
+    }
+  }, [onChange]);
+
+  const handleManualKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ([8, 9, 27, 13, 46].includes(e.keyCode) || (e.keyCode >= 37 && e.keyCode <= 40)) return;
+    if (!/[0-9.]/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === '.' && inputValue.split('.').length >= 3) {
+      e.preventDefault();
+    }
+  }, [inputValue]);
+
+  const handleManualBlur = useCallback(() => {
+    if (inputValue.length === 0) return;
+    const parsed = parseDisplayString(inputValue);
+    if (!parsed) {
+      setInputValue(formatDisplayString(selectedDate));
+    }
+  }, [inputValue, selectedDate]);
+
   const handleDateSelect = (date: Date) => {
-    // Создаем дату в UTC и берем только дату (без времени)
     const utcDate = new Date(Date.UTC(
       date.getFullYear(),
       date.getMonth(),
       date.getDate()
     ));
-    
+
     setSelectedDate(date);
-    
-    // Используем toISOString() и берем только дату
+    setInputValue(formatDisplayString(date));
+
     const formattedDate = utcDate.toISOString().split('T')[0];
-    
+
     onChange?.(formattedDate);
     setIsPickerOpen(false);
   };
 
-const handleToday = () => {
-  const today = new Date();
-  setCurrentDate(today);
-  
-  const utcToday = new Date(Date.UTC(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  ));
-  
-  const formattedDate = utcToday.toISOString().split('T')[0];
-  
-  onChange?.(formattedDate);
-  setIsPickerOpen(false);
-};
+  const handleToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today);
+    setInputValue(formatDisplayString(today));
+
+    const utcToday = new Date(Date.UTC(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    ));
+    const formattedDate = utcToday.toISOString().split('T')[0];
+
+    onChange?.(formattedDate);
+    setIsPickerOpen(false);
+  };
 
   const handleReset = () => {
     setSelectedDate(null);
+    setInputValue('');
     onChange?.('');
     onReset?.();
     setIsPickerOpen(false);
@@ -189,15 +262,6 @@ const handleToday = () => {
     return days;
   };
 
-  const formatDisplayDate = () => {
-    if (!selectedDate) return placeholder;
-    return selectedDate.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
   const generateYears = () => {
     const currentYear = new Date().getFullYear();
     const years = [];
@@ -230,10 +294,26 @@ const handleToday = () => {
 
   return (
     <Container ref={containerRef}>
-      <Field onClick={() => setIsPickerOpen(!isPickerOpen)}>
+      <Field>
         {prefix && <Prefix>{prefix}</Prefix>}
-        <DateText isEmpty={!selectedDate}>{formatDisplayDate()}</DateText>
-        <CalendarIcon className="ml-2" style={{ fontSize: "20px" }}/>
+        <EditableInput
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          placeholder={placeholder === 'Выберите дату' ? 'дд.мм.гггг' : placeholder}
+          onChange={handleManualChange}
+          onKeyDown={handleManualKeyDown}
+          onBlur={handleManualBlur}
+          inputMode="numeric"
+          maxLength={10}
+        />
+        <CalendarIconButton
+          type="button"
+          onClick={() => setIsPickerOpen(prev => !prev)}
+          aria-label="Открыть календарь"
+        >
+          <CalendarIcon style={{ fontSize: '20px' }} />
+        </CalendarIconButton>
       </Field>
 
       {isPickerOpen && (
@@ -380,9 +460,42 @@ const Prefix = styled.span`
   margin-right: 8px;
 `;
 
-const DateText = styled.span<{ isEmpty: boolean }>`
+const EditableInput = styled.input`
   flex-grow: 1;
-  color: ${({ isEmpty }) => isEmpty ? 'rgba(80, 85, 92, 1)' : '#000'};
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #000;
+  padding: 0;
+  min-width: 0;
+  font-family: inherit;
+
+  &::placeholder {
+    color: rgba(80, 85, 92, 1);
+    opacity: 1;
+  }
+`;
+
+const CalendarIconButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(80, 85, 92, 1);
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: rgba(0, 125, 136, 1);
+  }
+
+  &:focus {
+    outline: none;
+  }
 `;
 
 const CalendarPopup = styled.div`

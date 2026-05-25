@@ -532,7 +532,73 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
     <ModalOverlay>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <CancelButton onClick={handleCancel} />
-        <TitleField style={{ marginTop: 0, padding: "0 24px 0 24px" }}>
+        <TitleField style={{ marginTop: 0, padding: "0 24px 0 24px", gap: 16 }}>
+            <TemplatesBar>
+              <TemplatesLabel>Шаблоны:</TemplatesLabel>
+              <TemplatesChips>
+                {templates.map(template => (
+                  <TemplateChip
+                    key={template.id}
+                    type="button"
+                    onClick={() => handleApplyTemplate(template)}
+                    title={`Применить шаблон "${template.name}"`}
+                  >
+                    <span>{template.name}</span>
+                    <TemplateDeleteButton
+                      role="button"
+                      aria-label={`Удалить шаблон ${template.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTemplate(template.id, template.name);
+                      }}
+                    >
+                      ×
+                    </TemplateDeleteButton>
+                  </TemplateChip>
+                ))}
+
+                {isSavingTemplate ? (
+                  <TemplateSaveForm
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleConfirmSaveTemplate();
+                    }}
+                  >
+                    <TemplateNameInput
+                      autoFocus
+                      placeholder="Название (напр. Авто)"
+                      value={newTemplateName}
+                      onChange={(e) => setNewTemplateName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.preventDefault();
+                          handleCancelSavingTemplate();
+                        }
+                      }}
+                      maxLength={40}
+                    />
+                    <TemplateActionButton
+                      type="submit"
+                      $variant="primary"
+                      disabled={!newTemplateName.trim()}
+                    >
+                      Сохранить
+                    </TemplateActionButton>
+                    <TemplateActionButton
+                      type="button"
+                      $variant="ghost"
+                      onClick={handleCancelSavingTemplate}
+                    >
+                      Отмена
+                    </TemplateActionButton>
+                  </TemplateSaveForm>
+                ) : (
+                  <TemplateAddButton type="button" onClick={handleStartSavingTemplate}>
+                    + Сохранить шаблон
+                  </TemplateAddButton>
+                )}
+              </TemplatesChips>
+            </TemplatesBar>
             <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
               <ExportButton
                 onClick={handleExportToPDF}
@@ -540,73 +606,6 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
             </div>
         </TitleField>
         <ModalContent>
-          <TemplatesBar>
-            <TemplatesLabel>Шаблоны:</TemplatesLabel>
-            <TemplatesChips>
-              {templates.map(template => (
-                <TemplateChip
-                  key={template.id}
-                  type="button"
-                  onClick={() => handleApplyTemplate(template)}
-                  title={`Применить шаблон "${template.name}"`}
-                >
-                  <span>{template.name}</span>
-                  <TemplateDeleteButton
-                    role="button"
-                    aria-label={`Удалить шаблон ${template.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteTemplate(template.id, template.name);
-                    }}
-                  >
-                    ×
-                  </TemplateDeleteButton>
-                </TemplateChip>
-              ))}
-
-              {isSavingTemplate ? (
-                <TemplateSaveForm
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleConfirmSaveTemplate();
-                  }}
-                >
-                  <TemplateNameInput
-                    autoFocus
-                    placeholder="Название (напр. Авто)"
-                    value={newTemplateName}
-                    onChange={(e) => setNewTemplateName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        e.preventDefault();
-                        handleCancelSavingTemplate();
-                      }
-                    }}
-                    maxLength={40}
-                  />
-                  <TemplateActionButton
-                    type="submit"
-                    $variant="primary"
-                    disabled={!newTemplateName.trim()}
-                  >
-                    Сохранить
-                  </TemplateActionButton>
-                  <TemplateActionButton
-                    type="button"
-                    $variant="ghost"
-                    onClick={handleCancelSavingTemplate}
-                  >
-                    Отмена
-                  </TemplateActionButton>
-                </TemplateSaveForm>
-              ) : (
-                <TemplateAddButton type="button" onClick={handleStartSavingTemplate}>
-                  + Сохранить шаблон
-                </TemplateAddButton>
-              )}
-            </TemplatesChips>
-          </TemplatesBar>
-
           <ColumnsContainer>
             <InputsColumn>
               <InputRow>
@@ -812,24 +811,23 @@ const ColumnsContainer = styled.div`
 
 const TemplatesBar = styled.div`
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(226, 232, 240, 1);
+  flex: 1;
+  min-width: 0;
 `;
 
 const TemplatesLabel = styled.span`
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
   color: rgba(80, 85, 92, 1);
   flex-shrink: 0;
-  padding: 6px 0;
 `;
 
 const TemplatesChips = styled.div`
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   flex: 1;
   min-width: 0;
@@ -839,12 +837,12 @@ const TemplateChip = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px 6px 12px;
+  padding: 6px 10px 6px 14px;
   background-color: rgba(0, 125, 136, 0.08);
   color: rgba(0, 125, 136, 1);
   border: 1px solid rgba(0, 125, 136, 0.25);
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -859,10 +857,10 @@ const TemplateDeleteButton = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1;
   color: rgba(0, 125, 136, 0.7);
 
@@ -875,12 +873,12 @@ const TemplateDeleteButton = styled.span`
 const TemplateAddButton = styled.button`
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
+  padding: 6px 14px;
   background-color: transparent;
   color: rgba(0, 125, 136, 1);
   border: 1px dashed rgba(0, 125, 136, 0.5);
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -897,12 +895,12 @@ const TemplateSaveForm = styled.form`
 `;
 
 const TemplateNameInput = styled.input`
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: 18px;
   border: 1px solid rgba(0, 125, 136, 0.5);
   border-radius: 999px;
   outline: none;
-  min-width: 180px;
+  min-width: 200px;
 
   &:focus {
     border-color: rgba(0, 125, 136, 1);
@@ -911,8 +909,8 @@ const TemplateNameInput = styled.input`
 `;
 
 const TemplateActionButton = styled.button<{ $variant: 'primary' | 'ghost' }>`
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: 6px 14px;
+  font-size: 18px;
   font-weight: 500;
   border-radius: 999px;
   cursor: pointer;
