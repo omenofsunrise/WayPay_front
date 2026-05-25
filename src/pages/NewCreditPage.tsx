@@ -990,6 +990,12 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
 
   const guarantorInfo = getGuarantorDisplayInfo();
 
+  const plusIcon = (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+
   const initialPaymentNumeric = useMemo(
     () => (initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0),
     [initialPaymentAmount, parseAmount]
@@ -1015,72 +1021,77 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
 
   return (
     <PageLayout>
-      <PageHeader>
-        <CustomTitle>{isEditMode ? 'Редактирование договора' : 'Новый договор'}</CustomTitle>
+      {isEditMode && (
+        <PageHeader>
+          <CustomTitle>Редактирование договора</CustomTitle>
+        </PageHeader>
+      )}
+
+      <StickySummaryBar>
+        <SummaryGrid>
+          <SummaryCard>
+            <SummaryIcon $accent="default">
+              <AttachMoneyOutlinedIcon fontSize="small" />
+            </SummaryIcon>
+            <SummaryItemBody>
+              <SummaryLabel>Сумма товаров</SummaryLabel>
+              <SummaryValue>{totalSum > 0 ? formatMoney(totalSum.toString()) : '—'}</SummaryValue>
+            </SummaryItemBody>
+          </SummaryCard>
+
+          <SummaryCard>
+            <SummaryIcon $accent="info">
+              <AccountBalanceWalletOutlinedIcon fontSize="small" />
+            </SummaryIcon>
+            <SummaryItemBody>
+              <SummaryLabel>Первый взнос</SummaryLabel>
+              <SummaryValue>
+                {initialPaymentNumeric > 0
+                  ? `${formatMoney(initialPaymentNumeric.toString())}${initialPaymentPercent ? ` · ${initialPaymentPercent}%` : ''}`
+                  : '—'}
+              </SummaryValue>
+            </SummaryItemBody>
+          </SummaryCard>
+
+          <SummaryCard>
+            <SummaryIcon $accent="default">
+              <CalendarMonthOutlinedIcon fontSize="small" />
+            </SummaryIcon>
+            <SummaryItemBody>
+              <SummaryLabel>Срок</SummaryLabel>
+              <SummaryValue>{months ? `${months} мес.` : '—'}</SummaryValue>
+            </SummaryItemBody>
+          </SummaryCard>
+
+          <SummaryCard>
+            <SummaryIcon $accent="info">
+              <TrendingUpOutlinedIcon fontSize="small" />
+            </SummaryIcon>
+            <SummaryItemBody>
+              <SummaryLabel>Ежемесячный платёж</SummaryLabel>
+              <SummaryValue>{monthlyPayment > 0 ? formatMoney(monthlyPayment.toString()) : '—'}</SummaryValue>
+            </SummaryItemBody>
+          </SummaryCard>
+
+          {overpayment > 0 && (
+            <SummaryCard $variant="danger">
+              <SummaryIcon $accent="danger">
+                <WarningAmberOutlinedIcon fontSize="small" />
+              </SummaryIcon>
+              <SummaryItemBody>
+                <SummaryLabel>Переплата</SummaryLabel>
+                <SummaryValue>{formatMoney(overpayment.toString())}</SummaryValue>
+              </SummaryItemBody>
+            </SummaryCard>
+          )}
+        </SummaryGrid>
+
         {hasDraft && !isEditMode && (
           <HeaderActions>
             <GrayButton onClick={resetDraft}>Сбросить черновик</GrayButton>
           </HeaderActions>
         )}
-      </PageHeader>
-
-      <SummaryGrid>
-        <SummaryCard>
-          <SummaryIcon $accent="default">
-            <AttachMoneyOutlinedIcon fontSize="small" />
-          </SummaryIcon>
-          <SummaryItemBody>
-            <SummaryLabel>Сумма товаров</SummaryLabel>
-            <SummaryValue>{totalSum > 0 ? formatMoney(totalSum.toString()) : '—'}</SummaryValue>
-          </SummaryItemBody>
-        </SummaryCard>
-
-        <SummaryCard>
-          <SummaryIcon $accent="info">
-            <AccountBalanceWalletOutlinedIcon fontSize="small" />
-          </SummaryIcon>
-          <SummaryItemBody>
-            <SummaryLabel>Первый взнос</SummaryLabel>
-            <SummaryValue>
-              {initialPaymentNumeric > 0
-                ? `${formatMoney(initialPaymentNumeric.toString())}${initialPaymentPercent ? ` · ${initialPaymentPercent}%` : ''}`
-                : '—'}
-            </SummaryValue>
-          </SummaryItemBody>
-        </SummaryCard>
-
-        <SummaryCard>
-          <SummaryIcon $accent="default">
-            <CalendarMonthOutlinedIcon fontSize="small" />
-          </SummaryIcon>
-          <SummaryItemBody>
-            <SummaryLabel>Срок</SummaryLabel>
-            <SummaryValue>{months ? `${months} мес.` : '—'}</SummaryValue>
-          </SummaryItemBody>
-        </SummaryCard>
-
-        <SummaryCard>
-          <SummaryIcon $accent="info">
-            <TrendingUpOutlinedIcon fontSize="small" />
-          </SummaryIcon>
-          <SummaryItemBody>
-            <SummaryLabel>Ежемесячный платёж</SummaryLabel>
-            <SummaryValue>{monthlyPayment > 0 ? formatMoney(monthlyPayment.toString()) : '—'}</SummaryValue>
-          </SummaryItemBody>
-        </SummaryCard>
-
-        {overpayment > 0 && (
-          <SummaryCard $variant="danger">
-            <SummaryIcon $accent="danger">
-              <WarningAmberOutlinedIcon fontSize="small" />
-            </SummaryIcon>
-            <SummaryItemBody>
-              <SummaryLabel>Переплата</SummaryLabel>
-              <SummaryValue>{formatMoney(overpayment.toString())}</SummaryValue>
-            </SummaryItemBody>
-          </SummaryCard>
-        )}
-      </SummaryGrid>
+      </StickySummaryBar>
 
       <ContentStack>
         <SectionCard $accent="teal">
@@ -1122,6 +1133,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                       placeholder="Выберите инвестора или пул"
                       onSelect={openInvestorModal}
                       onClear={clearSelectedEntity}
+                      customIcon={plusIcon}
                     />
                   </EntitySelectWrapper>
                 </FieldGroup>
@@ -1184,6 +1196,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                   placeholder="Выберите покупателя"
                   onSelect={() => openClientModal('client')}
                   onClear={() => setClient(null)}
+                  customIcon={plusIcon}
                 />
               </EntitySelectWrapper>
             </SectionBody>
@@ -1204,11 +1217,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                   placeholder="Выберите поручителя"
                   onSelect={() => openClientModal('guarantorClient')}
                   onClear={clearGuarantor}
-                  customIcon={
-                    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  }
+                  customIcon={plusIcon}
                 />
               </EntitySelectWrapper>
             </SectionBody>
@@ -1269,15 +1278,15 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
           </SectionBody>
         </SectionCard>
 
-        <SectionCard $accent="teal">
-          <SectionAccentBar $accent="teal" />
-          <SectionBody>
-            <SectionHeader>
-              <SectionIcon><PaymentsOutlinedIcon fontSize="small" /></SectionIcon>
-              <SectionTitle>График выплат</SectionTitle>
-            </SectionHeader>
+        <PaymentRow>
+          <PaymentParamsCard $accent="teal">
+            <SectionAccentBar $accent="teal" />
+            <SectionBody>
+              <SectionHeader>
+                <SectionIcon><PaymentsOutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionTitle>Параметры выплат</SectionTitle>
+              </SectionHeader>
 
-            <PaymentScheduleContainer>
               <PaymentScheduleInputs>
                 <InputGroup>
                   <InputRow>
@@ -1364,15 +1373,25 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                   </DarkCyanButton>
                 </ButtonWrapper>
               </PaymentScheduleInputs>
+            </SectionBody>
+          </PaymentParamsCard>
+
+          <PaymentScheduleCard $accent="teal">
+            <SectionAccentBar $accent="teal" />
+            <SectionBody>
+              <SectionHeader>
+                <SectionIcon><CalendarMonthOutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionTitle>График выплат</SectionTitle>
+              </SectionHeader>
               <PaymentScheduleTableWrapper>
                 <PaymentScheduleTable
                   data={paymentSchedule}
                   isLoading={isScheduleLoading}
                 />
               </PaymentScheduleTableWrapper>
-            </PaymentScheduleContainer>
-          </SectionBody>
-        </SectionCard>
+            </SectionBody>
+          </PaymentScheduleCard>
+        </PaymentRow>
       </ContentStack>
 
       <ClientSelectModal
@@ -1403,14 +1422,27 @@ const PageHeader = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 20px;
+  margin: 0 0 16px;
   min-width: 0;
 `;
 
+const StickySummaryBar = styled.div`
+  position: sticky;
+  top: 56px;
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px 0;
+  margin: 0 0 16px;
+  background-color: rgba(249, 250, 250, 1);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+`;
+
 const HeaderActions = styled.div`
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
 
   & > button {
     margin: 0;
@@ -1418,10 +1450,11 @@ const HeaderActions = styled.div`
 `;
 
 const SummaryGrid = styled.div`
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 10px;
-  margin-bottom: 20px;
+  min-width: 0;
 `;
 
 type SummaryVariant = 'default' | 'danger';
@@ -1801,13 +1834,27 @@ const ButtonWrapper = styled.div`
   }
 `;
 
-const PaymentScheduleContainer = styled.div`
+const PaymentRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  align-items: stretch;
 
   @media (min-width: 992px) {
     flex-direction: row;
+  }
+`;
+
+const PaymentParamsCard = styled(SectionCard)`
+  @media (min-width: 992px) {
+    flex: 0 0 360px;
+  }
+`;
+
+const PaymentScheduleCard = styled(SectionCard)`
+  @media (min-width: 992px) {
+    flex: 1;
+    min-width: 0;
   }
 `;
 
@@ -1816,11 +1863,6 @@ const PaymentScheduleInputs = styled.div`
   flex-direction: column;
   gap: 16px;
   width: 100%;
-
-  @media (min-width: 992px) {
-    width: 300px;
-    min-width: 300px;
-  }
 `;
 
 const PaymentScheduleTableWrapper = styled.div`
