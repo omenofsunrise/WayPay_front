@@ -170,20 +170,40 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     onRowDoubleClick(row, rowIndex);
   };
 
+  const selectRowForContextMenu = (rowIndex: number) => {
+    if (!isRowSelectable(rowIndex, false)) return;
+    if (selectedRows.includes(rowIndex)) return;
+
+    const newSelectedRows = [rowIndex];
+
+    if (externalSelectedRows === undefined) {
+      setInternalSelectedRows(newSelectedRows);
+    }
+
+    if (onMultiSelectChange && multiSelect) {
+      onMultiSelectChange(newSelectedRows);
+    }
+
+    if (onRowClick) {
+      onRowClick(data[rowIndex], rowIndex);
+    }
+  };
+
   const handleContextMenu = (event: React.MouseEvent, rowIndex: number, isTotalsRow: boolean) => {
     if (isTotalsRow) return;
     event.preventDefault();
+    selectRowForContextMenu(rowIndex);
     showContextMenu(event, rowIndex);
   };
 
   const showContextMenu = (event: React.MouseEvent | React.TouchEvent, rowIndex: number) => {
     if (contextMenuActions.length === 0) return;
-    
+
     event.preventDefault();
-    
+
     const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
     const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-    
+
     setContextMenu({
       x: clientX,
       y: clientY,
@@ -193,12 +213,13 @@ const CustomTable: React.FC<CreditsTableProps> = ({
 
   const handleTouchStart = (event: React.TouchEvent, rowIndex: number, isTotalsRow: boolean) => {
     if (isTotalsRow || contextMenuActions.length === 0) return;
-    
+
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
     }
-    
+
     longPressTimer.current = window.setTimeout(() => {
+      selectRowForContextMenu(rowIndex);
       showContextMenu(event, rowIndex);
     }, LONG_PRESS_DURATION);
   };
