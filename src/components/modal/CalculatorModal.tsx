@@ -837,12 +837,12 @@ const TemplateChip = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px 6px 14px;
+  padding: 6px 8px 6px 12px;
   background-color: rgba(0, 125, 136, 0.08);
   color: rgba(0, 125, 136, 1);
   border: 1px solid rgba(0, 125, 136, 0.25);
   border-radius: 999px;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -857,10 +857,10 @@ const TemplateDeleteButton = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   color: rgba(0, 125, 136, 0.7);
 
@@ -873,12 +873,12 @@ const TemplateDeleteButton = styled.span`
 const TemplateAddButton = styled.button`
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
+  padding: 6px 12px;
   background-color: transparent;
   color: rgba(0, 125, 136, 1);
   border: 1px dashed rgba(0, 125, 136, 0.5);
   border-radius: 999px;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease;
