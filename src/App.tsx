@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthPage from './pages/AuthPage';
 import CreditPage from './pages/CreditPage';
 import MainLayout from './components/Layout/MainLayout/MainLayout';
@@ -29,7 +29,6 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import type { AuthInfo } from './api/types/auth';
 import apiClient, { PIN_REQUIRED_EVENT, type PinRequiredEventDetail } from './api/client';
 import PinCodeModal from './components/modal/PinCodeModal';
-import { createRoot } from 'react-dom/client';
 import LicenseOutPage from './pages/LicenseOutPage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
@@ -45,6 +44,12 @@ import BlackCatalogPage from './pages/BlackCatalogPage/BlackCatalogPage';
 import BotManagementPage from './pages/SettingsPage.tsx/BotManagementPage';
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
+const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
+
+type PinResolver = {
+  resolve: (pin: string) => void;
+  reject: (error: Error) => void;
+};
 
 const isMobileDevice = (): boolean => {
   const screenWidthCheck = window.innerWidth <= 768;
@@ -60,6 +65,9 @@ function App() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [isLicenseValid, setIsLicenseValid] = useState<boolean>(true);
   const disableNotifications = useLocalStorageSetting(DISABLE_NOTIFICATIONS_KEY, false);
+  const pinResolversRef = useRef<PinResolver[]>([]);
+  const lastHiddenAtRef = useRef<number | null>(null);
+  const needsFullReloadRef = useRef<boolean>(false);
 
   const currentPath = window.location.pathname;
 
@@ -138,7 +146,11 @@ function App() {
       if (!isAuthenticated || !authInfo?.hasPin || showPinModal) return;
 
       const currentTime = Date.now();
-      if (currentTime - lastActivity > INACTIVITY_TIMEOUT) {
+      const elapsed = currentTime - lastActivity;
+      if (elapsed > INACTIVITY_TIMEOUT) {
+        if (elapsed >= FULL_RELOAD_AFTER_HIDDEN) {
+          needsFullReloadRef.current = true;
+        }
         setShowPinModal(true);
         sessionStorage.removeItem('lastActivity');
       }
@@ -151,34 +163,8 @@ function App() {
   useEffect(() => {
     const handlePinRequired = (event: CustomEvent<PinRequiredEventDetail>) => {
       const { resolve, reject } = event.detail;
-      
-      let modalRoot = document.getElementById('pin-modal-root');
-      if (!modalRoot) {
-        modalRoot = document.createElement('div');
-        modalRoot.id = 'pin-modal-root';
-        document.body.appendChild(modalRoot);
-      }
-      
-      const root = createRoot(modalRoot);
-      
-      root.render(
-        <PinCodeModal
-          isOpen={true}
-          onSuccess={(pin) => {
-            resolve(pin);
-            root.unmount();
-            modalRoot?.remove();
-          }}
-          mode="verify"
-          onMaxAttempts={() => {
-            reject(new Error('Max attempts reached'));
-            root.unmount();
-            modalRoot?.remove();
-            authStorage.clear();
-            window.location.href = '/auth';
-          }}
-        />
-      );
+      pinResolversRef.current.push({ resolve, reject });
+      setShowPinModal(true);
     };
 
     window.addEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
@@ -186,6 +172,36 @@ function App() {
       window.removeEventListener(PIN_REQUIRED_EVENT, handlePinRequired as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        lastHiddenAtRef.current = Date.now();
+        return;
+      }
+
+      const hiddenAt = lastHiddenAtRef.current;
+      lastHiddenAtRef.current = null;
+      if (!hiddenAt || !isAuthenticated) return;
+
+      const awayMs = Date.now() - hiddenAt;
+      if (awayMs < INACTIVITY_TIMEOUT) return;
+
+      if (awayMs >= FULL_RELOAD_AFTER_HIDDEN) {
+        needsFullReloadRef.current = true;
+      }
+
+      sessionStorage.removeItem('lastActivity');
+      if (authInfo?.hasPin && !showPinModal) {
+        setShowPinModal(true);
+      } else if (authInfo && !authInfo.hasPin) {
+        window.location.reload();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isAuthenticated, authInfo, showPinModal]);
 
   const updateAuthStatus = useCallback(() => {
     const authenticated = authStorage.isAuthenticated();
@@ -212,6 +228,9 @@ function App() {
             
             const savedActivity = sessionStorage.getItem('lastActivity');
             if (!savedActivity || (savedActivity && Date.now() - parseInt(savedActivity, 10) > INACTIVITY_TIMEOUT)) {
+              if (savedActivity && Date.now() - parseInt(savedActivity, 10) >= FULL_RELOAD_AFTER_HIDDEN) {
+                needsFullReloadRef.current = true;
+              }
               setShowPinModal(true);
             }
           })
@@ -227,11 +246,30 @@ function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [updateAuthStatus]);
 
-  const handlePinSuccess = useCallback(() => {
+  const handlePinSuccess = useCallback((pin?: string) => {
     setShowPinModal(false);
     updateActivity();
     sessionStorage.setItem('lastActivity', Date.now().toString());
+
+    const resolvers = pinResolversRef.current;
+    pinResolversRef.current = [];
+    if (pin) {
+      resolvers.forEach(r => r.resolve(pin));
+    }
+
+    if (needsFullReloadRef.current) {
+      needsFullReloadRef.current = false;
+      window.location.reload();
+    }
   }, [updateActivity]);
+
+  const handlePinMaxAttempts = useCallback(() => {
+    const resolvers = pinResolversRef.current;
+    pinResolversRef.current = [];
+    resolvers.forEach(r => r.reject(new Error('Max attempts reached')));
+    authStorage.clear();
+    window.location.href = '/auth';
+  }, []);
 
   if (isMobile) {
     return <DesktopOnlyContent />;
@@ -267,10 +305,7 @@ function App() {
           isOpen={true}
           onSuccess={handlePinSuccess}
           mode="verify"
-          onMaxAttempts={() => {
-            authStorage.clear();
-            window.location.href = '/auth';
-          }}
+          onMaxAttempts={handlePinMaxAttempts}
         />
       )}
       <BrowserRouter>
