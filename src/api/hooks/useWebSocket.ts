@@ -2,18 +2,29 @@ import { useEffect, useRef, useCallback } from 'react';
 import { BASE_URL } from '../client';
 import { useAuth } from '../../сontext/AuthContext';
 
-interface WebSocketMessage {
-  type: string;
-  title: string;
-  body: string;
-  image?: string;
-  route?: string;
-  timestamp: string;
+export interface WebSocketMessage {
+  Type: string;
+  Title: string;
+  Body: string;
+  Image?: string;
+  Route?: string;
+  Timestamp: string;
 }
+
+export const WHATSAPP_WS_EVENT = 'whatsapp-ws-message';
+export const MOCK_WS_EVENT = 'mock-ws-message';
+export type WhatsAppWsEvent = CustomEvent<WebSocketMessage>;
 
 interface UseWebSocketProps {
   onNotification: (message: WebSocketMessage) => void;
   onError?: (error: Event) => void;
+}
+
+declare global {
+  interface Window {
+    __mockWAMessage?: (phone: string, body: string) => void;
+    __mockWSMessage?: (message: Partial<WebSocketMessage>) => void;
+  }
 }
 
 export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => {
@@ -22,6 +33,13 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
   const maxReconnectAttempts = 5;
   const reconnectDelay = 1000;
   const { authInfo } = useAuth();
+
+  const processMessage = useCallback((message: WebSocketMessage) => {
+    if (message?.Type === 'whats_app') {
+      window.dispatchEvent(new CustomEvent(WHATSAPP_WS_EVENT, { detail: message }));
+    }
+    onNotification(message);
+  }, [onNotification]);
 
   const connect = useCallback(() => {
     const employeeId = authInfo?.employee?.id;
@@ -50,8 +68,8 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
           console.log('📨 RAW WebSocket message received:', event.data);
           const message: WebSocketMessage = JSON.parse(event.data);
           console.log('📨 Parsed WebSocket message:', message);
-          
-          onNotification(message);
+
+          processMessage(message);
         } catch (error) {
           console.error('❌ Error parsing WebSocket message:', error, 'Raw data:', event.data);
         }
@@ -71,7 +89,7 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
       console.error('💥 WebSocket connection failed:', error);
       handleReconnect();
     }
-  }, [onNotification, onError, authInfo?.employee?.id]);
+  }, [processMessage, onError, authInfo?.employee?.id]);
 
   const handleReconnect = useCallback(() => {
     const employeeId = authInfo?.employee?.id;
@@ -117,13 +135,40 @@ export const useWebSocket = ({ onNotification, onError }: UseWebSocketProps) => 
       }
     };
 
+    const handleMockMessage = (event: Event) => {
+      const detail = (event as CustomEvent<WebSocketMessage>).detail;
+      if (!detail) return;
+      console.log('🧪 Mock WS message received:', detail);
+      processMessage(detail);
+    };
+
+    window.__mockWSMessage = (partial: Partial<WebSocketMessage>) => {
+      const message: WebSocketMessage = {
+        Type: partial.Type ?? 'whats_app',
+        Title: partial.Title ?? '79991234567',
+        Body: partial.Body ?? 'Тестовое сообщение',
+        Image: partial.Image,
+        Route: partial.Route,
+        Timestamp: partial.Timestamp ?? new Date().toISOString(),
+      };
+      window.dispatchEvent(new CustomEvent(MOCK_WS_EVENT, { detail: message }));
+    };
+
+    window.__mockWAMessage = (phone: string, body: string) => {
+      window.__mockWSMessage?.({ Type: 'whats_app', Title: phone, Body: body });
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener(MOCK_WS_EVENT, handleMockMessage);
 
     return () => {
       disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener(MOCK_WS_EVENT, handleMockMessage);
+      delete window.__mockWAMessage;
+      delete window.__mockWSMessage;
     };
-  }, [connect, disconnect, authInfo?.employee?.id]);
+  }, [connect, disconnect, processMessage, authInfo?.employee?.id]);
 
   return {
     disconnect,

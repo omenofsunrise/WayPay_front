@@ -46,6 +46,42 @@ const useWhatsApp = () => {
     setMessages(prev => [...prev, message]);
   }, []);
 
+  const addIncomingMessage = useCallback((
+    fromPhone: string,
+    body: string,
+    timestampMs?: number,
+  ) => {
+    const ts = Math.floor((timestampMs ?? Date.now()) / 1000);
+    const incoming: ChatMessage = {
+      id: `ws_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      from: fromPhone,
+      to: channelStatus?.phoneNumber || '',
+      chatId: '',
+      chatName: '',
+      fromName: '',
+      timestamp: ts,
+      status: 'DELIVERED',
+      isFromMe: false,
+      source: 'whatsapp',
+      deviceId: 0,
+      type: 'text',
+      subtype: '',
+      displayText: body,
+      text: {
+        body,
+        buttons: [],
+        viewOnce: false,
+      },
+      reactions: [],
+      labels: [],
+    };
+
+    setMessages(prev => {
+      if (prev.some(m => m.id === incoming.id)) return prev;
+      return [...prev, incoming];
+    });
+  }, [channelStatus]);
+
   const getChannels = useCallback(async (): Promise<ChannelResponse[] | null> => {
     setIsLoading(true);
     setError(null);
@@ -724,6 +760,7 @@ const useWhatsApp = () => {
     
     sendMessage,
     sendMediaMessage,
+    addIncomingMessage,
     markAsRead,
     deleteMessage,
     getQR,

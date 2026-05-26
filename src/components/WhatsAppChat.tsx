@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import type { ChatMessage, SendMessageRequest } from '../api/types/whatsapp';
 import useWhatsApp from '../api/hooks/useWhatsApp';
 import MessageContent from './MessageContent';
+import { WHATSAPP_WS_EVENT, type WebSocketMessage } from '../api/hooks/useWebSocket';
 
 interface WhatsAppChatProps {
   phoneNumber: string;
@@ -29,6 +30,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     channelStatus,
     sendMessage,
     sendMediaMessage,
+    addIncomingMessage,
     findChatByPhone,
     loadChatWithClient,
     getChannelStatus,
@@ -73,6 +75,31 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
       clearChatData();
     };
   }, [phoneNumber]);
+
+  useEffect(() => {
+    if (!cleanPhoneNumber) return;
+
+    const handleWsMessage = (event: Event) => {
+      const detail = (event as CustomEvent<WebSocketMessage>).detail;
+      if (!detail) return;
+
+      const incomingPhone = (detail.Title || '').replace(/\D/g, '');
+      if (!incomingPhone) return;
+
+      const matches =
+        incomingPhone === cleanPhoneNumber ||
+        incomingPhone.endsWith(cleanPhoneNumber) ||
+        cleanPhoneNumber.endsWith(incomingPhone);
+
+      if (!matches) return;
+
+      const timestampMs = detail.Timestamp ? new Date(detail.Timestamp).getTime() : Date.now();
+      addIncomingMessage(incomingPhone, detail.Body || '', timestampMs);
+    };
+
+    window.addEventListener(WHATSAPP_WS_EVENT, handleWsMessage);
+    return () => window.removeEventListener(WHATSAPP_WS_EVENT, handleWsMessage);
+  }, [cleanPhoneNumber, addIncomingMessage]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -294,7 +321,10 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   };
 
   const getConnectionStatusText = () => {
-    return `WhatsApp • ${channelStatus?.name || channelStatus?.phoneNumber || 'Подключение...'}`;
+    if (!channelStatus) return 'WhatsApp • Подключение...';
+    const detail = channelStatus.name || channelStatus.phoneNumber;
+    if (detail) return `WhatsApp • ${detail}`;
+    return channelStatus.connected ? 'WhatsApp • В сети' : 'WhatsApp • Не подключён';
   };
 
   const getConnectionStatusColor = () => {

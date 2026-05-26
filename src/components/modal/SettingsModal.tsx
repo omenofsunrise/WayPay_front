@@ -19,6 +19,7 @@ export const HIDE_CURRENCY_KEY = 'hideCurrencySymbol';
 export const AUTO_COLLAPSE_MENU_KEY = 'autoCollapseMenu';
 export const DISABLE_NOTIFICATIONS_KEY = 'disableNotifications';
 export const SHOW_CONTRACT_CREATION_NOTIFICATION_KEY = 'showContractCreationNotification';
+export const DISABLE_WHATSAPP_NOTIFICATIONS_KEY = 'disableWhatsAppNotifications';
 
 export const getHideCurrencySetting = (): boolean => {
   if (typeof window === 'undefined') return false;
@@ -111,6 +112,24 @@ export const setShowContractCreationNotificationSetting = (value: boolean): void
   }
 };
 
+export const getDisableWhatsAppNotificationsSetting = (): boolean => {
+  if (typeof window === 'undefined') return false;
+
+  const stored = localStorage.getItem(DISABLE_WHATSAPP_NOTIFICATIONS_KEY);
+  if (stored === null) return false;
+
+  return stored === 'true';
+};
+
+export const setDisableWhatsAppNotificationsSetting = (value: boolean): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(DISABLE_WHATSAPP_NOTIFICATIONS_KEY, value.toString());
+    window.dispatchEvent(new CustomEvent('localStorageChange', {
+      detail: { key: DISABLE_WHATSAPP_NOTIFICATIONS_KEY }
+    }));
+  }
+};
+
 type SettingsTab = 'interface' | 'notifications';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
@@ -118,6 +137,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [autoCollapseMenu, setAutoCollapseMenu] = useState(false);
   const [disableNotifications, setDisableNotifications] = useState(false);
   const [showContractCreationNotification, setShowContractCreationNotification] = useState(true);
+  const [disableWhatsAppNotifications, setDisableWhatsAppNotifications] = useState(false);
   const [creditsDisplayMode, setCreditsDisplayMode] = useState<CreditsDisplayMode>('pagination');
   const [activeTab, setActiveTab] = useState<SettingsTab>('interface');
 
@@ -126,6 +146,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     setAutoCollapseMenu(getAutoCollapseMenuSetting());
     setDisableNotifications(getDisableNotificationsSetting());
     setShowContractCreationNotification(getShowContractCreationNotificationSetting());
+    setDisableWhatsAppNotifications(getDisableWhatsAppNotificationsSetting());
     setCreditsDisplayMode(getUiSettings().creditsDisplayMode);
   }, []);
 
@@ -134,6 +155,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     setAutoCollapseMenuSetting(autoCollapseMenu);
     setDisableNotificationsSetting(disableNotifications);
     setShowContractCreationNotificationSetting(showContractCreationNotification);
+    setDisableWhatsAppNotificationsSetting(disableWhatsAppNotifications);
     setUiSettings({ creditsDisplayMode });
     onClose();
   };
@@ -204,6 +226,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             label='Показывать уведомление при создании договора'
             checked={showContractCreationNotification}
             onChange={(e) => setShowContractCreationNotification(e)}
+            disabled={disableNotifications}
+          />
+          <Checkbox
+            label='Не присылать уведомления WhatsApp'
+            checked={disableWhatsAppNotifications}
+            onChange={(e) => setDisableWhatsAppNotifications(e)}
             disabled={disableNotifications}
           />
         </SettingsSection>
