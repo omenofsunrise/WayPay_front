@@ -158,6 +158,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     const handlePinSuccess = () => {
         setShowPinModal(false);
         setAuthCompleted(true);
+        sessionStorage.setItem('lastActivity', Date.now().toString());
         onLoginSuccess(authStorage.getAccessToken()!);
         window.location.href = '/credits';
     };

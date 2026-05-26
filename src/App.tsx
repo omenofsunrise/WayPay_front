@@ -253,15 +253,16 @@ function App() {
 
     const resolvers = pinResolversRef.current;
     pinResolversRef.current = [];
+    const triggeredByInterceptor = resolvers.length > 0;
     if (pin) {
       resolvers.forEach(r => r.resolve(pin));
     }
 
-    if (needsFullReloadRef.current) {
+    if (needsFullReloadRef.current || triggeredByInterceptor || !authInfo) {
       needsFullReloadRef.current = false;
       window.location.reload();
     }
-  }, [updateActivity]);
+  }, [updateActivity, authInfo]);
 
   const handlePinMaxAttempts = useCallback(() => {
     const resolvers = pinResolversRef.current;
