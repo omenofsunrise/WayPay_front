@@ -1,5 +1,12 @@
 import { useState, useCallback } from 'react';
-import { PassportPhotoType, type Client, type ClientParams, type PassportPhotoResponse } from '../types/client';
+import {
+  PassportPhotoType,
+  type Client,
+  type ClientContact,
+  type ClientParams,
+  type ContactType,
+  type PassportPhotoResponse,
+} from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 import clientService from '../services/clientService';
 
@@ -210,6 +217,77 @@ const useClient = () => {
     }
   };
 
+  const extractApiError = (err: unknown): string => {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const response = (err as { response?: { data?: unknown } }).response;
+      const data = response?.data;
+      if (typeof data === 'string' && data) return data;
+      if (data && typeof data === 'object') {
+        const obj = data as Record<string, unknown>;
+        if (typeof obj.message === 'string') return obj.message;
+        if (typeof obj.title === 'string') return obj.title;
+        if (typeof obj.error === 'string') return obj.error;
+      }
+    }
+    return err instanceof Error ? err.message : 'Unknown error';
+  };
+
+  const createContact = useCallback(async (
+    clientId: number,
+    type: ContactType,
+    value: string,
+  ): Promise<{ ok: boolean; data: ClientContact | null; error: string | null }> => {
+    setError(null);
+    try {
+      const created = await clientService.createContact({ clientId, type, value });
+      return { ok: true, data: created, error: null };
+    } catch (err) {
+      console.error('createContact failed:', err);
+      const message = extractApiError(err);
+      setError(message);
+      return { ok: false, data: null, error: message };
+    }
+  }, []);
+
+  const updateContact = useCallback(async (
+    contactId: number,
+    value: string,
+  ): Promise<{ ok: boolean; data: ClientContact | null; error: string | null }> => {
+    setError(null);
+    try {
+      const updated = await clientService.updateContact({ contactId, value });
+      return { ok: true, data: updated, error: null };
+    } catch (err) {
+      console.error('updateContact failed:', err);
+      const message = extractApiError(err);
+      setError(message);
+      return { ok: false, data: null, error: message };
+    }
+  }, []);
+
+  const deleteContact = useCallback(async (contactId: number): Promise<{ ok: boolean; error: string | null }> => {
+    setError(null);
+    try {
+      await clientService.deleteContact(contactId);
+      return { ok: true, error: null };
+    } catch (err) {
+      console.error('deleteContact failed:', err);
+      const message = extractApiError(err);
+      setError(message);
+      return { ok: false, error: message };
+    }
+  }, []);
+
+  const getClientContacts = useCallback(async (id: number): Promise<ClientContact[] | null> => {
+    try {
+      const client = await clientService.getClientById(id);
+      return client.contacts || [];
+    } catch (err) {
+      console.error('getClientContacts failed:', err);
+      return null;
+    }
+  }, []);
+
   const deletePassportPhoto = async (id: number, photoType: PassportPhotoType): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -247,7 +325,11 @@ const useClient = () => {
     uploadPassportPhoto,
     getPassportPhoto,
     deletePassportPhoto,
-    getAllPassportPhotos
+    getAllPassportPhotos,
+    createContact,
+    updateContact,
+    deleteContact,
+    getClientContacts,
   };
 };
 

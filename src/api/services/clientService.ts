@@ -1,5 +1,15 @@
 import apiClient from '../client';
-import type { Client, ClientExistsResponse, ClientParams, PassportPhotoResponse, PassportPhotoType, UploadPhotoResponse } from '../types/client';
+import type {
+  Client,
+  ClientContact,
+  ClientExistsResponse,
+  ClientParams,
+  CreateContactRequest,
+  PassportPhotoResponse,
+  PassportPhotoType,
+  UpdateContactRequest,
+  UploadPhotoResponse,
+} from '../types/client';
 import type { PaginatedResponse } from '../types/common';
 
 class ClientService {
@@ -71,6 +81,20 @@ class ClientService {
     await apiClient.delete(`/Client/${id}/passport-photo`, {
       params: { photoType }
     });
+  }
+
+  async createContact(request: CreateContactRequest): Promise<ClientContact | null> {
+    const response = await apiClient.post<ClientContact | null>('/Client/contact', request);
+    return response.data ?? null;
+  }
+
+  async updateContact(request: UpdateContactRequest): Promise<ClientContact | null> {
+    const response = await apiClient.put<ClientContact | null>('/Client/contact', request);
+    return response.data ?? null;
+  }
+
+  async deleteContact(id: number): Promise<void> {
+    await apiClient.delete(`/Client/contact/${id}`);
   }
 }
 

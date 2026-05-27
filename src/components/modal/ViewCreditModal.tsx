@@ -45,6 +45,8 @@ import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import SearchOffOutlinedIcon from '@mui/icons-material/SearchOffOutlined';
+import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
+import ContactsEditor from '../ui/ContactsEditor';
 
 interface ViewCreditModalProps {
   id: number;
@@ -1020,6 +1022,19 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           </InfoRows>
                         </PersonInfo>
                       </PersonCard>
+
+                      {creditData?.clientId ? (
+                        <>
+                          <SectionHeader style={{ marginTop: '24px' }}>
+                            <SectionIcon><ContactsOutlinedIcon fontSize="small" /></SectionIcon>
+                            <SectionTitle>Контакты</SectionTitle>
+                          </SectionHeader>
+                          <ContactsEditor
+                            clientId={creditData.clientId}
+                            contacts={creditData.contacts || []}
+                          />
+                        </>
+                      ) : null}
 
                       <SectionHeader style={{ marginTop: '24px' }}>
                         <SectionIcon><DescriptionOutlinedIcon fontSize="small" /></SectionIcon>

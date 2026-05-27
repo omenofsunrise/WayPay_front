@@ -4,11 +4,12 @@ import CustomInput from '../../ui/fields/CustomInput';
 import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
 import PhoneModalInput from '../../ui/fields/PhoneModalInput';
 import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
-import type { ClientForm } from '../../../api/types/client';
+import type { ClientContact, ClientForm } from '../../../api/types/client';
 import Button from '../../ui/Buttons/DarkCyanButton';
 import useClient from '../../../api/hooks/useClient';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../../ui/links/PhoneLink';
+import ContactsEditor from '../../ui/ContactsEditor';
 
 interface Client {
   id: number;
@@ -20,6 +21,7 @@ interface Client {
   docIssueDate?: string | Date;
   docIssueYear: number;
   registrationAddress: string;
+  contacts?: ClientContact[];
 }
 
 type ClientModalProps = {
@@ -706,6 +708,19 @@ const ClientModal: React.FC<ClientModalProps> = ({
               />
             </InputContainer>
           </InputRow>
+
+          {initialData.id > 0 && mode !== 'create' && (
+            <InputRow style={{ alignItems: 'flex-start' }}>
+              <InputLabel>Контакты:</InputLabel>
+              <InputContainer>
+                <ContactsEditor
+                  clientId={initialData.id}
+                  contacts={initialData.contacts || []}
+                  readOnly={mode === 'view'}
+                />
+              </InputContainer>
+            </InputRow>
+          )}
         </div>
       </form>
     </BaseModal>

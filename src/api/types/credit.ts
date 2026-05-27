@@ -1,4 +1,5 @@
 import type { PaginationParams, PaginatedResponse } from './common';
+import type { ClientContact } from './client';
 
 export type GuarantorType = 'Guarantor' | 'Client';
 
@@ -41,6 +42,7 @@ export interface Credit {
     employeeName: string;
     debtDays?: number;
     defferedIncome?: number;
+    contacts?: ClientContact[];
 }
 
 export interface CreateCreditRequest {

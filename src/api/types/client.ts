@@ -6,6 +6,35 @@ export interface GuarantorRef {
   creditId: number;
 }
 
+export type ContactType = 'Email' | 'WhatsAppPhone' | 'AdditionalPhone' | 'Telegram';
+
+export const ContactType = {
+  Email: 'Email',
+  WhatsAppPhone: 'WhatsAppPhone',
+  AdditionalPhone: 'AdditionalPhone',
+  Telegram: 'Telegram',
+} as const;
+
+export interface ClientContact {
+  id: number;
+  value: string;
+  type: ContactType;
+  entityId: number;
+  entityType: string;
+  createdAt?: string;
+}
+
+export interface CreateContactRequest {
+  clientId: number;
+  type: ContactType;
+  value: string;
+}
+
+export interface UpdateContactRequest {
+  contactId: number;
+  value: string;
+}
+
 export interface Client {
   id: number;
   fullName: string;
@@ -20,6 +49,7 @@ export interface Client {
   secondPhone?: string;
   hasPassportPhoto?: boolean;
   guarantors?: GuarantorRef[];
+  contacts?: ClientContact[];
 }
 
 export interface ClientParams extends PaginationParams {

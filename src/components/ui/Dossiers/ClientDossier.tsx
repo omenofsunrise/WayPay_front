@@ -12,9 +12,10 @@ import { formatMoney } from '../../../utils/formatPrice';
 import Pagination from '../fields/CustomPagination';
 import CustomTable from '../tables/CustomTable';
 import ViewCreditModal from '../../modal/ViewCreditModal';
-import { PassportPhotoType } from '../../../api/types/client';
+import { PassportPhotoType, type ClientContact } from '../../../api/types/client';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../links/PhoneLink';
+import ContactsEditor from '../ContactsEditor';
 
 const TabsContainer = styled.div`
   width: 100%;
@@ -705,7 +706,8 @@ interface ClientDossierProps {
     docIssueYear: number;
     registrationAddress: string | null;
     hasPassportPhoto?: boolean;
-    hasSecondPassportPhoto?: boolean;    
+    hasSecondPassportPhoto?: boolean;
+    contacts?: ClientContact[];
   };
   installments: Installment[];
   onBack: () => void;
@@ -1406,6 +1408,14 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
             {renderPassportPhotoSection(PassportPhotoType.MainPage)}
             {renderPassportPhotoSection(PassportPhotoType.RegistrationPage)}
           </PassportSection>
+        </Section>
+
+        <Section style={{ gridColumn: '1 / -1' }}>
+          <SectionTitle>Контакты</SectionTitle>
+          <ContactsEditor
+            clientId={client.id}
+            contacts={client.contacts || []}
+          />
         </Section>
 
         <CommentsSection>
