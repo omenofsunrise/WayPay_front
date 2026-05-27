@@ -4,6 +4,8 @@ import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
 import CustomInput from '../components/ui/fields/CustomInput';
 import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
+import CreditCardList from '../components/ui/cards/CreditCardList';
+import type { CreditCardField } from '../components/ui/cards/CreditCard';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import PrintIcon from '../assets/ui/print.svg?react';
@@ -185,7 +187,7 @@ const CreditPage = () => {
     key: number | null;
     direction: 'asc' | 'desc';
   }>({ key: null, direction: 'desc' });
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean; objectTypeId?: number }>(() => savedFilters?.filters ?? {});
+  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean; Terminated?: boolean; objectTypeId?: number }>(() => savedFilters?.filters ?? {});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -221,8 +223,8 @@ const CreditPage = () => {
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, getDocsData, setInvestmentSource, acceptCredit, acceptCredits } = useCredit();
-  const displayedCredits = isListMode ? accumulatedItems : (creditsData?.items ?? []);
+  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, toggleTerminated, getDocsData, setInvestmentSource, acceptCredit, acceptCredits } = useCredit();
+  const rawCredits = isListMode ? accumulatedItems : (creditsData?.items ?? []);
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
@@ -459,7 +461,8 @@ const CreditPage = () => {
       { id: 'favourite', label: 'Избранные' },
       { id: 'debtors', label: 'Просрочка' },
       { id: 'inDebt', label: 'В долг' },
-      { id: 'archive', label: 'В архиве' }
+      { id: 'archive', label: 'В архиве' },
+      { id: 'terminated', label: 'Расторгнутые' }
     ];
 
     const customTabItems = customTabs.map(tab => ({
@@ -495,6 +498,13 @@ const CreditPage = () => {
   }, [shouldShowMyCreditsTab, customTabs]);
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
+
+  const displayedCredits = useMemo(() => {
+    if (activeTab === 'terminated') {
+      return rawCredits.filter(c => c.terminated === true);
+    }
+    return rawCredits.filter(c => c.terminated !== true);
+  }, [rawCredits, activeTab]);
 
   const handleCreateTab = useCallback(async (tabData: ObjectTypeCreateRequest) => {
     if (customTabs.length >= 5) {
@@ -629,7 +639,7 @@ const CreditPage = () => {
     if (filterKeys.length > 0) {
       // Проверяем, что это не фильтры от вкладок
       const hasNonTabFilters = filterKeys.some(key => 
-        !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'objectTypeId'].includes(key) || 
+        !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'Terminated', 'objectTypeId'].includes(key) || 
         (key === 'objectTypeId' && !activeTab.startsWith('tab-'))
       );
       
@@ -668,7 +678,7 @@ const CreditPage = () => {
     ) || (Object.keys(filters).length > 0 && 
          // Проверяем, что это не фильтры от вкладок
          Object.keys(filters).some(key => 
-           !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'objectTypeId'].includes(key)
+           !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'Terminated', 'objectTypeId'].includes(key)
          ));
   }, [
     contractNumber,
@@ -718,12 +728,15 @@ const CreditPage = () => {
         case 'inDebt':
           newFilters = { inDebt: true };
           break;
+        case 'terminated':
+          newFilters = { Terminated: true };
+          break;
         default:
           newFilters = {};
           break;
       }
     }
-    
+
     setFilters(newFilters);
     setSortConfig({ key: null, direction: 'desc' });
     setCurrentPage(1);
@@ -850,7 +863,7 @@ const CreditPage = () => {
   };
 
   const includeAllStates = useMemo(() => {
-    const excludedTabs = ['favourite', 'archive', 'debtors', 'inDebt'];
+    const excludedTabs = ['favourite', 'archive', 'debtors', 'inDebt', 'terminated'];
     if (excludedTabs.includes(activeTab)) {
       return false;
     }
@@ -1012,12 +1025,15 @@ const CreditPage = () => {
         case 'inDebt':
           newFilters = { inDebt: true };
           break;
+        case 'terminated':
+          newFilters = { Terminated: true };
+          break;
         default:
           newFilters = {};
           break;
       }
     }
-    
+
     setFilters(newFilters);
     setCurrentPage(1);
     setSelectedRows([]); // Сбрасываем выбор при смене вкладки
@@ -1169,6 +1185,49 @@ const CreditPage = () => {
       shouldShow: (rowData: any[]) => hasPermission('EDIT_CREDITS', true)
     },
     {
+      label: 'Расторгнуть',
+      action: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find(c => c.id === Number(id));
+        if (!credit) return;
+        if (!window.confirm(
+          'Договор будет переведён в «Расторгнутые». ' +
+          'Сумма, использованная при выдаче, автоматически вернётся в кассу пула или инвестора. ' +
+          'Продолжить?'
+        )) return;
+        toggleTerminated(credit.id).then(ok => {
+          if (ok) loadCredits();
+        });
+      },
+      color: '#EF4444',
+      shouldShow: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find(c => c.id === Number(id));
+        return !!credit && !credit.terminated && hasPermission('EDIT_CREDITS', true);
+      }
+    },
+    {
+      label: 'Восстановить из расторгнутых',
+      action: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find(c => c.id === Number(id));
+        if (!credit) return;
+        if (!window.confirm(
+          'Договор будет возвращён в актуальные. ' +
+          'Сумма снова спишется с кассы пула или инвестора. Продолжить?'
+        )) return;
+        toggleTerminated(credit.id).then(ok => {
+          if (ok) loadCredits();
+        });
+      },
+      color: '#007d88',
+      shouldShow: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find(c => c.id === Number(id));
+        return !!credit && credit.terminated && hasPermission('EDIT_CREDITS', true);
+      }
+    },
+    {
       label: 'Удалить',
       action: handleDeleteCredit,
       color: '#EF4444',
@@ -1246,6 +1305,11 @@ const CreditPage = () => {
       if (!credit.isActive) {
         baseStyle.backgroundColor = '#E8F5E8';
         baseStyle.color = '#1B5E20';
+      }
+
+      if (credit.terminated) {
+        baseStyle.backgroundColor = '#F3E8FF';
+        baseStyle.color = '#6B21A8';
       }
 
       if (!credit.hasCounterApproved) {
@@ -1460,36 +1524,38 @@ const CreditPage = () => {
       </TitleField>
 
       {isFiltersVisible && (
-        <>
-          <FilterField>
-            <InputWrapper>
+        <FiltersCard>
+          <FilterGrid>
+            <FilterSlot>
+              <FilterSlotLabel>№ Договора</FilterSlotLabel>
               <CustomInput
                 inputType="text"
-                placeholder="№ Договора"
+                placeholder="Например, 19265"
                 value={contractNumber}
                 onChange={(e) => {
                   setContractNumber(e.target.value);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
-            
-            <InputWrapper>
-              <CustomInput 
-                style={{ marginRight: "auto", display: "flex"}}
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+              <CustomInput
                 inputType="fullname"
-                placeholder="ФИО"
+                placeholder="Поиск по ФИО"
                 value={clientFullName}
                 onChange={(e) => {
                   setClientFullName(e.target.value);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
+            </FilterSlot>
 
-            <InputWrapper>
-              <InvestorSelect 
-                placeholder="Инвестор"
+            <FilterSlot>
+              <FilterSlotLabel>Инвестор</FilterSlotLabel>
+              <InvestorSelect
+                placeholder="Любой"
                 value={investorName}
                 onChange={(name) => {
                   setInvestorName(name);
@@ -1507,70 +1573,73 @@ const CreditPage = () => {
                 }}
                 includePools
               />
-            </InputWrapper>
+            </FilterSlot>
 
-            <InputWrapper>
-              <ObjectTypeSelect 
+            <FilterSlot>
+              <FilterSlotLabel>Папка</FilterSlotLabel>
+              <ObjectTypeSelect
                 value={objectType}
                 onChange={handleObjectTypeChange}
                 onObjectTypeSelect={handleObjectTypeSelect}
-                placeholder="Папка"
+                placeholder="Любая"
                 customPlaceholder="Папка"
                 hideClearButton={false}
               />
-            </InputWrapper>
-          </FilterField>
+            </FilterSlot>
 
-          <SecondRaw style={{ color: "white", gap: "15px" }}>
-            <InputWrapper>
-              <CustomCalendar 
+            <FilterSlot>
+              <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
+              <CustomCalendar
                 prefix="от:"
-                placeholder='Дата договора'
+                placeholder='дд-мм-гггг'
                 value={fromDate}
                 onChange={(date) => {
                   setFromDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
-            
-            <InputWrapper>
-              <CustomCalendar 
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
+              <CustomCalendar
                 prefix="до:"
-                placeholder='Дата договора'
+                placeholder='дд-мм-гггг'
                 value={toDate}
                 onChange={(date) => {
                   setToDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
+            </FilterSlot>
 
-            <InputWrapper>
-              <CustomCalendar 
+            <FilterSlot>
+              <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
+              <CustomCalendar
                 prefix="от:"
-                placeholder='Дата создания'
+                placeholder='дд-мм-гггг'
                 value={fromCreationDate}
                 onChange={(date) => {
                   setFromCreationDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
-            
-            <InputWrapper>
-              <CustomCalendar 
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
+              <CustomCalendar
                 prefix="до:"
-                placeholder='Дата создания'
+                placeholder='дд-мм-гггг'
                 value={toCreationDate}
                 onChange={(date) => {
                   setToCreationDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
-          </SecondRaw>
-        </>
+            </FilterSlot>
+          </FilterGrid>
+        </FiltersCard>
       )}
 
       <SecondRaw style={{ color: "white" }}>
@@ -1603,32 +1672,57 @@ const CreditPage = () => {
 
       {!error && (!isLoading || (isListMode && displayedCredits.length > 0)) && (
         <>
-          <CustomTable 
-            columns={[
-              { name: "" },
-              { name: "№", isSortable: true },
-              { name: "Дата договора", isSortable: true, align: "right" },
-              { name: "ФИО покупателя", isSortable: true, align: "left" },
-              { name: "Стоимость товара", align: "right" },
-              { name: "Первоначальный взнос", isSortable: true, align: "right" },
-              { name: "Начислено", isSortable: true, align: "right" },
-              { name: "Уплачено", isSortable: true, align: "right" },
-              { name: "Остаток", isSortable: true, align: "right" },
-              { name: "Остаток", isHidden: true },
-              { name: "Долг", isSortable: true, align: "right" },
-              { name: "isActive", isHidden: true, align: "right" },
-            ]} 
-            data={formatCreditData(displayedCredits)}
-            rowStyles={rowStyles}
-            onSort={handleSort}
-            multiSelect={true}
-            onMultiSelectChange={handleMultiSelectChange}
-            sortConfig={sortConfig}
-            onRowDoubleClick={handleRowDoubleClick}
-            onRowClick={handleRowClick}
+          {creditsData && forbiddenRole('сотрудник') && displayedCredits.length > 0 && (
+            <SummaryStrip>
+              <SummaryItem><SummaryLabel>Стоимость</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalPrice.toString())}</SummaryValue></SummaryItem>
+              <SummaryItem><SummaryLabel>Аванс</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalFirstPayment.toString())}</SummaryValue></SummaryItem>
+              <SummaryItem><SummaryLabel>Начислено</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalAccured.toString())}</SummaryValue></SummaryItem>
+              <SummaryItem><SummaryLabel>Уплачено</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalPayed.toString())}</SummaryValue></SummaryItem>
+              <SummaryItem><SummaryLabel>Остаток</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalRest.toString())}</SummaryValue></SummaryItem>
+              <SummaryItem $danger={(creditsData.totalDebt ?? 0) > 0}><SummaryLabel>Долг</SummaryLabel><SummaryValue $danger={(creditsData.totalDebt ?? 0) > 0}>{formatMoney(creditsData.totalDebt.toString())}</SummaryValue></SummaryItem>
+            </SummaryStrip>
+          )}
+
+          <CreditCardList
+            credits={displayedCredits}
+            fields={['totalClean', 'firstPayment', 'accured', 'payed', 'rest', 'debt'] as CreditCardField[]}
+            getRowData={(credit) => [
+              null,
+              credit.id.toString(),
+              formatDate(credit.creditDate),
+              credit.clientFullName,
+              formatMoney((credit.totalClean ?? 0).toString()),
+              formatMoney((credit.firstPayment ?? 0).toString()),
+              formatMoney((credit.accured ?? 0).toString()),
+              formatMoney((credit.payed ?? 0).toString()),
+              formatMoney((credit.rest ?? 0).toString()),
+              formatMoney((credit.rest ?? 0).toString()),
+              formatMoney((credit.debt ?? 0).toString()),
+              credit.isActive,
+            ]}
+            selectedIndices={selectedRows}
+            highlightedCreditId={selectedCreditForPrint?.id ?? null}
+            multiSelect
+            onToggleSelect={(rowIndex) => {
+              setSelectedRows(prev =>
+                prev.includes(rowIndex)
+                  ? prev.filter(i => i !== rowIndex)
+                  : [...prev, rowIndex]
+              );
+            }}
+            onRowClick={(rowIndex) => {
+              const credit = displayedCredits[rowIndex];
+              if (credit) setSelectedCreditForPrint(credit);
+            }}
+            onRowDoubleClick={(rowIndex) => {
+              const credit = displayedCredits[rowIndex];
+              if (credit) {
+                setViewingCreditId(credit.id);
+                setIsViewModalOpen(true);
+              }
+            }}
+            onToggleFavourite={(credit) => toggleFavourite(credit.id)}
             contextMenuActions={tableActions}
-            hasTotalsRow={forbiddenRole('сотрудник')}
-            debtChecker={(row) => row[row.length - 2] !== '0₽' && row[row.length - 2] !== '0'}
           />
 
           {isListMode ? (
@@ -1983,6 +2077,68 @@ const ListLoadingIndicator = styled.div`
 
 const ListBottomSpacer = styled.div`
   height: 32px;
+`;
+
+const FiltersCard = styled.div`
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+`;
+
+const FilterGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 16px;
+`;
+
+const FilterSlot = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+`;
+
+const FilterSlotLabel = styled.span`
+  font-size: 11px;
+  font-weight: 500;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const SummaryStrip = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #F0FDFA 0%, #ECFEFF 100%);
+  border: 1px solid #CCFBF1;
+  border-radius: 12px;
+`;
+
+const SummaryItem = styled.div<{ $danger?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid ${p => (p.$danger ? '#EF4444' : '#0F766E')};
+`;
+
+const SummaryLabel = styled.span`
+  font-size: 11px;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const SummaryValue = styled.span<{ $danger?: boolean }>`
+  font-size: 15px;
+  font-weight: 600;
+  color: ${p => (p.$danger ? '#B91C1C' : '#0F766E')};
 `;
 
 export default CreditPage;

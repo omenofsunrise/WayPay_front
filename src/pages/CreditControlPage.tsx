@@ -4,6 +4,8 @@ import TitleField from '../components/ui/Layouts/TitleLayout';
 import ExportButton from '../components/ui/Buttons/ExportButton';
 import CustomInput from '../components/ui/fields/CustomInput';
 import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
+import CreditCardList from '../components/ui/cards/CreditCardList';
+import type { CreditCardField } from '../components/ui/cards/CreditCard';
 import Pagination from '../components/ui/fields/CustomPagination';
 import PageLayout from '../components/ui/Layouts/PageLayout';
 import Tabs from '../components/ui/fields/Tabs';
@@ -980,46 +982,50 @@ const CreditControlPage = () => {
       </TitleField>
 
       {isFiltersVisible && (
-        <>
-          <FilterField>
-            <InputWrapper>
+        <FiltersCard>
+          <FilterGrid>
+            <FilterSlot>
+              <FilterSlotLabel>№ Договора</FilterSlotLabel>
               <CustomInput
                 inputType="text"
-                placeholder="№ Договора"
+                placeholder="Например, 19265"
                 value={contractNumber}
                 onChange={(e) => {
                   setContractNumber(e.target.value);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
-            
-            <InputWrapper>
-              <CustomInput 
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+              <CustomInput
                 inputType="fullname"
-                placeholder="ФИО"
+                placeholder="Поиск по ФИО"
                 value={clientFullName}
                 onChange={(e) => {
                   setClientFullName(e.target.value);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
+            </FilterSlot>
 
-            <InputWrapper>
-              <ObjectTypeSelect 
+            <FilterSlot>
+              <FilterSlotLabel>Папка</FilterSlotLabel>
+              <ObjectTypeSelect
                 value={objectType}
                 onChange={handleObjectTypeChange}
                 onObjectTypeSelect={handleObjectTypeSelect}
-                placeholder="Папка"
+                placeholder="Любая"
                 customPlaceholder="Папка"
                 hideClearButton={false}
               />
-            </InputWrapper>
+            </FilterSlot>
 
-            <InputWrapper style={{ minWidth: "250px" }}>
-              <InvestorSelect 
-                placeholder="Инвестор"
+            <FilterSlot>
+              <FilterSlotLabel>Инвестор</FilterSlotLabel>
+              <InvestorSelect
+                placeholder="Любой"
                 value={investorName}
                 onChange={(name) => {
                   setInvestorName(name);
@@ -1037,10 +1043,12 @@ const CreditControlPage = () => {
                 }}
                 includePools
               />
-            </InputWrapper>
-            <InputWrapper style={{ minWidth: "150px" }}>
-              <CustomSelect 
-                placeholder="Статус подтверждения"
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Статус подтверждения</FilterSlotLabel>
+              <CustomSelect
+                placeholder="Любой"
                 customPlaceholder="Статус подтверждения"
                 options={approvalOptions}
                 value={approvalStatus}
@@ -1051,107 +1059,111 @@ const CreditControlPage = () => {
                 hasError={false}
                 disabled={false}
               />
-            </InputWrapper>
-          </FilterField>
+            </FilterSlot>
 
-          <SecondRaw>
-            <InputWrapper>
-              <CustomCalendar 
+            <FilterSlot>
+              <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
+              <CustomCalendar
                 prefix="от:"
-                placeholder='Дата договора'
+                placeholder='дд-мм-гггг'
                 value={fromDate}
                 onChange={(date) => {
                   setFromDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
-            
-            <InputWrapper>
-              <CustomCalendar 
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
+              <CustomCalendar
                 prefix="до:"
-                placeholder='Дата договора'
+                placeholder='дд-мм-гггг'
                 value={toDate}
                 onChange={(date) => {
                   setToDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
+            </FilterSlot>
 
-            <InputWrapper>
-              <CustomCalendar 
+            <FilterSlot>
+              <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
+              <CustomCalendar
                 prefix="от:"
-                placeholder='Дата создания'
+                placeholder='дд-мм-гггг'
                 value={fromCreationDate}
                 onChange={(date) => {
                   setFromCreationDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
-            
-            <InputWrapper>
-              <CustomCalendar 
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
+              <CustomCalendar
                 prefix="до:"
-                placeholder='Дата создания'
+                placeholder='дд-мм-гггг'
                 value={toCreationDate}
                 onChange={(date) => {
                   setToCreationDate(date);
                   setCurrentPage(1);
                 }}
               />
-            </InputWrapper>
+            </FilterSlot>
 
-            <IncomeContainer>
-              <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, руб</InputTitle>
-              <CustomInput 
-                style={{ maxWidth: "80px" }}
-                inputType="number"
-                placeholder="От"
-                value={rublesIncomeFrom}
-                onChange={(e) => {
-                  setRublesIncomeFrom(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-              <InputTitle style={{ margin: '0' }}>-</InputTitle>
-              <CustomInput 
-                style={{ maxWidth: "80px" }}
-                inputType="number"
-                placeholder="До"
-                value={rublesIncomeTo}
-                onChange={(e) => {
-                  setRublesIncomeTo(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-              <Container style={{ margin: "20px"}}/>
-              <InputTitle style={{ margin: '0 16px 0 16px' }}>Доход, %</InputTitle>
-              <CustomInput 
-                style={{ maxWidth: "80px" }}
-                inputType="number"
-                placeholder="От"
-                value={percentsIncomeFrom}
-                onChange={(e) => {
-                  setPercentsIncomeFrom(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-              <InputTitle style={{ margin: '0' }}>-</InputTitle>
-              <CustomInput 
-                style={{ maxWidth: "80px" }}
-                inputType="number"
-                placeholder="До"
-                value={percentsIncomeTo}
-                onChange={(e) => {
-                  setPercentsIncomeTo(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </IncomeContainer>
-          </SecondRaw>
-        </>
+            <FilterSlot>
+              <FilterSlotLabel>Доход, руб</FilterSlotLabel>
+              <RangeRow>
+                <CustomInput
+                  inputType="number"
+                  placeholder="От"
+                  value={rublesIncomeFrom}
+                  onChange={(e) => {
+                    setRublesIncomeFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+                <RangeDash>–</RangeDash>
+                <CustomInput
+                  inputType="number"
+                  placeholder="До"
+                  value={rublesIncomeTo}
+                  onChange={(e) => {
+                    setRublesIncomeTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </RangeRow>
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Доход, %</FilterSlotLabel>
+              <RangeRow>
+                <CustomInput
+                  inputType="number"
+                  placeholder="От"
+                  value={percentsIncomeFrom}
+                  onChange={(e) => {
+                    setPercentsIncomeFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+                <RangeDash>–</RangeDash>
+                <CustomInput
+                  inputType="number"
+                  placeholder="До"
+                  value={percentsIncomeTo}
+                  onChange={(e) => {
+                    setPercentsIncomeTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </RangeRow>
+            </FilterSlot>
+          </FilterGrid>
+        </FiltersCard>
       )}
 
       <SecondRaw>
@@ -1172,28 +1184,45 @@ const CreditControlPage = () => {
 
       {!error && (!isLoading || (isListMode && displayedCredits.length > 0)) && (
         <>
-          <CustomTable
-            columns={[
-              { name: "" },
-              { name: "№", isSortable: true },
-              { name: "Дата договора", isSortable: true, align: "right" },
-              { name: "ФИО сотрудника", align: "left" },
-              { name: "Стоимость товара", align: "right" },
-              { name: "Первоначальный взнос", align: "right" },
-              { name: "Доход, %", isSortable: true, align: "right" },
-              { name: "Доход, руб", isSortable: true, align: "right" },
-              { name: "Начислено", isSortable: true, align: "right" },
-              { name: "isActive", isHidden: true },
-              { name: "hasDebt", isHidden: true } 
-            ]} 
-            data={formatCreditData(displayedCredits)}
-            onRowClick={handleRowClick}
-            onSort={handleSort}
-            rowStyles={rowStyles}
-            sortConfig={sortConfig}
-            onRowDoubleClick={handleRowDoubleClick}
+          {creditsData && displayedCredits.length > 0 && (
+            <ControlSummaryStrip>
+              <ControlSummaryItem><ControlSummaryLabel>Стоимость</ControlSummaryLabel><ControlSummaryValue>{formatMoney(creditsData.totalPrice.toString())}</ControlSummaryValue></ControlSummaryItem>
+              <ControlSummaryItem><ControlSummaryLabel>Аванс</ControlSummaryLabel><ControlSummaryValue>{formatMoney(creditsData.totalFirstPayment.toString())}</ControlSummaryValue></ControlSummaryItem>
+              <ControlSummaryItem><ControlSummaryLabel>Доход, руб</ControlSummaryLabel><ControlSummaryValue>{formatMoney(creditsData.totalIncomeRubles.toString())}</ControlSummaryValue></ControlSummaryItem>
+              <ControlSummaryItem><ControlSummaryLabel>Начислено</ControlSummaryLabel><ControlSummaryValue>{formatMoney(creditsData.totalAccured.toString())}</ControlSummaryValue></ControlSummaryItem>
+            </ControlSummaryStrip>
+          )}
+
+          <CreditCardList
+            credits={displayedCredits}
+            fields={['employee', 'totalClean', 'firstPayment', 'incomePercents', 'incomeRubles', 'accured'] as CreditCardField[]}
+            getRowData={(credit) => [
+              null,
+              credit.id.toString(),
+              formatDate(credit.creditDate),
+              credit.employeeName,
+              formatMoney((credit.totalClean ?? 0).toString()),
+              formatMoney((credit.firstPayment ?? 0).toString()),
+              `${credit.incomePercents ?? 0}%`,
+              formatMoney((credit.incomeRubles ?? 0).toString()),
+              formatMoney((credit.accured ?? 0).toString()),
+              (credit.debt ?? 0) > 0,
+              credit.isActive,
+            ]}
+            highlightedCreditId={selectedCredit?.id ?? null}
+            onRowClick={(rowIndex) => {
+              const credit = displayedCredits[rowIndex];
+              if (credit) setSelectedCredit(credit);
+            }}
+            onRowDoubleClick={(rowIndex) => {
+              const credit = displayedCredits[rowIndex];
+              if (credit) {
+                setViewingCreditId(credit.id);
+                setIsViewModalOpen(true);
+              }
+            }}
+            onToggleFavourite={(credit) => toggleFavourite(credit.id)}
             contextMenuActions={tableActions}
-            hasTotalsRow={true}
           />
 
           {isListMode ? (
@@ -1417,6 +1446,85 @@ const ListLoadingIndicator = styled.div`
 
 const ListBottomSpacer = styled.div`
   height: 32px;
+`;
+
+const FiltersCard = styled.div`
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+`;
+
+const FilterGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 16px;
+`;
+
+const FilterSlot = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+`;
+
+const FilterSlotLabel = styled.span`
+  font-size: 11px;
+  font-weight: 500;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const RangeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  > *:first-child,
+  > *:last-child {
+    flex: 1;
+    min-width: 0;
+  }
+`;
+
+const RangeDash = styled.span`
+  color: #6B7280;
+  font-weight: 500;
+`;
+
+const ControlSummaryStrip = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #F0FDFA 0%, #ECFEFF 100%);
+  border: 1px solid #CCFBF1;
+  border-radius: 12px;
+`;
+
+const ControlSummaryItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid #0F766E;
+`;
+
+const ControlSummaryLabel = styled.span`
+  font-size: 11px;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const ControlSummaryValue = styled.span`
+  font-size: 15px;
+  font-weight: 600;
+  color: #0F766E;
 `;
 
 export default CreditControlPage;

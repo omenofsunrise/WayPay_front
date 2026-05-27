@@ -139,7 +139,7 @@ const useCredit = () => {
         if (!prev) return null;
         return {
           ...prev,
-          items: prev.items.map(credit => 
+          items: prev.items.map(credit =>
             credit.id === id ? { ...credit, isFavourite: !credit.isFavourite } : credit
           )
         };
@@ -148,13 +148,41 @@ const useCredit = () => {
         if (!prev) return null;
         return {
           ...prev,
-          items: prev.items.map(credit => 
+          items: prev.items.map(credit =>
             credit.id === id ? { ...credit, isFavourite: !credit.isFavourite } : credit
           )
         };
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle favorite');
+    }
+  }, []);
+
+  const toggleTerminated = useCallback(async (id: number): Promise<boolean> => {
+    try {
+      await creditService.toggleTerminated(id);
+      setData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          items: prev.items.map(credit =>
+            credit.id === id ? { ...credit, terminated: !credit.terminated } : credit
+          )
+        };
+      });
+      setInvestorCredits(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          items: prev.items.map(credit =>
+            credit.id === id ? { ...credit, terminated: !credit.terminated } : credit
+          )
+        };
+      });
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle terminated');
+      return false;
     }
   }, []);
 
@@ -253,6 +281,7 @@ const useCredit = () => {
     getCreditsByInvestorId,
     createCredit,
     toggleFavourite,
+    toggleTerminated,
     deleteCredit,
     getDocsData,
     updateCredit,

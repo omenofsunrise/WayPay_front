@@ -61,6 +61,10 @@ class CreditService {
     await apiClient.put(`/Credit/${id}/toggle-favourite`);
   }
 
+  async toggleTerminated(id: number) {
+    await apiClient.patch(`/Credit/toggle/terminated/${id}`);
+  }
+
   async acceptCredit(id: number) {
     await apiClient.patch(`/Credit/approve/${id}`);
   }

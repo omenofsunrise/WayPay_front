@@ -96,7 +96,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     getFileByNote 
   } = useNotes();
   
-  const { getCredits, getCreditListByClient } = useCredit();
+  const { getCredits, getCreditListByClient, toggleTerminated } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
   const [activeTab, setActiveTab] = useState<CreditTab>(() => {
     const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as CreditTab | null;
@@ -905,6 +905,29 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                   const status = getCreditStatus(creditData);
                   return <StatusBadge $status={status.key}>{status.label}</StatusBadge>;
                 })()}
+                {creditData?.terminated && (
+                  <StatusBadge $status="closed" style={{ background: '#F3E8FF', borderColor: '#D8B4FE', color: '#6B21A8' }}>
+                    Расторгнут
+                  </StatusBadge>
+                )}
+                {creditData && (
+                  <TerminateButton
+                    type="button"
+                    $variant={creditData.terminated ? 'restore' : 'terminate'}
+                    onClick={async () => {
+                      const confirmMsg = creditData.terminated
+                        ? 'Договор будет возвращён в актуальные. Сумма снова спишется с кассы пула или инвестора. Продолжить?'
+                        : 'Договор будет переведён в «Расторгнутые». Сумма, использованная при выдаче, автоматически вернётся в кассу пула или инвестора. Продолжить?';
+                      if (!window.confirm(confirmMsg)) return;
+                      const ok = await toggleTerminated(creditData.id);
+                      if (ok) {
+                        setCreditData(prev => prev ? { ...prev, terminated: !prev.terminated } : prev);
+                      }
+                    }}
+                  >
+                    {creditData.terminated ? 'Восстановить' : 'Расторгнуть'}
+                  </TerminateButton>
+                )}
               </HeaderTitle>
               {creditData?.name && <HeaderSubtitle>{creditData.name}</HeaderSubtitle>}
             </HeaderRow>
@@ -1031,7 +1054,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           </SectionHeader>
                           <ContactsEditor
                             clientId={creditData.clientId}
-                            contacts={creditData.contacts || []}
+                            contacts={creditData.clientContacts || []}
                           />
                         </>
                       ) : null}
@@ -1615,6 +1638,30 @@ const HeaderTitle = styled.div`
 const HeaderSubtitle = styled.div`
   font-size: 14px;
   color: rgba(80, 85, 92, 1);
+`;
+
+const TerminateButton = styled.button<{ $variant: 'terminate' | 'restore' }>`
+  margin-left: auto;
+  background: ${p => (p.$variant === 'restore' ? '#007D88' : '#fff')};
+  color: ${p => (p.$variant === 'restore' ? '#fff' : '#B91C1C')};
+  border: 1px solid ${p => (p.$variant === 'restore' ? '#007D88' : '#FCA5A5')};
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: ${p => (p.$variant === 'restore' ? '#006670' : '#FEF2F2')};
+    border-color: ${p => (p.$variant === 'restore' ? '#006670' : '#F87171')};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const statusPalette: Record<CreditStatusKey, { bg: string; border: string; color: string }> = {

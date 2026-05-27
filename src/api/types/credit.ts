@@ -42,7 +42,8 @@ export interface Credit {
     employeeName: string;
     debtDays?: number;
     defferedIncome?: number;
-    contacts?: ClientContact[];
+    clientContacts?: ClientContact[];
+    terminated: boolean;
 }
 
 export interface CreateCreditRequest {
@@ -98,6 +99,7 @@ export interface CreditParams extends PaginationParams {
     isActive?: boolean;
     clientId?: number;
     includeAllStates?: boolean;
+    Terminated?: boolean;
 }
 
 export interface CreditDocs {
