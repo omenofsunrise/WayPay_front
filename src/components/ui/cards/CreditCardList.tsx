@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import type { Credit } from '../../../api/types/credit';
 import type { TableAction } from '../tables/CustomTable';
@@ -41,6 +41,8 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
   emptyText = 'Договоров нет',
 }) => {
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (!menu) return;
@@ -51,6 +53,18 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
       window.removeEventListener('click', close);
       window.removeEventListener('contextmenu', close);
     };
+  }, [menu]);
+
+  useLayoutEffect(() => {
+    if (!menu || !menuRef.current) {
+      setMenuPos(null);
+      return;
+    }
+    const margin = 8;
+    const { width, height } = menuRef.current.getBoundingClientRect();
+    const left = Math.max(margin, Math.min(menu.x, window.innerWidth - width - margin));
+    const top = Math.max(margin, Math.min(menu.y, window.innerHeight - height - margin));
+    setMenuPos({ top, left });
   }, [menu]);
 
   const openMenu = (e: React.MouseEvent, rowIndex: number, rowData: any[]) => {
@@ -90,7 +104,15 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
       })}
 
       {menu && (
-        <Menu style={{ top: menu.y, left: menu.x }} onClick={(e) => e.stopPropagation()}>
+        <Menu
+          ref={menuRef}
+          style={{
+            top: menuPos?.top ?? menu.y,
+            left: menuPos?.left ?? menu.x,
+            visibility: menuPos ? 'visible' : 'hidden',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           {visibleActions(menu.rowData).map((action, i) => (
             <MenuItem
               key={`${action.label}-${i}`}
@@ -135,6 +157,9 @@ const Menu = styled.div`
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
   padding: 6px;
   min-width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
 `;
 
 const MenuItem = styled.div<{ $color?: string }>`

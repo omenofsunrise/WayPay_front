@@ -126,7 +126,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
 
         <HeaderInfo>
           <TitleRow>
-            <Title>Договор №{credit.id}</Title>
+            <Title>{credit.clientFullName || `Договор №${credit.id}`}</Title>
             {onToggleFavourite && (
               <FavButton
                 type="button"
@@ -147,18 +147,8 @@ const CreditCard: React.FC<CreditCardProps> = ({
           <MetaRow>
             <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
             <span>{formatDate(credit.creditDate)}</span>
-            {credit.clientFullName && (
-              <>
-                <Sep>·</Sep>
-                <ClientName>{credit.clientFullName}</ClientName>
-              </>
-            )}
-            {credit.clientPhone && (
-              <>
-                <Sep>·</Sep>
-                <Muted>{credit.clientPhone}</Muted>
-              </>
-            )}
+            <Sep>·</Sep>
+            <span>Договор №{credit.id}</span>
           </MetaRow>
         </HeaderInfo>
 
@@ -307,15 +297,6 @@ const MetaRow = styled.div`
 
 const Sep = styled.span`
   color: #CBD5E1;
-`;
-
-const Muted = styled.span`
-  color: #6B7280;
-`;
-
-const ClientName = styled.span`
-  font-weight: 600;
-  color: #111827;
 `;
 
 const StatusBadge = styled.span<{ $bg: string; $border: string; $color: string }>`

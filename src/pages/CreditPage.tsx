@@ -200,15 +200,18 @@ const CreditPage = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [isPageSizeReady, setIsPageSizeReady] = useState(false);
   const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
-    defaultPageSize: 10,
+    defaultPageSize: 5,
     minPageSize: 1,
     maxPageSize: 50,
-    rowHeight: 35,
+    rowHeight: 130,
     headerHeight: 300,
     paginationHeight: 60,
   });
   const pageSizeRef = useRef(responsivePageSize);
-  const itemsPerPage = responsivePageSize;
+  // В постраничном режиме показываем ровно столько договоров, сколько помещается
+  // на экран, чтобы листать страницами без прокрутки. В режиме ленты грузим
+  // более крупными пачками, чтобы бесконечный скролл не дёргался.
+  const itemsPerPage = isListMode ? Math.max(responsivePageSize, 20) : responsivePageSize;
   const columnToApiSortMap: Record<number, string> = {
     1: 'id',
     2: 'date',
@@ -218,7 +221,7 @@ const CreditPage = () => {
     7: 'rest',
     8: 'debt'
   };
-  const { hasPermission, forbiddenRole, hasRole, denyPermission } = useAuth();
+  const { hasPermission, hasRole, denyPermission } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -1672,17 +1675,6 @@ const CreditPage = () => {
 
       {!error && (!isLoading || (isListMode && displayedCredits.length > 0)) && (
         <>
-          {creditsData && forbiddenRole('сотрудник') && displayedCredits.length > 0 && (
-            <SummaryStrip>
-              <SummaryItem><SummaryLabel>Стоимость</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalPrice.toString())}</SummaryValue></SummaryItem>
-              <SummaryItem><SummaryLabel>Аванс</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalFirstPayment.toString())}</SummaryValue></SummaryItem>
-              <SummaryItem><SummaryLabel>Начислено</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalAccured.toString())}</SummaryValue></SummaryItem>
-              <SummaryItem><SummaryLabel>Уплачено</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalPayed.toString())}</SummaryValue></SummaryItem>
-              <SummaryItem><SummaryLabel>Остаток</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalRest.toString())}</SummaryValue></SummaryItem>
-              <SummaryItem $danger={(creditsData.totalDebt ?? 0) > 0}><SummaryLabel>Долг</SummaryLabel><SummaryValue $danger={(creditsData.totalDebt ?? 0) > 0}>{formatMoney(creditsData.totalDebt.toString())}</SummaryValue></SummaryItem>
-            </SummaryStrip>
-          )}
-
           <CreditCardList
             credits={displayedCredits}
             fields={['totalClean', 'firstPayment', 'accured', 'payed', 'rest', 'debt'] as CreditCardField[]}
@@ -2107,38 +2099,6 @@ const FilterSlotLabel = styled.span`
   color: #6B7280;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-`;
-
-const SummaryStrip = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg, #F0FDFA 0%, #ECFEFF 100%);
-  border: 1px solid #CCFBF1;
-  border-radius: 12px;
-`;
-
-const SummaryItem = styled.div<{ $danger?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 10px;
-  border-left: 3px solid ${p => (p.$danger ? '#EF4444' : '#0F766E')};
-`;
-
-const SummaryLabel = styled.span`
-  font-size: 11px;
-  color: #6B7280;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-`;
-
-const SummaryValue = styled.span<{ $danger?: boolean }>`
-  font-size: 15px;
-  font-weight: 600;
-  color: ${p => (p.$danger ? '#B91C1C' : '#0F766E')};
 `;
 
 export default CreditPage;

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import TitleField from '../ui/Layouts/TitleLayout';
 import CustomTitle from '../ui/Text/CustomTitle';
@@ -98,6 +98,24 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   
   const { getCredits, getCreditListByClient, toggleTerminated } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
+  const [copiedName, setCopiedName] = useState<string | null>(null);
+  const copyNameTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (copyNameTimerRef.current) window.clearTimeout(copyNameTimerRef.current);
+  }, []);
+
+  const handleCopyName = useCallback(async (name: string | null | undefined, key: string) => {
+    if (!name) return;
+    try {
+      await navigator.clipboard.writeText(name);
+      setCopiedName(key);
+      if (copyNameTimerRef.current) window.clearTimeout(copyNameTimerRef.current);
+      copyNameTimerRef.current = window.setTimeout(() => setCopiedName(null), 1500);
+    } catch (err) {
+      console.error('Не удалось скопировать ФИО:', err);
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState<CreditTab>(() => {
     const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as CreditTab | null;
     return saved && ['client', 'payments', 'products', 'guarantor', 'notes'].includes(saved)
@@ -901,33 +919,35 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                 <CustomTitle style={{ marginTop: 0, marginBottom: 0 }}>
                   Договор №{id}
                 </CustomTitle>
-                {creditData && (() => {
-                  const status = getCreditStatus(creditData);
-                  return <StatusBadge $status={status.key}>{status.label}</StatusBadge>;
-                })()}
-                {creditData?.terminated && (
-                  <StatusBadge $status="closed" style={{ background: '#F3E8FF', borderColor: '#D8B4FE', color: '#6B21A8' }}>
-                    Расторгнут
-                  </StatusBadge>
-                )}
-                {creditData && (
-                  <TerminateButton
-                    type="button"
-                    $variant={creditData.terminated ? 'restore' : 'terminate'}
-                    onClick={async () => {
-                      const confirmMsg = creditData.terminated
-                        ? 'Договор будет возвращён в актуальные. Сумма снова спишется с кассы пула или инвестора. Продолжить?'
-                        : 'Договор будет переведён в «Расторгнутые». Сумма, использованная при выдаче, автоматически вернётся в кассу пула или инвестора. Продолжить?';
-                      if (!window.confirm(confirmMsg)) return;
-                      const ok = await toggleTerminated(creditData.id);
-                      if (ok) {
-                        setCreditData(prev => prev ? { ...prev, terminated: !prev.terminated } : prev);
-                      }
-                    }}
-                  >
-                    {creditData.terminated ? 'Восстановить' : 'Расторгнуть'}
-                  </TerminateButton>
-                )}
+                <HeaderActions>
+                  {creditData && (() => {
+                    const status = getCreditStatus(creditData);
+                    return <StatusBadge $status={status.key}>{status.label}</StatusBadge>;
+                  })()}
+                  {creditData?.terminated && (
+                    <StatusBadge $status="closed" style={{ background: '#F3E8FF', borderColor: '#D8B4FE', color: '#6B21A8' }}>
+                      Расторгнут
+                    </StatusBadge>
+                  )}
+                  {creditData && (
+                    <TerminateButton
+                      type="button"
+                      $variant={creditData.terminated ? 'restore' : 'terminate'}
+                      onClick={async () => {
+                        const confirmMsg = creditData.terminated
+                          ? 'Договор будет возвращён в актуальные. Сумма снова спишется с кассы пула или инвестора. Продолжить?'
+                          : 'Договор будет переведён в «Расторгнутые». Сумма, использованная при выдаче, автоматически вернётся в кассу пула или инвестора. Продолжить?';
+                        if (!window.confirm(confirmMsg)) return;
+                        const ok = await toggleTerminated(creditData.id);
+                        if (ok) {
+                          setCreditData(prev => prev ? { ...prev, terminated: !prev.terminated } : prev);
+                        }
+                      }}
+                    >
+                      {creditData.terminated ? 'Восстановить' : 'Расторгнуть'}
+                    </TerminateButton>
+                  )}
+                </HeaderActions>
               </HeaderTitle>
               {creditData?.name && <HeaderSubtitle>{creditData.name}</HeaderSubtitle>}
             </HeaderRow>
@@ -1016,7 +1036,15 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       <PersonCard>
                         <Avatar />
                         <PersonInfo>
-                          <PersonName>{creditData?.clientFullName || '—'}</PersonName>
+                          <PersonName
+                            $clickable={!!creditData?.clientFullName}
+                            onClick={() => handleCopyName(creditData?.clientFullName, 'client')}
+                            title={creditData?.clientFullName ? 'Нажмите, чтобы скопировать ФИО' : undefined}
+                            role={creditData?.clientFullName ? 'button' : undefined}
+                          >
+                            {creditData?.clientFullName || '—'}
+                            {copiedName === 'client' && <CopiedHint>Скопировано</CopiedHint>}
+                          </PersonName>
                           <InfoRows>
                             <InfoRow>
                               <InfoIcon><CallOutlinedIcon fontSize="small" /></InfoIcon>
@@ -1181,7 +1209,15 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           <PersonCard>
                             <Avatar $variant="guarantor" />
                             <PersonInfo>
-                              <PersonName>{creditData.guarantorFullname}</PersonName>
+                              <PersonName
+                                $clickable={!!creditData.guarantorFullname}
+                                onClick={() => handleCopyName(creditData.guarantorFullname, 'guarantor')}
+                                title="Нажмите, чтобы скопировать ФИО"
+                                role="button"
+                              >
+                                {creditData.guarantorFullname}
+                                {copiedName === 'guarantor' && <CopiedHint>Скопировано</CopiedHint>}
+                              </PersonName>
                               <InfoRows>
                                 {creditData.guarantorPhone && (
                                   <InfoRow>
@@ -1635,13 +1671,20 @@ const HeaderTitle = styled.div`
   flex-wrap: wrap;
 `;
 
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-wrap: wrap;
+`;
+
 const HeaderSubtitle = styled.div`
   font-size: 14px;
   color: rgba(80, 85, 92, 1);
 `;
 
 const TerminateButton = styled.button<{ $variant: 'terminate' | 'restore' }>`
-  margin-left: auto;
   background: ${p => (p.$variant === 'restore' ? '#007D88' : '#fff')};
   color: ${p => (p.$variant === 'restore' ? '#fff' : '#B91C1C')};
   border: 1px solid ${p => (p.$variant === 'restore' ? '#007D88' : '#FCA5A5')};
@@ -1799,10 +1842,31 @@ const PersonInfo = styled.div`
   flex: 1;
 `;
 
-const PersonName = styled.div`
+const PersonName = styled.div<{ $clickable?: boolean }>`
   font-size: 18px;
   font-weight: 600;
   color: #000;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  ${p => p.$clickable && `
+    cursor: pointer;
+    transition: color 0.15s;
+    &:hover { color: #007D88; }
+  `}
+`;
+
+const CopiedHint = styled.span`
+  font-size: 12px;
+  font-weight: 600;
+  color: #0F766E;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
 `;
 
 const InfoRows = styled.div`

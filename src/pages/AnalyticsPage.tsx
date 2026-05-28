@@ -10,6 +10,9 @@ import ColumnChart from "../components/Dashboards/ColumnChart";
 import { useEffect, useMemo, useState } from "react";
 import useAnalytic from "../api/hooks/useAnalytic";
 import { useEmployee } from "../api/hooks/useEmployee";
+import useCredit from "../api/hooks/useCredit";
+import { useAuth } from "../сontext/AuthContext";
+import { formatMoney } from "../utils/formatPrice";
 import type { AnalyticParams, PredefinedPeriod } from "../api/types/analytic";
 
 const SHORT_MONTHS = [
@@ -45,6 +48,8 @@ const AnalyticsPage = () => {
   } = useAnalytic();
 
   const { paymentsStats, fetchPaymentsStats } = useEmployee();
+  const { data: creditsData, getCredits } = useCredit();
+  const { forbiddenRole } = useAuth();
   const currentYear = useMemo(() => new Date().getFullYear(), []);
 
   useEffect(() => {
@@ -53,6 +58,10 @@ const AnalyticsPage = () => {
     getInvestmentDynamic({ predefinedPeriod: period });
     getDebtDynamic({ predefinedPeriod: period });
   }, [period, getAnalyticItems, getSellInfo, getInvestmentDynamic, getDebtDynamic]);
+
+  useEffect(() => {
+    getCredits({ page: 1, pageSize: 1 });
+  }, [getCredits]);
 
   useEffect(() => {
     fetchPaymentsStats(12);
@@ -205,6 +214,16 @@ const handlePeriodChange = (period: string, startDate?: string, endDate?: string
         />
       </FilterField>
       <AnalyticsWrapper>
+        {creditsData && forbiddenRole('сотрудник') && (
+          <SummaryStrip>
+            <SummaryItem><SummaryLabel>Стоимость</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalPrice.toString())}</SummaryValue></SummaryItem>
+            <SummaryItem><SummaryLabel>Аванс</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalFirstPayment.toString())}</SummaryValue></SummaryItem>
+            <SummaryItem><SummaryLabel>Начислено</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalAccured.toString())}</SummaryValue></SummaryItem>
+            <SummaryItem><SummaryLabel>Уплачено</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalPayed.toString())}</SummaryValue></SummaryItem>
+            <SummaryItem><SummaryLabel>Остаток</SummaryLabel><SummaryValue>{formatMoney(creditsData.totalRest.toString())}</SummaryValue></SummaryItem>
+            <SummaryItem $danger={(creditsData.totalDebt ?? 0) > 0}><SummaryLabel>Долг</SummaryLabel><SummaryValue $danger={(creditsData.totalDebt ?? 0) > 0}>{formatMoney(creditsData.totalDebt.toString())}</SummaryValue></SummaryItem>
+          </SummaryStrip>
+        )}
         <AnalyticsContainer>
           <AnalyticItem
             icon={
@@ -377,6 +396,38 @@ const handlePeriodChange = (period: string, startDate?: string, endDate?: string
 const AnalyticsWrapper = styled.div`
   width: 100%;
   box-sizing: border-box;
+`;
+
+const SummaryStrip = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #F0FDFA 0%, #ECFEFF 100%);
+  border: 1px solid #CCFBF1;
+  border-radius: 12px;
+`;
+
+const SummaryItem = styled.div<{ $danger?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid ${p => (p.$danger ? '#EF4444' : '#0F766E')};
+`;
+
+const SummaryLabel = styled.span`
+  font-size: 11px;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const SummaryValue = styled.span<{ $danger?: boolean }>`
+  font-size: 15px;
+  font-weight: 600;
+  color: ${p => (p.$danger ? '#B91C1C' : '#0F766E')};
 `;
 
 const AnalyticsContainer = styled.div`
