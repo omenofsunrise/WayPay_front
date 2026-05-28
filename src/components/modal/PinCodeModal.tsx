@@ -149,11 +149,11 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
           <Title>
             {mode === 'setup' ? 'Установите пин-код' : 'Введите пин-код'}
           </Title>
-          <Description>
-            {mode === 'setup' 
-              ? 'Для безопасности вашего аккаунта установите 5-значный пин-код. Он потребуется для подтверждения важных операций.'
-              : 'Для подтверждения операции введите ваш 5-значный пин-код.'}
-          </Description>
+          {mode === 'setup' && (
+            <Description>
+              Для безопасности вашего аккаунта установите 5-значный пин-код. Он потребуется для подтверждения важных операций.
+            </Description>
+          )}
           
           <PinForm onSubmit={handleSubmit}>
             <PinCells role="group" aria-label="Пин-код">
