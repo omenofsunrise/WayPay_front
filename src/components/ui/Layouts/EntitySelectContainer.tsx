@@ -97,7 +97,7 @@ const Wrapper = styled.div`
 const StyledInput = styled.input`
   width: 100%;
   padding: 10px 40px 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid #9CA3AF;
   border-radius: 4px;
   font-size: 14px;
   background-color: ${props => props.disabled ? '#f5f5f5' : 'white'};
@@ -110,7 +110,7 @@ const ViewContainer = styled.div`
   flex-direction: column;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid #9CA3AF;
   border-radius: 4px;
   background-color: #f5f5f5;
 `;

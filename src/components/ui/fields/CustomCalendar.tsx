@@ -436,7 +436,7 @@ const Field = styled.div`
   padding: 10px 12px;
   font-size: 14px;
   border-radius: 5px;
-  border: 1px solid rgba(209, 213, 219, 1);
+  border: 1px solid rgba(156, 163, 175, 1);
   cursor: pointer;
   background-color: white;
   width: 100%;

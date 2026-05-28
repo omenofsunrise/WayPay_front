@@ -14,7 +14,6 @@ import CustomInput from '../components/ui/fields/CustomInput';
 import useSchedule from '../api/hooks/useSchedule';
 import useCredit from '../api/hooks/useCredit';
 import type { CreateCreditRequest, UpdateCreditRequest } from '../api/types/credit';
-import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import type { Investor } from '../api/types/investor';
 import { type Guarantor } from '../components/modal/CrudInherited/GuarantorModal';
 import Checkbox from '../components/ui/CheckBoxes/Checkbox';
@@ -71,7 +70,7 @@ const NewCreditPage = () => {
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
   const location = useLocation();
-  const [contractDate, setContractDate] = useState<string | null>(null);
+  const [contractDate, setContractDate] = useState<string | null>(new Date().toISOString().split('T')[0]);
   const [client, setClient] = useState<Client | null>(null);
   const [guarantor, setGuarantor] = useState<Guarantor | null>(null);
   const [guarantorClient, setGuarantorClient] = useState<Client | null>(null);
@@ -131,7 +130,7 @@ const NewCreditPage = () => {
     if (draftRaw) {
       try {
         const draft = JSON.parse(draftRaw);
-        setContractDate(draft.contractDate ?? null);
+        setContractDate(draft.contractDate ?? new Date().toISOString().split('T')[0]);
         setClient(draft.client ?? null);
         setGuarantor(draft.guarantor ?? null);
         setGuarantorClient(draft.guarantorClient ?? null);
@@ -474,7 +473,7 @@ useEffect(() => {
   const resetDraft = useCallback(() => {
     localStorage.removeItem(CREDIT_DRAFT_STORAGE_KEY);
     setHasDraft(false);
-    setContractDate(null);
+    setContractDate(new Date().toISOString().split('T')[0]);
     setClient(null);
     setGuarantor(null);
     setGuarantorClient(null);
@@ -723,21 +722,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     inDebt
   ]);
 
-  const handleContractDateChange = useCallback((date: string | null) => {
-    setContractDate(date);
-    
-    if (date) {
-      const contractDateObj = new Date(date);
-      const nextDay = new Date(contractDateObj);
-      nextDay.setDate(nextDay.getDate() + 1);
-      
-      setPaymentDue(nextDay.getDate().toString());
-    }
-    
-    setTimeout(() => {
-      validateInvestorActivePeriod();
-    }, 0);
-  }, [validateInvestorActivePeriod]);
 
   const generateSchedulePreview = useCallback(async () => {
     if (!contractDate || !months || !paymentDue || totalSum <= 0) return;
@@ -1112,16 +1096,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </SectionTopRow>
 
             <FormRow>
-              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
-                <Label>Дата</Label>
-                <DateInputWrapper>
-                  <CustomCalendar
-                    value={contractDate}
-                    onChange={handleContractDateChange}
-                  />
-                </DateInputWrapper>
-              </FieldGroup>
-
               {!inDebt ? (
                 <FieldGroup style={{ maxWidth: '365px', width: '100%' }}>
                   <Label>Инвестор / Пул</Label>
