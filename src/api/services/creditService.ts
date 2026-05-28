@@ -74,7 +74,7 @@ class CreditService {
     return;
   }
 
-  async setCreditType(creditId: number, typeId?: number) {
+  async setCreditType(creditId: number, typeId?: number | null) {
     if (typeId === null)
       await apiClient.patch(`/Credit/set-category/${creditId}/`);
     else

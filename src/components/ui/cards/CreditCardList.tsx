@@ -1,7 +1,8 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import type { Credit } from '../../../api/types/credit';
 import type { TableAction } from '../tables/CustomTable';
+import ContextMenu, { type ContextMenuItem } from '../../modal/ContextMenu';
 import CreditCard, { type CreditCardField } from './CreditCard';
 
 interface CreditCardListProps {
@@ -41,31 +42,6 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
   emptyText = 'Договоров нет',
 }) => {
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
-
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(null);
-    window.addEventListener('click', close);
-    window.addEventListener('contextmenu', close);
-    return () => {
-      window.removeEventListener('click', close);
-      window.removeEventListener('contextmenu', close);
-    };
-  }, [menu]);
-
-  useLayoutEffect(() => {
-    if (!menu || !menuRef.current) {
-      setMenuPos(null);
-      return;
-    }
-    const margin = 8;
-    const { width, height } = menuRef.current.getBoundingClientRect();
-    const left = Math.max(margin, Math.min(menu.x, window.innerWidth - width - margin));
-    const top = Math.max(margin, Math.min(menu.y, window.innerHeight - height - margin));
-    setMenuPos({ top, left });
-  }, [menu]);
 
   const openMenu = (e: React.MouseEvent, rowIndex: number, rowData: any[]) => {
     if (contextMenuActions.length === 0) return;
@@ -104,28 +80,32 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
       })}
 
       {menu && (
-        <Menu
-          ref={menuRef}
-          style={{
-            top: menuPos?.top ?? menu.y,
-            left: menuPos?.left ?? menu.x,
-            visibility: menuPos ? 'visible' : 'hidden',
-          }}
+        <MenuPositioner
+          style={{ left: menu.x, top: menu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          {visibleActions(menu.rowData).map((action, i) => (
-            <MenuItem
-              key={`${action.label}-${i}`}
-              $color={action.color}
-              onClick={() => {
-                action.action(menu.rowData, menu.rowIndex);
-                setMenu(null);
-              }}
-            >
-              {action.label}
-            </MenuItem>
-          ))}
-        </Menu>
+          <ContextMenu
+            x={0}
+            y={0}
+            items={visibleActions(menu.rowData).map((action): ContextMenuItem => {
+              const item: ContextMenuItem = {
+                label: action.label,
+                color: action.color,
+                disabled: action.disabled,
+              };
+              if (action.getSubmenu) {
+                item.submenu = action.getSubmenu(menu.rowData);
+              } else {
+                item.action = () => {
+                  action.action(menu.rowData, menu.rowIndex);
+                  setMenu(null);
+                };
+              }
+              return item;
+            })}
+            onClose={() => setMenu(null)}
+          />
+        </MenuPositioner>
       )}
     </Wrapper>
   );
@@ -148,32 +128,9 @@ const Empty = styled.div`
   background: #F9FAFB;
 `;
 
-const Menu = styled.div`
+const MenuPositioner = styled.div`
   position: fixed;
   z-index: 1000;
-  background: #fff;
-  border: 1px solid #E5E7EB;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-  padding: 6px;
-  min-width: 220px;
-  max-width: calc(100vw - 16px);
-  max-height: calc(100vh - 16px);
-  overflow-y: auto;
-`;
-
-const MenuItem = styled.div<{ $color?: string }>`
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  color: ${p => p.$color ?? '#111827'};
-  transition: background-color 0.15s;
-
-  &:hover {
-    background: ${p => (p.$color === '#EF4444' || p.$color === '#B91C1C' ? '#FEF2F2' : '#F3F4F6')};
-  }
 `;
 
 export default CreditCardList;

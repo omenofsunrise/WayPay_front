@@ -200,8 +200,8 @@ const CreditPage = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [isPageSizeReady, setIsPageSizeReady] = useState(false);
   const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
-    defaultPageSize: 5,
-    minPageSize: 1,
+    defaultPageSize: 6,
+    minPageSize: 5,
     maxPageSize: 50,
     rowHeight: 130,
     headerHeight: 300,

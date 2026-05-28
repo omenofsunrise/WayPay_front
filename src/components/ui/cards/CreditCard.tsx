@@ -126,7 +126,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
 
         <HeaderInfo>
           <TitleRow>
-            <Title>{credit.clientFullName || `Договор №${credit.id}`}</Title>
+            <Title>{credit.clientFullName || `№${credit.id}`}</Title>
             {onToggleFavourite && (
               <FavButton
                 type="button"
@@ -148,7 +148,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
             <CalendarMonthOutlinedIcon style={{ fontSize: 14 }} />
             <span>{formatDate(credit.creditDate)}</span>
             <Sep>·</Sep>
-            <span>Договор №{credit.id}</span>
+            <span>№{credit.id}</span>
           </MetaRow>
         </HeaderInfo>
 
