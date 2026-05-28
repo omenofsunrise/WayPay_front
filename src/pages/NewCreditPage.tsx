@@ -1380,6 +1380,8 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         onClose={() => setIsGuarantorClientModalOpen(false)}
         onSubmit={handleSelectClient}
         title="Выбор поручителя"
+        createTitle="Создание поручителя"
+        namePlaceholder="ФИО поручителя"
       />
 
       <InvestorSelectModal

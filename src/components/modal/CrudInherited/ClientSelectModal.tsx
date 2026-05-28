@@ -18,14 +18,18 @@ interface ClientSelectModalProps {
   onSubmit: (client: { id: number; fullName: string; phone: string }) => void;
   width?: string;
   title?: string;
+  createTitle?: string;
+  namePlaceholder?: string;
 }
 
-const ClientSelectModal = ({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
+const ClientSelectModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
   width = "900px",
   title,
+  createTitle,
+  namePlaceholder,
 }: ClientSelectModalProps) => {
   const [nameFilter, setNameFilter] = useState('');
   const [phoneFilter, setPhoneFilter] = useState('');
@@ -296,6 +300,8 @@ const ClientSelectModal = ({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleSubmitNewClient}
+        createTitle={createTitle}
+        namePlaceholder={namePlaceholder}
         initialData={ 
           creatingClient || {
                     id: 0,

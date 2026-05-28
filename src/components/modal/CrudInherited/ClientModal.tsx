@@ -30,6 +30,8 @@ type ClientModalProps = {
   onClose: () => void;
   onSubmit: (clientData: Omit<ClientForm, 'doc' | 'docIssueDate'>) => Promise<boolean>;
   initialData?: Client;
+  createTitle?: string;
+  namePlaceholder?: string;
 };
 
 const emptyClient: Omit<Client, 'id'> = {
@@ -115,6 +117,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
     docIssueYear: 0,
     registrationAddress: ''
   },
+  createTitle,
+  namePlaceholder = 'ФИО клиента',
 }) => {
   const [formData, setFormData] = useState<Omit<Client, 'id'>>(
     mode === 'create' ? emptyClient : {
@@ -533,7 +537,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const getTitle = () => {
     switch (mode) {
-      case 'create': return 'Создание';
+      case 'create': return createTitle ?? 'Создание';
       case 'edit': return 'Редактирование';
       case 'view': return 'Просмотр';
       default: return 'Клиент';
@@ -588,7 +592,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
               <CustomInput
                 name="fullName"
                 inputType="fullname"
-                placeholder="ФИО клиента"
+                placeholder={namePlaceholder}
                 value={formData.fullName}
                 onChange={handleInputChange}
                 disabled={mode === 'view'}
