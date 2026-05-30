@@ -6,6 +6,7 @@ import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable'
 import { useState, useCallback, useEffect } from 'react';
 import useCompany from '../api/hooks/useCompany';
 import CompanyModal, { type CompanyModalData } from '../components/modal/CrudInherited/CompanyModal';
+import type { Company, SubscriptionStatistic } from '../api/types/company';
 import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import CustomInput from '../components/ui/fields/CustomInput';
@@ -29,6 +30,32 @@ const PaymentType = {
 } as const;
 
 type PaymentTypeValue = typeof PaymentType[keyof typeof PaymentType];
+
+const formatCurrency = (cost: number): string => {
+  const rubles = cost / 100;
+  return `${new Intl.NumberFormat('ru-RU').format(rubles)} ₽`;
+};
+
+const formatDateTime = (date?: Date | string): string => {
+  if (!date) return 'Нет данных';
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'Нет данных';
+
+  return parsed.toLocaleString('ru-RU', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const getPeriodDays = (startAt: string, endAt: string): number => {
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+  return Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+};
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -266,6 +293,306 @@ const PayoutModal = ({ isOpen, onClose, onConfirm, partnerName, isSubmitting }: 
   );
 };
 
+interface CompanyCabinetModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  company: Company | null;
+  statistics: SubscriptionStatistic[];
+  isLoading: boolean;
+  error: string | null;
+  isPartner: boolean;
+}
+
+const CompanyCabinetModal = ({
+  isOpen,
+  onClose,
+  company,
+  statistics,
+  isLoading,
+  error,
+  isPartner
+}: CompanyCabinetModalProps) => {
+  if (!isOpen || !company) return null;
+
+  const paidSubscriptions = statistics.filter(item => !item.isFree);
+  const freeSubscriptions = statistics.filter(item => item.isFree);
+  const giftedDays = freeSubscriptions.reduce((sum, item) => sum + getPeriodDays(item.startAt, item.endAt), 0);
+  const paidTotal = paidSubscriptions.reduce((sum, item) => sum + item.cost, 0);
+
+  return (
+    <BaseModal
+      title={`Личный кабинет: ${company.name}`}
+      onClose={onClose}
+      onCancel={onClose}
+      mode="view"
+      hideCanselButton
+      width="900px"
+      maxHeight="92vh"
+    >
+      <CabinetContent>
+        <CabinetSection>
+          <CabinetSectionTitle>Данные компании</CabinetSectionTitle>
+          <CabinetGrid>
+            <CabinetItem>
+              <CabinetLabel>ID</CabinetLabel>
+              <CabinetValue>#{company.id}</CabinetValue>
+            </CabinetItem>
+            <CabinetItem>
+              <CabinetLabel>{isPartner ? 'Партнер' : 'Компания'}</CabinetLabel>
+              <CabinetValue>{company.name || 'Нет данных'}</CabinetValue>
+            </CabinetItem>
+            <CabinetItem>
+              <CabinetLabel>Директор</CabinetLabel>
+              <CabinetValue>{company.chief || 'Нет данных'}</CabinetValue>
+            </CabinetItem>
+            <CabinetItem>
+              <CabinetLabel>Телефон</CabinetLabel>
+              <CabinetValue>
+                {company.phone ? (
+                  <PhoneLink href={formatPhoneHref(company.phone)}>{company.phone}</PhoneLink>
+                ) : (
+                  'Нет данных'
+                )}
+              </CabinetValue>
+            </CabinetItem>
+            {!isPartner && (
+              <>
+                <CabinetItem>
+                  <CabinetLabel>Лицензия до</CabinetLabel>
+                  <CabinetValue>{company.licenceDate ? formatDate(company.licenceDate) : 'Нет данных'}</CabinetValue>
+                </CabinetItem>
+                <CabinetItem>
+                  <CabinetLabel>Договоров за 10 дней</CabinetLabel>
+                  <CabinetValue>{company.createdCreditsCount ?? 0}</CabinetValue>
+                </CabinetItem>
+                <CabinetItem>
+                  <CabinetLabel>Договоров всего</CabinetLabel>
+                  <CabinetValue>{company.totalCredits ?? 0}</CabinetValue>
+                </CabinetItem>
+              </>
+            )}
+            {isPartner && (
+              <CabinetItem>
+                <CabinetLabel>Баланс</CabinetLabel>
+                <CabinetValue>{formatCurrency((company.balance ?? 0) * 100)}</CabinetValue>
+              </CabinetItem>
+            )}
+            <CabinetItem>
+              <CabinetLabel>Последний вход</CabinetLabel>
+              <CabinetValue>{formatDateTime(company.lastActive)}</CabinetValue>
+            </CabinetItem>
+          </CabinetGrid>
+        </CabinetSection>
+
+        <CabinetSection>
+          <CabinetSectionTitle>Итоги по подпискам</CabinetSectionTitle>
+          <SummaryGrid>
+            <SummaryItem>
+              <CabinetLabel>Всего записей</CabinetLabel>
+              <SummaryValue>{statistics.length}</SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <CabinetLabel>Платных продлений</CabinetLabel>
+              <SummaryValue>{paidSubscriptions.length}</SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <CabinetLabel>Подаренных продлений</CabinetLabel>
+              <SummaryValue>{freeSubscriptions.length}</SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <CabinetLabel>Подаренные дни</CabinetLabel>
+              <SummaryValue>{giftedDays}</SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <CabinetLabel>Оплачено всего</CabinetLabel>
+              <SummaryValue>{formatCurrency(paidTotal)}</SummaryValue>
+            </SummaryItem>
+          </SummaryGrid>
+        </CabinetSection>
+
+        <CabinetSection>
+          <CabinetSectionTitle>История подписки</CabinetSectionTitle>
+          {isLoading && <CabinetMuted>Загрузка истории подписки...</CabinetMuted>}
+          {error && <CabinetError>{error}</CabinetError>}
+          {!isLoading && !error && statistics.length === 0 && (
+            <CabinetMuted>История подписки пока пустая</CabinetMuted>
+          )}
+          {!isLoading && statistics.length > 0 && (
+            <CabinetTableWrapper>
+              <CabinetTable>
+                <thead>
+                  <tr>
+                    <th>Тип</th>
+                    <th>Дни</th>
+                    <th>Стоимость</th>
+                    <th>Начало</th>
+                    <th>Окончание</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statistics.map(item => {
+                    const days = getPeriodDays(item.startAt, item.endAt);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <SubscriptionBadge $isFree={item.isFree}>
+                            {item.isFree ? 'Подарено' : item.type || 'Оплата'}
+                          </SubscriptionBadge>
+                        </td>
+                        <td>{days}</td>
+                        <td>{item.isFree ? '0 ₽' : formatCurrency(item.cost)}</td>
+                        <td>{formatDate(item.startAt)}</td>
+                        <td>{formatDate(item.endAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </CabinetTable>
+            </CabinetTableWrapper>
+          )}
+        </CabinetSection>
+      </CabinetContent>
+    </BaseModal>
+  );
+};
+
+const CabinetContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 8px 4px 4px;
+`;
+
+const CabinetSection = styled.section`
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+`;
+
+const CabinetSectionTitle = styled.h3`
+  margin: 0 0 14px;
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 700;
+`;
+
+const CabinetGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const CabinetItem = styled.div`
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  background: #f9fafb;
+`;
+
+const CabinetLabel = styled.div`
+  margin-bottom: 5px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.3;
+`;
+
+const CabinetValue = styled.div`
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+`;
+
+const SummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SummaryItem = styled(CabinetItem)`
+  background: #f8fbfb;
+`;
+
+const SummaryValue = styled(CabinetValue)`
+  color: #007d88;
+`;
+
+const CabinetMuted = styled.div`
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.4;
+`;
+
+const CabinetError = styled.div`
+  color: #dc2626;
+  font-size: 14px;
+  line-height: 1.4;
+`;
+
+const CabinetTableWrapper = styled.div`
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+`;
+
+const CabinetTable = styled.table`
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: #ffffff;
+    color: #6b7280;
+    font-weight: 600;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+`;
+
+const SubscriptionBadge = styled.span<{ $isFree: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: ${props => props.$isFree ? '#92400e' : '#065f46'};
+  background: ${props => props.$isFree ? '#fef3c7' : '#d1fae5'};
+  font-size: 12px;
+  font-weight: 700;
+`;
+
 const AdminPanelPage = () => {
   const { hasRole } = useAuth();
   const [nameFilter, setNameFilter] = useState('');
@@ -280,9 +607,14 @@ const AdminPanelPage = () => {
   
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [isCompanyCabinetOpen, setIsCompanyCabinetOpen] = useState(false);
   const [isDirectorModalOpen, setIsDirectorModalOpen] = useState(false);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
+  const [cabinetCompany, setCabinetCompany] = useState<Company | null>(null);
+  const [cabinetStatistics, setCabinetStatistics] = useState<SubscriptionStatistic[]>([]);
+  const [isCabinetStatisticsLoading, setIsCabinetStatisticsLoading] = useState(false);
+  const [cabinetStatisticsError, setCabinetStatisticsError] = useState<string | null>(null);
   const [selectedCompanyName, setSelectedCompanyName] = useState('');
   const [selectedPartnerName, setSelectedPartnerName] = useState('');
   const [phoneValue, setPhoneValue] = useState('');
@@ -305,6 +637,7 @@ const AdminPanelPage = () => {
     deleteCompany,
     changeLicenceDate,
     changePhone,
+    getSubscriptionStatistics,
     payoutPartner
   } = useCompany();
 
@@ -364,6 +697,26 @@ const AdminPanelPage = () => {
     setEditingCompanyId(companyId);
     setSelectedCompanyName(companyName);
     setIsSubscriptionModalOpen(true);
+  };
+
+  const handleOpenCompanyCabinet = async (companyId: number) => {
+    const selected = companies.find(item => item.id === companyId) || null;
+    if (!selected) return;
+
+    setCabinetCompany(selected);
+    setCabinetStatistics([]);
+    setCabinetStatisticsError(null);
+    setIsCompanyCabinetOpen(true);
+    setIsCabinetStatisticsLoading(true);
+
+    const statistics = await getSubscriptionStatistics(companyId);
+    if (statistics) {
+      setCabinetStatistics(statistics);
+    } else {
+      setCabinetStatisticsError('Не удалось загрузить историю подписки');
+    }
+
+    setIsCabinetStatisticsLoading(false);
   };
 
   const handleOpenDirectorEdit = (companyId: number, currentDirector: string) => {
@@ -683,6 +1036,11 @@ const AdminPanelPage = () => {
     ? activeTab === 'partners'
       ? [
           {
+            label: 'Личный кабинет',
+            action: (rowData: any[]) => handleOpenCompanyCabinet(Number(rowData[0])),
+            color: '#007D88'
+          },
+          {
             label: 'Зайти в компанию',
             action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
             color: '#EF4444'
@@ -714,6 +1072,11 @@ const AdminPanelPage = () => {
           }
         ]
       : [
+          {
+            label: 'Личный кабинет',
+            action: (rowData: any[]) => handleOpenCompanyCabinet(Number(rowData[0])),
+            color: '#007D88'
+          },
           {
             label: 'Зайти в компанию',
             action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
@@ -751,6 +1114,7 @@ const AdminPanelPage = () => {
             data={tableData}
             rowStyles={rowStyles}
             contextMenuActions={tableActions}
+            onRowDoubleClick={(rowData) => handleOpenCompanyCabinet(Number(rowData[0]))}
           />
           
           <PaginationLayout>
@@ -969,6 +1333,16 @@ const AdminPanelPage = () => {
           isSubmitting={isSaving}
         />
       )}
+
+      <CompanyCabinetModal
+        isOpen={isCompanyCabinetOpen}
+        onClose={() => setIsCompanyCabinetOpen(false)}
+        company={cabinetCompany}
+        statistics={cabinetStatistics}
+        isLoading={isCabinetStatisticsLoading}
+        error={cabinetStatisticsError}
+        isPartner={activeTab === 'partners'}
+      />
 
       {isDirectorModalOpen && (
         <BaseModal
