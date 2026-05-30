@@ -4,9 +4,10 @@ import useSubscription from '../../api/hooks/useSubscription';
 
 interface SubscriptionBlockProps {
   onPaymentSuccess?: () => void;
+  compact?: boolean;
 }
 
-const SubscriptionBlock: React.FC<SubscriptionBlockProps> = ({ onPaymentSuccess }) => {
+const SubscriptionBlock: React.FC<SubscriptionBlockProps> = ({ onPaymentSuccess, compact = false }) => {
   const [selectedDays, setSelectedDays] = useState<number>(365);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
@@ -35,7 +36,7 @@ const SubscriptionBlock: React.FC<SubscriptionBlockProps> = ({ onPaymentSuccess 
   };
 
   return (
-    <Container>
+    <Container $compact={compact}>
       <Header>
         <Title>Подписка</Title>
         <Subtitle>WayPay CRM</Subtitle>
@@ -69,15 +70,15 @@ const SubscriptionBlock: React.FC<SubscriptionBlockProps> = ({ onPaymentSuccess 
   );
 };
 
-const Container = styled.div`
+const Container = styled.div<{ $compact?: boolean }>`
   background: white;
-  border-radius: 24px;
-  padding: 32px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  border: 1px solid #f0f0f0;
+  border-radius: ${props => props.$compact ? '8px' : '24px'};
+  padding: ${props => props.$compact ? '0' : '32px'};
+  box-shadow: ${props => props.$compact ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03)'};
+  border: ${props => props.$compact ? 'none' : '1px solid #f0f0f0'};
   height: fit-content;
-  position: sticky;
-  top: 20px;
+  position: ${props => props.$compact ? 'static' : 'sticky'};
+  top: ${props => props.$compact ? 'auto' : '20px'};
 
   @media (max-width: 900px) {
     position: static;

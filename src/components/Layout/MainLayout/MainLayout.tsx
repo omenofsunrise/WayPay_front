@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import SideMenu from './SideMenu';
 import TopMenu, { pathToMenuItemMap } from './TopMenu';
 import { SideMenuContext } from './SideMenuContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import LicenseExpiryNotice from '../../Subscription/LicenseExpiryNotice';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -51,6 +52,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <ContentContainer $collapsed={collapsed}>
           {children}
         </ContentContainer>
+        <LicenseExpiryNotice />
       </LayoutContainer>
     </SideMenuContext.Provider>
   );
