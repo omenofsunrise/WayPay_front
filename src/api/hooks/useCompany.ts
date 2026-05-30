@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import companyService, { type AddSubscriptionRequest, type PaymentTypeValue } from '../services/companyService';
-import type { CommonInfo, CompaneAccountDetails, Company } from '../types/company';
+import type { CommonInfo, CompaneAccountDetails, Company, SubscriptionStatistic } from '../types/company';
 
 const useCompany = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +56,20 @@ const useCompany = () => {
     setError(null);
     try {
       const result = await companyService.getAccountDetails();
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const getSubscriptionStatistics = useCallback(async (id: number): Promise<SubscriptionStatistic[] | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await companyService.getSubscriptionStatistics(id);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -241,6 +255,7 @@ const useCompany = () => {
     getCompanyPhotoUrl,
     getCommonInfo,
     getAccountDetails,
+    getSubscriptionStatistics,
     payoutPartner
   };
 };

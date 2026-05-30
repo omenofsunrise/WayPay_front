@@ -1,5 +1,5 @@
 import apiClient, { FILE_BASE_URL } from '../client';
-import type { CommonInfo, CompaneAccountDetails, Company } from '../types/company';
+import type { CommonInfo, CompaneAccountDetails, Company, SubscriptionStatistic } from '../types/company';
 
 class CompanyService {
   async getCompany(): Promise<Company> {
@@ -19,6 +19,11 @@ class CompanyService {
 
   async getAccountDetails(): Promise<CompaneAccountDetails> {
     const response = await apiClient.get<CompaneAccountDetails>(`/Company/account-details`);
+    return response.data;
+  }
+
+  async getSubscriptionStatistics(id: number): Promise<SubscriptionStatistic[]> {
+    const response = await apiClient.get<SubscriptionStatistic[]>(`/Company/subscription/statistics/${id}`);
     return response.data;
   }
 

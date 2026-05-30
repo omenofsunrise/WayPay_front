@@ -39,6 +39,15 @@ export interface CommonInfo {
   phone: string;
 }
 
+export interface SubscriptionStatistic {
+  id: string;
+  type: string;
+  isFree: boolean;
+  cost: number;
+  startAt: string;
+  endAt: string;
+}
+
 export interface CompaneAccountDetails {
   company: string;
   accountDetails: string;
