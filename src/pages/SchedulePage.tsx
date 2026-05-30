@@ -35,6 +35,7 @@ import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmation
 import type { PaymentTab } from '../api/types/payment';
 import paymentService from '../api/services/paymentService';
 import { useResponsivePageSize } from '../utils/useResponsivePageSize';
+import BaseModal from '../components/modal/BASE/modalCRUBase';
 
 const CheckIcon = () => (
   <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -69,7 +70,7 @@ const IconButton = styled.button`
   align-items: center;
 `;
 
-type TabType = 'schedule' | 'table';
+type TabType = 'calendar' | 'schedule' | 'table';
 
 const ACTIVE_TAB_STORAGE_KEY = 'schedule_page_active_tab';
 
@@ -80,15 +81,179 @@ interface SelectedEntity {
   type: 'investor' | 'pool';
 }
 
+type SchedulePaymentStatus = 'paid' | 'overdue' | 'transferred' | 'called' | 'pending';
+
+const schedulePaymentStatusMeta: Record<SchedulePaymentStatus, {
+    label: string;
+    background: string;
+    border: string;
+    accent: string;
+    color: string;
+}> = {
+    paid: {
+        label: 'Оплачен',
+        background: '#f0fdf4',
+        border: '#86efac',
+        accent: '#22c55e',
+        color: '#166534'
+    },
+    overdue: {
+        label: 'Просрочен',
+        background: '#fef2f2',
+        border: '#fca5a5',
+        accent: '#ef4444',
+        color: '#991b1b'
+    },
+    transferred: {
+        label: 'Перенесен',
+        background: '#eff6ff',
+        border: '#93c5fd',
+        accent: '#3b82f6',
+        color: '#1d4ed8'
+    },
+    called: {
+        label: 'Обзвонен',
+        background: '#ecfeff',
+        border: '#67e8f9',
+        accent: '#0891b2',
+        color: '#155e75'
+    },
+    pending: {
+        label: 'Ожидает',
+        background: '#fffbeb',
+        border: '#fde68a',
+        accent: '#f59e0b',
+        color: '#92400e'
+    }
+};
+
+const toDateInputValue = (date: Date | string): string => {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toISOString().split('T')[0];
+};
+
+const getMonthKey = (date: Date | string): string => {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const getCalendarMonths = (startDate: string, endDate: string) => {
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), 0, 1);
+    const end = endDate ? new Date(endDate) : new Date(new Date().getFullYear(), 11, 1);
+    start.setDate(1);
+    end.setDate(1);
+
+    const months: { key: string; label: string }[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end && months.length < 24) {
+        months.push({
+            key: getMonthKey(cursor),
+            label: cursor.toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' })
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return months;
+};
+
+const getCalendarMonthsByPayments = (payments: ScheduleDetails[], fallbackStartDate: string, fallbackEndDate: string) => {
+    const validDates = payments
+        .map(payment => new Date(payment.paymentDate))
+        .filter(date => !Number.isNaN(date.getTime()));
+
+    if (validDates.length === 0) {
+        return getCalendarMonths(fallbackStartDate, fallbackEndDate);
+    }
+
+    const minDate = new Date(Math.min(...validDates.map(date => date.getTime())));
+    const maxDate = new Date(Math.max(...validDates.map(date => date.getTime())));
+
+    minDate.setDate(1);
+    maxDate.setDate(1);
+
+    return getCalendarMonths(
+        minDate.toISOString().split('T')[0],
+        maxDate.toISOString().split('T')[0]
+    );
+};
+
+const isSchedulePaid = (schedule: ScheduleDetails): boolean => {
+    return Boolean(schedule.payed ?? schedule.isPaid);
+};
+
+const isScheduleOverdue = (schedule: ScheduleDetails): boolean => {
+    if (isSchedulePaid(schedule)) return false;
+    const paymentDate = new Date(schedule.paymentDate);
+    paymentDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return paymentDate < today;
+};
+
+const isScheduleTransferred = (schedule: ScheduleDetails): boolean => {
+    const text = `${schedule.comment || ''} ${schedule.userComment || ''}`.toLowerCase();
+    return text.includes('перенес') || text.includes('перенос');
+};
+
+const getSchedulePaymentStatus = (schedule: ScheduleDetails): SchedulePaymentStatus => {
+    if (isSchedulePaid(schedule)) return 'paid';
+    if (isScheduleTransferred(schedule)) return 'transferred';
+    if (isScheduleOverdue(schedule)) return 'overdue';
+    if (schedule.notified) return 'called';
+    return 'pending';
+};
+
+const getDefaultCalendarDateRange = () => {
+    const start = new Date();
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 3);
+    end.setDate(28);
+
+    return {
+        start: start.toISOString().split('T')[0],
+        end: end.toISOString().split('T')[0]
+    };
+};
+
+const getDaysBetween = (startDate: string, endDate: string): number => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const addDaysToIsoDate = (date: string, days: number): string => {
+    const parsed = new Date(date);
+    parsed.setDate(parsed.getDate() + days);
+    return parsed.toISOString().split('T')[0];
+};
+
 const SchedulePage = () => {
     const [activeTab, setActiveTab] = useState<TabType>(() => {
         const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
-        return savedTab && (savedTab === 'schedule' || savedTab === 'table') 
+        return savedTab && (savedTab === 'calendar' || savedTab === 'schedule' || savedTab === 'table') 
             ? savedTab 
-            : 'schedule';
+            : 'calendar';
     });
     
     const [clientNameFilter, setClientNameFilter] = useState('');
+    const [calendarSearch, setCalendarSearch] = useState('');
+    const [calendarSearchQuery, setCalendarSearchQuery] = useState('');
+    const [calendarDateFrom, setCalendarDateFrom] = useState(() => getDefaultCalendarDateRange().start);
+    const [calendarDateTo, setCalendarDateTo] = useState(() => getDefaultCalendarDateRange().end);
+    const [calendarOverdueOnly, setCalendarOverdueOnly] = useState(false);
+    const [calendarOverdues, setCalendarOverdues] = useState('');
+    const [calendarDateRangeWarning, setCalendarDateRangeWarning] = useState('');
+    const [calendarPage, setCalendarPage] = useState(1);
+    const [selectedCalendarSchedule, setSelectedCalendarSchedule] = useState<ScheduleDetails | null>(null);
+    const [scheduleComment, setScheduleComment] = useState('');
+    const [scheduleDate, setScheduleDate] = useState('');
+    const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+    const [isSavingScheduleComment, setIsSavingScheduleComment] = useState(false);
     const [investorFilter, setInvestorFilter] = useState('');
     const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
     const [dateFromFilter, setDateFromFilter] = useState('');
@@ -138,8 +303,11 @@ const SchedulePage = () => {
     const { 
         isLoading, 
         error, 
-        scheduleData, 
-        getList
+        scheduleData,
+        calendarData,
+        getList,
+        getCalendar,
+        updateSchedule
     } = useSchedule();
     
     const shouldShowScheduleTab = hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true) || hasRole('админ');
@@ -155,7 +323,7 @@ const SchedulePage = () => {
     }, [responsivePageSize]);
 
     useEffect(() => {
-        if (!shouldShowScheduleTab && activeTab === 'schedule') {
+        if (!shouldShowScheduleTab && (activeTab === 'schedule' || activeTab === 'calendar')) {
             setActiveTab('table');
         }
     }, [shouldShowScheduleTab, activeTab]);
@@ -372,6 +540,42 @@ const SchedulePage = () => {
         }
     }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules, activeTab, selectedEntity, isPageSizeReady]);
 
+    const loadCalendarSchedules = useCallback(async () => {
+        let safeEndDate = calendarDateTo;
+        if (calendarDateFrom && calendarDateTo && getDaysBetween(calendarDateFrom, calendarDateTo) > 120) {
+            safeEndDate = addDaysToIsoDate(calendarDateFrom, 120);
+            setCalendarDateTo(safeEndDate);
+            setCalendarDateRangeWarning('Диапазон календаря ограничен 120 днями.');
+        } else {
+            setCalendarDateRangeWarning('');
+        }
+
+        await getCalendar({
+            StartDate: calendarDateFrom ? parseDateInput(calendarDateFrom) : undefined,
+            EndDate: safeEndDate ? parseDateInput(safeEndDate) : undefined,
+            Search: calendarSearchQuery || undefined,
+            Overdue: calendarOverdueOnly || undefined,
+            Overdues: calendarOverdues ? Number(calendarOverdues) : undefined,
+            ClientsCount: 50,
+            ClientsPage: calendarPage
+        });
+    }, [calendarDateFrom, calendarDateTo, calendarSearchQuery, calendarOverdueOnly, calendarOverdues, calendarPage, getCalendar]);
+
+    useEffect(() => {
+        if (activeTab === 'calendar') {
+            loadCalendarSchedules();
+        }
+    }, [activeTab, loadCalendarSchedules]);
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setCalendarSearchQuery(calendarSearch.trim());
+            setCalendarPage(1);
+        }, 350);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [calendarSearch]);
+
     const handleClientNameFilterChange = (value: string) => {
         setClientNameFilter(value);
         setCurrentPage(1);
@@ -410,6 +614,38 @@ const SchedulePage = () => {
     const handleDateToFilterChange = (value: string) => {
         setDateToFilter(value);
         setCurrentPage(1);
+    };
+
+    const openScheduleCommentModal = (schedule: ScheduleDetails) => {
+        setSelectedCalendarSchedule(schedule);
+        setScheduleComment(schedule.userComment || '');
+        setScheduleDate(toDateInputValue(schedule.paymentDate));
+        setIsCommentModalOpen(true);
+    };
+
+    const handleSaveScheduleComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedCalendarSchedule || !scheduleDate) return;
+
+        setIsSavingScheduleComment(true);
+        const success = await updateSchedule({
+            id: selectedCalendarSchedule.id,
+            date: new Date(scheduleDate).toISOString(),
+            userComment: scheduleComment.trim() || null
+        });
+        setIsSavingScheduleComment(false);
+
+        if (!success) {
+            alert('Не удалось сохранить комментарий');
+            return;
+        }
+
+        setIsCommentModalOpen(false);
+        setSelectedCalendarSchedule(null);
+        await loadCalendarSchedules();
+        if (activeTab === 'table') {
+            await loadSchedules();
+        }
     };
 
     const handleSort = (columnIndex: number) => {
@@ -467,6 +703,7 @@ const SchedulePage = () => {
                     'Телефон поручителя': schedule.guarantorPhone,
                     'Платеж': formatMoney(schedule.paymentAmount.toString()),
                     'Дата платежа': formatDate(schedule.paymentDate),
+                    'Комментарий': schedule.userComment || '',
                     'Уведомлен': schedule.notified ? 'Да' : 'Нет'
                 })
             });
@@ -544,6 +781,7 @@ const SchedulePage = () => {
             schedule.clientName,
             formattedAmount,
             formattedDate,
+            schedule.userComment || '—',
             (
                 <NotifyCell>
                     {schedule.notified ? (
@@ -637,7 +875,163 @@ const SchedulePage = () => {
         );
     };
 
+    const safeCalendarData = Array.isArray(calendarData) ? calendarData : [];
+    const calendarMonths = getCalendarMonthsByPayments(safeCalendarData, calendarDateFrom, calendarDateTo);
+    const calendarClients = Array.from(new Map(
+        safeCalendarData.map(item => [item.clientName, item.clientName])
+    ).values());
+    const calendarPaymentsByClient = safeCalendarData.reduce((acc, item) => {
+        const clientKey = item.clientName || 'Без имени';
+        const monthKey = getMonthKey(item.paymentDate);
+        if (!acc[clientKey]) acc[clientKey] = {};
+        if (!acc[clientKey][monthKey]) acc[clientKey][monthKey] = [];
+        acc[clientKey][monthKey].push(item);
+        return acc;
+    }, {} as Record<string, Record<string, ScheduleDetails[]>>);
+
     const tabs = [
+        ...(shouldShowScheduleTab ? [{
+            id: 'calendar',
+            label: 'Календарь',
+            content: (
+                <>
+                    <CalendarToolbar>
+                        <CalendarFilterGroup>
+                            <SearchField>
+                                <CustomInput
+                                    inputType="text"
+                                    placeholder="Поиск по ФИО"
+                                    value={calendarSearch}
+                                    onChange={(e) => setCalendarSearch(e.target.value)}
+                                />
+                                {calendarSearch && (
+                                    <SearchClearButton
+                                        type="button"
+                                        onClick={() => {
+                                            setCalendarSearch('');
+                                            setCalendarSearchQuery('');
+                                            setCalendarPage(1);
+                                        }}
+                                        aria-label="Очистить поиск"
+                                    >
+                                        ×
+                                    </SearchClearButton>
+                                )}
+                            </SearchField>
+                        </CalendarFilterGroup>
+                        <CalendarFilterGroup>
+                            <CustomCalendar
+                                prefix="От"
+                                value={calendarDateFrom}
+                                onChange={(date) => {
+                                    setCalendarDateFrom(date);
+                                    setCalendarPage(1);
+                                }}
+                            />
+                        </CalendarFilterGroup>
+                        <CalendarFilterGroup>
+                            <CustomCalendar
+                                prefix="До"
+                                value={calendarDateTo}
+                                onChange={(date) => {
+                                    setCalendarDateTo(date);
+                                    setCalendarPage(1);
+                                }}
+                            />
+                        </CalendarFilterGroup>
+                        <CalendarToggleLabel>
+                            <input
+                                type="checkbox"
+                                checked={calendarOverdueOnly}
+                                onChange={(e) => {
+                                    setCalendarOverdueOnly(e.target.checked);
+                                    setCalendarPage(1);
+                                }}
+                            />
+                            Только просрочки
+                        </CalendarToggleLabel>
+                        <CalendarFilterGroup>
+                            <CustomInput
+                                inputType="number"
+                                placeholder="Кол-во просрочек"
+                                value={calendarOverdues}
+                                min="1"
+                                onChange={(e) => {
+                                    setCalendarOverdues(e.target.value.replace(/[^0-9]/g, ''));
+                                    setCalendarPage(1);
+                                }}
+                            />
+                        </CalendarFilterGroup>
+                    </CalendarToolbar>
+                    {calendarDateRangeWarning && (
+                        <CalendarWarning>{calendarDateRangeWarning}</CalendarWarning>
+                    )}
+                    <CalendarLegend>
+                        {(Object.keys(schedulePaymentStatusMeta) as SchedulePaymentStatus[]).map(status => (
+                            <LegendItem key={status}>
+                                <LegendDot $status={status} />
+                                {schedulePaymentStatusMeta[status].label}
+                            </LegendItem>
+                        ))}
+                    </CalendarLegend>
+
+                    {isLoading && <div>Загрузка...</div>}
+                    {error && <div>Ошибка: {error}</div>}
+                    {!isLoading && !error && (
+                        <CalendarGridScroll>
+                            <CalendarGrid $columns={calendarMonths.length}>
+                                <CalendarHeaderCell>Клиент / месяц</CalendarHeaderCell>
+                                {calendarMonths.map(month => (
+                                    <CalendarHeaderCell key={month.key}>{month.label}</CalendarHeaderCell>
+                                ))}
+
+                                {calendarClients.length === 0 && (
+                                    <CalendarEmptyCell $columns={calendarMonths.length + 1}>
+                                        Нет платежей за выбранный период
+                                    </CalendarEmptyCell>
+                                )}
+
+                                {calendarClients.map(clientName => [
+                                    <CalendarClientCell key={`${clientName}-client`}>{clientName}</CalendarClientCell>,
+                                    ...calendarMonths.map(month => {
+                                            const payments = calendarPaymentsByClient[clientName]?.[month.key] || [];
+                                            return (
+                                                <CalendarPaymentCell key={`${clientName}-${month.key}`}>
+                                                    {payments.length === 0 ? (
+                                                        <CalendarEmptyMark>—</CalendarEmptyMark>
+                                                    ) : (
+                                                        payments.map(payment => {
+                                                            const status = getSchedulePaymentStatus(payment);
+                                                            return (
+                                                                <PaymentChip
+                                                                    key={payment.id}
+                                                                    type="button"
+                                                                    $status={status}
+                                                                    $hasComment={Boolean(payment.userComment?.trim())}
+                                                                    onClick={() => openScheduleCommentModal(payment)}
+                                                                    title={schedulePaymentStatusMeta[status].label}
+                                                                >
+                                                                    <PaymentStatusLabel $status={status}>
+                                                                        {schedulePaymentStatusMeta[status].label}
+                                                                    </PaymentStatusLabel>
+                                                                    <PaymentChipAmount>
+                                                                        {formatMoney(payment.paymentAmount.toString())}
+                                                                    </PaymentChipAmount>
+                                                                    <PaymentChipDate>{formatDate(payment.paymentDate)}</PaymentChipDate>
+                                                                </PaymentChip>
+                                                            );
+                                                        })
+                                                    )}
+                                                </CalendarPaymentCell>
+                                            );
+                                    })
+                                ])}
+                            </CalendarGrid>
+                        </CalendarGridScroll>
+                    )}
+                </>
+            )
+        }] : []),
         ...(shouldShowScheduleTab ? [{
             id: 'schedule',
             label: 'График',
@@ -715,6 +1109,7 @@ const SchedulePage = () => {
                                     { name: "ФИО", isSortable: true, align: "left" },
                                     { name: "Платёж", isSortable: true, align: "right" },
                                     { name: "Дата платежа", isSortable: true, align: "right" },
+                                    { name: "Комментарий", align: "left" },
                                     { name: "Уведомлён", align: "center" },
                                 ]} 
                                 data={tableData}
@@ -762,6 +1157,45 @@ const SchedulePage = () => {
                 activeTab={activeTab}
                 onChange={handleTabChange}
             />
+
+            {isCommentModalOpen && selectedCalendarSchedule && (
+                <BaseModal
+                    title="Комментарий к платежу"
+                    onClose={() => setIsCommentModalOpen(false)}
+                    onCancel={() => setIsCommentModalOpen(false)}
+                    onSave={handleSaveScheduleComment}
+                    saveButtonText="Сохранить"
+                    isSubmitting={isSavingScheduleComment}
+                    width="560px"
+                >
+                    <ScheduleCommentForm>
+                        <ScheduleInfoBox>
+                            <strong>{selectedCalendarSchedule.clientName}</strong>
+                            <span>Договор №{selectedCalendarSchedule.creditId}</span>
+                            <span>{formatMoney(selectedCalendarSchedule.paymentAmount.toString())}</span>
+                        </ScheduleInfoBox>
+
+                        <ModalField>
+                            <InputLabel>Дата платежа</InputLabel>
+                            <CustomCalendar
+                                prefix=""
+                                value={scheduleDate}
+                                onChange={setScheduleDate}
+                            />
+                        </ModalField>
+
+                        <ModalField>
+                            <InputLabel>Комментарий</InputLabel>
+                            <CommentTextarea
+                                value={scheduleComment}
+                                onChange={(e) => setScheduleComment(e.target.value)}
+                                placeholder="Комментарий по платежу"
+                                rows={4}
+                            />
+                        </ModalField>
+                    </ScheduleCommentForm>
+                </BaseModal>
+            )}
 
             <NewPaymentModal
                 isOpen={isPaymentModalOpen}
@@ -884,6 +1318,260 @@ const FilterInfo = styled.div`
   border-radius: 4px;
   color: #0050b3;
   font-size: 14px;
+`;
+
+const CalendarToolbar = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+`;
+
+const CalendarFilterGroup = styled.div`
+  min-width: 210px;
+`;
+
+const SearchField = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const SearchClearButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: #d1d5db;
+  }
+`;
+
+const CalendarToggleLabel = styled.label`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+`;
+
+const CalendarWarning = styled.div`
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 14px;
+`;
+
+const CalendarLegend = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -4px 0 14px;
+`;
+
+const LegendItem = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+`;
+
+const LegendDot = styled.span<{ $status: SchedulePaymentStatus }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: ${props => schedulePaymentStatusMeta[props.$status].accent};
+`;
+
+const CalendarGridScroll = styled.div`
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  max-height: calc(100vh - 280px);
+`;
+
+const CalendarGrid = styled.div<{ $columns: number }>`
+  display: grid;
+  grid-template-columns: 260px repeat(${props => props.$columns}, minmax(130px, 160px));
+  min-width: max-content;
+`;
+
+const CalendarHeaderCell = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 12px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+
+  &:first-child {
+    left: 0;
+    z-index: 3;
+    text-align: left;
+  }
+`;
+
+const CalendarClientCell = styled.div`
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+`;
+
+const CalendarPaymentCell = styled.div`
+  min-height: 70px;
+  padding: 6px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: stretch;
+  justify-content: center;
+`;
+
+const CalendarEmptyMark = styled.span`
+  color: #cbd5e1;
+  text-align: center;
+  font-size: 13px;
+`;
+
+const CalendarEmptyCell = styled.div<{ $columns: number }>`
+  grid-column: span ${props => props.$columns};
+  padding: 28px;
+  color: #6b7280;
+  text-align: center;
+`;
+
+const PaymentChip = styled.button<{ $status: SchedulePaymentStatus; $hasComment: boolean }>`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  padding: 7px 8px;
+  border: 1px solid ${props => schedulePaymentStatusMeta[props.$status].border};
+  border-left: 3px solid ${props => schedulePaymentStatusMeta[props.$status].accent};
+  border-radius: 7px;
+  background: ${props => schedulePaymentStatusMeta[props.$status].background};
+  color: #111827;
+  cursor: pointer;
+
+  &::after {
+    content: ${props => props.$hasComment ? '"💬"' : '""'};
+    position: absolute;
+    top: 3px;
+    right: 5px;
+    font-size: 10px;
+  }
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    transform: translateY(-1px);
+  }
+`;
+
+const PaymentStatusLabel = styled.span<{ $status: SchedulePaymentStatus }>`
+  color: ${props => schedulePaymentStatusMeta[props.$status].color};
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+`;
+
+const PaymentChipAmount = styled.span`
+  font-size: 12px;
+  font-weight: 800;
+`;
+
+const PaymentChipDate = styled.span`
+  font-size: 11px;
+  color: #64748b;
+`;
+
+const ScheduleCommentForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 4px;
+`;
+
+const ScheduleInfoBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #111827;
+  font-size: 14px;
+`;
+
+const ModalField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const CommentTextarea = styled.textarea`
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #007d88;
+  }
 `;
 
 export default SchedulePage;

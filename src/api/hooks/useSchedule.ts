@@ -4,7 +4,9 @@ import type {
     ScheduleItem, 
     ScheduleDetails, 
     ScheduleParams, 
-    SchedulePreviewParams 
+    SchedulePreviewParams,
+    ScheduleCalendarParams,
+    UpdateScheduleRequest
 } from '../types/schedule';
 import type { PaginatedResponse } from '../types/common';
 
@@ -12,6 +14,7 @@ const useSchedule = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [scheduleData, setScheduleData] = useState<PaginatedResponse<ScheduleDetails> | null>(null);
+    const [calendarData, setCalendarData] = useState<ScheduleDetails[]>([]);
     const [scheduleDetails, setScheduleDetails] = useState<ScheduleDetails | null>(null);
     const [previewData, setPreviewData] = useState<ScheduleItem[] | null>(null);
 
@@ -65,6 +68,21 @@ const useSchedule = () => {
         }
     }, []);
 
+    const getCalendar = useCallback(async (params?: ScheduleCalendarParams): Promise<ScheduleDetails[] | null> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const result = await scheduleService.getCalendar(params);
+            setCalendarData(result);
+            return result;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to get schedule calendar');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     const getPreview = useCallback(async (
         params: SchedulePreviewParams
     ): Promise<ScheduleItem[] | null> => {
@@ -110,6 +128,20 @@ const useSchedule = () => {
         }
     }, []);
 
+    const updateSchedule = useCallback(async (request: UpdateScheduleRequest): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await scheduleService.updateSchedule(request);
+            return true;
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update schedule');
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     const updateDates = useCallback(async (ids: number[], date: string): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
@@ -128,13 +160,16 @@ const useSchedule = () => {
         isLoading,
         error,
         scheduleData,
+        calendarData,
         scheduleDetails,
         previewData,
         getList,
         getByCreditId,
         getById,
+        getCalendar,
         getPreview,
         markAsNotified,
+        updateSchedule,
         updateDate,
         updateDates
     };

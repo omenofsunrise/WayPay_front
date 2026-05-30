@@ -27,6 +27,22 @@ export interface ScheduleParams extends PaginationParams {
     poolId?: number;
 }
 
+export interface ScheduleCalendarParams {
+    StartDate?: Date;
+    EndDate?: Date;
+    Search?: string;
+    Overdue?: boolean;
+    Overdues?: number;
+    ClientsCount?: number;
+    ClientsPage?: number;
+}
+
+export interface UpdateScheduleRequest {
+    id: number;
+    date: string;
+    userComment?: string | null;
+}
+
 export interface ScheduleDetails {
     id: number;
     creditId: number;
@@ -41,4 +57,6 @@ export interface ScheduleDetails {
     clientPhone: string;
     guarantorFullname?: string;
     guarantorPhone?: string;
+    payed?: boolean;
+    userComment?: string | null;
 }
