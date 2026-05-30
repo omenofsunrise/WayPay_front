@@ -21,6 +21,7 @@ import type { EntityType } from '../api/types/objectType';
 import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import { formatMoney } from '../utils/formatPrice';
 import DateModalInput from '../components/ui/fields/DateModalInput';
+import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
@@ -1132,6 +1133,18 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                     placeholder="Имя договора"
                     value={creditName}
                     onChange={(e) => setCreditName(e.target.value)}
+                  />
+                </DateInputWrapper>
+              </FieldGroup>
+
+              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
+                <Label>Дата договора</Label>
+                <DateInputWrapper>
+                  <CustomCalendar
+                    prefix=""
+                    value={contractDate || ''}
+                    onChange={(date) => setContractDate(date || null)}
+                    onReset={() => setContractDate(null)}
                   />
                 </DateInputWrapper>
               </FieldGroup>
