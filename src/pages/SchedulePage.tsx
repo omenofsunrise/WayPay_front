@@ -179,16 +179,30 @@ const getCalendarMonthsByPayments = (payments: ScheduleDetails[], fallbackStartD
 };
 
 const isSchedulePaid = (schedule: ScheduleDetails): boolean => {
-    return Boolean(schedule.payed ?? schedule.isPaid);
+    return schedule.status === 'Payed' || Boolean(schedule.payed ?? schedule.isPaid);
 };
 
 const isScheduleOverdue = (schedule: ScheduleDetails): boolean => {
+    if (schedule.status === 'Overdue') return true;
+    if (schedule.status === 'Pending' || schedule.status === 'Payed') return false;
     if (isSchedulePaid(schedule)) return false;
     const paymentDate = new Date(schedule.paymentDate);
     paymentDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return paymentDate < today;
+};
+
+const isSchedulePendingSoon = (schedule: ScheduleDetails): boolean => {
+    if (schedule.status === 'Pending') return true;
+    if (isSchedulePaid(schedule) || isScheduleOverdue(schedule)) return false;
+
+    const paymentDate = new Date(schedule.paymentDate);
+    paymentDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysUntilPayment = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntilPayment >= 0 && daysUntilPayment <= 3;
 };
 
 const isScheduleTransferred = (schedule: ScheduleDetails): boolean => {
@@ -201,7 +215,7 @@ const getSchedulePaymentStatus = (schedule: ScheduleDetails): SchedulePaymentSta
     if (isScheduleTransferred(schedule)) return 'transferred';
     if (isScheduleOverdue(schedule)) return 'overdue';
     if (schedule.notified) return 'called';
-    return 'pending';
+    return isSchedulePendingSoon(schedule) ? 'pending' : 'called';
 };
 
 const getDefaultCalendarDateRange = () => {
@@ -254,6 +268,8 @@ const SchedulePage = () => {
     const [scheduleDate, setScheduleDate] = useState('');
     const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
     const [isSavingScheduleComment, setIsSavingScheduleComment] = useState(false);
+    const [scheduleModalCredit, setScheduleModalCredit] = useState<Credit | null>(null);
+    const [isScheduleModalCreditLoading, setIsScheduleModalCreditLoading] = useState(false);
     const [investorFilter, setInvestorFilter] = useState('');
     const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
     const [dateFromFilter, setDateFromFilter] = useState('');
@@ -616,11 +632,22 @@ const SchedulePage = () => {
         setCurrentPage(1);
     };
 
-    const openScheduleCommentModal = (schedule: ScheduleDetails) => {
+    const openScheduleCommentModal = async (schedule: ScheduleDetails) => {
         setSelectedCalendarSchedule(schedule);
         setScheduleComment(schedule.userComment || '');
         setScheduleDate(toDateInputValue(schedule.paymentDate));
+        setScheduleModalCredit(null);
         setIsCommentModalOpen(true);
+
+        setIsScheduleModalCreditLoading(true);
+        try {
+            const credit = await creditService.getCreditById(schedule.creditId);
+            setScheduleModalCredit(credit);
+        } catch (error) {
+            console.error('Ошибка при загрузке договора для платежа:', error);
+        } finally {
+            setIsScheduleModalCreditLoading(false);
+        }
     };
 
     const handleSaveScheduleComment = async (e: React.FormEvent) => {
@@ -642,9 +669,41 @@ const SchedulePage = () => {
 
         setIsCommentModalOpen(false);
         setSelectedCalendarSchedule(null);
-        await loadCalendarSchedules();
+        setScheduleModalCredit(null);
+
+        if (activeTab === 'calendar') {
+            await loadCalendarSchedules();
+        }
+
         if (activeTab === 'table') {
             await loadSchedules();
+        }
+    };
+
+    const handleOpenCreditFromScheduleModal = () => {
+        if (!selectedCalendarSchedule) return;
+        setViewingCreditId(selectedCalendarSchedule.creditId);
+        setIsViewModalOpen(true);
+    };
+
+    const handleOpenPaymentFromScheduleModal = async () => {
+        if (!selectedCalendarSchedule) return;
+        await handleOpenPaymentModal(selectedCalendarSchedule);
+        setIsCommentModalOpen(false);
+    };
+
+    const handleNotifyFromScheduleModal = async () => {
+        if (!selectedCalendarSchedule) return;
+        const success = await sendWhatsAppMessage(
+            selectedCalendarSchedule.id,
+            selectedCalendarSchedule.clientPhone,
+        );
+
+        if (success) {
+            await loadCalendarSchedules();
+            if (activeTab === 'table') {
+                await loadSchedules();
+            }
         }
     };
 
@@ -748,6 +807,16 @@ const SchedulePage = () => {
                 }
             },
             color: '#008b8b'
+        },
+        {
+            label: 'Дата/комментарий',
+            action: (_rowData: any[], rowIndex: number) => {
+                const schedule = scheduleData?.items[rowIndex];
+                if (schedule) {
+                    openScheduleCommentModal(schedule);
+                }
+            },
+            color: '#3B82F6'
         }
     ];
     
@@ -1002,22 +1071,33 @@ const SchedulePage = () => {
                                                     ) : (
                                                         payments.map(payment => {
                                                             const status = getSchedulePaymentStatus(payment);
+                                                            const isPaid = status === 'paid';
                                                             return (
                                                                 <PaymentChip
                                                                     key={payment.id}
                                                                     type="button"
                                                                     $status={status}
+                                                                    $isPaidCollapsed={isPaid}
                                                                     $hasComment={Boolean(payment.userComment?.trim())}
                                                                     onClick={() => openScheduleCommentModal(payment)}
                                                                     title={schedulePaymentStatusMeta[status].label}
                                                                 >
-                                                                    <PaymentStatusLabel $status={status}>
-                                                                        {schedulePaymentStatusMeta[status].label}
-                                                                    </PaymentStatusLabel>
-                                                                    <PaymentChipAmount>
-                                                                        {formatMoney(payment.paymentAmount.toString())}
-                                                                    </PaymentChipAmount>
-                                                                    <PaymentChipDate>{formatDate(payment.paymentDate)}</PaymentChipDate>
+                                                                    {isPaid ? (
+                                                                        <PaidCollapsedContent>
+                                                                            <PaidCollapsedDot />
+                                                                            <PaidCollapsedText>Оплачен</PaidCollapsedText>
+                                                                        </PaidCollapsedContent>
+                                                                    ) : (
+                                                                        <>
+                                                                            <PaymentStatusLabel $status={status}>
+                                                                                {schedulePaymentStatusMeta[status].label}
+                                                                            </PaymentStatusLabel>
+                                                                            <PaymentChipAmount>
+                                                                                {formatMoney(payment.paymentAmount.toString())}
+                                                                            </PaymentChipAmount>
+                                                                            <PaymentChipDate>{formatDate(payment.paymentDate)}</PaymentChipDate>
+                                                                        </>
+                                                                    )}
                                                                 </PaymentChip>
                                                             );
                                                         })
@@ -1141,6 +1221,10 @@ const SchedulePage = () => {
         }
     ];
 
+    const selectedScheduleStatus = selectedCalendarSchedule
+        ? getSchedulePaymentStatus(selectedCalendarSchedule)
+        : 'pending';
+
     return (
         <PageLayout ref={containerRef}>
             <TitleField>
@@ -1160,20 +1244,92 @@ const SchedulePage = () => {
 
             {isCommentModalOpen && selectedCalendarSchedule && (
                 <BaseModal
-                    title="Комментарий к платежу"
+                    title="Операции по платежу"
                     onClose={() => setIsCommentModalOpen(false)}
                     onCancel={() => setIsCommentModalOpen(false)}
                     onSave={handleSaveScheduleComment}
                     saveButtonText="Сохранить"
                     isSubmitting={isSavingScheduleComment}
-                    width="560px"
+                    width="720px"
                 >
                     <ScheduleCommentForm>
-                        <ScheduleInfoBox>
-                            <strong>{selectedCalendarSchedule.clientName}</strong>
-                            <span>Договор №{selectedCalendarSchedule.creditId}</span>
-                            <span>{formatMoney(selectedCalendarSchedule.paymentAmount.toString())}</span>
-                        </ScheduleInfoBox>
+                        <ScheduleModalHeaderCard $status={selectedScheduleStatus}>
+                            <ScheduleModalHeaderMain>
+                                <ScheduleModalClientName>{selectedCalendarSchedule.clientName}</ScheduleModalClientName>
+                                <ScheduleStatusPill $status={selectedScheduleStatus}>
+                                    {schedulePaymentStatusMeta[selectedScheduleStatus].label}
+                                </ScheduleStatusPill>
+                            </ScheduleModalHeaderMain>
+                            <ScheduleModalMetaGrid>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>Договор</ScheduleModalLabel>
+                                    <ScheduleModalValue>
+                                        №{selectedCalendarSchedule.creditId}
+                                        {scheduleModalCredit?.name ? ` · ${scheduleModalCredit.name}` : ''}
+                                    </ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>ID клиента</ScheduleModalLabel>
+                                    <ScheduleModalValue>
+                                        {scheduleModalCredit?.clientId ?? 'Загрузка...'}
+                                    </ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>Дата договора</ScheduleModalLabel>
+                                    <ScheduleModalValue>
+                                        {scheduleModalCredit?.creditDate ? formatDate(scheduleModalCredit.creditDate) : isScheduleModalCreditLoading ? 'Загрузка...' : 'Нет данных'}
+                                    </ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>Платеж</ScheduleModalLabel>
+                                    <ScheduleModalValue>{formatMoney(selectedCalendarSchedule.paymentAmount.toString())}</ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>Остаток</ScheduleModalLabel>
+                                    <ScheduleModalValue>{formatMoney((selectedCalendarSchedule.rest || 0).toString())}</ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>Телефон клиента</ScheduleModalLabel>
+                                    <ScheduleModalValue>{scheduleModalCredit?.clientPhone || selectedCalendarSchedule.clientPhone || 'Нет данных'}</ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>Срок договора</ScheduleModalLabel>
+                                    <ScheduleModalValue>
+                                        {scheduleModalCredit?.termMonths ? `${scheduleModalCredit.termMonths} мес.` : isScheduleModalCreditLoading ? 'Загрузка...' : 'Нет данных'}
+                                    </ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                <ScheduleModalMetaItem>
+                                    <ScheduleModalLabel>Сумма договора</ScheduleModalLabel>
+                                    <ScheduleModalValue>
+                                        {scheduleModalCredit ? formatMoney(scheduleModalCredit.totalAmount.toString()) : isScheduleModalCreditLoading ? 'Загрузка...' : 'Нет данных'}
+                                    </ScheduleModalValue>
+                                </ScheduleModalMetaItem>
+                                {selectedCalendarSchedule.guarantorFullname && (
+                                    <ScheduleModalMetaItem>
+                                        <ScheduleModalLabel>Поручитель</ScheduleModalLabel>
+                                        <ScheduleModalValue>{selectedCalendarSchedule.guarantorFullname}</ScheduleModalValue>
+                                    </ScheduleModalMetaItem>
+                                )}
+                                {selectedCalendarSchedule.guarantorPhone && (
+                                    <ScheduleModalMetaItem>
+                                        <ScheduleModalLabel>Телефон поручителя</ScheduleModalLabel>
+                                        <ScheduleModalValue>{selectedCalendarSchedule.guarantorPhone}</ScheduleModalValue>
+                                    </ScheduleModalMetaItem>
+                                )}
+                            </ScheduleModalMetaGrid>
+                        </ScheduleModalHeaderCard>
+
+                        <ScheduleOperationsRow>
+                            <ScheduleOperationButton type="button" onClick={handleOpenCreditFromScheduleModal}>
+                                Открыть договор
+                            </ScheduleOperationButton>
+                            <ScheduleOperationButton type="button" onClick={handleOpenPaymentFromScheduleModal}>
+                                Добавить платеж
+                            </ScheduleOperationButton>
+                            <ScheduleOperationButton type="button" onClick={handleNotifyFromScheduleModal}>
+                                Отправить уведомление
+                            </ScheduleOperationButton>
+                        </ScheduleOperationsRow>
 
                         <ModalField>
                             <InputLabel>Дата платежа</InputLabel>
@@ -1484,15 +1640,15 @@ const CalendarEmptyCell = styled.div<{ $columns: number }>`
   text-align: center;
 `;
 
-const PaymentChip = styled.button<{ $status: SchedulePaymentStatus; $hasComment: boolean }>`
+const PaymentChip = styled.button<{ $status: SchedulePaymentStatus; $hasComment: boolean; $isPaidCollapsed?: boolean }>`
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: ${props => props.$isPaidCollapsed ? 'row' : 'column'};
   gap: 2px;
   align-items: center;
   justify-content: center;
-  min-height: 58px;
-  padding: 7px 8px;
+  min-height: ${props => props.$isPaidCollapsed ? '28px' : '58px'};
+  padding: ${props => props.$isPaidCollapsed ? '4px 8px' : '7px 8px'};
   border: 1px solid ${props => schedulePaymentStatusMeta[props.$status].border};
   border-left: 3px solid ${props => schedulePaymentStatusMeta[props.$status].accent};
   border-radius: 7px;
@@ -1512,6 +1668,28 @@ const PaymentChip = styled.button<{ $status: SchedulePaymentStatus; $hasComment:
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
     transform: translateY(-1px);
   }
+`;
+
+const PaidCollapsedContent = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+`;
+
+const PaidCollapsedDot = styled.span`
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+`;
+
+const PaidCollapsedText = styled.span`
+  color: #166534;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
 `;
 
 const PaymentStatusLabel = styled.span<{ $status: SchedulePaymentStatus }>`
@@ -1539,15 +1717,103 @@ const ScheduleCommentForm = styled.div`
   padding: 8px 4px;
 `;
 
-const ScheduleInfoBox = styled.div`
+const ScheduleModalHeaderCard = styled.div<{ $status: SchedulePaymentStatus }>`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px;
   border-radius: 8px;
-  background: #f8fafc;
+  border: 1px solid ${props => schedulePaymentStatusMeta[props.$status].border};
+  border-left: 4px solid ${props => schedulePaymentStatusMeta[props.$status].accent};
+  background: ${props => schedulePaymentStatusMeta[props.$status].background};
+  color: #111827;
+`;
+
+const ScheduleModalHeaderMain = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const ScheduleModalClientName = styled.strong`
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.25;
+`;
+
+const ScheduleStatusPill = styled.span<{ $status: SchedulePaymentStatus }>`
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: ${props => schedulePaymentStatusMeta[props.$status].color};
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+`;
+
+const ScheduleModalMetaGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ScheduleModalMetaItem = styled.div`
+  min-width: 0;
+  padding: 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.72);
+`;
+
+const ScheduleModalLabel = styled.div`
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.25;
+`;
+
+const ScheduleModalValue = styled.div`
   color: #111827;
   font-size: 14px;
+  line-height: 1.3;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+`;
+
+const ScheduleOperationsRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ScheduleOperationButton = styled.button`
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #007d88;
+    color: #007d88;
+    background: #f8fbfb;
+  }
 `;
 
 const ModalField = styled.div`

@@ -59,4 +59,5 @@ export interface ScheduleDetails {
     guarantorPhone?: string;
     payed?: boolean;
     userComment?: string | null;
+    status?: 'Payed' | 'Overdue' | 'Pending';
 }
