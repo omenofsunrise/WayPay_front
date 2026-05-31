@@ -17,6 +17,7 @@ import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import styled from 'styled-components';
 import { formatMoney } from '../utils/formatPrice';
 import InvestorSelect from '../components/ui/fields/InvestorSelect';
+import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import useCompany from '../api/hooks/useCompany';
 import Tabs from '../components/ui/fields/Tabs';
 import SchedulePieChart from '../components/Dashboards/SchedulePieChart';
@@ -81,6 +82,11 @@ interface SelectedEntity {
   type: 'investor' | 'pool';
 }
 
+interface SelectedObjectType {
+  id: number;
+  name: string;
+}
+
 type SchedulePaymentStatus = 'paid' | 'overdue' | 'transferred' | 'called' | 'pending';
 
 const schedulePaymentStatusMeta: Record<SchedulePaymentStatus, {
@@ -137,6 +143,14 @@ const getMonthKey = (date: Date | string): string => {
     const parsed = new Date(date);
     if (Number.isNaN(parsed.getTime())) return '';
     return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const getCalendarClientName = (payment: ScheduleDetails): string => {
+    return payment.clientName?.trim() || 'Без имени';
+};
+
+const getCalendarClientKey = (payment: ScheduleDetails): string => {
+    return `${getCalendarClientName(payment)}|${payment.clientPhone || ''}`;
 };
 
 const getCalendarMonths = (startDate: string, endDate: string) => {
@@ -257,11 +271,13 @@ const SchedulePage = () => {
     const [clientNameFilter, setClientNameFilter] = useState('');
     const [calendarSearch, setCalendarSearch] = useState('');
     const [calendarSearchQuery, setCalendarSearchQuery] = useState('');
-    const [calendarDateFrom, setCalendarDateFrom] = useState(() => getDefaultCalendarDateRange().start);
-    const [calendarDateTo, setCalendarDateTo] = useState(() => getDefaultCalendarDateRange().end);
+    const [calendarDateFrom, setCalendarDateFrom] = useState('');
+    const [calendarDateTo, setCalendarDateTo] = useState('');
     const [calendarOverdueOnly, setCalendarOverdueOnly] = useState(false);
     const [calendarOverdues, setCalendarOverdues] = useState('');
     const [calendarDateRangeWarning, setCalendarDateRangeWarning] = useState('');
+    const [calendarObjectTypeName, setCalendarObjectTypeName] = useState('');
+    const [selectedCalendarObjectType, setSelectedCalendarObjectType] = useState<SelectedObjectType | null>(null);
     const [calendarPage, setCalendarPage] = useState(1);
     const [selectedCalendarSchedule, setSelectedCalendarSchedule] = useState<ScheduleDetails | null>(null);
     const [scheduleComment, setScheduleComment] = useState('');
@@ -274,6 +290,8 @@ const SchedulePage = () => {
     const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
     const [dateFromFilter, setDateFromFilter] = useState('');
     const [dateToFilter, setDateToFilter] = useState('');
+    const [tableObjectTypeName, setTableObjectTypeName] = useState('');
+    const [selectedTableObjectType, setSelectedTableObjectType] = useState<SelectedObjectType | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortConfig, setSortConfig] = useState<{
         key: number | null;
@@ -531,7 +549,8 @@ const SchedulePage = () => {
             pageSize: itemsPerPage,
             clientName: clientNameFilter || undefined,
             dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
-            dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined
+            dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
+            creditTypeId: selectedTableObjectType?.id || undefined
         };
 
         if (selectedEntity && selectedEntity.id != 0) {
@@ -548,13 +567,13 @@ const SchedulePage = () => {
         }
 
         await getList(params);
-    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, selectedEntity, getList, itemsPerPage, isPageSizeReady]);
+    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, selectedTableObjectType, sortConfig, selectedEntity, getList, itemsPerPage, isPageSizeReady]);
     
     useEffect(() => {
         if (activeTab === 'table' && isPageSizeReady) {
             loadSchedules();
         }
-    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, sortConfig, loadSchedules, activeTab, selectedEntity, isPageSizeReady]);
+    }, [currentPage, clientNameFilter, investorFilter, dateFromFilter, dateToFilter, selectedTableObjectType, sortConfig, loadSchedules, activeTab, selectedEntity, isPageSizeReady]);
 
     const loadCalendarSchedules = useCallback(async () => {
         let safeEndDate = calendarDateTo;
@@ -573,9 +592,10 @@ const SchedulePage = () => {
             Overdue: calendarOverdueOnly || undefined,
             Overdues: calendarOverdues ? Number(calendarOverdues) : undefined,
             ClientsCount: 50,
-            ClientsPage: calendarPage
+            ClientsPage: calendarPage,
+            CreditTypeId: selectedCalendarObjectType?.id || undefined
         });
-    }, [calendarDateFrom, calendarDateTo, calendarSearchQuery, calendarOverdueOnly, calendarOverdues, calendarPage, getCalendar]);
+    }, [calendarDateFrom, calendarDateTo, calendarSearchQuery, calendarOverdueOnly, calendarOverdues, selectedCalendarObjectType, calendarPage, getCalendar]);
 
     useEffect(() => {
         if (activeTab === 'calendar') {
@@ -629,6 +649,34 @@ const SchedulePage = () => {
 
     const handleDateToFilterChange = (value: string) => {
         setDateToFilter(value);
+        setCurrentPage(1);
+    };
+
+    const handleCalendarObjectTypeNameChange = (value: string) => {
+        setCalendarObjectTypeName(value);
+        if (!value) {
+            setSelectedCalendarObjectType(null);
+        }
+        setCalendarPage(1);
+    };
+
+    const handleCalendarObjectTypeSelect = (objectType: SelectedObjectType) => {
+        setSelectedCalendarObjectType(objectType);
+        setCalendarObjectTypeName(objectType.name);
+        setCalendarPage(1);
+    };
+
+    const handleTableObjectTypeNameChange = (value: string) => {
+        setTableObjectTypeName(value);
+        if (!value) {
+            setSelectedTableObjectType(null);
+        }
+        setCurrentPage(1);
+    };
+
+    const handleTableObjectTypeSelect = (objectType: SelectedObjectType) => {
+        setSelectedTableObjectType(objectType);
+        setTableObjectTypeName(objectType.name);
         setCurrentPage(1);
     };
 
@@ -735,6 +783,7 @@ const SchedulePage = () => {
                         investorNickname: investorFilter || undefined,
                         dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
                         dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
+                        creditTypeId: selectedTableObjectType?.id || undefined,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
@@ -947,11 +996,15 @@ const SchedulePage = () => {
     const safeCalendarData = Array.isArray(calendarData) ? calendarData : [];
     const calendarMonths = getCalendarMonthsByPayments(safeCalendarData, calendarDateFrom, calendarDateTo);
     const calendarClients = Array.from(new Map(
-        safeCalendarData.map(item => [item.clientName, item.clientName])
+        safeCalendarData.map(item => {
+            const key = getCalendarClientKey(item);
+            return [key, { key, name: getCalendarClientName(item) }];
+        })
     ).values());
     const calendarPaymentsByClient = safeCalendarData.reduce((acc, item) => {
-        const clientKey = item.clientName || 'Без имени';
+        const clientKey = getCalendarClientKey(item);
         const monthKey = getMonthKey(item.paymentDate);
+        if (!monthKey) return acc;
         if (!acc[clientKey]) acc[clientKey] = {};
         if (!acc[clientKey][monthKey]) acc[clientKey][monthKey] = [];
         acc[clientKey][monthKey].push(item);
@@ -989,6 +1042,15 @@ const SchedulePage = () => {
                             </SearchField>
                         </CalendarFilterGroup>
                         <CalendarFilterGroup>
+                            <ObjectTypeSelect
+                                value={calendarObjectTypeName}
+                                onChange={handleCalendarObjectTypeNameChange}
+                                onObjectTypeSelect={handleCalendarObjectTypeSelect}
+                                placeholder="Папка договора"
+                                entityType="credit"
+                            />
+                        </CalendarFilterGroup>
+                        <CalendarFilterGroup>
                             <CustomCalendar
                                 prefix="От"
                                 value={calendarDateFrom}
@@ -1008,17 +1070,6 @@ const SchedulePage = () => {
                                 }}
                             />
                         </CalendarFilterGroup>
-                        <CalendarToggleLabel>
-                            <input
-                                type="checkbox"
-                                checked={calendarOverdueOnly}
-                                onChange={(e) => {
-                                    setCalendarOverdueOnly(e.target.checked);
-                                    setCalendarPage(1);
-                                }}
-                            />
-                            Только просрочки
-                        </CalendarToggleLabel>
                         <CalendarFilterGroup>
                             <CustomInput
                                 inputType="number"
@@ -1031,6 +1082,18 @@ const SchedulePage = () => {
                                 }}
                             />
                         </CalendarFilterGroup>
+                        <CalendarSwitchLabel>
+                            <CalendarSwitchInput
+                                type="checkbox"
+                                checked={calendarOverdueOnly}
+                                onChange={(e) => {
+                                    setCalendarOverdueOnly(e.target.checked);
+                                    setCalendarPage(1);
+                                }}
+                            />
+                            <CalendarSwitchSlider />
+                            <span>Только просрочки</span>
+                        </CalendarSwitchLabel>
                     </CalendarToolbar>
                     {calendarDateRangeWarning && (
                         <CalendarWarning>{calendarDateRangeWarning}</CalendarWarning>
@@ -1060,12 +1123,12 @@ const SchedulePage = () => {
                                     </CalendarEmptyCell>
                                 )}
 
-                                {calendarClients.map(clientName => [
-                                    <CalendarClientCell key={`${clientName}-client`}>{clientName}</CalendarClientCell>,
+                                {calendarClients.map(client => [
+                                    <CalendarClientCell key={`${client.key}-client`}>{client.name}</CalendarClientCell>,
                                     ...calendarMonths.map(month => {
-                                            const payments = calendarPaymentsByClient[clientName]?.[month.key] || [];
+                                            const payments = calendarPaymentsByClient[client.key]?.[month.key] || [];
                                             return (
-                                                <CalendarPaymentCell key={`${clientName}-${month.key}`}>
+                                                <CalendarPaymentCell key={`${client.key}-${month.key}`}>
                                                     {payments.length === 0 ? (
                                                         <CalendarEmptyMark>—</CalendarEmptyMark>
                                                     ) : (
@@ -1159,6 +1222,15 @@ const SchedulePage = () => {
                                     onChange={handleInvestorFilterChange}
                                     onInvestorSelect={handleEntitySelect}
                                     includePools={true}
+                                />
+                            </InputWrapper>
+                            <InputWrapper>
+                                <ObjectTypeSelect
+                                    value={tableObjectTypeName}
+                                    onChange={handleTableObjectTypeNameChange}
+                                    onObjectTypeSelect={handleTableObjectTypeSelect}
+                                    placeholder="Папка договора"
+                                    entityType="credit"
                                 />
                             </InputWrapper>
                             <DateInputWrapper>
@@ -1520,13 +1592,50 @@ const SearchClearButton = styled.button`
   }
 `;
 
-const CalendarToggleLabel = styled.label`
+const CalendarSwitchLabel = styled.label`
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: #374151;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+`;
+
+const CalendarSwitchInput = styled.input`
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+`;
+
+const CalendarSwitchSlider = styled.span`
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background-color 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
+    transition: transform 0.2s ease;
+  }
+
+  ${CalendarSwitchInput}:checked + & {
+    background: #007d88;
+  }
+
+  ${CalendarSwitchInput}:checked + &::after {
+    transform: translateX(18px);
+  }
 `;
 
 const CalendarWarning = styled.div`

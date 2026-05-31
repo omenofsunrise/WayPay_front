@@ -1097,6 +1097,18 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </SectionTopRow>
 
             <FormRow>
+              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
+                <Label>Дата договора</Label>
+                <DateInputWrapper>
+                  <CustomCalendar
+                    prefix=""
+                    value={contractDate || ''}
+                    onChange={(date) => setContractDate(date || null)}
+                    onReset={() => setContractDate(null)}
+                  />
+                </DateInputWrapper>
+              </FieldGroup>
+
               {!inDebt ? (
                 <FieldGroup style={{ maxWidth: '365px', width: '100%' }}>
                   <Label>Инвестор / Пул</Label>
@@ -1133,18 +1145,6 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                     placeholder="Имя договора"
                     value={creditName}
                     onChange={(e) => setCreditName(e.target.value)}
-                  />
-                </DateInputWrapper>
-              </FieldGroup>
-
-              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
-                <Label>Дата договора</Label>
-                <DateInputWrapper>
-                  <CustomCalendar
-                    prefix=""
-                    value={contractDate || ''}
-                    onChange={(date) => setContractDate(date || null)}
-                    onReset={() => setContractDate(null)}
                   />
                 </DateInputWrapper>
               </FieldGroup>

@@ -25,6 +25,7 @@ export interface ScheduleParams extends PaginationParams {
     sortDirection?: 'asc' | 'desc';
     investorId?: number;
     poolId?: number;
+    creditTypeId?: number;
 }
 
 export interface ScheduleCalendarParams {
@@ -35,6 +36,7 @@ export interface ScheduleCalendarParams {
     Overdues?: number;
     ClientsCount?: number;
     ClientsPage?: number;
+    CreditTypeId?: number;
 }
 
 export interface UpdateScheduleRequest {
