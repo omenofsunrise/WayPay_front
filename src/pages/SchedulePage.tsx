@@ -368,7 +368,7 @@ const SchedulePage = ({
     addDaysToIsoDate(todayIsoDate(), CALENDAR_FUTURE_DAYS)
   );
   const [isCalendarFullscreen, setIsCalendarFullscreen] = useState(false);
-  const calendarScrollRef = useRef<HTMLDivElement>(null);
+  const calendarScrollRef = useRef<HTMLDivElement | null>(null);
   // Запоминаем scrollWidth перед подгрузкой слева, чтобы вернуть позицию скролла
   // после появления новых колонок (иначе лента «прыгает»).
   const calendarAnchorWidthRef = useRef<number | null>(null);
@@ -849,15 +849,25 @@ const SchedulePage = ({
     }
   }, [calendarData]);
 
-  // Осевая блокировка прокрутки колесом:
+  // Осевая блокировка прокрутки колесом над гридом календаря:
   // над колонкой «Клиент / дата» — только вертикаль, над платежами — только горизонталь.
+  // Листенер вешаем на window (passive: false), чтобы preventDefault работал гарантированно,
+  // независимо от момента монтирования грида.
   useEffect(() => {
-    const el = calendarScrollRef.current;
-    if (!el) return;
-
     const handleWheel = (event: WheelEvent) => {
-      const pointerX = event.clientX - el.getBoundingClientRect().left;
-      const overClientColumn = pointerX <= CALENDAR_CLIENT_COL_WIDTH;
+      const el = calendarScrollRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const inside =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+      if (!inside) return;
+
+      const overClientColumn =
+        event.clientX - rect.left <= CALENDAR_CLIENT_COL_WIDTH;
       const delta =
         Math.abs(event.deltaY) >= Math.abs(event.deltaX)
           ? event.deltaY
@@ -871,9 +881,9 @@ const SchedulePage = ({
       event.preventDefault();
     };
 
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => el.removeEventListener("wheel", handleWheel);
-  }, [activeTab, error, isCalendarFullscreen]);
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    return () => window.removeEventListener("wheel", handleWheel);
+  }, []);
 
   const handleClientNameFilterChange = (value: string) => {
     setClientNameFilter(value);
