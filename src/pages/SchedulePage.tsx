@@ -1,4 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
@@ -309,6 +315,17 @@ const addDaysToIsoDate = (date: string, days: number): string => {
   return parsed.toISOString().split("T")[0];
 };
 
+const todayIsoDate = (): string => new Date().toISOString().split("T")[0];
+
+// Когда фильтр дат не выбран, календарь работает как бесконечная лента:
+// показываем окно дат вокруг сегодняшнего дня и расширяем его при скролле к краю.
+const CALENDAR_PAST_DAYS = 30;
+const CALENDAR_FUTURE_DAYS = 90;
+const CALENDAR_WINDOW_STEP_DAYS = 30;
+// Ограничение, чтобы окно не разрасталось бесконечно при длительном скролле.
+const CALENDAR_MAX_SPAN_DAYS = 720;
+const CALENDAR_SCROLL_EDGE_PX = 140;
+
 const SchedulePage = ({
   initialTab = "table",
   hiddenTabs = ["calendar"],
@@ -341,6 +358,18 @@ const SchedulePage = ({
   const [selectedCalendarObjectType, setSelectedCalendarObjectType] =
     useState<SelectedObjectType | null>(null);
   const [calendarPage, setCalendarPage] = useState(1);
+  // Окно дат для режима бесконечного скролла (когда фильтр дат не задан).
+  const [calendarWindowStart, setCalendarWindowStart] = useState(() =>
+    addDaysToIsoDate(todayIsoDate(), -CALENDAR_PAST_DAYS)
+  );
+  const [calendarWindowEnd, setCalendarWindowEnd] = useState(() =>
+    addDaysToIsoDate(todayIsoDate(), CALENDAR_FUTURE_DAYS)
+  );
+  const calendarScrollRef = useRef<HTMLDivElement>(null);
+  // Запоминаем scrollWidth перед подгрузкой слева, чтобы вернуть позицию скролла
+  // после появления новых колонок (иначе лента «прыгает»).
+  const calendarAnchorWidthRef = useRef<number | null>(null);
+  const calendarExtendingRef = useRef(false);
   const [selectedCalendarSchedule, setSelectedCalendarSchedule] =
     useState<ScheduleDetails | null>(null);
   const [scheduleComment, setScheduleComment] = useState("");
@@ -408,6 +437,7 @@ const SchedulePage = ({
     error,
     scheduleData,
     calendarData,
+    calendarSummary,
     getList,
     getCalendar,
     updateSchedule,
@@ -693,25 +723,38 @@ const SchedulePage = ({
     isPageSizeReady,
   ]);
 
+  const hasCalendarDateFilter = Boolean(calendarDateFrom || calendarDateTo);
+
   const loadCalendarSchedules = useCallback(async () => {
-    let safeEndDate = calendarDateTo;
-    if (
-      calendarDateFrom &&
-      calendarDateTo &&
-      getDaysBetween(calendarDateFrom, calendarDateTo) > 120
-    ) {
-      safeEndDate = addDaysToIsoDate(calendarDateFrom, 120);
-      setCalendarDateTo(safeEndDate);
-      setCalendarDateRangeWarning("Диапазон календаря ограничен 120 днями.");
+    let startDate: string | undefined;
+    let endDate: string | undefined;
+
+    if (hasCalendarDateFilter) {
+      // Режим фильтра: используем выбранные даты с ограничением диапазона в 120 дней.
+      startDate = calendarDateFrom || undefined;
+      let safeEndDate = calendarDateTo;
+      if (
+        calendarDateFrom &&
+        calendarDateTo &&
+        getDaysBetween(calendarDateFrom, calendarDateTo) > 120
+      ) {
+        safeEndDate = addDaysToIsoDate(calendarDateFrom, 120);
+        setCalendarDateTo(safeEndDate);
+        setCalendarDateRangeWarning("Диапазон календаря ограничен 120 днями.");
+      } else {
+        setCalendarDateRangeWarning("");
+      }
+      endDate = safeEndDate || undefined;
     } else {
+      // Режим бесконечной ленты: окно дат вокруг сегодняшнего дня.
       setCalendarDateRangeWarning("");
+      startDate = calendarWindowStart;
+      endDate = calendarWindowEnd;
     }
 
     await getCalendar({
-      StartDate: calendarDateFrom
-        ? parseDateInput(calendarDateFrom)
-        : undefined,
-      EndDate: safeEndDate ? parseDateInput(safeEndDate) : undefined,
+      StartDate: startDate ? parseDateInput(startDate) : undefined,
+      EndDate: endDate ? parseDateInput(endDate) : undefined,
       Search: calendarSearchQuery || undefined,
       Overdue: calendarOverdueOnly || undefined,
       Overdues: calendarOverdues ? Number(calendarOverdues) : undefined,
@@ -719,9 +762,14 @@ const SchedulePage = ({
       ClientsPage: calendarPage,
       CreditTypeId: selectedCalendarObjectType?.id || undefined,
     });
+
+    calendarExtendingRef.current = false;
   }, [
+    hasCalendarDateFilter,
     calendarDateFrom,
     calendarDateTo,
+    calendarWindowStart,
+    calendarWindowEnd,
     calendarSearchQuery,
     calendarOverdueOnly,
     calendarOverdues,
@@ -744,6 +792,59 @@ const SchedulePage = ({
 
     return () => window.clearTimeout(timeoutId);
   }, [calendarSearch]);
+
+  // Бесконечная лента: при подкрутке к краю расширяем окно дат и подгружаем данные.
+  // Работает только когда фильтр дат не выбран.
+  const handleCalendarScroll = useCallback(() => {
+    if (hasCalendarDateFilter || isLoading || calendarExtendingRef.current) {
+      return;
+    }
+    const el = calendarScrollRef.current;
+    if (!el) return;
+
+    if (
+      getDaysBetween(calendarWindowStart, calendarWindowEnd) >=
+      CALENDAR_MAX_SPAN_DAYS
+    ) {
+      return;
+    }
+
+    const atLeftEdge = el.scrollLeft <= CALENDAR_SCROLL_EDGE_PX;
+    const atRightEdge =
+      el.scrollLeft + el.clientWidth >=
+      el.scrollWidth - CALENDAR_SCROLL_EDGE_PX;
+
+    if (atLeftEdge) {
+      calendarExtendingRef.current = true;
+      // Запоминаем текущую ширину, чтобы после prepend вернуть позицию.
+      calendarAnchorWidthRef.current = el.scrollWidth;
+      setCalendarWindowStart((prev) =>
+        addDaysToIsoDate(prev, -CALENDAR_WINDOW_STEP_DAYS)
+      );
+    } else if (atRightEdge) {
+      calendarExtendingRef.current = true;
+      setCalendarWindowEnd((prev) =>
+        addDaysToIsoDate(prev, CALENDAR_WINDOW_STEP_DAYS)
+      );
+    }
+  }, [
+    hasCalendarDateFilter,
+    isLoading,
+    calendarWindowStart,
+    calendarWindowEnd,
+  ]);
+
+  // После prepend новых колонок слева возвращаем позицию скролла, чтобы лента не «прыгала».
+  useLayoutEffect(() => {
+    const el = calendarScrollRef.current;
+    if (el && calendarAnchorWidthRef.current !== null) {
+      const delta = el.scrollWidth - calendarAnchorWidthRef.current;
+      if (delta > 0) {
+        el.scrollLeft += delta;
+      }
+      calendarAnchorWidthRef.current = null;
+    }
+  }, [calendarData]);
 
   const handleClientNameFilterChange = (value: string) => {
     setClientNameFilter(value);
@@ -1246,10 +1347,39 @@ const SchedulePage = ({
                 {calendarDateRangeWarning && (
                   <CalendarWarning>{calendarDateRangeWarning}</CalendarWarning>
                 )}
-                {isLoading && <div>Загрузка...</div>}
+                <CalendarSummaryBar>
+                  <CalendarSummaryItem>
+                    <CalendarSummaryLabel>Всего платежей</CalendarSummaryLabel>
+                    <CalendarSummaryValue>
+                      {calendarSummary.totalCount}
+                    </CalendarSummaryValue>
+                  </CalendarSummaryItem>
+                  <CalendarSummaryItem>
+                    <CalendarSummaryLabel>Просрочек</CalendarSummaryLabel>
+                    <CalendarSummaryValue
+                      $danger={calendarSummary.totalOverdues > 0}
+                    >
+                      {calendarSummary.totalOverdues}
+                    </CalendarSummaryValue>
+                  </CalendarSummaryItem>
+                  <CalendarSummaryItem>
+                    <CalendarSummaryLabel>Сумма просрочек</CalendarSummaryLabel>
+                    <CalendarSummaryValue
+                      $danger={calendarSummary.overduesAmount > 0}
+                    >
+                      {formatMoneyValue(calendarSummary.overduesAmount)}
+                    </CalendarSummaryValue>
+                  </CalendarSummaryItem>
+                </CalendarSummaryBar>
                 {error && <div>Ошибка: {error}</div>}
-                {!isLoading && !error && (
-                  <CalendarGridScroll>
+                {!error && (
+                  <CalendarGridScroll
+                    ref={calendarScrollRef}
+                    onScroll={handleCalendarScroll}
+                  >
+                    {isLoading && (
+                      <CalendarLoadingOverlay>Загрузка…</CalendarLoadingOverlay>
+                    )}
                     <CalendarGrid $columns={calendarDays.length}>
                       <CalendarHeaderCell>Клиент / дата</CalendarHeaderCell>
                       {calendarDays.map((day) => (
@@ -1838,12 +1968,58 @@ const CalendarWarning = styled.div`
   font-size: 14px;
 `;
 
+const CalendarSummaryBar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+`;
+
+const CalendarSummaryItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+`;
+
+const CalendarSummaryLabel = styled.span`
+  font-size: 12px;
+  color: #64748b;
+`;
+
+const CalendarSummaryValue = styled.span<{ $danger?: boolean }>`
+  font-size: 18px;
+  font-weight: 700;
+  color: ${(props) => (props.$danger ? "#dc2626" : "#111827")};
+`;
+
 const CalendarGridScroll = styled.div`
+  position: relative;
   overflow: auto;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #ffffff;
   max-height: calc(100vh - 280px);
+`;
+
+const CalendarLoadingOverlay = styled.div`
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+  background: rgba(248, 250, 252, 0.92);
+  border-bottom: 1px solid #e2e8f0;
 `;
 
 const CalendarGrid = styled.div<{ $columns: number }>`
