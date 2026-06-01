@@ -1,62 +1,65 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import CustomTitle from '../components/ui/Text/CustomTitle';
-import TitleField from '../components/ui/Layouts/TitleLayout';
-import ExportButton from '../components/ui/Buttons/ExportButton';
-import CustomInput from '../components/ui/fields/CustomInput';
-import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
-import CreditCardList from '../components/ui/cards/CreditCardList';
-import type { CreditCardField } from '../components/ui/cards/CreditCard';
-import Pagination from '../components/ui/fields/CustomPagination';
-import PageLayout from '../components/ui/Layouts/PageLayout';
-import PrintIcon from '../assets/ui/print.svg?react';
-import styled from 'styled-components';
-import Tabs from '../components/ui/fields/Tabs';
-import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
-import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
-import { useNavigate, useParams } from 'react-router-dom';
-import useCredit from '../api/hooks/useCredit';
-import { InvestmentSourceType, type Credit, type SetInvestmentSourceRequest } from '../api/types/credit';
-import useExport from '../api/hooks/useExport';
-import creditService from '../api/services/creditService';
-import { formatDate } from '../utils/dateFormatter';
-import NewPaymentModal from '../components/modal/NewPaymentModal';
-import ViewCreditModal from '../components/modal/ViewCreditModal';
-import { formatMoney } from '../utils/formatPrice';
-import usePayment from '../api/hooks/usePayment';
-import CustomCalendar from '../components/ui/fields/CustomCalendar';
-import { useAuth } from '../сontext/AuthContext';
-import PrintOptionModal from '../components/modal/PrintOptionModal';
-import DocxGenerator from '../utils/doxcUtils/docxGenerator';
-import InvestorSelect from '../components/ui/fields/InvestorSelect';
-import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
-import PaymentConfirmationGenerator from '../utils/doxcUtils/paymentConfirmationGenerator';
-import paymentService from '../api/services/paymentService';
-import type { PaymentTab } from '../api/types/payment';
-import InvestorSelectModal from '../components/modal/CrudInherited/InvestorSelectModal';
-import AddButton from '../components/ui/Buttons/AddButton';
-import type { ObjectType, ObjectTypeCreateRequest, ObjectTypeUpdateRequest } from '../api/types/objectType';
-import useObjectTypes from '../api/hooks/useObjectType';
-import CreateObjectTypeModal from '../components/modal/CrudInherited/CreateObjectTypeModal';
-import EditButton from '../components/ui/Buttons/EditButton';
-import DeleteButton from '../components/ui/Buttons/DeleteButton';
-import EditObjectTypeModal from '../components/modal/CrudInherited/EditObjectTypeModal';
-import type { ContextMenuItem } from '../components/modal/ContextMenu';
-import { createWhatsAppMessageWithoutPhone, sendWhatsAppMessageToPhone } from '../utils/sendWhatsAppMessage';
-import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
-import { useResponsivePageSize } from '../utils/useResponsivePageSize';
-import { useUiSettings } from '../utils/uiSettings';
-import useSender from '../api/hooks/useSender';
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import TitleField from "../components/ui/Layouts/TitleLayout";
+import CustomInput from "../components/ui/fields/CustomInput";
+import CustomTable, {
+  type RowStyle,
+} from "../components/ui/tables/CustomTable";
+import CreditCardList from "../components/ui/cards/CreditCardList";
+import type { CreditCardField } from "../components/ui/cards/CreditCard";
+import Pagination from "../components/ui/fields/CustomPagination";
+import PageLayout from "../components/ui/Layouts/PageLayout";
+import styled from "styled-components";
+import Tabs from "../components/ui/fields/Tabs";
+import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
+import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
+import { useNavigate, useParams } from "react-router-dom";
+import useCredit from "../api/hooks/useCredit";
+import {
+  InvestmentSourceType,
+  type Credit,
+  type SetInvestmentSourceRequest,
+} from "../api/types/credit";
+import useExport from "../api/hooks/useExport";
+import creditService from "../api/services/creditService";
+import { formatDate } from "../utils/dateFormatter";
+import NewPaymentModal from "../components/modal/NewPaymentModal";
+import ViewCreditModal from "../components/modal/ViewCreditModal";
+import { formatMoney } from "../utils/formatPrice";
+import usePayment from "../api/hooks/usePayment";
+import CustomCalendar from "../components/ui/fields/CustomCalendar";
+import { useAuth } from "../сontext/AuthContext";
+import PrintOptionModal from "../components/modal/PrintOptionModal";
+import DocxGenerator from "../utils/doxcUtils/docxGenerator";
+import InvestorSelect from "../components/ui/fields/InvestorSelect";
+import ObjectTypeSelect from "../components/ui/fields/ObjectTypeSelect";
+import PaymentConfirmationGenerator from "../utils/doxcUtils/paymentConfirmationGenerator";
+import paymentService from "../api/services/paymentService";
+import type { PaymentTab } from "../api/types/payment";
+import InvestorSelectModal from "../components/modal/CrudInherited/InvestorSelectModal";
+import AddButton from "../components/ui/Buttons/AddButton";
+import type {
+  ObjectType,
+  ObjectTypeCreateRequest,
+  ObjectTypeUpdateRequest,
+} from "../api/types/objectType";
+import useObjectTypes from "../api/hooks/useObjectType";
+import CreateObjectTypeModal from "../components/modal/CrudInherited/CreateObjectTypeModal";
+import EditButton from "../components/ui/Buttons/EditButton";
+import DeleteButton from "../components/ui/Buttons/DeleteButton";
+import EditObjectTypeModal from "../components/modal/CrudInherited/EditObjectTypeModal";
+import type { ContextMenuItem } from "../components/modal/ContextMenu";
+import {
+  createWhatsAppMessageWithoutPhone,
+  sendWhatsAppMessageToPhone,
+} from "../utils/sendWhatsAppMessage";
+import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
+import { useResponsivePageSize } from "../utils/useResponsivePageSize";
+import { useUiSettings } from "../utils/uiSettings";
+import useSender from "../api/hooks/useSender";
 
 // Иконка для кнопки сворачивания
-const FilterToggleIcon = styled.svg<{ $isOpen: boolean }>`
-  width: 20px;
-  height: 20px;
-  transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
-  transition: transform 0.3s ease;
-`;
-
 // Интерфейс для модалки "Поделиться"
-type ShareOption = 'contractData' | 'paymentHistory' | 'paymentSchedule';
+type ShareOption = "contractData" | "paymentHistory" | "paymentSchedule";
 
 interface ShareOptionModalProps {
   isOpen: boolean;
@@ -72,12 +75,19 @@ const ShareOptionModal = ({
   onClose,
   onSelect,
   selectedCredit,
-  modalTitle = "Поделиться"
+  modalTitle = "Поделиться",
 }: ShareOptionModalProps) => {
-
   const options = [
-    { key: 'contractData', label: 'Данными договора', enabled: !!selectedCredit },
-    { key: 'paymentHistory', label: 'Историей платежей', enabled: !!selectedCredit },
+    {
+      key: "contractData",
+      label: "Данными договора",
+      enabled: !!selectedCredit,
+    },
+    {
+      key: "paymentHistory",
+      label: "Историей платежей",
+      enabled: !!selectedCredit,
+    },
     // { key: 'paymentSchedule', label: 'Расписанием платежей', enabled: !!selectedCredit }
   ];
 
@@ -85,7 +95,7 @@ const ShareOptionModal = ({
     if (selectedCredit) {
       onSelect(optionKey);
     } else {
-      console.error('No credit selected for sharing');
+      console.error("No credit selected for sharing");
       onClose();
     }
   };
@@ -95,17 +105,18 @@ const ShareOptionModal = ({
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalTitle>{modalTitle}</ModalTitle>
         <PrintOptions>
-          {options.map(option => (
-            option.enabled !== false && (
-              <PrintOption 
-                key={option.key} 
-                onClick={() => handleSelect(option.key as any)}
-                disabled={!option.enabled}
-              >
-                {option.label}
-              </PrintOption>
-            )
-          ))}
+          {options.map(
+            (option) =>
+              option.enabled !== false && (
+                <PrintOption
+                  key={option.key}
+                  onClick={() => handleSelect(option.key as any)}
+                  disabled={!option.enabled}
+                >
+                  {option.label}
+                </PrintOption>
+              )
+          )}
         </PrintOptions>
       </ModalContent>
     </ModalOverlay>
@@ -124,28 +135,17 @@ interface SetCategoryActionProps {
 
 const CreditPage = () => {
   const colors = {
-    primary: '#007D88'
+    primary: "#007D88",
   };
-  const FILTERS_STORAGE_KEY = 'creditsFilters';
-  const FILTERS_VISIBLE_KEY = 'creditsFiltersVisible';
+  const FILTERS_STORAGE_KEY = "creditsFilters";
   const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const savedFilters = useMemo(() => {
     try {
       const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch (error) {
-      console.error('Ошибка чтения фильтров договоров из localStorage:', error);
+      console.error("Ошибка чтения фильтров договоров из localStorage:", error);
       return null;
-    }
-  }, []);
-
-  const savedFiltersVisible = useMemo(() => {
-    try {
-      const raw = localStorage.getItem(FILTERS_VISIBLE_KEY);
-      return raw ? JSON.parse(raw) : true;
-    } catch (error) {
-      console.error('Ошибка чтения состояния фильтров из localStorage:', error);
-      return true;
     }
   }, []);
 
@@ -154,40 +154,71 @@ const CreditPage = () => {
       return tab;
     }
 
-    if (location.pathname === '/credits/in-debt') {
-      return 'inDebt';
+    if (location.pathname === "/credits/in-debt") {
+      return "inDebt";
     }
 
-    return typeof savedFilters?.activeTab === 'string' ? savedFilters.activeTab : 'all';
+    return typeof savedFilters?.activeTab === "string"
+      ? savedFilters.activeTab
+      : "all";
   }, [tab, savedFilters]);
 
-  // Состояние для сворачивания фильтров
-  const [isFiltersVisible, setIsFiltersVisible] = useState(savedFiltersVisible);
-
   const uiSettings = useUiSettings();
-  const isListMode = uiSettings.creditsDisplayMode === 'list';
+  const isListMode = uiSettings.creditsDisplayMode === "list";
   const [accumulatedItems, setAccumulatedItems] = useState<Credit[]>([]);
   const accumulatedItemsRef = useRef<Credit[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
-  const [contractNumber, setContractNumber] = useState(() => savedFilters?.contractNumber ?? '');
+  const [contractNumber, setContractNumber] = useState(
+    () => savedFilters?.contractNumber ?? ""
+  );
   const [currentPage, setCurrentPage] = useState(1);
-  const [investorName, setInvestorName] = useState(() => savedFilters?.investorName ?? '');
-  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{ type: 'investor' | 'pool'; id: number; name: string } | null>(() => savedFilters?.selectedInvestmentSource ?? null);
-  const [clientFullName, setClientFullName] = useState(() => savedFilters?.clientFullName ?? '');
-  const [fromDate, setFromDate] = useState<string>(() => savedFilters?.fromDate ?? '');
-  const [toDate, setToDate] = useState<string>(() => savedFilters?.toDate ?? '');
-  const [fromCreationDate, setFromCreationDate] = useState<string>(() => savedFilters?.fromCreationDate ?? '');
-  const [toCreationDate, setToCreationDate] = useState<string>(() => savedFilters?.toCreationDate ?? '');
-  const [objectType, setObjectType] = useState<string>(() => savedFilters?.objectType ?? '');
+  const [investorName, setInvestorName] = useState(
+    () => savedFilters?.investorName ?? ""
+  );
+  const [selectedInvestmentSource, setSelectedInvestmentSource] = useState<{
+    type: "investor" | "pool";
+    id: number;
+    name: string;
+  } | null>(() => savedFilters?.selectedInvestmentSource ?? null);
+  const [clientFullName, setClientFullName] = useState(
+    () => savedFilters?.clientFullName ?? ""
+  );
+  const [fromDate, setFromDate] = useState<string>(
+    () => savedFilters?.fromDate ?? ""
+  );
+  const [toDate, setToDate] = useState<string>(
+    () => savedFilters?.toDate ?? ""
+  );
+  const [fromCreationDate, setFromCreationDate] = useState<string>(
+    () => savedFilters?.fromCreationDate ?? ""
+  );
+  const [toCreationDate, setToCreationDate] = useState<string>(
+    () => savedFilters?.toCreationDate ?? ""
+  );
+  const [objectType, setObjectType] = useState<string>(
+    () => savedFilters?.objectType ?? ""
+  );
   const [isConfirmingAll, setIsConfirmingAll] = useState(false);
-  const [creditTypeId, setCreditTypeId] = useState<number | null>(() => (typeof savedFilters?.creditTypeId === 'number' ? savedFilters.creditTypeId : null));
+  const [creditTypeId, setCreditTypeId] = useState<number | null>(() =>
+    typeof savedFilters?.creditTypeId === "number"
+      ? savedFilters.creditTypeId
+      : null
+  );
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
-    direction: 'asc' | 'desc';
-  }>({ key: null, direction: 'desc' });
-  const [filters, setFilters] = useState<{ isFavourite?: boolean; isActive?: boolean; myCredits?: boolean; debt?: boolean; inDebt?: boolean; Terminated?: boolean; objectTypeId?: number }>(() => savedFilters?.filters ?? {});
+    direction: "asc" | "desc";
+  }>({ key: null, direction: "desc" });
+  const [filters, setFilters] = useState<{
+    isFavourite?: boolean;
+    isActive?: boolean;
+    myCredits?: boolean;
+    debt?: boolean;
+    inDebt?: boolean;
+    Terminated?: boolean;
+    objectTypeId?: number;
+  }>(() => savedFilters?.filters ?? {});
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -211,35 +242,53 @@ const CreditPage = () => {
   // В постраничном режиме показываем ровно столько договоров, сколько помещается
   // на экран, чтобы листать страницами без прокрутки. В режиме ленты грузим
   // более крупными пачками, чтобы бесконечный скролл не дёргался.
-  const itemsPerPage = isListMode ? Math.max(responsivePageSize, 20) : responsivePageSize;
+  const itemsPerPage = isListMode
+    ? Math.max(responsivePageSize, 20)
+    : responsivePageSize;
   const columnToApiSortMap: Record<number, string> = {
-    1: 'id',
-    2: 'date',
-    3: 'client',
-    5: 'accured',
-    6: 'payed',
-    7: 'rest',
-    8: 'debt'
+    1: "id",
+    2: "date",
+    3: "client",
+    5: "accured",
+    6: "payed",
+    7: "rest",
+    8: "debt",
   };
   const { hasPermission, hasRole, denyPermission } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const { exportData, isExporting, exportProgress } = useExport<Credit>();
-  const { isLoading, error, data: creditsData, getCredits, toggleFavourite, toggleTerminated, getDocsData, setInvestmentSource, acceptCredit, acceptCredits } = useCredit();
-  const rawCredits = isListMode ? accumulatedItems : (creditsData?.items ?? []);
+  // Модальное окно с фильтрами (открывается иконкой в шапке)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const { exportData } = useExport<Credit>();
+  const {
+    isLoading,
+    error,
+    data: creditsData,
+    getCredits,
+    toggleFavourite,
+    toggleTerminated,
+    getDocsData,
+    setInvestmentSource,
+    acceptCredit,
+    acceptCredits,
+  } = useCredit();
+  const rawCredits = isListMode ? accumulatedItems : creditsData?.items ?? [];
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [selectedCreditForPrint, setSelectedCreditForPrint] = useState<Credit | null>(null);
-  const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] = useState(false);
-  const [selectedCreditForFunding, setSelectedCreditForFunding] = useState<Credit | null>(null);
-  const { 
-    isLoading: isObjectTypesLoading, 
-    objectTypes, 
+  const [selectedCreditForPrint, setSelectedCreditForPrint] =
+    useState<Credit | null>(null);
+  const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] =
+    useState(false);
+  const [selectedCreditForFunding, setSelectedCreditForFunding] =
+    useState<Credit | null>(null);
+  const {
+    isLoading: isObjectTypesLoading,
+    objectTypes,
     create: createObjectType,
     update: updateObjectType,
     deleteObjectType: deleteObjectTypeApi,
-    getAll: getAllObjectTypes 
+    getAll: getAllObjectTypes,
   } = useObjectTypes();
 
   useEffect(() => {
@@ -247,9 +296,10 @@ const CreditPage = () => {
     setIsPageSizeReady(true);
   }, [responsivePageSize]);
 
-  const shouldShowMyCreditsTab = hasRole('директор') || 
-                                hasRole('суперадмин') || 
-                                hasPermission('VIEW_ALL_CREDITS', true);
+  const shouldShowMyCreditsTab =
+    hasRole("директор") ||
+    hasRole("суперадмин") ||
+    hasPermission("VIEW_ALL_CREDITS", true);
 
   useEffect(() => {
     loadCustomTabs();
@@ -259,69 +309,11 @@ const CreditPage = () => {
     setSelectedRows(selectedIndices);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(FILTERS_VISIBLE_KEY, JSON.stringify(isFiltersVisible));
-  }, [isFiltersVisible]);
-
-  const handlePrintButtonClick = () => {
-    if (selectedRows.length === 0) {
-      alert('Пожалуйста, выберите хотя бы один договор из таблицы');
-      return;
-    }
-    
-    if (selectedRows.length === 1) {
-      // Если выбран один договор - показываем модалку печати
-      const selectedIndex = selectedRows[0];
-      const credit = displayedCredits[selectedIndex];
-      if (credit) {
-        setSelectedCreditForPrint(credit);
-        setIsPrintModalOpen(true);
-      }
-    } else {
-      // Если выбрано несколько договоров - предлагаем массовую печать
-      const confirmMassPrint = window.confirm(
-        `Вы выбрали ${selectedRows.length} договора(ов). Хотите сгенерировать документы для всех выбранных договоров?`
-      );
-      
-      if (confirmMassPrint) {
-        // Реализуйте массовую печать здесь
-        handleMassPrint(selectedRows);
-      }
-    }
-  };
-
-  const handleShareButtonClick = () => {
-    if (selectedRows.length === 0) {
-      alert('Пожалуйста, выберите хотя бы один договор из таблицы');
-      return;
-    }
-    
-    if (selectedRows.length === 1) {
-      // Если выбран один договор - показываем модалку "Поделиться"
-      const selectedIndex = selectedRows[0];
-      const credit = displayedCredits[selectedIndex];
-      if (credit) {
-        setSelectedCreditForPrint(credit);
-        setIsShareModalOpen(true);
-      }
-    } else {
-      // Если выбрано несколько договоров - предлагаем массовую рассылку
-      const confirmMassShare = window.confirm(
-        `Вы выбрали ${selectedRows.length} договора(ов). Хотите отправить данные по всем выбранным договорам?`
-      );
-      
-      if (confirmMassShare) {
-        // Реализуйте массовую рассылку здесь
-        handleMassShare(selectedRows);
-      }
-    }
-  };
-
   // Функция для массовой печати
   const handleMassPrint = async (selectedIndices: number[]) => {
     try {
       const docxGenerator = new DocxGenerator(getDocsData);
-      
+
       for (const rowIndex of selectedIndices) {
         const credit = displayedCredits[rowIndex];
         if (credit) {
@@ -329,128 +321,138 @@ const CreditPage = () => {
           await docxGenerator.generateFromCreditData(credit.id);
         }
       }
-      
+
       alert(`Сгенерировано документов: ${selectedIndices.length}`);
     } catch (error) {
-      console.error('Ошибка при массовой печати:', error);
-      alert('Произошла ошибка при печати некоторых документов');
+      console.error("Ошибка при массовой печати:", error);
+      alert("Произошла ошибка при печати некоторых документов");
     }
   };
 
   const handleMassShare = async (selectedIndices: number[]) => {
     try {
       const creditIds = selectedIndices
-        .map(rowIndex => displayedCredits[rowIndex]?.id)
-        .filter((id): id is number => typeof id === 'number');
+        .map((rowIndex) => displayedCredits[rowIndex]?.id)
+        .filter((id): id is number => typeof id === "number");
 
       if (creditIds.length === 0) {
-        alert('Не удалось определить выбранные договоры');
+        alert("Не удалось определить выбранные договоры");
         return;
       }
 
       const message = await GetFilledCredits(creditIds);
       if (!message) {
-        alert('Не удалось получить сообщение для отправки');
+        alert("Не удалось получить сообщение для отправки");
         return;
       }
 
       const whatsappUrl = createWhatsAppMessageWithoutPhone(message);
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
-      console.error('Ошибка при массовой рассылке:', error);
-      alert('Произошла ошибка при подготовке сообщения');
+      console.error("Ошибка при массовой рассылке:", error);
+      alert("Произошла ошибка при подготовке сообщения");
     }
   };
 
-  const generateShareMessage = useCallback(async (option: ShareOption): Promise<string> => {
-    if (!selectedCreditForPrint) return '';
+  const generateShareMessage = useCallback(
+    async (option: ShareOption): Promise<string> => {
+      if (!selectedCreditForPrint) return "";
 
-    const credit = selectedCreditForPrint;
-    switch (option) {
-      case 'contractData':
-        return (await GetFilledCredit(credit.id)) || '';
+      const credit = selectedCreditForPrint;
+      switch (option) {
+        case "contractData":
+          return (await GetFilledCredit(credit.id)) || "";
 
-      case 'paymentHistory':
-        return (await GetFilledPayments(credit.id)) || '';
+        case "paymentHistory":
+          return (await GetFilledPayments(credit.id)) || "";
 
-      case 'paymentSchedule':
-        return await generatePaymentHistoryMessage(credit);
+        case "paymentSchedule":
+          return await generatePaymentHistoryMessage(credit);
 
-      default:
-        return '';
-    }
-  }, [selectedCreditForPrint, GetFilledCredit, GetFilledPayments, generatePaymentHistoryMessage]);
+        default:
+          return "";
+      }
+    },
+    [
+      selectedCreditForPrint,
+      GetFilledCredit,
+      GetFilledPayments,
+      generatePaymentHistoryMessage,
+    ]
+  );
 
-  const handleShareOptionSelect = useCallback(async (option: ShareOption, e?: React.MouseEvent) => {
+  const handleShareOptionSelect = useCallback(
+    async (option: ShareOption, e?: React.MouseEvent) => {
       if (e) {
-          e.preventDefault();
-          e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
       }
 
       if (!selectedCreditForPrint) {
-          alert('Договор не выбран');
-          setIsShareModalOpen(false);
-          return;
+        alert("Договор не выбран");
+        setIsShareModalOpen(false);
+        return;
       }
 
       const clientPhone = selectedCreditForPrint.clientPhone;
 
       if (!clientPhone) {
-          alert('У клиента не указан номер телефона');
-          setIsShareModalOpen(false);
-          return;
+        alert("У клиента не указан номер телефона");
+        setIsShareModalOpen(false);
+        return;
       }
 
       const message = await generateShareMessage(option);
       if (message) {
-          const success = sendWhatsAppMessageToPhone(clientPhone, message);
+        const success = sendWhatsAppMessageToPhone(clientPhone, message);
 
-          if (success) {
-              console.log(`Сообщение отправлено на номер: ${clientPhone}`);
-          } else {
-              alert('Не удалось открыть WhatsApp. Проверьте номер телефона.');
-          }
+        if (success) {
+          console.log(`Сообщение отправлено на номер: ${clientPhone}`);
+        } else {
+          alert("Не удалось открыть WhatsApp. Проверьте номер телефона.");
+        }
       } else {
-          alert('Не удалось получить сообщение для отправки');
+        alert("Не удалось получить сообщение для отправки");
       }
       setIsShareModalOpen(false);
-  }, [generateShareMessage, selectedCreditForPrint]);
+    },
+    [generateShareMessage, selectedCreditForPrint]
+  );
 
-  const getCategoryMenuItems = ({ 
-    creditId, 
-    onCategorySet, 
-    customTabs 
+  const getCategoryMenuItems = ({
+    creditId,
+    onCategorySet,
+    customTabs,
   }: SetCategoryActionProps): ContextMenuItem[] => {
-
     const handleSetCategory = async (objectTypeId: number | null) => {
       try {
         await creditService.setCreditType(creditId, objectTypeId);
         onCategorySet();
       } catch (error) {
-        console.error('Ошибка при установке категории:', error);
-        alert('Произошла ошибка при установке категории');
+        console.error("Ошибка при установке категории:", error);
+        alert("Произошла ошибка при установке категории");
       }
     };
 
     const categoryItems: ContextMenuItem[] = [
       {
-        label: 'Без категории',
+        label: "Без категории",
         action: () => handleSetCategory(null),
-        color: '#666'
+        color: "#666",
       },
-      ...customTabs.map(tab => ({
+      ...customTabs.map((tab) => ({
         label: tab.name,
         action: () => handleSetCategory(tab.id),
-        color: '#007d88'
-      }))
+        color: "#007d88",
+      })),
     ];
 
     return categoryItems;
   };
 
   const loadCustomTabs = useCallback(async () => {
-    const result = await getAllObjectTypes({ 
-      entityType: 'creditTab' 
+    const result = await getAllObjectTypes({
+      entityType: "creditTab",
     });
     if (result) {
       setCustomTabs(result.items);
@@ -459,42 +461,42 @@ const CreditPage = () => {
 
   const getTabs = useCallback(() => {
     const baseTabs = [
-      { id: 'all', label: 'Все' },
-      ...(shouldShowMyCreditsTab ? [{ id: 'my', label: 'Свои' }] : []),
-      { id: 'favourite', label: 'Избранные' },
-      { id: 'debtors', label: 'Просрочка' },
-      { id: 'inDebt', label: 'В долг' },
-      { id: 'archive', label: 'В архиве' },
-      { id: 'terminated', label: 'Расторгнутые' }
+      { id: "all", label: "Все" },
+      ...(shouldShowMyCreditsTab ? [{ id: "my", label: "Свои" }] : []),
+      { id: "favourite", label: "Избранные" },
+      { id: "debtors", label: "Просрочка" },
+      { id: "inDebt", label: "В долг" },
+      { id: "archive", label: "В архиве" },
+      { id: "terminated", label: "Расторгнутые" },
     ];
 
-    const customTabItems = customTabs.map(tab => ({
+    const customTabItems = customTabs.map((tab) => ({
       id: `tab-${tab.id}`,
       label: (
         <TabLabel>
           {tab.name}
           <TabActions>
-            <EditButton 
+            <EditButton
               onClick={(e) => {
                 e.stopPropagation();
                 setEditingTab(tab);
                 setIsEditTabModalOpen(true);
-              }} 
+              }}
               size={25}
             />
-            <DeleteButton 
+            <DeleteButton
               onClick={(e) => {
                 e.stopPropagation();
                 if (window.confirm(`Удалить вкладку "${tab.name}"?`)) {
                   handleDeleteTab(tab.id);
                 }
-              }} 
+              }}
               size={25}
             />
           </TabActions>
         </TabLabel>
       ),
-      objectTypeId: tab.id
+      objectTypeId: tab.id,
     }));
 
     return [...baseTabs, ...customTabItems];
@@ -503,65 +505,74 @@ const CreditPage = () => {
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
   const displayedCredits = useMemo(() => {
-    if (activeTab === 'terminated') {
-      return rawCredits.filter(c => c.terminated === true);
+    if (activeTab === "terminated") {
+      return rawCredits.filter((c) => c.terminated === true);
     }
-    return rawCredits.filter(c => c.terminated !== true);
+    return rawCredits.filter((c) => c.terminated !== true);
   }, [rawCredits, activeTab]);
 
-  const handleCreateTab = useCallback(async (tabData: ObjectTypeCreateRequest) => {
-    if (customTabs.length >= 5) {
-      alert('Максимальное количество вкладок - 5');
-      return false;
-    }
+  const handleCreateTab = useCallback(
+    async (tabData: ObjectTypeCreateRequest) => {
+      if (customTabs.length >= 5) {
+        alert("Максимальное количество вкладок - 5");
+        return false;
+      }
 
-    try {
-      const result = await createObjectType(tabData);
-      if (result) {
+      try {
+        const result = await createObjectType(tabData);
+        if (result) {
+          await loadCustomTabs();
+          setIsCreateTabModalOpen(false);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error("Ошибка при создании вкладки:", error);
+        return false;
+      }
+    },
+    [createObjectType, customTabs.length, loadCustomTabs]
+  );
+
+  const handleEditTab = useCallback(
+    async (updateData: ObjectTypeUpdateRequest) => {
+      if (!editingTab) return false;
+
+      try {
+        const result = await updateObjectType(editingTab.id, updateData);
+        if (result) {
+          await loadCustomTabs();
+          setIsEditTabModalOpen(false);
+          setEditingTab(null);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error("Ошибка при редактировании вкладки:", error);
+        return false;
+      }
+    },
+    [editingTab, updateObjectType, loadCustomTabs]
+  );
+
+  const handleDeleteTab = useCallback(
+    async (tabId: number) => {
+      try {
+        await deleteObjectTypeApi(tabId);
         await loadCustomTabs();
-        setIsCreateTabModalOpen(false);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Ошибка при создании вкладки:', error);
-      return false;
-    }
-  }, [createObjectType, customTabs.length, loadCustomTabs]);
 
-  const handleEditTab = useCallback(async (updateData: ObjectTypeUpdateRequest) => {
-    if (!editingTab) return false;
+        if (activeTab === `tab-${tabId}`) {
+          setActiveTab("all");
+        }
 
-    try {
-      const result = await updateObjectType(editingTab.id, updateData);
-      if (result) {
-        await loadCustomTabs();
-        setIsEditTabModalOpen(false);
-        setEditingTab(null);
-        return true;
+        alert("Вкладка успешно удалена");
+      } catch (error) {
+        console.error("Ошибка при удалении вкладки:", error);
+        alert("Произошла ошибка при удалении вкладки");
       }
-      return false;
-    } catch (error) {
-      console.error('Ошибка при редактировании вкладки:', error);
-      return false;
-    }
-  }, [editingTab, updateObjectType, loadCustomTabs]);
-
-  const handleDeleteTab = useCallback(async (tabId: number) => {
-    try {
-      await deleteObjectTypeApi(tabId);
-      await loadCustomTabs();
-      
-      if (activeTab === `tab-${tabId}`) {
-        setActiveTab('all');
-      }
-      
-      alert('Вкладка успешно удалена');
-    } catch (error) {
-      console.error('Ошибка при удалении вкладки:', error);
-      alert('Произошла ошибка при удалении вкладки');
-    }
-  }, [deleteObjectTypeApi, loadCustomTabs, activeTab]);
+    },
+    [deleteObjectTypeApi, loadCustomTabs, activeTab]
+  );
 
   useEffect(() => {
     if (id) {
@@ -575,7 +586,7 @@ const CreditPage = () => {
 
   useEffect(() => {
     if (!isViewModalOpen && id) {
-      navigate('/credits', { replace: true });
+      navigate("/credits", { replace: true });
     }
   }, [isViewModalOpen, id, navigate]);
 
@@ -586,7 +597,7 @@ const CreditPage = () => {
 
   const handleSelectFundingSource = (rowData: any[]) => {
     const [_, id] = rowData;
-    const credit = displayedCredits.find(c => c.id === Number(id));
+    const credit = displayedCredits.find((c) => c.id === Number(id));
     if (credit) {
       setSelectedCreditForFunding(credit);
       setIsInvestorSelectModalOpen(true);
@@ -606,7 +617,7 @@ const CreditPage = () => {
       objectType,
       creditTypeId,
       activeTab,
-      filters
+      filters,
     };
 
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(payload));
@@ -622,7 +633,7 @@ const CreditPage = () => {
     objectType,
     creditTypeId,
     activeTab,
-    filters
+    filters,
   ]);
 
   // Функция для подсчета количества активных фильтров (исключая выбранную вкладку)
@@ -636,19 +647,28 @@ const CreditPage = () => {
     if (fromCreationDate) count++;
     if (toCreationDate) count++;
     if (objectType) count++;
-    
+
     // Исключаем фильтры от вкладок из подсчета
     const filterKeys = Object.keys(filters);
     if (filterKeys.length > 0) {
       // Проверяем, что это не фильтры от вкладок
-      const hasNonTabFilters = filterKeys.some(key => 
-        !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'Terminated', 'objectTypeId'].includes(key) || 
-        (key === 'objectTypeId' && !activeTab.startsWith('tab-'))
+      const hasNonTabFilters = filterKeys.some(
+        (key) =>
+          ![
+            "isFavourite",
+            "myCredits",
+            "debt",
+            "inDebt",
+            "isActive",
+            "Terminated",
+            "objectTypeId",
+          ].includes(key) ||
+          (key === "objectTypeId" && !activeTab.startsWith("tab-"))
       );
-      
+
       if (hasNonTabFilters) count++;
     }
-    
+
     return count;
   }, [
     contractNumber,
@@ -662,27 +682,39 @@ const CreditPage = () => {
     objectType,
     creditTypeId,
     filters,
-    activeTab
+    activeTab,
   ]);
 
   const hasActiveFilters = useMemo(() => {
     // Проверяем наличие активных фильтров, исключая фильтры от вкладок
-    return Boolean(
-      contractNumber ||
-      investorName ||
-      selectedInvestmentSource ||
-      clientFullName ||
-      fromDate ||
-      toDate ||
-      fromCreationDate ||
-      toCreationDate ||
-      objectType ||
-      (creditTypeId !== null && creditTypeId !== undefined)
-    ) || (Object.keys(filters).length > 0 && 
-         // Проверяем, что это не фильтры от вкладок
-         Object.keys(filters).some(key => 
-           !['isFavourite', 'myCredits', 'debt', 'inDebt', 'isActive', 'Terminated', 'objectTypeId'].includes(key)
-         ));
+    return (
+      Boolean(
+        contractNumber ||
+          investorName ||
+          selectedInvestmentSource ||
+          clientFullName ||
+          fromDate ||
+          toDate ||
+          fromCreationDate ||
+          toCreationDate ||
+          objectType ||
+          (creditTypeId !== null && creditTypeId !== undefined)
+      ) ||
+      (Object.keys(filters).length > 0 &&
+        // Проверяем, что это не фильтры от вкладок
+        Object.keys(filters).some(
+          (key) =>
+            ![
+              "isFavourite",
+              "myCredits",
+              "debt",
+              "inDebt",
+              "isActive",
+              "Terminated",
+              "objectTypeId",
+            ].includes(key)
+        ))
+    );
   }, [
     contractNumber,
     investorName,
@@ -694,44 +726,44 @@ const CreditPage = () => {
     toCreationDate,
     objectType,
     creditTypeId,
-    filters
+    filters,
   ]);
 
   const resetFilters = useCallback(() => {
-    setContractNumber('');
-    setInvestorName('');
+    setContractNumber("");
+    setInvestorName("");
     setSelectedInvestmentSource(null);
-    setClientFullName('');
-    setFromDate('');
-    setToDate('');
-    setFromCreationDate('');
-    setToCreationDate('');
-    setObjectType('');
+    setClientFullName("");
+    setFromDate("");
+    setToDate("");
+    setFromCreationDate("");
+    setToCreationDate("");
+    setObjectType("");
     setCreditTypeId(null);
-    
+
     // Сохраняем только фильтры от текущей вкладки
     let newFilters = {};
-    if (activeTab.startsWith('tab-')) {
-      const objectTypeId = parseInt(activeTab.replace('tab-', ''));
+    if (activeTab.startsWith("tab-")) {
+      const objectTypeId = parseInt(activeTab.replace("tab-", ""));
       newFilters = { objectTypeId };
     } else {
       switch (activeTab) {
-        case 'my':
+        case "my":
           newFilters = { myCredits: true };
           break;
-        case 'favourite':
+        case "favourite":
           newFilters = { isFavourite: true };
           break;
-        case 'archive':
+        case "archive":
           newFilters = { isActive: false };
           break;
-        case 'debtors':
+        case "debtors":
           newFilters = { debt: true };
           break;
-        case 'inDebt':
+        case "inDebt":
           newFilters = { inDebt: true };
           break;
-        case 'terminated':
+        case "terminated":
           newFilters = { Terminated: true };
           break;
         default:
@@ -741,81 +773,89 @@ const CreditPage = () => {
     }
 
     setFilters(newFilters);
-    setSortConfig({ key: null, direction: 'desc' });
+    setSortConfig({ key: null, direction: "desc" });
     setCurrentPage(1);
     setSelectedRows([]);
-    
+
     // Не удаляем фильтры полностью из localStorage, обновляем их
     const payload = {
-      contractNumber: '',
-      investorName: '',
+      contractNumber: "",
+      investorName: "",
       selectedInvestmentSource: null,
-      clientFullName: '',
-      fromDate: '',
-      toDate: '',
-      fromCreationDate: '',
-      toCreationDate: '',
-      objectType: '',
+      clientFullName: "",
+      fromDate: "",
+      toDate: "",
+      fromCreationDate: "",
+      toCreationDate: "",
+      objectType: "",
       creditTypeId: null,
       activeTab,
-      filters: newFilters
+      filters: newFilters,
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(payload));
   }, [activeTab]);
 
   const handleAccept = async (rowData: any[]) => {
     const [_, id] = rowData;
-    const credit = displayedCredits.find(c => c.id === Number(id));
+    const credit = displayedCredits.find((c) => c.id === Number(id));
     if (credit) {
       try {
         await acceptCredit(credit.id);
         await loadCredits();
       } catch (error) {
-        console.error('Ошибка при подтверждении договора:', error);
+        console.error("Ошибка при подтверждении договора:", error);
       }
     }
   };
 
-  const handleFundingSourceSubmit = async (entity: { 
-    id: number; 
-    type: 'investor' | 'pool';
+  const handleFundingSourceSubmit = async (entity: {
+    id: number;
+    type: "investor" | "pool";
   }) => {
     if (!selectedCreditForFunding) return;
 
     try {
       const sourceRequest: SetInvestmentSourceRequest = {
-        sourceType: entity.type === 'investor' ? InvestmentSourceType.Investor : InvestmentSourceType.InvestorPool,
-        entityId: entity.id
+        sourceType:
+          entity.type === "investor"
+            ? InvestmentSourceType.Investor
+            : InvestmentSourceType.InvestorPool,
+        entityId: entity.id,
       };
 
       await setInvestmentSource(selectedCreditForFunding.id, sourceRequest);
-      
+
       await loadCredits();
       setIsInvestorSelectModalOpen(false);
       setSelectedCreditForFunding(null);
-      
-      alert('Источник финансирования успешно установлен');
+
+      alert("Источник финансирования успешно установлен");
     } catch (error) {
-      console.error('Ошибка при установке источника финансирования:', error);
-      alert('Произошла ошибка при установке источника финансирования');
+      console.error("Ошибка при установке источника финансирования:", error);
+      alert("Произошла ошибка при установке источника финансирования");
     }
   };
 
-  const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
+  const getPaymentTab = useCallback(
+    async (paymentId: number): Promise<PaymentTab | null> => {
       try {
-          const result = await paymentService.getPaymentTab(paymentId);
-          return result;
+        const result = await paymentService.getPaymentTab(paymentId);
+        return result;
       } catch (err) {
-          console.error('Ошибка при получении данных для документа:', err);
-          return null;
+        console.error("Ошибка при получении данных для документа:", err);
+        return null;
       }
-  }, []);
+    },
+    []
+  );
 
-  const paymentConfirmationGenerator = new PaymentConfirmationGenerator(getPaymentTab);
+  const paymentConfirmationGenerator = new PaymentConfirmationGenerator(
+    getPaymentTab
+  );
 
   const handleRowClick = (rowData: any[], rowIndex: number) => {
     const [_, id] = rowData;
-    const credit = displayedCredits.find(c => c.id === Number(id));
+    const credit = displayedCredits.find((c) => c.id === Number(id));
     if (credit) {
       // Для обратной совместимости устанавливаем selectedCreditForPrint
       setSelectedCreditForPrint(credit);
@@ -827,55 +867,74 @@ const CreditPage = () => {
     navigate(`/new-credit/${id}`);
   };
 
-  const handlePrintOptionSelect = async (option: 'sale' | 'saleSinglePage' | 'schedules' | 'guaranteeConsent') => {
+  const handlePrintOptionSelect = async (
+    option: "sale" | "saleSinglePage" | "schedules" | "guaranteeConsent"
+  ) => {
     if (!selectedCreditForPrint) return;
-    
+
     const docxGenerator = new DocxGenerator(getDocsData);
-    
-    if (option === 'sale') {
+
+    if (option === "sale") {
       await docxGenerator.generateFromCreditData(selectedCreditForPrint.id);
-    } else if (option === 'saleSinglePage') {
+    } else if (option === "saleSinglePage") {
       await docxGenerator.generateFromCreditData(
         selectedCreditForPrint.id,
-        '/Docs/salesContractSinglePage.docx'
+        "/Docs/salesContractSinglePage.docx"
       );
-    } else if (option === 'schedules') {
+    } else if (option === "schedules") {
       await docxGenerator.generateFromCreditData(
         selectedCreditForPrint.id,
-        '/Docs/schedules.docx'
+        "/Docs/schedules.docx"
       );
-    } else if (option === 'guaranteeConsent') {
+    } else if (option === "guaranteeConsent") {
       await docxGenerator.generateFromCreditData(
         selectedCreditForPrint.id,
-        '/Docs/guaranteeandConsentAgreement.docx'
+        "/Docs/guaranteeandConsentAgreement.docx"
       );
     }
-  
+
     setIsPrintModalOpen(false);
   };
 
   const handlePrintReceipt = async (paymentId: number) => {
     try {
-      console.log('ПОЧАЛОСЬ');
+      console.log("ПОЧАЛОСЬ");
       await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
-      console.log('Чек успешно сгенерирован');
+      console.log("Чек успешно сгенерирован");
     } catch (error) {
-      console.error('Ошибка при печати чека:', error);
-      alert('Платёж создан, но произошла ошибка при печати чека');
+      console.error("Ошибка при печати чека:", error);
+      alert("Платёж создан, но произошла ошибка при печати чека");
     }
   };
 
   const includeAllStates = useMemo(() => {
-    const excludedTabs = ['favourite', 'archive', 'debtors', 'inDebt', 'terminated'];
+    const excludedTabs = [
+      "favourite",
+      "archive",
+      "debtors",
+      "inDebt",
+      "terminated",
+    ];
     if (excludedTabs.includes(activeTab)) {
       return false;
     }
 
-    return contractNumber.trim() !== '' || 
-          clientFullName.trim() !== '' || 
-          investorName.trim() !== '' || 
-          (creditTypeId !== null && creditTypeId !== undefined && creditTypeId !== 0);
-  }, [contractNumber, clientFullName, investorName, objectType, selectedInvestmentSource, creditTypeId]);
+    return (
+      contractNumber.trim() !== "" ||
+      clientFullName.trim() !== "" ||
+      investorName.trim() !== "" ||
+      (creditTypeId !== null &&
+        creditTypeId !== undefined &&
+        creditTypeId !== 0)
+    );
+  }, [
+    contractNumber,
+    clientFullName,
+    investorName,
+    objectType,
+    selectedInvestmentSource,
+    creditTypeId,
+  ]);
 
   const loadCredits = useCallback(async () => {
     if (!isPageSizeReady) return;
@@ -897,23 +956,33 @@ const CreditPage = () => {
       name: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
       includeAllStates: shouldInclude ? true : undefined,
-      investorNickname: selectedInvestmentSource?.type === 'pool' ? undefined : (investorName || undefined),
-      investorPoolId: selectedInvestmentSource?.type === 'pool' ? selectedInvestmentSource.id : undefined,
+      investorNickname:
+        selectedInvestmentSource?.type === "pool"
+          ? undefined
+          : investorName || undefined,
+      investorPoolId:
+        selectedInvestmentSource?.type === "pool"
+          ? selectedInvestmentSource.id
+          : undefined,
       dateFrom: fromDate ? new Date(fromDate) : undefined,
       dateTo: toDate ? new Date(toDate) : undefined,
       CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
       CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
       creditTypeId: creditTypeId || undefined,
-      sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
+      sortBy:
+        sortConfig.key !== null
+          ? columnToApiSortMap[sortConfig.key]
+          : undefined,
       sortDirection: sortConfig.direction,
-      ...filters
+      ...filters,
     };
 
     const result = await getCredits(params, signal);
 
     if (isListMode && result && !signal.aborted) {
       const items = result.items || [];
-      const next = currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
+      const next =
+        currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
       accumulatedItemsRef.current = next;
       setAccumulatedItems(next);
       setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
@@ -921,7 +990,23 @@ const CreditPage = () => {
     if (!signal.aborted) {
       setIsLoadingMore(false);
     }
-  }, [currentPage, includeAllStates, clientFullName, investorName, isPageSizeReady, fromDate, toDate, toCreationDate, fromCreationDate, creditTypeId, sortConfig, filters, contractNumber, selectedInvestmentSource, isListMode]);
+  }, [
+    currentPage,
+    includeAllStates,
+    clientFullName,
+    investorName,
+    isPageSizeReady,
+    fromDate,
+    toDate,
+    toCreationDate,
+    fromCreationDate,
+    creditTypeId,
+    sortConfig,
+    filters,
+    contractNumber,
+    selectedInvestmentSource,
+    isListMode,
+  ]);
 
   // Очистка при размонтировании
   useEffect(() => {
@@ -973,14 +1058,14 @@ const CreditPage = () => {
     if (accumulatedItems.length === 0) return;
 
     const observer = new IntersectionObserver(
-      entries => {
+      (entries) => {
         const entry = entries[0];
         if (entry.isIntersecting) {
           setIsLoadingMore(true);
-          setCurrentPage(prev => prev + 1);
+          setCurrentPage((prev) => prev + 1);
         }
       },
-      { rootMargin: '200px' }
+      { rootMargin: "200px" }
     );
 
     observer.observe(sentinel);
@@ -989,46 +1074,46 @@ const CreditPage = () => {
 
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
-    
-    setSortConfig(prev => {
+
+    setSortConfig((prev) => {
       if (prev.key === columnIndex) {
         return {
           key: columnIndex,
-          direction: prev.direction === 'asc' ? 'desc' : 'asc'
+          direction: prev.direction === "asc" ? "desc" : "asc",
         };
       }
       return {
         key: columnIndex,
-        direction: 'asc'
+        direction: "asc",
       };
     });
   };
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    
+
     let newFilters = {};
-    if (tabId.startsWith('tab-')) {
-      const objectTypeId = parseInt(tabId.replace('tab-', ''));
+    if (tabId.startsWith("tab-")) {
+      const objectTypeId = parseInt(tabId.replace("tab-", ""));
       newFilters = { objectTypeId };
     } else {
       switch (tabId) {
-        case 'my':
+        case "my":
           newFilters = { myCredits: true };
           break;
-        case 'favourite':
+        case "favourite":
           newFilters = { isFavourite: true };
           break;
-        case 'archive':
+        case "archive":
           newFilters = { isActive: false };
           break;
-        case 'debtors':
+        case "debtors":
           newFilters = { debt: true };
           break;
-        case 'inDebt':
+        case "inDebt":
           newFilters = { inDebt: true };
           break;
-        case 'terminated':
+        case "terminated":
           newFilters = { Terminated: true };
           break;
         default:
@@ -1044,19 +1129,19 @@ const CreditPage = () => {
 
   const handleDeleteCredit = async (rowData: any[]) => {
     const [_, id] = rowData;
-    if (window.confirm('Вы уверены, что хотите удалить этот договор?')) {
+    if (window.confirm("Вы уверены, что хотите удалить этот договор?")) {
       try {
         await creditService.deleteCredit(Number(id));
         loadCredits();
       } catch (err) {
-        console.error('Ошибка при удалении договора:', err);
+        console.error("Ошибка при удалении договора:", err);
       }
     }
   };
 
   const handleOpenPaymentModal = (rowData: any[]) => {
     const [_, id, __, clientFullName] = rowData;
-    const credit = displayedCredits.find(c => c.id === Number(id));
+    const credit = displayedCredits.find((c) => c.id === Number(id));
     if (credit) {
       setSelectedCreditForPrint(credit);
       setIsPaymentModalOpen(true);
@@ -1066,227 +1151,323 @@ const CreditPage = () => {
   const handleSavePayment = async (paymentData: {
     paymentDate: string;
     principalAmount: number;
-    paymentMethod: 'cash' | 'card';
+    paymentMethod: "cash" | "card";
     bankCardId?: number;
   }) => {
     try {
       if (!selectedCreditForPrint) return;
-      
+
       const paymentRequest = {
         creditId: selectedCreditForPrint.id,
         paymentAmount: paymentData.principalAmount,
         datePayment: paymentData.paymentDate,
         type: paymentData.paymentMethod,
-        bankCardId: paymentData.bankCardId
+        bankCardId: paymentData.bankCardId,
       };
-      
+
       const result = await createPayment(paymentRequest);
-      
+
       await loadCredits();
       setIsPaymentModalOpen(false);
       return result;
     } catch (error) {
-      console.error('Ошибка при сохранении платежа:', error);
+      console.error("Ошибка при сохранении платежа:", error);
     }
   };
 
   const handleConfirmAllCredits = useCallback(async () => {
-
-  // Подтверждение у пользователя
-  const confirmMessage = `Вы действительно хотите подтвердить ВСЕ договоры, соответствующие текущим фильтрам?
+    // Подтверждение у пользователя
+    const confirmMessage = `Вы действительно хотите подтвердить ВСЕ договоры, соответствующие текущим фильтрам?
 
 Это действие нельзя отменить. Продолжить?`;
 
-  if (!window.confirm(confirmMessage)) {
-    return;
-  }
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
 
-  setIsConfirmingAll(true);
-  
-  try {
-    // Формируем параметры фильтрации для подтверждения
-    const params = {
-      name: contractNumber || undefined,
-      clientFullname: clientFullName || undefined,
-      includeAllStates: includeAllStates ? true : undefined,
-      investorNickname: selectedInvestmentSource?.type === 'pool' ? undefined : (investorName || undefined),
-      investorPoolId: selectedInvestmentSource?.type === 'pool' ? selectedInvestmentSource.id : undefined,
-      dateFrom: fromDate ? new Date(fromDate) : undefined,
-      dateTo: toDate ? new Date(toDate) : undefined,
-      CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
-      CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
-      creditTypeId: creditTypeId || undefined,
-      ...filters
-    };
+    setIsConfirmingAll(true);
 
-    await acceptCredits(params);
-    
-    // Показываем сообщение об успехе
-    alert('Все договоры по указанным фильтрам успешно подтверждены');
-    
-    // Обновляем список договоров
-    await loadCredits();
-    
-  } catch (error) {
-    console.error('Ошибка при массовом подтверждении договоров:', error);
-    alert('Произошла ошибка при подтверждении договоров. Пожалуйста, попробуйте еще раз.');
-  } finally {
-    setIsConfirmingAll(false);
-  }
-}, [acceptCredits, hasActiveFilters, contractNumber, clientFullName, investorName, 
-    objectType, fromDate, toDate, fromCreationDate, toCreationDate, activeTab, 
-    filters, includeAllStates, selectedInvestmentSource, creditTypeId, loadCredits]);
+    try {
+      // Формируем параметры фильтрации для подтверждения
+      const params = {
+        name: contractNumber || undefined,
+        clientFullname: clientFullName || undefined,
+        includeAllStates: includeAllStates ? true : undefined,
+        investorNickname:
+          selectedInvestmentSource?.type === "pool"
+            ? undefined
+            : investorName || undefined,
+        investorPoolId:
+          selectedInvestmentSource?.type === "pool"
+            ? selectedInvestmentSource.id
+            : undefined,
+        dateFrom: fromDate ? new Date(fromDate) : undefined,
+        dateTo: toDate ? new Date(toDate) : undefined,
+        CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
+        CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
+        creditTypeId: creditTypeId || undefined,
+        ...filters,
+      };
+
+      await acceptCredits(params);
+
+      // Показываем сообщение об успехе
+      alert("Все договоры по указанным фильтрам успешно подтверждены");
+
+      // Обновляем список договоров
+      await loadCredits();
+    } catch (error) {
+      console.error("Ошибка при массовом подтверждении договоров:", error);
+      alert(
+        "Произошла ошибка при подтверждении договоров. Пожалуйста, попробуйте еще раз."
+      );
+    } finally {
+      setIsConfirmingAll(false);
+    }
+  }, [
+    acceptCredits,
+    hasActiveFilters,
+    contractNumber,
+    clientFullName,
+    investorName,
+    objectType,
+    fromDate,
+    toDate,
+    fromCreationDate,
+    toCreationDate,
+    activeTab,
+    filters,
+    includeAllStates,
+    selectedInvestmentSource,
+    creditTypeId,
+    loadCredits,
+  ]);
+
+  // Экспорт конкретного набора договоров (для действий по строке / по выбранным).
+  const exportCredits = async (credits: Credit[]) => {
+    if (credits.length === 0) return;
+    try {
+      await exportData({
+        fetchData: async () => ({ items: credits, totalCount: credits.length }),
+        fileName:
+          credits.length === 1 ? `credit_${credits[0].id}` : "credits_export",
+        transformData: (credit) => {
+          const creditDate =
+            typeof credit.creditDate === "string"
+              ? new Date(credit.creditDate)
+              : credit.creditDate;
+          return {
+            ID: credit.id,
+            "Дата договора": creditDate
+              ? creditDate.toLocaleDateString()
+              : "Нет данных",
+            "ФИО покупателя": credit.clientFullName,
+            Телефон: credit.clientPhone || "Нет данных",
+            "Стоимость товара": formatMoney(credit.totalClean?.toString()),
+            "Первоначальный взнос": formatMoney(
+              credit.firstPayment?.toString()
+            ),
+            Начислено: formatMoney(credit.totalAmount?.toString() || "0"),
+            Уплачено: formatMoney(credit.payed?.toString() || "0"),
+            Остаток: formatMoney(credit.rest?.toString() || "0"),
+            Просрочка: formatMoney(credit.debt?.toString() || "0"),
+          };
+        },
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.");
+    }
+  };
+
+  // Действия по строке. Если выбрано несколько договоров — применяем ко всем выбранным.
+  const getRowCredit = (rowData: any[]): Credit | undefined =>
+    displayedCredits.find((c) => c.id === Number(rowData[1]));
+
+  const handleRowShare = (rowData: any[]) => {
+    if (selectedRows.length > 1) {
+      if (
+        window.confirm(
+          `Вы выбрали ${selectedRows.length} договора(ов). Отправить данные по всем выбранным?`
+        )
+      ) {
+        handleMassShare(selectedRows);
+      }
+      return;
+    }
+    const credit = getRowCredit(rowData);
+    if (credit) {
+      setSelectedCreditForPrint(credit);
+      setIsShareModalOpen(true);
+    }
+  };
+
+  const handleRowPrint = (rowData: any[]) => {
+    if (selectedRows.length > 1) {
+      if (
+        window.confirm(
+          `Вы выбрали ${selectedRows.length} договора(ов). Сгенерировать документы для всех выбранных?`
+        )
+      ) {
+        handleMassPrint(selectedRows);
+      }
+      return;
+    }
+    const credit = getRowCredit(rowData);
+    if (credit) {
+      setSelectedCreditForPrint(credit);
+      setIsPrintModalOpen(true);
+    }
+  };
+
+  const handleRowExport = (rowData: any[]) => {
+    if (selectedRows.length > 1) {
+      const credits = selectedRows
+        .map((i) => displayedCredits[i])
+        .filter((c): c is Credit => Boolean(c));
+      if (
+        window.confirm(`Экспортировать ${credits.length} выбранных договоров?`)
+      ) {
+        exportCredits(credits);
+      }
+      return;
+    }
+    const credit = getRowCredit(rowData);
+    if (credit) exportCredits([credit]);
+  };
 
   const tableActions = [
     {
-      label: 'Подтвердить договор',
+      label: "Подтвердить договор",
       action: handleAccept,
-      color: '#007d88',
+      color: "#007d88",
       shouldShow: (rowData: any[]) => {
         const [_, id] = rowData;
-        const credit = displayedCredits.find(c => c.id === Number(id));
-        
-        return hasPermission('MANAGE_ACCOUNTING', true) && 
-              credit && 
-              !credit.hasCounterApproved;
-      }
-    },
-    {
-      label: 'Добавить платёж',
-      action: handleOpenPaymentModal,
-      color: '#008b8b',
-    },
-    {
-      label: 'Выбрать источник финансирования',
-      action: handleSelectFundingSource,
-      color: '#007d88',
-      shouldShow: (rowData: any[]) => activeTab === 'inDebt' && (hasRole('директор') || hasRole('суперадмин')) && denyPermission('MANAGE_ACCOUNTING', true)
-    },
-    {
-      label: 'Установить категорию',
-      action: (rowData: any[]) => {
-        console.log('Установка категории для:', rowData);
+        const credit = displayedCredits.find((c) => c.id === Number(id));
+
+        return (
+          hasPermission("MANAGE_ACCOUNTING", true) &&
+          credit &&
+          !credit.hasCounterApproved
+        );
       },
-      color: '#007d88',
+    },
+    {
+      label: "Добавить платёж",
+      action: handleOpenPaymentModal,
+      color: "#008b8b",
+    },
+    {
+      label: "Поделиться",
+      action: handleRowShare,
+      color: "#007d88",
+    },
+    {
+      label: "Печать",
+      action: handleRowPrint,
+      color: "#007d88",
+    },
+    {
+      label: "Экспорт",
+      action: handleRowExport,
+      color: "#007d88",
+    },
+    {
+      label: "Выбрать источник финансирования",
+      action: handleSelectFundingSource,
+      color: "#007d88",
+      shouldShow: (rowData: any[]) =>
+        activeTab === "inDebt" &&
+        (hasRole("директор") || hasRole("суперадмин")) &&
+        denyPermission("MANAGE_ACCOUNTING", true),
+    },
+    {
+      label: "Установить категорию",
+      action: (rowData: any[]) => {
+        console.log("Установка категории для:", rowData);
+      },
+      color: "#007d88",
       shouldShow: (rowData: any[]) => customTabs.length > 0,
       getSubmenu: (rowData: any[]) => {
         const [_, id] = rowData;
         const creditId = Number(id);
-        
-        return getCategoryMenuItems({ 
-          creditId, 
-          onCategorySet: loadCredits, 
-          customTabs 
-        });
-      },
-      showOnHover: true
-    },
-    {
-      label: 'Редактировать',
-      action: handleEditCredit,
-      color: '#007d88',
-      shouldShow: (rowData: any[]) => hasPermission('EDIT_CREDITS', true)
-    },
-    {
-      label: 'Расторгнуть',
-      action: (rowData: any[]) => {
-        const [_, id] = rowData;
-        const credit = displayedCredits.find(c => c.id === Number(id));
-        if (!credit) return;
-        if (!window.confirm(
-          'Договор будет переведён в «Расторгнутые». ' +
-          'Сумма, использованная при выдаче, автоматически вернётся в кассу пула или инвестора. ' +
-          'Продолжить?'
-        )) return;
-        toggleTerminated(credit.id).then(ok => {
-          if (ok) loadCredits();
-        });
-      },
-      color: '#EF4444',
-      shouldShow: (rowData: any[]) => {
-        const [_, id] = rowData;
-        const credit = displayedCredits.find(c => c.id === Number(id));
-        return !!credit && !credit.terminated && hasPermission('EDIT_CREDITS', true);
-      }
-    },
-    {
-      label: 'Восстановить из расторгнутых',
-      action: (rowData: any[]) => {
-        const [_, id] = rowData;
-        const credit = displayedCredits.find(c => c.id === Number(id));
-        if (!credit) return;
-        if (!window.confirm(
-          'Договор будет возвращён в актуальные. ' +
-          'Сумма снова спишется с кассы пула или инвестора. Продолжить?'
-        )) return;
-        toggleTerminated(credit.id).then(ok => {
-          if (ok) loadCredits();
-        });
-      },
-      color: '#007d88',
-      shouldShow: (rowData: any[]) => {
-        const [_, id] = rowData;
-        const credit = displayedCredits.find(c => c.id === Number(id));
-        return !!credit && credit.terminated && hasPermission('EDIT_CREDITS', true);
-      }
-    },
-    {
-      label: 'Удалить',
-      action: handleDeleteCredit,
-      color: '#EF4444',
-      shouldShow: (rowData: any[]) => (hasPermission('DELETE_CREDITS') && denyPermission('MANAGE_ACCOUNTING', true))
-    }
-  ];
 
-  const handleExport = async () => {
-    try {
-      await exportData({
-        fetchData: async (page, pageSize) => {
-          const params = {
-            page,
-            pageSize,
-            creditId: contractNumber || undefined,
-            clientFullname: clientFullName || undefined,
-            investorNickname: investorName || undefined,
-            dateFrom: fromDate ? new Date(fromDate) : undefined,
-            dateTo: toDate ? new Date(toDate) : undefined,
-            creditTypeId: creditTypeId || undefined,
-            sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
-            sortDirection: sortConfig.direction,
-            ...filters
-          };
-          
-          const result = await creditService.getCredits(params);
-          return {
-            items: Array.isArray(result.items) ? result.items : [],
-            totalCount: result.totalCount || 0
-          };
-        },
-        fileName: 'credits_export',
-        transformData: (credit) => {
-          const creditDate = typeof credit.creditDate === 'string' 
-            ? new Date(credit.creditDate) 
-            : credit.creditDate;
-            
-          return {
-            'ID': credit.id,
-            'Дата договора': creditDate ? creditDate.toLocaleDateString() : 'Нет данных',
-            'ФИО покупателя': credit.clientFullName,
-            'Телефон': credit.clientPhone || 'Нет данных',
-            'Стоимость товара': formatMoney(credit.totalClean?.toString()),
-            'Первоначальный взнос': formatMoney(credit.firstPayment?.toString()),
-            'Начислено': formatMoney(credit.totalAmount?.toString() || '0'),
-            'Уплачено': formatMoney(credit.payed?.toString() || '0'),
-            'Остаток': formatMoney(credit.rest?.toString() || '0'),
-            'Просрочка': formatMoney(credit.debt?.toString() || '0')
-          };
-        }
-      });
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert('Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.');
-    }
-  };
+        return getCategoryMenuItems({
+          creditId,
+          onCategorySet: loadCredits,
+          customTabs,
+        });
+      },
+      showOnHover: true,
+    },
+    {
+      label: "Редактировать",
+      action: handleEditCredit,
+      color: "#007d88",
+      shouldShow: (rowData: any[]) => hasPermission("EDIT_CREDITS", true),
+    },
+    {
+      label: "Расторгнуть",
+      action: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find((c) => c.id === Number(id));
+        if (!credit) return;
+        if (
+          !window.confirm(
+            "Договор будет переведён в «Расторгнутые». " +
+              "Сумма, использованная при выдаче, автоматически вернётся в кассу пула или инвестора. " +
+              "Продолжить?"
+          )
+        )
+          return;
+        toggleTerminated(credit.id).then((ok) => {
+          if (ok) loadCredits();
+        });
+      },
+      color: "#EF4444",
+      shouldShow: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find((c) => c.id === Number(id));
+        return (
+          !!credit && !credit.terminated && hasPermission("EDIT_CREDITS", true)
+        );
+      },
+    },
+    {
+      label: "Восстановить из расторгнутых",
+      action: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find((c) => c.id === Number(id));
+        if (!credit) return;
+        if (
+          !window.confirm(
+            "Договор будет возвращён в актуальные. " +
+              "Сумма снова спишется с кассы пула или инвестора. Продолжить?"
+          )
+        )
+          return;
+        toggleTerminated(credit.id).then((ok) => {
+          if (ok) loadCredits();
+        });
+      },
+      color: "#007d88",
+      shouldShow: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find((c) => c.id === Number(id));
+        return (
+          !!credit && credit.terminated && hasPermission("EDIT_CREDITS", true)
+        );
+      },
+    },
+    {
+      label: "Удалить",
+      action: handleDeleteCredit,
+      color: "#EF4444",
+      shouldShow: (rowData: any[]) =>
+        hasPermission("DELETE_CREDITS") &&
+        denyPermission("MANAGE_ACCOUNTING", true),
+    },
+  ];
 
   const rowStyles = useMemo(() => {
     if (!displayedCredits || displayedCredits.length === 0) return {};
@@ -1295,40 +1476,43 @@ const CreditPage = () => {
 
     displayedCredits.forEach((credit, rowIndex) => {
       const baseStyle: RowStyle = {
-        backgroundColor: '#FFFFFF',
-        color: '#000000',
-        fontWeight: 'normal',
-        hoverBackgroundColor: '#F3F4F6'
+        backgroundColor: "#FFFFFF",
+        color: "#000000",
+        fontWeight: "normal",
+        hoverBackgroundColor: "#F3F4F6",
       };
 
       if (credit.debt > 0) {
-        baseStyle.backgroundColor = '#E8D8D8';
+        baseStyle.backgroundColor = "#E8D8D8";
       }
 
       if (!credit.isActive) {
-        baseStyle.backgroundColor = '#E8F5E8';
-        baseStyle.color = '#1B5E20';
+        baseStyle.backgroundColor = "#E8F5E8";
+        baseStyle.color = "#1B5E20";
       }
 
       if (credit.terminated) {
-        baseStyle.backgroundColor = '#F3E8FF';
-        baseStyle.color = '#6B21A8';
+        baseStyle.backgroundColor = "#F3E8FF";
+        baseStyle.color = "#6B21A8";
       }
 
       if (!credit.hasCounterApproved) {
-        baseStyle.color = '#FF5A5A';
+        baseStyle.color = "#FF5A5A";
       }
 
       // Подсветка выбранных строк
       if (selectedRows.includes(rowIndex)) {
-        baseStyle.backgroundColor = '#E3F2FD';
-        baseStyle.color = '#1565C0';
+        baseStyle.backgroundColor = "#E3F2FD";
+        baseStyle.color = "#1565C0";
       }
 
       // Подсветка строки при одиночном выборе
-      if (selectedCreditForPrint?.id === credit.id && selectedRows.length === 1) {
-        baseStyle.backgroundColor = '#007D88';
-        baseStyle.color = '#FFFFFF';
+      if (
+        selectedCreditForPrint?.id === credit.id &&
+        selectedRows.length === 1
+      ) {
+        baseStyle.backgroundColor = "#007D88";
+        baseStyle.color = "#FFFFFF";
       }
 
       styles[rowIndex] = baseStyle;
@@ -1340,29 +1524,51 @@ const CreditPage = () => {
   const formatCreditData = (credits: Credit[] | undefined) => {
     if (!credits) return [];
 
-    const formattedData = credits.map(credit => [
+    const formattedData = credits.map((credit) => [
       credit.isFavourite ? (
-        <StarIcon 
+        <StarIcon
           key={`star-${credit.id}`}
           onClick={(e) => {
             e.stopPropagation();
             toggleFavourite(credit.id);
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7.74804 1.33325L9.81738 5.81859L14.7227 6.40059L11.096 9.75392L12.0587 14.5993L7.74804 12.1866L3.43738 14.5999L4.40004 9.75459L0.773376 6.39992L5.67938 5.81792L7.74804 1.33325Z" fill="#50555C" stroke="#50555C" stroke-width="1.5" stroke-linejoin="round"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M7.74804 1.33325L9.81738 5.81859L14.7227 6.40059L11.096 9.75392L12.0587 14.5993L7.74804 12.1866L3.43738 14.5999L4.40004 9.75459L0.773376 6.39992L5.67938 5.81792L7.74804 1.33325Z"
+              fill="#50555C"
+              stroke="#50555C"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
           </svg>
         </StarIcon>
       ) : (
-        <EmptyStarIcon 
+        <EmptyStarIcon
           key={`star-${credit.id}`}
           onClick={(e) => {
             e.stopPropagation();
             toggleFavourite(credit.id);
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7.74804 1.33325L9.81738 5.81859L14.7227 6.40059L11.096 9.75392L12.0587 14.5993L7.74804 12.1866L3.43738 14.5999L4.40004 9.75459L0.773376 6.39992L5.67938 5.81792L7.74804 1.33325Z" stroke="#50555C" stroke-linejoin="round"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M7.74804 1.33325L9.81738 5.81859L14.7227 6.40059L11.096 9.75392L12.0587 14.5993L7.74804 12.1866L3.43738 14.5999L4.40004 9.75459L0.773376 6.39992L5.67938 5.81792L7.74804 1.33325Z"
+              stroke="#50555C"
+              stroke-linejoin="round"
+            />
           </svg>
         </EmptyStarIcon>
       ),
@@ -1370,22 +1576,27 @@ const CreditPage = () => {
       formatDate(credit.creditDate),
       credit.clientFullName,
       `${formatMoney(credit.totalClean.toString())}`,
-      `${formatMoney(credit.firstPayment?.toString() || '')}`,
-      `${formatMoney(credit.accured?.toString() || '')}`,
+      `${formatMoney(credit.firstPayment?.toString() || "")}`,
+      `${formatMoney(credit.accured?.toString() || "")}`,
       `${formatMoney(credit.payed.toString())}`,
       `${formatMoney(credit.rest.toString())}`,
       `${formatMoney(credit.rest.toString())}`,
       `${formatMoney(credit.debt.toString())}`,
-      credit.isActive
+      credit.isActive,
     ]);
 
-    if (credits.length > 0 && 
-      (hasRole('админ') || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING'))) {
+    if (
+      credits.length > 0 &&
+      (hasRole("админ") ||
+        hasRole("директор") ||
+        hasRole("суперадмин") ||
+        hasPermission("MANAGE_ACCOUNTING"))
+    ) {
       const totalsRow = [
-        '',
-        '',
-        '',
-        'Итого',
+        "",
+        "",
+        "",
+        "Итого",
         `${formatMoney(creditsData.totalPrice.toString())}`,
         `${formatMoney(creditsData.totalFirstPayment.toString())}`,
         `${formatMoney(creditsData.totalAccured.toString())}`,
@@ -1393,7 +1604,7 @@ const CreditPage = () => {
         `${formatMoney(creditsData.totalRest.toString())}`,
         `${formatMoney(creditsData.totalRest.toString())}`,
         `${formatMoney(creditsData.totalDebt.toString())}`,
-        ''
+        "",
       ];
       formattedData.push(totalsRow);
     }
@@ -1415,9 +1626,9 @@ const CreditPage = () => {
     setCurrentPage(1);
   };
 
-  const handleObjectTypeSelect = (objectType: { 
-    id: number; 
-    name: string; 
+  const handleObjectTypeSelect = (objectType: {
+    id: number;
+    name: string;
     entityType: string;
   }) => {
     setCreditTypeId(objectType.id);
@@ -1428,328 +1639,316 @@ const CreditPage = () => {
   // Добавим индикатор выбранных строк
   const SelectedCount = () => {
     if (selectedRows.length === 0) return null;
-    
+
     return (
-      <SelectedCountBadge>
-        Выбрано: {selectedRows.length}
-      </SelectedCountBadge>
+      <SelectedCountBadge>Выбрано: {selectedRows.length}</SelectedCountBadge>
     );
   };
 
   return (
     <PageLayout ref={containerRef}>
       <TitleField>
-        <CustomTitle>Договоры</CustomTitle>
-        
-        <HeaderControls>
-          <LeftControls>
-            <FilterHeader>
-              <FilterToggleButton 
-                onClick={() => setIsFiltersVisible(!isFiltersVisible)}
-                $isOpen={isFiltersVisible}
-                $hasActiveFilters={hasActiveFilters}
-              >
-                <FilterToggleIcon 
-                  $isOpen={isFiltersVisible} 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path 
-                    d="M6 9L12 15L18 9" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  />
-                </FilterToggleIcon>
-                Фильтры
-                {hasActiveFilters && getActiveFiltersCount > 0 && (
-                  <FilterBadge>
-                    {getActiveFiltersCount}
-                  </FilterBadge>
-                )}
-              </FilterToggleButton>
+        <FilterIconButton
+          type="button"
+          onClick={() => setIsFilterModalOpen(true)}
+          $hasActiveFilters={hasActiveFilters}
+          title="Фильтр"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+          >
+            <path
+              d="M3 5h18l-7 8v6l-4 2v-8L3 5z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {hasActiveFilters && getActiveFiltersCount > 0 && (
+            <FilterBadge>{getActiveFiltersCount}</FilterBadge>
+          )}
+        </FilterIconButton>
+      </TitleField>
 
+      {isFilterModalOpen && (
+        <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
+          <FilterModalPanel onClick={(e) => e.stopPropagation()}>
+            <FilterModalHeader>
+              <span>Фильтр</span>
+              <FilterModalClose
+                type="button"
+                onClick={() => setIsFilterModalOpen(false)}
+                aria-label="Закрыть"
+              >
+                ×
+              </FilterModalClose>
+            </FilterModalHeader>
+            <FilterGrid>
+              <FilterSlot>
+                <FilterSlotLabel>№ Договора</FilterSlotLabel>
+                <CustomInput
+                  inputType="text"
+                  placeholder="Например, 19265"
+                  value={contractNumber}
+                  onChange={(e) => {
+                    setContractNumber(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+                <CustomInput
+                  inputType="fullname"
+                  placeholder="Поиск по ФИО"
+                  value={clientFullName}
+                  onChange={(e) => {
+                    setClientFullName(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>Инвестор</FilterSlotLabel>
+                <InvestorSelect
+                  placeholder="Любой"
+                  value={investorName}
+                  onChange={(name) => {
+                    setInvestorName(name);
+                    setSelectedInvestmentSource(null);
+                    setCurrentPage(1);
+                  }}
+                  onInvestorSelect={(investor) => {
+                    setInvestorName(
+                      investor.nickname || investor.fullName || ""
+                    );
+                    setSelectedInvestmentSource({
+                      type: investor.type || "investor",
+                      id: investor.id,
+                      name: investor.nickname || investor.fullName || "",
+                    });
+                    setCurrentPage(1);
+                  }}
+                  includePools
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>Папка</FilterSlotLabel>
+                <ObjectTypeSelect
+                  value={objectType}
+                  onChange={handleObjectTypeChange}
+                  onObjectTypeSelect={handleObjectTypeSelect}
+                  placeholder="Любая"
+                  customPlaceholder="Папка"
+                  hideClearButton={false}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
+                <CustomCalendar
+                  prefix="от:"
+                  placeholder="дд-мм-гггг"
+                  value={fromDate}
+                  onChange={(date) => {
+                    setFromDate(date);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
+                <CustomCalendar
+                  prefix="до:"
+                  placeholder="дд-мм-гггг"
+                  value={toDate}
+                  onChange={(date) => {
+                    setToDate(date);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
+                <CustomCalendar
+                  prefix="от:"
+                  placeholder="дд-мм-гггг"
+                  value={fromCreationDate}
+                  onChange={(date) => {
+                    setFromCreationDate(date);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
+                <CustomCalendar
+                  prefix="до:"
+                  placeholder="дд-мм-гггг"
+                  value={toCreationDate}
+                  onChange={(date) => {
+                    setToCreationDate(date);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+            </FilterGrid>
+
+            <FilterModalFooter>
               <DarkCyanButton
-                style={{marginLeft: "5px"}}
                 type="button"
                 onClick={resetFilters}
                 disabled={!hasActiveFilters}
               >
-                X
+                Сбросить фильтры
               </DarkCyanButton>
-            </FilterHeader>
 
-            {hasPermission('MANAGE_ACCOUNTING', true) && (
-              <DarkCyanButton 
-                onClick={handleConfirmAllCredits}
-                disabled={isConfirmingAll}
-              >
-                {isConfirmingAll ? (
-                  <>
-                    <SpinnerIcon />
-                    Подтверждение...
-                  </>
-                ) : (
-                  'Подтвердить все по фильтрам'
-                )}
-              </DarkCyanButton>
-            )}
-          </LeftControls>
-
-          <RightControls>
-            <ExportButton 
-              icon={<ShareIcon />}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleShareButtonClick();
-              }}
-            >
-              Поделиться
-            </ExportButton>
-            <ExportButton 
-              icon={<PrintIcon />} 
-              onClick={() => { handlePrintButtonClick(); }}
-            >
-              Печать
-            </ExportButton>
-            <ExportButton 
-              onClick={handleExport}
-              isExporting={isExporting}
-              exportProgress={exportProgress}
-            >
-              Экспорт
-            </ExportButton>
-          </RightControls>
-        </HeaderControls>
-      </TitleField>
-
-      {isFiltersVisible && (
-        <FiltersCard>
-          <FilterGrid>
-            <FilterSlot>
-              <FilterSlotLabel>№ Договора</FilterSlotLabel>
-              <CustomInput
-                inputType="text"
-                placeholder="Например, 19265"
-                value={contractNumber}
-                onChange={(e) => {
-                  setContractNumber(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
-              <CustomInput
-                inputType="fullname"
-                placeholder="Поиск по ФИО"
-                value={clientFullName}
-                onChange={(e) => {
-                  setClientFullName(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Инвестор</FilterSlotLabel>
-              <InvestorSelect
-                placeholder="Любой"
-                value={investorName}
-                onChange={(name) => {
-                  setInvestorName(name);
-                  setSelectedInvestmentSource(null);
-                  setCurrentPage(1);
-                }}
-                onInvestorSelect={(investor) => {
-                  setInvestorName(investor.nickname || investor.fullName || '');
-                  setSelectedInvestmentSource({
-                    type: investor.type || 'investor',
-                    id: investor.id,
-                    name: investor.nickname || investor.fullName || ''
-                  });
-                  setCurrentPage(1);
-                }}
-                includePools
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Папка</FilterSlotLabel>
-              <ObjectTypeSelect
-                value={objectType}
-                onChange={handleObjectTypeChange}
-                onObjectTypeSelect={handleObjectTypeSelect}
-                placeholder="Любая"
-                customPlaceholder="Папка"
-                hideClearButton={false}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
-              <CustomCalendar
-                prefix="от:"
-                placeholder='дд-мм-гггг'
-                value={fromDate}
-                onChange={(date) => {
-                  setFromDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
-              <CustomCalendar
-                prefix="до:"
-                placeholder='дд-мм-гггг'
-                value={toDate}
-                onChange={(date) => {
-                  setToDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
-              <CustomCalendar
-                prefix="от:"
-                placeholder='дд-мм-гггг'
-                value={fromCreationDate}
-                onChange={(date) => {
-                  setFromCreationDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
-              <CustomCalendar
-                prefix="до:"
-                placeholder='дд-мм-гггг'
-                value={toCreationDate}
-                onChange={(date) => {
-                  setToCreationDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-          </FilterGrid>
-        </FiltersCard>
+              {hasPermission("MANAGE_ACCOUNTING", true) && (
+                <DarkCyanButton
+                  onClick={handleConfirmAllCredits}
+                  disabled={isConfirmingAll}
+                >
+                  {isConfirmingAll ? (
+                    <>
+                      <SpinnerIcon />
+                      Подтверждение...
+                    </>
+                  ) : (
+                    "Подтвердить все по фильтрам"
+                  )}
+                </DarkCyanButton>
+              )}
+            </FilterModalFooter>
+          </FilterModalPanel>
+        </FilterModalOverlay>
       )}
 
       <SecondRaw style={{ color: "white" }}>
-        <Tabs 
+        <Tabs
           tabs={getTabs()}
           activeTab={activeTab}
           onChange={handleTabChange}
         />
-        
+
         {customTabs.length < 5 && (
-          <AddButton 
+          <AddButton
             onClick={() => setIsCreateTabModalOpen(true)}
             tooltip="Добавить вкладку"
-            margin="0 auto 15px 15px" 
+            margin="0 auto 15px 15px"
             size={24}
           />
         )}
 
         <TotalControls>
-          <CountInfoTitle 
-            total={creditsData?.totalCount || 0} 
-          />
+          <CountInfoTitle total={creditsData?.totalCount || 0} />
         </TotalControls>
-        
+
         <SelectedCount />
       </SecondRaw>
 
-      {isLoading && (!isListMode || displayedCredits.length === 0) && <div>Загрузка...</div>}
+      {isLoading && (!isListMode || displayedCredits.length === 0) && (
+        <div>Загрузка...</div>
+      )}
       {error && <div>Ошибка: {error}</div>}
 
-      {!error && (!isLoading || (isListMode && displayedCredits.length > 0)) && (
-        <>
-          <CreditCardList
-            credits={displayedCredits}
-            fields={['totalClean', 'firstPayment', 'accured', 'payed', 'rest', 'debt'] as CreditCardField[]}
-            getRowData={(credit) => [
-              null,
-              credit.id.toString(),
-              formatDate(credit.creditDate),
-              credit.clientFullName,
-              formatMoney((credit.totalClean ?? 0).toString()),
-              formatMoney((credit.firstPayment ?? 0).toString()),
-              formatMoney((credit.accured ?? 0).toString()),
-              formatMoney((credit.payed ?? 0).toString()),
-              formatMoney((credit.rest ?? 0).toString()),
-              formatMoney((credit.rest ?? 0).toString()),
-              formatMoney((credit.debt ?? 0).toString()),
-              credit.isActive,
-            ]}
-            selectedIndices={selectedRows}
-            highlightedCreditId={selectedCreditForPrint?.id ?? null}
-            multiSelect
-            onToggleSelect={(rowIndex) => {
-              setSelectedRows(prev =>
-                prev.includes(rowIndex)
-                  ? prev.filter(i => i !== rowIndex)
-                  : [...prev, rowIndex]
-              );
-            }}
-            onRowClick={(rowIndex) => {
-              const credit = displayedCredits[rowIndex];
-              if (credit) setSelectedCreditForPrint(credit);
-            }}
-            onRowDoubleClick={(rowIndex) => {
-              const credit = displayedCredits[rowIndex];
-              if (credit) {
-                setViewingCreditId(credit.id);
-                setIsViewModalOpen(true);
+      {!error &&
+        (!isLoading || (isListMode && displayedCredits.length > 0)) && (
+          <>
+            <CreditCardList
+              credits={displayedCredits}
+              fields={
+                [
+                  "totalClean",
+                  "firstPayment",
+                  "accured",
+                  "payed",
+                  "rest",
+                  "debt",
+                ] as CreditCardField[]
               }
-            }}
-            onToggleFavourite={(credit) => toggleFavourite(credit.id)}
-            contextMenuActions={tableActions}
-          />
+              getRowData={(credit) => [
+                null,
+                credit.id.toString(),
+                formatDate(credit.creditDate),
+                credit.clientFullName,
+                formatMoney((credit.totalClean ?? 0).toString()),
+                formatMoney((credit.firstPayment ?? 0).toString()),
+                formatMoney((credit.accured ?? 0).toString()),
+                formatMoney((credit.payed ?? 0).toString()),
+                formatMoney((credit.rest ?? 0).toString()),
+                formatMoney((credit.rest ?? 0).toString()),
+                formatMoney((credit.debt ?? 0).toString()),
+                credit.isActive,
+              ]}
+              selectedIndices={selectedRows}
+              highlightedCreditId={selectedCreditForPrint?.id ?? null}
+              multiSelect
+              onToggleSelect={(rowIndex) => {
+                setSelectedRows((prev) =>
+                  prev.includes(rowIndex)
+                    ? prev.filter((i) => i !== rowIndex)
+                    : [...prev, rowIndex]
+                );
+              }}
+              onRowClick={(rowIndex) => {
+                const credit = displayedCredits[rowIndex];
+                if (credit) setSelectedCreditForPrint(credit);
+              }}
+              onRowDoubleClick={(rowIndex) => {
+                const credit = displayedCredits[rowIndex];
+                if (credit) {
+                  setViewingCreditId(credit.id);
+                  setIsViewModalOpen(true);
+                }
+              }}
+              onToggleFavourite={(credit) => toggleFavourite(credit.id)}
+              contextMenuActions={tableActions}
+            />
 
-          {isListMode ? (
-            <>
-              {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
-              {isLoadingMore ? (
-                <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
-              ) : (
-                <ListBottomSpacer />
-              )}
-            </>
-          ) : (
-            <PaginationLayout>
-              <Pagination
-                total={creditsData?.totalCount || 0}
-                current={currentPage}
-                onChange={(page) => {
-                  setCurrentPage(page);
-                  setSelectedRows([]); // Сбрасываем выбор при смене страницы
-                }}
-                itemsPerPage={itemsPerPage}
-              />
-            </PaginationLayout>
-          )}
-        </>
-      )}
+            {isListMode ? (
+              <>
+                {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
+                {isLoadingMore ? (
+                  <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+                ) : (
+                  <ListBottomSpacer />
+                )}
+              </>
+            ) : (
+              <PaginationLayout>
+                <Pagination
+                  total={creditsData?.totalCount || 0}
+                  current={currentPage}
+                  onChange={(page) => {
+                    setCurrentPage(page);
+                    setSelectedRows([]); // Сбрасываем выбор при смене страницы
+                  }}
+                  itemsPerPage={itemsPerPage}
+                />
+              </PaginationLayout>
+            )}
+          </>
+        )}
 
       <NewPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onSubmit={handleSavePayment}
         creditId={selectedCreditForPrint?.id || 0}
-        clientName={selectedCreditForPrint?.clientFullName || ''}
-        investorName={selectedCreditForPrint?.investorNickname || ''}
-        clientPhone={selectedCreditForPrint?.clientPhone || ''}
+        clientName={selectedCreditForPrint?.clientFullName || ""}
+        investorName={selectedCreditForPrint?.investorNickname || ""}
+        clientPhone={selectedCreditForPrint?.clientPhone || ""}
         currentDebt={selectedCreditForPrint?.rest || 0}
         currentMonthDebt={selectedCreditForPrint?.currentMonthDebt || 0}
         onPrintReceipt={handlePrintReceipt}
@@ -1806,46 +2005,41 @@ const CreditPage = () => {
         initialData={editingTab}
         entityType="creditTab"
       />
-
     </PageLayout>
   );
 };
 
-const FilterHeader = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const FilterToggleButton = styled.button<{ $isOpen: boolean; $hasActiveFilters: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: ${props => props.$isOpen ? '#007D88' : '#f5f5f5'};
-  border: 1px solid ${props => props.$isOpen ? '#007D88' : '#ddd'};
-  border-radius: 30px;
-  cursor: pointer;
-  color: ${props => props.$isOpen ? 'white' : '#333'};
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+// Иконка-кнопка фильтра в шапке (в стиле кнопок уведомлений/настроек в TopMenu).
+const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: relative;
-  height: 40px;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#555")};
+  transition: all 0.2s ease;
+  outline: none;
 
   &:hover {
-    background: ${props => props.$isOpen ? '#00666f' : '#e9e9e9'};
-    border-color: ${props => props.$isOpen ? '#00666f' : '#007D88'};
+    background-color: rgba(209, 213, 219, 0.5);
+    color: #007d88;
   }
 
-  svg {
-    color: ${props => props.$isOpen ? 'white' : '#007D88'};
+  &:focus-visible {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
   }
 `;
 
 const FilterBadge = styled.span`
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: -4px;
+  right: -4px;
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
@@ -1859,24 +2053,55 @@ const FilterBadge = styled.span`
   justify-content: center;
 `;
 
-const HeaderControls = styled.div`
+const FilterModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
   display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-left: auto;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 60px 16px 16px;
+  background: rgba(15, 23, 42, 0.45);
+  overflow-y: auto;
 `;
 
-const LeftControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
+const FilterModalPanel = styled.div`
+  width: 100%;
+  max-width: 760px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
 `;
 
-const RightControls = styled.div`
-  margin-top: 10px;
+const FilterModalHeader = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+`;
+
+const FilterModalClose = styled.button`
+  border: none;
+  background: transparent;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+
+  &:hover {
+    color: #111827;
+  }
+`;
+
+const FilterModalFooter = styled.div`
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  margin-top: 20px;
 `;
 
 const FilterField = styled.div`
@@ -1888,7 +2113,7 @@ const FilterField = styled.div`
 `;
 
 const InputWrapper = styled.div`
-  flex: 1;  
+  flex: 1;
   min-width: 0;
   position: relative;
 `;
@@ -1914,12 +2139,12 @@ const StarIcon = styled.div`
   color: gold;
   font-size: 1.2rem;
   user-select: none;
-  width: 24px;  
+  width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   svg {
     width: 100%;
     height: 100%;
@@ -1934,12 +2159,12 @@ const EmptyStarIcon = styled.div<EmptyStarIconProps>`
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   svg {
     width: 100%;
     height: 100%;
     path {
-      stroke: #50555C;
+      stroke: #50555c;
     }
   }
 `;
@@ -1955,14 +2180,14 @@ const TabActions = styled.div`
   gap: 4px;
   opacity: 0;
   transition: opacity 0.2s;
-  
+
   ${TabLabel}:hover & {
     opacity: 1;
   }
 `;
 
 const SelectedCountBadge = styled.div`
-  background-color: #007D88;
+  background-color: #007d88;
   color: white;
   padding: 6px 12px;
   border-radius: 16px;
@@ -1974,7 +2199,7 @@ const SelectedCountBadge = styled.div`
 
 // Стили для модалки "Поделиться" (можно вынести в отдельный файл)
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
-  display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+  display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
   position: fixed;
   top: 0;
   left: 0;
@@ -2011,17 +2236,18 @@ const PrintOptions = styled.div`
 
 const PrintOption = styled.button<{ disabled?: boolean }>`
   padding: 12px;
-  background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#f5f5f5'};
-  border: 1px solid ${({ disabled }) => disabled ? '#eee' : '#ddd'};
+  background-color: ${({ disabled }) => (disabled ? "#f9f9f9" : "#f5f5f5")};
+  border: 1px solid ${({ disabled }) => (disabled ? "#eee" : "#ddd")};
   border-radius: 4px;
-  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
   text-align: center;
   transition: background-color 0.2s;
-  color: ${({ disabled }) => disabled ? '#999' : 'black'};
-  
+  color: ${({ disabled }) => (disabled ? "#999" : "black")};
+
   &:hover {
-    background-color: ${({ disabled }) => disabled ? '#f9f9f9' : '#e9e9e9'};
-    border-color: ${({ disabled }) => disabled ? '#eee' : 'rgba(0, 125, 136, 1)'};
+    background-color: ${({ disabled }) => (disabled ? "#f9f9f9" : "#e9e9e9")};
+    border-color: ${({ disabled }) =>
+      disabled ? "#eee" : "rgba(0, 125, 136, 1)"};
   }
 `;
 
@@ -2050,8 +2276,12 @@ const SpinnerIcon = styled.div`
   margin-right: 8px;
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -2071,15 +2301,6 @@ const ListBottomSpacer = styled.div`
   height: 32px;
 `;
 
-const FiltersCard = styled.div`
-  padding: 14px 16px;
-  margin-bottom: 8px;
-  background: #fff;
-  border: 1px solid #E5E7EB;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-`;
-
 const FilterGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2096,7 +2317,7 @@ const FilterSlot = styled.div`
 const FilterSlotLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
-  color: #6B7280;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;
