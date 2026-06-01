@@ -1587,14 +1587,16 @@ const SchedulePage = ({
 
   return (
     <PageLayout ref={containerRef}>
-      <TitleField>
-        <CustomTitle>{title}</CustomTitle>
-        <ExportButton
-          onClick={handleExport}
-          isExporting={isExporting}
-          exportProgress={exportProgress}
-        />
-      </TitleField>
+      {activeTab !== "calendar" && (
+        <TitleField>
+          <CustomTitle>{title}</CustomTitle>
+          <ExportButton
+            onClick={handleExport}
+            isExporting={isExporting}
+            exportProgress={exportProgress}
+          />
+        </TitleField>
+      )}
 
       {tabs.length > 1 ? (
         <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
