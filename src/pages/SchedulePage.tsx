@@ -186,15 +186,6 @@ const toDateInputValue = (date: Date | string): string => {
   return parsed.toISOString().split("T")[0];
 };
 
-const getMonthKey = (date: Date | string): string => {
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}`;
-};
-
 const getCalendarClientName = (payment: ScheduleDetails): string => {
   return payment.clientName?.trim() || "Без имени";
 };
@@ -207,57 +198,37 @@ const formatMoneyValue = (value?: number | string | null): string => {
   return formatMoney(String(value ?? 0));
 };
 
-const getCalendarMonths = (startDate: string, endDate: string) => {
-  const start = startDate
-    ? new Date(startDate)
-    : new Date(new Date().getFullYear(), 0, 1);
-  const end = endDate
-    ? new Date(endDate)
-    : new Date(new Date().getFullYear(), 11, 1);
-  start.setDate(1);
-  end.setDate(1);
+const getDayKey = (date: Date | string): string => {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(parsed.getDate()).padStart(2, "0")}`;
+};
 
-  const months: { key: string; label: string }[] = [];
-  const cursor = new Date(start);
-  while (cursor <= end && months.length < 24) {
-    months.push({
-      key: getMonthKey(cursor),
-      label: cursor.toLocaleDateString("ru-RU", {
+// Колонки календаря — это конкретные даты платежей (по дням), а не месяцы.
+// Берём все уникальные даты, по которым есть платежи, и сортируем по возрастанию.
+const getCalendarDaysByPayments = (payments: ScheduleDetails[]) => {
+  const daysMap = new Map<string, { key: string; label: string }>();
+
+  payments.forEach((payment) => {
+    const parsed = new Date(payment.paymentDate);
+    if (Number.isNaN(parsed.getTime())) return;
+    const key = getDayKey(parsed);
+    if (!key || daysMap.has(key)) return;
+    daysMap.set(key, {
+      key,
+      label: parsed.toLocaleDateString("ru-RU", {
+        day: "2-digit",
         month: "short",
         year: "2-digit",
       }),
     });
-    cursor.setMonth(cursor.getMonth() + 1);
-  }
-  return months;
-};
+  });
 
-const getCalendarMonthsByPayments = (
-  payments: ScheduleDetails[],
-  fallbackStartDate: string,
-  fallbackEndDate: string
-) => {
-  const validDates = payments
-    .map((payment) => new Date(payment.paymentDate))
-    .filter((date) => !Number.isNaN(date.getTime()));
-
-  if (validDates.length === 0) {
-    return getCalendarMonths(fallbackStartDate, fallbackEndDate);
-  }
-
-  const minDate = new Date(
-    Math.min(...validDates.map((date) => date.getTime()))
-  );
-  const maxDate = new Date(
-    Math.max(...validDates.map((date) => date.getTime()))
-  );
-
-  minDate.setDate(1);
-  maxDate.setDate(1);
-
-  return getCalendarMonths(
-    minDate.toISOString().split("T")[0],
-    maxDate.toISOString().split("T")[0]
+  return Array.from(daysMap.values()).sort((a, b) =>
+    a.key.localeCompare(b.key)
   );
 };
 
@@ -1157,11 +1128,7 @@ const SchedulePage = ({
   };
 
   const safeCalendarData = Array.isArray(calendarData) ? calendarData : [];
-  const calendarMonths = getCalendarMonthsByPayments(
-    safeCalendarData,
-    calendarDateFrom,
-    calendarDateTo
-  );
+  const calendarDays = getCalendarDaysByPayments(safeCalendarData);
   const calendarClients = Array.from(
     new Map(
       safeCalendarData.map((item) => {
@@ -1172,11 +1139,11 @@ const SchedulePage = ({
   );
   const calendarPaymentsByClient = safeCalendarData.reduce((acc, item) => {
     const clientKey = getCalendarClientKey(item);
-    const monthKey = getMonthKey(item.paymentDate);
-    if (!monthKey) return acc;
+    const dayKey = getDayKey(item.paymentDate);
+    if (!dayKey) return acc;
     if (!acc[clientKey]) acc[clientKey] = {};
-    if (!acc[clientKey][monthKey]) acc[clientKey][monthKey] = [];
-    acc[clientKey][monthKey].push(item);
+    if (!acc[clientKey][dayKey]) acc[clientKey][dayKey] = [];
+    acc[clientKey][dayKey].push(item);
     return acc;
   }, {} as Record<string, Record<string, ScheduleDetails[]>>);
 
@@ -1283,16 +1250,16 @@ const SchedulePage = ({
                 {error && <div>Ошибка: {error}</div>}
                 {!isLoading && !error && (
                   <CalendarGridScroll>
-                    <CalendarGrid $columns={calendarMonths.length}>
-                      <CalendarHeaderCell>Клиент / месяц</CalendarHeaderCell>
-                      {calendarMonths.map((month) => (
-                        <CalendarHeaderCell key={month.key}>
-                          {month.label}
+                    <CalendarGrid $columns={calendarDays.length}>
+                      <CalendarHeaderCell>Клиент / дата</CalendarHeaderCell>
+                      {calendarDays.map((day) => (
+                        <CalendarHeaderCell key={day.key}>
+                          {day.label}
                         </CalendarHeaderCell>
                       ))}
 
                       {calendarClients.length === 0 && (
-                        <CalendarEmptyCell $columns={calendarMonths.length + 1}>
+                        <CalendarEmptyCell $columns={calendarDays.length + 1}>
                           Нет платежей за выбранный период
                         </CalendarEmptyCell>
                       )}
@@ -1301,13 +1268,13 @@ const SchedulePage = ({
                         <CalendarClientCell key={`${client.key}-client`}>
                           {client.name}
                         </CalendarClientCell>,
-                        ...calendarMonths.map((month) => {
+                        ...calendarDays.map((day) => {
                           const payments =
-                            calendarPaymentsByClient[client.key]?.[month.key] ||
+                            calendarPaymentsByClient[client.key]?.[day.key] ||
                             [];
                           return (
                             <CalendarPaymentCell
-                              key={`${client.key}-${month.key}`}
+                              key={`${client.key}-${day.key}`}
                               $isClickable={payments.length > 0}
                               onClick={() => handleCalendarCellClick(payments)}
                             >
