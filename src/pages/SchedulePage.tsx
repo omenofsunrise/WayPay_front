@@ -213,30 +213,61 @@ const getDayKey = (date: Date | string): string => {
   )}-${String(parsed.getDate()).padStart(2, "0")}`;
 };
 
-// Колонки календаря — это конкретные даты платежей (по дням), а не месяцы.
-// Берём все уникальные даты, по которым есть платежи, и сортируем по возрастанию.
-const getCalendarDaysByPayments = (payments: ScheduleDetails[]) => {
-  const daysMap = new Map<string, { key: string; label: string }>();
+const getMonthKey = (date: Date | string): string => {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}`;
+};
 
+// Обычный режим: колонки = месяцы, по которым есть платежи (по возрастанию).
+const getCalendarMonthsByPayments = (payments: ScheduleDetails[]) => {
+  const map = new Map<string, { key: string; label: string }>();
   payments.forEach((payment) => {
     const parsed = new Date(payment.paymentDate);
     if (Number.isNaN(parsed.getTime())) return;
-    const key = getDayKey(parsed);
-    if (!key || daysMap.has(key)) return;
-    daysMap.set(key, {
+    const key = getMonthKey(parsed);
+    if (!key || map.has(key)) return;
+    map.set(key, {
       key,
       label: parsed.toLocaleDateString("ru-RU", {
-        day: "2-digit",
-        month: "short",
-        year: "2-digit",
+        month: "long",
+        year: "numeric",
       }),
     });
   });
-
-  return Array.from(daysMap.values()).sort((a, b) =>
-    a.key.localeCompare(b.key)
-  );
+  return Array.from(map.values()).sort((a, b) => a.key.localeCompare(b.key));
 };
+
+// Полноэкранный режим: колонки = числа выбранного месяца (1..N).
+const getMonthDayColumns = (year: number, month: number) => {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const cols: { key: string; label: string }[] = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const key = `${year}-${String(month).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
+    cols.push({ key, label: String(day) });
+  }
+  return cols;
+};
+
+const CALENDAR_MONTH_NAMES = [
+  "Январь",
+  "Февраль",
+  "Март",
+  "Апрель",
+  "Май",
+  "Июнь",
+  "Июль",
+  "Август",
+  "Сентябрь",
+  "Октябрь",
+  "Ноябрь",
+  "Декабрь",
+];
 
 const isSchedulePaid = (schedule: ScheduleDetails): boolean => {
   return (
@@ -366,6 +397,13 @@ const SchedulePage = ({
     addDaysToIsoDate(todayIsoDate(), CALENDAR_FUTURE_DAYS)
   );
   const [isCalendarFullscreen, setIsCalendarFullscreen] = useState(false);
+  // Выбранные месяц (1-12) и год для полноэкранного режима (вид по дням, как в финансе).
+  const [calendarFsMonth, setCalendarFsMonth] = useState(
+    () => new Date().getMonth() + 1
+  );
+  const [calendarFsYear, setCalendarFsYear] = useState(() =>
+    new Date().getFullYear()
+  );
   const calendarScrollRef = useRef<HTMLDivElement>(null);
   // Запоминаем scrollWidth перед подгрузкой слева, чтобы вернуть позицию скролла
   // после появления новых колонок (иначе лента «прыгает»).
@@ -730,7 +768,14 @@ const SchedulePage = ({
     let startDate: string | undefined;
     let endDate: string | undefined;
 
-    if (hasCalendarDateFilter) {
+    if (isCalendarFullscreen) {
+      // Полноэкранный режим: грузим ровно выбранный месяц (как в финансе).
+      setCalendarDateRangeWarning("");
+      const mm = String(calendarFsMonth).padStart(2, "0");
+      const lastDay = new Date(calendarFsYear, calendarFsMonth, 0).getDate();
+      startDate = `${calendarFsYear}-${mm}-01`;
+      endDate = `${calendarFsYear}-${mm}-${String(lastDay).padStart(2, "0")}`;
+    } else if (hasCalendarDateFilter) {
       // Режим фильтра: используем выбранные даты как есть, без ограничения диапазона —
       // можно задать От/До за любой период, в том числе за прошлые годы.
       setCalendarDateRangeWarning("");
@@ -756,6 +801,9 @@ const SchedulePage = ({
 
     calendarExtendingRef.current = false;
   }, [
+    isCalendarFullscreen,
+    calendarFsMonth,
+    calendarFsYear,
     hasCalendarDateFilter,
     calendarDateFrom,
     calendarDateTo,
@@ -787,7 +835,12 @@ const SchedulePage = ({
   // Бесконечная лента: при подкрутке к краю расширяем окно дат и подгружаем данные.
   // Работает только когда фильтр дат не выбран.
   const handleCalendarScroll = useCallback(() => {
-    if (hasCalendarDateFilter || isLoading || calendarExtendingRef.current) {
+    if (
+      isCalendarFullscreen ||
+      hasCalendarDateFilter ||
+      isLoading ||
+      calendarExtendingRef.current
+    ) {
       return;
     }
     const el = calendarScrollRef.current;
@@ -819,6 +872,7 @@ const SchedulePage = ({
       );
     }
   }, [
+    isCalendarFullscreen,
     hasCalendarDateFilter,
     isLoading,
     calendarWindowStart,
@@ -1230,7 +1284,13 @@ const SchedulePage = ({
   };
 
   const safeCalendarData = Array.isArray(calendarData) ? calendarData : [];
-  const calendarDays = getCalendarDaysByPayments(safeCalendarData);
+  // Обычный режим — колонки по месяцам; полноэкранный — по дням выбранного месяца.
+  const isCalendarDayView = isCalendarFullscreen;
+  const calendarColumns = isCalendarDayView
+    ? getMonthDayColumns(calendarFsYear, calendarFsMonth)
+    : getCalendarMonthsByPayments(safeCalendarData);
+  const getCalendarGroupKey = (date: Date | string) =>
+    isCalendarDayView ? getDayKey(date) : getMonthKey(date);
   const calendarClients = Array.from(
     new Map(
       safeCalendarData.map((item) => {
@@ -1241,11 +1301,11 @@ const SchedulePage = ({
   );
   const calendarPaymentsByClient = safeCalendarData.reduce((acc, item) => {
     const clientKey = getCalendarClientKey(item);
-    const dayKey = getDayKey(item.paymentDate);
-    if (!dayKey) return acc;
+    const colKey = getCalendarGroupKey(item.paymentDate);
+    if (!colKey) return acc;
     if (!acc[clientKey]) acc[clientKey] = {};
-    if (!acc[clientKey][dayKey]) acc[clientKey][dayKey] = [];
-    acc[clientKey][dayKey].push(item);
+    if (!acc[clientKey][colKey]) acc[clientKey][colKey] = [];
+    acc[clientKey][colKey].push(item);
     return acc;
   }, {} as Record<string, Record<string, ScheduleDetails[]>>);
 
@@ -1359,7 +1419,35 @@ const SchedulePage = ({
                 <CalendarTableWrapper $fullscreen={isCalendarFullscreen}>
                   {isCalendarFullscreen && (
                     <CalendarFullscreenBar>
-                      <span>Платежи по датам</span>
+                      <CalendarMonthNav>
+                        <CalendarMonthSelect
+                          value={calendarFsMonth}
+                          onChange={(e) =>
+                            setCalendarFsMonth(Number(e.target.value))
+                          }
+                        >
+                          {CALENDAR_MONTH_NAMES.map((name, index) => (
+                            <option key={name} value={index + 1}>
+                              {name}
+                            </option>
+                          ))}
+                        </CalendarMonthSelect>
+                        <CalendarMonthSelect
+                          value={calendarFsYear}
+                          onChange={(e) =>
+                            setCalendarFsYear(Number(e.target.value))
+                          }
+                        >
+                          {Array.from({ length: 5 }, (_, i) => {
+                            const year = new Date().getFullYear() - 2 + i;
+                            return (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            );
+                          })}
+                        </CalendarMonthSelect>
+                      </CalendarMonthNav>
                       <CalendarInfoButton
                         type="button"
                         onClick={() => setIsCalendarFullscreen(false)}
@@ -1410,16 +1498,22 @@ const SchedulePage = ({
                           Загрузка…
                         </CalendarLoadingOverlay>
                       )}
-                      <CalendarGrid $columns={calendarDays.length}>
-                        <CalendarHeaderCell>Клиент / дата</CalendarHeaderCell>
-                        {calendarDays.map((day) => (
-                          <CalendarHeaderCell key={day.key}>
-                            {day.label}
+                      <CalendarGrid $columns={calendarColumns.length}>
+                        <CalendarHeaderCell>
+                          {isCalendarDayView
+                            ? "Клиент / число"
+                            : "Клиент / месяц"}
+                        </CalendarHeaderCell>
+                        {calendarColumns.map((col) => (
+                          <CalendarHeaderCell key={col.key}>
+                            {col.label}
                           </CalendarHeaderCell>
                         ))}
 
                         {calendarClients.length === 0 && (
-                          <CalendarEmptyCell $columns={calendarDays.length + 1}>
+                          <CalendarEmptyCell
+                            $columns={calendarColumns.length + 1}
+                          >
                             Нет платежей за выбранный период
                           </CalendarEmptyCell>
                         )}
@@ -1428,13 +1522,13 @@ const SchedulePage = ({
                           <CalendarClientCell key={`${client.key}-client`}>
                             {client.name}
                           </CalendarClientCell>,
-                          ...calendarDays.map((day) => {
+                          ...calendarColumns.map((col) => {
                             const payments =
-                              calendarPaymentsByClient[client.key]?.[day.key] ||
+                              calendarPaymentsByClient[client.key]?.[col.key] ||
                               [];
                             return (
                               <CalendarPaymentCell
-                                key={`${client.key}-${day.key}`}
+                                key={`${client.key}-${col.key}`}
                                 $isClickable={payments.length > 0}
                                 onClick={() =>
                                   handleCalendarCellClick(payments)
@@ -2057,10 +2151,33 @@ const CalendarFullscreenBar = styled.div`
   color: #111827;
 `;
 
+const CalendarMonthNav = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const CalendarMonthSelect = styled.select`
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: #007d88;
+  }
+`;
+
 const CalendarGridScroll = styled.div<{ $fullscreen?: boolean }>`
   position: relative;
   overflow: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #ffffff;
   max-height: ${(props) =>
@@ -2103,8 +2220,8 @@ const CalendarHeaderCell = styled.div`
   top: 0;
   z-index: 2;
   padding: 10px 12px;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
   background: #f8fafc;
   color: #111827;
   font-size: 13px;
@@ -2123,8 +2240,8 @@ const CalendarClientCell = styled.div`
   left: 0;
   z-index: 1;
   padding: 10px 12px;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
   background: #ffffff;
   color: #111827;
   font-size: 13px;
@@ -2134,8 +2251,8 @@ const CalendarClientCell = styled.div`
 const CalendarPaymentCell = styled.div<{ $isClickable?: boolean }>`
   min-height: 70px;
   padding: 6px;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
   background: #ffffff;
   display: flex;
   flex-direction: column;
