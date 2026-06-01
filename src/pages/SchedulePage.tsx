@@ -325,6 +325,8 @@ const CALENDAR_WINDOW_STEP_DAYS = 30;
 // Ограничение, чтобы окно не разрасталось бесконечно при длительном скролле.
 const CALENDAR_MAX_SPAN_DAYS = 720;
 const CALENDAR_SCROLL_EDGE_PX = 140;
+// Ширина закреплённой колонки «Клиент / дата» (используется и в стилях, и в логике колеса).
+const CALENDAR_CLIENT_COL_WIDTH = 260;
 
 const SchedulePage = ({
   initialTab = "table",
@@ -846,6 +848,32 @@ const SchedulePage = ({
       calendarAnchorWidthRef.current = null;
     }
   }, [calendarData]);
+
+  // Осевая блокировка прокрутки колесом:
+  // над колонкой «Клиент / дата» — только вертикаль, над платежами — только горизонталь.
+  useEffect(() => {
+    const el = calendarScrollRef.current;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      const pointerX = event.clientX - el.getBoundingClientRect().left;
+      const overClientColumn = pointerX <= CALENDAR_CLIENT_COL_WIDTH;
+      const delta =
+        Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+          ? event.deltaY
+          : event.deltaX;
+
+      if (overClientColumn) {
+        el.scrollTop += delta;
+      } else {
+        el.scrollLeft += delta;
+      }
+      event.preventDefault();
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [activeTab, error, isCalendarFullscreen]);
 
   const handleClientNameFilterChange = (value: string) => {
     setClientNameFilter(value);
@@ -2091,7 +2119,7 @@ const CalendarLoadingOverlay = styled.div`
 
 const CalendarGrid = styled.div<{ $columns: number }>`
   display: grid;
-  grid-template-columns: 260px repeat(
+  grid-template-columns: ${CALENDAR_CLIENT_COL_WIDTH}px repeat(
       ${(props) => props.$columns},
       minmax(130px, 160px)
     );
