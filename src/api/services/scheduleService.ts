@@ -176,6 +176,41 @@ const normalizeCalendarResponse = (
   });
 };
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+// Максимальный диапазон дат для одного запроса /Schedule/calendar (ограничение бэкенда).
+const CALENDAR_MAX_RANGE_DAYS = 120;
+// Предохранитель, чтобы очень широкий диапазон не превратился в сотни запросов.
+const CALENDAR_MAX_CHUNKS = 60;
+// Сколько окон грузим одновременно, чтобы не перегружать сервер.
+const CALENDAR_CHUNK_CONCURRENCY = 4;
+
+const getDaysBetweenDates = (start: Date, end: Date): number => {
+  return Math.ceil((end.getTime() - start.getTime()) / MS_PER_DAY);
+};
+
+const buildDateChunks = (
+  start: Date,
+  end: Date
+): { start: Date; end: Date }[] => {
+  const chunks: { start: Date; end: Date }[] = [];
+  let cursor = new Date(start);
+
+  while (cursor <= end && chunks.length < CALENDAR_MAX_CHUNKS) {
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setDate(chunkEnd.getDate() + CALENDAR_MAX_RANGE_DAYS - 1);
+
+    chunks.push({
+      start: new Date(cursor),
+      end: chunkEnd > end ? new Date(end) : chunkEnd,
+    });
+
+    cursor = new Date(chunkEnd);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return chunks;
+};
+
 class ScheduleService {
   async getList(
     params?: ScheduleParams
@@ -203,7 +238,9 @@ class ScheduleService {
     return response.data;
   }
 
-  async getCalendar(params?: ScheduleCalendarParams): Promise<CalendarResult> {
+  private async fetchCalendarChunk(
+    params?: ScheduleCalendarParams
+  ): Promise<CalendarResult> {
     const response = await apiClient.get<CalendarResponse>(
       "/Schedule/calendar",
       { params }
@@ -228,6 +265,61 @@ class ScheduleService {
         "OverduesAmount"
       ),
     };
+  }
+
+  async getCalendar(params?: ScheduleCalendarParams): Promise<CalendarResult> {
+    const start = params?.StartDate ? new Date(params.StartDate) : null;
+    const end = params?.EndDate ? new Date(params.EndDate) : null;
+
+    // Бэкенд ограничивает диапазон одного запроса (CALENDAR_MAX_RANGE_DAYS дней)
+    // и отвечает 400 на более широкий период. Чтобы можно было смотреть и прошлые
+    // годы, разбиваем диапазон на окна и склеиваем результат на фронте.
+    if (
+      start &&
+      end &&
+      !Number.isNaN(start.getTime()) &&
+      !Number.isNaN(end.getTime()) &&
+      getDaysBetweenDates(start, end) > CALENDAR_MAX_RANGE_DAYS
+    ) {
+      const chunks = buildDateChunks(start, end);
+
+      // Грузим окна батчами с ограниченной одновременностью, чтобы не перегружать сервер.
+      const results: CalendarResult[] = [];
+      for (let i = 0; i < chunks.length; i += CALENDAR_CHUNK_CONCURRENCY) {
+        const batch = chunks.slice(i, i + CALENDAR_CHUNK_CONCURRENCY);
+        const batchResults = await Promise.all(
+          batch.map((chunk) =>
+            this.fetchCalendarChunk({
+              ...params,
+              StartDate: chunk.start,
+              EndDate: chunk.end,
+            })
+          )
+        );
+        results.push(...batchResults);
+      }
+
+      const itemsById = new Map<number, ScheduleDetails>();
+      let totalCount = 0;
+      let totalOverdues = 0;
+      let overduesAmount = 0;
+
+      for (const result of results) {
+        result.items.forEach((item) => itemsById.set(item.id, item));
+        totalCount += result.totalCount;
+        totalOverdues += result.totalOverdues;
+        overduesAmount += result.overduesAmount;
+      }
+
+      return {
+        items: Array.from(itemsById.values()),
+        totalCount,
+        totalOverdues,
+        overduesAmount,
+      };
+    }
+
+    return this.fetchCalendarChunk(params);
   }
 
   async markAsNotified(id: number): Promise<void> {
