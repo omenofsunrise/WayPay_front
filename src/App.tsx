@@ -390,7 +390,13 @@ function App() {
 
             <Route path="schedules" element={
                 <MainLayout> 
-                  <SchedulePage />
+                  <SchedulePage initialTab="table" hiddenTabs={['calendar']} title="Ожидаемые платежи" />
+                </MainLayout>
+            } />
+
+            <Route path="schedule-calendar" element={
+                <MainLayout> 
+                  <SchedulePage initialTab="calendar" hiddenTabs={['schedule', 'table']} title="Календарь платежей" />
                 </MainLayout>
             } />
 

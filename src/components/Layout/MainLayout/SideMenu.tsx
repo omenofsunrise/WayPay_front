@@ -41,6 +41,7 @@ const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string,
   '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
   // '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
   '/schedules': { mainItem: 'payments', subItems: { '/schedules': 'pending-payments' } },
+  '/schedule-calendar': { mainItem: 'payments', subItems: { '/schedule-calendar': 'payments-calendar' } },
   '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
   '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
   '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
@@ -120,6 +121,7 @@ const SideMenu = () => {
     'blacklist': () => true,
     // 'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
     'pending-payments': () => true,
+    'payments-calendar': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true),
     'payments-journal': () => true,
     'investors': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
     'investors-report': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
@@ -250,6 +252,7 @@ const SideMenu = () => {
       'blacklist': 'Чёрный список',
       // 'credit-application': 'Заявки',
       'pending-payments': 'Ожидаемые',
+      'payments-calendar': 'Календарь',
       'payments-journal': 'Журнал',
       'investors': 'Инвесторы',
       'investors-report': 'Отчёт для инвесторов',
@@ -469,12 +472,14 @@ const SideMenu = () => {
             }}
             $collapsed={collapsed}
             $selected={selectedSideMenuItem === 'pending-payments' || 
+                      selectedSideMenuItem === 'payments-calendar' ||
                       selectedSideMenuItem === 'payments-journal'}
           >
             <Icon 
               src={paymentsIcon} 
               $collapsed={collapsed} 
               $selected={selectedSideMenuItem === 'pending-payments' || 
+                        selectedSideMenuItem === 'payments-calendar' ||
                         selectedSideMenuItem === 'payments-journal'} 
             />
             {!collapsed && (
@@ -507,6 +512,14 @@ const SideMenu = () => {
               >
                 Ожидаемые
               </SubMenuItem>
+              {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true)) && (
+                <SubMenuItem 
+                  onClick={() => handleSubMenuItemClick('payments-calendar', '/schedule-calendar')}
+                  $selected={selectedSideMenuItem === 'payments-calendar'}
+                >
+                  Календарь
+                </SubMenuItem>
+              )}
               <SubMenuItem 
                 onClick={() => handleSubMenuItemClick('payments-journal', '/payments')}
                 $selected={selectedSideMenuItem === 'payments-journal'}
