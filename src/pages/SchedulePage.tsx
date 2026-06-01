@@ -22,7 +22,7 @@ import type { ScheduleDetails, ScheduleParams } from "../api/types/schedule";
 import scheduleService from "../api/services/scheduleService";
 import { formatDate, parseDateInput } from "../utils/dateFormatter";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { formatMoney } from "../utils/formatPrice";
 import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import ObjectTypeSelect from "../components/ui/fields/ObjectTypeSelect";
@@ -48,7 +48,7 @@ import type { PaymentTab } from "../api/types/payment";
 import paymentService from "../api/services/paymentService";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
-import { Info } from "lucide-react";
+import { Info, Maximize2, Minimize2 } from "lucide-react";
 
 const CheckIcon = () => (
   <svg
@@ -365,6 +365,7 @@ const SchedulePage = ({
   const [calendarWindowEnd, setCalendarWindowEnd] = useState(() =>
     addDaysToIsoDate(todayIsoDate(), CALENDAR_FUTURE_DAYS)
   );
+  const [isCalendarFullscreen, setIsCalendarFullscreen] = useState(false);
   const calendarScrollRef = useRef<HTMLDivElement>(null);
   // Запоминаем scrollWidth перед подгрузкой слева, чтобы вернуть позицию скролла
   // после появления новых колонок (иначе лента «прыгает»).
@@ -823,6 +824,16 @@ const SchedulePage = ({
     calendarWindowStart,
     calendarWindowEnd,
   ]);
+
+  // Выход из полноэкранного режима по Escape.
+  useEffect(() => {
+    if (!isCalendarFullscreen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsCalendarFullscreen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isCalendarFullscreen]);
 
   // После prepend новых колонок слева возвращаем позицию скролла, чтобы лента не «прыгала».
   useLayoutEffect(() => {
@@ -1333,112 +1344,144 @@ const SchedulePage = ({
                     <Info size={16} strokeWidth={2.2} />
                     <span>Статусы платежей</span>
                   </CalendarInfoButton>
+                  <CalendarInfoButton
+                    type="button"
+                    onClick={() => setIsCalendarFullscreen(true)}
+                    title="Открыть таблицу на весь экран"
+                  >
+                    <Maximize2 size={16} strokeWidth={2.2} />
+                    <span>На весь экран</span>
+                  </CalendarInfoButton>
                 </CalendarToolbar>
                 {calendarDateRangeWarning && (
                   <CalendarWarning>{calendarDateRangeWarning}</CalendarWarning>
                 )}
-                <CalendarSummaryBar>
-                  <CalendarSummaryItem>
-                    <CalendarSummaryLabel>Всего платежей</CalendarSummaryLabel>
-                    <CalendarSummaryValue>
-                      {calendarSummary.totalCount}
-                    </CalendarSummaryValue>
-                  </CalendarSummaryItem>
-                  <CalendarSummaryItem>
-                    <CalendarSummaryLabel>Просрочек</CalendarSummaryLabel>
-                    <CalendarSummaryValue
-                      $danger={calendarSummary.totalOverdues > 0}
+                <CalendarTableWrapper $fullscreen={isCalendarFullscreen}>
+                  {isCalendarFullscreen && (
+                    <CalendarFullscreenBar>
+                      <span>Платежи по датам</span>
+                      <CalendarInfoButton
+                        type="button"
+                        onClick={() => setIsCalendarFullscreen(false)}
+                        title="Свернуть (Esc)"
+                      >
+                        <Minimize2 size={16} strokeWidth={2.2} />
+                        <span>Свернуть</span>
+                      </CalendarInfoButton>
+                    </CalendarFullscreenBar>
+                  )}
+                  <CalendarSummaryBar>
+                    <CalendarSummaryItem>
+                      <CalendarSummaryLabel>
+                        Всего платежей
+                      </CalendarSummaryLabel>
+                      <CalendarSummaryValue>
+                        {calendarSummary.totalCount}
+                      </CalendarSummaryValue>
+                    </CalendarSummaryItem>
+                    <CalendarSummaryItem>
+                      <CalendarSummaryLabel>Просрочек</CalendarSummaryLabel>
+                      <CalendarSummaryValue
+                        $danger={calendarSummary.totalOverdues > 0}
+                      >
+                        {calendarSummary.totalOverdues}
+                      </CalendarSummaryValue>
+                    </CalendarSummaryItem>
+                    <CalendarSummaryItem>
+                      <CalendarSummaryLabel>
+                        Сумма просрочек
+                      </CalendarSummaryLabel>
+                      <CalendarSummaryValue
+                        $danger={calendarSummary.overduesAmount > 0}
+                      >
+                        {formatMoneyValue(calendarSummary.overduesAmount)}
+                      </CalendarSummaryValue>
+                    </CalendarSummaryItem>
+                  </CalendarSummaryBar>
+                  {error && <div>Ошибка: {error}</div>}
+                  {!error && (
+                    <CalendarGridScroll
+                      ref={calendarScrollRef}
+                      onScroll={handleCalendarScroll}
+                      $fullscreen={isCalendarFullscreen}
                     >
-                      {calendarSummary.totalOverdues}
-                    </CalendarSummaryValue>
-                  </CalendarSummaryItem>
-                  <CalendarSummaryItem>
-                    <CalendarSummaryLabel>Сумма просрочек</CalendarSummaryLabel>
-                    <CalendarSummaryValue
-                      $danger={calendarSummary.overduesAmount > 0}
-                    >
-                      {formatMoneyValue(calendarSummary.overduesAmount)}
-                    </CalendarSummaryValue>
-                  </CalendarSummaryItem>
-                </CalendarSummaryBar>
-                {error && <div>Ошибка: {error}</div>}
-                {!error && (
-                  <CalendarGridScroll
-                    ref={calendarScrollRef}
-                    onScroll={handleCalendarScroll}
-                  >
-                    {isLoading && (
-                      <CalendarLoadingOverlay>Загрузка…</CalendarLoadingOverlay>
-                    )}
-                    <CalendarGrid $columns={calendarDays.length}>
-                      <CalendarHeaderCell>Клиент / дата</CalendarHeaderCell>
-                      {calendarDays.map((day) => (
-                        <CalendarHeaderCell key={day.key}>
-                          {day.label}
-                        </CalendarHeaderCell>
-                      ))}
-
-                      {calendarClients.length === 0 && (
-                        <CalendarEmptyCell $columns={calendarDays.length + 1}>
-                          Нет платежей за выбранный период
-                        </CalendarEmptyCell>
+                      {isLoading && (
+                        <CalendarLoadingOverlay>
+                          Загрузка…
+                        </CalendarLoadingOverlay>
                       )}
+                      <CalendarGrid $columns={calendarDays.length}>
+                        <CalendarHeaderCell>Клиент / дата</CalendarHeaderCell>
+                        {calendarDays.map((day) => (
+                          <CalendarHeaderCell key={day.key}>
+                            {day.label}
+                          </CalendarHeaderCell>
+                        ))}
 
-                      {calendarClients.map((client) => [
-                        <CalendarClientCell key={`${client.key}-client`}>
-                          {client.name}
-                        </CalendarClientCell>,
-                        ...calendarDays.map((day) => {
-                          const payments =
-                            calendarPaymentsByClient[client.key]?.[day.key] ||
-                            [];
-                          return (
-                            <CalendarPaymentCell
-                              key={`${client.key}-${day.key}`}
-                              $isClickable={payments.length > 0}
-                              onClick={() => handleCalendarCellClick(payments)}
-                            >
-                              {payments.length === 0 ? (
-                                <CalendarEmptyMark>—</CalendarEmptyMark>
-                              ) : (
-                                payments.map((payment) => {
-                                  const status =
-                                    getSchedulePaymentStatus(payment);
-                                  return (
-                                    <PaymentChip
-                                      key={payment.id}
-                                      type="button"
-                                      $status={status}
-                                      $hasComment={Boolean(
-                                        payment.userComment?.trim()
-                                      )}
-                                      onClick={(event) =>
-                                        handleCalendarPaymentClick(
-                                          event,
-                                          payment
-                                        )
-                                      }
-                                      title="Открыть платеж"
-                                    >
-                                      <PaymentChipAmount>
-                                        {formatMoneyValue(
-                                          payment.paymentAmount
+                        {calendarClients.length === 0 && (
+                          <CalendarEmptyCell $columns={calendarDays.length + 1}>
+                            Нет платежей за выбранный период
+                          </CalendarEmptyCell>
+                        )}
+
+                        {calendarClients.map((client) => [
+                          <CalendarClientCell key={`${client.key}-client`}>
+                            {client.name}
+                          </CalendarClientCell>,
+                          ...calendarDays.map((day) => {
+                            const payments =
+                              calendarPaymentsByClient[client.key]?.[day.key] ||
+                              [];
+                            return (
+                              <CalendarPaymentCell
+                                key={`${client.key}-${day.key}`}
+                                $isClickable={payments.length > 0}
+                                onClick={() =>
+                                  handleCalendarCellClick(payments)
+                                }
+                              >
+                                {payments.length === 0 ? (
+                                  <CalendarEmptyMark>—</CalendarEmptyMark>
+                                ) : (
+                                  payments.map((payment) => {
+                                    const status =
+                                      getSchedulePaymentStatus(payment);
+                                    return (
+                                      <PaymentChip
+                                        key={payment.id}
+                                        type="button"
+                                        $status={status}
+                                        $hasComment={Boolean(
+                                          payment.userComment?.trim()
                                         )}
-                                      </PaymentChipAmount>
-                                      <PaymentChipDate>
-                                        {formatDate(payment.paymentDate)}
-                                      </PaymentChipDate>
-                                    </PaymentChip>
-                                  );
-                                })
-                              )}
-                            </CalendarPaymentCell>
-                          );
-                        }),
-                      ])}
-                    </CalendarGrid>
-                  </CalendarGridScroll>
-                )}
+                                        onClick={(event) =>
+                                          handleCalendarPaymentClick(
+                                            event,
+                                            payment
+                                          )
+                                        }
+                                        title="Открыть платеж"
+                                      >
+                                        <PaymentChipAmount>
+                                          {formatMoneyValue(
+                                            payment.paymentAmount
+                                          )}
+                                        </PaymentChipAmount>
+                                        <PaymentChipDate>
+                                          {formatDate(payment.paymentDate)}
+                                        </PaymentChipDate>
+                                      </PaymentChip>
+                                    );
+                                  })
+                                )}
+                              </CalendarPaymentCell>
+                            );
+                          }),
+                        ])}
+                      </CalendarGrid>
+                    </CalendarGridScroll>
+                  )}
+                </CalendarTableWrapper>
               </>
             ),
           },
@@ -1989,13 +2032,45 @@ const CalendarSummaryValue = styled.span<{ $danger?: boolean }>`
   color: ${(props) => (props.$danger ? "#dc2626" : "#111827")};
 `;
 
-const CalendarGridScroll = styled.div`
+const CalendarTableWrapper = styled.div<{ $fullscreen: boolean }>`
+  ${(props) =>
+    props.$fullscreen &&
+    css`
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      background: #ffffff;
+    `}
+`;
+
+const CalendarFullscreenBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+`;
+
+const CalendarGridScroll = styled.div<{ $fullscreen?: boolean }>`
   position: relative;
   overflow: auto;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #ffffff;
-  max-height: calc(100vh - 280px);
+  max-height: ${(props) =>
+    props.$fullscreen ? "none" : "calc(100vh - 280px)"};
+  ${(props) =>
+    props.$fullscreen &&
+    css`
+      flex: 1;
+      min-height: 0;
+    `}
 `;
 
 const CalendarLoadingOverlay = styled.div`
