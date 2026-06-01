@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { ListFilter } from "lucide-react";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
   type RowStyle,
@@ -1646,6 +1647,19 @@ const CreditPage = () => {
 
   return (
     <PageLayout ref={containerRef}>
+      <FilterIconButton
+        type="button"
+        onClick={() => setIsFilterModalOpen(true)}
+        $hasActiveFilters={hasActiveFilters}
+        aria-label="Фильтр"
+        title="Фильтр"
+      >
+        <ListFilter aria-hidden="true" size={20} strokeWidth={2.2} />
+        {hasActiveFilters && getActiveFiltersCount > 0 && (
+          <FilterBadge>{getActiveFiltersCount}</FilterBadge>
+        )}
+      </FilterIconButton>
+
       {isFilterModalOpen && (
         <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
           <FilterModalPanel onClick={(e) => e.stopPropagation()}>
@@ -1822,32 +1836,6 @@ const CreditPage = () => {
         )}
 
         <TotalControls>
-          <FilterIconButton
-            type="button"
-            onClick={() => setIsFilterModalOpen(true)}
-            $hasActiveFilters={hasActiveFilters}
-            title="Фильтр"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-            >
-              <path
-                d="M3 5h18l-7 8v6l-4 2v-8L3 5z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span>Фильтр</span>
-            {hasActiveFilters && getActiveFiltersCount > 0 && (
-              <FilterBadge>{getActiveFiltersCount}</FilterBadge>
-            )}
-          </FilterIconButton>
           <CountInfoTitle total={creditsData?.totalCount || 0} />
         </TotalControls>
 
@@ -2006,33 +1994,51 @@ const CreditPage = () => {
   );
 };
 
-// Иконка-кнопка фильтра в шапке (в стиле кнопок уведомлений/настроек в TopMenu).
+// Иконка-кнопка фильтра — только иконка, вверху справа рядом с колокольчиком/настройками
+// (TopMenu: настройки right:10, колокольчик right:50; фильтр ставим левее — right:92).
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
-  position: relative;
-  height: 38px;
-  padding: 0 14px;
-  gap: 8px;
-  border: 1px solid
-    ${(props) => (props.$hasActiveFilters ? "#007D88" : "#cbd5e1")};
-  background: #ffffff;
+  position: fixed;
+  top: 10px;
+  right: 92px;
+  z-index: 95;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
+  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#50555C")};
   transition: all 0.2s ease;
   outline: none;
 
   &:hover {
-    border-color: #007d88;
+    background-color: rgba(209, 213, 219, 0.5);
     color: #007d88;
+  }
+
+  &:active {
+    background-color: rgba(209, 213, 219, 0.7);
   }
 
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+
+  svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: currentColor;
+    stroke: currentColor;
+    opacity: 1;
+  }
+
+  svg * {
+    stroke: currentColor;
   }
 `;
 
