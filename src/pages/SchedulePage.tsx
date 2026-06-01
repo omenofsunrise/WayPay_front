@@ -325,8 +325,6 @@ const CALENDAR_WINDOW_STEP_DAYS = 30;
 // Ограничение, чтобы окно не разрасталось бесконечно при длительном скролле.
 const CALENDAR_MAX_SPAN_DAYS = 720;
 const CALENDAR_SCROLL_EDGE_PX = 140;
-// Ширина закреплённой колонки «Клиент / дата» (используется и в стилях, и в логике колеса).
-const CALENDAR_CLIENT_COL_WIDTH = 260;
 
 const SchedulePage = ({
   initialTab = "table",
@@ -368,7 +366,7 @@ const SchedulePage = ({
     addDaysToIsoDate(todayIsoDate(), CALENDAR_FUTURE_DAYS)
   );
   const [isCalendarFullscreen, setIsCalendarFullscreen] = useState(false);
-  const calendarScrollRef = useRef<HTMLDivElement | null>(null);
+  const calendarScrollRef = useRef<HTMLDivElement>(null);
   // Запоминаем scrollWidth перед подгрузкой слева, чтобы вернуть позицию скролла
   // после появления новых колонок (иначе лента «прыгает»).
   const calendarAnchorWidthRef = useRef<number | null>(null);
@@ -848,42 +846,6 @@ const SchedulePage = ({
       calendarAnchorWidthRef.current = null;
     }
   }, [calendarData]);
-
-  // Осевая блокировка прокрутки колесом над гридом календаря:
-  // над колонкой «Клиент / дата» — только вертикаль, над платежами — только горизонталь.
-  // Листенер вешаем на window (passive: false), чтобы preventDefault работал гарантированно,
-  // независимо от момента монтирования грида.
-  useEffect(() => {
-    const handleWheel = (event: WheelEvent) => {
-      const el = calendarScrollRef.current;
-      if (!el) return;
-
-      const rect = el.getBoundingClientRect();
-      const inside =
-        event.clientX >= rect.left &&
-        event.clientX <= rect.right &&
-        event.clientY >= rect.top &&
-        event.clientY <= rect.bottom;
-      if (!inside) return;
-
-      const overClientColumn =
-        event.clientX - rect.left <= CALENDAR_CLIENT_COL_WIDTH;
-      const delta =
-        Math.abs(event.deltaY) >= Math.abs(event.deltaX)
-          ? event.deltaY
-          : event.deltaX;
-
-      if (overClientColumn) {
-        el.scrollTop += delta;
-      } else {
-        el.scrollLeft += delta;
-      }
-      event.preventDefault();
-    };
-
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    return () => window.removeEventListener("wheel", handleWheel);
-  }, []);
 
   const handleClientNameFilterChange = (value: string) => {
     setClientNameFilter(value);
@@ -2129,7 +2091,7 @@ const CalendarLoadingOverlay = styled.div`
 
 const CalendarGrid = styled.div<{ $columns: number }>`
   display: grid;
-  grid-template-columns: ${CALENDAR_CLIENT_COL_WIDTH}px repeat(
+  grid-template-columns: 260px repeat(
       ${(props) => props.$columns},
       minmax(130px, 160px)
     );
