@@ -730,21 +730,11 @@ const SchedulePage = ({
     let endDate: string | undefined;
 
     if (hasCalendarDateFilter) {
-      // Режим фильтра: используем выбранные даты с ограничением диапазона в 120 дней.
+      // Режим фильтра: используем выбранные даты как есть, без ограничения диапазона —
+      // можно задать От/До за любой период, в том числе за прошлые годы.
+      setCalendarDateRangeWarning("");
       startDate = calendarDateFrom || undefined;
-      let safeEndDate = calendarDateTo;
-      if (
-        calendarDateFrom &&
-        calendarDateTo &&
-        getDaysBetween(calendarDateFrom, calendarDateTo) > 120
-      ) {
-        safeEndDate = addDaysToIsoDate(calendarDateFrom, 120);
-        setCalendarDateTo(safeEndDate);
-        setCalendarDateRangeWarning("Диапазон календаря ограничен 120 днями.");
-      } else {
-        setCalendarDateRangeWarning("");
-      }
-      endDate = safeEndDate || undefined;
+      endDate = calendarDateTo || undefined;
     } else {
       // Режим бесконечной ленты: окно дат вокруг сегодняшнего дня.
       setCalendarDateRangeWarning("");
