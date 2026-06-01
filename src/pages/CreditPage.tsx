@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
   type RowStyle,
@@ -1647,34 +1646,6 @@ const CreditPage = () => {
 
   return (
     <PageLayout ref={containerRef}>
-      <TitleField>
-        <FilterIconButton
-          type="button"
-          onClick={() => setIsFilterModalOpen(true)}
-          $hasActiveFilters={hasActiveFilters}
-          title="Фильтр"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-          >
-            <path
-              d="M3 5h18l-7 8v6l-4 2v-8L3 5z"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {hasActiveFilters && getActiveFiltersCount > 0 && (
-            <FilterBadge>{getActiveFiltersCount}</FilterBadge>
-          )}
-        </FilterIconButton>
-      </TitleField>
-
       {isFilterModalOpen && (
         <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
           <FilterModalPanel onClick={(e) => e.stopPropagation()}>
@@ -1851,6 +1822,32 @@ const CreditPage = () => {
         )}
 
         <TotalControls>
+          <FilterIconButton
+            type="button"
+            onClick={() => setIsFilterModalOpen(true)}
+            $hasActiveFilters={hasActiveFilters}
+            title="Фильтр"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+            >
+              <path
+                d="M3 5h18l-7 8v6l-4 2v-8L3 5z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Фильтр</span>
+            {hasActiveFilters && getActiveFiltersCount > 0 && (
+              <FilterBadge>{getActiveFiltersCount}</FilterBadge>
+            )}
+          </FilterIconButton>
           <CountInfoTitle total={creditsData?.totalCount || 0} />
         </TotalControls>
 
@@ -2012,22 +2009,25 @@ const CreditPage = () => {
 // Иконка-кнопка фильтра в шапке (в стиле кнопок уведомлений/настроек в TopMenu).
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: relative;
-  width: 36px;
-  height: 36px;
-  margin-left: auto;
-  border: none;
-  background: transparent;
+  height: 38px;
+  padding: 0 14px;
+  gap: 8px;
+  border: 1px solid
+    ${(props) => (props.$hasActiveFilters ? "#007D88" : "#cbd5e1")};
+  background: #ffffff;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#555")};
+  font-size: 14px;
+  font-weight: 600;
+  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
   transition: all 0.2s ease;
   outline: none;
 
   &:hover {
-    background-color: rgba(209, 213, 219, 0.5);
+    border-color: #007d88;
     color: #007d88;
   }
 
