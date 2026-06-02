@@ -194,7 +194,7 @@ const InvestorSelectModal = ({
     investor.investorPie.toString() + "%",
     investor.isBlocked?.toString() || 'false',
     formatMoney(investor.balance.toString()),
-    formatDate(investor.activeUntil ?? new Date()),
+    investor.isCompany ? '-' : formatDate(investor.activeUntil ?? new Date()),
   ]) || [];
 
   const poolsTableData = includePools 
