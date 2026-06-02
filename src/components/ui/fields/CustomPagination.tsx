@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PaginationProps {
   total: number;
@@ -16,6 +16,10 @@ const Pagination: React.FC<PaginationProps> = ({
 }) => {
   const totalPages = Math.ceil(total / itemsPerPage);
   const [currentPage, setCurrentPage] = useState(current);
+
+  useEffect(() => {
+    setCurrentPage(current);
+  }, [current]);
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages || page === currentPage) return;
