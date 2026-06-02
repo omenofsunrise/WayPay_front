@@ -906,6 +906,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         investmentAmount: selectedEntity.investmentAmount || 0,
         balance: selectedEntity.balance || 0,
         activeUntil: selectedEntity.activeUntil,
+        isCompany: selectedEntity.isCompany,
         isPool: false
       });
       setSelectedPool(null);
