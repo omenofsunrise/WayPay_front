@@ -583,7 +583,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       return true;
     }
 
-    if (investorActiveUntil < tempDate) {
+    if (!selectedInvestor.isCompany && investorActiveUntil < tempDate) {
       const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
       setValidationError(errorMessage);
       return false;
@@ -899,6 +899,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         investmentAmount: selectedEntity.investmentAmount || 0,
         balance: selectedEntity.balance || 0,
         activeUntil: selectedEntity.activeUntil,
+        isCompany: selectedEntity.isCompany,
         isPool: false
       });
       setSelectedPool(null);
