@@ -575,7 +575,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       return true;
     }
 
-    if (investorActiveUntil < tempDate) {
+    if (!selectedInvestor.isCompany && investorActiveUntil < tempDate) {
       const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
       setValidationError(errorMessage);
       return false;
