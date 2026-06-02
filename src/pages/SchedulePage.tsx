@@ -2218,7 +2218,7 @@ const CalendarGrid = styled.div<{ $columns: number }>`
 const CalendarHeaderCell = styled.div`
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 4;
   padding: 10px 12px;
   border-right: 1px solid #cbd5e1;
   border-bottom: 1px solid #cbd5e1;
@@ -2228,17 +2228,20 @@ const CalendarHeaderCell = styled.div`
   font-weight: 700;
   text-align: center;
 
+  /* Замороженный угол: столбец "Клиент / месяц" + строка заголовка */
   &:first-child {
+    position: sticky;
     left: 0;
-    z-index: 3;
+    z-index: 5;
     text-align: left;
+    box-shadow: 4px 0 6px -3px rgba(15, 23, 42, 0.18);
   }
 `;
 
 const CalendarClientCell = styled.div`
   position: sticky;
   left: 0;
-  z-index: 1;
+  z-index: 3;
   padding: 10px 12px;
   border-right: 1px solid #cbd5e1;
   border-bottom: 1px solid #cbd5e1;
@@ -2246,6 +2249,8 @@ const CalendarClientCell = styled.div`
   color: #111827;
   font-size: 13px;
   font-weight: 600;
+  /* Тень-разделитель, чтобы платежи явно уходили под закреплённый столбец */
+  box-shadow: 4px 0 6px -3px rgba(15, 23, 42, 0.12);
 `;
 
 const CalendarPaymentCell = styled.div<{ $isClickable?: boolean }>`
