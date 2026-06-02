@@ -1654,7 +1654,12 @@ const CreditPage = () => {
         aria-label="Фильтр"
         title="Фильтр"
       >
-        <ListFilter aria-hidden="true" size={20} strokeWidth={2.2} />
+        <ListFilter
+          aria-hidden="true"
+          size={20}
+          strokeWidth={2.2}
+          color={hasActiveFilters ? "#007D88" : "#111827"}
+        />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
@@ -1674,32 +1679,6 @@ const CreditPage = () => {
               </FilterModalClose>
             </FilterModalHeader>
             <FilterGrid>
-              <FilterSlot>
-                <FilterSlotLabel>№ Договора</FilterSlotLabel>
-                <CustomInput
-                  inputType="text"
-                  placeholder="Например, 19265"
-                  value={contractNumber}
-                  onChange={(e) => {
-                    setContractNumber(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
-                <CustomInput
-                  inputType="fullname"
-                  placeholder="Поиск по ФИО"
-                  value={clientFullName}
-                  onChange={(e) => {
-                    setClientFullName(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
               <FilterSlot>
                 <FilterSlotLabel>Инвестор</FilterSlotLabel>
                 <InvestorSelect
@@ -1818,6 +1797,34 @@ const CreditPage = () => {
           </FilterModalPanel>
         </FilterModalOverlay>
       )}
+
+      <QuickFilters>
+        <QuickFilterSlot>
+          <FilterSlotLabel>№ Договора</FilterSlotLabel>
+          <CustomInput
+            inputType="text"
+            placeholder="Например, 19265"
+            value={contractNumber}
+            onChange={(e) => {
+              setContractNumber(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </QuickFilterSlot>
+
+        <QuickFilterSlot>
+          <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+          <CustomInput
+            inputType="fullname"
+            placeholder="Поиск по ФИО"
+            value={clientFullName}
+            onChange={(e) => {
+              setClientFullName(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </QuickFilterSlot>
+      </QuickFilters>
 
       <SecondRaw style={{ color: "white" }}>
         <Tabs
@@ -2311,6 +2318,23 @@ const FilterGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px 16px;
+`;
+
+// Быстрые фильтры, вынесенные из модального окна прямо на страницу
+const QuickFilters = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin: 7px 0 0;
+`;
+
+const QuickFilterSlot = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 220px;
+  max-width: 320px;
 `;
 
 const FilterSlot = styled.div`
