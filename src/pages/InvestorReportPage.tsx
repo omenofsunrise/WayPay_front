@@ -166,7 +166,7 @@ const InvestorReportPage = () => {
                 fetchPayouts(Number(selectedInvestorId));
                 getCreditsByInvestorId(Number(selectedInvestorId), creditsPage, pageSize);
 
-                getContributions(Number(selectedInvestorId), {
+                getContributions(Number(selectedInvestorId), undefined, {
                     page: contributionsPage,
                     pageSize: pageSize
                 });
@@ -233,7 +233,7 @@ const InvestorReportPage = () => {
 
             // Перезагружаем данные
             if (selectedInvestorId) {
-                getContributions(Number(selectedInvestorId), {
+                getContributions(Number(selectedInvestorId), undefined, {
                     page: contributionsPage,
                     pageSize: pageSize
                 });
@@ -278,7 +278,7 @@ const InvestorReportPage = () => {
         try {
             await makeContributionAction(id, action);
             if (selectedInvestorId) {
-                getContributions(Number(selectedInvestorId), {
+                getContributions(Number(selectedInvestorId), undefined, {
                     page: contributionsPage,
                     pageSize: pageSize
                 });
