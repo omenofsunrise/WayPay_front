@@ -1,36 +1,44 @@
-import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
-import { FaPlus } from 'react-icons/fa';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import type { ClientContact, ContactType } from '../../api/types/client';
-import useClient from '../../api/hooks/useClient';
-import CustomSelect from './fields/CustomSelect';
-import CustomInput from './fields/CustomInput';
-import PhoneModalInput from './fields/PhoneModalInput';
+import React, { useEffect, useState } from "react";
+import styled from "styled-components";
+import { FaPlus } from "react-icons/fa";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import StarOutlineOutlinedIcon from "@mui/icons-material/StarOutlineOutlined";
+import StarIcon from "@mui/icons-material/Star";
+import type { ClientContact, ContactType } from "../../api/types/client";
+import useClient from "../../api/hooks/useClient";
+import CustomSelect from "./fields/CustomSelect";
+import CustomInput from "./fields/CustomInput";
+import PhoneModalInput from "./fields/PhoneModalInput";
 
 const isPhoneType = (type: ContactType) =>
-  type === 'WhatsAppPhone' || type === 'AdditionalPhone';
+  type === "WhatsAppPhone" || type === "AdditionalPhone";
+
+const normalizePhone = (value: string) => value.replace(/\D/g, "");
 
 interface ContactsEditorProps {
   clientId: number;
   contacts: ClientContact[];
   onChange?: (contacts: ClientContact[]) => void;
   readOnly?: boolean;
+  /** Текущий основной WhatsApp-номер клиента (secondPhone). */
+  mainWhatsApp?: string;
+  /** Вызывается при выборе номера как основного для WhatsApp. */
+  onSetMainWhatsApp?: (value: string) => void;
 }
 
 const CONTACT_TYPE_OPTIONS: { value: ContactType; label: string }[] = [
-  { value: 'WhatsAppPhone', label: 'WhatsApp' },
-  { value: 'AdditionalPhone', label: 'Доп. телефон' },
-  { value: 'Email', label: 'Email' },
-  { value: 'Telegram', label: 'Telegram' },
+  { value: "WhatsAppPhone", label: "WhatsApp" },
+  { value: "AdditionalPhone", label: "Доп. телефон" },
+  { value: "Email", label: "Email" },
+  { value: "Telegram", label: "Telegram" },
 ];
 
 const TYPE_LABEL: Record<ContactType, string> = {
-  WhatsAppPhone: 'WhatsApp',
-  AdditionalPhone: 'Доп. телефон',
-  Email: 'Email',
-  Telegram: 'Telegram',
+  WhatsAppPhone: "WhatsApp",
+  AdditionalPhone: "Доп. телефон",
+  Email: "Email",
+  Telegram: "Telegram",
 };
 
 const ContactsEditor: React.FC<ContactsEditorProps> = ({
@@ -38,14 +46,17 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
   contacts,
   onChange,
   readOnly = false,
+  mainWhatsApp,
+  onSetMainWhatsApp,
 }) => {
-  const { createContact, updateContact, deleteContact, getClientContacts } = useClient();
+  const { createContact, updateContact, deleteContact, getClientContacts } =
+    useClient();
   const [items, setItems] = useState<ClientContact[]>(contacts || []);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingValue, setEditingValue] = useState('');
+  const [editingValue, setEditingValue] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  const [newType, setNewType] = useState<ContactType>('WhatsAppPhone');
-  const [newValue, setNewValue] = useState('');
+  const [newType, setNewType] = useState<ContactType>("WhatsAppPhone");
+  const [newValue, setNewValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,19 +71,19 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
 
   const placeholderForType = (type: ContactType) => {
     switch (type) {
-      case 'Email':
-        return 'name@example.com';
-      case 'Telegram':
-        return '@username';
+      case "Email":
+        return "name@example.com";
+      case "Telegram":
+        return "@username";
       default:
-        return '+7...';
+        return "+7...";
     }
   };
 
   const cleanValueForSubmit = (value: string, type: ContactType): string => {
     const trimmed = value.trim();
     if (isPhoneType(type)) {
-      return trimmed.replace(/\D/g, '');
+      return trimmed.replace(/\D/g, "");
     }
     return trimmed;
   };
@@ -89,10 +100,14 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
     setBusy(true);
     setError(null);
     const payload = cleanValueForSubmit(newValue, newType);
-    const { ok, data, error: apiError } = await createContact(clientId, newType, payload);
+    const {
+      ok,
+      data,
+      error: apiError,
+    } = await createContact(clientId, newType, payload);
     if (!ok) {
       setBusy(false);
-      setError(apiError || 'Не удалось добавить контакт');
+      setError(apiError || "Не удалось добавить контакт");
       return;
     }
     if (data) {
@@ -101,14 +116,14 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
       await refreshFromServer();
     }
     setBusy(false);
-    setNewValue('');
-    setNewType('WhatsAppPhone');
+    setNewValue("");
+    setNewType("WhatsAppPhone");
     setIsAdding(false);
   };
 
   const handleSaveEdit = async (id: number) => {
     if (!editingValue.trim()) return;
-    const contact = items.find(c => c.id === id);
+    const contact = items.find((c) => c.id === id);
     if (!contact) return;
     setBusy(true);
     setError(null);
@@ -116,33 +131,39 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
     const { ok, data, error: apiError } = await updateContact(id, payload);
     if (!ok) {
       setBusy(false);
-      setError(apiError || 'Не удалось обновить контакт');
+      setError(apiError || "Не удалось обновить контакт");
       return;
     }
     if (data) {
-      commitItems(items.map(c => (c.id === id ? { ...c, value: data.value || payload } : c)));
+      commitItems(
+        items.map((c) =>
+          c.id === id ? { ...c, value: data.value || payload } : c
+        )
+      );
     } else {
-      commitItems(items.map(c => (c.id === id ? { ...c, value: payload } : c)));
+      commitItems(
+        items.map((c) => (c.id === id ? { ...c, value: payload } : c))
+      );
     }
     setBusy(false);
     setEditingId(null);
-    setEditingValue('');
+    setEditingValue("");
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Удалить контакт?')) return;
+    if (!window.confirm("Удалить контакт?")) return;
     setBusy(true);
     setError(null);
     const { ok, error: apiError } = await deleteContact(id);
     setBusy(false);
     if (!ok) {
-      setError(apiError || 'Не удалось удалить контакт');
+      setError(apiError || "Не удалось удалить контакт");
       return;
     }
-    commitItems(items.filter(c => c.id !== id));
+    commitItems(items.filter((c) => c.id !== id));
     if (editingId === id) {
       setEditingId(null);
-      setEditingValue('');
+      setEditingValue("");
     }
   };
 
@@ -153,7 +174,7 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditingValue('');
+    setEditingValue("");
   };
 
   return (
@@ -165,8 +186,14 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
       )}
 
       <List>
-        {items.map(contact => {
+        {items.map((contact) => {
           const isEditing = editingId === contact.id;
+          const canBeMainWhatsApp =
+            !!onSetMainWhatsApp && isPhoneType(contact.type);
+          const isMainWhatsApp =
+            canBeMainWhatsApp &&
+            !!mainWhatsApp &&
+            normalizePhone(contact.value) === normalizePhone(mainWhatsApp);
           const renderEditor = () => {
             if (isPhoneType(contact.type)) {
               return (
@@ -193,15 +220,46 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
             <ItemCard key={contact.id}>
               <TopRow>
                 <BadgeColumn>
-                  <TypeBadge $type={contact.type}>{TYPE_LABEL[contact.type] ?? contact.type}</TypeBadge>
+                  <TypeBadge $type={contact.type}>
+                    {TYPE_LABEL[contact.type] ?? contact.type}
+                  </TypeBadge>
                 </BadgeColumn>
 
                 <ValueColumn>
-                  {isEditing ? renderEditor() : <Value>{contact.value}</Value>}
+                  {isEditing ? (
+                    renderEditor()
+                  ) : (
+                    <ValueLine>
+                      <Value>{contact.value}</Value>
+                      {isMainWhatsApp && (
+                        <MainBadge>Основной WhatsApp</MainBadge>
+                      )}
+                    </ValueLine>
+                  )}
                 </ValueColumn>
 
                 {!isEditing && !readOnly && (
                   <InlineActions>
+                    {canBeMainWhatsApp && (
+                      <IconButton
+                        type="button"
+                        onClick={() => onSetMainWhatsApp?.(contact.value)}
+                        disabled={busy || isMainWhatsApp}
+                        title={
+                          isMainWhatsApp
+                            ? "Основной номер WhatsApp"
+                            : "Сделать основным WhatsApp"
+                        }
+                        aria-label="Сделать основным WhatsApp"
+                        $active={isMainWhatsApp}
+                      >
+                        {isMainWhatsApp ? (
+                          <StarIcon fontSize="small" />
+                        ) : (
+                          <StarOutlineOutlinedIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    )}
                     <IconButton
                       type="button"
                       onClick={() => startEdit(contact)}
@@ -234,7 +292,11 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
                   >
                     Сохранить
                   </PrimaryButton>
-                  <SecondaryButton type="button" onClick={cancelEdit} disabled={busy}>
+                  <SecondaryButton
+                    type="button"
+                    onClick={cancelEdit}
+                    disabled={busy}
+                  >
                     Отмена
                   </SecondaryButton>
                 </ActionRow>
@@ -256,7 +318,7 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
                       value={newType}
                       onChange={(e) => {
                         setNewType(e.target.value);
-                        setNewValue('');
+                        setNewValue("");
                       }}
                       placeholder="Тип"
                     />
@@ -295,8 +357,8 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
                   type="button"
                   onClick={() => {
                     setIsAdding(false);
-                    setNewValue('');
-                    setNewType('WhatsAppPhone');
+                    setNewValue("");
+                    setNewType("WhatsAppPhone");
                   }}
                   disabled={busy}
                 >
@@ -305,7 +367,11 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
               </ActionRow>
             </AddCard>
           ) : (
-            <AddButton type="button" onClick={() => setIsAdding(true)} disabled={busy || !clientId}>
+            <AddButton
+              type="button"
+              onClick={() => setIsAdding(true)}
+              disabled={busy || !clientId}
+            >
               <FaPlus size={10} />
               Добавить контакт
             </AddButton>
@@ -352,7 +418,7 @@ const ItemCard = styled.div`
 
 const AddCard = styled(ItemCard)`
   border-style: dashed;
-  border-color: #007D88;
+  border-color: #007d88;
   background: rgba(0, 125, 136, 0.04);
 `;
 
@@ -394,26 +460,26 @@ const TypeBadge = styled.span<{ $type: ContactType }>`
   font-weight: 500;
   background: ${({ $type }) => {
     switch ($type) {
-      case 'WhatsAppPhone':
-        return 'rgba(37, 211, 102, 0.14)';
-      case 'Telegram':
-        return 'rgba(34, 158, 217, 0.14)';
-      case 'Email':
-        return 'rgba(0, 125, 136, 0.14)';
+      case "WhatsAppPhone":
+        return "rgba(37, 211, 102, 0.14)";
+      case "Telegram":
+        return "rgba(34, 158, 217, 0.14)";
+      case "Email":
+        return "rgba(0, 125, 136, 0.14)";
       default:
-        return 'rgba(107, 114, 128, 0.14)';
+        return "rgba(107, 114, 128, 0.14)";
     }
   }};
   color: ${({ $type }) => {
     switch ($type) {
-      case 'WhatsAppPhone':
-        return '#0d8a3f';
-      case 'Telegram':
-        return '#1c7ab5';
-      case 'Email':
-        return '#007D88';
+      case "WhatsAppPhone":
+        return "#0d8a3f";
+      case "Telegram":
+        return "#1c7ab5";
+      case "Email":
+        return "#007D88";
       default:
-        return '#4b5563';
+        return "#4b5563";
     }
   }};
 `;
@@ -429,7 +495,7 @@ const SelectBox = styled.div`
 `;
 
 const PrimaryButton = styled.button`
-  background: #007D88;
+  background: #007d88;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -472,16 +538,20 @@ const SecondaryButton = styled.button`
   }
 `;
 
-const IconButton = styled.button<{ $danger?: boolean }>`
+const IconButton = styled.button<{ $danger?: boolean; $active?: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
   border-radius: 6px;
-  border: 1px solid ${({ $danger }) => ($danger ? '#fecaca' : '#d1d5db')};
-  background: ${({ $danger }) => ($danger ? '#fef2f2' : '#f9fafb')};
-  color: ${({ $danger }) => ($danger ? '#dc2626' : '#4b5563')};
+  border: 1px solid
+    ${({ $danger, $active }) =>
+      $danger ? "#fecaca" : $active ? "#fcd34d" : "#d1d5db"};
+  background: ${({ $danger, $active }) =>
+    $danger ? "#fef2f2" : $active ? "#fffbeb" : "#f9fafb"};
+  color: ${({ $danger, $active }) =>
+    $danger ? "#dc2626" : $active ? "#d97706" : "#4b5563"};
   cursor: pointer;
   transition: background-color 0.15s, border-color 0.15s;
   flex-shrink: 0;
@@ -492,14 +562,33 @@ const IconButton = styled.button<{ $danger?: boolean }>`
   }
 
   &:hover:not(:disabled) {
-    background: ${({ $danger }) => ($danger ? '#fee2e2' : '#f3f4f6')};
-    border-color: ${({ $danger }) => ($danger ? '#fca5a5' : '#9ca3af')};
+    background: ${({ $danger }) => ($danger ? "#fee2e2" : "#f3f4f6")};
+    border-color: ${({ $danger }) => ($danger ? "#fca5a5" : "#9ca3af")};
   }
 
   &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    opacity: ${({ $active }) => ($active ? 1 : 0.5)};
+    cursor: ${({ $active }) => ($active ? "default" : "not-allowed")};
   }
+`;
+
+const ValueLine = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+`;
+
+const MainBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(37, 211, 102, 0.14);
+  color: #0d8a3f;
+  white-space: nowrap;
 `;
 
 const AddButton = styled.button`
@@ -509,9 +598,9 @@ const AddButton = styled.button`
   gap: 6px;
   padding: 8px 14px;
   border-radius: 6px;
-  border: 1px dashed #007D88;
+  border: 1px dashed #007d88;
   background: transparent;
-  color: #007D88;
+  color: #007d88;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

@@ -6,13 +6,17 @@ export interface GuarantorRef {
   creditId: number;
 }
 
-export type ContactType = 'Email' | 'WhatsAppPhone' | 'AdditionalPhone' | 'Telegram';
+export type ContactType =
+  | "Email"
+  | "WhatsAppPhone"
+  | "AdditionalPhone"
+  | "Telegram";
 
 export const ContactType = {
-  Email: 'Email',
-  WhatsAppPhone: 'WhatsAppPhone',
-  AdditionalPhone: 'AdditionalPhone',
-  Telegram: 'Telegram',
+  Email: "Email",
+  WhatsAppPhone: "WhatsAppPhone",
+  AdditionalPhone: "AdditionalPhone",
+  Telegram: "Telegram",
 } as const;
 
 export interface ClientContact {
@@ -46,6 +50,7 @@ export interface Client {
   creditIds: number[];
   creditRestTerms: number[];
   registrationAddress: string;
+  actualAddress?: string;
   secondPhone?: string;
   hasPassportPhoto?: boolean;
   guarantors?: GuarantorRef[];
@@ -56,7 +61,7 @@ export interface ClientParams extends PaginationParams {
   FullName?: string;
   Phone?: string;
   sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
+  sortDirection?: "asc" | "desc";
 }
 
 export interface ClientForm {
@@ -67,9 +72,10 @@ export interface ClientForm {
   birthdate: string;
   docIssueDate: string;
   registrationAddress: string;
+  actualAddress?: string;
 }
 
-export interface Client extends Omit<ClientForm, 'birthdate' | 'docIssueDate'> {
+export interface Client extends Omit<ClientForm, "birthdate" | "docIssueDate"> {
   id: number;
   birthdate: Date | string;
   docIssueDate: Date | string;
@@ -107,11 +113,12 @@ export interface GuarantorForm {
   address: string;
 }
 
-export type PassportPhotoType = typeof PassportPhotoType[keyof typeof PassportPhotoType];
+export type PassportPhotoType =
+  (typeof PassportPhotoType)[keyof typeof PassportPhotoType];
 
 export const PassportPhotoType = {
   MainPage: 1,
-  RegistrationPage: 2
+  RegistrationPage: 2,
 } as const;
 
 export interface UploadPhotoResponse {

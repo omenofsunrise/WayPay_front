@@ -1214,6 +1214,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                           <SummaryLabel>Просрочка</SummaryLabel>
                           <SummaryValue style={{ color: "#B71C1C" }}>
                             {creditData.debtDays} дн.
+                            {creditData.debt != null &&
+                              creditData.debt > 0 &&
+                              ` · ${formatMoney(creditData.debt.toString())}`}
                           </SummaryValue>
                         </SummaryItemBody>
                       </SummaryCard>

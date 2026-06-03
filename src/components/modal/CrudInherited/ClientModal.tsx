@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import BaseModal, { type ModalMode } from '../BASE/modalCRUBase';
-import CustomInput from '../../ui/fields/CustomInput';
-import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
-import PhoneModalInput from '../../ui/fields/PhoneModalInput';
-import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
-import type { ClientContact, ClientForm } from '../../../api/types/client';
-import Button from '../../ui/Buttons/DarkCyanButton';
-import useClient from '../../../api/hooks/useClient';
-import { formatPhoneHref } from '../../../utils/phoneUtils';
-import PhoneLink from '../../ui/links/PhoneLink';
-import ContactsEditor from '../../ui/ContactsEditor';
+import React, { useState, useEffect } from "react";
+import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
+import CustomInput from "../../ui/fields/CustomInput";
+import ModalInfoTitle from "../../ui/Text/ModalInfoTitle";
+import PhoneModalInput from "../../ui/fields/PhoneModalInput";
+import {
+  InputContainer,
+  InputLabel,
+  InputRow,
+} from "../../Containers/InputComponents";
+import type { ClientContact, ClientForm } from "../../../api/types/client";
+import Button from "../../ui/Buttons/DarkCyanButton";
+import useClient from "../../../api/hooks/useClient";
+import { formatPhoneHref } from "../../../utils/phoneUtils";
+import PhoneLink from "../../ui/links/PhoneLink";
+import ContactsEditor from "../../ui/ContactsEditor";
 
 interface Client {
   id: number;
@@ -21,6 +25,7 @@ interface Client {
   docIssueDate?: string | Date;
   docIssueYear: number;
   registrationAddress: string;
+  actualAddress?: string;
   contacts?: ClientContact[];
 }
 
@@ -28,76 +33,97 @@ type ClientModalProps = {
   mode: ModalMode;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (clientData: Omit<ClientForm, 'doc' | 'docIssueDate'>) => Promise<boolean>;
+  onSubmit: (
+    clientData: Omit<ClientForm, "doc" | "docIssueDate">
+  ) => Promise<boolean>;
   initialData?: Client;
   createTitle?: string;
   namePlaceholder?: string;
 };
 
-const emptyClient: Omit<Client, 'id'> = {
-  fullName: '',
-  phone: '',
-  secondPhone: '',
-  doc: '',
-  birthdate: '',
-  docIssueDate: '',
+const emptyClient: Omit<Client, "id"> = {
+  fullName: "",
+  phone: "",
+  secondPhone: "",
+  doc: "",
+  birthdate: "",
+  docIssueDate: "",
   docIssueYear: 0,
-  registrationAddress: ''
+  registrationAddress: "",
+  actualAddress: "",
 };
 
-const validateDate = (dateStr: string, minAge: number, maxAge: number, isRequired: boolean): { isValid: boolean; error?: string; date?: Date } => {
+const validateDate = (
+  dateStr: string,
+  minAge: number,
+  maxAge: number,
+  isRequired: boolean
+): { isValid: boolean; error?: string; date?: Date } => {
   if (!dateStr) {
-    return { isValid: !isRequired, error: isRequired ? 'Поле обязательно для заполнения' : undefined };
+    return {
+      isValid: !isRequired,
+      error: isRequired ? "Поле обязательно для заполнения" : undefined,
+    };
   }
 
   const dateRegex = /^\d{2}\.\d{2}\.\d{4}$/;
   if (!dateRegex.test(dateStr)) {
-    return { isValid: false, error: 'Формат даты: дд.мм.гггг' };
+    return { isValid: false, error: "Формат даты: дд.мм.гггг" };
   }
 
-  const [day, month, year] = dateStr.split('.').map(Number);
-  
+  const [day, month, year] = dateStr.split(".").map(Number);
+
   const date = new Date(year, month - 1, day);
   if (
     date.getFullYear() !== year ||
     date.getMonth() !== month - 1 ||
     date.getDate() !== day
   ) {
-    return { isValid: false, error: 'Некорректная дата' };
+    return { isValid: false, error: "Некорректная дата" };
   }
 
   const today = new Date();
-  const age = today.getFullYear() - year - 
-    (today.getMonth() < month - 1 || 
-     (today.getMonth() === month - 1 && today.getDate() < day) ? 1 : 0);
+  const age =
+    today.getFullYear() -
+    year -
+    (today.getMonth() < month - 1 ||
+    (today.getMonth() === month - 1 && today.getDate() < day)
+      ? 1
+      : 0);
 
   if (age < minAge) {
-    return { isValid: false, error: `Возраст должен быть не менее ${minAge} лет` };
+    return {
+      isValid: false,
+      error: `Возраст должен быть не менее ${minAge} лет`,
+    };
   }
 
   if (age > maxAge) {
-    return { isValid: false, error: `Возраст должен быть не более ${maxAge} лет` };
+    return {
+      isValid: false,
+      error: `Возраст должен быть не более ${maxAge} лет`,
+    };
   }
 
   return { isValid: true, date };
 };
 
 const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return '';
-  
+  if (!dateString) return "";
+
   if (/^\d{2}\.\d{2}\.\d{4}$/.test(dateString)) {
     return dateString;
   }
-  
+
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
-    return '';
+    return "";
   }
-  
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
-  
+
   return `${day}.${month}.${year}`;
 };
 
@@ -108,85 +134,97 @@ const ClientModal: React.FC<ClientModalProps> = ({
   onSubmit,
   initialData = {
     id: 0,
-    fullName: '',
-    phone: '',
-    secondPhone: '',
-    doc: '',
+    fullName: "",
+    phone: "",
+    secondPhone: "",
+    doc: "",
     birthdate: null,
     docIssueDate: null,
     docIssueYear: 0,
-    registrationAddress: ''
+    registrationAddress: "",
+    actualAddress: "",
   },
   createTitle,
-  namePlaceholder = 'ФИО клиента',
+  namePlaceholder = "ФИО клиента",
 }) => {
-  const [formData, setFormData] = useState<Omit<Client, 'id'>>(
-    mode === 'create' ? emptyClient : {
-      fullName: initialData?.fullName || '',
-      phone: initialData?.phone || '',
-      secondPhone: initialData?.secondPhone || '',
-      doc: initialData?.doc || '',
-      birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
-      docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : '',
-      docIssueYear: initialData?.docIssueYear || 0,
-      registrationAddress: initialData?.registrationAddress || ''
-    }
+  const [formData, setFormData] = useState<Omit<Client, "id">>(
+    mode === "create"
+      ? emptyClient
+      : {
+          fullName: initialData?.fullName || "",
+          phone: initialData?.phone || "",
+          secondPhone: initialData?.secondPhone || "",
+          doc: initialData?.doc || "",
+          birthdate: initialData?.birthdate
+            ? formatDate(initialData.birthdate.toString())
+            : "",
+          docIssueDate: initialData?.docIssueDate
+            ? formatDate(initialData.docIssueDate.toString())
+            : "",
+          docIssueYear: initialData?.docIssueYear || 0,
+          registrationAddress: initialData?.registrationAddress || "",
+          actualAddress: initialData?.actualAddress || "",
+        }
   );
 
-  const { updateClientDoc, updateClientDocIssueDate, checkClientExists  } = useClient();
-  
+  const { updateClientDoc, updateClientDocIssueDate, checkClientExists } =
+    useClient();
+
   const [validationErrors, setValidationErrors] = useState({
     fullName: false,
     phone: false,
     birthdate: false,
     doc: false,
     docIssueDate: false,
-    registrationAddress: false
+    registrationAddress: false,
   });
-  
+
   const validatePhone = async (phone: string, initialPhone: string) => {
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
-    if (phone === initialData.phone)
-      return '';
+    if (phone === initialData.phone) return "";
 
     if (!phoneRegex.test(phone.trim())) {
-      return 'Введите корректный телефон';
-    }
-    
-    if (phone.trim().length === 0) {
-      return 'Поле обязательно для заполнения';
+      return "Введите корректный телефон";
     }
 
-    const cleanPhone = phone.replace(/\D/g, '');
+    if (phone.trim().length === 0) {
+      return "Поле обязательно для заполнения";
+    }
+
+    const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length === 11) {
       try {
         const exists = await checkClientExists(phone);
-        if (exists && (mode === 'create' || (mode === 'edit' && phone !== initialData.phone))) {
-          return 'Клиент с таким номером телефона уже есть';
+        if (
+          exists &&
+          (mode === "create" ||
+            (mode === "edit" && phone !== initialData.phone))
+        ) {
+          return "Клиент с таким номером телефона уже есть";
         }
       } catch (error) {
-        console.error('Error checking phone:', error);
-        return 'Ошибка проверки номера телефона';
+        console.error("Error checking phone:", error);
+        return "Ошибка проверки номера телефона";
       }
     }
 
-    return '';
+    return "";
   };
 
   const handleClose = () => {
-      if (mode === 'create') {
-          setFormData(emptyClient);
-      }
-      onClose();
+    if (mode === "create") {
+      setFormData(emptyClient);
+    }
+    onClose();
   };
 
   const [errorMessages, setErrorMessages] = useState({
-    fullName: '',
-    phone: '',
-    birthdate: '',
-    doc: '',
-    docIssueDate: '',
-    registrationAddress: ''
+    fullName: "",
+    phone: "",
+    birthdate: "",
+    doc: "",
+    docIssueDate: "",
+    registrationAddress: "",
   });
 
   const [touchedFields, setTouchedFields] = useState({
@@ -195,71 +233,24 @@ const ClientModal: React.FC<ClientModalProps> = ({
     birthdate: false,
     doc: false,
     docIssueDate: false,
-    registrationAddress: false
+    registrationAddress: false,
   });
 
   const [isEditingPassport, setIsEditingPassport] = useState(false);
   const [passportEditData, setPassportEditData] = useState({
-    doc: initialData?.doc || '',
-    docIssueDate: initialData?.docIssueDate || ''
+    doc: initialData?.doc || "",
+    docIssueDate: initialData?.docIssueDate || "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError, setApiError] = useState('');
+  const [apiError, setApiError] = useState("");
 
   useEffect(() => {
     if (isOpen) {
-      if (mode === 'create') {
-            setFormData(emptyClient);
-            setIsEditingPassport(false);
-        
-        setValidationErrors({
-          fullName: false,
-          phone: false,
-          birthdate: false,
-          doc: false,
-          docIssueDate: false,
-          registrationAddress: false,
-        });
-        
-        setErrorMessages({
-          fullName: '',
-          phone: '',
-          birthdate: '',
-          doc: '',
-          docIssueDate: '',
-          registrationAddress: ''
-        });
-        
-        setTouchedFields({
-          fullName: false,
-          phone: false,
-          birthdate: false,
-          doc: false,
-          docIssueDate: false,
-          registrationAddress: false
-        });
-        }
-      if (mode !== 'create') {
-        setFormData({
-          fullName: initialData?.fullName || '',
-          phone: initialData?.phone || '',
-          secondPhone: initialData?.secondPhone || '',
-          doc: initialData?.doc || '',
-          birthdate: initialData?.birthdate ? formatDate(initialData.birthdate.toString()) : '',
-          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : 
-          initialData?.docIssueYear ? `01.01.${initialData.docIssueYear}` : '',
-          docIssueYear: initialData?.docIssueYear || 0,
-          registrationAddress: initialData?.registrationAddress || '',
-        });
-        
-        setPassportEditData({
-          doc: initialData?.doc || '',
-          docIssueDate: initialData?.docIssueDate ? formatDate(initialData.docIssueDate.toString()) : ''
-        });
-        
+      if (mode === "create") {
+        setFormData(emptyClient);
         setIsEditingPassport(false);
-        
+
         setValidationErrors({
           fullName: false,
           phone: false,
@@ -268,71 +259,140 @@ const ClientModal: React.FC<ClientModalProps> = ({
           docIssueDate: false,
           registrationAddress: false,
         });
-        
+
         setErrorMessages({
-          fullName: '',
-          phone: '',
-          birthdate: '',
-          doc: '',
-          docIssueDate: '',
-          registrationAddress: ''
+          fullName: "",
+          phone: "",
+          birthdate: "",
+          doc: "",
+          docIssueDate: "",
+          registrationAddress: "",
         });
-        
+
         setTouchedFields({
           fullName: false,
           phone: false,
           birthdate: false,
           doc: false,
           docIssueDate: false,
-          registrationAddress: false
+          registrationAddress: false,
         });
-        
-        setApiError('');
+      }
+      if (mode !== "create") {
+        setFormData({
+          fullName: initialData?.fullName || "",
+          phone: initialData?.phone || "",
+          secondPhone: initialData?.secondPhone || "",
+          doc: initialData?.doc || "",
+          birthdate: initialData?.birthdate
+            ? formatDate(initialData.birthdate.toString())
+            : "",
+          docIssueDate: initialData?.docIssueDate
+            ? formatDate(initialData.docIssueDate.toString())
+            : initialData?.docIssueYear
+            ? `01.01.${initialData.docIssueYear}`
+            : "",
+          docIssueYear: initialData?.docIssueYear || 0,
+          registrationAddress: initialData?.registrationAddress || "",
+          actualAddress: initialData?.actualAddress || "",
+        });
+
+        setPassportEditData({
+          doc: initialData?.doc || "",
+          docIssueDate: initialData?.docIssueDate
+            ? formatDate(initialData.docIssueDate.toString())
+            : "",
+        });
+
+        setIsEditingPassport(false);
+
+        setValidationErrors({
+          fullName: false,
+          phone: false,
+          birthdate: false,
+          doc: false,
+          docIssueDate: false,
+          registrationAddress: false,
+        });
+
+        setErrorMessages({
+          fullName: "",
+          phone: "",
+          birthdate: "",
+          doc: "",
+          docIssueDate: "",
+          registrationAddress: "",
+        });
+
+        setTouchedFields({
+          fullName: false,
+          phone: false,
+          birthdate: false,
+          doc: false,
+          docIssueDate: false,
+          registrationAddress: false,
+        });
+
+        setApiError("");
       }
     }
   }, [isOpen, mode]);
 
   useEffect(() => {
-    if (mode === 'view') return;
+    if (mode === "view") return;
 
     const validateForm = async () => {
       const newErrorMessages = {
-        fullName: '',
-        phone: '',
-        birthdate: '',
-        doc: '',
-        docIssueDate: '',
-        registrationAddress: ''
+        fullName: "",
+        phone: "",
+        birthdate: "",
+        doc: "",
+        docIssueDate: "",
+        registrationAddress: "",
       };
 
       if (formData.fullName.trim().split(/\s+/).length < 2) {
-        newErrorMessages.fullName = 'Укажите фио полностью';
+        newErrorMessages.fullName = "Укажите фио полностью";
       } else if (formData.fullName.trim().length === 0) {
-        newErrorMessages.fullName = 'Поле обязательно для заполнения';
+        newErrorMessages.fullName = "Поле обязательно для заполнения";
       }
 
-      newErrorMessages.phone = await validatePhone(formData.phone, initialData.phone);
-      
-      const birthdateValidation = validateDate(formData.birthdate.toString() || '', 18, 100, true);
+      newErrorMessages.phone = await validatePhone(
+        formData.phone,
+        initialData.phone
+      );
+
+      const birthdateValidation = validateDate(
+        formData.birthdate.toString() || "",
+        18,
+        100,
+        true
+      );
       if (!birthdateValidation.isValid) {
-        newErrorMessages.birthdate = birthdateValidation.error || '';
+        newErrorMessages.birthdate = birthdateValidation.error || "";
       }
 
-      if (mode === 'create' || isEditingPassport) {
+      if (mode === "create" || isEditingPassport) {
         const docRegex = /^\d{4}\s\d{6}$/;
         if (!docRegex.test(formData.doc.trim())) {
-          newErrorMessages.doc = 'Введите документ';
+          newErrorMessages.doc = "Введите документ";
         } else if (formData.doc.trim().length === 0) {
-          newErrorMessages.doc = 'Поле обязательно для заполнения';
+          newErrorMessages.doc = "Поле обязательно для заполнения";
         }
 
-        const docIssueValidation = validateDate(formData.docIssueDate.toString(), 0, 90, false);
+        const docIssueValidation = validateDate(
+          formData.docIssueDate.toString(),
+          0,
+          90,
+          false
+        );
         if (!docIssueValidation.isValid && docIssueValidation.error) {
           newErrorMessages.docIssueDate = docIssueValidation.error;
         } else if (docIssueValidation.date) {
           const today = new Date();
           if (docIssueValidation.date > today) {
-            newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+            newErrorMessages.docIssueDate =
+              "Дата выдачи не может быть в будущем";
           }
         }
       }
@@ -345,7 +405,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         birthdate: !!newErrorMessages.birthdate,
         doc: !!newErrorMessages.doc,
         docIssueDate: !!newErrorMessages.docIssueDate,
-        registrationAddress: !!newErrorMessages.registrationAddress
+        registrationAddress: !!newErrorMessages.registrationAddress,
       };
 
       setValidationErrors(errors);
@@ -355,21 +415,23 @@ const ClientModal: React.FC<ClientModalProps> = ({
   }, [formData, mode, isEditingPassport]);
 
   const isSaveDisabled = () => {
-    if (mode === 'view') return true;
+    if (mode === "view") return true;
 
     const hasErrors = Object.values(validationErrors).some(Boolean);
     if (hasErrors) return true;
 
-    if (mode === 'edit') {
-      const isChanged = (
+    if (mode === "edit") {
+      const isChanged =
         formData.fullName !== initialData.fullName ||
         formData.phone !== initialData.phone ||
         formData.birthdate !== initialData.birthdate ||
-        (isEditingPassport && (
-          formData.doc !== initialData.doc ||
-          formData.docIssueDate !== initialData.docIssueDate
-        ))
-      );
+        formData.registrationAddress !==
+          (initialData.registrationAddress || "") ||
+        formData.actualAddress !== (initialData.actualAddress || "") ||
+        (formData.secondPhone || "") !== (initialData.secondPhone || "") ||
+        (isEditingPassport &&
+          (formData.doc !== initialData.doc ||
+            formData.docIssueDate !== initialData.docIssueDate));
       return !isChanged;
     }
 
@@ -378,14 +440,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     setTouchedFields({
       fullName: true,
       phone: true,
       birthdate: true,
       doc: true,
       docIssueDate: true,
-      registrationAddress: true
+      registrationAddress: true,
     });
 
     const isValid = !Object.values(validationErrors).some(Boolean);
@@ -394,12 +456,13 @@ const ClientModal: React.FC<ClientModalProps> = ({
     }
 
     setIsSubmitting(true);
-    setApiError('');
+    setApiError("");
 
     try {
-      const formattedBirthdate = typeof formData.birthdate === 'string' 
-        ? formData.birthdate
-        : formatDate(formData.birthdate.toString());
+      const formattedBirthdate =
+        typeof formData.birthdate === "string"
+          ? formData.birthdate
+          : formatDate(formData.birthdate.toString());
 
       const submitData = {
         fullName: formData.fullName,
@@ -408,73 +471,79 @@ const ClientModal: React.FC<ClientModalProps> = ({
         birthdate: formattedBirthdate,
         docIssueDate: formData.docIssueDate,
         doc: formData.doc,
-        registrationAddress: formData.registrationAddress
+        registrationAddress: formData.registrationAddress,
+        actualAddress: formData.actualAddress,
       };
 
       const success = await onSubmit(submitData);
-      
+
       if (success) {
         onClose();
       }
       setIsSubmitting(false);
     } catch (error: any) {
-      console.error('Ошибка при сохранении клиента:', error);
-      setApiError(error.message || 'Произошла ошибка при сохранении клиента');
+      console.error("Ошибка при сохранении клиента:", error);
+      setApiError(error.message || "Произошла ошибка при сохранении клиента");
       setIsSubmitting(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    setTouchedFields(prev => ({
+    setTouchedFields((prev) => ({
       ...prev,
-      [name]: true
+      [name]: true,
     }));
   };
 
   const handlePassportEditStart = () => {
     setIsEditingPassport(true);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      doc: '',
-      docIssueDate: ''
+      doc: "",
+      docIssueDate: "",
     }));
   };
 
   const handlePassportEditCancel = () => {
     setIsEditingPassport(false);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       doc: passportEditData.doc,
-      docIssueDate: passportEditData.docIssueDate
+      docIssueDate: passportEditData.docIssueDate,
     }));
-    setValidationErrors(prev => ({
+    setValidationErrors((prev) => ({
       ...prev,
       doc: false,
-      docIssueDate: false
+      docIssueDate: false,
     }));
-    setErrorMessages(prev => ({
+    setErrorMessages((prev) => ({
       ...prev,
-      doc: '',
-      docIssueDate: ''
+      doc: "",
+      docIssueDate: "",
     }));
   };
 
   const handlePassportSave = async () => {
     const docRegex = /^\d{4}\s\d{6}$/;
-    const docIssueValidation = validateDate(formData.docIssueDate.toString(), 0, 90, false);
-    
+    const docIssueValidation = validateDate(
+      formData.docIssueDate.toString(),
+      0,
+      90,
+      false
+    );
+
     const newErrorMessages = {
-      doc: '',
-      docIssueDate: ''
+      doc: "",
+      docIssueDate: "",
     };
 
     if (!docRegex.test(formData.doc.trim())) {
-      newErrorMessages.doc = 'Введите документ';
+      newErrorMessages.doc = "Введите документ";
     }
 
     if (!docIssueValidation.isValid && docIssueValidation.error) {
@@ -482,53 +551,56 @@ const ClientModal: React.FC<ClientModalProps> = ({
     } else if (docIssueValidation.date) {
       const today = new Date();
       if (docIssueValidation.date > today) {
-        newErrorMessages.docIssueDate = 'Дата выдачи не может быть в будущем';
+        newErrorMessages.docIssueDate = "Дата выдачи не может быть в будущем";
       }
     }
 
     if (newErrorMessages.doc || newErrorMessages.docIssueDate) {
-      setErrorMessages(prev => ({
+      setErrorMessages((prev) => ({
         ...prev,
-        ...newErrorMessages
+        ...newErrorMessages,
       }));
-      setValidationErrors(prev => ({
+      setValidationErrors((prev) => ({
         ...prev,
         doc: !!newErrorMessages.doc,
-        docIssueDate: !!newErrorMessages.docIssueDate
+        docIssueDate: !!newErrorMessages.docIssueDate,
       }));
       return;
     }
 
     setIsSubmitting(true);
-    setApiError('');
+    setApiError("");
 
     try {
       if (initialData.id) {
         await updateClientDoc(initialData.id, formData.doc);
-        
+
         if (formData.docIssueDate) {
-          await updateClientDocIssueDate(initialData.id, new Date(formData.docIssueDate));
+          await updateClientDocIssueDate(
+            initialData.id,
+            new Date(formData.docIssueDate)
+          );
         }
-        
+
         setPassportEditData({
           doc: formData.doc,
-          docIssueDate: formData.docIssueDate
+          docIssueDate: formData.docIssueDate,
         });
         setIsEditingPassport(false);
-        
-        setFormData(prev => ({
+
+        setFormData((prev) => ({
           ...prev,
           doc: formData.doc,
-          docIssueDate: formData.docIssueDate
+          docIssueDate: formData.docIssueDate,
         }));
       }
     } catch (error) {
-      console.error('Failed to update passport:', error);
-      setApiError('Ошибка при сохранении паспортных данных');
-      setErrorMessages(prev => ({
+      console.error("Failed to update passport:", error);
+      setApiError("Ошибка при сохранении паспортных данных");
+      setErrorMessages((prev) => ({
         ...prev,
-        doc: 'Ошибка при сохранении',
-        docIssueDate: 'Ошибка при сохранении'
+        doc: "Ошибка при сохранении",
+        docIssueDate: "Ошибка при сохранении",
       }));
     } finally {
       setIsSubmitting(false);
@@ -537,10 +609,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const getTitle = () => {
     switch (mode) {
-      case 'create': return createTitle ?? 'Создание';
-      case 'edit': return 'Редактирование';
-      case 'view': return 'Просмотр';
-      default: return 'Клиент';
+      case "create":
+        return createTitle ?? "Создание";
+      case "edit":
+        return "Редактирование";
+      case "view":
+        return "Просмотр";
+      default:
+        return "Клиент";
     }
   };
 
@@ -557,18 +633,23 @@ const ClientModal: React.FC<ClientModalProps> = ({
       mode={mode}
     >
       <form onSubmit={handleSubmit}>
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div
+          style={{
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+          }}
+        >
           {apiError && (
-            <div style={{ color: 'red', marginBottom: '15px' }}>
-              {apiError}
-            </div>
+            <div style={{ color: "red", marginBottom: "15px" }}>{apiError}</div>
           )}
-          
+
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
           <InputRow>
             <InputLabel>Телефон:</InputLabel>
             <InputContainer>
-              {mode === 'view' ? (
+              {mode === "view" ? (
                 <PhoneLink href={formatPhoneHref(formData.phone)}>
                   {formData.phone}
                 </PhoneLink>
@@ -578,9 +659,11 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   placeholder="Телефон"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  disabled={mode === 'view'}
+                  disabled={mode === "view"}
                   hasError={touchedFields.phone && validationErrors.phone}
-                  errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
+                  errorMessage={
+                    touchedFields.phone ? errorMessages.phone : undefined
+                  }
                 />
               )}
             </InputContainer>
@@ -595,13 +678,15 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 placeholder={namePlaceholder}
                 value={formData.fullName}
                 onChange={handleInputChange}
-                disabled={mode === 'view'}
+                disabled={mode === "view"}
                 hasError={touchedFields.fullName && validationErrors.fullName}
-                errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
+                errorMessage={
+                  touchedFields.fullName ? errorMessages.fullName : undefined
+                }
               />
             </InputContainer>
           </InputRow>
-          
+
           <InputRow>
             <InputLabel>Дата рождения:</InputLabel>
             <InputContainer>
@@ -609,44 +694,49 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 name="birthdate"
                 inputType="date"
                 placeholder="дд.мм.гггг"
-                value={formData.birthdate.toString() || ''}
+                value={formData.birthdate.toString() || ""}
                 onChange={handleInputChange}
-                disabled={mode === 'view'}
+                disabled={mode === "view"}
                 hasError={touchedFields.birthdate && validationErrors.birthdate}
-                errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
+                errorMessage={
+                  touchedFields.birthdate ? errorMessages.birthdate : undefined
+                }
               />
             </InputContainer>
           </InputRow>
-          
+
           <ModalInfoTitle>Паспортные данные</ModalInfoTitle>
-          
+
           <InputRow>
             <InputLabel>Паспорт:</InputLabel>
             <InputContainer>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div
+                style={{ display: "flex", gap: "10px", alignItems: "center" }}
+              >
                 <CustomInput
                   name="doc"
                   inputType="doc"
                   placeholder="Серия и номер"
                   value={formData.doc}
                   onChange={handleInputChange}
-                  disabled={mode === 'view' || (mode === 'edit' && !isEditingPassport)}
+                  disabled={
+                    mode === "view" || (mode === "edit" && !isEditingPassport)
+                  }
                   hasError={touchedFields.doc && validationErrors.doc}
-                  errorMessage={touchedFields.doc ? errorMessages.doc : undefined}
+                  errorMessage={
+                    touchedFields.doc ? errorMessages.doc : undefined
+                  }
                   style={{ flex: 1 }}
                 />
-                {mode === 'edit' && !isEditingPassport && (
-                  <Button
-                    type="button"
-                    onClick={handlePassportEditStart}
-                  >
+                {mode === "edit" && !isEditingPassport && (
+                  <Button type="button" onClick={handlePassportEditStart}>
                     Изменить
                   </Button>
                 )}
               </div>
             </InputContainer>
           </InputRow>
-          
+
           {/* <InputRow>
             <InputLabel>Дата выдачи:</InputLabel>
             <InputContainer>
@@ -692,9 +782,30 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 placeholder="г. Грозный, ул. Примерная, д. 1, кв. 1"
                 value={formData.registrationAddress}
                 onChange={handleInputChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.registrationAddress && validationErrors.registrationAddress}
-                errorMessage={touchedFields.registrationAddress ? errorMessages.registrationAddress : undefined}
+                disabled={mode === "view"}
+                hasError={
+                  touchedFields.registrationAddress &&
+                  validationErrors.registrationAddress
+                }
+                errorMessage={
+                  touchedFields.registrationAddress
+                    ? errorMessages.registrationAddress
+                    : undefined
+                }
+              />
+            </InputContainer>
+          </InputRow>
+
+          <InputRow>
+            <InputLabel>Фактический адрес:</InputLabel>
+            <InputContainer>
+              <CustomInput
+                name="actualAddress"
+                inputType="text"
+                placeholder="г. Грозный, ул. Примерная, д. 1, кв. 1"
+                value={formData.actualAddress || ""}
+                onChange={handleInputChange}
+                disabled={mode === "view"}
               />
             </InputContainer>
           </InputRow>
@@ -706,21 +817,25 @@ const ClientModal: React.FC<ClientModalProps> = ({
               <PhoneModalInput
                 name="secondPhone"
                 placeholder="WhatsApp"
-                value={formData.secondPhone || ''}
+                value={formData.secondPhone || ""}
                 onChange={handleInputChange}
-                disabled={mode === 'view'}
+                disabled={mode === "view"}
               />
             </InputContainer>
           </InputRow>
 
-          {initialData.id > 0 && mode !== 'create' && (
-            <InputRow style={{ alignItems: 'flex-start' }}>
+          {initialData.id > 0 && mode !== "create" && (
+            <InputRow style={{ alignItems: "flex-start" }}>
               <InputLabel>Контакты:</InputLabel>
               <InputContainer>
                 <ContactsEditor
                   clientId={initialData.id}
                   contacts={initialData.contacts || []}
-                  readOnly={mode === 'view'}
+                  readOnly={mode === "view"}
+                  mainWhatsApp={formData.secondPhone}
+                  onSetMainWhatsApp={(value) =>
+                    setFormData((prev) => ({ ...prev, secondPhone: value }))
+                  }
                 />
               </InputContainer>
             </InputRow>
