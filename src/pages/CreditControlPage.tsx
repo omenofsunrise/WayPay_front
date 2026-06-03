@@ -1,8 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ListFilter } from "lucide-react";
-import CustomTitle from "../components/ui/Text/CustomTitle";
-import TitleField from "../components/ui/Layouts/TitleLayout";
-import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
   type RowStyle,
@@ -17,7 +14,6 @@ import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import { useNavigate } from "react-router-dom";
 import useCredit from "../api/hooks/useCredit";
 import type { Credit } from "../api/types/credit";
-import useExport from "../api/hooks/useExport";
 import creditService from "../api/services/creditService";
 import { formatDate } from "../utils/dateFormatter";
 import NewPaymentModal from "../components/modal/NewPaymentModal";
@@ -154,7 +150,6 @@ const CreditControlPage = () => {
     6: "income_rubles",
   };
   const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
-  const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
     error,
@@ -773,70 +768,6 @@ const CreditControlPage = () => {
     },
   ];
 
-  const handleExport = async () => {
-    try {
-      await exportData({
-        fetchData: async (page, pageSize) => {
-          const params = {
-            page,
-            pageSize,
-            creditId: contractNumber || undefined,
-            clientFullname: clientFullName || undefined,
-            investorNickname: investorName || undefined,
-            dateFrom: fromDate ? new Date(fromDate) : undefined,
-            dateTo: toDate ? new Date(toDate) : undefined,
-            rublesIncomeFrom: rublesIncomeFrom
-              ? Number(rublesIncomeFrom)
-              : undefined,
-            rublesIncomeTo: rublesIncomeTo ? Number(rublesIncomeTo) : undefined,
-            percentsIncomeFrom: percentsIncomeFrom
-              ? Number(percentsIncomeFrom)
-              : undefined,
-            percentsIncomeTo: percentsIncomeTo
-              ? Number(percentsIncomeTo)
-              : undefined,
-            sortBy:
-              sortConfig.key !== null
-                ? columnToApiSortMap[sortConfig.key]
-                : undefined,
-            sortDirection: sortConfig.direction,
-            ...filters,
-          };
-
-          const result = await creditService.getCredits(params);
-          return {
-            items: Array.isArray(result.items) ? result.items : [],
-            totalCount: result.totalCount || 0,
-          };
-        },
-        fileName: "credits_control_export",
-        transformData: (credit) => {
-          const creditDate =
-            typeof credit.creditDate === "string"
-              ? new Date(credit.creditDate)
-              : credit.creditDate;
-
-          return {
-            "Номер договора": credit.id,
-            "Дата договора": creditDate ? formatDate(creditDate) : "Нет данных",
-            "ФИО сотрудника": credit.employeeName || "Нет данных",
-            "Стоимость товара": formatMoney(
-              credit.totalClean?.toString() || "0"
-            ),
-            "Доход в рублях": formatMoney(
-              credit.incomeRubles?.toString() || "0"
-            ),
-            "Доход в %": `${credit.incomePercents || 0}%`,
-            Начислено: formatMoney(credit.accured?.toString() || "0"),
-          };
-        },
-      });
-    } catch (error) {
-      console.error("Export failed:", error);
-      alert("Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.");
-    }
-  };
-
   const handleRowClick = (rowData: any[], rowIndex: number) => {
     const [_, id] = rowData;
     const credit = displayedCredits.find((c) => c.id === Number(id));
@@ -1080,22 +1011,6 @@ const CreditControlPage = () => {
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
       </FilterIconButton>
-
-      <TitleField>
-        <CustomTitle>Контроль договоров</CustomTitle>
-
-        <HeaderControls>
-          <RightControls style={{ marginTop: "10px" }}>
-            <ExportButton
-              onClick={handleExport}
-              isExporting={isExporting}
-              exportProgress={exportProgress}
-            >
-              Экспорт
-            </ExportButton>
-          </RightControls>
-        </HeaderControls>
-      </TitleField>
 
       {isFilterModalOpen && (
         <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
@@ -1539,19 +1454,6 @@ const FilterBadge = styled.span`
   display: flex;
   align-items: center;
   justify-content: center;
-`;
-
-const HeaderControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-left: auto;
-`;
-
-const RightControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
 `;
 
 const FilterField = styled.div`
