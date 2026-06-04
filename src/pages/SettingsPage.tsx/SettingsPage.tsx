@@ -12,6 +12,7 @@ import SenderPage from './SenderPage';
 import AboutPage from '../AboutPage';
 import WhatsAppSettingsPage from './WhatsAppSettingsPage';
 import CalculatorSettingsPage from './CalculatorSettingsPage';
+import PaymentPlacePage from './PaymentPlacePage';
 
 const SettingsPage = () => {
     const [activeTab, setActiveTab] = useState<string>(() => {
@@ -59,6 +60,7 @@ const SettingsPage = () => {
         tabs.push(
             { id: "Данные компании", label: "Данные компании" },
             { id: "Отделения", label: "Отделения" },
+            { id: "Пункты приёма", label: "Пункты приёма" },
             { id: "Рассылка", label: "Рассылка" },
             { id: "WhatsApp", label: "WhatsApp" },
             { id: "Калькулятор", label: "Калькулятор" },
@@ -97,6 +99,8 @@ const SettingsPage = () => {
                 return <CompanyPage />;
             case "Отделения":
                 return <BranchPage />;
+            case "Пункты приёма":
+                return <PaymentPlacePage />;
             case "Рассылка":
                 return <SenderPage />;
             case "WhatsApp":
