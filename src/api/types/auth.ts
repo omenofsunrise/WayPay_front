@@ -1,21 +1,22 @@
-export type Permission = 
-  | 'CREATE_CREDITS'
-  | 'DELETE_CREDITS'
-  | 'EDIT_CREDITS'
-  | 'VIEW_CREDITS'
-  | 'VIEW_ANALYTIC'
-  | 'VIEW_ALL_CREDITS'
-  | 'FORBID_CREATING_CREDITS'
-  | 'FORBID_CREATING_PAYMENTS'
-  | 'FORBID_DELETING_PAYMENTS'
-  | 'FORBID_CREDIT_APPLICATIONS'
-  | 'MANAGE_ACCOUNTING'
-;
+export type Permission =
+  | "CREATE_CREDITS"
+  | "DELETE_CREDITS"
+  | "EDIT_CREDITS"
+  | "VIEW_CREDITS"
+  | "VIEW_ANALYTIC"
+  | "VIEW_ALL_CREDITS"
+  | "FORBID_CREATING_CREDITS"
+  | "FORBID_CREATING_PAYMENTS"
+  | "FORBID_DELETING_PAYMENTS"
+  | "FORBID_CREDIT_APPLICATIONS"
+  | "MANAGE_ACCOUNTING";
 
-export type Role = 'админ' | 'сотрудник' | 'директор' | 'суперадмин';
+export type Role = "админ" | "сотрудник" | "директор" | "суперадмин";
+
+export type UserType = "employee" | "payment_place";
 
 export interface AuthInfo {
-  type: 'employee';
+  type: UserType;
   hasPin: boolean;
   employee: {
     id: number;

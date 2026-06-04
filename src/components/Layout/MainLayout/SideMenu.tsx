@@ -1,27 +1,27 @@
-import styled from 'styled-components';
-import arrow from '../../../assets/ui/arrow.svg';
-import logo from '../../../assets/logos/vectorLogo.svg';
-import analyticsIcon from '../../../assets/ui/MenuItems/analitic.svg';
-import contractsIcon from '../../../assets/ui/MenuItems/credits.svg';
-import clientsIcon from '../../../assets/ui/MenuItems/clients.svg';
-import paymentsIcon from '../../../assets/ui/MenuItems/payments.svg';
-import investorsIcon from '../../../assets/ui/MenuItems/investors.svg';
-import referencesIcon from '../../../assets/ui/MenuItems/catalogs.svg';
-import financeIcon from '../../../assets/ui/MenuItems/finance.svg';
-import profileIcon from '../../../assets/ui/MenuItems/profile.svg';
-import blackCatalogIcon from '../../../assets/ui/MenuItems/oldclients.svg';
-import { useState, useContext, useEffect } from 'react';
-import { SideMenuContext } from './SideMenuContext';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../../сontext/AuthContext';
-import { getAutoCollapseMenuSetting } from '../../modal/SettingsModal';
-import { FILE_BASE_URL } from '../../../api/client';
-import { getInitials, generateAvatar } from '../../../utils/avatarUtils';
-import { authStorage } from '../../../api/utils/auth-storage';
-import useCompany from '../../../api/hooks/useCompany';
-import React from 'react';
-import type { CommonInfo } from '../../../api/types/company';
-import { formatDate, getLicenseDateColor } from '../../../utils/dateFormatter';
+import styled from "styled-components";
+import arrow from "../../../assets/ui/arrow.svg";
+import logo from "../../../assets/logos/vectorLogo.svg";
+import analyticsIcon from "../../../assets/ui/MenuItems/analitic.svg";
+import contractsIcon from "../../../assets/ui/MenuItems/credits.svg";
+import clientsIcon from "../../../assets/ui/MenuItems/clients.svg";
+import paymentsIcon from "../../../assets/ui/MenuItems/payments.svg";
+import investorsIcon from "../../../assets/ui/MenuItems/investors.svg";
+import referencesIcon from "../../../assets/ui/MenuItems/catalogs.svg";
+import financeIcon from "../../../assets/ui/MenuItems/finance.svg";
+import profileIcon from "../../../assets/ui/MenuItems/profile.svg";
+import blackCatalogIcon from "../../../assets/ui/MenuItems/oldclients.svg";
+import { useState, useContext, useEffect } from "react";
+import { SideMenuContext } from "./SideMenuContext";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../../сontext/AuthContext";
+import { getAutoCollapseMenuSetting } from "../../modal/SettingsModal";
+import { FILE_BASE_URL } from "../../../api/client";
+import { getInitials, generateAvatar } from "../../../utils/avatarUtils";
+import { authStorage } from "../../../api/utils/auth-storage";
+import useCompany from "../../../api/hooks/useCompany";
+import React from "react";
+import type { CommonInfo } from "../../../api/types/company";
+import { formatDate, getLicenseDateColor } from "../../../utils/dateFormatter";
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -32,30 +32,64 @@ type MenuItemProps = CollapsibleProps & {
   onClick?: () => void;
 };
 
-const menuItemsMap: Record<string, { mainItem: string; subItems?: Record<string, string> }> = {
-  '/admin': { mainItem: 'admin' },
-  '/analytics': { mainItem: 'analytics' },
-  '/credits': { mainItem: 'contracts', subItems: { '/credits': 'contracts' } },
-  '/credit-control': { mainItem: 'contracts', subItems: { '/credit-control': 'contracts-control' } },
-  '/clients': { mainItem: 'clients', subItems: { '/clients': 'clients' } },
-  '/blacklist': { mainItem: 'clients', subItems: { '/blacklist': 'blacklist' } },
+const menuItemsMap: Record<
+  string,
+  { mainItem: string; subItems?: Record<string, string> }
+> = {
+  "/admin": { mainItem: "admin" },
+  "/analytics": { mainItem: "analytics" },
+  "/credits": { mainItem: "contracts", subItems: { "/credits": "contracts" } },
+  "/credit-control": {
+    mainItem: "contracts",
+    subItems: { "/credit-control": "contracts-control" },
+  },
+  "/clients": { mainItem: "clients", subItems: { "/clients": "clients" } },
+  "/blacklist": {
+    mainItem: "clients",
+    subItems: { "/blacklist": "blacklist" },
+  },
   // '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
-  '/schedules': { mainItem: 'payments', subItems: { '/schedules': 'pending-payments' } },
-  '/schedule-calendar': { mainItem: 'payments', subItems: { '/schedule-calendar': 'payments-calendar' } },
-  '/payments': { mainItem: 'payments', subItems: { '/payments': 'payments-journal' } },
-  '/investors': { mainItem: 'investors', subItems: { '/investors': 'investors' } },
-  '/investors-report': { mainItem: 'investors', subItems: { '/investors-report': 'investors-report' } },
-  '/investors-pool': { mainItem: 'investors', subItems: { '/investors-pool': 'investors-pool' } },
-  '/black-catalog': { mainItem: 'black-catalog' },
-  '/registration-requests': { mainItem: 'references', subItems: { '/registration-requests': 'registration-requests' } },
-  '/finance': { mainItem: 'finance' },
-  '/profile': { mainItem: 'profile' },
-  '/settings': { mainItem: 'settings' },
+  "/schedules": {
+    mainItem: "payments",
+    subItems: { "/schedules": "pending-payments" },
+  },
+  "/schedule-calendar": {
+    mainItem: "payments",
+    subItems: { "/schedule-calendar": "payments-calendar" },
+  },
+  "/payments": {
+    mainItem: "payments",
+    subItems: { "/payments": "payments-journal" },
+  },
+  "/payments-pending": {
+    mainItem: "payments",
+    subItems: { "/payments-pending": "reception-payments" },
+  },
+  "/investors": {
+    mainItem: "investors",
+    subItems: { "/investors": "investors" },
+  },
+  "/investors-report": {
+    mainItem: "investors",
+    subItems: { "/investors-report": "investors-report" },
+  },
+  "/investors-pool": {
+    mainItem: "investors",
+    subItems: { "/investors-pool": "investors-pool" },
+  },
+  "/black-catalog": { mainItem: "black-catalog" },
+  "/registration-requests": {
+    mainItem: "references",
+    subItems: { "/registration-requests": "registration-requests" },
+  },
+  "/finance": { mainItem: "finance" },
+  "/profile": { mainItem: "profile" },
+  "/settings": { mainItem: "settings" },
 };
 
 const SideMenu = () => {
-  const { 
-    collapsed, 
+  const {
+    collapsed,
     toggleCollapsed,
     selectedSideMenuItem,
     setSelectedSideMenuItem,
@@ -68,36 +102,42 @@ const SideMenu = () => {
     x: number;
     y: number;
     mainItem: string;
-  }>({ visible: false, x: 0, y: 0, mainItem: '' });
-  
+  }>({ visible: false, x: 0, y: 0, mainItem: "" });
+
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole, hasPermission, denyPermission, isSuperAdminCompany, authInfo } = useAuth();
-  
+  const {
+    hasRole,
+    hasPermission,
+    denyPermission,
+    isSuperAdminCompany,
+    authInfo,
+  } = useAuth();
+
   React.useEffect(() => {
-      const fetchData = async () => {
-        try {
-          const data = await getCommonInfo();
-          setCommonInfo(data);
-        } catch (err) {
-          console.error(err);
-        } finally {
-        }
-      };
-  
-      fetchData();
+    const fetchData = async () => {
+      try {
+        const data = await getCommonInfo();
+        setCommonInfo(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+      }
+    };
+
+    fetchData();
   }, [getCommonInfo]);
 
   const getDaysUntilExpiry = (dateString: string): string => {
     const targetDate = new Date(dateString);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const diffTime = targetDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays > 0) return `Осталось ${diffDays} дней`;
-    if (diffDays === 0) return 'Срок истекает сегодня';
+    if (diffDays === 0) return "Срок истекает сегодня";
     return `Просрочено на ${Math.abs(diffDays)} дней`;
   };
 
@@ -106,32 +146,45 @@ const SideMenu = () => {
   const currentDate = formatDate(licenceDate);
   const daysUntilExpiry = getDaysUntilExpiry(licenceDate);
   const licenseDateColor = getLicenseDateColor(daysUntilExpiry);
-  
-  const firstName = employee?.fullName ? employee.fullName.split(' ')[0] : '';
-  
-  const avatarSrc = employee?.photoPath 
+
+  const firstName = employee?.fullName ? employee.fullName.split(" ")[0] : "";
+
+  const avatarSrc = employee?.photoPath
     ? `${FILE_BASE_URL}${employee.photoPath}`
-    : generateAvatar(getInitials(employee?.fullName || ''), 40);
+    : generateAvatar(getInitials(employee?.fullName || ""), 40);
 
   const menuItemPermissions: Record<string, () => boolean> = {
-    'analytics': () => hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true),
-    'contracts': () => true,
-    'contracts-control': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
-    'clients': () => true,
-    'blacklist': () => true,
+    analytics: () =>
+      hasPermission("VIEW_ANALYTIC", true) ||
+      hasRole("директор") ||
+      hasRole("суперадмин") ||
+      hasPermission("MANAGE_ACCOUNTING", true),
+    contracts: () => true,
+    "contracts-control": () =>
+      hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
+    clients: () => true,
+    blacklist: () => true,
     // 'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
-    'pending-payments': () => true,
-    'payments-calendar': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true),
-    'payments-journal': () => true,
-    'investors': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
-    'investors-report': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
-    'investors-pool': () => hasRole('админ') || hasRole('директор') || hasRole('суперадмин'),
-    'black-catalog': () => true,
-    'registration-requests': () => isSuperAdminCompany(),
-    'finance': () => hasPermission('MANAGE_ACCOUNTING', true),
-    'profile': () => true,
-    'settings': () => true,
-    'admin': () => hasRole('суперадмин'),
+    "pending-payments": () => true,
+    "payments-calendar": () =>
+      hasRole("админ") ||
+      hasRole("директор") ||
+      hasRole("суперадмин") ||
+      hasPermission("MANAGE_ACCOUNTING", true),
+    "payments-journal": () => true,
+    "reception-payments": () => true,
+    investors: () =>
+      hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
+    "investors-report": () =>
+      hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
+    "investors-pool": () =>
+      hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
+    "black-catalog": () => true,
+    "registration-requests": () => isSuperAdminCompany(),
+    finance: () => hasPermission("MANAGE_ACCOUNTING", true),
+    profile: () => true,
+    settings: () => true,
+    admin: () => hasRole("суперадмин"),
   };
 
   const checkMenuItemPermission = (menuItemKey: string): boolean => {
@@ -141,16 +194,22 @@ const SideMenu = () => {
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
-    
-    if (currentPath.startsWith('/finance') || currentPath.startsWith('/budget') || currentPath.startsWith('/payments-income')) {
-      return 'finance';
+
+    if (
+      currentPath.startsWith("/finance") ||
+      currentPath.startsWith("/budget") ||
+      currentPath.startsWith("/payments-income")
+    ) {
+      return "finance";
     }
-    
+
     const menuItem = menuItemsMap[currentPath];
-    
+
     if (menuItem) {
       if (menuItem.subItems) {
-        const subItemKey = Object.keys(menuItem.subItems).find(key => currentPath.startsWith(key));
+        const subItemKey = Object.keys(menuItem.subItems).find((key) =>
+          currentPath.startsWith(key)
+        );
         if (subItemKey) {
           return menuItem.subItems[subItemKey];
         }
@@ -173,20 +232,24 @@ const SideMenu = () => {
 
   useEffect(() => {
     const handleClickOutside = () => {
-      setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
+      setContextMenu({ visible: false, x: 0, y: 0, mainItem: "" });
     };
-    
-    document.addEventListener('click', handleClickOutside);
+
+    document.addEventListener("click", handleClickOutside);
     return () => {
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     };
   }, []);
 
-  const handleMainMenuItemClick = (item: string, path?: string, hasSubItems?: boolean) => {
+  const handleMainMenuItemClick = (
+    item: string,
+    path?: string,
+    hasSubItems?: boolean
+  ) => {
     if (collapsed && hasSubItems) {
       return;
     }
-    
+
     if (path) {
       handleMenuItemClick(item, path);
     } else if (hasSubItems) {
@@ -194,18 +257,22 @@ const SideMenu = () => {
     }
   };
 
-  const handleCollapsedMenuClick = (e: React.MouseEvent, mainItem: string, hasSubItems: boolean) => {
+  const handleCollapsedMenuClick = (
+    e: React.MouseEvent,
+    mainItem: string,
+    hasSubItems: boolean
+  ) => {
     if (!collapsed) return;
-    
+
     e.stopPropagation();
-    
+
     if (hasSubItems) {
       const rect = e.currentTarget.getBoundingClientRect();
       setContextMenu({
         visible: true,
         x: rect.right + 5,
         y: rect.top,
-        mainItem
+        mainItem,
       });
     } else {
       const path = getPathByMainItem(mainItem);
@@ -225,9 +292,11 @@ const SideMenu = () => {
     return null;
   };
 
-  const getSubItems = (mainItem: string): { key: string; label: string; path: string }[] => {
+  const getSubItems = (
+    mainItem: string
+  ): { key: string; label: string; path: string }[] => {
     const subItems: { key: string; label: string; path: string }[] = [];
-    
+
     Object.entries(menuItemsMap).forEach(([path, item]) => {
       if (item.mainItem === mainItem && item.subItems) {
         Object.entries(item.subItems).forEach(([subPath, subKey]) => {
@@ -240,26 +309,27 @@ const SideMenu = () => {
         });
       }
     });
-    
+
     return subItems;
   };
 
   const getSubItemLabel = (subItemKey: string): string => {
     const labels: Record<string, string> = {
-      'contracts': 'Договоры',
-      'contracts-control': 'Контроль договоров',
-      'clients': 'Клиенты',
-      'blacklist': 'Чёрный список',
+      contracts: "Договоры",
+      "contracts-control": "Контроль договоров",
+      clients: "Клиенты",
+      blacklist: "Чёрный список",
       // 'credit-application': 'Заявки',
-      'pending-payments': 'Ожидаемые',
-      'payments-calendar': 'Календарь',
-      'payments-journal': 'Журнал',
-      'investors': 'Инвесторы',
-      'investors-report': 'Отчёт для инвесторов',
-      'investors-pool': 'Пулы инвесторов',
-      'registration-requests': 'Заявки на регистрацию',
+      "pending-payments": "Ожидаемые",
+      "payments-calendar": "Календарь",
+      "payments-journal": "Журнал",
+      "reception-payments": "Платежи с приёмки",
+      investors: "Инвесторы",
+      "investors-report": "Отчёт для инвесторов",
+      "investors-pool": "Пулы инвесторов",
+      "registration-requests": "Заявки на регистрацию",
     };
-    
+
     return labels[subItemKey] || subItemKey;
   };
 
@@ -279,8 +349,8 @@ const SideMenu = () => {
   const handleMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
     navigate(path);
-    setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
-    
+    setContextMenu({ visible: false, x: 0, y: 0, mainItem: "" });
+
     if (getAutoCollapseMenuSetting() && !collapsed) {
       toggleCollapsed();
     }
@@ -289,8 +359,8 @@ const SideMenu = () => {
   const handleSubMenuItemClick = (item: string, path: string) => {
     setSelectedSideMenuItem(item);
     navigate(path);
-    setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
-    
+    setContextMenu({ visible: false, x: 0, y: 0, mainItem: "" });
+
     if (getAutoCollapseMenuSetting() && !collapsed) {
       toggleCollapsed();
     }
@@ -299,7 +369,7 @@ const SideMenu = () => {
   const toggleMenu = () => {
     toggleCollapsed();
     setExpandedItem(null);
-    setContextMenu({ visible: false, x: 0, y: 0, mainItem: '' });
+    setContextMenu({ visible: false, x: 0, y: 0, mainItem: "" });
   };
 
   const handleContextMenuAction = (action: string, path: string) => {
@@ -308,318 +378,315 @@ const SideMenu = () => {
 
   const handleLogout = () => {
     authStorage.clear();
-    window.dispatchEvent(new Event('storage'));
-    window.location.href = '/auth';
+    window.dispatchEvent(new Event("storage"));
+    window.location.href = "/auth";
   };
 
   const handleProfileClick = () => {
-    navigate('/profile');
+    navigate("/profile");
   };
 
   return (
     <SideMenuContainer $collapsed={collapsed}>
-      <ArrowIcon 
-        src={arrow} 
-        alt="arrow" 
+      <ArrowIcon
+        src={arrow}
+        alt="arrow"
         onClick={toggleMenu}
         $collapsed={collapsed}
       />
       {!collapsed && <Logo src={logo} alt="logo" />}
-      
+
       <MenuList $collapsed={collapsed}>
         <ScrollableMenuContent>
-          {(hasPermission('VIEW_ANALYTIC', true) || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true)) && (
-            <MenuItem 
+          {(hasPermission("VIEW_ANALYTIC", true) ||
+            hasRole("директор") ||
+            hasRole("суперадмин") ||
+            hasPermission("MANAGE_ACCOUNTING", true)) && (
+            <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, 'analytics', false);
+                  handleCollapsedMenuClick(e, "analytics", false);
                 } else {
-                  handleMenuItemClick('analytics', '/analytics');
+                  handleMenuItemClick("analytics", "/analytics");
                 }
               }}
               $collapsed={collapsed}
-              $selected={selectedSideMenuItem === 'analytics'}
+              $selected={selectedSideMenuItem === "analytics"}
             >
-              <Icon src={analyticsIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'analytics'} />
+              <Icon
+                src={analyticsIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "analytics"}
+              />
               {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
             </MenuItem>
           )}
-          
+
           {!collapsed && <Divider />}
-          
-          <MenuItem 
+
+          <MenuItem
             onClick={(e) => {
               if (collapsed) {
-                handleCollapsedMenuClick(e, 'contracts', true);
+                handleCollapsedMenuClick(e, "contracts", true);
               } else {
-                handleMainMenuItemClick('contracts', undefined, true);
+                handleMainMenuItemClick("contracts", undefined, true);
               }
             }}
             $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'contracts' || 
-                      selectedSideMenuItem === 'contracts-control'}
+            $selected={
+              selectedSideMenuItem === "contracts" ||
+              selectedSideMenuItem === "contracts-control"
+            }
           >
-            <Icon 
-              src={contractsIcon} 
-              $collapsed={collapsed} 
-              $selected={selectedSideMenuItem === 'contracts' || selectedSideMenuItem === 'contracts-control'} 
+            <Icon
+              src={contractsIcon}
+              $collapsed={collapsed}
+              $selected={
+                selectedSideMenuItem === "contracts" ||
+                selectedSideMenuItem === "contracts-control"
+              }
             />
             {!collapsed && (
               <>
                 <MenuItemText>Договоры</MenuItemText>
-                <ExpandArrow 
-                  width="14" 
-                  height="8" 
-                  viewBox="0 0 14 8" 
-                  fill="none" 
-                  $expanded={expandedItem === 'contracts'}
+                <ExpandArrow
+                  width="14"
+                  height="8"
+                  viewBox="0 0 14 8"
+                  fill="none"
+                  $expanded={expandedItem === "contracts"}
                 >
-                  <path 
-                    d="M1 1.32422L7 7.32422L13 1.32422" 
-                    stroke="#50555C" 
-                    strokeLinecap="round" 
+                  <path
+                    d="M1 1.32422L7 7.32422L13 1.32422"
+                    stroke="#50555C"
+                    strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </ExpandArrow>
               </>
             )}
           </MenuItem>
-          
-          {!collapsed && expandedItem === 'contracts' && (
+
+          {!collapsed && expandedItem === "contracts" && (
             <SubMenu>
               <SubMenuLine />
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('contracts', '/credits')}
-                $selected={selectedSideMenuItem === 'contracts'}
+              <SubMenuItem
+                onClick={() => handleSubMenuItemClick("contracts", "/credits")}
+                $selected={selectedSideMenuItem === "contracts"}
               >
                 Договоры
               </SubMenuItem>
-              {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
-                <SubMenuItem 
-                  onClick={() => handleSubMenuItemClick('contracts-control', '/credit-control')}
-                  $selected={selectedSideMenuItem === 'contracts-control'}
+              {(hasRole("админ") ||
+                hasRole("директор") ||
+                hasRole("суперадмин")) && (
+                <SubMenuItem
+                  onClick={() =>
+                    handleSubMenuItemClick(
+                      "contracts-control",
+                      "/credit-control"
+                    )
+                  }
+                  $selected={selectedSideMenuItem === "contracts-control"}
                 >
                   Контроль договоров
                 </SubMenuItem>
               )}
             </SubMenu>
           )}
-          
-          <MenuItem 
+
+          <MenuItem
             onClick={(e) => {
               if (collapsed) {
-                handleCollapsedMenuClick(e, 'clients', true);
+                handleCollapsedMenuClick(e, "clients", true);
               } else {
-                handleMainMenuItemClick('clients', undefined, true);
+                handleMainMenuItemClick("clients", undefined, true);
               }
             }}
             $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'clients' || 
-                      selectedSideMenuItem === 'blacklist'}
+            $selected={
+              selectedSideMenuItem === "clients" ||
+              selectedSideMenuItem === "blacklist"
+            }
           >
-            <Icon 
-              src={clientsIcon} 
-              $collapsed={collapsed} 
-              $selected={selectedSideMenuItem === 'clients' || 
-                        selectedSideMenuItem === 'blacklist'} 
+            <Icon
+              src={clientsIcon}
+              $collapsed={collapsed}
+              $selected={
+                selectedSideMenuItem === "clients" ||
+                selectedSideMenuItem === "blacklist"
+              }
             />
             {!collapsed && (
               <>
                 <MenuItemText>Клиенты</MenuItemText>
-                <ExpandArrow 
-                  width="14" 
-                  height="8" 
-                  viewBox="0 0 14 8" 
-                  fill="none" 
-                  $expanded={expandedItem === 'clients'}
+                <ExpandArrow
+                  width="14"
+                  height="8"
+                  viewBox="0 0 14 8"
+                  fill="none"
+                  $expanded={expandedItem === "clients"}
                 >
-                  <path 
-                    d="M1 1.32422L7 7.32422L13 1.32422" 
-                    stroke="#50555C" 
-                    strokeLinecap="round" 
+                  <path
+                    d="M1 1.32422L7 7.32422L13 1.32422"
+                    stroke="#50555C"
+                    strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </ExpandArrow>
               </>
             )}
           </MenuItem>
-          
-          {!collapsed && expandedItem === 'clients' && (
+
+          {!collapsed && expandedItem === "clients" && (
             <SubMenu>
               <SubMenuLine />
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('clients', '/clients')}
-                $selected={selectedSideMenuItem === 'clients'}
+              <SubMenuItem
+                onClick={() => handleSubMenuItemClick("clients", "/clients")}
+                $selected={selectedSideMenuItem === "clients"}
               >
                 Клиенты
               </SubMenuItem>
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('blacklist', '/blacklist')}
-                $selected={selectedSideMenuItem === 'blacklist'}
+              <SubMenuItem
+                onClick={() =>
+                  handleSubMenuItemClick("blacklist", "/blacklist")
+                }
+                $selected={selectedSideMenuItem === "blacklist"}
               >
                 Чёрный список
               </SubMenuItem>
             </SubMenu>
           )}
-          
-          <MenuItem 
+
+          <MenuItem
             onClick={(e) => {
               if (collapsed) {
-                handleCollapsedMenuClick(e, 'payments', true);
+                handleCollapsedMenuClick(e, "payments", true);
               } else {
-                handleMainMenuItemClick('payments', undefined, true);
+                handleMainMenuItemClick("payments", undefined, true);
               }
             }}
             $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'pending-payments' || 
-                      selectedSideMenuItem === 'payments-calendar' ||
-                      selectedSideMenuItem === 'payments-journal'}
+            $selected={
+              selectedSideMenuItem === "pending-payments" ||
+              selectedSideMenuItem === "payments-calendar" ||
+              selectedSideMenuItem === "payments-journal" ||
+              selectedSideMenuItem === "reception-payments"
+            }
           >
-            <Icon 
-              src={paymentsIcon} 
-              $collapsed={collapsed} 
-              $selected={selectedSideMenuItem === 'pending-payments' || 
-                        selectedSideMenuItem === 'payments-calendar' ||
-                        selectedSideMenuItem === 'payments-journal'} 
+            <Icon
+              src={paymentsIcon}
+              $collapsed={collapsed}
+              $selected={
+                selectedSideMenuItem === "pending-payments" ||
+                selectedSideMenuItem === "payments-calendar" ||
+                selectedSideMenuItem === "payments-journal" ||
+                selectedSideMenuItem === "reception-payments"
+              }
             />
             {!collapsed && (
               <>
                 <MenuItemText>Платежи</MenuItemText>
-                <ExpandArrow 
-                  width="14" 
-                  height="8" 
-                  viewBox="0 0 14 8" 
-                  fill="none" 
-                  $expanded={expandedItem === 'payments'}
+                <ExpandArrow
+                  width="14"
+                  height="8"
+                  viewBox="0 0 14 8"
+                  fill="none"
+                  $expanded={expandedItem === "payments"}
                 >
-                  <path 
-                    d="M1 1.32422L7 7.32422L13 1.32422" 
-                    stroke="#50555C" 
-                    strokeLinecap="round" 
+                  <path
+                    d="M1 1.32422L7 7.32422L13 1.32422"
+                    stroke="#50555C"
+                    strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </ExpandArrow>
               </>
             )}
           </MenuItem>
-          
-          {!collapsed && expandedItem === 'payments' && (
+
+          {!collapsed && expandedItem === "payments" && (
             <SubMenu>
               <SubMenuLine />
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('pending-payments', '/schedules')}
-                $selected={selectedSideMenuItem === 'pending-payments'}
+              <SubMenuItem
+                onClick={() =>
+                  handleSubMenuItemClick("pending-payments", "/schedules")
+                }
+                $selected={selectedSideMenuItem === "pending-payments"}
               >
                 Ожидаемые
               </SubMenuItem>
-              {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин') || hasPermission('MANAGE_ACCOUNTING', true)) && (
-                <SubMenuItem 
-                  onClick={() => handleSubMenuItemClick('payments-calendar', '/schedule-calendar')}
-                  $selected={selectedSideMenuItem === 'payments-calendar'}
+              {(hasRole("админ") ||
+                hasRole("директор") ||
+                hasRole("суперадмин") ||
+                hasPermission("MANAGE_ACCOUNTING", true)) && (
+                <SubMenuItem
+                  onClick={() =>
+                    handleSubMenuItemClick(
+                      "payments-calendar",
+                      "/schedule-calendar"
+                    )
+                  }
+                  $selected={selectedSideMenuItem === "payments-calendar"}
                 >
                   Календарь
                 </SubMenuItem>
               )}
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('payments-journal', '/payments')}
-                $selected={selectedSideMenuItem === 'payments-journal'}
+              <SubMenuItem
+                onClick={() =>
+                  handleSubMenuItemClick("payments-journal", "/payments")
+                }
+                $selected={selectedSideMenuItem === "payments-journal"}
               >
                 Журнал
               </SubMenuItem>
+              <SubMenuItem
+                onClick={() =>
+                  handleSubMenuItemClick(
+                    "reception-payments",
+                    "/payments-pending"
+                  )
+                }
+                $selected={selectedSideMenuItem === "reception-payments"}
+              >
+                Платежи с приёмки
+              </SubMenuItem>
             </SubMenu>
           )}
-          
-          {(hasRole('админ') || hasRole('директор') || hasRole('суперадмин')) && (
-            <MenuItem 
+
+          {(hasRole("админ") ||
+            hasRole("директор") ||
+            hasRole("суперадмин")) && (
+            <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, 'investors', true);
+                  handleCollapsedMenuClick(e, "investors", true);
                 } else {
-                  handleMainMenuItemClick('investors', undefined, true);
+                  handleMainMenuItemClick("investors", undefined, true);
                 }
               }}
               $collapsed={collapsed}
-              $selected={selectedSideMenuItem === 'investors' || 
-                        selectedSideMenuItem === 'investors-report'}
+              $selected={
+                selectedSideMenuItem === "investors" ||
+                selectedSideMenuItem === "investors-report"
+              }
             >
-              <Icon 
-                src={investorsIcon} 
-                $collapsed={collapsed} 
-                $selected={selectedSideMenuItem === 'investors' || 
-                          selectedSideMenuItem === 'investors-report'} 
+              <Icon
+                src={investorsIcon}
+                $collapsed={collapsed}
+                $selected={
+                  selectedSideMenuItem === "investors" ||
+                  selectedSideMenuItem === "investors-report"
+                }
               />
               {!collapsed && (
                 <>
                   <MenuItemText>Инвесторы</MenuItemText>
-                  <ExpandArrow 
-                    width="14" 
-                    height="8" 
-                    viewBox="0 0 14 8" 
-                    fill="none" 
-                    $expanded={expandedItem === 'investors'}
-                  >
-                    <path 
-                      d="M1 1.32422L7 7.32422L13 1.32422" 
-                      stroke="#50555C" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                  </ExpandArrow>
-                </>
-              )}
-            </MenuItem>
-          )}
-          
-          {!collapsed && expandedItem === 'investors' && (
-            <SubMenu>
-              <SubMenuLine />
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('investors', '/investors')}
-                $selected={selectedSideMenuItem === 'investors'}
-              >
-                Инвесторы
-              </SubMenuItem>
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('investors-report', '/investors-report')}
-                $selected={selectedSideMenuItem === 'investors-report'}
-              >
-                Отчёт для инвесторов
-              </SubMenuItem>
-              <SubMenuItem 
-                onClick={() => handleSubMenuItemClick('investors-pool', '/investors-pool')}
-                $selected={selectedSideMenuItem === 'investors-pool'}
-              >
-                Пулы инвесторов
-              </SubMenuItem>
-            </SubMenu>
-          )}
-          
-          {isSuperAdminCompany() && (
-            <MenuItem
-              onClick={(e) => {
-                if (collapsed) {
-                  handleCollapsedMenuClick(e, 'references', true);
-                } else {
-                  handleMainMenuItemClick('references', undefined, true);
-                }
-              }}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === 'registration-requests'}
-            >
-              <Icon
-                src={referencesIcon}
-                $collapsed={collapsed}
-                $selected={selectedSideMenuItem === 'registration-requests'}
-              />
-              {!collapsed && (
-                <>
-                  <MenuItemText>Справочники</MenuItemText>
                   <ExpandArrow
                     width="14"
                     height="8"
                     viewBox="0 0 14 8"
                     fill="none"
-                    $expanded={expandedItem === 'references'}
+                    $expanded={expandedItem === "investors"}
                   >
                     <path
                       d="M1 1.32422L7 7.32422L13 1.32422"
@@ -633,90 +700,173 @@ const SideMenu = () => {
             </MenuItem>
           )}
 
-          {isSuperAdminCompany() && !collapsed && expandedItem === 'references' && (
+          {!collapsed && expandedItem === "investors" && (
             <SubMenu>
               <SubMenuLine />
               <SubMenuItem
-                onClick={() => handleSubMenuItemClick('registration-requests', '/registration-requests')}
-                $selected={selectedSideMenuItem === 'registration-requests'}
+                onClick={() =>
+                  handleSubMenuItemClick("investors", "/investors")
+                }
+                $selected={selectedSideMenuItem === "investors"}
               >
-                Заявки на регистрацию
+                Инвесторы
+              </SubMenuItem>
+              <SubMenuItem
+                onClick={() =>
+                  handleSubMenuItemClick(
+                    "investors-report",
+                    "/investors-report"
+                  )
+                }
+                $selected={selectedSideMenuItem === "investors-report"}
+              >
+                Отчёт для инвесторов
+              </SubMenuItem>
+              <SubMenuItem
+                onClick={() =>
+                  handleSubMenuItemClick("investors-pool", "/investors-pool")
+                }
+                $selected={selectedSideMenuItem === "investors-pool"}
+              >
+                Пулы инвесторов
               </SubMenuItem>
             </SubMenu>
           )}
 
-          {(hasPermission('MANAGE_ACCOUNTING', true)) && (
-            <MenuItem 
+          {isSuperAdminCompany() && (
+            <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, 'finance', false);
+                  handleCollapsedMenuClick(e, "references", true);
                 } else {
-                  handleMenuItemClick('finance', '/finance');
+                  handleMainMenuItemClick("references", undefined, true);
                 }
               }}
               $collapsed={collapsed}
-              $selected={selectedSideMenuItem === 'finance'}
+              $selected={selectedSideMenuItem === "registration-requests"}
             >
-              <Icon 
-                src={financeIcon} 
-                $collapsed={collapsed} 
-                $selected={selectedSideMenuItem === 'finance'} 
+              <Icon
+                src={referencesIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "registration-requests"}
+              />
+              {!collapsed && (
+                <>
+                  <MenuItemText>Справочники</MenuItemText>
+                  <ExpandArrow
+                    width="14"
+                    height="8"
+                    viewBox="0 0 14 8"
+                    fill="none"
+                    $expanded={expandedItem === "references"}
+                  >
+                    <path
+                      d="M1 1.32422L7 7.32422L13 1.32422"
+                      stroke="#50555C"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </ExpandArrow>
+                </>
+              )}
+            </MenuItem>
+          )}
+
+          {isSuperAdminCompany() &&
+            !collapsed &&
+            expandedItem === "references" && (
+              <SubMenu>
+                <SubMenuLine />
+                <SubMenuItem
+                  onClick={() =>
+                    handleSubMenuItemClick(
+                      "registration-requests",
+                      "/registration-requests"
+                    )
+                  }
+                  $selected={selectedSideMenuItem === "registration-requests"}
+                >
+                  Заявки на регистрацию
+                </SubMenuItem>
+              </SubMenu>
+            )}
+
+          {hasPermission("MANAGE_ACCOUNTING", true) && (
+            <MenuItem
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, "finance", false);
+                } else {
+                  handleMenuItemClick("finance", "/finance");
+                }
+              }}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === "finance"}
+            >
+              <Icon
+                src={financeIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "finance"}
               />
               {!collapsed && <MenuItemText>Финансы</MenuItemText>}
             </MenuItem>
           )}
-          
-          <MenuItem 
+
+          <MenuItem
             onClick={(e) => {
               if (collapsed) {
-                handleCollapsedMenuClick(e, 'black-catalog', false);
+                handleCollapsedMenuClick(e, "black-catalog", false);
               } else {
-                handleMenuItemClick('black-catalog', '/black-catalog');
+                handleMenuItemClick("black-catalog", "/black-catalog");
               }
             }}
             $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'black-catalog'}
+            $selected={selectedSideMenuItem === "black-catalog"}
           >
-            <Icon 
-              src={blackCatalogIcon || analyticsIcon} 
-              $collapsed={collapsed} 
-              $selected={selectedSideMenuItem === 'black-catalog'} 
+            <Icon
+              src={blackCatalogIcon || analyticsIcon}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === "black-catalog"}
             />
             {!collapsed && <MenuItemText>ЧС+</MenuItemText>}
           </MenuItem>
 
           {/* Пункт "Настройки" ведет на /settings */}
-          <MenuItem 
+          <MenuItem
             onClick={(e) => {
               if (collapsed) {
-                handleCollapsedMenuClick(e, 'settings', false);
+                handleCollapsedMenuClick(e, "settings", false);
               } else {
-                handleMenuItemClick('settings', '/settings');
+                handleMenuItemClick("settings", "/settings");
               }
             }}
             $collapsed={collapsed}
-            $selected={selectedSideMenuItem === 'settings'}
+            $selected={selectedSideMenuItem === "settings"}
           >
-            <Icon src={profileIcon} $collapsed={collapsed} $selected={selectedSideMenuItem === 'settings'} />
+            <Icon
+              src={profileIcon}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === "settings"}
+            />
             {!collapsed && <MenuItemText>Настройки</MenuItemText>}
           </MenuItem>
 
-          {hasRole('суперадмин') && (
-            <MenuItem 
+          {hasRole("суперадмин") && (
+            <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, 'admin', false);
+                  handleCollapsedMenuClick(e, "admin", false);
                 } else {
-                  handleMenuItemClick('admin', '/admin');
+                  handleMenuItemClick("admin", "/admin");
                 }
               }}
               $collapsed={collapsed}
-              $selected={selectedSideMenuItem === 'admin'}
+              $selected={selectedSideMenuItem === "admin"}
             >
-              <Icon 
+              <Icon
                 src={analyticsIcon}
-                $collapsed={collapsed} 
-                $selected={selectedSideMenuItem === 'admin'} 
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "admin"}
               />
               {!collapsed && <MenuItemText>Админ-панель</MenuItemText>}
             </MenuItem>
@@ -725,28 +875,42 @@ const SideMenu = () => {
       </MenuList>
 
       {/* Блок с профилем - теперь всегда в самом низу */}
-      {employee && (
-        collapsed ? (
-          <CollapsedUserProfileBlock onClick={handleProfileClick} $selected={selectedSideMenuItem === 'profile'}>
+      {employee &&
+        (collapsed ? (
+          <CollapsedUserProfileBlock
+            onClick={handleProfileClick}
+            $selected={selectedSideMenuItem === "profile"}
+          >
             <CollapsedUserAvatar src={avatarSrc} alt={employee.fullName} />
           </CollapsedUserProfileBlock>
         ) : (
-          <UserProfileBlock onClick={handleProfileClick} $selected={selectedSideMenuItem === 'profile'}>
+          <UserProfileBlock
+            onClick={handleProfileClick}
+            $selected={selectedSideMenuItem === "profile"}
+          >
             <UserAvatar src={avatarSrc} alt={employee.fullName} />
             <UserInfo>
               <UserFullName>{employee.fullName}</UserFullName>
               <UserRole>{employee.role}</UserRole>
               <UserDate $color={licenseDateColor}>{currentDate}</UserDate>
             </UserInfo>
-            <LogoutButton onClick={(e) => { e.stopPropagation(); handleLogout(); }} title="Выйти">
+            <LogoutButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }}
+              title="Выйти"
+            >
               <svg width="18" height="18" viewBox="0 0 16 17" fill="none">
-                <path d="M7.5 0.625C7.72302 0.625247 7.93753 0.710644 8.0997 0.863742C8.26187 1.01684 8.35946 1.22608 8.37253 1.44872C8.3856 1.67136 8.31316 1.89058 8.17002 2.0616C8.02688 2.23262 7.82383 2.34253 7.60237 2.36888L7.5 2.375H3.125C2.91068 2.37503 2.70383 2.45371 2.54367 2.59613C2.38352 2.73854 2.2812 2.93478 2.25612 3.14762L2.25 3.25V13.75C2.25003 13.9643 2.32871 14.1712 2.47113 14.3313C2.61354 14.4915 2.80978 14.5938 3.02262 14.6189L3.125 14.625H7.0625C7.28552 14.6252 7.50003 14.7106 7.6622 14.8637C7.82437 15.0168 7.92196 15.2261 7.93503 15.4487C7.9481 15.6714 7.87566 15.8906 7.73252 16.0616C7.58938 16.2326 7.38633 16.3425 7.16487 16.3689L7.0625 16.375H3.125C2.45544 16.375 1.81117 16.1192 1.32402 15.6599C0.836869 15.2005 0.543656 14.5724 0.504375 13.904L0.5 13.75V3.25C0.499963 2.58044 0.755785 1.93617 1.21512 1.44902C1.67446 0.961869 2.30259 0.668656 2.971 0.629375L3.125 0.625H7.5ZM12.4936 5.406L14.9681 7.88138C15.1322 8.04546 15.2243 8.26798 15.2243 8.5C15.2243 8.73202 15.1322 8.95454 14.9681 9.11862L12.4936 11.594C12.3294 11.7581 12.1068 11.8502 11.8747 11.8501C11.6426 11.85 11.42 11.7577 11.2559 11.5936C11.0919 11.4294 10.9997 11.2067 10.9998 10.9746C10.9999 10.7425 11.0922 10.5199 11.2564 10.3559L12.2372 9.375H7.5C7.26794 9.375 7.04538 9.28281 6.88128 9.11872C6.71719 8.95462 6.625 8.73206 6.625 8.5C6.625 8.26794 6.71719 8.04538 6.88128 7.88128C7.04538 7.71719 7.26794 7.625 7.5 7.625H12.2372L11.2564 6.64412C11.0922 6.48006 10.9999 6.25748 10.9998 6.02537C10.9997 5.79326 11.0919 5.57062 11.2559 5.40644C11.42 5.24225 11.6426 5.14997 11.8747 5.14989C12.1068 5.1498 12.3294 5.24193 12.4936 5.406Z" fill="#50555C"/>
+                <path
+                  d="M7.5 0.625C7.72302 0.625247 7.93753 0.710644 8.0997 0.863742C8.26187 1.01684 8.35946 1.22608 8.37253 1.44872C8.3856 1.67136 8.31316 1.89058 8.17002 2.0616C8.02688 2.23262 7.82383 2.34253 7.60237 2.36888L7.5 2.375H3.125C2.91068 2.37503 2.70383 2.45371 2.54367 2.59613C2.38352 2.73854 2.2812 2.93478 2.25612 3.14762L2.25 3.25V13.75C2.25003 13.9643 2.32871 14.1712 2.47113 14.3313C2.61354 14.4915 2.80978 14.5938 3.02262 14.6189L3.125 14.625H7.0625C7.28552 14.6252 7.50003 14.7106 7.6622 14.8637C7.82437 15.0168 7.92196 15.2261 7.93503 15.4487C7.9481 15.6714 7.87566 15.8906 7.73252 16.0616C7.58938 16.2326 7.38633 16.3425 7.16487 16.3689L7.0625 16.375H3.125C2.45544 16.375 1.81117 16.1192 1.32402 15.6599C0.836869 15.2005 0.543656 14.5724 0.504375 13.904L0.5 13.75V3.25C0.499963 2.58044 0.755785 1.93617 1.21512 1.44902C1.67446 0.961869 2.30259 0.668656 2.971 0.629375L3.125 0.625H7.5ZM12.4936 5.406L14.9681 7.88138C15.1322 8.04546 15.2243 8.26798 15.2243 8.5C15.2243 8.73202 15.1322 8.95454 14.9681 9.11862L12.4936 11.594C12.3294 11.7581 12.1068 11.8502 11.8747 11.8501C11.6426 11.85 11.42 11.7577 11.2559 11.5936C11.0919 11.4294 10.9997 11.2067 10.9998 10.9746C10.9999 10.7425 11.0922 10.5199 11.2564 10.3559L12.2372 9.375H7.5C7.26794 9.375 7.04538 9.28281 6.88128 9.11872C6.71719 8.95462 6.625 8.73206 6.625 8.5C6.625 8.26794 6.71719 8.04538 6.88128 7.88128C7.04538 7.71719 7.26794 7.625 7.5 7.625H12.2372L11.2564 6.64412C11.0922 6.48006 10.9999 6.25748 10.9998 6.02537C10.9997 5.79326 11.0919 5.57062 11.2559 5.40644C11.42 5.24225 11.6426 5.14997 11.8747 5.14989C12.1068 5.1498 12.3294 5.24193 12.4936 5.406Z"
+                  fill="#50555C"
+                />
               </svg>
             </LogoutButton>
           </UserProfileBlock>
-        )
-      )}
-      
+        ))}
+
       {contextMenu.visible && (
         <ContextMenu
           style={{
@@ -765,7 +929,7 @@ const SideMenu = () => {
           ))}
         </ContextMenu>
       )}
-      
+
       <RightBorder $collapsed={collapsed} />
     </SideMenuContainer>
   );
@@ -776,7 +940,8 @@ const UserProfileBlock = styled.div<{ $selected?: boolean }>`
   align-items: center;
   padding: 1px 17px;
   margin: 8px 0;
-  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : '#F3F4F6'};
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(209, 213, 219, 1)" : "#F3F4F6"};
   border-radius: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -785,7 +950,8 @@ const UserProfileBlock = styled.div<{ $selected?: boolean }>`
   transition: background-color 0.2s ease;
 
   &:hover {
-    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : '#E5E7EB'};
+    background-color: ${({ $selected }) =>
+      $selected ? "rgba(209, 213, 219, 1)" : "#E5E7EB"};
   }
 `;
 
@@ -801,14 +967,15 @@ const CollapsedUserProfileBlock = styled.div<{ $selected?: boolean }>`
   box-sizing: border-box;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
-  padding: ${({ $selected }) => $selected ? '8px 0' : '8px 0'};
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
+  padding: ${({ $selected }) => ($selected ? "8px 0" : "8px 0")};
 
   &:hover {
-    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
+    background-color: ${({ $selected }) =>
+      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
   }
 `;
-
 
 const CollapsedUserAvatar = styled.img`
   width: 35px;
@@ -836,7 +1003,7 @@ const UserInfo = styled.div`
 const UserFullName = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #1F2937;
+  color: #1f2937;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -845,7 +1012,7 @@ const UserFullName = styled.div`
 
 const UserRole = styled.div`
   font-size: 12px;
-  color: #6B7280;
+  color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -854,7 +1021,7 @@ const UserRole = styled.div`
 
 const UserDate = styled.div<{ $color?: string }>`
   font-size: 12px;
-  color: ${({ $color }) => $color || '#9CA3AF'};
+  color: ${({ $color }) => $color || "#9CA3AF"};
   margin-top: 2px;
   text-align: left;
 `;
@@ -869,10 +1036,10 @@ const LogoutButton = styled.button`
   padding: 4px;
   border-radius: 4px;
   flex-shrink: 0;
-  
+
   &:hover {
     background-color: rgba(0, 0, 0, 0.05);
-    
+
     svg path {
       fill: #000;
     }
@@ -884,7 +1051,8 @@ const ContextMenu = styled.div`
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   padding: 8px;
   z-index: 1000;
   min-width: 180px;
@@ -895,11 +1063,13 @@ const ContextMenuItem = styled.div<{ $selected?: boolean }>`
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  color: ${({ $selected }) => ($selected ? '#000' : '#50555c')};
-  background-color: ${({ $selected }) => ($selected ? 'rgba(209, 213, 219, 1)' : 'transparent')};
-  
+  color: ${({ $selected }) => ($selected ? "#000" : "#50555c")};
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
+
   &:hover {
-    background-color: ${({ $selected }) => ($selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)')};
+    background-color: ${({ $selected }) =>
+      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
     color: #000;
   }
 `;
@@ -912,7 +1082,7 @@ const ScrollableMenuContent = styled.div`
   &::-webkit-scrollbar {
     display: none;
   }
-  
+
   -ms-overflow-style: none;
   scrollbar-width: none;
 `;
@@ -920,25 +1090,29 @@ const ScrollableMenuContent = styled.div`
 const MenuItem = styled.div<MenuItemProps>`
   display: flex;
   align-items: center;
-  padding: ${({ $collapsed }) => ($collapsed ? '15px 0' : '15px 17px')};
+  padding: ${({ $collapsed }) => ($collapsed ? "15px 0" : "15px 17px")};
   margin-bottom: 3px;
   cursor: pointer;
   border-radius: 8px;
-  width: ${({ $collapsed }) => ($collapsed ? '45px' : '100%')};
+  width: ${({ $collapsed }) => ($collapsed ? "45px" : "100%")};
   height: 35px;
   max-width: 100%;
   box-sizing: border-box;
   transition: all 0.2s ease;
-  color: ${({ $selected }) => $selected ? '#000' : '#50555c'};
-  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
-  justify-content: ${({ $collapsed }) => ($collapsed ? 'center' : 'flex-start')};
-  
+  color: ${({ $selected }) => ($selected ? "#000" : "#50555c")};
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
+  justify-content: ${({ $collapsed }) =>
+    $collapsed ? "center" : "flex-start"};
+
   &:hover {
-    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
+    background-color: ${({ $selected }) =>
+      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
     color: #000;
-    
+
     img {
-      filter: ${({ $selected }) => $selected ? 'brightness(0)' : 'brightness(0.7)'};
+      filter: ${({ $selected }) =>
+        $selected ? "brightness(0)" : "brightness(0.7)"};
     }
   }
 `;
@@ -950,14 +1124,16 @@ const SubMenuItem = styled.div<{ $selected?: boolean }>`
   border-radius: 6px;
   font-size: 14px;
   transition: all 0.2s ease;
-  color: ${({ $selected }) => $selected ? '#000' : '#50555c'};
+  color: ${({ $selected }) => ($selected ? "#000" : "#50555c")};
   text-align: left;
   font-weight: 500;
   position: relative;
-  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
 
   &:hover {
-    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
+    background-color: ${({ $selected }) =>
+      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
     color: #000;
   }
 `;
@@ -965,9 +1141,10 @@ const SubMenuItem = styled.div<{ $selected?: boolean }>`
 const Icon = styled.img<CollapsibleProps & { $selected?: boolean }>`
   width: 21px;
   height: 21px;
-  margin-right: ${({ $collapsed }) => ($collapsed ? '0' : '17px')};
+  margin-right: ${({ $collapsed }) => ($collapsed ? "0" : "17px")};
   transition: all 0.2s ease;
-  filter: ${({ $selected }) => $selected ? 'brightness(0)' : 'brightness(0.7)'};
+  filter: ${({ $selected }) =>
+    $selected ? "brightness(0)" : "brightness(0.7)"};
 `;
 
 const RightBorder = styled.div<CollapsibleProps>`
@@ -982,7 +1159,7 @@ const RightBorder = styled.div<CollapsibleProps>`
 `;
 
 const SideMenuContainer = styled.div<CollapsibleProps>`
-  width: ${({ $collapsed }) => ($collapsed ? '70px' : '315px')};
+  width: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
   height: 100vh;
   background-color: rgba(249, 250, 250, 1);
   color: rgba(80, 85, 92, 1);
@@ -1015,7 +1192,8 @@ const ArrowIcon = styled.img<CollapsibleProps>`
   height: 22px;
   margin-bottom: 28px;
   cursor: pointer;
-  transform: ${({ $collapsed }) => ($collapsed ? 'rotate(180deg)' : 'rotate(0)')};
+  transform: ${({ $collapsed }) =>
+    $collapsed ? "rotate(180deg)" : "rotate(0)"};
   transition: transform 0.3s ease;
 `;
 
@@ -1060,7 +1238,7 @@ const Divider = styled.div`
 const ExpandArrow = styled.svg<{ $expanded: boolean }>`
   margin-left: auto;
   transition: transform 0.2s ease;
-  transform: ${({ $expanded }) => ($expanded ? 'rotate(180deg)' : 'rotate(0)')};
+  transform: ${({ $expanded }) => ($expanded ? "rotate(180deg)" : "rotate(0)")};
 `;
 
 export default SideMenu;

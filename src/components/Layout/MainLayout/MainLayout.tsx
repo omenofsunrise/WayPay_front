@@ -5,6 +5,7 @@ import TopMenu, { pathToMenuItemMap } from "./TopMenu";
 import { SideMenuContext } from "./SideMenuContext";
 import { useLocation } from "react-router-dom";
 import LicenseExpiryNotice from "../../Subscription/LicenseExpiryNotice";
+import { authStorage } from "../../../api/utils/auth-storage";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,16 @@ interface MainLayoutProps {
 const SIDE_MENU_COLLAPSED_KEY = "sideMenuCollapsed";
 
 const MainLayout = ({ children }: MainLayoutProps) => {
+  // Пользователю типа payment_place не показываем меню и прочую обвязку —
+  // только содержимое страницы.
+  if (authStorage.isPaymentPlace()) {
+    return <BareContainer>{children}</BareContainer>;
+  }
+
+  return <FullLayout>{children}</FullLayout>;
+};
+
+const FullLayout = ({ children }: MainLayoutProps) => {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     const saved = localStorage.getItem(SIDE_MENU_COLLAPSED_KEY);
     return saved ? JSON.parse(saved) : false;
@@ -66,6 +77,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     </SideMenuContext.Provider>
   );
 };
+
+const BareContainer = styled.div`
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-color: rgba(249, 250, 250, 1);
+`;
 
 const LayoutContainer = styled.div`
   display: flex;

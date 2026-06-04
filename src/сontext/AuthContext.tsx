@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import apiClient from '../api/client';
-import type { AuthInfo, Permission, Role } from '../api/types/auth';
-import { authStorage } from '../api/utils/auth-storage';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import apiClient from "../api/client";
+import type { AuthInfo, Permission, Role } from "../api/types/auth";
+import { authStorage } from "../api/utils/auth-storage";
 
 interface AuthContextType {
   authInfo: AuthInfo | null;
@@ -19,10 +19,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const SUPER_ROLES: Role[] = ['админ', 'суперадмин', 'директор'];
-const ALWAYS_TRUE_ROLES: Role[] = ['суперадмин', 'директор'];
+const SUPER_ROLES: Role[] = ["админ", "суперадмин", "директор"];
+const ALWAYS_TRUE_ROLES: Role[] = ["суперадмин", "директор"];
 
-export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +38,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     try {
       setIsLoading(true);
       setError(null);
-      const response = await apiClient.get<AuthInfo>('/Auth/info');
+      const response = await apiClient.get<AuthInfo>("/Auth/info");
       setAuthInfo(response.data);
+      authStorage.setUserType(response.data.type);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       setAuthInfo(null);
     } finally {
       setIsLoading(false);
@@ -50,41 +53,47 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     fetchAuthInfo();
   }, []);
 
-  const hasPermission = (permission: Permission, checkAdmins: boolean = false): boolean => {
+  const hasPermission = (
+    permission: Permission,
+    checkAdmins: boolean = false
+  ): boolean => {
     if (!authInfo) return false;
 
     if (ALWAYS_TRUE_ROLES.includes(authInfo.employee.role)) {
       return true;
     }
-    
+
     if (!checkAdmins && SUPER_ROLES.includes(authInfo.employee.role)) {
       return true;
     }
-    
+
     return authInfo.employee.permissions.includes(permission);
   };
 
-  const denyPermission = (permission: Permission, checkAdmins: boolean = false): boolean => {
+  const denyPermission = (
+    permission: Permission,
+    checkAdmins: boolean = false
+  ): boolean => {
     if (!authInfo) return true;
 
     if (ALWAYS_TRUE_ROLES.includes(authInfo.employee.role)) {
       return true;
     }
-    
+
     if (!checkAdmins && SUPER_ROLES.includes(authInfo.employee.role)) {
       return true;
     }
-    
+
     return !authInfo.employee.permissions.includes(permission);
   };
 
   const hasRole = (role: Role | Role[]): boolean => {
     if (!authInfo) return false;
-    
+
     if (Array.isArray(role)) {
       return role.includes(authInfo.employee.role);
     }
-    
+
     return authInfo.employee.role === role;
   };
 
@@ -100,7 +109,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
   const isSuperAdminId = (): boolean => {
     if (!authInfo) return false;
-    return authInfo.employee.id === 1 || authInfo.employee.id === 4 || authInfo.employee.id === 102;
+    return (
+      authInfo.employee.id === 1 ||
+      authInfo.employee.id === 4 ||
+      authInfo.employee.id === 102
+    );
   };
 
   const isSuperAdminIdUser = (id: number): boolean => {
@@ -108,19 +121,21 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      authInfo, 
-      isLoading, 
-      error, 
-      refresh: fetchAuthInfo,
-      hasPermission,
-      denyPermission,
-      hasRole,
-      forbiddenRole,
-      isSuperAdminCompany,
-      isSuperAdminId,
-      isSuperAdminIdUser
-    }}>
+    <AuthContext.Provider
+      value={{
+        authInfo,
+        isLoading,
+        error,
+        refresh: fetchAuthInfo,
+        hasPermission,
+        denyPermission,
+        hasRole,
+        forbiddenRole,
+        isSuperAdminCompany,
+        isSuperAdminId,
+        isSuperAdminIdUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -129,7 +144,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
