@@ -1,25 +1,10 @@
 import { useState, useCallback } from "react";
-import axios from "axios";
 import type {
   PaymentPending,
   PaymentPendingParams,
 } from "../types/paymentPending";
 import paymentPendingService from "../services/paymentPendingService";
-
-const extractErrorMessage = (err: unknown, fallback: string): string => {
-  if (axios.isAxiosError(err)) {
-    const data = err.response?.data;
-    if (typeof data === "string" && data.trim()) return data;
-    if (data && typeof data === "object") {
-      const obj = data as Record<string, unknown>;
-      const candidate = obj.message ?? obj.title ?? obj.error;
-      if (typeof candidate === "string" && candidate.trim()) return candidate;
-    }
-    if (err.message) return err.message;
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-};
+import { extractErrorMessage } from "../utils/errorMessage";
 
 const usePaymentPending = () => {
   const [isLoading, setIsLoading] = useState(false);
