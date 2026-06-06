@@ -1,4 +1,4 @@
-import apiClient from '../client';
+import apiClient from "../client";
 
 export interface CreateSubscriptionRequest {
   days: number;
@@ -22,13 +22,19 @@ export interface CancelSubscriptionResponse {
   message: string;
 }
 
-interface UniversalSubscribeRequest {
-    tariffType: TariffType;
-    days: number;
-    ones?: number;
+/** Опция прайс-листа: длительность подписки и её стоимость (динамическое ценообразование) */
+export interface PayOption {
+  days: number;
+  cost: number;
 }
 
-type TariffType = 'WaypayCrm';
+interface UniversalSubscribeRequest {
+  tariffType: TariffType;
+  days: number;
+  ones?: number;
+}
+
+type TariffType = "WaypayCrm";
 
 class SubscriptionService {
   /**
@@ -36,19 +42,35 @@ class SubscriptionService {
    * @param days - количество дней (30, 90, 180, 365)
    * @returns Promise с данными подписки и ссылкой на оплату
    */
-  async subscribe(days: number, tariffType: TariffType = 'WaypayCrm', ones?: number): Promise<CreateSubscriptionResponse> {
-      const request: UniversalSubscribeRequest = {
-          tariffType: tariffType,
-          days: days
-      };
-      
-      // Добавляем ones только если он передан (для некоторых тарифов)
-      if (ones !== undefined) {
-          request.ones = ones;
-      }
-      
-      const response = await apiClient.post<CreateSubscriptionResponse>('/Pay/subscribe', request);
-      return response.data;
+  async subscribe(
+    days: number,
+    tariffType: TariffType = "WaypayCrm",
+    ones?: number
+  ): Promise<CreateSubscriptionResponse> {
+    const request: UniversalSubscribeRequest = {
+      tariffType: tariffType,
+      days: days,
+    };
+
+    // Добавляем ones только если он передан (для некоторых тарифов)
+    if (ones !== undefined) {
+      request.ones = ones;
+    }
+
+    const response = await apiClient.post<CreateSubscriptionResponse>(
+      "/Pay/subscribe",
+      request
+    );
+    return response.data;
+  }
+
+  /**
+   * Получить актуальный прайс-лист подписки (динамическое ценообразование)
+   * @returns Promise со списком доступных вариантов длительности и их стоимости
+   */
+  async getOptions(): Promise<PayOption[]> {
+    const response = await apiClient.get<PayOption[]>("/Pay/options");
+    return response.data;
   }
 
   /**
@@ -56,7 +78,9 @@ class SubscriptionService {
    * @returns Promise с информацией об отмене
    */
   async cancelSubscription(): Promise<CancelSubscriptionResponse> {
-    const response = await apiClient.post<CancelSubscriptionResponse>('/Pay/cancel');
+    const response = await apiClient.post<CancelSubscriptionResponse>(
+      "/Pay/cancel"
+    );
     return response.data;
   }
 
@@ -64,8 +88,12 @@ class SubscriptionService {
    * Получить информацию о текущей подписке (если нужно)
    * @param subscriptionId - ID подписки
    */
-  async getSubscriptionInfo(subscriptionId: string): Promise<CreateSubscriptionResponse> {
-    const response = await apiClient.get<CreateSubscriptionResponse>(`/Pay/subscription/${subscriptionId}`);
+  async getSubscriptionInfo(
+    subscriptionId: string
+  ): Promise<CreateSubscriptionResponse> {
+    const response = await apiClient.get<CreateSubscriptionResponse>(
+      `/Pay/subscription/${subscriptionId}`
+    );
     return response.data;
   }
 }
