@@ -1,21 +1,21 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import styled from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
-import Portal from '../../../utils/Portal';
-import { FaTimes, FaPlus, FaEdit, FaTrash, FaList } from 'react-icons/fa';
-import useObjectTypes from '../../../api/hooks/useObjectType';
-import type { EntityType } from '../../../api/types/objectType';
-import BaseModal from '../../modal/BASE/modalCRUBase';
-import Pagination from './CustomPagination';
-import DarkCyanButton from '../Buttons/DarkCyanButton';
-import CustomInput from './CustomInput';
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import styled from "styled-components";
+import { motion, AnimatePresence } from "framer-motion";
+import Portal from "../../../utils/Portal";
+import { FaTimes, FaPlus, FaEdit, FaTrash, FaList } from "react-icons/fa";
+import useObjectTypes from "../../../api/hooks/useObjectType";
+import type { EntityType } from "../../../api/types/objectType";
+import BaseModal from "../../modal/BASE/modalCRUBase";
+import Pagination from "./CustomPagination";
+import DarkCyanButton from "../Buttons/DarkCyanButton";
+import CustomInput from "./CustomInput";
 
 interface ObjectTypeSelectProps {
   value: string;
   onChange: (value: string) => void;
-  onObjectTypeSelect?: (objectType: { 
-    id: number; 
-    name: string; 
+  onObjectTypeSelect?: (objectType: {
+    id: number;
+    name: string;
     entityType: EntityType;
   }) => void;
   placeholder?: string;
@@ -42,44 +42,53 @@ const ObjectTypeSelect = ({
   value,
   onChange,
   onObjectTypeSelect,
-  placeholder = 'Выберите папку',
+  placeholder = "Выберите папку",
   customPlaceholder,
   hasError = false,
   errorMessage,
   disabled = false,
-  entityType = 'credit',
+  entityType = "credit",
   ...props
 }: ObjectTypeSelectProps) => {
-  const { 
-    getAll, 
-    create, 
-    update, 
-    deleteObjectType,
-    isLoading 
-  } = useObjectTypes();
-  
-  const [objectTypesData, setObjectTypesData] = useState<PaginationResponse | null>(null);
+  const { getAll, create, update, deleteObjectType, isLoading } =
+    useObjectTypes();
+
+  const [objectTypesData, setObjectTypesData] =
+    useState<PaginationResponse | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [manageModalMode, setManageModalMode] = useState<'create' | 'edit' | null>(null);
-  const [manageName, setManageName] = useState('');
-  const [editingObject, setEditingObject] = useState<{ id: number; name: string } | null>(null);
+  const [manageModalMode, setManageModalMode] = useState<
+    "create" | "edit" | null
+  >(null);
+  const [manageName, setManageName] = useState("");
+  const [editingObject, setEditingObject] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [dropdownCurrentPage, setDropdownCurrentPage] = useState(1);
   const itemsPerPage = 16; // Для dropdown (6 как в примере)
   const modalItemsPerPage = 6; // Для модального окна
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [menuPosition, setMenuPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
 
   // Получение данных с пагинацией
-  const fetchObjectTypes = async (page: number, pageSize: number = itemsPerPage, isForModal: boolean = false) => {
+  const fetchObjectTypes = async (
+    page: number,
+    pageSize: number = itemsPerPage,
+    isForModal: boolean = false
+  ) => {
     try {
-      const data = await getAll({ 
-        entityType, 
-        pageSize, 
-        page 
+      const data = await getAll({
+        entityType,
+        pageSize,
+        page,
       });
       if (data) {
         if (isForModal) {
@@ -92,7 +101,7 @@ const ObjectTypeSelect = ({
         }
       }
     } catch (error) {
-      console.error('Error fetching object types:', error);
+      console.error("Error fetching object types:", error);
     }
   };
 
@@ -103,13 +112,16 @@ const ObjectTypeSelect = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -117,19 +129,19 @@ const ObjectTypeSelect = ({
       // Сохраняем текущую позицию скролла
       const scrollY = window.scrollY;
       const body = document.body;
-      
+
       // Блокируем скролл на body
-      body.style.position = 'fixed';
+      body.style.position = "fixed";
       body.style.top = `-${scrollY}px`;
-      body.style.width = '100%';
-      body.style.overflowY = 'scroll'; // Оставляем скроллбар чтобы не прыгал контент
-      
+      body.style.width = "100%";
+      body.style.overflowY = "scroll"; // Оставляем скроллбар чтобы не прыгал контент
+
       return () => {
         // Восстанавливаем скролл при закрытии dropdown
-        body.style.position = '';
-        body.style.top = '';
-        body.style.width = '';
-        body.style.overflowY = '';
+        body.style.position = "";
+        body.style.top = "";
+        body.style.width = "";
+        body.style.overflowY = "";
         window.scrollTo(0, scrollY);
       };
     }
@@ -145,23 +157,29 @@ const ObjectTypeSelect = ({
   // Добавляем обработчик колесика мыши
   useEffect(() => {
     if (isDropdownOpen) {
-      document.addEventListener('wheel', handleDropdownWheel, { passive: false });
+      document.addEventListener("wheel", handleDropdownWheel, {
+        passive: false,
+      });
       return () => {
-        document.removeEventListener('wheel', handleDropdownWheel);
+        document.removeEventListener("wheel", handleDropdownWheel);
       };
     }
   }, [isDropdownOpen, handleDropdownWheel]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
 
     if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isDropdownOpen]);
 
@@ -171,7 +189,7 @@ const ObjectTypeSelect = ({
       setMenuPosition({
         top: rect.bottom,
         left: rect.left,
-        width: rect.width
+        width: rect.width,
       });
     }
   };
@@ -191,7 +209,11 @@ const ObjectTypeSelect = ({
     }
   };
 
-  const handleObjectTypeSelect = (objectType: { id: number; name: string; entityType: EntityType }) => {
+  const handleObjectTypeSelect = (objectType: {
+    id: number;
+    name: string;
+    entityType: EntityType;
+  }) => {
     onChange(objectType.name);
     if (onObjectTypeSelect) {
       onObjectTypeSelect(objectType);
@@ -201,12 +223,12 @@ const ObjectTypeSelect = ({
   };
 
   const handleClearSelection = () => {
-    onChange('');
+    onChange("");
     if (onObjectTypeSelect) {
       onObjectTypeSelect({
         id: 0,
-        name: '',
-        entityType: 'credit'
+        name: "",
+        entityType: "credit",
       });
     }
   };
@@ -214,15 +236,15 @@ const ObjectTypeSelect = ({
   const handleCreateNew = () => {
     setIsModalOpen(false);
     setIsDropdownOpen(false);
-    setManageModalMode('create');
-    setManageName('');
+    setManageModalMode("create");
+    setManageName("");
     setEditingObject(null);
   };
 
   const handleStartEdit = (objectType: { id: number; name: string }) => {
     setIsModalOpen(false);
     setIsDropdownOpen(false);
-    setManageModalMode('edit');
+    setManageModalMode("edit");
     setManageName(objectType.name);
     setEditingObject(objectType);
   };
@@ -237,18 +259,19 @@ const ObjectTypeSelect = ({
         } else {
           fetchObjectTypes(1, itemsPerPage);
         }
-      }
-      catch {
-        window.alert("Невозможно удалить категорию к которой привязаны договоры");
+      } catch {
+        window.alert(
+          "Невозможно удалить категорию к которой привязаны договоры"
+        );
       }
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const items = objectTypesData?.items || [];
-    if (e.key === 'Enter' && items.length > 0) {
+    if (e.key === "Enter" && items.length > 0) {
       handleObjectTypeSelect(items[0]);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setIsDropdownOpen(false);
     }
   };
@@ -266,7 +289,7 @@ const ObjectTypeSelect = ({
 
   const handleCloseManageModal = () => {
     setManageModalMode(null);
-    setManageName('');
+    setManageName("");
     setEditingObject(null);
   };
 
@@ -274,14 +297,14 @@ const ObjectTypeSelect = ({
     e?.preventDefault();
     if (!manageModalMode || !manageName.trim()) return;
 
-    if (manageModalMode === 'create') {
+    if (manageModalMode === "create") {
       const created = await create({
         name: manageName.trim(),
-        entityType: entityType
+        entityType: entityType,
       });
-      
+
       if (created) {
-        setManageName('');
+        setManageName("");
         setManageModalMode(null);
         // Обновляем данные после создания
         if (isModalOpen) {
@@ -292,13 +315,15 @@ const ObjectTypeSelect = ({
         handleObjectTypeSelect(created);
       }
     } else if (editingObject) {
-      const updated = await update(editingObject.id, { name: manageName.trim() });
+      const updated = await update(editingObject.id, {
+        name: manageName.trim(),
+      });
       if (updated) {
         if (value === editingObject.name) {
           onChange(updated.name);
         }
         setManageModalMode(null);
-        setManageName('');
+        setManageName("");
         setEditingObject(null);
         // Обновляем данные после редактирования
         if (isModalOpen) {
@@ -337,7 +362,7 @@ const ObjectTypeSelect = ({
               onClick={handleInputClick}
               onFocus={handleFocus}
               onKeyDown={handleKeyDown}
-              placeholder={customPlaceholder && !value ? '' : placeholder}
+              placeholder={customPlaceholder && !value ? "" : placeholder}
               hasError={hasError}
               disabled={disabled || isLoading}
               {...props}
@@ -348,13 +373,17 @@ const ObjectTypeSelect = ({
               </ClearButton>
             )}
             {!disabled && (
-              <ModalButton type="button" onClick={handleOpenModal} title="Открыть список папок">
+              <ModalButton
+                type="button"
+                onClick={handleOpenModal}
+                title="Открыть список папок"
+              >
                 <FaList size={14} />
               </ModalButton>
             )}
           </InputWrapper>
         </ControlsRow>
-        
+
         {customPlaceholder && !value && (
           <PlaceholderLabel isVisible={true}>
             {customPlaceholder}
@@ -371,12 +400,12 @@ const ObjectTypeSelect = ({
                 transition={{ duration: 0.2 }}
                 ref={dropdownRef}
                 style={{
-                  position: 'absolute',
+                  position: "absolute",
                   top: `${menuPosition.top}px`,
                   left: `${menuPosition.left}px`,
                   width: `${menuPosition.width}px`,
-                  maxHeight: '400px',
-                  zIndex: 1000
+                  maxHeight: "400px",
+                  zIndex: 1200,
                 }}
               >
                 <DropdownContent>
@@ -387,7 +416,7 @@ const ObjectTypeSelect = ({
                       {displayObjectTypes.map((objectType) => (
                         <ObjectTypeItem key={objectType.id}>
                           <>
-                            <ObjectTypeName 
+                            <ObjectTypeName
                               onClick={() => handleObjectTypeSelect(objectType)}
                             >
                               {objectType.name}
@@ -400,7 +429,9 @@ const ObjectTypeSelect = ({
                                 <FaEdit size={12} />
                               </CompactActionButton>
                               <CompactActionButton
-                                onClick={() => handleDelete(objectType.id, objectType.name)}
+                                onClick={() =>
+                                  handleDelete(objectType.id, objectType.name)
+                                }
                                 title="Удалить"
                               >
                                 <FaTrash size={12} />
@@ -414,7 +445,7 @@ const ObjectTypeSelect = ({
                     <DropdownItem>папки не найдены</DropdownItem>
                   )}
                 </DropdownContent>
-                
+
                 <DropdownFooter>
                   <AddButton type="button" onClick={handleCreateNew}>
                     <FaPlus size={12} />
@@ -445,9 +476,9 @@ const ObjectTypeSelect = ({
           >
             <ModalContentWrapper>
               <TopActions>
-                <ModalActionButton 
+                <ModalActionButton
                   type="button"
-                  $primary 
+                  $primary
                   onClick={handleCreateNew}
                 >
                   <FaPlus size={14} />
@@ -464,7 +495,7 @@ const ObjectTypeSelect = ({
                       {displayObjectTypes.map((objectType) => (
                         <ModalObjectTypeItem key={objectType.id}>
                           <>
-                            <ModalObjectTypeName 
+                            <ModalObjectTypeName
                               onClick={() => handleObjectTypeSelect(objectType)}
                             >
                               {objectType.name}
@@ -477,7 +508,9 @@ const ObjectTypeSelect = ({
                                 <FaEdit size={14} />
                               </CompactActionButton>
                               <CompactActionButton
-                                onClick={() => handleDelete(objectType.id, objectType.name)}
+                                onClick={() =>
+                                  handleDelete(objectType.id, objectType.name)
+                                }
                                 title="Удалить"
                               >
                                 <FaTrash size={14} />
@@ -487,7 +520,7 @@ const ObjectTypeSelect = ({
                         </ModalObjectTypeItem>
                       ))}
                     </ObjectTypeList>
-                    
+
                     {/* Пагинация для модального окна */}
                     {objectTypesData && objectTypesData.totalPages > 1 && (
                       <PaginationContainer>
@@ -512,12 +545,18 @@ const ObjectTypeSelect = ({
       <AnimatePresence>
         {manageModalMode && (
           <BaseModal
-            title={manageModalMode === 'create' ? 'Создать папку' : 'Редактировать папку'}
+            title={
+              manageModalMode === "create"
+                ? "Создать папку"
+                : "Редактировать папку"
+            }
             onClose={handleCloseManageModal}
             onCancel={handleCloseManageModal}
             onSave={handleManageSubmit}
             isSaveDisabled={!manageName.trim()}
-            saveButtonText={manageModalMode === 'create' ? 'Создать' : 'Сохранить'}
+            saveButtonText={
+              manageModalMode === "create" ? "Создать" : "Сохранить"
+            }
             width="520px"
             maxHeight="60vh"
           >
@@ -532,7 +571,6 @@ const ObjectTypeSelect = ({
           </BaseModal>
         )}
       </AnimatePresence>
-
     </>
   );
 };
@@ -562,7 +600,9 @@ const InputWrapper = styled.div`
 
 const StyledInput = styled.input<{ hasError?: boolean }>`
   padding: 10px 12px;
-  border: 1px solid ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(156, 163, 175, 1)'};
+  border: 1px solid
+    ${({ hasError }) =>
+      hasError ? "rgba(239, 68, 68, 1)" : "rgba(156, 163, 175, 1)"};
   border-radius: 5px;
   font-size: 14px;
   width: 100%;
@@ -579,11 +619,13 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
   cursor: pointer;
 
   &:hover {
-    border-color: ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(0, 125, 136, 1)'};
+    border-color: ${({ hasError }) =>
+      hasError ? "rgba(239, 68, 68, 1)" : "rgba(0, 125, 136, 1)"};
   }
 
   &:focus {
-    border-color: ${({ hasError }) => hasError ? 'rgba(239, 68, 68, 1)' : 'rgba(0, 125, 136, 1)'};
+    border-color: ${({ hasError }) =>
+      hasError ? "rgba(239, 68, 68, 1)" : "rgba(0, 125, 136, 1)"};
   }
 
   &::placeholder {
@@ -750,7 +792,7 @@ const AddButton = styled.button`
   color: rgba(0, 125, 136, 1);
   font-size: 14px;
   padding: 4px 0;
-  
+
   &:hover {
     color: rgba(0, 100, 110, 1);
   }
@@ -798,7 +840,9 @@ const ModalActionButton = styled.button<{ $primary?: boolean }>`
   gap: 6px;
   min-width: 80px;
 
-  ${({ $primary }) => $primary && `
+  ${({ $primary }) =>
+    $primary &&
+    `
     background-color: rgba(0, 125, 136, 1);
     color: white;
     
@@ -830,11 +874,11 @@ const ModalObjectTypeItem = styled.div`
   color: black;
   border-bottom: 1px solid #f1f1f1;
   transition: background-color 0.2s ease;
-  
+
   &:last-child {
     border-bottom: none;
   }
-  
+
   &:hover {
     background-color: #f8f9fa;
   }
@@ -847,7 +891,7 @@ const ModalObjectTypeName = styled.div`
   font-size: 14px;
   text-align: left;
   margin-right: auto;
-  
+
   &:hover {
     color: rgba(0, 125, 136, 1);
   }
