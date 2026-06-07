@@ -1,26 +1,26 @@
-import React from 'react';
-import styled from 'styled-components';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import MoreVertOutlinedIcon from '@mui/icons-material/MoreVertOutlined';
-import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import StarBorderRoundedIcon from '@mui/icons-material/StarBorderRounded';
-import type { Credit } from '../../../api/types/credit';
-import { formatMoney } from '../../../utils/formatPrice';
-import { formatDate } from '../../../utils/dateFormatter';
+import React from "react";
+import styled from "styled-components";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import StarBorderRoundedIcon from "@mui/icons-material/StarBorderRounded";
+import type { Credit } from "../../../api/types/credit";
+import { formatMoney } from "../../../utils/formatPrice";
+import { formatDate } from "../../../utils/dateFormatter";
 
 export type CreditCardField =
-  | 'totalClean'
-  | 'firstPayment'
-  | 'accured'
-  | 'payed'
-  | 'rest'
-  | 'debt'
-  | 'incomePercents'
-  | 'incomeRubles'
-  | 'employee';
+  | "totalClean"
+  | "firstPayment"
+  | "accured"
+  | "payed"
+  | "rest"
+  | "debt"
+  | "incomePercents"
+  | "incomeRubles"
+  | "employee";
 
-export type CreditCardStatus = 'active' | 'overdue' | 'closed' | 'terminated';
+export type CreditCardStatus = "active" | "overdue" | "closed" | "terminated";
 
 interface CreditCardProps {
   credit: Credit;
@@ -36,53 +36,76 @@ interface CreditCardProps {
 }
 
 const FIELD_LABEL: Record<CreditCardField, string> = {
-  totalClean: 'Стоимость',
-  firstPayment: 'Аванс',
-  accured: 'Начислено',
-  payed: 'Уплачено',
-  rest: 'Остаток',
-  debt: 'Долг',
-  incomePercents: 'Доход, %',
-  incomeRubles: 'Доход, руб',
-  employee: 'Сотрудник',
+  totalClean: "Стоимость",
+  firstPayment: "Аванс",
+  accured: "Начислено",
+  payed: "Уплачено",
+  rest: "Остаток",
+  debt: "Долг",
+  incomePercents: "Доход, %",
+  incomeRubles: "Доход, руб",
+  employee: "Сотрудник",
 };
 
 const computeStatus = (credit: Credit): CreditCardStatus => {
-  if (credit.terminated) return 'terminated';
-  if (!credit.isActive) return 'closed';
-  if ((credit.debt ?? 0) > 0) return 'overdue';
-  return 'active';
+  if (credit.terminated) return "terminated";
+  if (!credit.isActive) return "closed";
+  if ((credit.debt ?? 0) > 0) return "overdue";
+  return "active";
 };
 
-const STATUS_PALETTE: Record<CreditCardStatus, { bg: string; border: string; color: string; label: string }> = {
-  active: { bg: '#E0F2F1', border: '#80CBC4', color: '#00695C', label: 'Активный' },
-  overdue: { bg: '#FFEBEE', border: '#EF9A9A', color: '#B71C1C', label: 'Просрочка' },
-  closed: { bg: '#ECEFF1', border: '#CFD8DC', color: '#455A64', label: 'Закрыт' },
-  terminated: { bg: '#F3E8FF', border: '#D8B4FE', color: '#6B21A8', label: 'Расторгнут' },
+const STATUS_PALETTE: Record<
+  CreditCardStatus,
+  { bg: string; border: string; color: string; label: string }
+> = {
+  active: {
+    bg: "#E0F2F1",
+    border: "#80CBC4",
+    color: "#00695C",
+    label: "Активный",
+  },
+  overdue: {
+    bg: "#FFEBEE",
+    border: "#EF9A9A",
+    color: "#B71C1C",
+    label: "Просрочка",
+  },
+  closed: {
+    bg: "#ECEFF1",
+    border: "#CFD8DC",
+    color: "#455A64",
+    label: "Закрыт",
+  },
+  terminated: {
+    bg: "#F3E8FF",
+    border: "#D8B4FE",
+    color: "#6B21A8",
+    label: "Расторгнут",
+  },
 };
 
 const fieldValue = (credit: Credit, field: CreditCardField): string => {
   switch (field) {
-    case 'totalClean':
+    case "totalClean":
       return `${formatMoney((credit.totalClean ?? 0).toString())}`;
-    case 'firstPayment':
+    case "firstPayment":
       return `${formatMoney((credit.firstPayment ?? 0).toString())}`;
-    case 'accured':
+    case "accured":
       return `${formatMoney((credit.accured ?? 0).toString())}`;
-    case 'payed':
+    case "payed":
       return `${formatMoney((credit.payed ?? 0).toString())}`;
-    case 'rest':
+    case "rest":
       return `${formatMoney((credit.rest ?? 0).toString())}`;
-    case 'debt':
+    case "debt":
       return `${formatMoney((credit.debt ?? 0).toString())}`;
-    case 'incomePercents':
+    case "incomePercents":
       return `${credit.incomePercents ?? 0}%`;
-    case 'incomeRubles':
+    case "incomeRubles":
       return `${formatMoney((credit.incomeRubles ?? 0).toString())}`;
-    case 'employee':
-      return credit.employeeName || '—';
+    case "employee":
+      return credit.employeeName || "—";
     default:
-      return '—';
+      return "—";
   }
 };
 
@@ -98,7 +121,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
   onToggleFavourite,
   onActionMenu,
 }) => {
-  const status = computeStatus(credit); 
+  const status = computeStatus(credit);
   const palette = STATUS_PALETTE[status];
 
   return (
@@ -106,7 +129,6 @@ const CreditCard: React.FC<CreditCardProps> = ({
       $selected={selected}
       $highlighted={highlighted}
       $borderAccent={palette.border}
-      $isClientApproved={credit.hasCounterApproved}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
@@ -135,12 +157,20 @@ const CreditCard: React.FC<CreditCardProps> = ({
                   e.stopPropagation();
                   onToggleFavourite();
                 }}
-                title={credit.isFavourite ? 'Убрать из избранного' : 'В избранное'}
+                title={
+                  credit.isFavourite ? "Убрать из избранного" : "В избранное"
+                }
               >
                 {credit.isFavourite ? (
-                  <StarRoundedIcon fontSize="small" style={{ color: '#F59E0B' }} />
+                  <StarRoundedIcon
+                    fontSize="small"
+                    style={{ color: "#F59E0B" }}
+                  />
                 ) : (
-                  <StarBorderRoundedIcon fontSize="small" style={{ color: '#9CA3AF' }} />
+                  <StarBorderRoundedIcon
+                    fontSize="small"
+                    style={{ color: "#9CA3AF" }}
+                  />
                 )}
               </FavButton>
             )}
@@ -153,7 +183,11 @@ const CreditCard: React.FC<CreditCardProps> = ({
           </MetaRow>
         </HeaderInfo>
 
-        <StatusBadge $bg={palette.bg} $border={palette.border} $color={palette.color}>
+        <StatusBadge
+          $bg={palette.bg}
+          $border={palette.border}
+          $color={palette.color}
+        >
           {palette.label}
         </StatusBadge>
 
@@ -173,11 +207,15 @@ const CreditCard: React.FC<CreditCardProps> = ({
 
       {fields.length > 0 && (
         <Body>
-          {fields.map(field => (
+          {fields.map((field) => (
             <Field key={field}>
               <FieldLabel>{FIELD_LABEL[field]}</FieldLabel>
               <FieldValue
-                $emphasis={field === 'debt' && (credit.debt ?? 0) > 0 ? 'danger' : undefined}
+                $emphasis={
+                  field === "debt" && (credit.debt ?? 0) > 0
+                    ? "danger"
+                    : undefined
+                }
               >
                 {fieldValue(credit, field)}
               </FieldValue>
@@ -189,41 +227,44 @@ const CreditCard: React.FC<CreditCardProps> = ({
   );
 };
 
-const Card = styled.div<{ $selected: boolean; $highlighted: boolean; $borderAccent: string; $isClientApproved: boolean }>`
+const Card = styled.div<{
+  $selected: boolean;
+  $highlighted: boolean;
+  $borderAccent: string;
+}>`
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  background: ${p => (p.$isClientApproved ? '#fff' : '#FFE8E8')};
-  border: 1px solid ${p => (p.$selected ? '#007D88' : p.$isClientApproved ? '#E5E7EB' : '#FFCCCC')};
+  background: #fff;
+  border: 1px solid ${(p) => (p.$selected ? "#007D88" : "#E5E7EB")};
   border-radius: 12px;
   cursor: pointer;
   transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
   position: relative;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0 auto 0 0;
     width: 4px;
     border-radius: 12px 0 0 12px;
-    background: ${p => p.$isClientApproved ? p.$borderAccent : '#FF6B6B'};
-    opacity: ${p => (p.$highlighted ? 1 : 0.65)};
+    background: ${(p) => p.$borderAccent};
+    opacity: ${(p) => (p.$highlighted ? 1 : 0.65)};
   }
 
   &:hover {
-    border-color: #CBD5E1;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: #007d88;
+    background: #f3fbfa;
+    box-shadow: 0 4px 12px rgba(0, 125, 136, 0.12);
     transform: translateY(-1px);
   }
 
-  ${p => p.$selected && `
+  ${(p) =>
+    p.$selected &&
+    `
     background: #F0FDFA;
     box-shadow: 0 2px 8px rgba(0, 125, 136, 0.12);
-  `}
-
-  ${p => !p.$isClientApproved && `
-    background: #FFE8E8;
   `}
 `;
 
@@ -238,7 +279,7 @@ const Checkbox = styled.input`
   height: 16px;
   cursor: pointer;
   flex-shrink: 0;
-  accent-color: #007D88;
+  accent-color: #007d88;
 `;
 
 const IconBadge = styled.div`
@@ -246,7 +287,7 @@ const IconBadge = styled.div`
   height: 36px;
   border-radius: 8px;
   background: rgba(0, 125, 136, 0.1);
-  color: #007D88;
+  color: #007d88;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -295,23 +336,27 @@ const MetaRow = styled.div`
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #50555C;
+  color: #50555c;
   flex-wrap: wrap;
   min-width: 0;
 `;
 
 const Sep = styled.span`
-  color: #CBD5E1;
+  color: #cbd5e1;
 `;
 
-const StatusBadge = styled.span<{ $bg: string; $border: string; $color: string }>`
+const StatusBadge = styled.span<{
+  $bg: string;
+  $border: string;
+  $color: string;
+}>`
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-  background: ${p => p.$bg};
-  border: 1px solid ${p => p.$border};
-  color: ${p => p.$color};
+  background: ${(p) => p.$bg};
+  border: 1px solid ${(p) => p.$border};
+  color: ${(p) => p.$color};
   white-space: nowrap;
   flex-shrink: 0;
 `;
@@ -325,12 +370,12 @@ const ActionButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #6B7280;
+  color: #6b7280;
   cursor: pointer;
   flex-shrink: 0;
 
   &:hover {
-    background: #F3F4F6;
+    background: #f3f4f6;
     color: #111827;
   }
 `;
@@ -340,7 +385,7 @@ const Body = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px 16px;
   padding-top: 8px;
-  border-top: 1px dashed #E5E7EB;
+  border-top: 1px dashed #e5e7eb;
 `;
 
 const Field = styled.div`
@@ -352,14 +397,18 @@ const Field = styled.div`
 
 const FieldLabel = styled.span`
   font-size: 11px;
-  color: #6B7280;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 `;
 
-const FieldValue = styled.span<{ $emphasis?: 'danger' }>`
+const FieldValue = styled.span<{ $emphasis?: "danger" }>`
   font-size: 13px;
   font-weight: 600;
+  color: ${(p) => (p.$emphasis === "danger" ? "#B91C1C" : "#111827")};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export default CreditCard;

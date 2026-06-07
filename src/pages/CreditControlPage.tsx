@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { ListFilter } from "lucide-react";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import ExportButton from "../components/ui/Buttons/ExportButton";
@@ -41,6 +40,24 @@ import { useUiSettings } from "../utils/uiSettings";
 interface EmptyStarIconProps {
   isSelected?: boolean;
 }
+
+const FilterIcon = ({ active }: { active: boolean }) => (
+  <svg
+    aria-hidden="true"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4 6H20M7 12H17M10 18H14"
+      stroke={active ? "#007D88" : "#50555C"}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 const CreditControlPage = () => {
   const colors = {
@@ -1067,9 +1084,10 @@ const CreditControlPage = () => {
         type="button"
         onClick={() => setIsFilterModalOpen(true)}
         $hasActiveFilters={hasActiveFilters}
+        aria-label="Фильтр"
         title="Фильтр"
       >
-        <ListFilter size={20} strokeWidth={2.2} />
+        <FilterIcon active={hasActiveFilters} />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
@@ -1081,7 +1099,15 @@ const CreditControlPage = () => {
 
       {isFilterModalOpen && (
         <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
-          <FilterModalPanel onClick={(e) => e.stopPropagation()}>
+          <FilterModalPanel
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setIsFilterModalOpen(false);
+              }
+            }}
+          >
             <FilterModalHeader>
               <span>Фильтр</span>
               <FilterModalClose
@@ -1442,30 +1468,29 @@ const CreditControlPage = () => {
   );
 };
 
-// Иконка-кнопка фильтра — только иконка, вверху справа рядом с колокольчиком/настройками
-// (TopMenu: настройки right:10, колокольчик right:50; фильтр ставим левее — right:92).
+// Иконка-кнопка фильтра — рядом с колокольчиком/настройками в TopMenu.
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 95;
+  z-index: 100;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(209, 213, 219, 1);
-  background: #ffffff;
+  padding: 0;
+  border: none;
+  background: transparent;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   outline: none;
 
   &:hover {
     background-color: rgba(209, 213, 219, 0.5);
-    color: #007d88;
+    border-color: transparent;
   }
 
   &:active {
@@ -1474,6 +1499,15 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
 
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+
+  svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 1;
+    pointer-events: none;
   }
 `;
 

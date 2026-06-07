@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { ListFilter } from "lucide-react";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
   type RowStyle,
@@ -133,6 +132,24 @@ interface SetCategoryActionProps {
   onCategorySet: () => void;
   customTabs: ObjectType[];
 }
+
+const FilterIcon = ({ active }: { active: boolean }) => (
+  <svg
+    aria-hidden="true"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4 6H20M7 12H17M10 18H14"
+      stroke={active ? "#007D88" : "#50555C"}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 const CreditPage = () => {
   const colors = {
@@ -1709,12 +1726,7 @@ const CreditPage = () => {
         aria-label="Фильтр"
         title="Фильтр"
       >
-        <ListFilter
-          aria-hidden="true"
-          size={20}
-          strokeWidth={2.2}
-          color={hasActiveFilters ? "#007D88" : "#50555C"}
-        />
+        <FilterIcon active={hasActiveFilters} />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
@@ -1722,7 +1734,15 @@ const CreditPage = () => {
 
       {isFilterModalOpen && (
         <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
-          <FilterModalPanel onClick={(e) => e.stopPropagation()}>
+          <FilterModalPanel
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setIsFilterModalOpen(false);
+              }
+            }}
+          >
             <FilterModalHeader>
               <span>Фильтр</span>
               <FilterModalClose
@@ -2126,7 +2146,6 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   &:hover {
     background-color: rgba(209, 213, 219, 0.5);
     border-color: transparent;
-    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#000000")};
   }
 
   &:active {
@@ -2142,13 +2161,8 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    color: currentColor;
-    stroke: currentColor;
     opacity: 1;
-  }
-
-  svg * {
-    stroke: currentColor;
+    pointer-events: none;
   }
 `;
 
@@ -2477,6 +2491,7 @@ const SummaryStrip = styled.div`
   position: sticky;
   top: 0;
   z-index: 10;
+  color: #0f766e;
 `;
 
 const SummaryItem = styled.div<{ $danger?: boolean }>`
