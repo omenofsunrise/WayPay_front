@@ -98,7 +98,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
   onToggleFavourite,
   onActionMenu,
 }) => {
-  const status = computeStatus(credit);
+  const status = computeStatus(credit); 
   const palette = STATUS_PALETTE[status];
 
   return (
@@ -106,6 +106,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
       $selected={selected}
       $highlighted={highlighted}
       $borderAccent={palette.border}
+      $isClientApproved={credit.hasCounterApproved}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
@@ -188,13 +189,13 @@ const CreditCard: React.FC<CreditCardProps> = ({
   );
 };
 
-const Card = styled.div<{ $selected: boolean; $highlighted: boolean; $borderAccent: string }>`
+const Card = styled.div<{ $selected: boolean; $highlighted: boolean; $borderAccent: string; $isClientApproved: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  background: #fff;
-  border: 1px solid ${p => (p.$selected ? '#007D88' : '#E5E7EB')};
+  background: ${p => (p.$isClientApproved ? '#fff' : '#FFE8E8')};
+  border: 1px solid ${p => (p.$selected ? '#007D88' : p.$isClientApproved ? '#E5E7EB' : '#FFCCCC')};
   border-radius: 12px;
   cursor: pointer;
   transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
@@ -206,7 +207,7 @@ const Card = styled.div<{ $selected: boolean; $highlighted: boolean; $borderAcce
     inset: 0 auto 0 0;
     width: 4px;
     border-radius: 12px 0 0 12px;
-    background: ${p => p.$borderAccent};
+    background: ${p => p.$isClientApproved ? p.$borderAccent : '#FF6B6B'};
     opacity: ${p => (p.$highlighted ? 1 : 0.65)};
   }
 
@@ -219,6 +220,10 @@ const Card = styled.div<{ $selected: boolean; $highlighted: boolean; $borderAcce
   ${p => p.$selected && `
     background: #F0FDFA;
     box-shadow: 0 2px 8px rgba(0, 125, 136, 0.12);
+  `}
+
+  ${p => !p.$isClientApproved && `
+    background: #FFE8E8;
   `}
 `;
 
@@ -355,10 +360,6 @@ const FieldLabel = styled.span`
 const FieldValue = styled.span<{ $emphasis?: 'danger' }>`
   font-size: 13px;
   font-weight: 600;
-  color: ${p => (p.$emphasis === 'danger' ? '#B91C1C' : '#111827')};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `;
 
 export default CreditCard;

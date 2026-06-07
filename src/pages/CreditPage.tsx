@@ -801,7 +801,12 @@ const CreditPage = () => {
     if (credit) {
       try {
         await acceptCredit(credit.id);
-        await loadCredits();
+        
+        updateCreditInState(credit.id, { 
+          hasCounterApproved: true,
+          isActive: true,
+        });
+        
       } catch (error) {
         console.error("Ошибка при подтверждении договора:", error);
       }
@@ -1007,6 +1012,19 @@ const CreditPage = () => {
     selectedInvestmentSource,
     isListMode,
   ]);
+
+  const updateCreditInState = useCallback((creditId: number, updates: Partial<Credit>) => {s
+    if (isListMode) {
+      setAccumulatedItems(prev => prev.map(credit => 
+        credit.id === creditId ? { ...credit, ...updates } : credit
+      ));
+      accumulatedItemsRef.current = accumulatedItemsRef.current.map(credit =>
+        credit.id === creditId ? { ...credit, ...updates } : credit
+      );
+    } else {
+      loadCredits();
+    }
+  }, []);
 
   // Очистка при размонтировании
   useEffect(() => {
