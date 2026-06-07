@@ -20,6 +20,7 @@ import {
   type SetInvestmentSourceRequest,
 } from "../api/types/credit";
 import useExport from "../api/hooks/useExport";
+import ExportButton from "../components/ui/Buttons/ExportButton";
 import creditService from "../api/services/creditService";
 import { formatDate } from "../utils/dateFormatter";
 import NewPaymentModal from "../components/modal/NewPaymentModal";
@@ -254,13 +255,13 @@ const CreditPage = () => {
     7: "rest",
     8: "debt",
   };
-  const { hasPermission, hasRole, denyPermission } = useAuth();
+  const { hasPermission, hasRole, denyPermission, forbiddenRole } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   // Модальное окно с фильтрами (открывается иконкой в шапке)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const { exportData } = useExport<Credit>();
+  const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
     error,
@@ -801,12 +802,7 @@ const CreditPage = () => {
     if (credit) {
       try {
         await acceptCredit(credit.id);
-        
-        updateCreditInState(credit.id, { 
-          hasCounterApproved: true,
-          isActive: true,
-        });
-        
+        await loadCredits();
       } catch (error) {
         console.error("Ошибка при подтверждении договора:", error);
       }
@@ -1012,19 +1008,6 @@ const CreditPage = () => {
     selectedInvestmentSource,
     isListMode,
   ]);
-
-  const updateCreditInState = useCallback((creditId: number, updates: Partial<Credit>) => {s
-    if (isListMode) {
-      setAccumulatedItems(prev => prev.map(credit => 
-        credit.id === creditId ? { ...credit, ...updates } : credit
-      ));
-      accumulatedItemsRef.current = accumulatedItemsRef.current.map(credit =>
-        credit.id === creditId ? { ...credit, ...updates } : credit
-      );
-    } else {
-      loadCredits();
-    }
-  }, []);
 
   // Очистка при размонтировании
   useEffect(() => {
@@ -1261,6 +1244,65 @@ const CreditPage = () => {
     loadCredits,
   ]);
 
+  // Экспорт всех договоров по текущему фильтру.
+  const handleExport = async () => {
+    try {
+      await exportData({
+        fetchData: async (page, pageSize) => {
+          const params = {
+            page,
+            pageSize,
+            creditId: contractNumber || undefined,
+            clientFullname: clientFullName || undefined,
+            investorNickname: investorName || undefined,
+            dateFrom: fromDate ? new Date(fromDate) : undefined,
+            dateTo: toDate ? new Date(toDate) : undefined,
+            creditTypeId: creditTypeId || undefined,
+            sortBy:
+              sortConfig.key !== null
+                ? columnToApiSortMap[sortConfig.key]
+                : undefined,
+            sortDirection: sortConfig.direction,
+            ...filters,
+          };
+
+          const result = await creditService.getCredits(params);
+          return {
+            items: Array.isArray(result.items) ? result.items : [],
+            totalCount: result.totalCount || 0,
+          };
+        },
+        fileName: "credits_export",
+        transformData: (credit) => {
+          const creditDate =
+            typeof credit.creditDate === "string"
+              ? new Date(credit.creditDate)
+              : credit.creditDate;
+
+          return {
+            ID: credit.id,
+            "Дата договора": creditDate
+              ? creditDate.toLocaleDateString()
+              : "Нет данных",
+            "ФИО покупателя": credit.clientFullName,
+            Телефон: credit.clientPhone || "Нет данных",
+            "Стоимость товара": formatMoney(credit.totalClean?.toString()),
+            "Первоначальный взнос": formatMoney(
+              credit.firstPayment?.toString()
+            ),
+            Начислено: formatMoney(credit.totalAmount?.toString() || "0"),
+            Уплачено: formatMoney(credit.payed?.toString() || "0"),
+            Остаток: formatMoney(credit.rest?.toString() || "0"),
+            Просрочка: formatMoney(credit.debt?.toString() || "0"),
+          };
+        },
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.");
+    }
+  };
+
   // Экспорт конкретного набора договоров (для действий по строке / по выбранным).
   const exportCredits = async (credits: Credit[]) => {
     if (credits.length === 0) return;
@@ -1383,11 +1425,6 @@ const CreditPage = () => {
     {
       label: "Печать",
       action: handleRowPrint,
-      color: "#007d88",
-    },
-    {
-      label: "Экспорт",
-      action: handleRowExport,
       color: "#007d88",
     },
     {
@@ -1676,7 +1713,7 @@ const CreditPage = () => {
           aria-hidden="true"
           size={20}
           strokeWidth={2.2}
-          color={hasActiveFilters ? "#007D88" : "#111827"}
+          color={hasActiveFilters ? "#007D88" : "#50555C"}
         />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
@@ -1697,6 +1734,32 @@ const CreditPage = () => {
               </FilterModalClose>
             </FilterModalHeader>
             <FilterGrid>
+              <FilterSlot>
+                <FilterSlotLabel>№ Договора</FilterSlotLabel>
+                <CustomInput
+                  inputType="text"
+                  placeholder="Например, 19265"
+                  value={contractNumber}
+                  onChange={(e) => {
+                    setContractNumber(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+                <CustomInput
+                  inputType="fullname"
+                  placeholder="Поиск по ФИО"
+                  value={clientFullName}
+                  onChange={(e) => {
+                    setClientFullName(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
               <FilterSlot>
                 <FilterSlotLabel>Инвестор</FilterSlotLabel>
                 <InvestorSelect
@@ -1811,38 +1874,59 @@ const CreditPage = () => {
                   )}
                 </DarkCyanButton>
               )}
+
+              <ExportButton
+                onClick={handleExport}
+                isExporting={isExporting}
+                exportProgress={exportProgress}
+              >
+                Экспорт по фильтру
+              </ExportButton>
             </FilterModalFooter>
           </FilterModalPanel>
         </FilterModalOverlay>
       )}
 
-      <QuickFilters>
-        <QuickFilterSlot>
-          <FilterSlotLabel>№ Договора</FilterSlotLabel>
-          <CustomInput
-            inputType="text"
-            placeholder="Например, 19265"
-            value={contractNumber}
-            onChange={(e) => {
-              setContractNumber(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </QuickFilterSlot>
-
-        <QuickFilterSlot>
-          <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
-          <CustomInput
-            inputType="fullname"
-            placeholder="Поиск по ФИО"
-            value={clientFullName}
-            onChange={(e) => {
-              setClientFullName(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </QuickFilterSlot>
-      </QuickFilters>
+      {creditsData && forbiddenRole("сотрудник") && (
+        <SummaryStrip>
+          <SummaryItem>
+            <SummaryLabel>Стоимость</SummaryLabel>
+            <SummaryValue>
+              {formatMoney(creditsData.totalPrice.toString())}
+            </SummaryValue>
+          </SummaryItem>
+          <SummaryItem>
+            <SummaryLabel>Аванс</SummaryLabel>
+            <SummaryValue>
+              {formatMoney(creditsData.totalFirstPayment.toString())}
+            </SummaryValue>
+          </SummaryItem>
+          <SummaryItem>
+            <SummaryLabel>Начислено</SummaryLabel>
+            <SummaryValue>
+              {formatMoney(creditsData.totalAccured.toString())}
+            </SummaryValue>
+          </SummaryItem>
+          <SummaryItem>
+            <SummaryLabel>Уплачено</SummaryLabel>
+            <SummaryValue>
+              {formatMoney(creditsData.totalPayed.toString())}
+            </SummaryValue>
+          </SummaryItem>
+          <SummaryItem>
+            <SummaryLabel>Остаток</SummaryLabel>
+            <SummaryValue>
+              {formatMoney(creditsData.totalRest.toString())}
+            </SummaryValue>
+          </SummaryItem>
+          <SummaryItem $danger={(creditsData.totalDebt ?? 0) > 0}>
+            <SummaryLabel>Долг</SummaryLabel>
+            <SummaryValue $danger={(creditsData.totalDebt ?? 0) > 0}>
+              {formatMoney(creditsData.totalDebt.toString())}
+            </SummaryValue>
+          </SummaryItem>
+        </SummaryStrip>
+      )}
 
       <SecondRaw style={{ color: "white" }}>
         <Tabs
@@ -2019,15 +2103,15 @@ const CreditPage = () => {
   );
 };
 
-// Иконка-кнопка фильтра — только иконка, вверху справа рядом с колокольчиком/настройками
-// (TopMenu: настройки right:10, колокольчик right:50; фильтр ставим левее — right:92).
+// Иконка-кнопка фильтра — рядом с колокольчиком/настройками в TopMenu.
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 95;
+  z-index: 100;
   width: 36px;
   height: 36px;
+  padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -2035,13 +2119,14 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#50555C")};
-  transition: all 0.2s ease;
+  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
+  transition: all 0.3s ease;
   outline: none;
 
   &:hover {
     background-color: rgba(209, 213, 219, 0.5);
-    color: #007d88;
+    border-color: transparent;
+    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#000000")};
   }
 
   &:active {
@@ -2087,7 +2172,7 @@ const FilterBadge = styled.span`
 const FilterModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 1000;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -2131,8 +2216,17 @@ const FilterModalClose = styled.button`
 const FilterModalFooter = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+
+  & button {
+    height: auto;
+    margin: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
 `;
 
 const FilterField = styled.div`
@@ -2368,6 +2462,42 @@ const FilterSlotLabel = styled.span`
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+`;
+
+const SummaryStrip = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+  border: 1px solid #ccfbf1;
+  border-radius: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+`;
+
+const SummaryItem = styled.div<{ $danger?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid ${(p) => (p.$danger ? "#EF4444" : "#0F766E")};
+`;
+
+const SummaryLabel = styled.span`
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const SummaryValue = styled.span<{ $danger?: boolean }>`
+  font-size: 15px;
+  font-weight: 600;
+  color: ${(p) => (p.$danger ? "#B91C1C" : "#0F766E")};
 `;
 
 export default CreditPage;

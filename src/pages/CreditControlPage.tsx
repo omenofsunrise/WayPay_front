@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ListFilter } from "lucide-react";
+import CustomTitle from "../components/ui/Text/CustomTitle";
+import TitleField from "../components/ui/Layouts/TitleLayout";
+import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
   type RowStyle,
@@ -14,6 +17,7 @@ import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import { useNavigate } from "react-router-dom";
 import useCredit from "../api/hooks/useCredit";
 import type { Credit } from "../api/types/credit";
+import useExport from "../api/hooks/useExport";
 import creditService from "../api/services/creditService";
 import { formatDate } from "../utils/dateFormatter";
 import NewPaymentModal from "../components/modal/NewPaymentModal";
@@ -150,6 +154,7 @@ const CreditControlPage = () => {
     6: "income_rubles",
   };
   const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
+  const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
     error,
@@ -768,6 +773,70 @@ const CreditControlPage = () => {
     },
   ];
 
+  const handleExport = async () => {
+    try {
+      await exportData({
+        fetchData: async (page, pageSize) => {
+          const params = {
+            page,
+            pageSize,
+            creditId: contractNumber || undefined,
+            clientFullname: clientFullName || undefined,
+            investorNickname: investorName || undefined,
+            dateFrom: fromDate ? new Date(fromDate) : undefined,
+            dateTo: toDate ? new Date(toDate) : undefined,
+            rublesIncomeFrom: rublesIncomeFrom
+              ? Number(rublesIncomeFrom)
+              : undefined,
+            rublesIncomeTo: rublesIncomeTo ? Number(rublesIncomeTo) : undefined,
+            percentsIncomeFrom: percentsIncomeFrom
+              ? Number(percentsIncomeFrom)
+              : undefined,
+            percentsIncomeTo: percentsIncomeTo
+              ? Number(percentsIncomeTo)
+              : undefined,
+            sortBy:
+              sortConfig.key !== null
+                ? columnToApiSortMap[sortConfig.key]
+                : undefined,
+            sortDirection: sortConfig.direction,
+            ...filters,
+          };
+
+          const result = await creditService.getCredits(params);
+          return {
+            items: Array.isArray(result.items) ? result.items : [],
+            totalCount: result.totalCount || 0,
+          };
+        },
+        fileName: "credits_control_export",
+        transformData: (credit) => {
+          const creditDate =
+            typeof credit.creditDate === "string"
+              ? new Date(credit.creditDate)
+              : credit.creditDate;
+
+          return {
+            "Номер договора": credit.id,
+            "Дата договора": creditDate ? formatDate(creditDate) : "Нет данных",
+            "ФИО сотрудника": credit.employeeName || "Нет данных",
+            "Стоимость товара": formatMoney(
+              credit.totalClean?.toString() || "0"
+            ),
+            "Доход в рублях": formatMoney(
+              credit.incomeRubles?.toString() || "0"
+            ),
+            "Доход в %": `${credit.incomePercents || 0}%`,
+            Начислено: formatMoney(credit.accured?.toString() || "0"),
+          };
+        },
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.");
+    }
+  };
+
   const handleRowClick = (rowData: any[], rowIndex: number) => {
     const [_, id] = rowData;
     const credit = displayedCredits.find((c) => c.id === Number(id));
@@ -998,19 +1067,17 @@ const CreditControlPage = () => {
         type="button"
         onClick={() => setIsFilterModalOpen(true)}
         $hasActiveFilters={hasActiveFilters}
-        aria-label="Фильтр"
         title="Фильтр"
       >
-        <ListFilter
-          aria-hidden="true"
-          size={20}
-          strokeWidth={2.2}
-          color={hasActiveFilters ? "#007D88" : "#111827"}
-        />
+        <ListFilter size={20} strokeWidth={2.2} />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
       </FilterIconButton>
+
+      <TitleField>
+        <CustomTitle>Контроль договоров</CustomTitle>
+      </TitleField>
 
       {isFilterModalOpen && (
         <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
@@ -1026,6 +1093,32 @@ const CreditControlPage = () => {
               </FilterModalClose>
             </FilterModalHeader>
             <FilterGrid>
+              <FilterSlot>
+                <FilterSlotLabel>№ Договора</FilterSlotLabel>
+                <CustomInput
+                  inputType="text"
+                  placeholder="Например, 19265"
+                  value={contractNumber}
+                  onChange={(e) => {
+                    setContractNumber(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+                <CustomInput
+                  inputType="fullname"
+                  placeholder="Поиск по ФИО"
+                  value={clientFullName}
+                  onChange={(e) => {
+                    setClientFullName(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </FilterSlot>
+
               <FilterSlot>
                 <FilterSlotLabel>Папка</FilterSlotLabel>
                 <ObjectTypeSelect
@@ -1206,38 +1299,47 @@ const CreditControlPage = () => {
                   )}
                 </DarkCyanButton>
               )}
+
+              <ExportButton
+                onClick={handleExport}
+                isExporting={isExporting}
+                exportProgress={exportProgress}
+              >
+                Экспорт по фильтру
+              </ExportButton>
             </FilterModalFooter>
           </FilterModalPanel>
         </FilterModalOverlay>
       )}
 
-      <QuickFilters>
-        <QuickFilterSlot>
-          <FilterSlotLabel>№ Договора</FilterSlotLabel>
-          <CustomInput
-            inputType="text"
-            placeholder="Например, 19265"
-            value={contractNumber}
-            onChange={(e) => {
-              setContractNumber(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </QuickFilterSlot>
-
-        <QuickFilterSlot>
-          <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
-          <CustomInput
-            inputType="fullname"
-            placeholder="Поиск по ФИО"
-            value={clientFullName}
-            onChange={(e) => {
-              setClientFullName(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </QuickFilterSlot>
-      </QuickFilters>
+      {creditsData && forbiddenRole("сотрудник") && (
+        <ControlSummaryStrip>
+          <ControlSummaryItem>
+            <ControlSummaryLabel>Стоимость</ControlSummaryLabel>
+            <ControlSummaryValue>
+              {formatMoney(creditsData.totalPrice.toString())}
+            </ControlSummaryValue>
+          </ControlSummaryItem>
+          <ControlSummaryItem>
+            <ControlSummaryLabel>Аванс</ControlSummaryLabel>
+            <ControlSummaryValue>
+              {formatMoney(creditsData.totalFirstPayment.toString())}
+            </ControlSummaryValue>
+          </ControlSummaryItem>
+          <ControlSummaryItem>
+            <ControlSummaryLabel>Доход, руб</ControlSummaryLabel>
+            <ControlSummaryValue>
+              {formatMoney(creditsData.totalIncomeRubles.toString())}
+            </ControlSummaryValue>
+          </ControlSummaryItem>
+          <ControlSummaryItem>
+            <ControlSummaryLabel>Начислено</ControlSummaryLabel>
+            <ControlSummaryValue>
+              {formatMoney(creditsData.totalAccured.toString())}
+            </ControlSummaryValue>
+          </ControlSummaryItem>
+        </ControlSummaryStrip>
+      )}
 
       <SecondRaw>
         <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
@@ -1349,14 +1451,15 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   z-index: 95;
   width: 36px;
   height: 36px;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(209, 213, 219, 1);
+  background: #ffffff;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#50555C")};
+  color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   transition: all 0.2s ease;
   outline: none;
 
@@ -1372,26 +1475,12 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
   }
-
-  svg {
-    display: block;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    color: currentColor;
-    stroke: currentColor;
-    opacity: 1;
-  }
-
-  svg * {
-    stroke: currentColor;
-  }
 `;
 
 const FilterModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 1000;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1435,8 +1524,17 @@ const FilterModalClose = styled.button`
 const FilterModalFooter = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+
+  & button {
+    height: auto;
+    margin: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
 `;
 
 const FilterBadge = styled.span`
@@ -1454,6 +1552,19 @@ const FilterBadge = styled.span`
   display: flex;
   align-items: center;
   justify-content: center;
+`;
+
+const HeaderControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-left: auto;
+`;
+
+const RightControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
 `;
 
 const FilterField = styled.div`
@@ -1624,6 +1735,43 @@ const QuickFilterSlot = styled.div`
   min-width: 0;
   flex: 1 1 220px;
   max-width: 320px;
+`;
+
+const ControlSummaryStrip = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+  border: 1px solid #ccfbf1;
+  border-radius: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  color: #0f766e;
+`;
+
+const ControlSummaryItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid #0f766e;
+`;
+
+const ControlSummaryLabel = styled.span`
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const ControlSummaryValue = styled.span`
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f766e;
 `;
 
 export default CreditControlPage;
