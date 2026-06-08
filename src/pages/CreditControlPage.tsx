@@ -1,4 +1,9 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { ListFilter } from "lucide-react";
+import filterArrow from "../assets/ui/arrow.svg";
+
+// Ширина выезжающей панели фильтров (на столько отодвигается контент). Как у бокового меню.
+const FILTER_PANEL_WIDTH = 360;
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import ExportButton from "../components/ui/Buttons/ExportButton";
@@ -12,7 +17,6 @@ import Pagination from "../components/ui/fields/CustomPagination";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import Tabs from "../components/ui/fields/Tabs";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
-import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import { useNavigate } from "react-router-dom";
 import useCredit from "../api/hooks/useCredit";
 import type { Credit } from "../api/types/credit";
@@ -40,24 +44,6 @@ import { useUiSettings } from "../utils/uiSettings";
 interface EmptyStarIconProps {
   isSelected?: boolean;
 }
-
-const FilterIcon = ({ active }: { active: boolean }) => (
-  <svg
-    aria-hidden="true"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M4 6H20M7 12H17M10 18H14"
-      stroke={active ? "#007D88" : "#50555C"}
-      strokeWidth="2.2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
 
 const CreditControlPage = () => {
   const colors = {
@@ -436,22 +422,13 @@ const CreditControlPage = () => {
     { value: "notConfirmed", label: "Неподтверждённые" },
   ];
 
-  const loadCredits = useCallback(async () => {
-    if (!isPageSizeReady) return;
-
-    // Отменяем предыдущий запрос
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Создаем новый AbortController и захватываем его локально
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    const signal = controller.signal;
-
-    const params = {
-      page: currentPage,
-      pageSize: itemsPerPage,
+  // Единый источник параметров фильтрации для запросов кредитов.
+  // Используется и таблицей (loadCredits), и экспортом (handleExport),
+  // чтобы экспорт всегда учитывал ровно те же фильтры, что и список.
+  const buildCreditParams = useCallback(
+    (page: number, pageSize: number) => ({
+      page,
+      pageSize,
       name: contractNumber || undefined,
       creditTypeId: creditTypeId || undefined,
       clientFullname: clientFullName || undefined,
@@ -494,7 +471,41 @@ const CreditControlPage = () => {
           : undefined,
       sortDirection: sortConfig.direction,
       ...filters,
-    };
+    }),
+    [
+      contractNumber,
+      creditTypeId,
+      clientFullName,
+      investorName,
+      selectedInvestmentSource,
+      fromDate,
+      toDate,
+      fromCreationDate,
+      toCreationDate,
+      approvalStatus,
+      rublesIncomeFrom,
+      rublesIncomeTo,
+      percentsIncomeFrom,
+      percentsIncomeTo,
+      sortConfig,
+      filters,
+    ]
+  );
+
+  const loadCredits = useCallback(async () => {
+    if (!isPageSizeReady) return;
+
+    // Отменяем предыдущий запрос
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Создаем новый AbortController и захватываем его локально
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
+
+    const params = buildCreditParams(currentPage, itemsPerPage);
 
     const result = await getCredits(params, signal);
 
@@ -510,23 +521,8 @@ const CreditControlPage = () => {
       setIsLoadingMore(false);
     }
   }, [
+    buildCreditParams,
     currentPage,
-    contractNumber,
-    clientFullName,
-    investorName,
-    selectedInvestmentSource,
-    fromDate,
-    toDate,
-    rublesIncomeFrom,
-    rublesIncomeTo,
-    percentsIncomeFrom,
-    percentsIncomeTo,
-    sortConfig,
-    filters,
-    creditTypeId,
-    toCreationDate,
-    fromCreationDate,
-    approvalStatus,
     itemsPerPage,
     isPageSizeReady,
     isListMode,
@@ -794,31 +790,8 @@ const CreditControlPage = () => {
     try {
       await exportData({
         fetchData: async (page, pageSize) => {
-          const params = {
-            page,
-            pageSize,
-            creditId: contractNumber || undefined,
-            clientFullname: clientFullName || undefined,
-            investorNickname: investorName || undefined,
-            dateFrom: fromDate ? new Date(fromDate) : undefined,
-            dateTo: toDate ? new Date(toDate) : undefined,
-            rublesIncomeFrom: rublesIncomeFrom
-              ? Number(rublesIncomeFrom)
-              : undefined,
-            rublesIncomeTo: rublesIncomeTo ? Number(rublesIncomeTo) : undefined,
-            percentsIncomeFrom: percentsIncomeFrom
-              ? Number(percentsIncomeFrom)
-              : undefined,
-            percentsIncomeTo: percentsIncomeTo
-              ? Number(percentsIncomeTo)
-              : undefined,
-            sortBy:
-              sortConfig.key !== null
-                ? columnToApiSortMap[sortConfig.key]
-                : undefined,
-            sortDirection: sortConfig.direction,
-            ...filters,
-          };
+          // Те же параметры фильтрации, что и в таблице — экспорт учитывает все фильтры
+          const params = buildCreditParams(page, pageSize);
 
           const result = await creditService.getCredits(params);
           return {
@@ -1079,15 +1052,22 @@ const CreditControlPage = () => {
   };
 
   return (
-    <PageLayout ref={containerRef}>
+    <PageLayout
+      ref={containerRef}
+      style={{
+        paddingRight: isFilterModalOpen ? FILTER_PANEL_WIDTH : 0,
+        transition: "padding-right 0.3s ease",
+        height: "calc(100vh - 56px)",
+        overflow: "hidden",
+      }}
+    >
       <FilterIconButton
         type="button"
-        onClick={() => setIsFilterModalOpen(true)}
+        onClick={() => setIsFilterModalOpen((v) => !v)}
         $hasActiveFilters={hasActiveFilters}
-        aria-label="Фильтр"
         title="Фильтр"
       >
-        <FilterIcon active={hasActiveFilters} />
+        <ListFilter size={20} strokeWidth={2.2} />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
@@ -1097,158 +1077,160 @@ const CreditControlPage = () => {
         <CustomTitle>Контроль договоров</CustomTitle>
       </TitleField>
 
-      {isFilterModalOpen && (
-        <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
-          <FilterModalPanel
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                setIsFilterModalOpen(false);
-              }
-            }}
-          >
-            <FilterModalHeader>
-              <span>Фильтр</span>
-              <FilterModalClose
-                type="button"
-                onClick={() => setIsFilterModalOpen(false)}
-                aria-label="Закрыть"
-              >
-                ×
-              </FilterModalClose>
-            </FilterModalHeader>
-            <FilterGrid>
+      <FilterPanel $open={isFilterModalOpen}>
+        <FilterPanelInner
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              setIsFilterModalOpen(false);
+            }
+          }}
+        >
+          <FilterModalHeader>
+            <span>Фильтр</span>
+            <CollapseArrow
+              src={filterArrow}
+              alt=""
+              onClick={() => setIsFilterModalOpen(false)}
+              title="Свернуть"
+            />
+          </FilterModalHeader>
+          <FilterGrid>
+            <FilterSlot>
+              <FilterSlotLabel>№ Договора</FilterSlotLabel>
+              <CustomInput
+                inputType="text"
+                placeholder="Например, 19265"
+                value={contractNumber}
+                onChange={(e) => {
+                  setContractNumber(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+              <CustomInput
+                inputType="fullname"
+                placeholder="Поиск по ФИО"
+                value={clientFullName}
+                onChange={(e) => {
+                  setClientFullName(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Папка</FilterSlotLabel>
+              <ObjectTypeSelect
+                value={objectType}
+                onChange={handleObjectTypeChange}
+                onObjectTypeSelect={handleObjectTypeSelect}
+                placeholder="Любая"
+                customPlaceholder="Папка"
+                hideClearButton={false}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Инвестор</FilterSlotLabel>
+              <InvestorSelect
+                placeholder="Любой"
+                value={investorName}
+                onChange={(name) => {
+                  setInvestorName(name);
+                  setSelectedInvestmentSource(null);
+                  setCurrentPage(1);
+                }}
+                onInvestorSelect={(investor) => {
+                  setInvestorName(investor.nickname || investor.fullName || "");
+                  setSelectedInvestmentSource({
+                    type: investor.type || "investor",
+                    id: investor.id,
+                    name: investor.nickname || investor.fullName || "",
+                  });
+                  setCurrentPage(1);
+                }}
+                includePools
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Статус подтверждения</FilterSlotLabel>
+              <CustomSelect
+                placeholder="Любой"
+                customPlaceholder="Статус подтверждения"
+                options={approvalOptions}
+                value={approvalStatus}
+                onChange={(event) => {
+                  setApprovalStatus(event.target.value);
+                  setCurrentPage(1);
+                }}
+                hasError={false}
+                disabled={false}
+              />
+            </FilterSlot>
+          </FilterGrid>
+
+          <FilterGroupRow>
+            <FilterGroup>
+              <FilterGroupTitle>Даты</FilterGroupTitle>
+
               <FilterSlot>
-                <FilterSlotLabel>№ Договора</FilterSlotLabel>
-                <CustomInput
-                  inputType="text"
-                  placeholder="Например, 19265"
-                  value={contractNumber}
-                  onChange={(e) => {
-                    setContractNumber(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
+                <FilterSlotLabel>Дата договора</FilterSlotLabel>
+                <RangeRow>
+                  <CustomCalendar
+                    prefix="от:"
+                    placeholder="дд-мм-гггг"
+                    value={fromDate}
+                    onChange={(date) => {
+                      setFromDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                  <RangeDash>–</RangeDash>
+                  <CustomCalendar
+                    prefix="до:"
+                    placeholder="дд-мм-гггг"
+                    value={toDate}
+                    onChange={(date) => {
+                      setToDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </RangeRow>
               </FilterSlot>
 
               <FilterSlot>
-                <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
-                <CustomInput
-                  inputType="fullname"
-                  placeholder="Поиск по ФИО"
-                  value={clientFullName}
-                  onChange={(e) => {
-                    setClientFullName(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
+                <FilterSlotLabel>Дата создания</FilterSlotLabel>
+                <RangeRow>
+                  <CustomCalendar
+                    prefix="от:"
+                    placeholder="дд-мм-гггг"
+                    value={fromCreationDate}
+                    onChange={(date) => {
+                      setFromCreationDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                  <RangeDash>–</RangeDash>
+                  <CustomCalendar
+                    prefix="до:"
+                    placeholder="дд-мм-гггг"
+                    value={toCreationDate}
+                    onChange={(date) => {
+                      setToCreationDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </RangeRow>
               </FilterSlot>
+            </FilterGroup>
 
-              <FilterSlot>
-                <FilterSlotLabel>Папка</FilterSlotLabel>
-                <ObjectTypeSelect
-                  value={objectType}
-                  onChange={handleObjectTypeChange}
-                  onObjectTypeSelect={handleObjectTypeSelect}
-                  placeholder="Любая"
-                  customPlaceholder="Папка"
-                  hideClearButton={false}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Инвестор</FilterSlotLabel>
-                <InvestorSelect
-                  placeholder="Любой"
-                  value={investorName}
-                  onChange={(name) => {
-                    setInvestorName(name);
-                    setSelectedInvestmentSource(null);
-                    setCurrentPage(1);
-                  }}
-                  onInvestorSelect={(investor) => {
-                    setInvestorName(
-                      investor.nickname || investor.fullName || ""
-                    );
-                    setSelectedInvestmentSource({
-                      type: investor.type || "investor",
-                      id: investor.id,
-                      name: investor.nickname || investor.fullName || "",
-                    });
-                    setCurrentPage(1);
-                  }}
-                  includePools
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Статус подтверждения</FilterSlotLabel>
-                <CustomSelect
-                  placeholder="Любой"
-                  customPlaceholder="Статус подтверждения"
-                  options={approvalOptions}
-                  value={approvalStatus}
-                  onChange={(event) => {
-                    setApprovalStatus(event.target.value);
-                    setCurrentPage(1);
-                  }}
-                  hasError={false}
-                  disabled={false}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="от:"
-                  placeholder="дд-мм-гггг"
-                  value={fromDate}
-                  onChange={(date) => {
-                    setFromDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="до:"
-                  placeholder="дд-мм-гггг"
-                  value={toDate}
-                  onChange={(date) => {
-                    setToDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="от:"
-                  placeholder="дд-мм-гггг"
-                  value={fromCreationDate}
-                  onChange={(date) => {
-                    setFromCreationDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="до:"
-                  placeholder="дд-мм-гггг"
-                  value={toCreationDate}
-                  onChange={(date) => {
-                    setToCreationDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
+            <FilterGroup>
+              <FilterGroupTitle>Доход</FilterGroupTitle>
 
               <FilterSlot>
                 <FilterSlotLabel>Доход, руб</FilterSlotLabel>
@@ -1299,151 +1281,158 @@ const CreditControlPage = () => {
                   />
                 </RangeRow>
               </FilterSlot>
-            </FilterGrid>
+            </FilterGroup>
+          </FilterGroupRow>
 
-            <FilterModalFooter>
+          <FilterModalFooter>
+            <DarkCyanButton
+              type="button"
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+            >
+              Сбросить фильтры
+            </DarkCyanButton>
+
+            {hasPermission("MANAGE_ACCOUNTING", true) && (
               <DarkCyanButton
-                type="button"
-                onClick={resetFilters}
-                disabled={!hasActiveFilters}
+                onClick={handleConfirmAllCredits}
+                disabled={isConfirmingAll}
               >
-                Сбросить фильтры
-              </DarkCyanButton>
-
-              {hasPermission("MANAGE_ACCOUNTING", true) && (
-                <DarkCyanButton
-                  onClick={handleConfirmAllCredits}
-                  disabled={isConfirmingAll}
-                >
-                  {isConfirmingAll ? (
-                    <>
-                      <SpinnerIcon />
-                      Подтверждение...
-                    </>
-                  ) : (
-                    "Подтвердить все по фильтрам"
-                  )}
-                </DarkCyanButton>
-              )}
-
-              <ExportButton
-                onClick={handleExport}
-                isExporting={isExporting}
-                exportProgress={exportProgress}
-              >
-                Экспорт по фильтру
-              </ExportButton>
-            </FilterModalFooter>
-          </FilterModalPanel>
-        </FilterModalOverlay>
-      )}
-
-      {creditsData && forbiddenRole("сотрудник") && (
-        <ControlSummaryStrip>
-          <ControlSummaryItem>
-            <ControlSummaryLabel>Стоимость</ControlSummaryLabel>
-            <ControlSummaryValue>
-              {formatMoney(creditsData.totalPrice.toString())}
-            </ControlSummaryValue>
-          </ControlSummaryItem>
-          <ControlSummaryItem>
-            <ControlSummaryLabel>Аванс</ControlSummaryLabel>
-            <ControlSummaryValue>
-              {formatMoney(creditsData.totalFirstPayment.toString())}
-            </ControlSummaryValue>
-          </ControlSummaryItem>
-          <ControlSummaryItem>
-            <ControlSummaryLabel>Доход, руб</ControlSummaryLabel>
-            <ControlSummaryValue>
-              {formatMoney(creditsData.totalIncomeRubles.toString())}
-            </ControlSummaryValue>
-          </ControlSummaryItem>
-          <ControlSummaryItem>
-            <ControlSummaryLabel>Начислено</ControlSummaryLabel>
-            <ControlSummaryValue>
-              {formatMoney(creditsData.totalAccured.toString())}
-            </ControlSummaryValue>
-          </ControlSummaryItem>
-        </ControlSummaryStrip>
-      )}
-
-      <SecondRaw>
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
-        <TotalControls>
-          <CountInfoTitle total={creditsData?.totalCount || 0} />
-        </TotalControls>
-      </SecondRaw>
-
-      {isLoading && (!isListMode || displayedCredits.length === 0) && (
-        <div>Загрузка...</div>
-      )}
-      {error && <div>Ошибка: {error}</div>}
-
-      {!error &&
-        (!isLoading || (isListMode && displayedCredits.length > 0)) && (
-          <>
-            <CreditCardList
-              credits={displayedCredits}
-              fields={
-                [
-                  "employee",
-                  "totalClean",
-                  "firstPayment",
-                  "incomePercents",
-                  "incomeRubles",
-                  "accured",
-                ] as CreditCardField[]
-              }
-              getRowData={(credit) => [
-                null,
-                credit.id.toString(),
-                formatDate(credit.creditDate),
-                credit.employeeName,
-                formatMoney((credit.totalClean ?? 0).toString()),
-                formatMoney((credit.firstPayment ?? 0).toString()),
-                `${credit.incomePercents ?? 0}%`,
-                formatMoney((credit.incomeRubles ?? 0).toString()),
-                formatMoney((credit.accured ?? 0).toString()),
-                (credit.debt ?? 0) > 0,
-                credit.isActive,
-              ]}
-              highlightedCreditId={selectedCredit?.id ?? null}
-              onRowClick={(rowIndex) => {
-                const credit = displayedCredits[rowIndex];
-                if (credit) setSelectedCredit(credit);
-              }}
-              onRowDoubleClick={(rowIndex) => {
-                const credit = displayedCredits[rowIndex];
-                if (credit) {
-                  setViewingCreditId(credit.id);
-                  setIsViewModalOpen(true);
-                }
-              }}
-              onToggleFavourite={(credit) => toggleFavourite(credit.id)}
-              contextMenuActions={tableActions}
-            />
-
-            {isListMode ? (
-              <>
-                {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
-                {isLoadingMore ? (
-                  <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+                {isConfirmingAll ? (
+                  <>
+                    <SpinnerIcon />
+                    Подтверждение...
+                  </>
                 ) : (
-                  <ListBottomSpacer />
+                  "Подтвердить все по фильтрам"
                 )}
-              </>
-            ) : (
-              <PaginationLayout>
-                <Pagination
-                  total={creditsData?.totalCount || 0}
-                  current={currentPage}
-                  onChange={setCurrentPage}
-                  itemsPerPage={itemsPerPage}
-                />
-              </PaginationLayout>
+              </DarkCyanButton>
             )}
-          </>
+
+            <ExportButton
+              onClick={handleExport}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            >
+              Экспорт по фильтру
+            </ExportButton>
+          </FilterModalFooter>
+        </FilterPanelInner>
+      </FilterPanel>
+
+      <StickyHeader>
+        {creditsData && forbiddenRole("сотрудник") && (
+          <ControlSummaryStrip>
+            <ControlSummaryItem>
+              <ControlSummaryLabel>Всего договоров</ControlSummaryLabel>
+              <ControlSummaryValue>
+                {creditsData.totalCount}
+              </ControlSummaryValue>
+            </ControlSummaryItem>
+            <ControlSummaryItem>
+              <ControlSummaryLabel>Стоимость</ControlSummaryLabel>
+              <ControlSummaryValue>
+                {formatMoney(creditsData.totalPrice.toString())}
+              </ControlSummaryValue>
+            </ControlSummaryItem>
+            <ControlSummaryItem>
+              <ControlSummaryLabel>Аванс</ControlSummaryLabel>
+              <ControlSummaryValue>
+                {formatMoney(creditsData.totalFirstPayment.toString())}
+              </ControlSummaryValue>
+            </ControlSummaryItem>
+            <ControlSummaryItem>
+              <ControlSummaryLabel>Доход, руб</ControlSummaryLabel>
+              <ControlSummaryValue>
+                {formatMoney(creditsData.totalIncomeRubles.toString())}
+              </ControlSummaryValue>
+            </ControlSummaryItem>
+            <ControlSummaryItem>
+              <ControlSummaryLabel>Начислено</ControlSummaryLabel>
+              <ControlSummaryValue>
+                {formatMoney(creditsData.totalAccured.toString())}
+              </ControlSummaryValue>
+            </ControlSummaryItem>
+          </ControlSummaryStrip>
         )}
+
+        <SecondRaw>
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
+        </SecondRaw>
+      </StickyHeader>
+
+      <ScrollArea>
+        {isLoading && (!isListMode || displayedCredits.length === 0) && (
+          <div>Загрузка...</div>
+        )}
+        {error && <div>Ошибка: {error}</div>}
+
+        {!error &&
+          (!isLoading || (isListMode && displayedCredits.length > 0)) && (
+            <>
+              <CreditCardList
+                credits={displayedCredits}
+                fields={
+                  [
+                    "employee",
+                    "totalClean",
+                    "firstPayment",
+                    "incomePercents",
+                    "incomeRubles",
+                    "accured",
+                  ] as CreditCardField[]
+                }
+                getRowData={(credit) => [
+                  null,
+                  credit.id.toString(),
+                  formatDate(credit.creditDate),
+                  credit.employeeName,
+                  formatMoney((credit.totalClean ?? 0).toString()),
+                  formatMoney((credit.firstPayment ?? 0).toString()),
+                  `${credit.incomePercents ?? 0}%`,
+                  formatMoney((credit.incomeRubles ?? 0).toString()),
+                  formatMoney((credit.accured ?? 0).toString()),
+                  (credit.debt ?? 0) > 0,
+                  credit.isActive,
+                ]}
+                highlightedCreditId={selectedCredit?.id ?? null}
+                onRowClick={(rowIndex) => {
+                  const credit = displayedCredits[rowIndex];
+                  if (credit) setSelectedCredit(credit);
+                }}
+                onRowDoubleClick={(rowIndex) => {
+                  const credit = displayedCredits[rowIndex];
+                  if (credit) {
+                    setViewingCreditId(credit.id);
+                    setIsViewModalOpen(true);
+                  }
+                }}
+                onToggleFavourite={(credit) => toggleFavourite(credit.id)}
+                contextMenuActions={tableActions}
+              />
+
+              {isListMode ? (
+                <>
+                  {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
+                  {isLoadingMore ? (
+                    <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+                  ) : (
+                    <ListBottomSpacer />
+                  )}
+                </>
+              ) : (
+                <PaginationLayout>
+                  <Pagination
+                    total={creditsData?.totalCount || 0}
+                    current={currentPage}
+                    onChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                  />
+                </PaginationLayout>
+              )}
+            </>
+          )}
+      </ScrollArea>
 
       <NewPaymentModal
         isOpen={isPaymentModalOpen}
@@ -1468,29 +1457,30 @@ const CreditControlPage = () => {
   );
 };
 
-// Иконка-кнопка фильтра — рядом с колокольчиком/настройками в TopMenu.
+// Иконка-кнопка фильтра — только иконка, вверху справа рядом с колокольчиком/настройками
+// (TopMenu: настройки right:10, колокольчик right:50; фильтр ставим левее — right:92).
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 100;
+  z-index: 110;
   width: 36px;
   height: 36px;
-  padding: 0;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(209, 213, 219, 1);
+  background: #ffffff;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
-  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
   outline: none;
 
   &:hover {
     background-color: rgba(209, 213, 219, 0.5);
-    border-color: transparent;
+    color: #007d88;
   }
 
   &:active {
@@ -1506,30 +1496,59 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
+    stroke: currentColor;
     opacity: 1;
     pointer-events: none;
   }
 `;
 
-const FilterModalOverlay = styled.div`
+// Правая панель фильтров — поведение как у бокового меню (SideMenu):
+// position: fixed у правого края, плавно выезжает за 0.3s, контент отодвигается
+// через padding-right у PageLayout. top: 56px — чтобы не перекрывать верхнее меню
+// (TopMenu с уведомлениями).
+const FilterPanel = styled.div<{ $open: boolean }>`
   position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 60px 16px 16px;
-  background: rgba(15, 23, 42, 0.45);
-  overflow-y: auto;
+  top: 56px;
+  right: 0;
+  height: calc(100vh - 56px);
+  width: ${FILTER_PANEL_WIDTH}px;
+  background: #ffffff;
+  box-shadow: -1px 0 7px rgba(0, 0, 0, 0.08);
+  border-left: 1px solid rgba(209, 213, 219, 1);
+  z-index: 100;
+  transform: ${({ $open }) => ($open ? "translateX(0)" : "translateX(100%)")};
+  transition: transform 0.3s ease;
+  overflow: hidden;
 `;
 
-const FilterModalPanel = styled.div`
-  width: 100%;
-  max-width: 760px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+const FilterPanelInner = styled.div`
+  width: ${FILTER_PANEL_WIDTH}px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 18px 16px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 1);
+    border-radius: 3px;
+  }
+`;
+
+// Стрелка сворачивания — как ArrowIcon у бокового меню (тот же ассет, поворот).
+const CollapseArrow = styled.img`
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  transform: rotate(180deg);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    opacity: 0.7;
+  }
 `;
 
 const FilterModalHeader = styled.div`
@@ -1540,19 +1559,6 @@ const FilterModalHeader = styled.div`
   font-size: 18px;
   font-weight: 700;
   color: #111827;
-`;
-
-const FilterModalClose = styled.button`
-  border: none;
-  background: transparent;
-  font-size: 26px;
-  line-height: 1;
-  cursor: pointer;
-  color: #6b7280;
-
-  &:hover {
-    color: #111827;
-  }
 `;
 
 const FilterModalFooter = styled.div`
@@ -1623,12 +1629,6 @@ const SecondRaw = styled.div`
   background-color: transparent;
   justify-content: space-between;
   align-items: center;
-`;
-
-const TotalControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
 `;
 
 const StarIcon = styled.div`
@@ -1754,6 +1754,35 @@ const RangeDash = styled.span`
   font-weight: 500;
 `;
 
+// Группировка родственных фильтров (даты, доход) в карточки с заголовком,
+// чтобы похожие диапазоны визуально не сливались и не путались.
+const FilterGroupRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 12px;
+`;
+
+const FilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 280px;
+  min-width: 0;
+  padding: 10px 14px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fafafa;
+`;
+
+const FilterGroupTitle = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+`;
+
 // Быстрые фильтры, вынесенные из модального окна прямо на страницу
 const QuickFilters = styled.div`
   display: flex;
@@ -1771,6 +1800,30 @@ const QuickFilterSlot = styled.div`
   max-width: 320px;
 `;
 
+// Статичная «шапка» списка: статистика + вкладки. Не скроллится —
+// прокручивается только ScrollArea с карточками под ней.
+const StickyHeader = styled.div`
+  flex-shrink: 0;
+  background: rgba(249, 250, 250, 1);
+  padding-bottom: 6px;
+`;
+
+// Внутренний скролл-контейнер только для карточек. Занимает оставшуюся
+// высоту страницы; шапка над ним остаётся на месте.
+const ScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 1);
+    border-radius: 4px;
+  }
+`;
+
 const ControlSummaryStrip = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1781,9 +1834,6 @@ const ControlSummaryStrip = styled.div`
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
   border: 1px solid #ccfbf1;
   border-radius: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
   color: #0f766e;
 `;
 

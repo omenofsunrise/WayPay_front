@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { ListFilter } from "lucide-react";
+import filterArrow from "../assets/ui/arrow.svg";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
   type RowStyle,
@@ -132,24 +134,6 @@ interface SetCategoryActionProps {
   onCategorySet: () => void;
   customTabs: ObjectType[];
 }
-
-const FilterIcon = ({ active }: { active: boolean }) => (
-  <svg
-    aria-hidden="true"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M4 6H20M7 12H17M10 18H14"
-      stroke={active ? "#007D88" : "#50555C"}
-      strokeWidth="2.2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
 
 const CreditPage = () => {
   const colors = {
@@ -1718,342 +1702,347 @@ const CreditPage = () => {
   };
 
   return (
-    <PageLayout ref={containerRef}>
+    <PageLayout
+      ref={containerRef}
+      style={{
+        paddingRight: isFilterModalOpen ? FILTER_PANEL_WIDTH : 0,
+        transition: "padding-right 0.3s ease",
+        height: "calc(100vh - 56px)",
+        overflow: "hidden",
+      }}
+    >
       <FilterIconButton
         type="button"
-        onClick={() => setIsFilterModalOpen(true)}
+        onClick={() => setIsFilterModalOpen((v) => !v)}
         $hasActiveFilters={hasActiveFilters}
-        aria-label="Фильтр"
         title="Фильтр"
       >
-        <FilterIcon active={hasActiveFilters} />
+        <ListFilter size={20} strokeWidth={2.2} />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
       </FilterIconButton>
 
-      {isFilterModalOpen && (
-        <FilterModalOverlay onClick={() => setIsFilterModalOpen(false)}>
-          <FilterModalPanel
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                setIsFilterModalOpen(false);
-              }
-            }}
-          >
-            <FilterModalHeader>
-              <span>Фильтр</span>
-              <FilterModalClose
-                type="button"
-                onClick={() => setIsFilterModalOpen(false)}
-                aria-label="Закрыть"
-              >
-                ×
-              </FilterModalClose>
-            </FilterModalHeader>
-            <FilterGrid>
-              <FilterSlot>
-                <FilterSlotLabel>№ Договора</FilterSlotLabel>
-                <CustomInput
-                  inputType="text"
-                  placeholder="Например, 19265"
-                  value={contractNumber}
-                  onChange={(e) => {
-                    setContractNumber(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
-                <CustomInput
-                  inputType="fullname"
-                  placeholder="Поиск по ФИО"
-                  value={clientFullName}
-                  onChange={(e) => {
-                    setClientFullName(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Инвестор</FilterSlotLabel>
-                <InvestorSelect
-                  placeholder="Любой"
-                  value={investorName}
-                  onChange={(name) => {
-                    setInvestorName(name);
-                    setSelectedInvestmentSource(null);
-                    setCurrentPage(1);
-                  }}
-                  onInvestorSelect={(investor) => {
-                    setInvestorName(
-                      investor.nickname || investor.fullName || ""
-                    );
-                    setSelectedInvestmentSource({
-                      type: investor.type || "investor",
-                      id: investor.id,
-                      name: investor.nickname || investor.fullName || "",
-                    });
-                    setCurrentPage(1);
-                  }}
-                  includePools
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Папка</FilterSlotLabel>
-                <ObjectTypeSelect
-                  value={objectType}
-                  onChange={handleObjectTypeChange}
-                  onObjectTypeSelect={handleObjectTypeSelect}
-                  placeholder="Любая"
-                  customPlaceholder="Папка"
-                  hideClearButton={false}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="от:"
-                  placeholder="дд-мм-гггг"
-                  value={fromDate}
-                  onChange={(date) => {
-                    setFromDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="до:"
-                  placeholder="дд-мм-гггг"
-                  value={toDate}
-                  onChange={(date) => {
-                    setToDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="от:"
-                  placeholder="дд-мм-гггг"
-                  value={fromCreationDate}
-                  onChange={(date) => {
-                    setFromCreationDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-
-              <FilterSlot>
-                <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
-                <CustomCalendar
-                  prefix="до:"
-                  placeholder="дд-мм-гггг"
-                  value={toCreationDate}
-                  onChange={(date) => {
-                    setToCreationDate(date);
-                    setCurrentPage(1);
-                  }}
-                />
-              </FilterSlot>
-            </FilterGrid>
-
-            <FilterModalFooter>
-              <DarkCyanButton
-                type="button"
-                onClick={resetFilters}
-                disabled={!hasActiveFilters}
-              >
-                Сбросить фильтры
-              </DarkCyanButton>
-
-              {hasPermission("MANAGE_ACCOUNTING", true) && (
-                <DarkCyanButton
-                  onClick={handleConfirmAllCredits}
-                  disabled={isConfirmingAll}
-                >
-                  {isConfirmingAll ? (
-                    <>
-                      <SpinnerIcon />
-                      Подтверждение...
-                    </>
-                  ) : (
-                    "Подтвердить все по фильтрам"
-                  )}
-                </DarkCyanButton>
-              )}
-
-              <ExportButton
-                onClick={handleExport}
-                isExporting={isExporting}
-                exportProgress={exportProgress}
-              >
-                Экспорт по фильтру
-              </ExportButton>
-            </FilterModalFooter>
-          </FilterModalPanel>
-        </FilterModalOverlay>
-      )}
-
-      {creditsData && forbiddenRole("сотрудник") && (
-        <SummaryStrip>
-          <SummaryItem>
-            <SummaryLabel>Стоимость</SummaryLabel>
-            <SummaryValue>
-              {formatMoney(creditsData.totalPrice.toString())}
-            </SummaryValue>
-          </SummaryItem>
-          <SummaryItem>
-            <SummaryLabel>Аванс</SummaryLabel>
-            <SummaryValue>
-              {formatMoney(creditsData.totalFirstPayment.toString())}
-            </SummaryValue>
-          </SummaryItem>
-          <SummaryItem>
-            <SummaryLabel>Начислено</SummaryLabel>
-            <SummaryValue>
-              {formatMoney(creditsData.totalAccured.toString())}
-            </SummaryValue>
-          </SummaryItem>
-          <SummaryItem>
-            <SummaryLabel>Уплачено</SummaryLabel>
-            <SummaryValue>
-              {formatMoney(creditsData.totalPayed.toString())}
-            </SummaryValue>
-          </SummaryItem>
-          <SummaryItem>
-            <SummaryLabel>Остаток</SummaryLabel>
-            <SummaryValue>
-              {formatMoney(creditsData.totalRest.toString())}
-            </SummaryValue>
-          </SummaryItem>
-          <SummaryItem $danger={(creditsData.totalDebt ?? 0) > 0}>
-            <SummaryLabel>Долг</SummaryLabel>
-            <SummaryValue $danger={(creditsData.totalDebt ?? 0) > 0}>
-              {formatMoney(creditsData.totalDebt.toString())}
-            </SummaryValue>
-          </SummaryItem>
-        </SummaryStrip>
-      )}
-
-      <SecondRaw style={{ color: "white" }}>
-        <Tabs
-          tabs={getTabs()}
-          activeTab={activeTab}
-          onChange={handleTabChange}
-        />
-
-        {customTabs.length < 5 && (
-          <AddButton
-            onClick={() => setIsCreateTabModalOpen(true)}
-            tooltip="Добавить вкладку"
-            margin="0 auto 15px 15px"
-            size={24}
-          />
-        )}
-
-        <TotalControls>
-          <CountInfoTitle total={creditsData?.totalCount || 0} />
-        </TotalControls>
-
-        <SelectedCount />
-      </SecondRaw>
-
-      {isLoading && (!isListMode || displayedCredits.length === 0) && (
-        <div>Загрузка...</div>
-      )}
-      {error && <div>Ошибка: {error}</div>}
-
-      {!error &&
-        (!isLoading || (isListMode && displayedCredits.length > 0)) && (
-          <>
-            <CreditCardList
-              credits={displayedCredits}
-              fields={
-                [
-                  "totalClean",
-                  "firstPayment",
-                  "accured",
-                  "payed",
-                  "rest",
-                  "debt",
-                ] as CreditCardField[]
-              }
-              getRowData={(credit) => [
-                null,
-                credit.id.toString(),
-                formatDate(credit.creditDate),
-                credit.clientFullName,
-                formatMoney((credit.totalClean ?? 0).toString()),
-                formatMoney((credit.firstPayment ?? 0).toString()),
-                formatMoney((credit.accured ?? 0).toString()),
-                formatMoney((credit.payed ?? 0).toString()),
-                formatMoney((credit.rest ?? 0).toString()),
-                formatMoney((credit.rest ?? 0).toString()),
-                formatMoney((credit.debt ?? 0).toString()),
-                credit.isActive,
-              ]}
-              selectedIndices={selectedRows}
-              highlightedCreditId={selectedCreditForPrint?.id ?? null}
-              multiSelect
-              onToggleSelect={(rowIndex) => {
-                setSelectedRows((prev) =>
-                  prev.includes(rowIndex)
-                    ? prev.filter((i) => i !== rowIndex)
-                    : [...prev, rowIndex]
-                );
-              }}
-              onRowClick={(rowIndex) => {
-                const credit = displayedCredits[rowIndex];
-                if (credit) setSelectedCreditForPrint(credit);
-              }}
-              onRowDoubleClick={(rowIndex) => {
-                const credit = displayedCredits[rowIndex];
-                if (credit) {
-                  setViewingCreditId(credit.id);
-                  setIsViewModalOpen(true);
-                }
-              }}
-              onToggleFavourite={(credit) => toggleFavourite(credit.id)}
-              contextMenuActions={tableActions}
+      <FilterPanel $open={isFilterModalOpen}>
+        <FilterPanelInner
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              setIsFilterModalOpen(false);
+            }
+          }}
+        >
+          <FilterModalHeader>
+            <span>Фильтр</span>
+            <CollapseArrow
+              src={filterArrow}
+              alt=""
+              onClick={() => setIsFilterModalOpen(false)}
+              title="Свернуть"
             />
+          </FilterModalHeader>
+          <FilterGrid>
+            <FilterSlot>
+              <FilterSlotLabel>№ Договора</FilterSlotLabel>
+              <CustomInput
+                inputType="text"
+                placeholder="Например, 19265"
+                value={contractNumber}
+                onChange={(e) => {
+                  setContractNumber(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
 
-            {isListMode ? (
-              <>
-                {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
-                {isLoadingMore ? (
-                  <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+            <FilterSlot>
+              <FilterSlotLabel>ФИО клиента</FilterSlotLabel>
+              <CustomInput
+                inputType="fullname"
+                placeholder="Поиск по ФИО"
+                value={clientFullName}
+                onChange={(e) => {
+                  setClientFullName(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Инвестор</FilterSlotLabel>
+              <InvestorSelect
+                placeholder="Любой"
+                value={investorName}
+                onChange={(name) => {
+                  setInvestorName(name);
+                  setSelectedInvestmentSource(null);
+                  setCurrentPage(1);
+                }}
+                onInvestorSelect={(investor) => {
+                  setInvestorName(investor.nickname || investor.fullName || "");
+                  setSelectedInvestmentSource({
+                    type: investor.type || "investor",
+                    id: investor.id,
+                    name: investor.nickname || investor.fullName || "",
+                  });
+                  setCurrentPage(1);
+                }}
+                includePools
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Папка</FilterSlotLabel>
+              <ObjectTypeSelect
+                value={objectType}
+                onChange={handleObjectTypeChange}
+                onObjectTypeSelect={handleObjectTypeSelect}
+                placeholder="Любая"
+                customPlaceholder="Папка"
+                hideClearButton={false}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
+              <CustomCalendar
+                prefix="от:"
+                placeholder="дд-мм-гггг"
+                value={fromDate}
+                onChange={(date) => {
+                  setFromDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
+              <CustomCalendar
+                prefix="до:"
+                placeholder="дд-мм-гггг"
+                value={toDate}
+                onChange={(date) => {
+                  setToDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
+              <CustomCalendar
+                prefix="от:"
+                placeholder="дд-мм-гггг"
+                value={fromCreationDate}
+                onChange={(date) => {
+                  setFromCreationDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
+              <CustomCalendar
+                prefix="до:"
+                placeholder="дд-мм-гггг"
+                value={toCreationDate}
+                onChange={(date) => {
+                  setToCreationDate(date);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+          </FilterGrid>
+
+          <FilterModalFooter>
+            <DarkCyanButton
+              type="button"
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+            >
+              Сбросить фильтры
+            </DarkCyanButton>
+
+            {hasPermission("MANAGE_ACCOUNTING", true) && (
+              <DarkCyanButton
+                onClick={handleConfirmAllCredits}
+                disabled={isConfirmingAll}
+              >
+                {isConfirmingAll ? (
+                  <>
+                    <SpinnerIcon />
+                    Подтверждение...
+                  </>
                 ) : (
-                  <ListBottomSpacer />
+                  "Подтвердить все по фильтрам"
                 )}
-              </>
-            ) : (
-              <PaginationLayout>
-                <Pagination
-                  total={creditsData?.totalCount || 0}
-                  current={currentPage}
-                  onChange={(page) => {
-                    setCurrentPage(page);
-                    setSelectedRows([]); // Сбрасываем выбор при смене страницы
-                  }}
-                  itemsPerPage={itemsPerPage}
-                />
-              </PaginationLayout>
+              </DarkCyanButton>
             )}
-          </>
+
+            <ExportButton
+              onClick={handleExport}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            >
+              Экспорт по фильтру
+            </ExportButton>
+          </FilterModalFooter>
+        </FilterPanelInner>
+      </FilterPanel>
+
+      <StickyHeader>
+        {creditsData && forbiddenRole("сотрудник") && (
+          <SummaryStrip>
+            <SummaryItem>
+              <SummaryLabel>Стоимость</SummaryLabel>
+              <SummaryValue>
+                {formatMoney(creditsData.totalPrice.toString())}
+              </SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <SummaryLabel>Аванс</SummaryLabel>
+              <SummaryValue>
+                {formatMoney(creditsData.totalFirstPayment.toString())}
+              </SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <SummaryLabel>Начислено</SummaryLabel>
+              <SummaryValue>
+                {formatMoney(creditsData.totalAccured.toString())}
+              </SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <SummaryLabel>Уплачено</SummaryLabel>
+              <SummaryValue>
+                {formatMoney(creditsData.totalPayed.toString())}
+              </SummaryValue>
+            </SummaryItem>
+            <SummaryItem>
+              <SummaryLabel>Остаток</SummaryLabel>
+              <SummaryValue>
+                {formatMoney(creditsData.totalRest.toString())}
+              </SummaryValue>
+            </SummaryItem>
+            <SummaryItem $danger={(creditsData.totalDebt ?? 0) > 0}>
+              <SummaryLabel>Долг</SummaryLabel>
+              <SummaryValue $danger={(creditsData.totalDebt ?? 0) > 0}>
+                {formatMoney(creditsData.totalDebt.toString())}
+              </SummaryValue>
+            </SummaryItem>
+          </SummaryStrip>
         )}
+
+        <SecondRaw style={{ color: "white" }}>
+          <Tabs
+            tabs={getTabs()}
+            activeTab={activeTab}
+            onChange={handleTabChange}
+          />
+
+          {customTabs.length < 5 && (
+            <AddButton
+              onClick={() => setIsCreateTabModalOpen(true)}
+              tooltip="Добавить вкладку"
+              margin="0 auto 15px 15px"
+              size={24}
+            />
+          )}
+
+          <TotalControls>
+            <CountInfoTitle total={creditsData?.totalCount || 0} />
+          </TotalControls>
+
+          <SelectedCount />
+        </SecondRaw>
+      </StickyHeader>
+
+      <ScrollArea>
+        {isLoading && (!isListMode || displayedCredits.length === 0) && (
+          <div>Загрузка...</div>
+        )}
+        {error && <div>Ошибка: {error}</div>}
+
+        {!error &&
+          (!isLoading || (isListMode && displayedCredits.length > 0)) && (
+            <>
+              <CreditCardList
+                credits={displayedCredits}
+                fields={
+                  [
+                    "totalClean",
+                    "firstPayment",
+                    "accured",
+                    "payed",
+                    "rest",
+                    "debt",
+                  ] as CreditCardField[]
+                }
+                getRowData={(credit) => [
+                  null,
+                  credit.id.toString(),
+                  formatDate(credit.creditDate),
+                  credit.clientFullName,
+                  formatMoney((credit.totalClean ?? 0).toString()),
+                  formatMoney((credit.firstPayment ?? 0).toString()),
+                  formatMoney((credit.accured ?? 0).toString()),
+                  formatMoney((credit.payed ?? 0).toString()),
+                  formatMoney((credit.rest ?? 0).toString()),
+                  formatMoney((credit.rest ?? 0).toString()),
+                  formatMoney((credit.debt ?? 0).toString()),
+                  credit.isActive,
+                ]}
+                selectedIndices={selectedRows}
+                highlightedCreditId={selectedCreditForPrint?.id ?? null}
+                multiSelect
+                onToggleSelect={(rowIndex) => {
+                  setSelectedRows((prev) =>
+                    prev.includes(rowIndex)
+                      ? prev.filter((i) => i !== rowIndex)
+                      : [...prev, rowIndex]
+                  );
+                }}
+                onRowClick={(rowIndex) => {
+                  const credit = displayedCredits[rowIndex];
+                  if (credit) setSelectedCreditForPrint(credit);
+                }}
+                onRowDoubleClick={(rowIndex) => {
+                  const credit = displayedCredits[rowIndex];
+                  if (credit) {
+                    setViewingCreditId(credit.id);
+                    setIsViewModalOpen(true);
+                  }
+                }}
+                onToggleFavourite={(credit) => toggleFavourite(credit.id)}
+                contextMenuActions={tableActions}
+              />
+
+              {isListMode ? (
+                <>
+                  {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
+                  {isLoadingMore ? (
+                    <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+                  ) : (
+                    <ListBottomSpacer />
+                  )}
+                </>
+              ) : (
+                <PaginationLayout>
+                  <Pagination
+                    total={creditsData?.totalCount || 0}
+                    current={currentPage}
+                    onChange={(page) => {
+                      setCurrentPage(page);
+                      setSelectedRows([]); // Сбрасываем выбор при смене страницы
+                    }}
+                    itemsPerPage={itemsPerPage}
+                  />
+                </PaginationLayout>
+              )}
+            </>
+          )}
+      </ScrollArea>
 
       <NewPaymentModal
         isOpen={isPaymentModalOpen}
@@ -2123,29 +2112,30 @@ const CreditPage = () => {
   );
 };
 
-// Иконка-кнопка фильтра — рядом с колокольчиком/настройками в TopMenu.
+// Иконка-кнопка фильтра — только иконка, вверху справа рядом с колокольчиком/настройками
+// (TopMenu: настройки right:10, колокольчик right:50; фильтр ставим левее — right:92).
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 100;
+  z-index: 110;
   width: 36px;
   height: 36px;
-  padding: 0;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(209, 213, 219, 1);
+  background: #ffffff;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
-  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
   outline: none;
 
   &:hover {
     background-color: rgba(209, 213, 219, 0.5);
-    border-color: transparent;
+    color: #007d88;
   }
 
   &:active {
@@ -2161,6 +2151,8 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
+    stroke: currentColor;
     opacity: 1;
     pointer-events: none;
   }
@@ -2183,25 +2175,77 @@ const FilterBadge = styled.span`
   justify-content: center;
 `;
 
-const FilterModalOverlay = styled.div`
+// Ширина выезжающей панели фильтров (на столько отодвигается контент). Как у бокового меню.
+const FILTER_PANEL_WIDTH = 360;
+
+// Правая панель фильтров — поведение как у бокового меню (SideMenu): position: fixed
+// у правого края, плавно выезжает за 0.3s, контент отодвигается через padding-right.
+// top: 56px — чтобы не перекрывать верхнее меню (TopMenu с уведомлениями).
+const FilterPanel = styled.div<{ $open: boolean }>`
   position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 60px 16px 16px;
-  background: rgba(15, 23, 42, 0.45);
-  overflow-y: auto;
+  top: 56px;
+  right: 0;
+  height: calc(100vh - 56px);
+  width: ${FILTER_PANEL_WIDTH}px;
+  background: #ffffff;
+  box-shadow: -1px 0 7px rgba(0, 0, 0, 0.08);
+  border-left: 1px solid rgba(209, 213, 219, 1);
+  z-index: 100;
+  transform: ${({ $open }) => ($open ? "translateX(0)" : "translateX(100%)")};
+  transition: transform 0.3s ease;
+  overflow: hidden;
 `;
 
-const FilterModalPanel = styled.div`
-  width: 100%;
-  max-width: 760px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+const FilterPanelInner = styled.div`
+  width: ${FILTER_PANEL_WIDTH}px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 18px 16px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 1);
+    border-radius: 3px;
+  }
+`;
+
+// Стрелка сворачивания — как ArrowIcon у бокового меню (тот же ассет, поворот).
+const CollapseArrow = styled.img`
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  transform: rotate(180deg);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    opacity: 0.7;
+  }
+`;
+
+// Статичная «шапка» списка: статистика + вкладки. Не скроллится —
+// прокручивается только ScrollArea с карточками под ней.
+const StickyHeader = styled.div`
+  flex-shrink: 0;
+  background: rgba(249, 250, 250, 1);
+  padding-bottom: 6px;
+`;
+
+// Внутренний скролл-контейнер только для карточек.
+const ScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 1);
+    border-radius: 4px;
+  }
 `;
 
 const FilterModalHeader = styled.div`
@@ -2212,19 +2256,6 @@ const FilterModalHeader = styled.div`
   font-size: 18px;
   font-weight: 700;
   color: #111827;
-`;
-
-const FilterModalClose = styled.button`
-  border: none;
-  background: transparent;
-  font-size: 26px;
-  line-height: 1;
-  cursor: pointer;
-  color: #6b7280;
-
-  &:hover {
-    color: #111827;
-  }
 `;
 
 const FilterModalFooter = styled.div`
@@ -2488,9 +2519,6 @@ const SummaryStrip = styled.div`
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
   border: 1px solid #ccfbf1;
   border-radius: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
   color: #0f766e;
 `;
 
