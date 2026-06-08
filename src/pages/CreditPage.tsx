@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ListFilter } from "lucide-react";
 import filterArrow from "../assets/ui/arrow.svg";
+import { getCollapseFiltersOnClickSetting } from "../components/modal/SettingsModal";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
   type RowStyle,
@@ -1701,6 +1702,15 @@ const CreditPage = () => {
     );
   };
 
+  // Авто-сворачивание панели фильтров: только если включено в Персональных
+  // настройках. Клик по рабочей области (карточки, вкладки, выделение договора)
+  // сворачивает открытую панель.
+  const collapseFiltersOnSectionClick = () => {
+    if (isFilterModalOpen && getCollapseFiltersOnClickSetting()) {
+      setIsFilterModalOpen(false);
+    }
+  };
+
   return (
     <PageLayout
       ref={containerRef}
@@ -1715,6 +1725,7 @@ const CreditPage = () => {
         type="button"
         onClick={() => setIsFilterModalOpen((v) => !v)}
         $hasActiveFilters={hasActiveFilters}
+        aria-label="Фильтр"
         title="Фильтр"
       >
         <ListFilter size={20} strokeWidth={2.2} />
@@ -1726,7 +1737,7 @@ const CreditPage = () => {
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && getCollapseFiltersOnClickSetting()) {
               e.preventDefault();
               setIsFilterModalOpen(false);
             }
@@ -1892,7 +1903,7 @@ const CreditPage = () => {
         </FilterPanelInner>
       </FilterPanel>
 
-      <StickyHeader>
+      <StickyHeader onClick={collapseFiltersOnSectionClick}>
         {creditsData && forbiddenRole("сотрудник") && (
           <SummaryStrip>
             <SummaryItem>
@@ -1958,7 +1969,7 @@ const CreditPage = () => {
         </SecondRaw>
       </StickyHeader>
 
-      <ScrollArea>
+      <ScrollArea onClick={collapseFiltersOnSectionClick}>
         {isLoading && (!isListMode || displayedCredits.length === 0) && (
           <div>Загрузка...</div>
         )}
@@ -2209,6 +2220,14 @@ const FilterPanelInner = styled.div`
   &::-webkit-scrollbar-thumb {
     background: rgba(209, 213, 219, 1);
     border-radius: 3px;
+  }
+
+  /* Компактные поля ввода фильтра — уже и чуть ниже. */
+  input {
+    min-height: 32px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 13px;
   }
 `;
 
@@ -2473,8 +2492,8 @@ const ListBottomSpacer = styled.div`
 
 const FilterGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 10px;
 `;
 
 // Быстрые фильтры, вынесенные из модального окна прямо на страницу

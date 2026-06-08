@@ -15,6 +15,7 @@ import CreditCardList from "../components/ui/cards/CreditCardList";
 import type { CreditCardField } from "../components/ui/cards/CreditCard";
 import Pagination from "../components/ui/fields/CustomPagination";
 import PageLayout from "../components/ui/Layouts/PageLayout";
+import { getCollapseFiltersOnClickSetting } from "../components/modal/SettingsModal";
 import Tabs from "../components/ui/fields/Tabs";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import { useNavigate } from "react-router-dom";
@@ -1051,6 +1052,15 @@ const CreditControlPage = () => {
     setIsViewModalOpen(true);
   };
 
+  // Авто-сворачивание панели фильтров: работает только если включено в
+  // Персональных настройках. По клику в рабочей области раздела (карточки,
+  // вкладки, выделение договора) сворачиваем открытую панель.
+  const collapseFiltersOnSectionClick = () => {
+    if (isFilterModalOpen && getCollapseFiltersOnClickSetting()) {
+      setIsFilterModalOpen(false);
+    }
+  };
+
   return (
     <PageLayout
       ref={containerRef}
@@ -1065,6 +1075,7 @@ const CreditControlPage = () => {
         type="button"
         onClick={() => setIsFilterModalOpen((v) => !v)}
         $hasActiveFilters={hasActiveFilters}
+        aria-label="Фильтр"
         title="Фильтр"
       >
         <ListFilter size={20} strokeWidth={2.2} />
@@ -1080,7 +1091,7 @@ const CreditControlPage = () => {
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && getCollapseFiltersOnClickSetting()) {
               e.preventDefault();
               setIsFilterModalOpen(false);
             }
@@ -1320,7 +1331,7 @@ const CreditControlPage = () => {
         </FilterPanelInner>
       </FilterPanel>
 
-      <StickyHeader>
+      <StickyHeader onClick={collapseFiltersOnSectionClick}>
         {creditsData && forbiddenRole("сотрудник") && (
           <ControlSummaryStrip>
             <ControlSummaryItem>
@@ -1361,7 +1372,7 @@ const CreditControlPage = () => {
         </SecondRaw>
       </StickyHeader>
 
-      <ScrollArea>
+      <ScrollArea onClick={collapseFiltersOnSectionClick}>
         {isLoading && (!isListMode || displayedCredits.length === 0) && (
           <div>Загрузка...</div>
         )}
@@ -1535,6 +1546,14 @@ const FilterPanelInner = styled.div`
   &::-webkit-scrollbar-thumb {
     background: rgba(209, 213, 219, 1);
     border-radius: 3px;
+  }
+
+  /* Компактные поля ввода фильтра — уже и чуть ниже. */
+  input {
+    min-height: 32px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 13px;
   }
 `;
 
@@ -1718,8 +1737,8 @@ const ListBottomSpacer = styled.div`
 
 const FilterGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 10px;
 `;
 
 const FilterSlot = styled.div`
