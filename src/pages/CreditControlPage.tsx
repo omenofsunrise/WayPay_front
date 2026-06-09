@@ -1076,6 +1076,7 @@ const CreditControlPage = () => {
         type="button"
         onClick={() => setIsFilterModalOpen((v) => !v)}
         $hasActiveFilters={hasActiveFilters}
+        aria-label="Фильтр"
         title="Фильтр"
       >
         <ListFilter size={20} strokeWidth={2.2} />
@@ -1296,13 +1297,6 @@ const CreditControlPage = () => {
           </FilterGroupRow>
 
           <FilterModalFooter>
-            {creditsData && forbiddenRole("сотрудник") && (
-              <FilterTotalCount>
-                <FilterTotalLabel>Всего договоров</FilterTotalLabel>
-                <FilterTotalValue>{creditsData.totalCount}</FilterTotalValue>
-              </FilterTotalCount>
-            )}
-
             <DarkCyanButton
               type="button"
               onClick={resetFilters}
@@ -1341,6 +1335,12 @@ const CreditControlPage = () => {
       <StickyHeader onClick={collapseFiltersOnSectionClick}>
         {creditsData && forbiddenRole("сотрудник") && (
           <ControlSummaryStrip>
+            <ControlSummaryItem>
+              <ControlSummaryLabel>Всего договоров</ControlSummaryLabel>
+              <ControlSummaryValue>
+                {creditsData.totalCount}
+              </ControlSummaryValue>
+            </ControlSummaryItem>
             <ControlSummaryItem>
               <ControlSummaryLabel>Стоимость</ControlSummaryLabel>
               <ControlSummaryValue>
@@ -1475,7 +1475,7 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 95;
+  z-index: 110;
   width: 36px;
   height: 36px;
   border: 1px solid rgba(209, 213, 219, 1);
@@ -1501,6 +1501,17 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
 
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+
+  svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
+    stroke: currentColor;
+    opacity: 1;
+    pointer-events: none;
   }
 `;
 
@@ -1584,30 +1595,6 @@ const FilterModalFooter = styled.div`
     font-size: 13px;
     border-radius: 8px;
   }
-`;
-
-// Счётчик «Всего договоров», перенесённый из верхней сводки в футер фильтра.
-// Прижат влево (margin-right: auto), кнопки футера остаются справа.
-const FilterTotalCount = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-right: auto;
-  padding: 4px 10px;
-  border-left: 3px solid #0f766e;
-`;
-
-const FilterTotalLabel = styled.span`
-  font-size: 11px;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-`;
-
-const FilterTotalValue = styled.span`
-  font-size: 15px;
-  font-weight: 600;
-  color: #0f766e;
 `;
 
 const FilterBadge = styled.span`
