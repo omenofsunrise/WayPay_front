@@ -23,7 +23,6 @@ import AdminPanelPage from "./pages/AdminPanelPage";
 import ToDoListPage from "./pages/ToDoListPage";
 import { TaskCountProvider } from "./сontext/TaskCountContext";
 import PaymentsIncomePage from "./pages/FinancePage/PaymentIncomePage";
-import BlogPage from "./pages/BlogPage";
 import ChatPage from "./pages/ChatPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import type { AuthInfo } from "./api/types/auth";
@@ -609,24 +608,6 @@ function App() {
                 element={
                   <MainLayout>
                     <PaymentsIncomePage />
-                  </MainLayout>
-                }
-              />
-
-              <Route
-                path="blog"
-                element={
-                  <MainLayout>
-                    <BlogPage />
-                  </MainLayout>
-                }
-              />
-
-              <Route
-                path="blog/:id"
-                element={
-                  <MainLayout>
-                    <BlogPage />
                   </MainLayout>
                 }
               />

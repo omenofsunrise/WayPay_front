@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import CalculatorIcon from '../../../assets/ui/TopBar/calculator.svg';
 import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
 import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
-import BlogIcon from '../../../assets/ui/TopBar/blog.svg';
 import newCreditIcon from '../../../assets/ui/TopBar/newCredit.svg';
 import SettingsIcon from '../../../assets/ui/TopBar/settings.svg';
 import BellIcon from '../../../assets/ui/TopBar/bell.svg';
@@ -39,16 +38,14 @@ const allMenuItems: MenuItem[] = [
   },
   { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
   { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
-  { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' },
-  { id: 'blog', icon: BlogIcon, text: 'Лента', path: '/blog' }
+  { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' }
 ];
 
 export const pathToMenuItemMap: Record<string, string> = {
   '/new-credit': 'newCredit',
   '/calculator': 'calculator',
   '/chat': 'chat',
-  '/todo': 'todo',
-  '/blog': 'blog'
+  '/todo': 'todo'
 };
 
 const TopMenu = () => {
