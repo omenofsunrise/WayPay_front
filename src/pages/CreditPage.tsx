@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { ListFilter } from "lucide-react";
+import { ListFilter, Lock, LockOpen } from "lucide-react";
 import filterArrow from "../assets/ui/arrow.svg";
 import { getCollapseFiltersOnClickSetting } from "../components/modal/SettingsModal";
 import CustomInput from "../components/ui/fields/CustomInput";
@@ -263,6 +263,9 @@ const CreditPage = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   // Модальное окно с фильтрами (открывается иконкой в шапке)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  // Закрепление панели фильтров: пока закреплено — панель не сворачивается
+  // (ни по клику в рабочей области, ни по Enter), даже если включено авто-сворачивание.
+  const [isFilterPinned, setIsFilterPinned] = useState(false);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
@@ -1707,7 +1710,11 @@ const CreditPage = () => {
   // настройках. Клик по рабочей области (карточки, вкладки, выделение договора)
   // сворачивает открытую панель.
   const collapseFiltersOnSectionClick = () => {
-    if (isFilterModalOpen && getCollapseFiltersOnClickSetting()) {
+    if (
+      isFilterModalOpen &&
+      !isFilterPinned &&
+      getCollapseFiltersOnClickSetting()
+    ) {
       setIsFilterModalOpen(false);
     }
   };
@@ -1738,7 +1745,11 @@ const CreditPage = () => {
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
           onKeyDown={(e) => {
-            if (e.key === "Enter" && getCollapseFiltersOnClickSetting()) {
+            if (
+              e.key === "Enter" &&
+              !isFilterPinned &&
+              getCollapseFiltersOnClickSetting()
+            ) {
               e.preventDefault();
               setIsFilterModalOpen(false);
             }
@@ -1746,12 +1757,33 @@ const CreditPage = () => {
         >
           <FilterModalHeader>
             <span>Фильтр</span>
-            <CollapseArrow
-              src={filterArrow}
-              alt=""
-              onClick={() => setIsFilterModalOpen(false)}
-              title="Свернуть"
-            />
+            <FilterHeaderActions>
+              <FilterLockButton
+                type="button"
+                onClick={() => setIsFilterPinned((v) => !v)}
+                $active={isFilterPinned}
+                title={
+                  isFilterPinned
+                    ? "Открепить (панель будет сворачиваться)"
+                    : "Закрепить (панель не будет сворачиваться)"
+                }
+                aria-pressed={isFilterPinned}
+              >
+                {isFilterPinned ? (
+                  <Lock size={18} strokeWidth={2.2} />
+                ) : (
+                  <LockOpen size={18} strokeWidth={2.2} />
+                )}
+              </FilterLockButton>
+              {!isFilterPinned && (
+                <CollapseArrow
+                  src={filterArrow}
+                  alt=""
+                  onClick={() => setIsFilterModalOpen(false)}
+                  title="Свернуть"
+                />
+              )}
+            </FilterHeaderActions>
           </FilterModalHeader>
           <FilterGrid>
             <FilterSlot>
@@ -1884,7 +1916,17 @@ const CreditPage = () => {
               Сбросить фильтры
             </DarkCyanButton>
 
-            {hasPermission("MANAGE_ACCOUNTING", true) && (
+            <ExportButton
+              onClick={handleExport}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            >
+              Экспорт по фильтру
+            </ExportButton>
+          </FilterModalFooter>
+
+          {hasPermission("MANAGE_ACCOUNTING", true) && (
+            <FilterConfirmAllRow>
               <DarkCyanButton
                 onClick={handleConfirmAllCredits}
                 disabled={isConfirmingAll}
@@ -1898,16 +1940,8 @@ const CreditPage = () => {
                   "Подтвердить все по фильтрам"
                 )}
               </DarkCyanButton>
-            )}
-
-            <ExportButton
-              onClick={handleExport}
-              isExporting={isExporting}
-              exportProgress={exportProgress}
-            >
-              Экспорт по фильтру
-            </ExportButton>
-          </FilterModalFooter>
+            </FilterConfirmAllRow>
+          )}
         </FilterPanelInner>
       </FilterPanel>
 
@@ -2137,7 +2171,7 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 110;
+  z-index: 10000;
   width: 36px;
   height: 36px;
   border: 1px solid rgba(209, 213, 219, 1);
@@ -2166,13 +2200,14 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   }
 
   svg {
-    display: block;
-    width: 20px;
-    height: 20px;
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
     flex-shrink: 0;
     color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
-    stroke: currentColor;
-    opacity: 1;
+    stroke: currentColor !important;
+    opacity: 1 !important;
+    visibility: visible !important;
     pointer-events: none;
   }
 `;
@@ -2221,6 +2256,8 @@ const FilterPanelInner = styled.div`
   box-sizing: border-box;
   padding: 18px 16px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -2239,6 +2276,23 @@ const FilterPanelInner = styled.div`
   }
 `;
 
+// Кнопка «Подтвердить все по фильтрам» — прижата к самому низу панели
+// (margin-top: auto), на всю ширину, с разделителем сверху.
+const FilterConfirmAllRow = styled.div`
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+
+  & button {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+`;
+
 // Стрелка сворачивания — как ArrowIcon у бокового меню (тот же ассет, поворот).
 const CollapseArrow = styled.img`
   width: 22px;
@@ -2249,6 +2303,32 @@ const CollapseArrow = styled.img`
 
   &:hover {
     opacity: 0.7;
+  }
+`;
+
+const FilterHeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const FilterLockButton = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid ${(p) => (p.$active ? "#0F766E" : "#E5E7EB")};
+  background: ${(p) => (p.$active ? "#CCFBF1" : "#FFFFFF")};
+  color: ${(p) => (p.$active ? "#0F766E" : "#6B7280")};
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+
+  &:hover {
+    border-color: #0f766e;
+    color: #0f766e;
   }
 `;
 
