@@ -1554,7 +1554,8 @@ const CreditPage = () => {
       }
 
       if (!credit.hasCounterApproved) {
-        baseStyle.color = "#FF5A5A";
+        baseStyle.backgroundColor = "#FFD6D6";
+        baseStyle.color = "#B91C1C";
       }
 
       // Подсветка выбранных строк
@@ -1725,7 +1726,6 @@ const CreditPage = () => {
         type="button"
         onClick={() => setIsFilterModalOpen((v) => !v)}
         $hasActiveFilters={hasActiveFilters}
-        aria-label="Фильтр"
         title="Фильтр"
       >
         <ListFilter size={20} strokeWidth={2.2} />
@@ -2129,7 +2129,7 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 110;
+  z-index: 95;
   width: 36px;
   height: 36px;
   border: 1px solid rgba(209, 213, 219, 1);
@@ -2155,17 +2155,6 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
 
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-  }
-
-  svg {
-    display: block;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
-    stroke: currentColor;
-    opacity: 1;
-    pointer-events: none;
   }
 `;
 

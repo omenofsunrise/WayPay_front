@@ -20,7 +20,12 @@ export type CreditCardField =
   | "incomeRubles"
   | "employee";
 
-export type CreditCardStatus = "active" | "overdue" | "closed" | "terminated";
+export type CreditCardStatus =
+  | "unconfirmed"
+  | "active"
+  | "overdue"
+  | "closed"
+  | "terminated";
 
 interface CreditCardProps {
   credit: Credit;
@@ -48,6 +53,10 @@ const FIELD_LABEL: Record<CreditCardField, string> = {
 };
 
 const computeStatus = (credit: Credit): CreditCardStatus => {
+  // Неподтверждённый договор имеет наивысший приоритет — его нужно
+  // визуально выделить, чтобы сразу было понятно, что требуется подтверждение
+  // (так же, как в табличном режиме на CreditPage / CreditControlPage).
+  if (!credit.hasCounterApproved) return "unconfirmed";
   if (credit.terminated) return "terminated";
   if (!credit.isActive) return "closed";
   if ((credit.debt ?? 0) > 0) return "overdue";
@@ -58,6 +67,12 @@ const STATUS_PALETTE: Record<
   CreditCardStatus,
   { bg: string; border: string; color: string; label: string }
 > = {
+  unconfirmed: {
+    bg: "#FFD6D6",
+    border: "#EF4444",
+    color: "#B91C1C",
+    label: "Не подтверждён",
+  },
   active: {
     bg: "#E0F2F1",
     border: "#80CBC4",
@@ -123,12 +138,15 @@ const CreditCard: React.FC<CreditCardProps> = ({
 }) => {
   const status = computeStatus(credit);
   const palette = STATUS_PALETTE[status];
+  const isUnconfirmed = status === "unconfirmed";
 
   return (
     <Card
       $selected={selected}
       $highlighted={highlighted}
       $borderAccent={palette.border}
+      $bg={isUnconfirmed ? palette.bg : undefined}
+      $accentBorder={isUnconfirmed ? palette.border : undefined}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
@@ -231,13 +249,16 @@ const Card = styled.div<{
   $selected: boolean;
   $highlighted: boolean;
   $borderAccent: string;
+  $bg?: string;
+  $accentBorder?: string;
 }>`
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  background: #fff;
-  border: 1px solid ${(p) => (p.$selected ? "#007D88" : "#E5E7EB")};
+  background: ${(p) => p.$bg ?? "#fff"};
+  border: 1px solid
+    ${(p) => (p.$selected ? "#007D88" : p.$accentBorder ?? "#E5E7EB")};
   border-radius: 12px;
   cursor: pointer;
   transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
