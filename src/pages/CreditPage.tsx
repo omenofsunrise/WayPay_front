@@ -141,6 +141,7 @@ const CreditPage = () => {
     primary: "#007D88",
   };
   const FILTERS_STORAGE_KEY = "creditsFilters";
+  const FILTER_PINNED_STORAGE_KEY = "creditsFilterPinned";
   const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const savedFilters = useMemo(() => {
     try {
@@ -265,7 +266,14 @@ const CreditPage = () => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   // Закрепление панели фильтров: пока закреплено — панель не сворачивается
   // (ни по клику в рабочей области, ни по Enter), даже если включено авто-сворачивание.
-  const [isFilterPinned, setIsFilterPinned] = useState(false);
+  // Состояние сохраняется в localStorage и переживает перезагрузку.
+  const [isFilterPinned, setIsFilterPinned] = useState(
+    () => localStorage.getItem(FILTER_PINNED_STORAGE_KEY) === "true"
+  );
+
+  useEffect(() => {
+    localStorage.setItem(FILTER_PINNED_STORAGE_KEY, String(isFilterPinned));
+  }, [isFilterPinned]);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
@@ -1736,7 +1744,12 @@ const CreditPage = () => {
         aria-label="Фильтр"
         title="Фильтр"
       >
-        <ListFilter size={20} strokeWidth={2.2} />
+        <ListFilter
+          aria-hidden="true"
+          size={20}
+          strokeWidth={2.2}
+          color={hasActiveFilters ? "#007D88" : "#50555C"}
+        />
         {hasActiveFilters && getActiveFiltersCount > 0 && (
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
@@ -2165,30 +2178,30 @@ const CreditPage = () => {
   );
 };
 
-// Иконка-кнопка фильтра — только иконка, вверху справа рядом с колокольчиком/настройками
-// (TopMenu: настройки right:10, колокольчик right:50; фильтр ставим левее — right:92).
+// Иконка-кнопка фильтра — рядом с колокольчиком/настройками в TopMenu.
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
   right: 92px;
-  z-index: 10000;
+  z-index: 101;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(209, 213, 219, 1);
-  background: #ffffff;
+  padding: 0;
+  border: none;
+  background: transparent;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   outline: none;
 
   &:hover {
     background-color: rgba(209, 213, 219, 0.5);
-    color: #007d88;
+    border-color: transparent;
+    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#000000")};
   }
 
   &:active {
@@ -2204,11 +2217,15 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
     width: 20px !important;
     height: 20px !important;
     flex-shrink: 0;
-    color: ${(props) => (props.$hasActiveFilters ? "#007D88" : "#374151")};
+    color: currentColor !important;
     stroke: currentColor !important;
+    fill: none !important;
     opacity: 1 !important;
-    visibility: visible !important;
     pointer-events: none;
+  }
+
+  svg * {
+    stroke: currentColor !important;
   }
 `;
 
