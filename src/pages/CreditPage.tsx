@@ -1859,68 +1859,72 @@ const CreditPage = () => {
                 hideClearButton={false}
               />
             </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата договора, от</FilterSlotLabel>
-              <CustomCalendar
-                prefix="от:"
-                placeholder=""
-                value={fromDate}
-                onChange={(date) => {
-                  setFromDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата договора, до</FilterSlotLabel>
-              <CustomCalendar
-                prefix="до:"
-                placeholder=""
-                value={toDate}
-                onChange={(date) => {
-                  setToDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата создания, от</FilterSlotLabel>
-              <CustomCalendar
-                prefix="от:"
-                placeholder=""
-                value={fromCreationDate}
-                onChange={(date) => {
-                  setFromCreationDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
-              <FilterSlotLabel>Дата создания, до</FilterSlotLabel>
-              <CustomCalendar
-                prefix="до:"
-                placeholder=""
-                value={toCreationDate}
-                onChange={(date) => {
-                  setToCreationDate(date);
-                  setCurrentPage(1);
-                }}
-              />
-            </FilterSlot>
           </FilterGrid>
 
-          <FilterModalFooter>
-            {creditsData && (
-              <FilterTotalCount>
-                <FilterTotalLabel>Всего договоров</FilterTotalLabel>
-                <FilterTotalValue>{creditsData.totalCount}</FilterTotalValue>
-              </FilterTotalCount>
-            )}
+          <FilterGroupRow>
+            <FilterGroup>
+              <FilterGroupTitle>Даты</FilterGroupTitle>
 
+              <FilterSlot>
+                <FilterSlotLabel>Дата договора</FilterSlotLabel>
+                <RangeRow>
+                  <CustomCalendar
+                    prefix="от:"
+                    placeholder=""
+                    value={fromDate}
+                    onChange={(date) => {
+                      setFromDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                  <RangeDash>–</RangeDash>
+                  <CustomCalendar
+                    prefix="до:"
+                    placeholder=""
+                    value={toDate}
+                    onChange={(date) => {
+                      setToDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </RangeRow>
+              </FilterSlot>
+
+              <FilterSlot>
+                <FilterSlotLabel>Дата создания</FilterSlotLabel>
+                <RangeRow>
+                  <CustomCalendar
+                    prefix="от:"
+                    placeholder=""
+                    value={fromCreationDate}
+                    onChange={(date) => {
+                      setFromCreationDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                  <RangeDash>–</RangeDash>
+                  <CustomCalendar
+                    prefix="до:"
+                    placeholder=""
+                    value={toCreationDate}
+                    onChange={(date) => {
+                      setToCreationDate(date);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </RangeRow>
+              </FilterSlot>
+            </FilterGroup>
+          </FilterGroupRow>
+
+          {creditsData && (
+            <FilterTotalCount>
+              <FilterTotalLabel>Всего договоров</FilterTotalLabel>
+              <FilterTotalValue>{creditsData.totalCount}</FilterTotalValue>
+            </FilterTotalCount>
+          )}
+
+          <FilterModalFooter>
             <DarkCyanButton
               type="button"
               onClick={resetFilters}
@@ -2404,7 +2408,9 @@ const FilterTotalCount = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-right: auto;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 12px;
   padding: 4px 10px;
   border-left: 3px solid #0f766e;
 `;
@@ -2623,6 +2629,52 @@ const FilterGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px 10px;
+`;
+
+const RangeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  > *:first-child,
+  > *:last-child {
+    flex: 1;
+    min-width: 0;
+  }
+`;
+
+const RangeDash = styled.span`
+  color: #6b7280;
+  font-weight: 500;
+`;
+
+// Группировка родственных фильтров (даты, доход) в карточки с заголовком,
+// чтобы похожие диапазоны визуально не сливались и не путались.
+const FilterGroupRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 12px;
+`;
+
+const FilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 280px;
+  min-width: 0;
+  padding: 10px 14px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fafafa;
+`;
+
+const FilterGroupTitle = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 `;
 
 // Быстрые фильтры, вынесенные из модального окна прямо на страницу
