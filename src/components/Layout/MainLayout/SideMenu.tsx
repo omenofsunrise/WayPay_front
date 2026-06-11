@@ -386,6 +386,96 @@ const SideMenu = () => {
     navigate("/profile");
   };
 
+  // --- Кастомизация порядка пунктов меню (drag & drop) ---
+  const DEFAULT_MENU_ORDER = [
+    "analytics",
+    "contracts",
+    "clients",
+    "payments",
+    "investors",
+    "references",
+    "finance",
+    "black-catalog",
+    "settings",
+    "admin",
+  ];
+  const MENU_ORDER_STORAGE_KEY = "sideMenuOrder";
+
+  const [menuOrder, setMenuOrder] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(MENU_ORDER_STORAGE_KEY);
+      const saved: string[] = raw ? JSON.parse(raw) : [];
+      const order = saved.filter((k) => DEFAULT_MENU_ORDER.includes(k));
+      // Новые/отсутствующие пункты добавляем в конец, в дефолтном порядке
+      DEFAULT_MENU_ORDER.forEach((k) => {
+        if (!order.includes(k)) order.push(k);
+      });
+      return order;
+    } catch {
+      return [...DEFAULT_MENU_ORDER];
+    }
+  });
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const [dragOverAfter, setDragOverAfter] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(MENU_ORDER_STORAGE_KEY, JSON.stringify(menuOrder));
+  }, [menuOrder]);
+
+  const handleMenuDrop = (targetKey: string, after: boolean) => {
+    if (draggingKey && draggingKey !== targetKey) {
+      setMenuOrder((prev) => {
+        const next = prev.filter((k) => k !== draggingKey);
+        let idx = next.indexOf(targetKey);
+        if (idx === -1) idx = next.length;
+        else if (after) idx += 1; // вставка ПОСЛЕ целевого пункта (нужно для последнего места)
+        next.splice(idx, 0, draggingKey);
+        return next;
+      });
+    }
+    setDraggingKey(null);
+    setDragOverKey(null);
+  };
+
+  // Определяет, отпускаем ли мы в нижнюю половину пункта (значит — вставка после него)
+  const isAfter = (e: React.DragEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return e.clientY > rect.top + rect.height / 2;
+  };
+
+  // Пропсы для перетаскиваемой обёртки пункта меню.
+  // Порядок задаётся через CSS order, чтобы не перекраивать разметку.
+  const dragProps = (key: string) => ({
+    draggable: !collapsed,
+    style: { order: menuOrder.indexOf(key) },
+    $dragging: draggingKey === key,
+    $dragOver: dragOverKey === key && draggingKey !== key,
+    $dragOverAfter: dragOverAfter,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.effectAllowed = "move";
+      setDraggingKey(key);
+    },
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault();
+      if (draggingKey && draggingKey !== key) {
+        setDragOverKey(key);
+        setDragOverAfter(isAfter(e));
+      }
+    },
+    onDragLeave: () => {
+      setDragOverKey((k) => (k === key ? null : k));
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      handleMenuDrop(key, isAfter(e));
+    },
+    onDragEnd: () => {
+      setDraggingKey(null);
+      setDragOverKey(null);
+    },
+  });
+
   return (
     <SideMenuContainer $collapsed={collapsed}>
       <ArrowIcon
@@ -402,179 +492,177 @@ const SideMenu = () => {
             hasRole("директор") ||
             hasRole("суперадмин") ||
             hasPermission("MANAGE_ACCOUNTING", true)) && (
+            <DraggableRow {...dragProps("analytics")}>
+              <MenuItem
+                onClick={(e) => {
+                  if (collapsed) {
+                    handleCollapsedMenuClick(e, "analytics", false);
+                  } else {
+                    handleMenuItemClick("analytics", "/analytics");
+                  }
+                }}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "analytics"}
+              >
+                <Icon
+                  src={analyticsIcon}
+                  $collapsed={collapsed}
+                  $selected={selectedSideMenuItem === "analytics"}
+                />
+                {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
+              </MenuItem>
+              {!collapsed && <Divider />}
+            </DraggableRow>
+          )}
+
+          <DraggableRow {...dragProps("contracts")}>
             <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, "analytics", false);
+                  handleCollapsedMenuClick(e, "contracts", true);
                 } else {
-                  handleMenuItemClick("analytics", "/analytics");
+                  handleMainMenuItemClick("contracts", undefined, true);
                 }
               }}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "analytics"}
-            >
-              <Icon
-                src={analyticsIcon}
-                $collapsed={collapsed}
-                $selected={selectedSideMenuItem === "analytics"}
-              />
-              {!collapsed && <MenuItemText>Аналитика</MenuItemText>}
-            </MenuItem>
-          )}
-
-          {!collapsed && <Divider />}
-
-          <MenuItem
-            onClick={(e) => {
-              if (collapsed) {
-                handleCollapsedMenuClick(e, "contracts", true);
-              } else {
-                handleMainMenuItemClick("contracts", undefined, true);
-              }
-            }}
-            $collapsed={collapsed}
-            $selected={
-              selectedSideMenuItem === "contracts" ||
-              selectedSideMenuItem === "contracts-control"
-            }
-          >
-            <Icon
-              src={contractsIcon}
               $collapsed={collapsed}
               $selected={
                 selectedSideMenuItem === "contracts" ||
                 selectedSideMenuItem === "contracts-control"
               }
-            />
-            {!collapsed && (
-              <>
-                <MenuItemText>Договоры</MenuItemText>
-                <ExpandArrow
-                  width="14"
-                  height="8"
-                  viewBox="0 0 14 8"
-                  fill="none"
-                  $expanded={expandedItem === "contracts"}
-                >
-                  <path
-                    d="M1 1.32422L7 7.32422L13 1.32422"
-                    stroke="#50555C"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </ExpandArrow>
-              </>
-            )}
-          </MenuItem>
+            >
+              <Icon
+                src={contractsIcon}
+                $collapsed={collapsed}
+                $selected={
+                  selectedSideMenuItem === "contracts" ||
+                  selectedSideMenuItem === "contracts-control"
+                }
+              />
+              {!collapsed && (
+                <>
+                  <MenuItemText>Договоры</MenuItemText>
+                  <ExpandArrow
+                    width="14"
+                    height="8"
+                    viewBox="0 0 14 8"
+                    fill="none"
+                    $expanded={expandedItem === "contracts"}
+                  >
+                    <path
+                      d="M1 1.32422L7 7.32422L13 1.32422"
+                      stroke="#50555C"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </ExpandArrow>
+                </>
+              )}
+            </MenuItem>
 
-          {!collapsed && expandedItem === "contracts" && (
-            <SubMenu>
-              <SubMenuLine />
-              <SubMenuItem
-                onClick={() => handleSubMenuItemClick("contracts", "/credits")}
-                $selected={selectedSideMenuItem === "contracts"}
-              >
-                Договоры
-              </SubMenuItem>
-              {(hasRole("админ") ||
-                hasRole("директор") ||
-                hasRole("суперадмин")) && (
+            {!collapsed && expandedItem === "contracts" && (
+              <SubMenu>
+                <SubMenuLine />
                 <SubMenuItem
                   onClick={() =>
-                    handleSubMenuItemClick(
-                      "contracts-control",
-                      "/credit-control"
-                    )
+                    handleSubMenuItemClick("contracts", "/credits")
                   }
-                  $selected={selectedSideMenuItem === "contracts-control"}
+                  $selected={selectedSideMenuItem === "contracts"}
                 >
-                  Контроль договоров
+                  Договоры
                 </SubMenuItem>
-              )}
-            </SubMenu>
-          )}
+                {(hasRole("админ") ||
+                  hasRole("директор") ||
+                  hasRole("суперадмин")) && (
+                  <SubMenuItem
+                    onClick={() =>
+                      handleSubMenuItemClick(
+                        "contracts-control",
+                        "/credit-control"
+                      )
+                    }
+                    $selected={selectedSideMenuItem === "contracts-control"}
+                  >
+                    Контроль договоров
+                  </SubMenuItem>
+                )}
+              </SubMenu>
+            )}
+          </DraggableRow>
 
-          <MenuItem
-            onClick={(e) => {
-              if (collapsed) {
-                handleCollapsedMenuClick(e, "clients", true);
-              } else {
-                handleMainMenuItemClick("clients", undefined, true);
-              }
-            }}
-            $collapsed={collapsed}
-            $selected={
-              selectedSideMenuItem === "clients" ||
-              selectedSideMenuItem === "blacklist"
-            }
-          >
-            <Icon
-              src={clientsIcon}
+          <DraggableRow {...dragProps("clients")}>
+            <MenuItem
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, "clients", true);
+                } else {
+                  handleMainMenuItemClick("clients", undefined, true);
+                }
+              }}
               $collapsed={collapsed}
               $selected={
                 selectedSideMenuItem === "clients" ||
                 selectedSideMenuItem === "blacklist"
               }
-            />
-            {!collapsed && (
-              <>
-                <MenuItemText>Клиенты</MenuItemText>
-                <ExpandArrow
-                  width="14"
-                  height="8"
-                  viewBox="0 0 14 8"
-                  fill="none"
-                  $expanded={expandedItem === "clients"}
-                >
-                  <path
-                    d="M1 1.32422L7 7.32422L13 1.32422"
-                    stroke="#50555C"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </ExpandArrow>
-              </>
-            )}
-          </MenuItem>
-
-          {!collapsed && expandedItem === "clients" && (
-            <SubMenu>
-              <SubMenuLine />
-              <SubMenuItem
-                onClick={() => handleSubMenuItemClick("clients", "/clients")}
-                $selected={selectedSideMenuItem === "clients"}
-              >
-                Клиенты
-              </SubMenuItem>
-              <SubMenuItem
-                onClick={() =>
-                  handleSubMenuItemClick("blacklist", "/blacklist")
+            >
+              <Icon
+                src={clientsIcon}
+                $collapsed={collapsed}
+                $selected={
+                  selectedSideMenuItem === "clients" ||
+                  selectedSideMenuItem === "blacklist"
                 }
-                $selected={selectedSideMenuItem === "blacklist"}
-              >
-                Чёрный список
-              </SubMenuItem>
-            </SubMenu>
-          )}
+              />
+              {!collapsed && (
+                <>
+                  <MenuItemText>Клиенты</MenuItemText>
+                  <ExpandArrow
+                    width="14"
+                    height="8"
+                    viewBox="0 0 14 8"
+                    fill="none"
+                    $expanded={expandedItem === "clients"}
+                  >
+                    <path
+                      d="M1 1.32422L7 7.32422L13 1.32422"
+                      stroke="#50555C"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </ExpandArrow>
+                </>
+              )}
+            </MenuItem>
 
-          <MenuItem
-            onClick={(e) => {
-              if (collapsed) {
-                handleCollapsedMenuClick(e, "payments", true);
-              } else {
-                handleMainMenuItemClick("payments", undefined, true);
-              }
-            }}
-            $collapsed={collapsed}
-            $selected={
-              selectedSideMenuItem === "pending-payments" ||
-              selectedSideMenuItem === "payments-calendar" ||
-              selectedSideMenuItem === "payments-journal" ||
-              selectedSideMenuItem === "reception-payments"
-            }
-          >
-            <Icon
-              src={paymentsIcon}
+            {!collapsed && expandedItem === "clients" && (
+              <SubMenu>
+                <SubMenuLine />
+                <SubMenuItem
+                  onClick={() => handleSubMenuItemClick("clients", "/clients")}
+                  $selected={selectedSideMenuItem === "clients"}
+                >
+                  Клиенты
+                </SubMenuItem>
+                <SubMenuItem
+                  onClick={() =>
+                    handleSubMenuItemClick("blacklist", "/blacklist")
+                  }
+                  $selected={selectedSideMenuItem === "blacklist"}
+                >
+                  Чёрный список
+                </SubMenuItem>
+              </SubMenu>
+            )}
+          </DraggableRow>
+
+          <DraggableRow {...dragProps("payments")}>
+            <MenuItem
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, "payments", true);
+                } else {
+                  handleMainMenuItemClick("payments", undefined, true);
+                }
+              }}
               $collapsed={collapsed}
               $selected={
                 selectedSideMenuItem === "pending-payments" ||
@@ -582,294 +670,316 @@ const SideMenu = () => {
                 selectedSideMenuItem === "payments-journal" ||
                 selectedSideMenuItem === "reception-payments"
               }
-            />
-            {!collapsed && (
-              <>
-                <MenuItemText>Платежи</MenuItemText>
-                <ExpandArrow
-                  width="14"
-                  height="8"
-                  viewBox="0 0 14 8"
-                  fill="none"
-                  $expanded={expandedItem === "payments"}
-                >
-                  <path
-                    d="M1 1.32422L7 7.32422L13 1.32422"
-                    stroke="#50555C"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </ExpandArrow>
-              </>
-            )}
-          </MenuItem>
-
-          {!collapsed && expandedItem === "payments" && (
-            <SubMenu>
-              <SubMenuLine />
-              <SubMenuItem
-                onClick={() =>
-                  handleSubMenuItemClick("pending-payments", "/schedules")
+            >
+              <Icon
+                src={paymentsIcon}
+                $collapsed={collapsed}
+                $selected={
+                  selectedSideMenuItem === "pending-payments" ||
+                  selectedSideMenuItem === "payments-calendar" ||
+                  selectedSideMenuItem === "payments-journal" ||
+                  selectedSideMenuItem === "reception-payments"
                 }
-                $selected={selectedSideMenuItem === "pending-payments"}
-              >
-                Ожидаемые
-              </SubMenuItem>
-              {(hasRole("админ") ||
-                hasRole("директор") ||
-                hasRole("суперадмин") ||
-                hasPermission("MANAGE_ACCOUNTING", true)) && (
+              />
+              {!collapsed && (
+                <>
+                  <MenuItemText>Платежи</MenuItemText>
+                  <ExpandArrow
+                    width="14"
+                    height="8"
+                    viewBox="0 0 14 8"
+                    fill="none"
+                    $expanded={expandedItem === "payments"}
+                  >
+                    <path
+                      d="M1 1.32422L7 7.32422L13 1.32422"
+                      stroke="#50555C"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </ExpandArrow>
+                </>
+              )}
+            </MenuItem>
+
+            {!collapsed && expandedItem === "payments" && (
+              <SubMenu>
+                <SubMenuLine />
+                <SubMenuItem
+                  onClick={() =>
+                    handleSubMenuItemClick("pending-payments", "/schedules")
+                  }
+                  $selected={selectedSideMenuItem === "pending-payments"}
+                >
+                  Ожидаемые
+                </SubMenuItem>
+                {(hasRole("админ") ||
+                  hasRole("директор") ||
+                  hasRole("суперадмин") ||
+                  hasPermission("MANAGE_ACCOUNTING", true)) && (
+                  <SubMenuItem
+                    onClick={() =>
+                      handleSubMenuItemClick(
+                        "payments-calendar",
+                        "/schedule-calendar"
+                      )
+                    }
+                    $selected={selectedSideMenuItem === "payments-calendar"}
+                  >
+                    Календарь
+                  </SubMenuItem>
+                )}
+                <SubMenuItem
+                  onClick={() =>
+                    handleSubMenuItemClick("payments-journal", "/payments")
+                  }
+                  $selected={selectedSideMenuItem === "payments-journal"}
+                >
+                  Журнал
+                </SubMenuItem>
                 <SubMenuItem
                   onClick={() =>
                     handleSubMenuItemClick(
-                      "payments-calendar",
-                      "/schedule-calendar"
+                      "reception-payments",
+                      "/payments-pending"
                     )
                   }
-                  $selected={selectedSideMenuItem === "payments-calendar"}
+                  $selected={selectedSideMenuItem === "reception-payments"}
                 >
-                  Календарь
+                  Платежи с приёмки
                 </SubMenuItem>
-              )}
-              <SubMenuItem
-                onClick={() =>
-                  handleSubMenuItemClick("payments-journal", "/payments")
-                }
-                $selected={selectedSideMenuItem === "payments-journal"}
-              >
-                Журнал
-              </SubMenuItem>
-              <SubMenuItem
-                onClick={() =>
-                  handleSubMenuItemClick(
-                    "reception-payments",
-                    "/payments-pending"
-                  )
-                }
-                $selected={selectedSideMenuItem === "reception-payments"}
-              >
-                Платежи с приёмки
-              </SubMenuItem>
-            </SubMenu>
-          )}
+              </SubMenu>
+            )}
+          </DraggableRow>
 
           {(hasRole("админ") ||
             hasRole("директор") ||
             hasRole("суперадмин")) && (
-            <MenuItem
-              onClick={(e) => {
-                if (collapsed) {
-                  handleCollapsedMenuClick(e, "investors", true);
-                } else {
-                  handleMainMenuItemClick("investors", undefined, true);
-                }
-              }}
-              $collapsed={collapsed}
-              $selected={
-                selectedSideMenuItem === "investors" ||
-                selectedSideMenuItem === "investors-report"
-              }
-            >
-              <Icon
-                src={investorsIcon}
+            <DraggableRow {...dragProps("investors")}>
+              <MenuItem
+                onClick={(e) => {
+                  if (collapsed) {
+                    handleCollapsedMenuClick(e, "investors", true);
+                  } else {
+                    handleMainMenuItemClick("investors", undefined, true);
+                  }
+                }}
                 $collapsed={collapsed}
                 $selected={
                   selectedSideMenuItem === "investors" ||
                   selectedSideMenuItem === "investors-report"
                 }
-              />
-              {!collapsed && (
-                <>
-                  <MenuItemText>Инвесторы</MenuItemText>
-                  <ExpandArrow
-                    width="14"
-                    height="8"
-                    viewBox="0 0 14 8"
-                    fill="none"
-                    $expanded={expandedItem === "investors"}
+              >
+                <Icon
+                  src={investorsIcon}
+                  $collapsed={collapsed}
+                  $selected={
+                    selectedSideMenuItem === "investors" ||
+                    selectedSideMenuItem === "investors-report"
+                  }
+                />
+                {!collapsed && (
+                  <>
+                    <MenuItemText>Инвесторы</MenuItemText>
+                    <ExpandArrow
+                      width="14"
+                      height="8"
+                      viewBox="0 0 14 8"
+                      fill="none"
+                      $expanded={expandedItem === "investors"}
+                    >
+                      <path
+                        d="M1 1.32422L7 7.32422L13 1.32422"
+                        stroke="#50555C"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </ExpandArrow>
+                  </>
+                )}
+              </MenuItem>
+              {!collapsed && expandedItem === "investors" && (
+                <SubMenu>
+                  <SubMenuLine />
+                  <SubMenuItem
+                    onClick={() =>
+                      handleSubMenuItemClick("investors", "/investors")
+                    }
+                    $selected={selectedSideMenuItem === "investors"}
                   >
-                    <path
-                      d="M1 1.32422L7 7.32422L13 1.32422"
-                      stroke="#50555C"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </ExpandArrow>
-                </>
+                    Инвесторы
+                  </SubMenuItem>
+                  <SubMenuItem
+                    onClick={() =>
+                      handleSubMenuItemClick(
+                        "investors-report",
+                        "/investors-report"
+                      )
+                    }
+                    $selected={selectedSideMenuItem === "investors-report"}
+                  >
+                    Отчёт для инвесторов
+                  </SubMenuItem>
+                  <SubMenuItem
+                    onClick={() =>
+                      handleSubMenuItemClick(
+                        "investors-pool",
+                        "/investors-pool"
+                      )
+                    }
+                    $selected={selectedSideMenuItem === "investors-pool"}
+                  >
+                    Пулы инвесторов
+                  </SubMenuItem>
+                </SubMenu>
               )}
-            </MenuItem>
-          )}
-
-          {!collapsed && expandedItem === "investors" && (
-            <SubMenu>
-              <SubMenuLine />
-              <SubMenuItem
-                onClick={() =>
-                  handleSubMenuItemClick("investors", "/investors")
-                }
-                $selected={selectedSideMenuItem === "investors"}
-              >
-                Инвесторы
-              </SubMenuItem>
-              <SubMenuItem
-                onClick={() =>
-                  handleSubMenuItemClick(
-                    "investors-report",
-                    "/investors-report"
-                  )
-                }
-                $selected={selectedSideMenuItem === "investors-report"}
-              >
-                Отчёт для инвесторов
-              </SubMenuItem>
-              <SubMenuItem
-                onClick={() =>
-                  handleSubMenuItemClick("investors-pool", "/investors-pool")
-                }
-                $selected={selectedSideMenuItem === "investors-pool"}
-              >
-                Пулы инвесторов
-              </SubMenuItem>
-            </SubMenu>
+            </DraggableRow>
           )}
 
           {isSuperAdminCompany() && (
-            <MenuItem
-              onClick={(e) => {
-                if (collapsed) {
-                  handleCollapsedMenuClick(e, "references", true);
-                } else {
-                  handleMainMenuItemClick("references", undefined, true);
-                }
-              }}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "registration-requests"}
-            >
-              <Icon
-                src={referencesIcon}
+            <DraggableRow {...dragProps("references")}>
+              <MenuItem
+                onClick={(e) => {
+                  if (collapsed) {
+                    handleCollapsedMenuClick(e, "references", true);
+                  } else {
+                    handleMainMenuItemClick("references", undefined, true);
+                  }
+                }}
                 $collapsed={collapsed}
                 $selected={selectedSideMenuItem === "registration-requests"}
-              />
-              {!collapsed && (
-                <>
-                  <MenuItemText>Справочники</MenuItemText>
-                  <ExpandArrow
-                    width="14"
-                    height="8"
-                    viewBox="0 0 14 8"
-                    fill="none"
-                    $expanded={expandedItem === "references"}
-                  >
-                    <path
-                      d="M1 1.32422L7 7.32422L13 1.32422"
-                      stroke="#50555C"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </ExpandArrow>
-                </>
-              )}
-            </MenuItem>
-          )}
-
-          {isSuperAdminCompany() &&
-            !collapsed &&
-            expandedItem === "references" && (
-              <SubMenu>
-                <SubMenuLine />
-                <SubMenuItem
-                  onClick={() =>
-                    handleSubMenuItemClick(
-                      "registration-requests",
-                      "/registration-requests"
-                    )
-                  }
+              >
+                <Icon
+                  src={referencesIcon}
+                  $collapsed={collapsed}
                   $selected={selectedSideMenuItem === "registration-requests"}
-                >
-                  Заявки на регистрацию
-                </SubMenuItem>
-              </SubMenu>
-            )}
+                />
+                {!collapsed && (
+                  <>
+                    <MenuItemText>Справочники</MenuItemText>
+                    <ExpandArrow
+                      width="14"
+                      height="8"
+                      viewBox="0 0 14 8"
+                      fill="none"
+                      $expanded={expandedItem === "references"}
+                    >
+                      <path
+                        d="M1 1.32422L7 7.32422L13 1.32422"
+                        stroke="#50555C"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </ExpandArrow>
+                  </>
+                )}
+              </MenuItem>
+              {!collapsed && expandedItem === "references" && (
+                <SubMenu>
+                  <SubMenuLine />
+                  <SubMenuItem
+                    onClick={() =>
+                      handleSubMenuItemClick(
+                        "registration-requests",
+                        "/registration-requests"
+                      )
+                    }
+                    $selected={selectedSideMenuItem === "registration-requests"}
+                  >
+                    Заявки на регистрацию
+                  </SubMenuItem>
+                </SubMenu>
+              )}
+            </DraggableRow>
+          )}
 
           {hasPermission("MANAGE_ACCOUNTING", true) && (
-            <MenuItem
-              onClick={(e) => {
-                if (collapsed) {
-                  handleCollapsedMenuClick(e, "finance", false);
-                } else {
-                  handleMenuItemClick("finance", "/finance");
-                }
-              }}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "finance"}
-            >
-              <Icon
-                src={financeIcon}
+            <DraggableRow {...dragProps("finance")}>
+              <MenuItem
+                onClick={(e) => {
+                  if (collapsed) {
+                    handleCollapsedMenuClick(e, "finance", false);
+                  } else {
+                    handleMenuItemClick("finance", "/finance");
+                  }
+                }}
                 $collapsed={collapsed}
                 $selected={selectedSideMenuItem === "finance"}
-              />
-              {!collapsed && <MenuItemText>Финансы</MenuItemText>}
-            </MenuItem>
+              >
+                <Icon
+                  src={financeIcon}
+                  $collapsed={collapsed}
+                  $selected={selectedSideMenuItem === "finance"}
+                />
+                {!collapsed && <MenuItemText>Финансы</MenuItemText>}
+              </MenuItem>
+            </DraggableRow>
           )}
 
-          <MenuItem
-            onClick={(e) => {
-              if (collapsed) {
-                handleCollapsedMenuClick(e, "black-catalog", false);
-              } else {
-                handleMenuItemClick("black-catalog", "/black-catalog");
-              }
-            }}
-            $collapsed={collapsed}
-            $selected={selectedSideMenuItem === "black-catalog"}
-          >
-            <Icon
-              src={blackCatalogIcon || analyticsIcon}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "black-catalog"}
-            />
-            {!collapsed && <MenuItemText>ЧС+</MenuItemText>}
-          </MenuItem>
-
-          {/* Пункт "Настройки" ведет на /settings */}
-          <MenuItem
-            onClick={(e) => {
-              if (collapsed) {
-                handleCollapsedMenuClick(e, "settings", false);
-              } else {
-                handleMenuItemClick("settings", "/settings");
-              }
-            }}
-            $collapsed={collapsed}
-            $selected={selectedSideMenuItem === "settings"}
-          >
-            <Icon
-              src={profileIcon}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "settings"}
-            />
-            {!collapsed && <MenuItemText>Настройки</MenuItemText>}
-          </MenuItem>
-
-          {hasRole("суперадмин") && (
+          <DraggableRow {...dragProps("black-catalog")}>
             <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, "admin", false);
+                  handleCollapsedMenuClick(e, "black-catalog", false);
                 } else {
-                  handleMenuItemClick("admin", "/admin");
+                  handleMenuItemClick("black-catalog", "/black-catalog");
                 }
               }}
               $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "admin"}
+              $selected={selectedSideMenuItem === "black-catalog"}
             >
               <Icon
-                src={analyticsIcon}
+                src={blackCatalogIcon || analyticsIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "black-catalog"}
+              />
+              {!collapsed && <MenuItemText>ЧС+</MenuItemText>}
+            </MenuItem>
+          </DraggableRow>
+
+          {/* Пункт "Настройки" ведет на /settings */}
+          <DraggableRow {...dragProps("settings")}>
+            <MenuItem
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, "settings", false);
+                } else {
+                  handleMenuItemClick("settings", "/settings");
+                }
+              }}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === "settings"}
+            >
+              <Icon
+                src={profileIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "settings"}
+              />
+              {!collapsed && <MenuItemText>Настройки</MenuItemText>}
+            </MenuItem>
+          </DraggableRow>
+
+          {hasRole("суперадмин") && (
+            <DraggableRow {...dragProps("admin")}>
+              <MenuItem
+                onClick={(e) => {
+                  if (collapsed) {
+                    handleCollapsedMenuClick(e, "admin", false);
+                  } else {
+                    handleMenuItemClick("admin", "/admin");
+                  }
+                }}
                 $collapsed={collapsed}
                 $selected={selectedSideMenuItem === "admin"}
-              />
-              {!collapsed && <MenuItemText>Админ-панель</MenuItemText>}
-            </MenuItem>
+              >
+                <Icon
+                  src={analyticsIcon}
+                  $collapsed={collapsed}
+                  $selected={selectedSideMenuItem === "admin"}
+                />
+                {!collapsed && <MenuItemText>Админ-панель</MenuItemText>}
+              </MenuItem>
+            </DraggableRow>
           )}
         </ScrollableMenuContent>
       </MenuList>
@@ -1076,6 +1186,8 @@ const ContextMenuItem = styled.div<{ $selected?: boolean }>`
 
 const ScrollableMenuContent = styled.div`
   width: 100%;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
 
@@ -1085,6 +1197,33 @@ const ScrollableMenuContent = styled.div`
 
   -ms-overflow-style: none;
   scrollbar-width: none;
+`;
+
+// Перетаскиваемая обёртка пункта меню (drag & drop для кастомизации порядка)
+const DraggableRow = styled.div<{
+  $dragging?: boolean;
+  $dragOver?: boolean;
+  $dragOverAfter?: boolean;
+}>`
+  width: 100%;
+  position: relative;
+  user-select: none;
+  border-radius: 8px;
+  opacity: ${({ $dragging }) => ($dragging ? 0.4 : 1)};
+  transition: opacity 0.15s ease;
+
+  &[draggable="true"] {
+    cursor: grab;
+  }
+  &[draggable="true"]:active {
+    cursor: grabbing;
+  }
+
+  ${({ $dragOver, $dragOverAfter }) =>
+    $dragOver &&
+    ($dragOverAfter
+      ? `box-shadow: inset 0 -3px 0 rgba(0, 125, 136, 1);`
+      : `box-shadow: inset 0 3px 0 rgba(0, 125, 136, 1);`)}
 `;
 
 const MenuItem = styled.div<MenuItemProps>`
