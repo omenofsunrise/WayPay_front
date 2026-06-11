@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { ListFilter, Lock, LockOpen } from "lucide-react";
-import filterArrow from "../assets/ui/arrow.svg";
+import { ListFilter } from "lucide-react";
 
 // Ширина выезжающей панели фильтров (на столько отодвигается контент). Как у бокового меню.
 const FILTER_PANEL_WIDTH = 360;
@@ -51,7 +50,6 @@ const CreditControlPage = () => {
     primary: "#007D88",
   };
   const FILTERS_STORAGE_KEY = "creditControlFilters";
-  const FILTER_PINNED_STORAGE_KEY = "creditControlFilterPinned";
 
   const savedFilters = useMemo(() => {
     try {
@@ -75,16 +73,6 @@ const CreditControlPage = () => {
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   // Модальное окно с фильтрами (открывается иконкой в шапке)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  // Закрепление панели фильтров: пока закреплено — панель не сворачивается
-  // (ни по клику в рабочей области, ни по Enter), даже если включено авто-сворачивание.
-  // Состояние сохраняется в localStorage и переживает перезагрузку.
-  const [isFilterPinned, setIsFilterPinned] = useState(
-    () => localStorage.getItem(FILTER_PINNED_STORAGE_KEY) === "true"
-  );
-
-  useEffect(() => {
-    localStorage.setItem(FILTER_PINNED_STORAGE_KEY, String(isFilterPinned));
-  }, [isFilterPinned]);
   const [contractNumber, setContractNumber] = useState(
     () => savedFilters?.contractNumber ?? ""
   );
@@ -1068,11 +1056,7 @@ const CreditControlPage = () => {
   // Персональных настройках. По клику в рабочей области раздела (карточки,
   // вкладки, выделение договора) сворачиваем открытую панель.
   const collapseFiltersOnSectionClick = () => {
-    if (
-      isFilterModalOpen &&
-      !isFilterPinned &&
-      getCollapseFiltersOnClickSetting()
-    ) {
+    if (isFilterModalOpen && getCollapseFiltersOnClickSetting()) {
       setIsFilterModalOpen(false);
     }
   };
@@ -1112,11 +1096,7 @@ const CreditControlPage = () => {
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
           onKeyDown={(e) => {
-            if (
-              e.key === "Enter" &&
-              !isFilterPinned &&
-              getCollapseFiltersOnClickSetting()
-            ) {
+            if (e.key === "Enter" && getCollapseFiltersOnClickSetting()) {
               e.preventDefault();
               setIsFilterModalOpen(false);
             }
@@ -1124,33 +1104,6 @@ const CreditControlPage = () => {
         >
           <FilterModalHeader>
             <span>Фильтр</span>
-            <FilterHeaderActions>
-              <FilterLockButton
-                type="button"
-                onClick={() => setIsFilterPinned((v) => !v)}
-                $active={isFilterPinned}
-                title={
-                  isFilterPinned
-                    ? "Открепить (панель будет сворачиваться)"
-                    : "Закрепить (панель не будет сворачиваться)"
-                }
-                aria-pressed={isFilterPinned}
-              >
-                {isFilterPinned ? (
-                  <Lock size={18} strokeWidth={2.2} />
-                ) : (
-                  <LockOpen size={18} strokeWidth={2.2} />
-                )}
-              </FilterLockButton>
-              {!isFilterPinned && (
-                <CollapseArrow
-                  src={filterArrow}
-                  alt=""
-                  onClick={() => setIsFilterModalOpen(false)}
-                  title="Свернуть"
-                />
-              )}
-            </FilterHeaderActions>
           </FilterModalHeader>
           <FilterGrid>
             <FilterSlot>
@@ -1626,45 +1579,6 @@ const FilterConfirmAllRow = styled.div`
     padding: 8px 12px;
     font-size: 13px;
     border-radius: 8px;
-  }
-`;
-
-// Стрелка сворачивания — как ArrowIcon у бокового меню (тот же ассет, поворот).
-const CollapseArrow = styled.img`
-  width: 22px;
-  height: 22px;
-  cursor: pointer;
-  transform: rotate(180deg);
-  transition: transform 0.3s ease;
-
-  &:hover {
-    opacity: 0.7;
-  }
-`;
-
-const FilterHeaderActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const FilterLockButton = styled.button<{ $active: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid ${(p) => (p.$active ? "#0F766E" : "#E5E7EB")};
-  background: ${(p) => (p.$active ? "#CCFBF1" : "#FFFFFF")};
-  color: ${(p) => (p.$active ? "#0F766E" : "#6B7280")};
-  transition: background 0.18s, border-color 0.18s, color 0.18s;
-
-  &:hover {
-    border-color: #0f766e;
-    color: #0f766e;
   }
 `;
 
