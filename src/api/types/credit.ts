@@ -26,6 +26,10 @@ export interface Credit {
     termMonths: number;
     clientFullName: string;
     clientPhone: string;
+    clientSecondPhone?: string;
+    secondPhone?: string;
+    address?: string;
+    clientBirthdate?: Date | string;
     investorNickname: string;
     guarantorId?: number;
     guarantorClientId?: number;
@@ -186,4 +190,3 @@ export interface CreditListResponse {
   status: string;
   creditDate: Date;
 }
-

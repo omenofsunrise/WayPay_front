@@ -107,7 +107,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     getFileByNote,
   } = useNotes();
 
-  const { getCredits, getCreditListByClient, toggleTerminated } = useCredit();
+  const { getCredits, getCreditById, getCreditListByClient, toggleTerminated } =
+    useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
   const [copiedName, setCopiedName] = useState<string | null>(null);
   const copyNameTimerRef = useRef<number | null>(null);
@@ -616,14 +617,18 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         try {
           setCreditData(null);
 
+          const credit = await getCreditById(Number(id));
+          if (credit) {
+            setCreditData(credit);
+            return;
+          }
+
           const creditResult = await getCredits({
             creditId: id.toString(),
             pageSize: 1,
+            includeAllStates: true,
           });
-          if (creditResult?.items?.length) {
-            const credit = creditResult.items[0];
-            setCreditData(credit);
-          }
+          setCreditData(creditResult?.items?.[0] ?? null);
         } catch (error) {
           console.error("Error fetching data:", error);
         }
@@ -632,7 +637,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       fetchData();
       getCreditNotes(Number(id));
     }
-  }, [isOpen, id, getCreditNotes, getCredits]);
+  }, [isOpen, id, getCredits, getCreditById, getCreditNotes]);
 
   // Обновляем массив изображений при изменении заметок
   useEffect(() => {
@@ -1065,6 +1070,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       ];
     });
   };
+
+  const clientWhatsAppPhone =
+    creditData?.secondPhone ||
+    creditData?.clientSecondPhone ||
+    creditData?.clientPhone ||
+    "";
 
   if (!isOpen) return null;
 
@@ -1685,7 +1696,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
               <RightColumn>
                 {creditData && (
                   <WhatsAppChat
-                    phoneNumber={creditData?.clientPhone}
+                    phoneNumber={clientWhatsAppPhone}
                     clientName={creditData?.clientFullName}
                   />
                 )}
