@@ -14,6 +14,7 @@ import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import EmployeeModal from "../../components/modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
+import { usePermission } from "../../api/hooks/usePermission";
 import type {
   Employee,
   EmployeeFilterRequest,
@@ -116,6 +117,14 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     togglePermission,
   } = useEmployee();
 
+  const { customRoles, fetchCustomRoles } = usePermission();
+
+  useEffect(() => {
+    fetchCustomRoles().catch(() => {
+      /* список кастомных ролей не критичен для страницы */
+    });
+  }, [fetchCustomRoles]);
+
   const loadEmployees = useCallback(async () => {
     const params: EmployeeFilterRequest = {
       page: currentPage,
@@ -142,7 +151,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
 
   const filteredEmployees = useMemo(() => {
     return localEmployees.filter(
-      emp => !isSuperAdminIdUser(emp.id) && emp.role !== 'суперадмин'
+      (emp) => !isSuperAdminIdUser(emp.id) && emp.role !== "суперадмин"
     );
   }, [localEmployees, isSuperAdminIdUser]);
   const filteredOutCount = localEmployees.length - filteredEmployees.length;
@@ -152,9 +161,27 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     setCurrentPage(1);
   };
 
+  // Значение селекта роли кодируется как "role:<база>" или "custom:<id>",
+  // чтобы в одном выпадающем списке выбирать и базовую, и кастомную роль.
+  const roleSelectOptions = useMemo(
+    () => [
+      { value: "role:сотрудник", label: "Сотрудник" },
+      { value: "role:админ", label: "Администратор" },
+      ...customRoles.map((r) => ({
+        value: `custom:${r.id}`,
+        label: `${r.name} (кастомная)`,
+      })),
+    ],
+    [customRoles]
+  );
+
   const handleOpenRoleModal = (employee: Employee, e: React.MouseEvent) => {
     e.preventDefault();
-    setRoleValue(employee.role);
+    setRoleValue(
+      employee.customRole
+        ? `custom:${employee.customRole.id}`
+        : `role:${employee.role}`
+    );
     setCurrentRoleEmployeeId(employee.id);
     setIsRoleModalOpen(true);
   };
@@ -163,9 +190,13 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     e.preventDefault();
     if (!currentRoleEmployeeId || !roleValue) return;
 
+    const payload = roleValue.startsWith("custom:")
+      ? { role: null, customRoleId: Number(roleValue.slice("custom:".length)) }
+      : { role: roleValue.slice("role:".length), customRoleId: null };
+
     setIsSavingRole(true);
     try {
-      await updateEmployeeRole(currentRoleEmployeeId, roleValue);
+      await updateEmployeeRole(currentRoleEmployeeId, payload);
       await loadEmployees();
       setIsRoleModalOpen(false);
       message.success("Роль успешно обновлена");
@@ -469,7 +500,11 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           phone: employeeData.phone || "",
           address: employeeData.address,
           minSurcharge: employeeData.minSurcharge || 0,
-          role: employeeData.role || "сотрудник",
+          role:
+            employeeData.customRoleId != null
+              ? undefined
+              : employeeData.role || "сотрудник",
+          customRoleId: employeeData.customRoleId ?? null,
         });
 
         setLocalEmployees((prev) =>
@@ -620,7 +655,13 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       {employee.fullName}
     </div>,
     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      {employee.role}
+      {employee.customRole ? (
+        <span title={`Кастомная роль (база: ${employee.role})`}>
+          {employee.customRole.name}
+        </span>
+      ) : (
+        employee.role
+      )}
       {canEditEmployee(employee) && (
         <button
           onClick={(e) => {
@@ -758,7 +799,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           />
 
           <PaginationLayout>
-            <CountInfoTitle total={totalCount- filteredOutCount} />
+            <CountInfoTitle total={totalCount - filteredOutCount} />
 
             <Pagination
               total={totalCount - filteredOutCount}
@@ -776,6 +817,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmitEmployee}
         initialData={selectedEmployee || defaultEmployee}
+        customRoles={customRoles}
       />
 
       {isPhoneModalOpen && (
@@ -825,10 +867,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
             style={{ marginLeft: "25px" }}
             value={roleValue}
             onChange={(e) => setRoleValue(e.target.value)}
-            options={[
-              { value: "сотрудник", label: "Сотрудник" },
-              { value: "админ", label: "Администратор" },
-            ]}
+            options={roleSelectOptions}
             placeholder="Выберите роль"
           />
         </BaseModal>

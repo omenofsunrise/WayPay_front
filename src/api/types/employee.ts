@@ -1,10 +1,31 @@
-import { number } from 'framer-motion';
-import type { PaginationParams } from './common';
+import { number } from "framer-motion";
+import type { PaginationParams } from "./common";
 
 export interface Permission {
   id: number;
   code: string;
   description: string;
+}
+
+/**
+ * Кастомная роль. Ответ CRUD-эндпоинтов /Permission/custom-roles содержит `permissions`.
+ * В составе сотрудника (GET /Employee, GET /Auth/info) поля могут быть урезаны —
+ * для отображения используются только id/name, поэтому `permissions` опционально.
+ */
+export interface CustomRole {
+  id: number;
+  name: string;
+  description: string;
+  role: string;
+  permissions?: Permission[];
+}
+
+/** Тело запроса создания/обновления кастомной роли. */
+export interface CustomRolePayload {
+  name: string;
+  description: string;
+  role: string;
+  permissionCodes: string[];
 }
 
 export interface Employee {
@@ -14,6 +35,8 @@ export interface Employee {
   phone: string;
   role: string;
   permissions: Permission[] | null;
+  customRoleId?: number | null;
+  customRole?: CustomRole | null;
   minSurcharge: number;
   photoPath: string;
   isBlocked: boolean;
@@ -21,14 +44,20 @@ export interface Employee {
   unconfirmedAmount: number;
 }
 
-export interface EmployeeFilterRequest extends PaginationParams{
+/** Тело запроса смены роли сотрудника: одна из base-роли или кастомной роли. */
+export interface UpdateEmployeeRolePayload {
+  role?: string | null;
+  customRoleId?: number | null;
+}
+
+export interface EmployeeFilterRequest extends PaginationParams {
   fullName?: string;
   role?: string;
   sortBy?: string;
 }
 
 export interface AuthInfoResponse {
-  type: 'employee';
+  type: "employee";
   employee: Employee;
 }
 
@@ -60,13 +89,13 @@ export interface Profile {
   id: number;
   fullName: string;
   photoPath: string;
-  description: string
+  description: string;
   postsCount: number;
   commentsCount: number;
   likesCount: number;
 }
 
 export interface ProfileUpdateRequest {
-  id?: number; 
+  id?: number;
   description: string;
 }

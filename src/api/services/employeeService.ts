@@ -1,53 +1,69 @@
-import apiClient from '../client';
-import socialApiClient from '../socialApiClient';
-import type { AuthSession } from '../types/auth';
-import type { ClientExistsResponse } from '../types/client';
-import type { PaginatedResponse } from '../types/common';
-import type { AuthInfoResponse, CreditStats, Employee, EmployeeFilterRequest, EmployeeFullnames, PaymentStatsResponse, Profile, ProfileUpdateRequest } from '../types/employee';
+import apiClient from "../client";
+import socialApiClient from "../socialApiClient";
+import type { AuthSession } from "../types/auth";
+import type { ClientExistsResponse } from "../types/client";
+import type { PaginatedResponse } from "../types/common";
+import type {
+  AuthInfoResponse,
+  CreditStats,
+  Employee,
+  EmployeeFilterRequest,
+  EmployeeFullnames,
+  PaymentStatsResponse,
+  Profile,
+  ProfileUpdateRequest,
+  UpdateEmployeeRolePayload,
+} from "../types/employee";
 
 class EmployeeService {
   static async getAuthInfo(): Promise<AuthInfoResponse> {
     try {
-      const response = await apiClient.get('/Auth/info');
+      const response = await apiClient.get("/Auth/info");
       return response.data;
     } catch (error) {
       throw error;
     }
   }
 
-  static async getEmployees(filter: EmployeeFilterRequest): Promise<PaginatedResponse<Employee>> {
+  static async getEmployees(
+    filter: EmployeeFilterRequest
+  ): Promise<PaginatedResponse<Employee>> {
     try {
-      const response = await apiClient.get('/Employee', { params: filter });
+      const response = await apiClient.get("/Employee", { params: filter });
       return response.data;
     } catch (error) {
       throw error;
     }
   }
-  
+
   static async createEmployee(employeeData: {
     fullName: string;
     phone: string;
     address?: string;
     minSurcharge?: number;
     role?: string;
+    customRoleId?: number | null;
   }): Promise<Employee> {
     try {
       const formData = new FormData();
-      formData.append('FullName', employeeData.fullName);
-      formData.append('Phone', employeeData.phone);
+      formData.append("FullName", employeeData.fullName);
+      formData.append("Phone", employeeData.phone);
       if (employeeData.address) {
-        formData.append('Address', employeeData.address);
+        formData.append("Address", employeeData.address);
       }
       if (employeeData.minSurcharge !== undefined) {
-        formData.append('MinSurcharge', employeeData.minSurcharge.toString());
+        formData.append("MinSurcharge", employeeData.minSurcharge.toString());
       }
-      if (employeeData.role) {
-        formData.append('Role', employeeData.role);
+      // Бэкенд ждёт одно из двух: base-роль ИЛИ кастомную роль.
+      if (employeeData.customRoleId != null) {
+        formData.append("CustomRoleId", employeeData.customRoleId.toString());
+      } else if (employeeData.role) {
+        formData.append("Role", employeeData.role);
       }
 
-      const response = await apiClient.post('/Employee', formData, {
+      const response = await apiClient.post("/Employee", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
       return response.data;
@@ -63,15 +79,15 @@ class EmployeeService {
   }): Promise<Employee> {
     try {
       const formData = new FormData();
-      formData.append('Id', employeeData.id.toString());
-      formData.append('FullName', employeeData.fullName);
+      formData.append("Id", employeeData.id.toString());
+      formData.append("FullName", employeeData.fullName);
       if (employeeData.address) {
-        formData.append('Address', employeeData.address);
+        formData.append("Address", employeeData.address);
       }
 
-      const response = await apiClient.put('/Employee', formData, {
+      const response = await apiClient.put("/Employee", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
       return response.data;
@@ -80,15 +96,18 @@ class EmployeeService {
     }
   }
 
-  static async updateEmployeePhoto(id: number, photoFile: File): Promise<Employee> {
+  static async updateEmployeePhoto(
+    id: number,
+    photoFile: File
+  ): Promise<Employee> {
     try {
       const formData = new FormData();
-      formData.append('Id', id.toString());
-      formData.append('Photo', photoFile);
+      formData.append("Id", id.toString());
+      formData.append("Photo", photoFile);
 
-      const response = await apiClient.put('/Employee/photo', formData, {
+      const response = await apiClient.put("/Employee/photo", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
       return response.data;
@@ -99,16 +118,22 @@ class EmployeeService {
 
   static async getCreditsStats(months: number = 12): Promise<CreditStats[]> {
     try {
-      const response = await apiClient.get(`/Employee/credits-stats?months=${months}`);
+      const response = await apiClient.get(
+        `/Employee/credits-stats?months=${months}`
+      );
       return response.data;
     } catch (error) {
       throw error;
     }
   }
 
-  static async getPaymentsStats(months: number = 12): Promise<PaymentStatsResponse[]> {
+  static async getPaymentsStats(
+    months: number = 12
+  ): Promise<PaymentStatsResponse[]> {
     try {
-      const response = await apiClient.get(`/Employee/payments-stats?months=${months}`);
+      const response = await apiClient.get(
+        `/Employee/payments-stats?months=${months}`
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -124,24 +149,34 @@ class EmployeeService {
     }
   }
 
-  static async getEmployeeCreditsStats(id: number, months: number = 12): Promise<CreditStats[]> {
+  static async getEmployeeCreditsStats(
+    id: number,
+    months: number = 12
+  ): Promise<CreditStats[]> {
     try {
-      const response = await apiClient.get(`/Employee/credits-stats${id}?months=${months}`);
+      const response = await apiClient.get(
+        `/Employee/credits-stats${id}?months=${months}`
+      );
       return response.data;
     } catch (error) {
       throw error;
     }
   }
 
-  static async getEmployeePaymentsStats(id: number, months: number = 12): Promise<PaymentStatsResponse[]> {
+  static async getEmployeePaymentsStats(
+    id: number,
+    months: number = 12
+  ): Promise<PaymentStatsResponse[]> {
     try {
-      const response = await apiClient.get(`/Employee/payments-stats${id}?months=${months}`);
+      const response = await apiClient.get(
+        `/Employee/payments-stats${id}?months=${months}`
+      );
       return response.data;
     } catch (error) {
       throw error;
     }
   }
-  
+
   static async getEmployeeFullnames(): Promise<EmployeeFullnames[]> {
     try {
       const response = await apiClient.get(`/Employee/fullnames`);
@@ -168,22 +203,28 @@ class EmployeeService {
   }
 
   static async checkEmployeeExists(phone: string): Promise<boolean> {
-    const response = await apiClient.get<ClientExistsResponse>('/Employee/exists', { 
-      params: { phone } 
-    });
+    const response = await apiClient.get<ClientExistsResponse>(
+      "/Employee/exists",
+      {
+        params: { phone },
+      }
+    );
     return response.data.exists;
   }
 
   static async deletePhoto() {
-    await apiClient.delete('/Employee/photo');
+    await apiClient.delete("/Employee/photo");
     return;
   }
 
-  static async updateEmployeePhone(id: number, phone: string): Promise<Employee> {
+  static async updateEmployeePhone(
+    id: number,
+    phone: string
+  ): Promise<Employee> {
     try {
       const response = await apiClient.patch(`/Employee/phone/${id}`, phone, {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
       return response.data;
@@ -192,42 +233,63 @@ class EmployeeService {
     }
   }
 
-  static async updateEmployeeFullname(id: number, fullName: string): Promise<Employee> {
+  static async updateEmployeeFullname(
+    id: number,
+    fullName: string
+  ): Promise<Employee> {
     try {
-      const response = await apiClient.patch(`Employee/director/fullname/${id}`, fullName, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.patch(
+        `Employee/director/fullname/${id}`,
+        fullName,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       return response.data;
     } catch (error) {
       throw error;
     }
   }
 
-  static async updateEmployeeMinSurcharge(id: number, minSurcharge: number): Promise<Employee> {
+  static async updateEmployeeMinSurcharge(
+    id: number,
+    minSurcharge: number
+  ): Promise<Employee> {
     try {
-      const response = await apiClient.patch(`/Employee/min-surcharge/${id}`, minSurcharge, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.patch(
+        `/Employee/min-surcharge/${id}`,
+        minSurcharge,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       return response.data;
     } catch (error) {
       throw error;
     }
   }
 
-  static async togglePermission(employeeId: number, permissionCode: string): Promise<Employee> {
+  static async togglePermission(
+    employeeId: number,
+    permissionCode: string
+  ): Promise<Employee> {
     try {
-      const response = await apiClient.put('/Permission/toggle', {
-        employeeId,
-        permissionCode
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await apiClient.put(
+        "/Permission/toggle",
+        {
+          employeeId,
+          permissionCode,
         },
-      });
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -238,7 +300,7 @@ class EmployeeService {
     try {
       const response = await apiClient.patch(`/Employee/role`, role, {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
       return response.data;
@@ -247,13 +309,23 @@ class EmployeeService {
     }
   }
 
-  static async updateEmployeeRole(id: number, role: string): Promise<Employee> {
+  static async updateEmployeeRole(
+    id: number,
+    payload: UpdateEmployeeRolePayload
+  ): Promise<Employee> {
     try {
-      const response = await apiClient.patch(`/Employee/role/${id}`, role, {
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await apiClient.patch(
+        `/Employee/role/${id}`,
+        {
+          role: payload.role ?? null,
+          customRoleId: payload.customRoleId ?? null,
         },
-      });
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -262,7 +334,7 @@ class EmployeeService {
 
   static async getProfile(id?: number): Promise<Profile> {
     try {
-      const url = id ? `/Profile?id=${id}` : '/Profile';
+      const url = id ? `/Profile?id=${id}` : "/Profile";
       const response = await socialApiClient.get(url);
       return response.data;
     } catch (error) {
@@ -274,13 +346,13 @@ class EmployeeService {
     try {
       const formData = new FormData();
       if (request.id) {
-        formData.append('Id', request.id.toString());
+        formData.append("Id", request.id.toString());
       }
-      formData.append('Description', request.description);
+      formData.append("Description", request.description);
 
-      await socialApiClient.put('/Profile/update', formData, {
+      await socialApiClient.put("/Profile/update", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
     } catch (error) {
@@ -290,7 +362,7 @@ class EmployeeService {
 
   static async getSessions(): Promise<AuthSession[]> {
     try {
-      const response = await apiClient.get('/Auth/sessions');
+      const response = await apiClient.get("/Auth/sessions");
       return response.data;
     } catch (error) {
       throw error;
@@ -299,7 +371,9 @@ class EmployeeService {
 
   static async revokeSession(tokenId?: number): Promise<void> {
     try {
-      await apiClient.post('/Auth/session/revoke', { tokenId: tokenId ?? null });
+      await apiClient.post("/Auth/session/revoke", {
+        tokenId: tokenId ?? null,
+      });
     } catch (error) {
       throw error;
     }
@@ -307,7 +381,7 @@ class EmployeeService {
 
   static async revokeAllSessions(): Promise<void> {
     try {
-      await apiClient.post('/Auth/revoke-all-sessions');
+      await apiClient.post("/Auth/revoke-all-sessions");
     } catch (error) {
       throw error;
     }

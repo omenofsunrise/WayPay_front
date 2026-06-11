@@ -11,9 +11,22 @@ export type Permission =
   | "FORBID_CREDIT_APPLICATIONS"
   | "MANAGE_ACCOUNTING";
 
-export type Role = "админ" | "сотрудник" | "директор" | "суперадмин";
+export type Role =
+  | "админ"
+  | "сотрудник"
+  | "директор"
+  | "суперадмин"
+  | "бухгалтер";
 
 export type UserType = "employee" | "payment_place";
+
+/** Кастомная роль в составе auth-инфо (GET /Auth/info). */
+export interface AuthCustomRole {
+  id: number;
+  name: string;
+  description: string;
+  role: string;
+}
 
 export interface AuthInfo {
   type: UserType;
@@ -23,6 +36,8 @@ export interface AuthInfo {
     fullName: string;
     role: Role;
     permissions: Permission[];
+    customRoleId?: number | null;
+    customRole?: AuthCustomRole | null;
     phone?: string;
     minSurcharge: number;
     companyId: number;
