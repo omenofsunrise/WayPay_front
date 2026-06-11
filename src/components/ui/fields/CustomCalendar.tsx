@@ -1,6 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
-import CalendarIcon from '../../../assets/ui/calendar.svg?react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
+import { createPortal } from "react-dom";
+import styled from "styled-components";
+import CalendarIcon from "../../../assets/ui/calendar.svg?react";
 
 interface DateInputProps {
   prefix?: string;
@@ -11,52 +18,80 @@ interface DateInputProps {
 }
 
 const formatDisplayString = (date: Date | null): string => {
-  if (!date || isNaN(date.getTime())) return '';
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  if (!date || isNaN(date.getTime())) return "";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${day}.${month}.${year}`;
 };
 
-const parseDisplayString = (text: string): { iso: string; date: Date } | null => {
+const parseDisplayString = (
+  text: string
+): { iso: string; date: Date } | null => {
   if (text.length !== 10) return null;
-  const [d, m, y] = text.split('.');
+  const [d, m, y] = text.split(".");
   const day = parseInt(d, 10);
   const month = parseInt(m, 10);
   const year = parseInt(y, 10);
   if (
-    !Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year) ||
-    day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100
+    !Number.isFinite(day) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(year) ||
+    day < 1 ||
+    day > 31 ||
+    month < 1 ||
+    month > 12 ||
+    year < 1900 ||
+    year > 2100
   ) {
     return null;
   }
   const date = new Date(year, month - 1, day);
-  if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+  if (
+    date.getDate() !== day ||
+    date.getMonth() !== month - 1 ||
+    date.getFullYear() !== year
+  ) {
     return null;
   }
-  const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
+    2,
+    "0"
+  )}`;
   return { iso, date };
 };
 
 const months = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+  "Январь",
+  "Февраль",
+  "Март",
+  "Апрель",
+  "Май",
+  "Июнь",
+  "Июль",
+  "Август",
+  "Сентябрь",
+  "Октябрь",
+  "Ноябрь",
+  "Декабрь",
 ];
 
-const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const weekDays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
-const CustomCalendar: React.FC<DateInputProps> = ({ 
-  prefix = 'Дата:', 
-  value = '', 
-  placeholder = 'Выберите дату',
-  onChange, 
-  onReset 
+const CustomCalendar: React.FC<DateInputProps> = ({
+  prefix = "Дата:",
+  value = "",
+  placeholder = "Выберите дату",
+  onChange,
+  onReset,
 }) => {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(value ? new Date(value) : null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    value ? new Date(value) : null
+  );
   const [inputValue, setInputValue] = useState<string>(() =>
-    value ? formatDisplayString(new Date(value)) : ''
+    value ? formatDisplayString(new Date(value)) : ""
   );
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
@@ -64,23 +99,79 @@ const CustomCalendar: React.FC<DateInputProps> = ({
   const monthDropdownRef = useRef<HTMLDivElement>(null);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({
+    visibility: "hidden",
+  });
+
+  const updatePopupPosition = useCallback(() => {
+    const container = containerRef.current;
+    const popup = popupRef.current;
+    if (!container || !popup) return;
+
+    const rect = container.getBoundingClientRect();
+    const popupW = popup.offsetWidth || 280;
+    const popupH = popup.offsetHeight || 0;
+    const margin = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // По горизонтали: выравниваем по левому краю поля, но не даём вылезти за края экрана
+    let left = rect.left;
+    if (left + popupW > vw - margin) left = vw - popupW - margin;
+    if (left < margin) left = margin;
+
+    // По вертикали: под полем; если не влезает — над полем; иначе прижимаем к низу
+    let top = rect.bottom + margin;
+    if (top + popupH > vh - margin) {
+      const above = rect.top - popupH - margin;
+      top = above >= margin ? above : Math.max(margin, vh - popupH - margin);
+    }
+
+    setPopupStyle({ top, left, visibility: "visible" });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isPickerOpen) {
+      setPopupStyle({ visibility: "hidden" });
+      return;
+    }
+    updatePopupPosition();
+    window.addEventListener("scroll", updatePopupPosition, true);
+    window.addEventListener("resize", updatePopupPosition);
+    return () => {
+      window.removeEventListener("scroll", updatePopupPosition, true);
+      window.removeEventListener("resize", updatePopupPosition);
+    };
+  }, [isPickerOpen, updatePopupPosition, showMonthDropdown, showYearDropdown]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        (!popupRef.current || !popupRef.current.contains(target))
+      ) {
         setIsPickerOpen(false);
       }
-      if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target as Node)) {
+      if (
+        monthDropdownRef.current &&
+        !monthDropdownRef.current.contains(event.target as Node)
+      ) {
         setShowMonthDropdown(false);
       }
-      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
+      if (
+        yearDropdownRef.current &&
+        !yearDropdownRef.current.contains(event.target as Node)
+      ) {
         setShowYearDropdown(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -91,38 +182,48 @@ const CustomCalendar: React.FC<DateInputProps> = ({
       setInputValue(formatDisplayString(date));
     } else {
       setSelectedDate(null);
-      setInputValue('');
+      setInputValue("");
     }
   }, [value]);
 
-  const handleManualChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const cleaned = e.target.value.replace(/[^\d.]/g, '');
-    const digits = cleaned.replace(/\./g, '');
-    let formatted = '';
-    for (let i = 0; i < digits.length && i < 8; i++) {
-      if (i === 2 || i === 4) formatted += '.';
-      formatted += digits[i];
-    }
-    setInputValue(formatted);
+  const handleManualChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const cleaned = e.target.value.replace(/[^\d.]/g, "");
+      const digits = cleaned.replace(/\./g, "");
+      let formatted = "";
+      for (let i = 0; i < digits.length && i < 8; i++) {
+        if (i === 2 || i === 4) formatted += ".";
+        formatted += digits[i];
+      }
+      setInputValue(formatted);
 
-    const parsed = parseDisplayString(formatted);
-    if (parsed) {
-      setSelectedDate(parsed.date);
-      setCurrentDate(parsed.date);
-      onChange?.(parsed.iso);
-    }
-  }, [onChange]);
+      const parsed = parseDisplayString(formatted);
+      if (parsed) {
+        setSelectedDate(parsed.date);
+        setCurrentDate(parsed.date);
+        onChange?.(parsed.iso);
+      }
+    },
+    [onChange]
+  );
 
-  const handleManualKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if ([8, 9, 27, 13, 46].includes(e.keyCode) || (e.keyCode >= 37 && e.keyCode <= 40)) return;
-    if (!/[0-9.]/.test(e.key)) {
-      e.preventDefault();
-      return;
-    }
-    if (e.key === '.' && inputValue.split('.').length >= 3) {
-      e.preventDefault();
-    }
-  }, [inputValue]);
+  const handleManualKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (
+        [8, 9, 27, 13, 46].includes(e.keyCode) ||
+        (e.keyCode >= 37 && e.keyCode <= 40)
+      )
+        return;
+      if (!/[0-9.]/.test(e.key)) {
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "." && inputValue.split(".").length >= 3) {
+        e.preventDefault();
+      }
+    },
+    [inputValue]
+  );
 
   const handleManualBlur = useCallback(() => {
     if (inputValue.length === 0) return;
@@ -133,16 +234,14 @@ const CustomCalendar: React.FC<DateInputProps> = ({
   }, [inputValue, selectedDate]);
 
   const handleDateSelect = (date: Date) => {
-    const utcDate = new Date(Date.UTC(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    ));
+    const utcDate = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
 
     setSelectedDate(date);
     setInputValue(formatDisplayString(date));
 
-    const formattedDate = utcDate.toISOString().split('T')[0];
+    const formattedDate = utcDate.toISOString().split("T")[0];
 
     onChange?.(formattedDate);
     setIsPickerOpen(false);
@@ -154,12 +253,10 @@ const CustomCalendar: React.FC<DateInputProps> = ({
     setSelectedDate(today);
     setInputValue(formatDisplayString(today));
 
-    const utcToday = new Date(Date.UTC(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    ));
-    const formattedDate = utcToday.toISOString().split('T')[0];
+    const utcToday = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+    );
+    const formattedDate = utcToday.toISOString().split("T")[0];
 
     onChange?.(formattedDate);
     setIsPickerOpen(false);
@@ -167,8 +264,8 @@ const CustomCalendar: React.FC<DateInputProps> = ({
 
   const handleReset = () => {
     setSelectedDate(null);
-    setInputValue('');
-    onChange?.('');
+    setInputValue("");
+    onChange?.("");
     onReset?.();
     setIsPickerOpen(false);
   };
@@ -190,28 +287,30 @@ const CustomCalendar: React.FC<DateInputProps> = ({
   const renderDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    
+
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
-    
+
     const daysInMonth = lastDayOfMonth.getDate();
-    const startDay = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
-    
+    const startDay =
+      firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
+
     const days = [];
     const totalDays = 35;
-    
+
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = 0; i < startDay; i++) {
       const day = prevMonthLastDay - startDay + i + 1;
       const date = new Date(year, month - 1, day);
-      const isSelected = selectedDate && 
-        date.getDate() === selectedDate.getDate() && 
-        date.getMonth() === selectedDate.getMonth() && 
+      const isSelected =
+        selectedDate &&
+        date.getDate() === selectedDate.getDate() &&
+        date.getMonth() === selectedDate.getMonth() &&
         date.getFullYear() === selectedDate.getFullYear();
-      
+
       days.push(
-        <Day 
-          key={`prev-${day}`} 
+        <Day
+          key={`prev-${day}`}
           selected={isSelected}
           onClick={() => handleDateSelect(date)}
           otherMonth
@@ -220,17 +319,18 @@ const CustomCalendar: React.FC<DateInputProps> = ({
         </Day>
       );
     }
-    
+
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
-      const isSelected = selectedDate && 
-        date.getDate() === selectedDate.getDate() && 
-        date.getMonth() === selectedDate.getMonth() && 
+      const isSelected =
+        selectedDate &&
+        date.getDate() === selectedDate.getDate() &&
+        date.getMonth() === selectedDate.getMonth() &&
         date.getFullYear() === selectedDate.getFullYear();
-      
+
       days.push(
-        <Day 
-          key={`current-${i}`} 
+        <Day
+          key={`current-${i}`}
           selected={isSelected}
           onClick={() => handleDateSelect(date)}
         >
@@ -238,18 +338,19 @@ const CustomCalendar: React.FC<DateInputProps> = ({
         </Day>
       );
     }
-    
+
     const remainingDays = totalDays - days.length;
     for (let i = 1; i <= remainingDays; i++) {
       const date = new Date(year, month + 1, i);
-      const isSelected = selectedDate && 
-        date.getDate() === selectedDate.getDate() && 
-        date.getMonth() === selectedDate.getMonth() && 
+      const isSelected =
+        selectedDate &&
+        date.getDate() === selectedDate.getDate() &&
+        date.getMonth() === selectedDate.getMonth() &&
         date.getFullYear() === selectedDate.getFullYear();
-      
+
       days.push(
-        <Day 
-          key={`next-${i}`} 
+        <Day
+          key={`next-${i}`}
           selected={isSelected}
           onClick={() => handleDateSelect(date)}
           otherMonth
@@ -258,7 +359,7 @@ const CustomCalendar: React.FC<DateInputProps> = ({
         </Day>
       );
     }
-    
+
     return days;
   };
 
@@ -285,8 +386,8 @@ const CustomCalendar: React.FC<DateInputProps> = ({
     setShowMonthDropdown(false);
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const increment = direction === 'next' ? 1 : -1;
+  const navigateMonth = (direction: "prev" | "next") => {
+    const increment = direction === "next" ? 1 : -1;
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + increment);
     setCurrentDate(newDate);
@@ -300,7 +401,9 @@ const CustomCalendar: React.FC<DateInputProps> = ({
           ref={inputRef}
           type="text"
           value={inputValue}
-          placeholder={placeholder === 'Выберите дату' ? 'дд.мм.гггг' : placeholder}
+          placeholder={
+            placeholder === "Выберите дату" ? "дд.мм.гггг" : placeholder
+          }
           onChange={handleManualChange}
           onKeyDown={handleManualKeyDown}
           onBlur={handleManualBlur}
@@ -309,115 +412,119 @@ const CustomCalendar: React.FC<DateInputProps> = ({
         />
         <CalendarIconButton
           type="button"
-          onClick={() => setIsPickerOpen(prev => !prev)}
+          onClick={() => setIsPickerOpen((prev) => !prev)}
           aria-label="Открыть календарь"
         >
-          <CalendarIcon style={{ fontSize: '20px' }} />
+          <CalendarIcon style={{ fontSize: "20px" }} />
         </CalendarIconButton>
       </Field>
 
-      {isPickerOpen && (
-        <CalendarPopup className="calendar-container">
-          <CalendarHeader>
-          <ArrowButton 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              navigateMonth('prev');
-            }}
-            onMouseDown={(e) => e.preventDefault()}
+      {isPickerOpen &&
+        createPortal(
+          <CalendarPopup
+            ref={popupRef}
+            style={popupStyle}
+            className="calendar-container"
           >
-            <ArrowIcon direction="right" />
-          </ArrowButton>
-            
-            <MonthYearContainer>
-              <MonthSelectWrapper ref={monthDropdownRef}>
-                <MonthSelectButton 
-                  onClick={(e) => toggleMonthDropdown(e)}
-                  onMouseDown={(e) => e.preventDefault()}
-                >
-                  {months[currentDate.getMonth()]}
-                  <DropdownArrow $open={showMonthDropdown} />
-                </MonthSelectButton>
-                {showMonthDropdown && (
-                  <DropdownList 
-                    $width={120}
-                    onClick={(e) => e.stopPropagation()} // Добавьте это
+            <CalendarHeader>
+              <ArrowButton
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigateMonth("prev");
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <ArrowIcon direction="right" />
+              </ArrowButton>
+
+              <MonthYearContainer>
+                <MonthSelectWrapper ref={monthDropdownRef}>
+                  <MonthSelectButton
+                    onClick={(e) => toggleMonthDropdown(e)}
+                    onMouseDown={(e) => e.preventDefault()}
                   >
-                    {months.map((month, index) => (
-                      <DropdownItem 
-                        key={month}
-                        $selected={index === currentDate.getMonth()}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Добавьте это
-                          changeMonth(index);
-                        }}
-                      >
-                        {month}
-                      </DropdownItem>
-                    ))}
-                  </DropdownList>
-                )}
-              </MonthSelectWrapper>
-              
-              <YearSelectWrapper ref={yearDropdownRef}>
-                <YearSelectButton 
-                  onClick={(e) => toggleYearDropdown(e)}
-                  onMouseDown={(e) => e.preventDefault()} // Добавьте это
-                >
-                  {currentDate.getFullYear()}
-                  <DropdownArrow $open={showYearDropdown} />
-                </YearSelectButton>
-                {showYearDropdown && (
-                  <DropdownList 
-                    $width={80}
-                    onClick={(e) => e.stopPropagation()}
+                    {months[currentDate.getMonth()]}
+                    <DropdownArrow $open={showMonthDropdown} />
+                  </MonthSelectButton>
+                  {showMonthDropdown && (
+                    <DropdownList
+                      $width={120}
+                      onClick={(e) => e.stopPropagation()} // Добавьте это
+                    >
+                      {months.map((month, index) => (
+                        <DropdownItem
+                          key={month}
+                          $selected={index === currentDate.getMonth()}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Добавьте это
+                            changeMonth(index);
+                          }}
+                        >
+                          {month}
+                        </DropdownItem>
+                      ))}
+                    </DropdownList>
+                  )}
+                </MonthSelectWrapper>
+
+                <YearSelectWrapper ref={yearDropdownRef}>
+                  <YearSelectButton
+                    onClick={(e) => toggleYearDropdown(e)}
+                    onMouseDown={(e) => e.preventDefault()} // Добавьте это
                   >
-                    {generateYears().map(year => (
-                      <DropdownItem 
-                        key={year}
-                        $selected={year === currentDate.getFullYear()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          changeYear(year);
-                        }}
-                      >
-                        {year}
-                      </DropdownItem>
-                    ))}
-                  </DropdownList>
-                )}
-              </YearSelectWrapper>
-            </MonthYearContainer>
-            
-            <ArrowButton 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                navigateMonth('next');
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <ArrowIcon direction="left" />
-            </ArrowButton>
-          </CalendarHeader>
-          
-          <WeekDays>
-            {weekDays.map(day => (
-              <WeekDay key={day}>{day}</WeekDay>
-            ))}
-          </WeekDays>
-          
-          <DaysGrid>
-            {renderDays()}
-          </DaysGrid>
-          
-          <CalendarFooter>
-            <FooterButton onClick={handleReset}>Удалить</FooterButton>
-            <FooterButton onClick={handleToday}>Сегодня</FooterButton>
-          </CalendarFooter>
-        </CalendarPopup>
-      )}
+                    {currentDate.getFullYear()}
+                    <DropdownArrow $open={showYearDropdown} />
+                  </YearSelectButton>
+                  {showYearDropdown && (
+                    <DropdownList
+                      $width={80}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {generateYears().map((year) => (
+                        <DropdownItem
+                          key={year}
+                          $selected={year === currentDate.getFullYear()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            changeYear(year);
+                          }}
+                        >
+                          {year}
+                        </DropdownItem>
+                      ))}
+                    </DropdownList>
+                  )}
+                </YearSelectWrapper>
+              </MonthYearContainer>
+
+              <ArrowButton
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigateMonth("next");
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <ArrowIcon direction="left" />
+              </ArrowButton>
+            </CalendarHeader>
+
+            <WeekDays>
+              {weekDays.map((day) => (
+                <WeekDay key={day}>{day}</WeekDay>
+              ))}
+            </WeekDays>
+
+            <DaysGrid>{renderDays()}</DaysGrid>
+
+            <CalendarFooter>
+              <FooterButton onClick={handleReset}>Удалить</FooterButton>
+              <FooterButton onClick={handleToday}>Сегодня</FooterButton>
+            </CalendarFooter>
+          </CalendarPopup>,
+          document.body
+        )}
     </Container>
   );
 };
@@ -500,11 +607,6 @@ const CalendarIconButton = styled.button`
 
 const CalendarPopup = styled.div`
   position: fixed;
-  top: unset; 
-  bottom: unset;
-  left: unset; 
-  transform: translate(0, 0);
-  margin-top: 8px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -541,7 +643,7 @@ const SelectButton = styled.button`
   min-width: 80px;
   transition: all 0.2s ease;
   color: black;
-  
+
   &:hover {
     background-color: rgba(232, 216, 216, 0.2);
   }
@@ -578,7 +680,7 @@ const DropdownArrow = styled.div<{ $open: boolean }>`
   border-right: 5px solid transparent;
   border-top: 5px solid rgba(80, 85, 92, 1);
   margin-left: 8px;
-  transform: ${({ $open }) => $open ? 'rotate(180deg)' : 'none'};
+  transform: ${({ $open }) => ($open ? "rotate(180deg)" : "none")};
   transition: transform 0.2s ease;
 `;
 
@@ -616,13 +718,17 @@ const DropdownItem = styled.div<{ $selected: boolean }>`
   padding: 8px 12px;
   font-size: 14px;
   cursor: pointer;
-  background-color: ${({ $selected }) => 
-    $selected ? 'rgba(232, 216, 216, 1)' : 'white'};
-  color: ${({ $selected }) => 
-    $selected ? '#000' : 'inherit'};
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(232, 216, 216, 1)" : "white"};
+  color: ${({ $selected }) => ($selected ? "#000" : "inherit")};
 
   &:hover {
-    background-color: rgba(232, 216, 216, ${({ $selected }) => $selected ? '1' : '0.5'});
+    background-color: rgba(
+      232,
+      216,
+      216,
+      ${({ $selected }) => ($selected ? "1" : "0.5")}
+    );
   }
 `;
 
@@ -639,7 +745,7 @@ const ArrowButton = styled.button`
   }
 `;
 
-const ArrowIcon = styled.div<{ direction: 'left' | 'right' }>`
+const ArrowIcon = styled.div<{ direction: "left" | "right" }>`
   width: 0;
   height: 0;
   border-top: 5px solid transparent;
@@ -673,12 +779,15 @@ const Day = styled.div<{ selected?: boolean; otherMonth?: boolean }>`
   font-size: 14px;
   cursor: pointer;
   border-radius: 5px;
-  
-  color: ${({ otherMonth }) => otherMonth ? 'rgba(173, 179, 188, 1)' : '#000'};
-  background-color: ${({ selected }) => selected ? 'rgba(237, 224, 224, 1)' : 'transparent'};
-  
+
+  color: ${({ otherMonth }) =>
+    otherMonth ? "rgba(173, 179, 188, 1)" : "#000"};
+  background-color: ${({ selected }) =>
+    selected ? "rgba(237, 224, 224, 1)" : "transparent"};
+
   &:hover {
-    background-color: ${({ selected }) => selected ? 'rgba(237, 224, 224, 1)' : 'rgba(0, 125, 136, 0.1)'};
+    background-color: ${({ selected }) =>
+      selected ? "rgba(237, 224, 224, 1)" : "rgba(0, 125, 136, 0.1)"};
   }
 `;
 
