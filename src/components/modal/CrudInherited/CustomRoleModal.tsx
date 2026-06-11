@@ -110,6 +110,7 @@ const CustomRoleModal: React.FC<CustomRoleModalProps> = ({
           value={role}
           onChange={(e) => setRole(e.target.value)}
           placeholder="Выберите базовую роль"
+          dropdownInPortal
         />
 
         <Label>Права доступа</Label>

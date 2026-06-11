@@ -863,13 +863,15 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           onSave={handleSaveRole}
           isSubmitting={isSavingRole}
         >
-          <CustomSelect
-            style={{ marginLeft: "25px" }}
-            value={roleValue}
-            onChange={(e) => setRoleValue(e.target.value)}
-            options={roleSelectOptions}
-            placeholder="Выберите роль"
-          />
+          <div style={{ padding: "0 25px" }}>
+            <CustomSelect
+              value={roleValue}
+              onChange={(e) => setRoleValue(e.target.value)}
+              options={roleSelectOptions}
+              placeholder="Выберите роль"
+              dropdownInPortal
+            />
+          </div>
         </BaseModal>
       )}
 

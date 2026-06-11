@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface CustomSelectProps<T = string> extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   placeholder?: string;
@@ -12,6 +13,7 @@ interface CustomSelectProps<T = string> extends Omit<React.HTMLAttributes<HTMLDi
   name?: string;
   disabled?: boolean;
   required?: boolean;
+  dropdownInPortal?: boolean;
 }
 
 const CustomSelect = <T extends string | number = string>({
@@ -25,11 +27,19 @@ const CustomSelect = <T extends string | number = string>({
   name,
   disabled = false,
   required = false,
+  dropdownInPortal = false,
   ...props
 }: CustomSelectProps<T>) => {
   const [isFocused, setIsFocused] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(false);
+  const [dropdownRect, setDropdownRect] = React.useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const selectRef = React.useRef<HTMLDivElement>(null);
+  const selectContainerRef = React.useRef<HTMLDivElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
   
   const showCustomPlaceholder = Boolean(customPlaceholder && !value && !isFocused);
 
@@ -45,14 +55,33 @@ const CustomSelect = <T extends string | number = string>({
   };
 
   const handleClickOutside = (event: MouseEvent) => {
-    if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+    const target = event.target as Node;
+    const isSelectClick = selectRef.current?.contains(target);
+    const isDropdownClick = dropdownRef.current?.contains(target);
+
+    if (!isSelectClick && !isDropdownClick) {
       setIsOpen(false);
       setIsFocused(false);
     }
   };
 
+  const updateDropdownPosition = React.useCallback(() => {
+    const anchor = selectContainerRef.current;
+    if (!anchor) return;
+
+    const rect = anchor.getBoundingClientRect();
+    setDropdownRect({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, []);
+
   const toggleDropdown = () => {
     if (!disabled) {
+      if (!isOpen && dropdownInPortal) {
+        updateDropdownPosition();
+      }
       setIsOpen(!isOpen);
       setIsFocused(!isOpen);
     }
@@ -65,12 +94,49 @@ const CustomSelect = <T extends string | number = string>({
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!isOpen || !dropdownInPortal) return;
+
+    updateDropdownPosition();
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+    };
+  }, [isOpen, dropdownInPortal, updateDropdownPosition]);
+
   const selectedOption = options.find(option => option.value === value);
   const displayValue = selectedOption ? selectedOption.label : '';
+  const dropdown = (
+    <Dropdown
+      ref={dropdownRef}
+      $inPortal={dropdownInPortal}
+      style={dropdownInPortal && dropdownRect ? {
+        top: dropdownRect.top,
+        left: dropdownRect.left,
+        width: dropdownRect.width,
+      } : undefined}
+    >
+      {options.map((option) => (
+        <OptionItem 
+          key={option.value} 
+          $isSelected={option.value === value}
+          onClick={() => handleOptionClick(option.value)}
+        >
+          <RadioButton $isSelected={option.value === value}>
+            {option.value === value && <RadioButtonInner />}
+          </RadioButton>
+          <OptionLabel>{option.label}</OptionLabel>
+        </OptionItem>
+      ))}
+    </Dropdown>
+  );
 
   return (
     <InputContainer ref={selectRef} {...props}>
-      <SelectContainer>
+      <SelectContainer ref={selectContainerRef}>
         <StyledSelect
           hasError={hasError}
           isOpen={isOpen}
@@ -90,22 +156,8 @@ const CustomSelect = <T extends string | number = string>({
           </SelectArrow>
         </StyledSelect>
         
-        {isOpen && (
-          <Dropdown>
-            {options.map((option) => (
-              <OptionItem 
-                key={option.value} 
-                $isSelected={option.value === value}
-                onClick={() => handleOptionClick(option.value)}
-              >
-                <RadioButton $isSelected={option.value === value}>
-                  {option.value === value && <RadioButtonInner />}
-                </RadioButton>
-                <OptionLabel>{option.label}</OptionLabel>
-              </OptionItem>
-            ))}
-          </Dropdown>
-        )}
+        {isOpen && !dropdownInPortal && dropdown}
+        {isOpen && dropdownInPortal && dropdownRect && createPortal(dropdown, document.body)}
       </SelectContainer>
       
       {customPlaceholder && (
@@ -196,17 +248,16 @@ const SelectArrow = styled.div<{ isOpen: boolean; disabled?: boolean }>`
   flex-shrink: 0;
 `;
 
-const Dropdown = styled.div`
-  position: absolute;
-  top: 100%;
-  left: 0;
+const Dropdown = styled.div<{ $inPortal?: boolean }>`
+  position: ${({ $inPortal }) => $inPortal ? 'fixed' : 'absolute'};
+  top: ${({ $inPortal }) => $inPortal ? 'auto' : '100%'};
+  left: ${({ $inPortal }) => $inPortal ? 'auto' : '0'};
   width: 100%;
-  margin-top: 4px;
+  margin-top: ${({ $inPortal }) => $inPortal ? '0' : '4px'};
   background: #FFFFFF;
   box-shadow: 2px 2px 25px 2px rgba(0, 0, 0, 0.25);
   border-radius: 5px;
-  /* Увеличиваем z-index чтобы выпадающий список был поверх модального окна */
-  z-index: 1001;
+  z-index: ${({ $inPortal }) => $inPortal ? 2000 : 1001};
   max-height: 300px;
   overflow-y: auto;
 `;
