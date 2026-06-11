@@ -112,9 +112,12 @@ const ObjectTypeSelect = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target) &&
+        inputRef.current &&
+        !inputRef.current.contains(target)
       ) {
         setIsDropdownOpen(false);
       }
@@ -168,9 +171,12 @@ const ObjectTypeSelect = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target) &&
+        inputRef.current &&
+        !inputRef.current.contains(target)
       ) {
         setIsDropdownOpen(false);
       }
@@ -195,12 +201,16 @@ const ObjectTypeSelect = ({
   };
 
   const handleInputClick = () => {
-    if (!disabled) {
-      setIsDropdownOpen(true);
-      updateMenuPosition();
-      // Обновляем данные при открытии dropdown
-      fetchObjectTypes(1, itemsPerPage);
+    if (disabled) return;
+    // Повторный клик по ячейке закрывает дропдаун (toggle)
+    if (isDropdownOpen) {
+      setIsDropdownOpen(false);
+      return;
     }
+    setIsDropdownOpen(true);
+    updateMenuPosition();
+    // Обновляем данные при открытии dropdown
+    fetchObjectTypes(1, itemsPerPage);
   };
 
   const handleFocus = () => {
@@ -719,6 +729,25 @@ const DropdownMenu = styled(motion.div)`
 const DropdownContent = styled.div`
   overflow-y: auto;
   flex-grow: 1;
+
+  /* Кастомный скроллбар — как у фильтра инвесторов */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
 `;
 
 const DropdownItem = styled.div`
@@ -738,12 +767,8 @@ const ObjectTypeItem = styled.div`
   gap: 12px;
   padding: 8px 12px;
   color: black;
-  border-bottom: 1px solid #f1f1f1;
-  &:last-child {
-    border-bottom: none;
-  }
   &:hover {
-    background-color: #f8f9fa;
+    background-color: #ebf8ff;
   }
 `;
 
