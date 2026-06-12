@@ -37,6 +37,7 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.544.0",
     "pizzip": "^3.2.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.0",

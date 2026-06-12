@@ -78,9 +78,9 @@ const menuItemsMap: Record<
     subItems: { "/investors-pool": "investors-pool" },
   },
   "/black-catalog": { mainItem: "black-catalog" },
-  "/registration-requests": {
+  "/mobile-apps": {
     mainItem: "references",
-    subItems: { "/registration-requests": "registration-requests" },
+    subItems: { "/mobile-apps": "mobile-apps" },
   },
   "/finance": { mainItem: "finance" },
   "/profile": { mainItem: "profile" },
@@ -110,7 +110,6 @@ const SideMenu = () => {
     hasRole,
     hasPermission,
     denyPermission,
-    isSuperAdminCompany,
     authInfo,
   } = useAuth();
 
@@ -180,7 +179,7 @@ const SideMenu = () => {
     "investors-pool": () =>
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
     "black-catalog": () => true,
-    "registration-requests": () => isSuperAdminCompany(),
+    "mobile-apps": () => true,
     finance: () => hasPermission("MANAGE_ACCOUNTING", true),
     profile: () => true,
     settings: () => true,
@@ -327,7 +326,7 @@ const SideMenu = () => {
       investors: "Инвесторы",
       "investors-report": "Отчёт для инвесторов",
       "investors-pool": "Пулы инвесторов",
-      "registration-requests": "Заявки на регистрацию",
+      "mobile-apps": "Мобильные приложения",
     };
 
     return labels[subItemKey] || subItemKey;
@@ -836,7 +835,7 @@ const SideMenu = () => {
             </DraggableRow>
           )}
 
-          {isSuperAdminCompany() && (
+          {
             <DraggableRow {...dragProps("references")}>
               <MenuItem
                 onClick={(e) => {
@@ -847,12 +846,12 @@ const SideMenu = () => {
                   }
                 }}
                 $collapsed={collapsed}
-                $selected={selectedSideMenuItem === "registration-requests"}
+                $selected={selectedSideMenuItem === "mobile-apps"}
               >
                 <Icon
                   src={referencesIcon}
                   $collapsed={collapsed}
-                  $selected={selectedSideMenuItem === "registration-requests"}
+                  $selected={selectedSideMenuItem === "mobile-apps"}
                 />
                 {!collapsed && (
                   <>
@@ -879,19 +878,16 @@ const SideMenu = () => {
                   <SubMenuLine />
                   <SubMenuItem
                     onClick={() =>
-                      handleSubMenuItemClick(
-                        "registration-requests",
-                        "/registration-requests"
-                      )
+                      handleSubMenuItemClick("mobile-apps", "/mobile-apps")
                     }
-                    $selected={selectedSideMenuItem === "registration-requests"}
+                    $selected={selectedSideMenuItem === "mobile-apps"}
                   >
-                    Заявки на регистрацию
+                    Мобильные приложения
                   </SubMenuItem>
                 </SubMenu>
               )}
             </DraggableRow>
-          )}
+          }
 
           {hasPermission("MANAGE_ACCOUNTING", true) && (
             <DraggableRow {...dragProps("finance")}>

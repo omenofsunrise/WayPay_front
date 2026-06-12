@@ -36,7 +36,7 @@ import AboutPage from "./pages/AboutPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import InvestorsPoolPage from "./pages/InvestorsPoolPage";
 import { DesktopOnlyContent } from "./components/DesktopOnly";
-import RegistrationRequestPage from "./pages/RegistrationRequestPage";
+import MobileAppsPage from "./pages/MobileAppsPage";
 import CreditApplicationPage from "./pages/CreditApplicationPage";
 import NotificationHandler from "./components/NotificationHandler/NotificationHandler";
 import {
@@ -660,10 +660,10 @@ function App() {
               />
 
               <Route
-                path="registration-requests"
+                path="mobile-apps"
                 element={
                   <MainLayout>
-                    <RegistrationRequestPage />
+                    <MobileAppsPage />
                   </MainLayout>
                 }
               />
