@@ -71,8 +71,18 @@ const CreditControlPage = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
-  // Модальное окно с фильтрами (открывается иконкой в шапке)
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  // Состояние панели фильтров. Если авто-сворачивание ВЫКЛ — фильтр всегда
+  // открыт. Если ВКЛ — восстанавливаем сохранённое состояние (по умолчанию
+  // свёрнут), чтобы он сворачивался, когда не используется.
+  const FILTER_OPEN_STORAGE_KEY = "creditControlFilterOpen";
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState<boolean>(() => {
+    if (!getCollapseFiltersOnClickSetting()) return true;
+    return localStorage.getItem(FILTER_OPEN_STORAGE_KEY) === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(FILTER_OPEN_STORAGE_KEY, String(isFilterModalOpen));
+  }, [isFilterModalOpen]);
   const [contractNumber, setContractNumber] = useState(
     () => savedFilters?.contractNumber ?? ""
   );

@@ -260,8 +260,18 @@ const CreditPage = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  // Модальное окно с фильтрами (открывается иконкой в шапке)
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  // Состояние панели фильтров. Если авто-сворачивание ВЫКЛ — фильтр всегда
+  // открыт. Если ВКЛ — восстанавливаем сохранённое состояние (по умолчанию
+  // свёрнут), чтобы он сворачивался, когда не используется.
+  const FILTER_OPEN_STORAGE_KEY = "creditsFilterOpen";
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState<boolean>(() => {
+    if (!getCollapseFiltersOnClickSetting()) return true;
+    return localStorage.getItem(FILTER_OPEN_STORAGE_KEY) === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(FILTER_OPEN_STORAGE_KEY, String(isFilterModalOpen));
+  }, [isFilterModalOpen]);
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
