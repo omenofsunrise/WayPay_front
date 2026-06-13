@@ -1143,18 +1143,6 @@ const CreditControlPage = () => {
             </FilterSlot>
 
             <FilterSlot>
-              <FilterSlotLabel>Папка</FilterSlotLabel>
-              <ObjectTypeSelect
-                value={objectType}
-                onChange={handleObjectTypeChange}
-                onObjectTypeSelect={handleObjectTypeSelect}
-                placeholder="Любая"
-                customPlaceholder="Папка"
-                hideClearButton={false}
-              />
-            </FilterSlot>
-
-            <FilterSlot>
               <FilterSlotLabel>Инвестор</FilterSlotLabel>
               <InvestorSelect
                 placeholder="Любой"
@@ -1174,6 +1162,18 @@ const CreditControlPage = () => {
                   setCurrentPage(1);
                 }}
                 includePools
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Папка</FilterSlotLabel>
+              <ObjectTypeSelect
+                value={objectType}
+                onChange={handleObjectTypeChange}
+                onObjectTypeSelect={handleObjectTypeSelect}
+                placeholder="Любая"
+                customPlaceholder="Папка"
+                hideClearButton={false}
               />
             </FilterSlot>
 
