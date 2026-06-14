@@ -15,11 +15,7 @@ import CustomTitle from "../../components/ui/Text/CustomTitle";
 import EmployeeModal from "../../components/modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
 import { usePermission } from "../../api/hooks/usePermission";
-import type {
-  Employee,
-  EmployeeFilterRequest,
-  Permission,
-} from "../../api/types/employee";
+import type { Employee, EmployeeFilterRequest } from "../../api/types/employee";
 import CustomSelect from "../../components/ui/fields/CustomSelect";
 import Avatar from "../../components/Profile/Avatar";
 import { FILE_BASE_URL } from "../../api/client";
@@ -27,8 +23,6 @@ import { useAuth } from "../../сontext/AuthContext";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import { EditOutlined } from "@ant-design/icons";
 import { message } from "antd";
-import Checkbox from "../../components/ui/CheckBoxes/Checkbox";
-import ConfirmModal from "../../components/modal/ConfirmationModal";
 import PhoneLink from "../../components/ui/links/PhoneLink";
 
 interface EmployeePageProps {
@@ -74,14 +68,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   const [isSavingRole, setIsSavingRole] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [employeeToBlock, setEmployeeToBlock] = useState<Employee | null>(null);
-  const [updatingPermissions, setUpdatingPermissions] = useState<
-    Record<number, boolean>
-  >({});
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [confirmModalData, setConfirmModalData] = useState<{
-    employee: Employee;
-    newValue: boolean;
-  } | null>(null);
 
   const columnToApiSortMap: Record<number, string> = {
     0: "id",
@@ -114,7 +100,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     updateEmployeeMinSurcharge,
     updateEmployeePhone,
     updateEmployeeRole,
-    togglePermission,
   } = useEmployee();
 
   const { customRoles, fetchCustomRoles } = usePermission();
@@ -240,115 +225,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
 
   const isEmployeeBlocked = (employee: Employee): boolean => {
     return employee.isBlocked === true;
-  };
-
-  const hasAccountingPermission = (employee: Employee): boolean => {
-    if (!employee.permissions) return false;
-    return employee.permissions.some(
-      (permission) => permission.code === "MANAGE_ACCOUNTING"
-    );
-  };
-
-  const handleToggleAccountingPermission = async (
-    employee: Employee,
-    newValue: boolean
-  ) => {
-    setUpdatingPermissions((prev) => ({ ...prev, [employee.id]: true }));
-
-    try {
-      await togglePermission(employee.id, "MANAGE_ACCOUNTING");
-
-      // Обновляем локальное состояние
-      setLocalEmployees((prev) =>
-        prev.map((e) => {
-          if (e.id === employee.id) {
-            const permissions = e.permissions || [];
-
-            if (newValue) {
-              // Добавляем разрешение текущему сотруднику
-              if (!permissions.some((p) => p.code === "MANAGE_ACCOUNTING")) {
-                const accountingPermission: Permission = {
-                  id: 0,
-                  code: "MANAGE_ACCOUNTING",
-                  description: "Управление финансами",
-                };
-                return {
-                  ...e,
-                  permissions: [...permissions, accountingPermission],
-                };
-              }
-            } else {
-              // Удаляем разрешение у текущего сотрудника
-              return {
-                ...e,
-                permissions: permissions.filter(
-                  (p) => p.code !== "MANAGE_ACCOUNTING"
-                ),
-              };
-            }
-          }
-
-          // Для всех остальных сотрудников: если включаем право у одного,
-          // то отключаем у всех остальных
-          if (newValue && e.id !== employee.id) {
-            return {
-              ...e,
-              permissions: (e.permissions || []).filter(
-                (p) => p.code !== "MANAGE_ACCOUNTING"
-              ),
-            };
-          }
-
-          return e;
-        })
-      );
-
-      message.success(
-        newValue
-          ? "Право на ведение бухгалтерии предоставлено"
-          : "Право на ведение бухгалтерии отозвано"
-      );
-    } catch (error) {
-      console.error("Ошибка при обновлении разрешения:", error);
-      message.error("Не удалось обновить разрешение");
-      // Возвращаем состояние к предыдущему
-      await loadEmployees();
-    } finally {
-      setUpdatingPermissions((prev) => ({ ...prev, [employee.id]: false }));
-    }
-  };
-
-  const handleCheckboxChange = (employee: Employee, checked: boolean) => {
-    const currentPermission = hasAccountingPermission(employee);
-
-    // Показываем окно подтверждения только если значение меняется
-    if (currentPermission !== checked) {
-      setConfirmModalData({
-        employee,
-        newValue: checked,
-      });
-      setConfirmModalOpen(true);
-    }
-  };
-
-  const handleConfirmPermissionChange = async () => {
-    if (!confirmModalData) return;
-
-    const { employee, newValue } = confirmModalData;
-
-    // Закрываем модальное окно подтверждения
-    setConfirmModalOpen(false);
-
-    // Выполняем изменение разрешения
-    await handleToggleAccountingPermission(employee, newValue);
-
-    // Сбрасываем данные
-    setConfirmModalData(null);
-  };
-
-  const handleCancelPermissionChange = () => {
-    setConfirmModalOpen(false);
-    setConfirmModalData(null);
   };
 
   const handleSort = (columnIndex: number) => {
@@ -727,12 +603,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       )}
     </div>,
     employee.address || "-",
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <Checkbox
-        checked={hasAccountingPermission(employee)}
-        onChange={(checked) => handleCheckboxChange(employee, checked)}
-      />
-    </div>,
   ]);
 
   const rowStyles: { [rowIndex: number]: RowStyle } = {};
@@ -788,7 +658,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
               { name: "Мин. надбавка", align: "left" },
               { name: "Телефон", isSortable: false, align: "left" },
               { name: "Адрес", isSortable: false, align: "left" },
-              { name: "Бухгалтерия", isSortable: false, align: "center" },
             ]}
             data={tableData}
             onRowDoubleClick={handleRowDoubleClick}
@@ -894,22 +763,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         </BaseModal>
       )}
 
-      {confirmModalOpen && confirmModalData && (
-        <ConfirmModal
-          isOpen={confirmModalOpen}
-          title="Подтверждение изменения права на бухгалтерию"
-          message={
-            confirmModalData.newValue
-              ? `Только один сотрудник может иметь право на ведение бухгалтерии, права у остальных сотрудников на ведение бухгалтерии анулируются. Вы действительно хотите предоставить право на ведение бухгалтерии сотруднику ${confirmModalData.employee.fullName}?`
-              : `Вы действительно хотите отозвать право на ведение бухгалтерии у сотрудника ${confirmModalData.employee.fullName}? У вас не останется бухгалтеров`
-          }
-          confirmText={confirmModalData.newValue ? "Предоставить" : "Отозвать"}
-          cancelText="Отмена"
-          onConfirm={handleConfirmPermissionChange}
-          onCancel={handleCancelPermissionChange}
-          confirmColor={confirmModalData.newValue ? "#10B981" : "#EF4444"}
-        />
-      )}
     </PageLayout>
   );
 };

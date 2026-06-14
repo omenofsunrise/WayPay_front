@@ -39,6 +39,5 @@ export const PERMISSION_DESCRIPTIONS: Record<string, string> =
 /** Базовые роли, на основе которых можно создавать кастомные роли. */
 export const CUSTOM_ROLE_BASE_OPTIONS: { value: string; label: string }[] = [
   { value: "сотрудник", label: "Сотрудник" },
-  { value: "бухгалтер", label: "Бухгалтер" },
   { value: "админ", label: "Администратор" },
 ];

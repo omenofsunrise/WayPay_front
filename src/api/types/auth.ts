@@ -15,8 +15,7 @@ export type Role =
   | "админ"
   | "сотрудник"
   | "директор"
-  | "суперадмин"
-  | "бухгалтер";
+  | "суперадмин";
 
 export type UserType = "employee" | "payment_place";
 
