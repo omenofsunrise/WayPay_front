@@ -66,9 +66,10 @@ const Checkbox: React.FC<CheckboxProps> = ({
 
 const CheckboxWrapper = styled.div<{ disabled: boolean }>`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   gap: 8px;
+  width: 100%;
   
   &:focus {
     outline: none;
@@ -82,6 +83,8 @@ const CheckboxContainer = styled.div<{
 }>`
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
   border-radius: 5px;
   display: flex;
   align-items: center;
@@ -117,10 +120,15 @@ const CheckboxContainer = styled.div<{
 `;
 
 const Label = styled.span<{ disabled: boolean }>`
+  flex: 1;
+  min-width: 0;
   font-size: 16px;
   color: ${props => props.disabled ? 'rgba(173, 179, 188, 1)' : '#333'};
   user-select: none;
-  white-space: nowrap;
+  text-align: left;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
 `;
 
 const Checkmark = styled.svg<{ disabled: boolean }>`

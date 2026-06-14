@@ -23,7 +23,6 @@ import AdminPanelPage from "./pages/AdminPanelPage";
 import ToDoListPage from "./pages/ToDoListPage";
 import { TaskCountProvider } from "./сontext/TaskCountContext";
 import PaymentsIncomePage from "./pages/FinancePage/PaymentIncomePage";
-import BlogPage from "./pages/BlogPage";
 import ChatPage from "./pages/ChatPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import type { AuthInfo } from "./api/types/auth";
@@ -37,7 +36,7 @@ import AboutPage from "./pages/AboutPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import InvestorsPoolPage from "./pages/InvestorsPoolPage";
 import { DesktopOnlyContent } from "./components/DesktopOnly";
-import RegistrationRequestPage from "./pages/RegistrationRequestPage";
+import MobileAppsPage from "./pages/MobileAppsPage";
 import CreditApplicationPage from "./pages/CreditApplicationPage";
 import NotificationHandler from "./components/NotificationHandler/NotificationHandler";
 import {
@@ -614,24 +613,6 @@ function App() {
               />
 
               <Route
-                path="blog"
-                element={
-                  <MainLayout>
-                    <BlogPage />
-                  </MainLayout>
-                }
-              />
-
-              <Route
-                path="blog/:id"
-                element={
-                  <MainLayout>
-                    <BlogPage />
-                  </MainLayout>
-                }
-              />
-
-              <Route
                 path="chat"
                 element={
                   <MainLayout>
@@ -679,10 +660,10 @@ function App() {
               />
 
               <Route
-                path="registration-requests"
+                path="mobile-apps"
                 element={
                   <MainLayout>
-                    <RegistrationRequestPage />
+                    <MobileAppsPage />
                   </MainLayout>
                 }
               />
