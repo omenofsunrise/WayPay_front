@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import styled from "styled-components";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import PageLayout from "../components/ui/Layouts/PageLayout";
@@ -63,7 +64,7 @@ const InvestorsPoolPage = () => {
     createInvestor,
     updateInvestor,
     addInvestment,
-    updateInvestment
+    updateInvestment,
   } = useInvestor();
 
   const {
@@ -72,7 +73,7 @@ const InvestorsPoolPage = () => {
     fetchPoolPayouts,
     addPayout,
     removePayout,
-    makePayoutAction
+    makePayoutAction,
   } = useInvestorPayout();
 
   const {
@@ -152,9 +153,10 @@ const InvestorsPoolPage = () => {
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [investmentDate, setInvestmentDate] = useState(() => {
     const today = new Date();
-        return today.toISOString().split('T')[0];
+    return today.toISOString().split("T")[0];
   });
-  const [isEditInvestmentModalOpen, setIsEditInvestmentModalOpen] = useState(false);
+  const [isEditInvestmentModalOpen, setIsEditInvestmentModalOpen] =
+    useState(false);
   const [selectedInvestmentForEdit, setSelectedInvestmentForEdit] = useState<{
     id: number;
     amount: number;
@@ -163,7 +165,7 @@ const InvestorsPoolPage = () => {
   const [editInvestmentAmount, setEditInvestmentAmount] = useState("");
   const [editInvestmentDate, setEditInvestmentDate] = useState(() => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return today.toISOString().split("T")[0];
   });
   const [selectedInvestorForInvestment, setSelectedInvestorForInvestment] =
     useState<Investor | null>(null);
@@ -313,7 +315,10 @@ const InvestorsPoolPage = () => {
     getContributions,
   ]);
 
-  const handleContributionAction = async (id: number, action: 'confirm' | 'reject') => {
+  const handleContributionAction = async (
+    id: number,
+    action: "confirm" | "reject"
+  ) => {
     try {
       await makeContributionAction(id, action);
       if (selectedPoolId) {
@@ -337,18 +342,18 @@ const InvestorsPoolPage = () => {
         }
       }
     } catch (error) {
-      console.error('Contribution action error:', error);
+      console.error("Contribution action error:", error);
     }
   };
 
   const handleEditInvestment = (contribution: InvestorContribution) => {
     let dateStr: string;
     if (contribution.date instanceof Date) {
-      dateStr = contribution.date.toISOString().split('T')[0];
+      dateStr = contribution.date.toISOString().split("T")[0];
     } else {
-      dateStr = new Date(contribution.date).toISOString().split('T')[0];
+      dateStr = new Date(contribution.date).toISOString().split("T")[0];
     }
-    
+
     setSelectedInvestmentForEdit({
       id: contribution.id,
       amount: contribution.amount,
@@ -372,25 +377,25 @@ const InvestorsPoolPage = () => {
 
       const dateObj = new Date(editInvestmentDate);
       const today = new Date();
-      
+
       const isToday = dateObj.toDateString() === today.toDateString();
-      
+
       if (isToday) {
-          dateObj.setHours(
-              today.getHours(),
-              today.getMinutes(),
-              today.getSeconds(),
-              today.getMilliseconds()
-          );
+        dateObj.setHours(
+          today.getHours(),
+          today.getMinutes(),
+          today.getSeconds(),
+          today.getMilliseconds()
+        );
       } else {
-          dateObj.setHours(12, 0, 0, 0);
+        dateObj.setHours(12, 0, 0, 0);
       }
 
       await updateInvestment(selectedInvestmentForEdit.id, amount, dateObj);
-      
+
       setIsEditInvestmentModalOpen(false);
       setEditInvestmentAmount("");
-      setEditInvestmentDate(today.toISOString().split('T')[0]);
+      setEditInvestmentDate(today.toISOString().split("T")[0]);
       setSelectedInvestmentForEdit(null);
 
       await reloadData();
@@ -688,27 +693,27 @@ const InvestorsPoolPage = () => {
 
       const dateObj = new Date(investmentDate);
       const today = new Date();
-      
+
       const isToday = dateObj.toDateString() === today.toDateString();
-      
+
       if (isToday) {
-          dateObj.setHours(
-              today.getHours(),
-              today.getMinutes(),
-              today.getSeconds(),
-              today.getMilliseconds()
-          );
-          console.log('Сегодняшняя дата, время:', dateObj.toLocaleTimeString());
+        dateObj.setHours(
+          today.getHours(),
+          today.getMinutes(),
+          today.getSeconds(),
+          today.getMilliseconds()
+        );
+        console.log("Сегодняшняя дата, время:", dateObj.toLocaleTimeString());
       } else {
-          dateObj.setHours(12, 0, 0, 0);
-          console.log('Не сегодняшняя дата, установлено 12:00');
+        dateObj.setHours(12, 0, 0, 0);
+        console.log("Не сегодняшняя дата, установлено 12:00");
       }
 
       await addInvestment(selectedInvestorForInvestment.id, amount, dateObj);
-      
+
       setIsInvestmentModalOpen(false);
       setInvestmentAmount("");
-      setInvestmentDate(today.toISOString().split('T')[0]);
+      setInvestmentDate(today.toISOString().split("T")[0]);
       setSelectedInvestorForInvestment(null);
 
       await reloadData();
@@ -734,8 +739,8 @@ const InvestorsPoolPage = () => {
     if (
       window.confirm(
         "⚠️ ВНИМАНИЕ! ⚠️\n\n" +
-        "ВСЕ ПЛАТЕЖИ СДЕЛАННЫЕ ДО РЕИНВЕСТИЦИИ НЕЛЬЗЯ БУДЕТ УДАЛИТЬ\n\n" +
-        "Вы уверены, что хотите реинвестировать доходы ВСЕХ инвесторов?"
+          "ВСЕ ПЛАТЕЖИ СДЕЛАННЫЕ ДО РЕИНВЕСТИЦИИ НЕЛЬЗЯ БУДЕТ УДАЛИТЬ\n\n" +
+          "Вы уверены, что хотите реинвестировать доходы ВСЕХ инвесторов?"
       )
     ) {
       reinvestInvestorPool(Number(selectedPoolId));
@@ -840,32 +845,37 @@ const InvestorsPoolPage = () => {
     }
   };
 
-  const contributionsTableData = (filteredContributions?.items || contributionsData?.items || []).map(
-    (contribution: InvestorContribution) => [
-      formatDate(contribution.date.toString()),
-      contribution.investorNickname || "-",
-      formatMoney(contribution.amount.toString()),
-      contribution.confirmed ? (
-        <ConfirmedBadge>Подтверждено</ConfirmedBadge>
-      ) : (
-        <ActionButtons>
-          <DarkCyanButton
-            onClick={() => handleContributionAction(contribution.id, 'confirm')}
-            disabled={isContributionsLoading}
-          >
-            Подтвердить
-          </DarkCyanButton>
-          <GrayButton
-            onClick={() => handleContributionAction(contribution.id, 'reject')}
-            disabled={isContributionsLoading}
-          >
-            Удалить
-          </GrayButton>
-          <EditButton onClick={() => handleEditInvestment(contribution)} />
-        </ActionButtons>
-      ),
-    ]
-  ) || [];
+  const contributionsTableData =
+    (filteredContributions?.items || contributionsData?.items || []).map(
+      (contribution: InvestorContribution) => [
+        formatDate(contribution.date.toString()),
+        contribution.investorNickname || "-",
+        formatMoney(contribution.amount.toString()),
+        contribution.confirmed ? (
+          <ConfirmedBadge>Подтверждено</ConfirmedBadge>
+        ) : (
+          <ActionButtons>
+            <DarkCyanButton
+              onClick={() =>
+                handleContributionAction(contribution.id, "confirm")
+              }
+              disabled={isContributionsLoading}
+            >
+              Подтвердить
+            </DarkCyanButton>
+            <GrayButton
+              onClick={() =>
+                handleContributionAction(contribution.id, "reject")
+              }
+              disabled={isContributionsLoading}
+            >
+              Удалить
+            </GrayButton>
+            <EditButton onClick={() => handleEditInvestment(contribution)} />
+          </ActionButtons>
+        ),
+      ]
+    ) || [];
 
   const handleCreatePool = async () => {
     if (!newPoolName.trim()) return;
@@ -1460,6 +1470,13 @@ const InvestorsPoolPage = () => {
     }
   );
 
+  // Для собственной кассы пула в окне договоров показываем дополнительный
+  // столбец с полным ожидаемым (отложенным) доходом по договору — до деления
+  // на доли пула/инвестора.
+  const showOwnCashExpectedIncome = Boolean(
+    selectedInvestorForCredits?.isCompanyPool
+  );
+
   const investorCreditsTableData = (() => {
     const rows =
       investorCreditsData?.items.map((credit: Credit, index: number) => {
@@ -1470,7 +1487,7 @@ const InvestorsPoolPage = () => {
             (selectedInvestorForCredits?.investorPie || 0)) /
           100;
 
-        return [
+        const row: ReactNode[] = [
           credit.id,
           formatDate(credit.creditDate.toString()),
           credit.clientFullName,
@@ -1486,11 +1503,17 @@ const InvestorsPoolPage = () => {
           ),
           formatMoney(expectedIncome.toString()),
         ];
+
+        if (showOwnCashExpectedIncome) {
+          row.push(formatMoney((credit.defferedIncome || 0).toString()));
+        }
+
+        return row;
       }) || [];
 
     if (rows.length > 0) {
       // Добавляем строку "Итого"
-      rows.push([
+      const totalRow: ReactNode[] = [
         "",
         "",
         "",
@@ -1504,7 +1527,15 @@ const InvestorsPoolPage = () => {
             100
           ).toString()
         ),
-      ]);
+      ];
+
+      if (showOwnCashExpectedIncome) {
+        totalRow.push(
+          formatMoney((investorCreditsData.totalDefferedIncome || 0).toString())
+        );
+      }
+
+      rows.push(totalRow);
     }
 
     return rows;
@@ -1928,7 +1959,7 @@ const InvestorsPoolPage = () => {
                 { name: "Дата", isSortable: true },
                 { name: "Инвестор", align: "left" },
                 { name: "Сумма", align: "right" },
-                { name: "Действия", align: "center" }
+                { name: "Действия", align: "center" },
               ]}
               data={contributionsTableData}
               isLoading={isContributionsLoading}
@@ -2029,6 +2060,14 @@ const InvestorsPoolPage = () => {
                     { name: "Клиент", align: "left" },
                     { name: "Телефон", align: "left" },
                     { name: "Отложенный доход инвестора", align: "left" },
+                    ...(showOwnCashExpectedIncome
+                      ? [
+                          {
+                            name: "Ожидаемый доход от инвестора",
+                            align: "left" as const,
+                          },
+                        ]
+                      : []),
                   ]}
                   hasTotalsRow={true}
                   data={investorCreditsTableData}
@@ -2150,19 +2189,21 @@ const InvestorsPoolPage = () => {
           >
             <form onSubmit={handleSubmitInvestment} style={{ padding: "20px" }}>
               {/* Предупредительная надпись */}
-              <div style={{ 
-                backgroundColor: "#fff3cd", 
-                color: "#856404",
-                padding: "12px 16px",
-                borderRadius: "4px",
-                marginBottom: "20px",
-                border: "1px solid #ffeeba",
-                fontSize: "14px"
-              }}>
-                ⚠️ Рекомендуется сначала сделать реинвестицию, 
-                а затем добавлять новую инвестицию
+              <div
+                style={{
+                  backgroundColor: "#fff3cd",
+                  color: "#856404",
+                  padding: "12px 16px",
+                  borderRadius: "4px",
+                  marginBottom: "20px",
+                  border: "1px solid #ffeeba",
+                  fontSize: "14px",
+                }}
+              >
+                ⚠️ Рекомендуется сначала сделать реинвестицию, а затем добавлять
+                новую инвестицию
               </div>
-              
+
               <InputRow>
                 <InputLabel>Сумма инвестиции:</InputLabel>
                 <InputContainer>
@@ -2179,9 +2220,13 @@ const InvestorsPoolPage = () => {
                 <InputLabel>Дата инвестиции</InputLabel>
                 <InputContainer>
                   <CustomCalendar
-                      placeholder="Дата инвестиции"
-                      value={investmentDate ? new Date(investmentDate).toISOString().split('T')[0] : ''}
-                      onChange={(dateString) => setInvestmentDate(dateString)}
+                    placeholder="Дата инвестиции"
+                    value={
+                      investmentDate
+                        ? new Date(investmentDate).toISOString().split("T")[0]
+                        : ""
+                    }
+                    onChange={(dateString) => setInvestmentDate(dateString)}
                   />
                 </InputContainer>
               </InputRow>
