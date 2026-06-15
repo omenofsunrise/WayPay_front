@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import TitleField from "../ui/Layouts/TitleLayout";
 import CustomTitle from "../ui/Text/CustomTitle";
@@ -8,7 +8,11 @@ import CustomTable from "../ui/tables/CustomTable";
 import useNotes from "../../api/hooks/useNote";
 import { formatDate } from "../../utils/dateFormatter";
 import useCredit from "../../api/hooks/useCredit";
-import type { Credit, CreditListResponse } from "../../api/types/credit";
+import type {
+  Credit,
+  CreditDocs,
+  CreditListResponse,
+} from "../../api/types/credit";
 import Tabs from "../ui/fields/Tabs";
 import { formatMoney } from "../../utils/formatPrice";
 import type {
@@ -65,15 +69,105 @@ const ACTIVE_TAB_STORAGE_KEY = "view_credit_modal_active_tab";
 type CreditStatusKey = "active" | "overdue" | "closed";
 
 const getCreditStatus = (
-  credit: Credit | null
+  credit: Credit | null,
+  overdueDays = 0
 ): { key: CreditStatusKey; label: string } => {
   if (!credit) return { key: "active", label: "Активный" };
   if (!credit.isActive || credit.rest === 0)
     return { key: "closed", label: "Закрытый" };
-  if (credit.debtDays && credit.debtDays > 0)
+  if ((credit.debtDays && credit.debtDays > 0) || overdueDays > 0)
     return { key: "overdue", label: "Просроченный" };
   return { key: "active", label: "Активный" };
 };
+
+const getObjectValue = <T,>(
+  source: Record<string, unknown> | null | undefined,
+  ...keys: string[]
+): T | undefined => {
+  if (!source) return undefined;
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null && value !== "") {
+      return value as T;
+    }
+  }
+  return undefined;
+};
+
+const getNumberValue = (
+  source: Record<string, unknown> | null | undefined,
+  ...keys: string[]
+): number | undefined => {
+  const value = getObjectValue<number | string>(source, ...keys);
+  const parsed = typeof value === "string" ? Number(value) : value;
+  return typeof parsed === "number" && !Number.isNaN(parsed)
+    ? parsed
+    : undefined;
+};
+
+const normalizeCreditDetails = (
+  credit: Credit,
+  docs?: CreditDocs | null
+): Credit => {
+  const raw = credit as unknown as Record<string, unknown>;
+  const guarantor = getObjectValue<Record<string, unknown>>(
+    raw,
+    "guarantor",
+    "Guarantor"
+  );
+
+  return {
+    ...credit,
+    guarantorFullname:
+      getObjectValue<string>(
+        raw,
+        "guarantorFullname",
+        "guarantorFullName",
+        "GuarantorFullname",
+        "GuarantorFullName",
+        "guarantorName",
+        "GuarantorName"
+      ) ??
+      getObjectValue<string>(guarantor, "fullName", "FullName", "name", "Name") ??
+      docs?.guarantorName ??
+      credit.guarantorFullname,
+    guarantorPhone:
+      getObjectValue<string>(raw, "guarantorPhone", "GuarantorPhone") ??
+      getObjectValue<string>(guarantor, "phone", "Phone") ??
+      docs?.guarantorPhone ??
+      credit.guarantorPhone,
+    guarantorBirthdate:
+      getObjectValue<string | Date>(
+        raw,
+        "guarantorBirthdate",
+        "GuarantorBirthdate",
+        "guarantorBirthDate",
+        "GuarantorBirthDate"
+      ) ??
+      getObjectValue<string | Date>(guarantor, "birthdate", "Birthdate") ??
+      docs?.guarantorBirthdate ??
+      credit.guarantorBirthdate,
+    guarantorAddress:
+      getObjectValue<string>(raw, "guarantorAddress", "GuarantorAddress") ??
+      getObjectValue<string>(guarantor, "address", "Address") ??
+      docs?.guarantorAddress ??
+      credit.guarantorAddress,
+    guarantorClientId:
+      getNumberValue(raw, "guarantorClientId", "GuarantorClientId") ??
+      credit.guarantorClientId,
+    debtDays:
+      getNumberValue(raw, "debtDays", "DebtDays", "overdueDays", "OverdueDays") ??
+      credit.debtDays,
+    debt:
+      getNumberValue(raw, "debt", "Debt", "overdueDebt", "OverdueDebt") ??
+      credit.debt,
+  };
+};
+
+const isSchedulePaid = (schedule: ScheduleDetails): boolean =>
+  schedule.payed === true ||
+  schedule.isPaid === true ||
+  schedule.status === "Payed";
 
 const TabLabel: React.FC<{ icon: React.ReactNode; label: string }> = ({
   icon,
@@ -107,8 +201,13 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     getFileByNote,
   } = useNotes();
 
-  const { getCredits, getCreditById, getCreditListByClient, toggleTerminated } =
-    useCredit();
+  const {
+    getCredits,
+    getCreditById,
+    getCreditListByClient,
+    getDocsData,
+    toggleTerminated,
+  } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
   const [copiedName, setCopiedName] = useState<string | null>(null);
   const copyNameTimerRef = useRef<number | null>(null);
@@ -599,6 +698,54 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
   }, [getSchedules, id]);
 
+  const overdueSummary = useMemo(() => {
+    const schedules = scheduleData?.items ?? [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return schedules.reduce(
+      (acc, schedule) => {
+        const paymentDate = schedule.paymentDate
+          ? new Date(schedule.paymentDate)
+          : null;
+        if (paymentDate) paymentDate.setHours(0, 0, 0, 0);
+
+        const isPaid =
+          schedule.payed === true ||
+          schedule.isPaid === true ||
+          schedule.status === "Payed";
+        const isOverdue =
+          !isPaid &&
+          schedule.paymentAmount > 0 &&
+          ((schedule.status === "Overdue") ||
+            (!!paymentDate && paymentDate < today));
+
+        if (!isOverdue) return acc;
+
+        const days = paymentDate
+          ? Math.max(
+              acc.days,
+              Math.ceil((today.getTime() - paymentDate.getTime()) / 86400000)
+            )
+          : acc.days;
+
+        return {
+          days,
+          amount: acc.amount + schedule.paymentAmount,
+        };
+      },
+      { days: 0, amount: 0 }
+    );
+  }, [scheduleData?.items]);
+  const displayedOverdueDays =
+    creditData?.debtDays && creditData.debtDays > 0
+      ? creditData.debtDays
+      : overdueSummary.days;
+  const displayedOverdueAmount =
+    creditData?.debt && creditData.debt > 0
+      ? creditData.debt
+      : overdueSummary.amount;
+
   useEffect(() => {
     loadSoldProducts();
   }, [loadSoldProducts]);
@@ -619,7 +766,12 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
           const credit = await getCreditById(Number(id));
           if (credit) {
-            setCreditData(credit);
+            const needsDocsFallback =
+              !credit.guarantorFullname && !credit.guarantor?.fullName;
+            const docs = needsDocsFallback
+              ? await getDocsData(Number(id)).catch(() => null)
+              : null;
+            setCreditData(normalizeCreditDetails(credit, docs));
             return;
           }
 
@@ -628,7 +780,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
             pageSize: 1,
             includeAllStates: true,
           });
-          setCreditData(creditResult?.items?.[0] ?? null);
+          const creditFromList = creditResult?.items?.[0] ?? null;
+          setCreditData(
+            creditFromList ? normalizeCreditDetails(creditFromList) : null
+          );
         } catch (error) {
           console.error("Error fetching data:", error);
         }
@@ -637,7 +792,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       fetchData();
       getCreditNotes(Number(id));
     }
-  }, [isOpen, id, getCredits, getCreditById, getCreditNotes]);
+  }, [isOpen, id, getCredits, getCreditById, getCreditNotes, getDocsData]);
 
   // Обновляем массив изображений при изменении заметок
   useEffect(() => {
@@ -946,7 +1101,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           gap: "8px",
         }}
       >
-        {schedule.payed ? (
+        {isSchedulePaid(schedule) ? (
           <>
             <span style={{ color: "#1B5E20", fontWeight: "500" }}>
               Оплачено
@@ -1008,7 +1163,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       ? new Date(schedule.paymentDate)
       : null;
 
-    if (schedule.paymentAmount === 0 || schedule.payed) {
+    if (schedule.paymentAmount === 0 || isSchedulePaid(schedule)) {
       return {
         backgroundColor: "#E8F5E8",
         color: "#1B5E20",
@@ -1016,7 +1171,11 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       };
     }
 
-    if (paymentDate && paymentDate < today && schedule.paymentAmount > 0) {
+    if (
+      (schedule.status === "Overdue" ||
+        (paymentDate && paymentDate < today)) &&
+      schedule.paymentAmount > 0
+    ) {
       return {
         backgroundColor: "#FFEBEE",
         color: "#B71C1C",
@@ -1094,7 +1253,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                     <HeaderActions>
                       {creditData &&
                         (() => {
-                          const status = getCreditStatus(creditData);
+                          const status = getCreditStatus(
+                            creditData,
+                            displayedOverdueDays
+                          );
                           return (
                             <StatusBadge $status={status.key}>
                               {status.label}
@@ -1216,7 +1378,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       </SummaryCard>
                     )}
 
-                    {creditData.debtDays != null && creditData.debtDays > 0 && (
+                    {(displayedOverdueDays > 0 ||
+                      displayedOverdueAmount > 0) && (
                       <SummaryCard $variant="danger">
                         <SummaryIcon $accent="danger">
                           <WarningAmberOutlinedIcon fontSize="small" />
@@ -1224,10 +1387,11 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                         <SummaryItemBody>
                           <SummaryLabel>Просрочка</SummaryLabel>
                           <SummaryValue style={{ color: "#B71C1C" }}>
-                            {creditData.debtDays} дн.
-                            {creditData.debt != null &&
-                              creditData.debt > 0 &&
-                              ` · ${formatMoney(creditData.debt.toString())}`}
+                            {displayedOverdueDays} дн.
+                            {displayedOverdueAmount > 0 &&
+                              ` · ${formatMoney(
+                                displayedOverdueAmount.toString()
+                              )}`}
                           </SummaryValue>
                         </SummaryItemBody>
                       </SummaryCard>

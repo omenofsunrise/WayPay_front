@@ -11,6 +11,8 @@ export const NOTEABLE_TYPES = {
 export interface Credit {
   guarantorFullname?: string;
   guarantorPhone?: string;
+  guarantorBirthdate?: string | Date;
+  guarantorAddress?: string;
   id: number;
   name: string;
   creditTypeId: number;
@@ -30,6 +32,13 @@ export interface Credit {
   guarantorId?: number;
   guarantorClientId?: number;
   guarantorType?: GuarantorType;
+  guarantor?: {
+    fullName?: string;
+    phone?: string;
+    birthdate?: string | Date;
+    address?: string;
+    doc?: string;
+  };
   firstPayment: number;
   accured: number;
   payed: number;

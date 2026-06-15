@@ -176,6 +176,13 @@ const normalizeCalendarResponse = (
   });
 };
 
+const normalizePaginatedScheduleResponse = (
+  data: PaginatedResponse<ScheduleDetails>
+): PaginatedResponse<ScheduleDetails> => ({
+  ...data,
+  items: normalizeCalendarResponse(data),
+});
+
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 // Максимальный диапазон дат для одного запроса /Schedule/calendar (ограничение бэкенда).
 const CALENDAR_MAX_RANGE_DAYS = 120;
@@ -219,7 +226,7 @@ class ScheduleService {
       "/Schedule",
       { params }
     );
-    return response.data;
+    return normalizePaginatedScheduleResponse(response.data);
   }
 
   async getByCreditId(
@@ -230,12 +237,12 @@ class ScheduleService {
       `/Schedule/by-credit/${creditId}`,
       { params }
     );
-    return response.data;
+    return normalizePaginatedScheduleResponse(response.data);
   }
 
   async getById(id: number): Promise<ScheduleDetails> {
     const response = await apiClient.get<ScheduleDetails>(`/Schedule/${id}`);
-    return response.data;
+    return normalizeScheduleDetails(response.data) ?? response.data;
   }
 
   private async fetchCalendarChunk(
