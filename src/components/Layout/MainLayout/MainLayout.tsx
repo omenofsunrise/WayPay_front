@@ -48,6 +48,25 @@ const FullLayout = ({ children }: MainLayoutProps) => {
     }
   }, [location.pathname]);
 
+  // На узких экранах меню по умолчанию свёрнуто (узкая полоса иконок), чтобы не
+  // перекрывать контент и верхнюю панель. Разворачивается уже поверх (drawer).
+  useEffect(() => {
+    const collapseIfNarrow = () => {
+      if (window.innerWidth <= 1280) {
+        setCollapsed((prev) => {
+          if (!prev) {
+            localStorage.setItem(SIDE_MENU_COLLAPSED_KEY, "true");
+            return true;
+          }
+          return prev;
+        });
+      }
+    };
+    collapseIfNarrow();
+    window.addEventListener("resize", collapseIfNarrow);
+    return () => window.removeEventListener("resize", collapseIfNarrow);
+  }, []);
+
   const toggleCollapsed = () => {
     const newCollapsedState = !collapsed;
     setCollapsed(newCollapsedState);
@@ -70,6 +89,9 @@ const FullLayout = ({ children }: MainLayoutProps) => {
     >
       <LayoutContainer>
         <SideMenu />
+        {/* На узких экранах развёрнутое меню выезжает поверх контента —
+            затемняем фон, клик по нему сворачивает меню. */}
+        <SideMenuBackdrop $visible={!collapsed} onClick={toggleCollapsed} />
         <TopMenu />
         <ContentContainer $collapsed={collapsed}>{children}</ContentContainer>
         <LicenseExpiryNotice />
@@ -101,6 +123,25 @@ const ContentContainer = styled.div<{ $collapsed: boolean }>`
   box-sizing: border-box;
   transition: all 0.3s ease;
   min-height: calc(100vh - 56px); /* Высота минус TopMenu */
+
+  /* Узкие экраны: меню не раздвигает контент, а выезжает поверх него.
+     Контент всегда занимает всю ширину, оставляя только узкую полосу иконок. */
+  @media (max-width: 1280px) {
+    margin-left: 70px;
+  }
+`;
+
+// Затемнение под развёрнутым меню — только на узких экранах.
+const SideMenuBackdrop = styled.div<{ $visible: boolean }>`
+  display: none;
+
+  @media (max-width: 1280px) {
+    display: ${({ $visible }) => ($visible ? "block" : "none")};
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 95;
+  }
 `;
 
 export default MainLayout;

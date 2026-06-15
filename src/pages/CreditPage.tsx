@@ -1722,15 +1722,13 @@ const CreditPage = () => {
   };
 
   return (
-    <PageLayout
-      ref={containerRef}
-      style={{
-        paddingRight: isFilterModalOpen ? FILTER_PANEL_WIDTH : 0,
-        transition: "padding-right 0.3s ease",
-        height: "calc(100vh - 56px)",
-        overflow: "hidden",
-      }}
-    >
+    <FilterAwarePageLayout ref={containerRef} $filterOpen={isFilterModalOpen}>
+      {/* На узких экранах фильтр выезжает поверх контента — затемняем фон,
+          клик по нему закрывает фильтр. */}
+      <FilterBackdrop
+        $visible={isFilterModalOpen}
+        onClick={() => setIsFilterModalOpen(false)}
+      />
       <FilterIconButton
         type="button"
         onClick={() => setIsFilterModalOpen((v) => !v)}
@@ -2141,15 +2139,17 @@ const CreditPage = () => {
         initialData={editingTab}
         entityType="creditTab"
       />
-    </PageLayout>
+    </FilterAwarePageLayout>
   );
 };
 
 // Иконка-кнопка фильтра — рядом с колокольчиком/настройками в TopMenu.
+// Кнопки 36px с шагом 46px дают одинаковый зазор 10px:
+// настройки right:10 → колокол right:56 → фильтр right:102.
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: fixed;
   top: 10px;
-  right: 92px;
+  right: 102px;
   z-index: 101;
   width: 36px;
   height: 36px;
@@ -2215,6 +2215,33 @@ const FilterBadge = styled.span`
 
 // Ширина выезжающей панели фильтров (на столько отодвигается контент). Как у бокового меню.
 const FILTER_PANEL_WIDTH = 360;
+
+// Контент-обёртка: на широких экранах отодвигается под выехавший фильтр,
+// на узких (≤1280px) фильтр выезжает поверх, поэтому отступ убираем.
+const FilterAwarePageLayout = styled(PageLayout)<{ $filterOpen: boolean }>`
+  padding-right: ${({ $filterOpen }) =>
+    $filterOpen ? FILTER_PANEL_WIDTH : 0}px;
+  transition: padding-right 0.3s ease;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+
+  @media (max-width: 1280px) {
+    padding-right: 0;
+  }
+`;
+
+// Затемнение под выехавшим фильтром — только на узких экранах.
+const FilterBackdrop = styled.div<{ $visible: boolean }>`
+  display: none;
+
+  @media (max-width: 1280px) {
+    display: ${({ $visible }) => ($visible ? "block" : "none")};
+    position: fixed;
+    inset: 56px 0 0 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 99;
+  }
+`;
 
 // Правая панель фильтров — поведение как у бокового меню (SideMenu): position: fixed
 // у правого края, плавно выезжает за 0.3s, контент отодвигается через padding-right.

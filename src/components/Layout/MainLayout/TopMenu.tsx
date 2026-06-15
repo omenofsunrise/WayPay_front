@@ -1,21 +1,21 @@
-import { useContext, useEffect, useRef, useState } from 'react';
-import styled from 'styled-components';
-import CalculatorIcon from '../../../assets/ui/TopBar/calculator.svg';
-import ChatIcon from '../../../assets/ui/TopBar/chat.svg';
-import TodoIcon from '../../../assets/ui/TopBar/to_do.svg';
-import newCreditIcon from '../../../assets/ui/TopBar/newCredit.svg';
-import SettingsIcon from '../../../assets/ui/TopBar/settings.svg';
-import BellIcon from '../../../assets/ui/TopBar/bell.svg';
-import { SideMenuContext } from './SideMenuContext';
-import { useNavigate, useLocation } from 'react-router-dom';
-import CalculatorModal from '../../modal/CalculatorModal';
-import SettingsModal from '../../modal/SettingsModal';
-import { useAuth } from '../../../сontext/AuthContext';
-import type { Permission, Role } from '../../../api/types/auth';
-import useTask from '../../../api/hooks/useTask';
-import { useTaskCount } from '../../../сontext/TaskCountContext';
-import useChat from '../../../api/hooks/useChat';
-import NotificationContextMenu from '../../ui/contextMenus/NotificationContextMenu';
+import { useContext, useEffect, useRef, useState } from "react";
+import styled from "styled-components";
+import CalculatorIcon from "../../../assets/ui/TopBar/calculator.svg";
+import ChatIcon from "../../../assets/ui/TopBar/chat.svg";
+import TodoIcon from "../../../assets/ui/TopBar/to_do.svg";
+import newCreditIcon from "../../../assets/ui/TopBar/newCredit.svg";
+import SettingsIcon from "../../../assets/ui/TopBar/settings.svg";
+import BellIcon from "../../../assets/ui/TopBar/bell.svg";
+import { SideMenuContext } from "./SideMenuContext";
+import { useNavigate, useLocation } from "react-router-dom";
+import CalculatorModal from "../../modal/CalculatorModal";
+import SettingsModal from "../../modal/SettingsModal";
+import { useAuth } from "../../../сontext/AuthContext";
+import type { Permission, Role } from "../../../api/types/auth";
+import useTask from "../../../api/hooks/useTask";
+import { useTaskCount } from "../../../сontext/TaskCountContext";
+import useChat from "../../../api/hooks/useChat";
+import NotificationContextMenu from "../../ui/contextMenus/NotificationContextMenu";
 
 interface MenuItem {
   id: string;
@@ -29,31 +29,31 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { 
-    id: 'newCredit', 
-    icon: newCreditIcon, 
-    text: 'Новый договор', 
-    path: '/new-credit', 
-    forbiddenPermissions: ['FORBID_CREATING_CREDITS'],
+  {
+    id: "newCredit",
+    icon: newCreditIcon,
+    text: "Новый договор",
+    path: "/new-credit",
+    forbiddenPermissions: ["FORBID_CREATING_CREDITS"],
   },
-  { id: 'calculator', icon: CalculatorIcon, text: 'Калькулятор', modal: true },
-  { id: 'chat', icon: ChatIcon, text: 'Чат', path: '/chat' },
-  { id: 'todo', icon: TodoIcon, text: 'Todo', path: '/todo' }
+  { id: "calculator", icon: CalculatorIcon, text: "Калькулятор", modal: true },
+  { id: "chat", icon: ChatIcon, text: "Чат", path: "/chat" },
+  { id: "todo", icon: TodoIcon, text: "Todo", path: "/todo" },
 ];
 
 export const pathToMenuItemMap: Record<string, string> = {
-  '/new-credit': 'newCredit',
-  '/calculator': 'calculator',
-  '/chat': 'chat',
-  '/todo': 'todo'
+  "/new-credit": "newCredit",
+  "/calculator": "calculator",
+  "/chat": "chat",
+  "/todo": "todo",
 };
 
 const TopMenu = () => {
-  const { 
+  const {
     collapsed,
-    selectedTopMenuItem, 
+    selectedTopMenuItem,
     setSelectedTopMenuItem,
-    setSelectedSideMenuItem
+    setSelectedSideMenuItem,
   } = useContext(SideMenuContext);
   const { hasPermission, forbiddenRole, hasRole } = useAuth();
   const navigate = useNavigate();
@@ -78,24 +78,26 @@ const TopMenu = () => {
   }, [getActiveTasksCount, setActiveTasksCount]);
 
   // Функция для проверки запрещенных пермишенов
-  const hasForbiddenPermission = (forbiddenPermissions?: Permission[]): boolean => {
+  const hasForbiddenPermission = (
+    forbiddenPermissions?: Permission[]
+  ): boolean => {
     if (!forbiddenPermissions || forbiddenPermissions.length === 0) {
       return false;
     }
-    
+
     // Проверяем, есть ли хотя бы один запрещенный пермишен у пользователя
-    return forbiddenPermissions.some(permission => hasPermission(permission));
+    return forbiddenPermissions.some((permission) => hasPermission(permission));
   };
 
-  const menuItems = allMenuItems.filter(item => {
+  const menuItems = allMenuItems.filter((item) => {
     // Для директора, суперадмина и админа показываем все элементы
-    if (hasRole('директор') || hasRole('суперадмин') || hasRole('админ')) {
+    if (hasRole("директор") || hasRole("суперадмин") || hasRole("админ")) {
       return true;
     }
-    
+
     // Проверяем запрещенные пермишены (теперь массив)
     const hasForbiddenPerm = hasForbiddenPermission(item.forbiddenPermissions);
-    
+
     // Показываем элемент только если нет запрещенных пермишенов И нет запрещенной роли
     return !hasForbiddenPerm;
   });
@@ -107,10 +109,10 @@ const TopMenu = () => {
         setUnreadChatsCount(count);
       }
     };
-    
+
     fetchUnreadChatsCount();
     const interval = setInterval(fetchUnreadChatsCount, 30000);
-    
+
     return () => clearInterval(interval);
   }, [getUnreadChatsCount]);
 
@@ -124,11 +126,11 @@ const TopMenu = () => {
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
-    
-    if (currentPath.startsWith('/chat/')) {
-      return 'chat';
+
+    if (currentPath.startsWith("/chat/")) {
+      return "chat";
     }
-    
+
     return pathToMenuItemMap[currentPath] || null;
   };
 
@@ -140,7 +142,11 @@ const TopMenu = () => {
     }
   }, [location.pathname, setSelectedTopMenuItem, setSelectedSideMenuItem]);
 
-  const handleMenuItemClick = (itemId: string, path?: string, isModal?: boolean) => {
+  const handleMenuItemClick = (
+    itemId: string,
+    path?: string,
+    isModal?: boolean
+  ) => {
     setSelectedTopMenuItem(itemId);
     if (!isModal && path) {
       navigate(path);
@@ -164,8 +170,8 @@ const TopMenu = () => {
   };
 
   const isItemSelected = (itemId: string) => {
-    if (itemId === 'calculator') {
-      return showCalculator || selectedTopMenuItem === 'calculator';
+    if (itemId === "calculator") {
+      return showCalculator || selectedTopMenuItem === "calculator";
     }
     return selectedTopMenuItem === itemId || getCurrentMenuItem() === itemId;
   };
@@ -175,37 +181,43 @@ const TopMenu = () => {
       <TopMenuContainer $collapsed={collapsed}>
         <MenuItemsWrapper>
           {menuItems.map((item) => (
-            <MenuItem 
+            <MenuItem
               key={item.id}
-              onClick={() => handleMenuItemClick(item.id, item.path, item.modal)}
+              onClick={() =>
+                handleMenuItemClick(item.id, item.path, item.modal)
+              }
               $selected={isItemSelected(item.id)}
             >
               <IconWrapper>
-                <Icon src={item.icon} alt={item.text} $selected={isItemSelected(item.id)} />
+                <Icon
+                  src={item.icon}
+                  alt={item.text}
+                  $selected={isItemSelected(item.id)}
+                />
               </IconWrapper>
               <Text $selected={isItemSelected(item.id)}>{item.text}</Text>
-              {item.id === 'todo' && activeTasksCount > 0 && (
+              {item.id === "todo" && activeTasksCount > 0 && (
                 <TaskCountBadge>{activeTasksCount}</TaskCountBadge>
               )}
-              {item.id === 'chat' && unreadChatsCount > 0 && (
+              {item.id === "chat" && unreadChatsCount > 0 && (
                 <TaskCountBadge>{unreadChatsCount}</TaskCountBadge>
               )}
             </MenuItem>
           ))}
         </MenuItemsWrapper>
-        
-        <BellButton 
-          ref={bellButtonRef}
-          onClick={handleBellClick}
-        >
+
+        <BellButton ref={bellButtonRef} onClick={handleBellClick}>
           <SettingsIconImg src={BellIcon} alt="Уведомления" />
         </BellButton>
 
-        <SettingsButton onClick={handleSettingsClick} title="Персональные настройки">
+        <SettingsButton
+          onClick={handleSettingsClick}
+          title="Персональные настройки"
+        >
           <SettingsIconImg src={SettingsIcon} alt="Персональные настройки" />
         </SettingsButton>
       </TopMenuContainer>
-      
+
       <NotificationContextMenu
         isOpen={showNotifications}
         onClose={handleNotificationsClose}
@@ -246,12 +258,15 @@ const TaskCountBadge = styled.div`
 `;
 
 const TopMenuContainer = styled.div<TopMenuContainerProps>`
-  width: calc(100% - ${({ $collapsed }) => ($collapsed ? '70px' : '315px')});
+  width: calc(100% - ${({ $collapsed }) => ($collapsed ? "70px" : "315px")});
   height: 56px;
   position: fixed;
-  left: ${({ $collapsed }) => ($collapsed ? '70px' : '315px')};
+  left: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
   top: 0;
-  padding: 0 14px;
+  /* Справа резервируем место под кластер кнопок (фильтр/колокол/настройки),
+     которые позиционируются абсолютно у правого края, — чтобы пункты меню
+     (в т.ч. Todo) к ним не прилипали ни на широких, ни на узких экранах. */
+  padding: 0 150px 0 14px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -260,6 +275,13 @@ const TopMenuContainer = styled.div<TopMenuContainerProps>`
   box-shadow: 0 1px 7px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
   border-bottom: 1px solid rgba(209, 213, 219, 1);
+
+  /* На узких экранах меню выезжает поверх контента, поэтому верхняя панель
+     всегда выровнена по узкой полосе иконок (70px). */
+  @media (max-width: 1280px) {
+    left: 70px;
+    width: calc(100% - 70px);
+  }
 `;
 
 const MenuItemsWrapper = styled.div`
@@ -269,12 +291,27 @@ const MenuItemsWrapper = styled.div`
   width: 100%;
   max-width: 1050px;
   margin: 0 auto;
+
+  /* На узких экранах прижимаем пункты влево и убираем «слипание» иконок.
+     Место справа под кнопки уже зарезервировано padding-right контейнера. */
+  @media (max-width: 1280px) {
+    justify-content: flex-start;
+    gap: 6px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const Icon = styled.img<IconProps>`
   width: 17px;
   height: 17px;
-  filter: ${({ $selected }) => $selected ? 'brightness(0)' : 'brightness(0.7)'};
+  filter: ${({ $selected }) =>
+    $selected ? "brightness(0)" : "brightness(0.7)"};
   transition: filter 0.3s ease;
 `;
 
@@ -285,10 +322,16 @@ const IconWrapper = styled.div`
 `;
 
 const Text = styled.span<TextProps>`
-  color: ${({ $selected }) => $selected ? 'rgba(0, 0, 0, 1)' : 'rgba(80, 85, 92, 1)'};
+  color: ${({ $selected }) =>
+    $selected ? "rgba(0, 0, 0, 1)" : "rgba(80, 85, 92, 1)"};
   font-size: 18px;
   font-weight: 500;
   transition: color 0.3s ease;
+  white-space: nowrap;
+
+  @media (max-width: 1280px) {
+    font-size: 14px;
+  }
 `;
 
 const MenuItem = styled.div<MenuItemProps>`
@@ -299,15 +342,23 @@ const MenuItem = styled.div<MenuItemProps>`
   border-radius: 6px;
   transition: all 0.3s ease;
   margin-right: 14px;
-  background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'transparent'};
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
+
+  @media (max-width: 1280px) {
+    padding: 6px 8px;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
 
   &:hover {
-    background-color: ${({ $selected }) => $selected ? 'rgba(209, 213, 219, 1)' : 'rgba(209, 213, 219, 0.5)'};
-    
+    background-color: ${({ $selected }) =>
+      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
+
     ${Icon} {
       filter: brightness(0);
     }
-    
+
     ${Text} {
       color: rgba(0, 0, 0, 1);
     }
@@ -350,7 +401,7 @@ const SettingsButton = styled.button`
 
 const BellButton = styled(SettingsButton)`
   top: 10px;
-  right: 50px;
+  right: 56px;
 `;
 
 const SettingsIconImg = styled.img`
