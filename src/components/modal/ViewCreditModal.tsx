@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import styled from "styled-components";
 import TitleField from "../ui/Layouts/TitleLayout";
 import CustomTitle from "../ui/Text/CustomTitle";
@@ -8,11 +14,7 @@ import CustomTable from "../ui/tables/CustomTable";
 import useNotes from "../../api/hooks/useNote";
 import { formatDate } from "../../utils/dateFormatter";
 import useCredit from "../../api/hooks/useCredit";
-import type {
-  Credit,
-  CreditDocs,
-  CreditListResponse,
-} from "../../api/types/credit";
+import type { Credit, CreditListResponse } from "../../api/types/credit";
 import Tabs from "../ui/fields/Tabs";
 import { formatMoney } from "../../utils/formatPrice";
 import type {
@@ -22,10 +24,15 @@ import type {
 } from "../../api/types/payment";
 import usePayment from "../../api/hooks/usePayment";
 import { NOTEABLE_TYPES } from "../../api/types/note";
+import type { Note } from "../../api/types/note";
 import useSoldProducts from "../../api/hooks/useSoldProduct";
 import type { SoldProduct } from "../../api/types/soldProduct";
 import useSchedule from "../../api/hooks/useSchedule";
-import type { ScheduleItem, ScheduleParams } from "../../api/types/schedule";
+import type {
+  ScheduleItem,
+  ScheduleParams,
+  ScheduleDetails,
+} from "../../api/types/schedule";
 import CreateNoteModal from "./CreateNoteModal";
 import PhotoViewerModal from "./PhotoViewerModal";
 import useChat from "../../api/hooks/useChat";
@@ -105,10 +112,7 @@ const getNumberValue = (
     : undefined;
 };
 
-const normalizeCreditDetails = (
-  credit: Credit,
-  docs?: CreditDocs | null
-): Credit => {
+const normalizeCreditDetails = (credit: Credit): Credit => {
   const raw = credit as unknown as Record<string, unknown>;
   const guarantor = getObjectValue<Record<string, unknown>>(
     raw,
@@ -128,13 +132,17 @@ const normalizeCreditDetails = (
         "guarantorName",
         "GuarantorName"
       ) ??
-      getObjectValue<string>(guarantor, "fullName", "FullName", "name", "Name") ??
-      docs?.guarantorName ??
+      getObjectValue<string>(
+        guarantor,
+        "fullName",
+        "FullName",
+        "name",
+        "Name"
+      ) ??
       credit.guarantorFullname,
     guarantorPhone:
       getObjectValue<string>(raw, "guarantorPhone", "GuarantorPhone") ??
       getObjectValue<string>(guarantor, "phone", "Phone") ??
-      docs?.guarantorPhone ??
       credit.guarantorPhone,
     guarantorBirthdate:
       getObjectValue<string | Date>(
@@ -145,22 +153,90 @@ const normalizeCreditDetails = (
         "GuarantorBirthDate"
       ) ??
       getObjectValue<string | Date>(guarantor, "birthdate", "Birthdate") ??
-      docs?.guarantorBirthdate ??
       credit.guarantorBirthdate,
     guarantorAddress:
       getObjectValue<string>(raw, "guarantorAddress", "GuarantorAddress") ??
       getObjectValue<string>(guarantor, "address", "Address") ??
-      docs?.guarantorAddress ??
       credit.guarantorAddress,
     guarantorClientId:
       getNumberValue(raw, "guarantorClientId", "GuarantorClientId") ??
       credit.guarantorClientId,
     debtDays:
-      getNumberValue(raw, "debtDays", "DebtDays", "overdueDays", "OverdueDays") ??
-      credit.debtDays,
+      getNumberValue(
+        raw,
+        "debtDays",
+        "DebtDays",
+        "overdueDays",
+        "OverdueDays"
+      ) ?? credit.debtDays,
     debt:
       getNumberValue(raw, "debt", "Debt", "overdueDebt", "OverdueDebt") ??
       credit.debt,
+  };
+};
+
+// Эндпоинт /Credit/{id} (одиночный) часто не содержит вычисляемых полей —
+// просрочки (debt, debtDays) и данных поручителя, — которые есть в списке /Credit
+// (именно их видно в таблицах «Договора» и «Контроль договоров»). Подмешиваем их.
+const mergeListComputedFields = (
+  credit: Credit,
+  listCredit: Credit | null
+): Credit => {
+  if (!listCredit) return credit;
+  const preferNumber = (primary?: number, fallback?: number) =>
+    primary != null && primary !== 0 ? primary : fallback ?? primary;
+  return {
+    ...credit,
+    guarantorFullname: credit.guarantorFullname || listCredit.guarantorFullname,
+    guarantorPhone: credit.guarantorPhone || listCredit.guarantorPhone,
+    guarantorClientId: credit.guarantorClientId ?? listCredit.guarantorClientId,
+    guarantorId: credit.guarantorId ?? listCredit.guarantorId,
+    debt: preferNumber(credit.debt, listCredit.debt),
+    debtDays: preferNumber(credit.debtDays, listCredit.debtDays),
+    currentMonthDebt: preferNumber(
+      credit.currentMonthDebt,
+      listCredit.currentMonthDebt
+    ),
+  };
+};
+
+// /Credit/create-request/{id} — это данные, введённые при оформлении договора.
+// Самый надёжный источник поручителя: либо клиент-поручитель
+// (guarantorClientId + guarantorFullname), либо свободный поручитель (объект guarantor).
+const applyGuarantorFromRequest = (
+  credit: Credit,
+  request: Record<string, unknown> | null
+): Credit => {
+  if (!request) return credit;
+  const guarantor = getObjectValue<Record<string, unknown>>(
+    request,
+    "guarantor",
+    "Guarantor"
+  );
+  return {
+    ...credit,
+    guarantorClientId:
+      credit.guarantorClientId ??
+      getNumberValue(request, "guarantorClientId", "GuarantorClientId"),
+    guarantorFullname:
+      credit.guarantorFullname ||
+      getObjectValue<string>(
+        request,
+        "guarantorFullname",
+        "guarantorFullName",
+        "GuarantorFullname",
+        "GuarantorFullName"
+      ) ||
+      getObjectValue<string>(guarantor, "fullName", "FullName", "name", "Name"),
+    guarantorPhone:
+      credit.guarantorPhone ||
+      getObjectValue<string>(guarantor, "phone", "Phone"),
+    guarantorBirthdate:
+      credit.guarantorBirthdate ||
+      getObjectValue<string | Date>(guarantor, "birthdate", "Birthdate"),
+    guarantorAddress:
+      credit.guarantorAddress ||
+      getObjectValue<string>(guarantor, "address", "Address"),
   };
 };
 
@@ -205,7 +281,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     getCredits,
     getCreditById,
     getCreditListByClient,
-    getDocsData,
+    getCreateCreditRequest,
     toggleTerminated,
   } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
@@ -717,7 +793,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         const isOverdue =
           !isPaid &&
           schedule.paymentAmount > 0 &&
-          ((schedule.status === "Overdue") ||
+          (schedule.status === "Overdue" ||
             (!!paymentDate && paymentDate < today));
 
         if (!isOverdue) return acc;
@@ -764,26 +840,47 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         try {
           setCreditData(null);
 
-          const credit = await getCreditById(Number(id));
-          if (credit) {
-            const needsDocsFallback =
-              !credit.guarantorFullname && !credit.guarantor?.fullName;
-            const docs = needsDocsFallback
-              ? await getDocsData(Number(id)).catch(() => null)
-              : null;
-            setCreditData(normalizeCreditDetails(credit, docs));
+          // Одиночный /Credit/{id} не отдаёт вычисляемые поля (просрочка, поручитель),
+          // поэтому параллельно берём запись из списка /Credit — там они есть и совпадают
+          // с тем, что показано в таблицах «Договора» и «Контроль договоров».
+          const [creditById, creditListResult] = await Promise.all([
+            getCreditById(Number(id)).catch(() => null),
+            getCredits({
+              creditId: id.toString(),
+              pageSize: 1,
+              includeAllStates: true,
+            }).catch(() => null),
+          ]);
+
+          const creditFromList = creditListResult?.items?.[0] ?? null;
+          const baseCredit = creditById ?? creditFromList;
+          if (!baseCredit) {
+            setCreditData(null);
             return;
           }
 
-          const creditResult = await getCredits({
-            creditId: id.toString(),
-            pageSize: 1,
-            includeAllStates: true,
-          });
-          const creditFromList = creditResult?.items?.[0] ?? null;
-          setCreditData(
-            creditFromList ? normalizeCreditDetails(creditFromList) : null
+          let merged = normalizeCreditDetails(
+            mergeListComputedFields(baseCredit, creditFromList)
           );
+
+          // Если поручитель так и не нашёлся (или нет его контактов) — добираем из
+          // create-request, где хранятся данные, введённые при оформлении договора.
+          const hasGuarantorName = !!merged.guarantorFullname;
+          const hasGuarantorContacts =
+            !!merged.guarantorPhone ||
+            !!merged.guarantorBirthdate ||
+            !!merged.guarantorAddress;
+          if (!hasGuarantorName || !hasGuarantorContacts) {
+            const request = await getCreateCreditRequest(Number(id)).catch(
+              () => null
+            );
+            merged = applyGuarantorFromRequest(
+              merged,
+              request as unknown as Record<string, unknown> | null
+            );
+          }
+
+          setCreditData(merged);
         } catch (error) {
           console.error("Error fetching data:", error);
         }
@@ -792,7 +889,14 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       fetchData();
       getCreditNotes(Number(id));
     }
-  }, [isOpen, id, getCredits, getCreditById, getCreditNotes, getDocsData]);
+  }, [
+    isOpen,
+    id,
+    getCredits,
+    getCreditById,
+    getCreditNotes,
+    getCreateCreditRequest,
+  ]);
 
   // Обновляем массив изображений при изменении заметок
   useEffect(() => {
@@ -1084,7 +1188,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     ]);
   };
 
-  const formatSchedulesData = (schedules: ScheduleItem[] | undefined) => {
+  const formatSchedulesData = (schedules: ScheduleDetails[] | undefined) => {
     if (!schedules) return [];
 
     return schedules.map((schedule) => [
@@ -1157,7 +1261,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     ]);
   };
 
-  const getScheduleRowStyle = (schedule: ScheduleItem, index: number) => {
+  const getScheduleRowStyle = (schedule: ScheduleDetails, index: number) => {
     const today = new Date();
     const paymentDate = schedule.paymentDate
       ? new Date(schedule.paymentDate)
@@ -1172,8 +1276,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     }
 
     if (
-      (schedule.status === "Overdue" ||
-        (paymentDate && paymentDate < today)) &&
+      (schedule.status === "Overdue" || (paymentDate && paymentDate < today)) &&
       schedule.paymentAmount > 0
     ) {
       return {
