@@ -22,6 +22,7 @@ import { NotificationType, type SendNotificationRequest } from '../api/types/not
 import styled from 'styled-components';
 import { useEmployee } from '../api/hooks/useEmployee';
 import CreditApplicationCompaniesManager from '../components/CreditApplicationCompaniesManager';
+import BroadcastCampaignsManager from '../components/AdminPanel/BroadcastCampaignsManager';
 
 const PaymentType = {
   ACQUIRING: 0,
@@ -599,7 +600,7 @@ const AdminPanelPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   
-  const [activeTab, setActiveTab] = useState<'companies' | 'partners' | 'credit-applications' | 'notifications'>('companies');
+  const [activeTab, setActiveTab] = useState<'companies' | 'partners' | 'credit-applications' | 'notifications' | 'broadcast'>('companies');
   
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
@@ -1032,6 +1033,10 @@ const AdminPanelPage = () => {
     return styles;
   }, {} as Record<number, RowStyle>);
 
+  const broadcastContent = (
+    <BroadcastCampaignsManager />
+  );
+
   const tableActions = hasRole('суперадмин') 
     ? activeTab === 'partners'
       ? [
@@ -1234,6 +1239,11 @@ const AdminPanelPage = () => {
       id: 'notifications',
       label: 'Рассылка',
       content: notificationsContent
+    },
+    {
+      id: 'broadcast',
+      label: 'Рекламные кампании',
+      content: broadcastContent
     }
   ];
 
@@ -1289,7 +1299,7 @@ const AdminPanelPage = () => {
         tabs={tabs}
         activeTab={activeTab}
         onChange={(tabId) => {
-          setActiveTab(tabId as 'companies' | 'partners' | 'notifications' | 'credit-applications');
+          setActiveTab(tabId as 'companies' | 'partners' | 'notifications' | 'credit-applications' | 'broadcast');
           setCurrentPage(1);
           setNameFilter('');
         }}

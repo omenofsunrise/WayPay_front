@@ -5,6 +5,7 @@ import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
 export type ModalMode = 'create' | 'edit' | 'view' | 'create-pool' | 'edit-pool';
 
 interface ModalProps {
+  isOpen?: boolean;
   title?: string;
   onClose: () => void;
   onCancel: () => void;
@@ -22,6 +23,7 @@ interface ModalProps {
 }
 
 const BaseModal: React.FC<ModalProps> = ({
+  isOpen = true,
   title,
   onClose,
   onCancel,
@@ -38,6 +40,8 @@ const BaseModal: React.FC<ModalProps> = ({
   maxHeight = '90vh'
 }) => {
   const isViewMode = mode === 'view';
+  
+  // ✅ ВСЕ ХУКИ ВЫЗЫВАЮТСЯ ДО ЛЮБОГО УСЛОВНОГО ВОЗВРАТА
   const modalRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = useState(false);
@@ -47,19 +51,15 @@ const BaseModal: React.FC<ModalProps> = ({
     onCancel();
   };
 
-  // Блокируем скролл страницы при открытии модалки
+  // ✅ Эффекты тоже до условного возврата
   useEffect(() => {
-    // Сохраняем текущую позицию скролла
     const scrollY = window.scrollY;
-    
-    // Блокируем скролл на body
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = '100%';
 
     return () => {
-      // Восстанавливаем скролл при закрытии
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top = '';
@@ -68,7 +68,6 @@ const BaseModal: React.FC<ModalProps> = ({
     };
   }, []);
 
-  // Проверяем, нужно ли включать скроллинг
   useEffect(() => {
     const checkContentHeight = () => {
       if (contentRef.current) {
@@ -79,7 +78,6 @@ const BaseModal: React.FC<ModalProps> = ({
     };
 
     checkContentHeight();
-    
     window.addEventListener('resize', checkContentHeight);
     
     const observer = new MutationObserver(checkContentHeight);
@@ -98,7 +96,6 @@ const BaseModal: React.FC<ModalProps> = ({
     };
   }, []);
 
-  // Обработчик Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -112,7 +109,6 @@ const BaseModal: React.FC<ModalProps> = ({
     };
   }, [onClose]);
 
-  // Предотвращаем скролл фона при скролле внутри модалки
   const handleModalScroll = (e: React.WheelEvent) => {
     const modalContent = contentRef.current;
     if (!modalContent) return;
@@ -121,19 +117,24 @@ const BaseModal: React.FC<ModalProps> = ({
     const isAtBottom = 
       Math.abs(modalContent.scrollHeight - modalContent.clientHeight - modalContent.scrollTop) < 1;
 
-    // Если мы вверху и скроллим вверх, или внизу и скроллим вниз - блокируем событие
     if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
       e.stopPropagation();
     }
   };
 
+  // ✅ УСЛОВНЫЙ ВОЗВРАТ ПОСЛЕ ВСЕХ ХУКОВ
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <ModalBackdrop>
+    <ModalBackdrop onClick={onClose}>
       <ModalContainer 
         width={width} 
         maxHeight={maxHeight} 
         ref={modalRef}
         onWheel={handleModalScroll}
+        onClick={(e) => e.stopPropagation()}
       >
         <CloseButton onClick={onClose}>&times;</CloseButton>
         <ModalHeader>
@@ -172,6 +173,7 @@ const BaseModal: React.FC<ModalProps> = ({
 
 export default BaseModal;
 
+// Стили остаются без изменений...
 const ModalBackdrop = styled.div`
   position: fixed;
   top: 0;
@@ -183,7 +185,7 @@ const ModalBackdrop = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  overflow: hidden; /* Важно: предотвращаем скролл бэкдропа */
+  overflow: hidden;
 `;
 
 const ModalContainer = styled.div<{ width: string; maxHeight: string }>`
@@ -200,7 +202,6 @@ const ModalContainer = styled.div<{ width: string; maxHeight: string }>`
   margin: 0;
   overflow: hidden;
   
-  /* Ограничиваем максимальную высоту относительно окна */
   @media (max-height: 768px) {
     max-height: 95vh;
   }
@@ -251,11 +252,8 @@ const ModalContent = styled.div<{ isScrollable: boolean }>`
   flex: 1;
   margin-bottom: 20px;
   min-height: 0;
-  
-  /* Всегда включаем скролл если контент не помещается */
   overflow-y: ${props => props.isScrollable ? 'auto' : 'visible'};
   
-  /* Кастомный скроллбар */
   &::-webkit-scrollbar {
     width: 8px;
   }

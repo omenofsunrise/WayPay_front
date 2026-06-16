@@ -24,6 +24,71 @@ class AdminPanelService {
   async deleteCreditApplicationCompany(id: string): Promise<void> {
     await apiClient.delete(`/AdminPanel/credit-application-companies/${id}`);
   }
+
+  async toggleWhatsAppChannel(channelId: string) {
+    const response = await apiClient.patch(
+      `/WhatsApp/broadcast-channels/${channelId}/toggle`
+    );
+    return response.data;
+  }
+
+  async createBroadcastCampaign(data: CreateBroadcastCampaignRequest): Promise<void> {
+    await apiClient.post('/AdminPanel/broadcast/campaigns', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
+  async getBroadcastCampaigns(page: number = 1, pageSize: number = 10): Promise<BroadcastCampaignsPagedResponse> {
+    const response = await apiClient.get<BroadcastCampaignsPagedResponse>('/AdminPanel/broadcast/campaigns', {
+      params: { page, pageSize },
+    });
+    return response.data;
+  }
+
+  async cancelBroadcastCampaign(id: number): Promise<void> {
+    await apiClient.delete(`/AdminPanel/cancell/broadcast/campaigns/${id}`);
+  }
+}
+
+export interface CreateBroadcastCampaignRequest {
+  title: string;
+  content: string;
+  file?: File | null;
+}
+
+export interface BroadcastCampaignMessage {
+  id: number;
+  content: string;
+  fileId: string | null;
+  campaignId: number;
+  campaign: string;
+}
+
+export interface BroadcastCampaign {
+  id: number;
+  title: string;
+  status: 'Pending' | 'InProgress' | 'Completed' | 'Failed' | 'Cancelled';
+  createdAt: string;
+  completedAt: string | null;
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+  message: {
+    id: number;
+    content: string;
+    fileId: string | null;
+    campaignId: number;
+  };
+}
+
+export interface BroadcastCampaignsPagedResponse {
+  items: BroadcastCampaign[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export default new AdminPanelService();
