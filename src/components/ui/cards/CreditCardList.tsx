@@ -9,6 +9,7 @@ interface CreditCardListProps {
   credits: Credit[];
   fields: CreditCardField[];
   getRowData: (credit: Credit) => any[];
+  getSubtitle?: (credit: Credit) => React.ReactNode;
   selectedIndices?: number[];
   highlightedCreditId?: number | null;
   onToggleSelect?: (rowIndex: number) => void;
@@ -31,6 +32,7 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
   credits,
   fields,
   getRowData,
+  getSubtitle,
   selectedIndices = [],
   highlightedCreditId = null,
   onToggleSelect,
@@ -101,6 +103,7 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
             key={credit.id}
             credit={credit}
             fields={fields}
+            subtitle={getSubtitle?.(credit)}
             selected={selectedIndices.includes(rowIndex)}
             highlighted={highlightedCreditId === credit.id}
             onClick={() => onRowClick?.(rowIndex)}

@@ -38,6 +38,9 @@ interface CreditCardProps {
   onToggleSelect?: () => void;
   onToggleFavourite?: () => void;
   onActionMenu?: (e: React.MouseEvent) => void;
+  // Доп. строка под заголовком (напр. в «Контроле» — сотрудник и доход),
+  // чтобы раздел визуально отличался от «Договоров».
+  subtitle?: React.ReactNode;
 }
 
 const FIELD_LABEL: Record<CreditCardField, string> = {
@@ -135,6 +138,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
   onToggleSelect,
   onToggleFavourite,
   onActionMenu,
+  subtitle,
 }) => {
   const status = computeStatus(credit);
   const palette = STATUS_PALETTE[status];
@@ -199,6 +203,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
             <Sep>·</Sep>
             <span>№{credit.id}</span>
           </MetaRow>
+          {subtitle && <SubtitleRow>{subtitle}</SubtitleRow>}
         </HeaderInfo>
 
         <StatusBadge
@@ -364,6 +369,20 @@ const MetaRow = styled.div`
 
 const Sep = styled.span`
   color: #cbd5e1;
+`;
+
+// Акцентная строка под мета-данными — выделяет специфику раздела
+// (в «Контроле» — сотрудник/доход).
+const SubtitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  min-width: 0;
 `;
 
 const StatusBadge = styled.span<{
