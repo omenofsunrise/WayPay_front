@@ -16,16 +16,14 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: "CREATE_CREDITS", description: "Создание договоров" },
   { code: "EDIT_CREDITS", description: "Редактирование договоров" },
   { code: "DELETE_CREDITS", description: "Удаление договоров" },
-  { code: "VIEW_CREDITS", description: "Просмотр договоров" },
   { code: "VIEW_ALL_CREDITS", description: "Просмотр всех договоров" },
   { code: "VIEW_ANALYTIC", description: "Просмотр аналитики" },
-  { code: "MANAGE_ACCOUNTING", description: "Управление бухгалтерией" },
   { code: "FORBID_CREATING_CREDITS", description: "Запрет создания договоров" },
   { code: "FORBID_CREATING_PAYMENTS", description: "Запрет создания платежей" },
   { code: "FORBID_DELETING_PAYMENTS", description: "Запрет удаления платежей" },
   {
     code: "FORBID_CREDIT_APPLICATIONS",
-    description: "Запрет заявок на договор",
+    description: "Запретить просмотр заявок",
   },
 ];
 
