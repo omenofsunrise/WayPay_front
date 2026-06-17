@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
-import styled, { css } from 'styled-components';
-import type { BotEventType } from '../../api/types/whatsapp';
+import { useMemo, useRef, useState } from "react";
+import styled, { css } from "styled-components";
+import type { BotEventType } from "../../api/types/whatsapp";
 import {
   BOT_LOOPS,
   BOT_TEMPLATES,
@@ -10,45 +10,45 @@ import {
   validateBotTemplate,
   type BotLoop,
   type BotTemplate,
-  type LoopType
-} from './botTemplateVariables';
+  type LoopType,
+} from "./botTemplateVariables";
 
 interface BotResponseConstructorProps {
   value: string;
   onChange: (next: string) => void;
   disabled?: boolean;
-  mode?: 'default' | 'companyOnly';
+  mode?: "default" | "companyOnly";
   event?: BotEventType | null;
 }
 
-const SCOPE_ACCENTS: Record<'global' | LoopType, string> = {
-  global: '#007D88',
-  foreachLoan: '#E07B00',
-  foreachPaymentInLoan: '#C2410C',
-  foreachPayment: '#9333EA',
-  foreachSchedule: '#0EA5E9',
-  foreachPaymentInCurrentLoan: '#DC2626'
+const SCOPE_ACCENTS: Record<"global" | LoopType, string> = {
+  global: "#007D88",
+  foreachLoan: "#E07B00",
+  foreachPaymentInLoan: "#C2410C",
+  foreachPayment: "#9333EA",
+  foreachSchedule: "#0EA5E9",
+  foreachScheduleInCurrentLoan: "#DC2626",
 };
 
-const SCOPE_BG: Record<'global' | LoopType, string> = {
-  global: 'rgba(0, 125, 136, 0.08)',
-  foreachLoan: 'rgba(224, 123, 0, 0.08)',
-  foreachPaymentInLoan: 'rgba(194, 65, 12, 0.08)',
-  foreachPayment: 'rgba(147, 51, 234, 0.08)',
-  foreachSchedule: 'rgba(14, 165, 233, 0.08)',
-  foreachPaymentInCurrentLoan: 'rgba(220, 38, 38, 0.08)'
+const SCOPE_BG: Record<"global" | LoopType, string> = {
+  global: "rgba(0, 125, 136, 0.08)",
+  foreachLoan: "rgba(224, 123, 0, 0.08)",
+  foreachPaymentInLoan: "rgba(194, 65, 12, 0.08)",
+  foreachPayment: "rgba(147, 51, 234, 0.08)",
+  foreachSchedule: "rgba(14, 165, 233, 0.08)",
+  foreachScheduleInCurrentLoan: "rgba(220, 38, 38, 0.08)",
 };
 
 const LOOP_TYPE_SET = new Set<LoopType>([
-  'foreachLoan',
-  'foreachPaymentInLoan',
-  'foreachPayment',
-  'foreachSchedule',
-  'foreachPaymentInCurrentLoan'
+  "foreachLoan",
+  "foreachPaymentInLoan",
+  "foreachPayment",
+  "foreachSchedule",
+  "foreachScheduleInCurrentLoan",
 ]);
 
-const VARIABLE_SCOPE: Record<string, 'global' | LoopType> = (() => {
-  const map: Record<string, 'global' | LoopType> = {};
+const VARIABLE_SCOPE: Record<string, "global" | LoopType> = (() => {
+  const map: Record<string, "global" | LoopType> = {};
   for (const group of BOT_VARIABLE_GROUPS) {
     for (const v of group.variables) map[v.key] = group.scope;
   }
@@ -68,16 +68,24 @@ function tokenizeTemplate(template: string): HighlightToken[] {
   let m: RegExpExecArray | null;
   while ((m = regex.exec(template)) !== null) {
     if (m.index > last) tokens.push({ text: template.slice(last, m.index) });
-    const isClose = m[1] === '/';
+    const isClose = m[1] === "/";
     const name = m[2];
     if (LOOP_TYPE_SET.has(name as LoopType)) {
       const accent = SCOPE_ACCENTS[name as LoopType];
-      tokens.push({ text: m[0], color: accent, bg: SCOPE_BG[name as LoopType] });
+      tokens.push({
+        text: m[0],
+        color: accent,
+        bg: SCOPE_BG[name as LoopType],
+      });
     } else if (!isClose && VARIABLE_SCOPE[name]) {
       const scope = VARIABLE_SCOPE[name];
-      tokens.push({ text: m[0], color: SCOPE_ACCENTS[scope], bg: SCOPE_BG[scope] });
+      tokens.push({
+        text: m[0],
+        color: SCOPE_ACCENTS[scope],
+        bg: SCOPE_BG[scope],
+      });
     } else {
-      tokens.push({ text: m[0], color: '#dc2626' });
+      tokens.push({ text: m[0], color: "#dc2626" });
     }
     last = m.index + m[0].length;
   }
@@ -85,17 +93,26 @@ function tokenizeTemplate(template: string): HighlightToken[] {
   return tokens;
 }
 
-const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', event = null }: BotResponseConstructorProps) => {
+const BotResponseConstructor = ({
+  value,
+  onChange,
+  disabled,
+  mode = "default",
+  event = null,
+}: BotResponseConstructorProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [cursorPos, setCursorPos] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
-  const isCompanyOnly = mode === 'companyOnly';
-  const matchesEvent = (required?: BotEventType): boolean => !required || required === event;
+  const isCompanyOnly = mode === "companyOnly";
+  const matchesEvent = (required?: BotEventType): boolean =>
+    !required || required === event;
   const visibleTemplates = isCompanyOnly ? [] : BOT_TEMPLATES;
-  const visibleLoops = isCompanyOnly ? [] : BOT_LOOPS.filter(l => matchesEvent(l.requiredEvent));
+  const visibleLoops = isCompanyOnly
+    ? []
+    : BOT_LOOPS.filter((l) => matchesEvent(l.requiredEvent));
   const visibleVarGroups = isCompanyOnly
-    ? BOT_VARIABLE_GROUPS.filter(g => g.title === 'Глобальные — Компания')
-    : BOT_VARIABLE_GROUPS.filter(g => matchesEvent(g.requiredEvent));
+    ? BOT_VARIABLE_GROUPS.filter((g) => g.title === "Глобальные — Компания")
+    : BOT_VARIABLE_GROUPS.filter((g) => matchesEvent(g.requiredEvent));
 
   const handleSelect = () => {
     const el = textareaRef.current;
@@ -118,7 +135,10 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
     const next = value.substring(0, start) + snippet + value.substring(end);
     onChange(next);
 
-    const newPos = cursorOffset !== undefined ? start + cursorOffset : start + snippet.length;
+    const newPos =
+      cursorOffset !== undefined
+        ? start + cursorOffset
+        : start + snippet.length;
     setTimeout(() => {
       el.focus();
       el.setSelectionRange(newPos, newPos);
@@ -129,7 +149,7 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
   const insertVariable = (key: string) => insertAtCursor(`{${key}}`);
 
   const insertLoop = (loop: BotLoop) => {
-    const indent = '  ';
+    const indent = "  ";
     const snippet = `{${loop.type}}\n${indent}\n{/${loop.type}}`;
     const cursorOffset = `{${loop.type}}\n${indent}`.length;
     insertAtCursor(snippet, cursorOffset);
@@ -156,7 +176,10 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
     }, 0);
   };
 
-  const cursorContext = useMemo(() => detectCursorContext(value, cursorPos), [value, cursorPos]);
+  const cursorContext = useMemo(
+    () => detectCursorContext(value, cursorPos),
+    [value, cursorPos]
+  );
   const issues = useMemo(() => validateBotTemplate(value), [value]);
   const preview = useMemo(() => renderBotTemplate(value), [value]);
   const tokens = useMemo(() => tokenizeTemplate(value), [value]);
@@ -166,70 +189,74 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
     <Layout>
       <EditorColumn>
         {visibleTemplates.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Dot $color="#7C3AED" /> Готовые шаблоны
-            </CardTitle>
-            <CardHint>Кликни — подставит шаблон в редактор</CardHint>
-          </CardHeader>
-          <TemplatesGrid>
-            {visibleTemplates.map(template => (
-              <TemplateCard
-                key={template.id}
-                onClick={() => applyTemplate(template)}
-                disabled={disabled}
-                title={template.description}
-              >
-                <TemplateTitle>{template.title}</TemplateTitle>
-                <TemplateDescription>{template.description}</TemplateDescription>
-              </TemplateCard>
-            ))}
-          </TemplatesGrid>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Dot $color="#7C3AED" /> Готовые шаблоны
+              </CardTitle>
+              <CardHint>Кликни — подставит шаблон в редактор</CardHint>
+            </CardHeader>
+            <TemplatesGrid>
+              {visibleTemplates.map((template) => (
+                <TemplateCard
+                  key={template.id}
+                  onClick={() => applyTemplate(template)}
+                  disabled={disabled}
+                  title={template.description}
+                >
+                  <TemplateTitle>{template.title}</TemplateTitle>
+                  <TemplateDescription>
+                    {template.description}
+                  </TemplateDescription>
+                </TemplateCard>
+              ))}
+            </TemplatesGrid>
+          </Card>
         )}
 
         {visibleLoops.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Dot $color="#007D88" /> Циклы
-            </CardTitle>
-            <CardHint>Кликни — вставится парный блок с курсором внутри</CardHint>
-          </CardHeader>
-          <LoopGrid>
-            {visibleLoops.map(loop => {
-              const isNested = loop.parent !== undefined;
-              const canInsert = isNestingAllowed(loop.type, cursorContext);
-              const top = cursorContext[cursorContext.length - 1];
-              const accent = SCOPE_ACCENTS[loop.type];
-              const blockedReason = !canInsert
-                ? isNested
-                  ? top
-                    ? `Можно вставить только внутри {${loop.parent}}, а курсор сейчас в {${top}}`
-                    : `Можно вставить только внутри {${loop.parent}}`
-                  : `Циклы нельзя вкладывать друг в друга — курсор внутри {${top}}`
-                : null;
-              return (
-                <LoopCard
-                  key={loop.type}
-                  onClick={() => insertLoop(loop)}
-                  disabled={disabled || !canInsert}
-                  $accent={accent}
-                  title={blockedReason ?? loop.description}
-                >
-                  <LoopCardTopRow>
-                    <LoopCardTitle>{loop.label}</LoopCardTitle>
-                    {isNested && <LoopCardBadge>вложенный</LoopCardBadge>}
-                  </LoopCardTopRow>
-                  <LoopCardTag>
-                    {'{' + loop.type + '}'} … {'{/' + loop.type + '}'}
-                  </LoopCardTag>
-                </LoopCard>
-              );
-            })}
-          </LoopGrid>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Dot $color="#007D88" /> Циклы
+              </CardTitle>
+              <CardHint>
+                Кликни — вставится парный блок с курсором внутри
+              </CardHint>
+            </CardHeader>
+            <LoopGrid>
+              {visibleLoops.map((loop) => {
+                const isNested = loop.parent !== undefined;
+                const canInsert = isNestingAllowed(loop.type, cursorContext);
+                const top = cursorContext[cursorContext.length - 1];
+                const accent = SCOPE_ACCENTS[loop.type];
+                const blockedReason = !canInsert
+                  ? isNested
+                    ? top
+                      ? `Можно вставить только внутри {${loop.parent}}, а курсор сейчас в {${top}}`
+                      : `Можно вставить только внутри {${loop.parent}}`
+                    : `Циклы нельзя вкладывать друг в друга — курсор внутри {${top}}`
+                  : null;
+                return (
+                  <LoopCard
+                    key={loop.type}
+                    onClick={() => insertLoop(loop)}
+                    disabled={disabled || !canInsert}
+                    $accent={accent}
+                    title={blockedReason ?? loop.description}
+                  >
+                    <LoopCardTopRow>
+                      <LoopCardTitle>{loop.label}</LoopCardTitle>
+                      {isNested && <LoopCardBadge>вложенный</LoopCardBadge>}
+                    </LoopCardTopRow>
+                    <LoopCardTag>
+                      {"{" + loop.type + "}"} … {"{/" + loop.type + "}"}
+                    </LoopCardTag>
+                  </LoopCard>
+                );
+              })}
+            </LoopGrid>
+          </Card>
         )}
 
         <Card>
@@ -239,15 +266,19 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
             </CardTitle>
             <ContextChip $context={cursorContext}>
               {cursorContext.length === 0
-                ? 'Курсор: вне циклов'
-                : `Курсор: ${cursorContext.map(c => '{' + c + '}').join(' → ')}`}
+                ? "Курсор: вне циклов"
+                : `Курсор: ${cursorContext
+                    .map((c) => "{" + c + "}")
+                    .join(" → ")}`}
             </ContextChip>
           </CardHeader>
 
           <EditorShell $hasIssues={issues.length > 0}>
             <TextareaStage>
               <Highlight aria-hidden>
-                <HighlightInner style={{ transform: `translateY(${-scrollTop}px)` }}>
+                <HighlightInner
+                  style={{ transform: `translateY(${-scrollTop}px)` }}
+                >
                   {tokens.map((t, i) => (
                     <HighlightToken
                       key={i}
@@ -260,13 +291,13 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
                       {t.text}
                     </HighlightToken>
                   ))}
-                  {value.endsWith('\n') && '​'}
+                  {value.endsWith("\n") && "​"}
                 </HighlightInner>
               </Highlight>
               <Textarea
                 ref={textareaRef}
                 value={value}
-                onChange={e => onChange(e.target.value)}
+                onChange={(e) => onChange(e.target.value)}
                 onSelect={handleSelect}
                 onKeyUp={handleSelect}
                 onClick={handleSelect}
@@ -279,7 +310,9 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
             <EditorFooter>
               <span>{charCount} симв.</span>
               {issues.length > 0 ? (
-                <FooterStatus $error>● {issues.length} ошибк{pluralize(issues.length)}</FooterStatus>
+                <FooterStatus $error>
+                  ● {issues.length} ошибк{pluralize(issues.length)}
+                </FooterStatus>
               ) : value.trim() ? (
                 <FooterStatus>● шаблон валиден</FooterStatus>
               ) : (
@@ -311,7 +344,9 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
             {preview ? (
               <PreviewBubble>{preview}</PreviewBubble>
             ) : (
-              <PreviewEmpty>Здесь появится сообщение, которое получит клиент</PreviewEmpty>
+              <PreviewEmpty>
+                Здесь появится сообщение, которое получит клиент
+              </PreviewEmpty>
             )}
           </PreviewStage>
         </Card>
@@ -325,21 +360,31 @@ const BotResponseConstructor = ({ value, onChange, disabled, mode = 'default', e
             </CardTitle>
           </CardHeader>
           <VarGroupsList>
-            {visibleVarGroups.map(group => {
+            {visibleVarGroups.map((group) => {
               const accent = SCOPE_ACCENTS[group.scope];
               const bg = SCOPE_BG[group.scope];
               const isAvailable =
-                group.scope === 'global' ||
+                group.scope === "global" ||
                 cursorContext.includes(group.scope as LoopType);
               return (
-                <VarGroup key={group.title} $dim={!isAvailable} $accent={accent}>
+                <VarGroup
+                  key={group.title}
+                  $dim={!isAvailable}
+                  $accent={accent}
+                >
                   <VarGroupHeader>
-                    <VarGroupTitle $accent={accent}>{group.title}</VarGroupTitle>
-                    {!isAvailable && <VarGroupLock>не в контексте</VarGroupLock>}
+                    <VarGroupTitle $accent={accent}>
+                      {group.title}
+                    </VarGroupTitle>
+                    {!isAvailable && (
+                      <VarGroupLock>не в контексте</VarGroupLock>
+                    )}
                   </VarGroupHeader>
-                  {group.description && <VarGroupHint>{group.description}</VarGroupHint>}
+                  {group.description && (
+                    <VarGroupHint>{group.description}</VarGroupHint>
+                  )}
                   <VarGroupButtons>
-                    {group.variables.map(v => (
+                    {group.variables.map((v) => (
                       <VarButton
                         key={v.key}
                         onClick={() => insertVariable(v.key)}
@@ -367,20 +412,21 @@ export default BotResponseConstructor;
 function pluralize(n: number): string {
   const mod10 = n % 10;
   const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'а';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'и';
-  return '';
+  if (mod10 === 1 && mod100 !== 11) return "а";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "и";
+  return "";
 }
 
 function detectCursorContext(template: string, cursorPos: number): LoopType[] {
   const stack: LoopType[] = [];
-  const tagRegex = /\{(\/?)(foreachLoan|foreachPaymentInLoan|foreachPaymentInCurrentLoan|foreachPayment|foreachSchedule)\}/g;
+  const tagRegex =
+    /\{(\/?)(foreachLoan|foreachPaymentInLoan|foreachScheduleInCurrentLoan|foreachPayment|foreachSchedule)\}/g;
   let match: RegExpExecArray | null;
 
   while ((match = tagRegex.exec(template)) !== null) {
     const tagEnd = match.index + match[0].length;
     if (tagEnd > cursorPos) break;
-    const isClose = match[1] === '/';
+    const isClose = match[1] === "/";
     const loop = match[2] as LoopType;
     if (!isClose) {
       stack.push(loop);
@@ -423,7 +469,7 @@ const Card = styled.section<{ $sticky?: boolean }>`
   padding: 16px 18px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 
-  ${props =>
+  ${(props) =>
     props.$sticky &&
     css`
       position: sticky;
@@ -460,8 +506,8 @@ const Dot = styled.span<{ $color: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${p => p.$color};
-  box-shadow: 0 0 0 3px ${p => p.$color}22;
+  background: ${(p) => p.$color};
+  box-shadow: 0 0 0 3px ${(p) => p.$color}22;
 `;
 
 const CardHint = styled.span`
@@ -485,12 +531,12 @@ const TemplatesGrid = styled.div`
 const TemplateCard = styled.button<{ disabled?: boolean }>`
   background: white;
   border: 1px solid rgba(124, 58, 237, 0.25);
-  border-left: 4px solid #7C3AED;
+  border-left: 4px solid #7c3aed;
   border-radius: 10px;
   padding: 10px 12px;
   text-align: left;
-  cursor: ${p => (p.disabled ? 'not-allowed' : 'pointer')};
-  opacity: ${p => (p.disabled ? 0.45 : 1)};
+  cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")};
+  opacity: ${(p) => (p.disabled ? 0.45 : 1)};
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
@@ -524,13 +570,13 @@ const TemplateDescription = styled.span`
 
 const LoopCard = styled.button<{ $accent: string; disabled?: boolean }>`
   background: white;
-  border: 1px solid ${p => p.$accent}55;
-  border-left: 4px solid ${p => p.$accent};
+  border: 1px solid ${(p) => p.$accent}55;
+  border-left: 4px solid ${(p) => p.$accent};
   border-radius: 10px;
   padding: 10px 12px;
   text-align: left;
-  cursor: ${p => (p.disabled ? 'not-allowed' : 'pointer')};
-  opacity: ${p => (p.disabled ? 0.45 : 1)};
+  cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")};
+  opacity: ${(p) => (p.disabled ? 0.45 : 1)};
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
@@ -539,9 +585,9 @@ const LoopCard = styled.button<{ $accent: string; disabled?: boolean }>`
   overflow: hidden;
 
   &:hover:not(:disabled) {
-    background: ${p => p.$accent}10;
+    background: ${(p) => p.$accent}10;
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px ${p => p.$accent}25;
+    box-shadow: 0 4px 10px ${(p) => p.$accent}25;
   }
 
   &:active:not(:disabled) {
@@ -569,7 +615,7 @@ const LoopCardTitle = styled.span`
 const LoopCardTag = styled.code`
   font-size: 10.5px;
   color: #64748b;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
   word-break: break-all;
   line-height: 1.3;
 `;
@@ -593,22 +639,24 @@ const ContextChip = styled.span<{ $context: LoopType[] }>`
   padding: 4px 10px;
   border-radius: 20px;
   font-weight: 500;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  background: ${p => (p.$context.length === 0 ? '#f1f5f9' : '#fef3c7')};
-  color: ${p => (p.$context.length === 0 ? '#64748b' : '#92400e')};
-  border: 1px solid ${p => (p.$context.length === 0 ? '#e2e8f0' : '#fcd34d')};
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  background: ${(p) => (p.$context.length === 0 ? "#f1f5f9" : "#fef3c7")};
+  color: ${(p) => (p.$context.length === 0 ? "#64748b" : "#92400e")};
+  border: 1px solid ${(p) => (p.$context.length === 0 ? "#e2e8f0" : "#fcd34d")};
 `;
 
 const EditorShell = styled.div<{ $hasIssues: boolean }>`
-  border: 1px solid ${p => (p.$hasIssues ? '#fca5a5' : '#d1d5db')};
+  border: 1px solid ${(p) => (p.$hasIssues ? "#fca5a5" : "#d1d5db")};
   border-radius: 10px;
   background: #fafbfc;
   overflow: hidden;
   transition: border-color 0.15s ease;
 
   &:focus-within {
-    border-color: ${p => (p.$hasIssues ? '#ef4444' : '#007D88')};
-    box-shadow: 0 0 0 3px ${p => (p.$hasIssues ? 'rgba(239, 68, 68, 0.1)' : 'rgba(0, 125, 136, 0.12)')};
+    border-color: ${(p) => (p.$hasIssues ? "#ef4444" : "#007D88")};
+    box-shadow: 0 0 0 3px
+      ${(p) =>
+        p.$hasIssues ? "rgba(239, 68, 68, 0.1)" : "rgba(0, 125, 136, 0.12)"};
   }
 `;
 
@@ -627,7 +675,7 @@ const Highlight = styled.div`
 const HighlightInner = styled.div`
   padding: 14px 16px;
   font-size: 13px;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
   line-height: 1.6;
   letter-spacing: 0;
   text-align: left;
@@ -652,7 +700,7 @@ const Textarea = styled.textarea<{ disabled?: boolean }>`
   padding: 14px 16px;
   border: none;
   font-size: 13px;
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
   line-height: 1.6;
   letter-spacing: 0;
   text-align: left;
@@ -700,7 +748,7 @@ const EditorFooter = styled.div`
 
 const FooterStatus = styled.span<{ $error?: boolean; $muted?: boolean }>`
   font-weight: 500;
-  color: ${p => (p.$error ? '#dc2626' : p.$muted ? '#94a3b8' : '#16a34a')};
+  color: ${(p) => (p.$error ? "#dc2626" : p.$muted ? "#94a3b8" : "#16a34a")};
 `;
 
 const IssuesBox = styled.div`
@@ -730,9 +778,12 @@ const IssueIcon = styled.span`
 `;
 
 const PreviewStage = styled.div`
-  background: #ECE5DD;
-  background-image:
-    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.04) 1px, transparent 0);
+  background: #ece5dd;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(0, 0, 0, 0.04) 1px,
+    transparent 0
+  );
   background-size: 12px 12px;
   border-radius: 10px;
   padding: 16px 14px;
@@ -742,7 +793,7 @@ const PreviewStage = styled.div`
 `;
 
 const PreviewBubble = styled.div`
-  background: #DCF8C6;
+  background: #dcf8c6;
   color: #0f172a;
   padding: 10px 14px;
   border-radius: 12px;
@@ -754,7 +805,7 @@ const PreviewBubble = styled.div`
   white-space: pre-wrap;
   word-break: break-word;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
-  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
   position: relative;
 `;
 
@@ -787,10 +838,10 @@ const VarGroupsList = styled.div`
 const VarGroup = styled.div<{ $dim?: boolean; $accent: string }>`
   background: white;
   border: 1px solid #e5e7eb;
-  border-left: 3px solid ${p => p.$accent};
+  border-left: 3px solid ${(p) => p.$accent};
   border-radius: 8px;
   padding: 10px 12px;
-  opacity: ${p => (p.$dim ? 0.5 : 1)};
+  opacity: ${(p) => (p.$dim ? 0.5 : 1)};
   transition: opacity 0.15s ease;
 `;
 
@@ -805,7 +856,7 @@ const VarGroupHeader = styled.div`
 const VarGroupTitle = styled.div<{ $accent: string }>`
   font-size: 11.5px;
   font-weight: 700;
-  color: ${p => p.$accent};
+  color: ${(p) => p.$accent};
   letter-spacing: 0.2px;
 `;
 
@@ -833,22 +884,26 @@ const VarGroupButtons = styled.div`
   gap: 4px;
 `;
 
-const VarButton = styled.button<{ disabled?: boolean; $accent: string; $bg: string }>`
-  background: ${p => p.$bg};
-  color: ${p => p.$accent};
-  border: 1px solid ${p => p.$accent}33;
+const VarButton = styled.button<{
+  disabled?: boolean;
+  $accent: string;
+  $bg: string;
+}>`
+  background: ${(p) => p.$bg};
+  color: ${(p) => p.$accent};
+  border: 1px solid ${(p) => p.$accent}33;
   padding: 3px 8px;
   border-radius: 5px;
-  cursor: ${p => (p.disabled ? 'not-allowed' : 'pointer')};
+  cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")};
   font-size: 11px;
   font-weight: 500;
   transition: all 0.12s ease;
   line-height: 1.4;
 
   &:hover:not(:disabled) {
-    background: ${p => p.$accent};
+    background: ${(p) => p.$accent};
     color: white;
-    border-color: ${p => p.$accent};
+    border-color: ${(p) => p.$accent};
     transform: translateY(-1px);
   }
 `;
