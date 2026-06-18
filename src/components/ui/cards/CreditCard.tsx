@@ -41,6 +41,9 @@ interface CreditCardProps {
   // Доп. строка под заголовком (напр. в «Контроле» — сотрудник и доход),
   // чтобы раздел визуально отличался от «Договоров».
   subtitle?: React.ReactNode;
+  // Переопределение заголовка карточки. По умолчанию — ФИО клиента
+  // (в «Контроле договоров» сюда передаётся имя сотрудника).
+  title?: React.ReactNode;
 }
 
 const FIELD_LABEL: Record<CreditCardField, string> = {
@@ -139,6 +142,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
   onToggleFavourite,
   onActionMenu,
   subtitle,
+  title,
 }) => {
   const status = computeStatus(credit);
   const palette = STATUS_PALETTE[status];
@@ -171,7 +175,7 @@ const CreditCard: React.FC<CreditCardProps> = ({
 
         <HeaderInfo>
           <TitleRow>
-            <Title>{credit.clientFullName || `№${credit.id}`}</Title>
+            <Title>{title ?? (credit.clientFullName || `№${credit.id}`)}</Title>
             {onToggleFavourite && (
               <FavButton
                 type="button"

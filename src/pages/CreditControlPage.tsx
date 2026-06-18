@@ -207,12 +207,13 @@ const CreditControlPage = () => {
   );
 
   // Список для отображения. По умолчанию (как в разделе «Договоры») скрываем
-  // архивные договоры (isActive === false) — показываем их только на вкладке
-  // «В архиве».
+  // архивные/расторгнутые договоры — в «Договорах» это фильтр `terminated !== true`,
+  // плюс прячем неактивные (isActive === false). Показываем их только на
+  // вкладке «В архиве».
   const displayedCredits = useMemo(() => {
     const list = isListMode ? accumulatedItems : creditsData?.items ?? [];
     if (activeTab === "archive") return list;
-    return list.filter((c) => c.isActive !== false);
+    return list.filter((c) => c.terminated !== true && c.isActive !== false);
   }, [isListMode, accumulatedItems, creditsData?.items, activeTab]);
 
   // Функция для подсчета количества активных фильтров (исключая выбранную вкладку)
@@ -1407,15 +1408,11 @@ const CreditControlPage = () => {
                     "accured",
                   ] as CreditCardField[]
                 }
+                getTitle={(credit) => credit.employeeName || "—"}
                 getSubtitle={(credit) => (
-                  <>
-                    <span>👤 {credit.employeeName || "—"}</span>
-                    <span>·</span>
-                    <span>
-                      Доход {formatMoney((credit.incomeRubles ?? 0).toString())}
-                      {" ₽"}
-                    </span>
-                  </>
+                  <span>
+                    Доход {formatMoney((credit.incomeRubles ?? 0).toString())}
+                  </span>
                 )}
                 getRowData={(credit) => [
                   null,
