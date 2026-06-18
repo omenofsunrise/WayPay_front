@@ -1409,11 +1409,6 @@ const CreditControlPage = () => {
                   ] as CreditCardField[]
                 }
                 getTitle={(credit) => credit.employeeName || "—"}
-                getSubtitle={(credit) => (
-                  <span>
-                    Доход {formatMoney((credit.incomeRubles ?? 0).toString())}
-                  </span>
-                )}
                 getRowData={(credit) => [
                   null,
                   credit.id.toString(),

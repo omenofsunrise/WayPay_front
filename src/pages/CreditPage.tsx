@@ -9,6 +9,8 @@ import CreditCardList from "../components/ui/cards/CreditCardList";
 import type { CreditCardField } from "../components/ui/cards/CreditCard";
 import Pagination from "../components/ui/fields/CustomPagination";
 import PageLayout from "../components/ui/Layouts/PageLayout";
+import CustomTitle from "../components/ui/Text/CustomTitle";
+import TitleField from "../components/ui/Layouts/TitleLayout";
 import styled from "styled-components";
 import Tabs from "../components/ui/fields/Tabs";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
@@ -1747,6 +1749,10 @@ const CreditPage = () => {
         )}
       </FilterIconButton>
 
+      <TitleField>
+        <CustomTitle>Договоры</CustomTitle>
+      </TitleField>
+
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
           onKeyDown={(e) => {
@@ -2362,8 +2368,9 @@ const FilterTotalCount = styled.div`
   width: 100%;
   box-sizing: border-box;
   margin-top: 12px;
-  padding: 4px 10px;
-  border-left: 3px solid #0f766e;
+  /* Выравниваем по левому краю блоков фильтра выше (без отступа/бордюра,
+     которые раньше сдвигали «Всего договоров» вправо). */
+  padding: 4px 0;
 `;
 
 const FilterTotalLabel = styled.span`
