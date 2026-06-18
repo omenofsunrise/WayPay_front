@@ -1,53 +1,64 @@
-import { useAuth } from '../сontext/AuthContext';
-import PageLayout from '../components/ui/Layouts/PageLayout';
-import CustomTitle from '../components/ui/Text/CustomTitle';
-import TitleField from '../components/ui/Layouts/TitleLayout';
-import CustomTable, { type RowStyle } from '../components/ui/tables/CustomTable';
-import { useState, useCallback, useEffect } from 'react';
-import useCompany from '../api/hooks/useCompany';
-import CompanyModal, { type CompanyModalData } from '../components/modal/CrudInherited/CompanyModal';
-import type { Company, SubscriptionStatistic } from '../api/types/company';
-import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
-import BaseModal from '../components/modal/BASE/modalCRUBase';
-import CustomInput from '../components/ui/fields/CustomInput';
-import { formatDate } from '../utils/dateFormatter';
-import { formatPhoneHref } from '../utils/phoneUtils';
-import PhoneLink from '../components/ui/links/PhoneLink';
-import CustomPhoneInput from '../components/ui/fields/PhoneInput';
-import Pagination from '../components/ui/fields/CustomPagination';
-import PaginationLayout from '../components/ui/Layouts/PaginationLayout';
-import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
-import useAdminPanel from '../api/hooks/useAdminPanel';
-import { NotificationType, type SendNotificationRequest } from '../api/types/notification';
-import styled from 'styled-components';
-import { useEmployee } from '../api/hooks/useEmployee';
-import CreditApplicationCompaniesManager from '../components/CreditApplicationCompaniesManager';
-import BroadcastCampaignsManager from '../components/AdminPanel/BroadcastCampaignsManager';
+import { useAuth } from "../сontext/AuthContext";
+import PageLayout from "../components/ui/Layouts/PageLayout";
+import CustomTitle from "../components/ui/Text/CustomTitle";
+import TitleField from "../components/ui/Layouts/TitleLayout";
+import CustomTable, {
+  type RowStyle,
+  type Column,
+} from "../components/ui/tables/CustomTable";
+import { useState, useCallback, useEffect } from "react";
+import useCompany from "../api/hooks/useCompany";
+import CompanyModal, {
+  type CompanyModalData,
+} from "../components/modal/CrudInherited/CompanyModal";
+import type { Company, SubscriptionStatistic } from "../api/types/company";
+import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
+import BaseModal from "../components/modal/BASE/modalCRUBase";
+import CustomInput from "../components/ui/fields/CustomInput";
+import { formatDate } from "../utils/dateFormatter";
+import { formatPhoneHref } from "../utils/phoneUtils";
+import PhoneLink from "../components/ui/links/PhoneLink";
+import CustomPhoneInput from "../components/ui/fields/PhoneInput";
+import Pagination from "../components/ui/fields/CustomPagination";
+import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
+import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
+import useAdminPanel from "../api/hooks/useAdminPanel";
+import {
+  NotificationType,
+  type SendNotificationRequest,
+} from "../api/types/notification";
+import styled from "styled-components";
+import { useEmployee } from "../api/hooks/useEmployee";
+import CreditApplicationCompaniesManager from "../components/CreditApplicationCompaniesManager";
+import BroadcastCampaignsManager from "../components/AdminPanel/BroadcastCampaignsManager";
+import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
+
+const SALES_MODE_STORAGE_KEY = "adminSalesMode";
 
 const PaymentType = {
   ACQUIRING: 0,
   CASH: 1,
-  FREE: 2
+  FREE: 2,
 } as const;
 
-type PaymentTypeValue = typeof PaymentType[keyof typeof PaymentType];
+type PaymentTypeValue = (typeof PaymentType)[keyof typeof PaymentType];
 
 const formatCurrency = (cost: number): string => {
   const rubles = cost / 100;
-  return `${new Intl.NumberFormat('ru-RU').format(rubles)} ₽`;
+  return `${new Intl.NumberFormat("ru-RU").format(rubles)} ₽`;
 };
 
 const formatDateTime = (date?: Date | string): string => {
-  if (!date) return 'Нет данных';
+  if (!date) return "Нет данных";
   const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return 'Нет данных';
+  if (Number.isNaN(parsed.getTime())) return "Нет данных";
 
-  return parsed.toLocaleString('ru-RU', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
+  return parsed.toLocaleString("ru-RU", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
@@ -55,37 +66,55 @@ const getPeriodDays = (startAt: string, endAt: string): number => {
   const start = new Date(startAt);
   const end = new Date(endAt);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
-  return Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  return Math.max(
+    0,
+    Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  );
 };
 
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (days: number, cost: number, paymentType: PaymentTypeValue) => void;
+  onConfirm: (
+    days: number,
+    cost: number,
+    paymentType: PaymentTypeValue
+  ) => void;
   companyName: string;
   isSubmitting: boolean;
 }
 
-const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitting }: SubscriptionModalProps) => {
-  const [days, setDays] = useState<string>('');
-  const [cost, setCost] = useState<string>('');
-  const [paymentType, setPaymentType] = useState<PaymentTypeValue>(PaymentType.CASH);
+const SubscriptionModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  companyName,
+  isSubmitting,
+}: SubscriptionModalProps) => {
+  const [days, setDays] = useState<string>("");
+  const [cost, setCost] = useState<string>("");
+  const [paymentType, setPaymentType] = useState<PaymentTypeValue>(
+    PaymentType.CASH
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numericDays = parseInt(days);
     const numericCost = parseInt(cost);
-    
+
     if (isNaN(numericDays) || numericDays <= 0) {
-      alert('Количество дней должно быть больше 0');
+      alert("Количество дней должно быть больше 0");
       return;
     }
-    
-    if (paymentType === PaymentType.CASH && (isNaN(numericCost) || numericCost <= 0)) {
-      alert('При оплате наличными сумма должна быть больше 0');
+
+    if (
+      paymentType === PaymentType.CASH &&
+      (isNaN(numericCost) || numericCost <= 0)
+    ) {
+      alert("При оплате наличными сумма должна быть больше 0");
       return;
     }
-    
+
     if (paymentType === PaymentType.FREE) {
       onConfirm(numericDays, 0, paymentType);
     } else {
@@ -103,21 +132,30 @@ const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitti
       onSave={handleSubmit}
       isSubmitting={isSubmitting}
     >
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+      <div style={{ padding: "20px" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "bold",
+              color: "black",
+            }}
+          >
             Тип оплаты:
           </label>
-          <select 
+          <select
             value={paymentType}
-            onChange={(e) => setPaymentType(parseInt(e.target.value) as PaymentTypeValue)}
-            style={{ 
-              width: '100%', 
-              padding: '10px', 
-              border: '1px solid #ccc', 
-              backgroundColor: 'white',
-              color: 'black',
-              borderRadius: '4px' 
+            onChange={(e) =>
+              setPaymentType(parseInt(e.target.value) as PaymentTypeValue)
+            }
+            style={{
+              width: "100%",
+              padding: "10px",
+              border: "1px solid #ccc",
+              backgroundColor: "white",
+              color: "black",
+              borderRadius: "4px",
             }}
           >
             <option value={PaymentType.CASH}>Наличные</option>
@@ -125,8 +163,15 @@ const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitti
           </select>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "bold",
+              color: "black",
+            }}
+          >
             Количество дней:
           </label>
           <CustomInput
@@ -139,8 +184,15 @@ const SubscriptionModal = ({ isOpen, onClose, onConfirm, companyName, isSubmitti
         </div>
 
         {paymentType === PaymentType.CASH && (
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontWeight: "bold",
+                color: "black",
+              }}
+            >
               Стоимость (₽):
             </label>
             <CustomInput
@@ -171,14 +223,14 @@ interface TabsProps {
 }
 
 const LocalTabs = ({ tabs, activeTab, onChange, addButton }: TabsProps) => {
-  const activeTabContent = tabs.find(tab => tab.id === activeTab)?.content;
+  const activeTabContent = tabs.find((tab) => tab.id === activeTab)?.content;
 
   return (
     <>
       <TabsContainer>
         <TabsList>
           {tabs.map((tab) => (
-            <TabItem 
+            <TabItem
               key={tab.id}
               $isActive={activeTab === tab.id}
               onClick={() => onChange(tab.id)}
@@ -190,11 +242,9 @@ const LocalTabs = ({ tabs, activeTab, onChange, addButton }: TabsProps) => {
           {addButton && <AddButtonContainer>{addButton}</AddButtonContainer>}
         </TabsList>
       </TabsContainer>
-      
+
       {activeTabContent && (
-        <TabContentContainer>
-          {activeTabContent}
-        </TabContentContainer>
+        <TabContentContainer>{activeTabContent}</TabContentContainer>
       )}
     </>
   );
@@ -220,8 +270,9 @@ const TabItem = styled.li<{ $isActive: boolean }>`
   padding: 12px 0;
   cursor: pointer;
   font-size: 14px;
-  font-weight: ${props => props.$isActive ? '600' : '400'};
-  color: ${props => props.$isActive ? 'rgba(0, 125, 136, 1)' : 'rgba(107, 114, 128, 1)'};
+  font-weight: ${(props) => (props.$isActive ? "600" : "400")};
+  color: ${(props) =>
+    props.$isActive ? "rgba(0, 125, 136, 1)" : "rgba(107, 114, 128, 1)"};
   transition: all 0.2s ease;
 
   &:hover {
@@ -240,8 +291,8 @@ const ActiveTabIndicator = styled.div`
 `;
 
 const AddButtonContainer = styled.li`
-  margin-left: auto; 
-  padding: 4px 0; 
+  margin-left: auto;
+  padding: 4px 0;
 `;
 
 const TabContentContainer = styled.div`
@@ -256,14 +307,20 @@ interface PayoutModalProps {
   isSubmitting: boolean;
 }
 
-const PayoutModal = ({ isOpen, onClose, onConfirm, partnerName, isSubmitting }: PayoutModalProps) => {
-  const [amount, setAmount] = useState<string>('');
+const PayoutModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  partnerName,
+  isSubmitting,
+}: PayoutModalProps) => {
+  const [amount, setAmount] = useState<string>("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      alert('Сумма должна быть больше 0');
+      alert("Сумма должна быть больше 0");
       return;
     }
     onConfirm(numericAmount);
@@ -279,8 +336,15 @@ const PayoutModal = ({ isOpen, onClose, onConfirm, partnerName, isSubmitting }: 
       onSave={handleSubmit}
       isSubmitting={isSubmitting}
     >
-      <div style={{ padding: '20px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+      <div style={{ padding: "20px" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "8px",
+            fontWeight: "bold",
+            color: "black",
+          }}
+        >
           Сумма выплаты (₽):
         </label>
         <CustomInput
@@ -302,6 +366,7 @@ interface CompanyCabinetModalProps {
   isLoading: boolean;
   error: string | null;
   isPartner: boolean;
+  salesMode: boolean;
 }
 
 const CompanyCabinetModal = ({
@@ -311,13 +376,17 @@ const CompanyCabinetModal = ({
   statistics,
   isLoading,
   error,
-  isPartner
+  isPartner,
+  salesMode,
 }: CompanyCabinetModalProps) => {
   if (!isOpen || !company) return null;
 
-  const paidSubscriptions = statistics.filter(item => !item.isFree);
-  const freeSubscriptions = statistics.filter(item => item.isFree);
-  const giftedDays = freeSubscriptions.reduce((sum, item) => sum + getPeriodDays(item.startAt, item.endAt), 0);
+  const paidSubscriptions = statistics.filter((item) => !item.isFree);
+  const freeSubscriptions = statistics.filter((item) => item.isFree);
+  const giftedDays = freeSubscriptions.reduce(
+    (sum, item) => sum + getPeriodDays(item.startAt, item.endAt),
+    0
+  );
   const paidTotal = paidSubscriptions.reduce((sum, item) => sum + item.cost, 0);
 
   return (
@@ -339,20 +408,22 @@ const CompanyCabinetModal = ({
               <CabinetValue>#{company.id}</CabinetValue>
             </CabinetItem>
             <CabinetItem>
-              <CabinetLabel>{isPartner ? 'Партнер' : 'Компания'}</CabinetLabel>
-              <CabinetValue>{company.name || 'Нет данных'}</CabinetValue>
+              <CabinetLabel>{isPartner ? "Партнер" : "Компания"}</CabinetLabel>
+              <CabinetValue>{company.name || "Нет данных"}</CabinetValue>
             </CabinetItem>
             <CabinetItem>
               <CabinetLabel>Директор</CabinetLabel>
-              <CabinetValue>{company.chief || 'Нет данных'}</CabinetValue>
+              <CabinetValue>{company.chief || "Нет данных"}</CabinetValue>
             </CabinetItem>
             <CabinetItem>
               <CabinetLabel>Телефон</CabinetLabel>
               <CabinetValue>
                 {company.phone ? (
-                  <PhoneLink href={formatPhoneHref(company.phone)}>{company.phone}</PhoneLink>
+                  <PhoneLink href={formatPhoneHref(company.phone)}>
+                    {company.phone}
+                  </PhoneLink>
                 ) : (
-                  'Нет данных'
+                  "Нет данных"
                 )}
               </CabinetValue>
             </CabinetItem>
@@ -360,11 +431,17 @@ const CompanyCabinetModal = ({
               <>
                 <CabinetItem>
                   <CabinetLabel>Лицензия до</CabinetLabel>
-                  <CabinetValue>{company.licenceDate ? formatDate(company.licenceDate) : 'Нет данных'}</CabinetValue>
+                  <CabinetValue>
+                    {company.licenceDate
+                      ? formatDate(company.licenceDate)
+                      : "Нет данных"}
+                  </CabinetValue>
                 </CabinetItem>
                 <CabinetItem>
                   <CabinetLabel>Договоров за 10 дней</CabinetLabel>
-                  <CabinetValue>{company.createdCreditsCount ?? 0}</CabinetValue>
+                  <CabinetValue>
+                    {company.createdCreditsCount ?? 0}
+                  </CabinetValue>
                 </CabinetItem>
                 <CabinetItem>
                   <CabinetLabel>Договоров всего</CabinetLabel>
@@ -375,13 +452,19 @@ const CompanyCabinetModal = ({
             {isPartner && (
               <CabinetItem>
                 <CabinetLabel>Баланс</CabinetLabel>
-                <CabinetValue>{formatCurrency((company.balance ?? 0) * 100)}</CabinetValue>
+                <CabinetValue>
+                  {formatCurrency((company.balance ?? 0) * 100)}
+                </CabinetValue>
               </CabinetItem>
             )}
-            <CabinetItem>
-              <CabinetLabel>Последний вход</CabinetLabel>
-              <CabinetValue>{formatDateTime(company.lastActive)}</CabinetValue>
-            </CabinetItem>
+            {!salesMode && (
+              <CabinetItem>
+                <CabinetLabel>Последний вход</CabinetLabel>
+                <CabinetValue>
+                  {formatDateTime(company.lastActive)}
+                </CabinetValue>
+              </CabinetItem>
+            )}
           </CabinetGrid>
         </CabinetSection>
 
@@ -413,7 +496,9 @@ const CompanyCabinetModal = ({
 
         <CabinetSection>
           <CabinetSectionTitle>История подписки</CabinetSectionTitle>
-          {isLoading && <CabinetMuted>Загрузка истории подписки...</CabinetMuted>}
+          {isLoading && (
+            <CabinetMuted>Загрузка истории подписки...</CabinetMuted>
+          )}
           {error && <CabinetError>{error}</CabinetError>}
           {!isLoading && !error && statistics.length === 0 && (
             <CabinetMuted>История подписки пока пустая</CabinetMuted>
@@ -431,17 +516,19 @@ const CompanyCabinetModal = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {statistics.map(item => {
+                  {statistics.map((item) => {
                     const days = getPeriodDays(item.startAt, item.endAt);
                     return (
                       <tr key={item.id}>
                         <td>
                           <SubscriptionBadge $isFree={item.isFree}>
-                            {item.isFree ? 'Подарено' : item.type || 'Оплата'}
+                            {item.isFree ? "Подарено" : item.type || "Оплата"}
                           </SubscriptionBadge>
                         </td>
                         <td>{days}</td>
-                        <td>{item.isFree ? '0 ₽' : formatCurrency(item.cost)}</td>
+                        <td>
+                          {item.isFree ? "0 ₽" : formatCurrency(item.cost)}
+                        </td>
                         <td>{formatDate(item.startAt)}</td>
                         <td>{formatDate(item.endAt)}</td>
                       </tr>
@@ -582,30 +669,67 @@ const CabinetTable = styled.table`
   }
 `;
 
+const SearchBar = styled.div`
+  max-width: 360px;
+  margin-bottom: 16px;
+`;
+
+const SalesModeToggle = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 20px 0 auto;
+  font-size: 14px;
+  color: rgba(80, 85, 92, 1);
+  user-select: none;
+`;
+
 const SubscriptionBadge = styled.span<{ $isFree: boolean }>`
   display: inline-flex;
   align-items: center;
   min-height: 24px;
   padding: 3px 9px;
   border-radius: 999px;
-  color: ${props => props.$isFree ? '#92400e' : '#065f46'};
-  background: ${props => props.$isFree ? '#fef3c7' : '#d1fae5'};
+  color: ${(props) => (props.$isFree ? "#92400e" : "#065f46")};
+  background: ${(props) => (props.$isFree ? "#fef3c7" : "#d1fae5")};
   font-size: 12px;
   font-weight: 700;
 `;
 
 const AdminPanelPage = () => {
   const { hasRole } = useAuth();
-  const [nameFilter, setNameFilter] = useState('');
+  const [nameFilter, setNameFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [salesMode, setSalesMode] = useState<boolean>(
+    () => localStorage.getItem(SALES_MODE_STORAGE_KEY) === "true"
+  );
   const pageSize = 10;
-  
-  const [activeTab, setActiveTab] = useState<'companies' | 'partners' | 'credit-applications' | 'notifications' | 'broadcast'>('companies');
-  
+
+  // Запоминаем режим продажи между сессиями
+  useEffect(() => {
+    localStorage.setItem(SALES_MODE_STORAGE_KEY, String(salesMode));
+  }, [salesMode]);
+
+  const handleSearchChange = (value: string) => {
+    setNameFilter(value);
+    setCurrentPage(1);
+  };
+
+  const [activeTab, setActiveTab] = useState<
+    | "companies"
+    | "partners"
+    | "credit-applications"
+    | "notifications"
+    | "broadcast"
+  >("companies");
+
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
-  const [selectedCompany, setSelectedCompany] = useState<CompanyModalData | null>(null);
-  
+  const [modalMode, setModalMode] = useState<"create" | "edit" | "view">(
+    "create"
+  );
+  const [selectedCompany, setSelectedCompany] =
+    useState<CompanyModalData | null>(null);
+
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isCompanyCabinetOpen, setIsCompanyCabinetOpen] = useState(false);
@@ -613,76 +737,83 @@ const AdminPanelPage = () => {
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
   const [cabinetCompany, setCabinetCompany] = useState<Company | null>(null);
-  const [cabinetStatistics, setCabinetStatistics] = useState<SubscriptionStatistic[]>([]);
-  const [isCabinetStatisticsLoading, setIsCabinetStatisticsLoading] = useState(false);
-  const [cabinetStatisticsError, setCabinetStatisticsError] = useState<string | null>(null);
-  const [selectedCompanyName, setSelectedCompanyName] = useState('');
-  const [selectedPartnerName, setSelectedPartnerName] = useState('');
-  const [phoneValue, setPhoneValue] = useState('');
-  const [directorValue, setDirectorValue] = useState('');
+  const [cabinetStatistics, setCabinetStatistics] = useState<
+    SubscriptionStatistic[]
+  >([]);
+  const [isCabinetStatisticsLoading, setIsCabinetStatisticsLoading] =
+    useState(false);
+  const [cabinetStatisticsError, setCabinetStatisticsError] = useState<
+    string | null
+  >(null);
+  const [selectedCompanyName, setSelectedCompanyName] = useState("");
+  const [selectedPartnerName, setSelectedPartnerName] = useState("");
+  const [phoneValue, setPhoneValue] = useState("");
+  const [directorValue, setDirectorValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  
-  const [notificationType, setNotificationType] = useState<NotificationType>(NotificationType.AllUsers);
-  const [notificationTitle, setNotificationTitle] = useState('');
-  const [notificationMessage, setNotificationMessage] = useState('');
-  const [targetId, setTargetId] = useState<string>('');
+
+  const [notificationType, setNotificationType] = useState<NotificationType>(
+    NotificationType.AllUsers
+  );
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [targetId, setTargetId] = useState<string>("");
   const [isSendingNotification, setIsSendingNotification] = useState(false);
 
-  const { 
-    isLoading, 
-    error, 
+  const {
+    isLoading,
+    error,
     company,
-    companies, 
+    companies,
     getAllCompanies,
     createCompany,
     deleteCompany,
     changeLicenceDate,
     changePhone,
     getSubscriptionStatistics,
-    payoutPartner
+    payoutPartner,
   } = useCompany();
 
-  const {
-    updateDirectorFullname,
-    setSelfCompany
-  } = useEmployee();
+  const { updateDirectorFullname, setSelfCompany } = useEmployee();
 
   const {
     sendNotification,
     isLoading: isNotificationLoading,
-    error: notificationError
+    error: notificationError,
   } = useAdminPanel();
 
-  const loadCompanies = useCallback(async (isPartner: boolean = false) => {
-    await getAllCompanies(isPartner);
-  }, [getAllCompanies]);
+  const loadCompanies = useCallback(
+    async (isPartner: boolean = false) => {
+      await getAllCompanies(isPartner);
+    },
+    [getAllCompanies]
+  );
 
   useEffect(() => {
-    if (activeTab === 'companies') {
+    if (activeTab === "companies") {
       loadCompanies(false);
-    } else if (activeTab === 'partners') {
+    } else if (activeTab === "partners") {
       loadCompanies(true);
     }
   }, [loadCompanies, activeTab]);
 
   const handleCreateCompany = () => {
-    setModalMode('create');
+    setModalMode("create");
     setSelectedCompany({
-      phone: '',
+      phone: "",
       licenceDate: new Date(),
-      chief: '',
-      company: ''
+      chief: "",
+      company: "",
     });
     setIsCompanyModalOpen(true);
   };
 
   const handleCreatePartner = () => {
-    setModalMode('create');
+    setModalMode("create");
     setSelectedCompany({
-      phone: '',
-      licenceDate: new Date('2099-12-31'),
-      chief: '',
-      company: ''
+      phone: "",
+      licenceDate: new Date("2099-12-31"),
+      chief: "",
+      company: "",
     });
     setIsCompanyModalOpen(true);
   };
@@ -694,14 +825,17 @@ const AdminPanelPage = () => {
   };
 
   // Изменено: открытие модального окна для добавления подписки
-  const handleOpenSubscriptionAdd = (companyId: number, companyName: string) => {
+  const handleOpenSubscriptionAdd = (
+    companyId: number,
+    companyName: string
+  ) => {
     setEditingCompanyId(companyId);
     setSelectedCompanyName(companyName);
     setIsSubscriptionModalOpen(true);
   };
 
   const handleOpenCompanyCabinet = async (companyId: number) => {
-    const selected = companies.find(item => item.id === companyId) || null;
+    const selected = companies.find((item) => item.id === companyId) || null;
     if (!selected) return;
 
     setCabinetCompany(selected);
@@ -714,13 +848,16 @@ const AdminPanelPage = () => {
     if (statistics) {
       setCabinetStatistics(statistics);
     } else {
-      setCabinetStatisticsError('Не удалось загрузить историю подписки');
+      setCabinetStatisticsError("Не удалось загрузить историю подписки");
     }
 
     setIsCabinetStatisticsLoading(false);
   };
 
-  const handleOpenDirectorEdit = (companyId: number, currentDirector: string) => {
+  const handleOpenDirectorEdit = (
+    companyId: number,
+    currentDirector: string
+  ) => {
     setEditingCompanyId(companyId);
     setDirectorValue(currentDirector);
     setIsDirectorModalOpen(true);
@@ -744,35 +881,44 @@ const AdminPanelPage = () => {
     try {
       const success = await changePhone(editingCompanyId, phoneValue);
       if (success) {
-        await loadCompanies(activeTab === 'partners');
+        await loadCompanies(activeTab === "partners");
         setIsPhoneModalOpen(false);
       } else {
-        alert('Не удалось сохранить изменения');
+        alert("Не удалось сохранить изменения");
       }
     } catch (err) {
-      console.error('Ошибка при изменении телефона:', err);
-      alert('Произошла ошибка при сохранении');
+      console.error("Ошибка при изменении телефона:", err);
+      alert("Произошла ошибка при сохранении");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleSaveSubscription = async (days: number, cost: number, paymentType: PaymentTypeValue) => {
+  const handleSaveSubscription = async (
+    days: number,
+    cost: number,
+    paymentType: PaymentTypeValue
+  ) => {
     if (!editingCompanyId) return;
 
     setIsSaving(true);
     try {
-      const success = await changeLicenceDate(editingCompanyId, days, cost, paymentType);
+      const success = await changeLicenceDate(
+        editingCompanyId,
+        days,
+        cost,
+        paymentType
+      );
       if (success) {
         alert(`Подписка успешно добавлена!`);
-        await loadCompanies(activeTab === 'partners');
+        await loadCompanies(activeTab === "partners");
         setIsSubscriptionModalOpen(false);
       } else {
-        alert('Не удалось добавить подписку');
+        alert("Не удалось добавить подписку");
       }
     } catch (err) {
-      console.error('Ошибка при добавлении подписки:', err);
-      alert('Произошла ошибка при добавлении подписки');
+      console.error("Ошибка при добавлении подписки:", err);
+      alert("Произошла ошибка при добавлении подписки");
     } finally {
       setIsSaving(false);
     }
@@ -785,11 +931,11 @@ const AdminPanelPage = () => {
     setIsSaving(true);
     try {
       await updateDirectorFullname(editingCompanyId, directorValue);
-      await loadCompanies(activeTab === 'partners');
+      await loadCompanies(activeTab === "partners");
       setIsDirectorModalOpen(false);
     } catch (err) {
-      console.error('Ошибка при изменении имени директора:', err);
-      alert('Произошла ошибка при сохранении');
+      console.error("Ошибка при изменении имени директора:", err);
+      alert("Произошла ошибка при сохранении");
     } finally {
       setIsSaving(false);
     }
@@ -805,80 +951,84 @@ const AdminPanelPage = () => {
       await loadCompanies(true);
       setIsPayoutModalOpen(false);
     } catch (err) {
-      console.error('Ошибка при выплате:', err);
-      alert('Произошла ошибка при выплате');
+      console.error("Ошибка при выплате:", err);
+      alert("Произошла ошибка при выплате");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const isLicenseExpiringSoon = (licenceDate: Date | null | undefined): boolean => {
+  const isLicenseExpiringSoon = (
+    licenceDate: Date | null | undefined
+  ): boolean => {
     if (!licenceDate) return false;
-    
+
     const today = new Date();
     const licenseEnd = new Date(licenceDate);
     const timeDiff = licenseEnd.getTime() - today.getTime();
     const daysDiff = timeDiff / (1000 * 3600 * 24);
-    
+
     return daysDiff <= 30;
   };
 
   const isLicenseExpired = (licenceDate: Date | null | undefined): boolean => {
     if (!licenceDate) return false;
-    
+
     const today = new Date();
     const licenseEnd = new Date(licenceDate);
     const timeDiff = licenseEnd.getTime() - today.getTime();
     const daysDiff = timeDiff / (1000 * 3600 * 24);
-    
+
     return daysDiff <= 0;
   };
 
   const handleDeleteCompany = async (rowData: any[]) => {
     const [id, name] = rowData;
-    
-    if (!window.confirm('Вы уверены, что хотите удалить эту компанию?')) {
+
+    if (!window.confirm("Вы уверены, что хотите удалить эту компанию?")) {
       return;
     }
-    
-    const userInput = prompt(`Для подтверждения удаления компании "${name}", введите её название:`);
-    
+
+    const userInput = prompt(
+      `Для подтверждения удаления компании "${name}", введите её название:`
+    );
+
     if (userInput === name) {
       try {
         await deleteCompany(Number(id));
-        loadCompanies(activeTab === 'partners');
+        loadCompanies(activeTab === "partners");
       } catch (err) {
-        console.error('Ошибка при удалении компании:', err);
-        alert('Не удалось удалить компанию');
+        console.error("Ошибка при удалении компании:", err);
+        alert("Не удалось удалить компанию");
       }
     } else if (userInput !== null) {
-      alert('Название компании не совпадает. Удаление отменено.');
+      alert("Название компании не совпадает. Удаление отменено.");
     }
   };
 
   const handleSubmitCompany = async (data: CompanyModalData) => {
     try {
-      if (modalMode === 'create') {
+      if (modalMode === "create") {
         await createCompany({
           AdminPhone: data.phone,
           LicenceDate: data.licenceDate,
           AdminName: data.chief,
           CompanyName: data.company,
-          IsPartner: activeTab === 'partners'
+          IsPartner: activeTab === "partners",
         });
       }
-      loadCompanies(activeTab === 'partners');
+      loadCompanies(activeTab === "partners");
       setIsCompanyModalOpen(false);
     } catch (err) {
-      console.error('Ошибка при сохранении компании:', err);
+      console.error("Ошибка при сохранении компании:", err);
     }
   };
 
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!notificationTitle.trim() || !notificationMessage.trim()) {
-      alert('Заполните заголовок и сообщение');
+      alert("Заполните заголовок и сообщение");
       return;
     }
 
@@ -888,48 +1038,58 @@ const AdminPanelPage = () => {
         type: notificationType,
         title: notificationTitle,
         message: notificationMessage,
-        employeeId: notificationType === NotificationType.Single && targetId ? parseInt(targetId) : null,
+        employeeId:
+          notificationType === NotificationType.Single && targetId
+            ? parseInt(targetId)
+            : null,
         clientId: null,
         deviceToken: null,
-        avatarPath: null
+        avatarPath: null,
       };
 
       await sendNotification(notificationData);
-      alert('Рассылка отправлена успешно!');
-      
-      setNotificationTitle('');
-      setNotificationMessage('');
-      setTargetId('');
+      alert("Рассылка отправлена успешно!");
+
+      setNotificationTitle("");
+      setNotificationMessage("");
+      setTargetId("");
     } catch (err) {
-      console.error('Ошибка при отправке рассылки:', err);
-      alert('Произошла ошибка при отправке рассылки');
+      console.error("Ошибка при отправке рассылки:", err);
+      alert("Произошла ошибка при отправке рассылки");
     } finally {
       setIsSendingNotification(false);
     }
   };
 
-  const filteredCompanies = companies?.filter(company => 
-    company.name.toLowerCase().includes(nameFilter.toLowerCase()) ||
-    company.phone.includes(nameFilter)
-  ) || [];
+  const searchQuery = nameFilter.trim().toLowerCase();
+  const filteredCompanies =
+    companies?.filter(
+      (company) =>
+        company.id.toString().includes(searchQuery) ||
+        company.name.toLowerCase().includes(searchQuery) ||
+        company.phone.includes(nameFilter.trim())
+    ) || [];
 
   const paginatedCompanies = filteredCompanies.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
 
-  const getTableColumns = () => {
-    if (activeTab === 'partners') {
-      return [
+  const getTableColumns = (): Column[] => {
+    if (activeTab === "partners") {
+      const columns: Column[] = [
         { name: "ID", align: "right" },
         { name: "Название партнера", align: "left" },
         { name: "Директор", align: "left" },
         { name: "Телефон", align: "left" },
         { name: "Баланс (₽)", align: "right" },
-        { name: "Последний заход в сеть", align: "right" },
       ];
+      if (!salesMode) {
+        columns.push({ name: "Последний заход в сеть", align: "right" });
+      }
+      return columns;
     }
-    return [
+    const columns: Column[] = [
       { name: "ID", align: "right" },
       { name: "Название компании", align: "left" },
       { name: "Директор", align: "left" },
@@ -937,196 +1097,228 @@ const AdminPanelPage = () => {
       { name: "Лицензия заканчивается", align: "right" },
       { name: "Договоров за последние 10 дней", align: "right" },
       { name: "Договоров всего", align: "right" },
-      { name: "Последний заход в сеть", align: "right" },
     ];
+    if (!salesMode) {
+      columns.push({ name: "Последний заход в сеть", align: "right" });
+    }
+    return columns;
   };
 
-  const tableData = hasRole('суперадмин') 
-    ? paginatedCompanies.map(company => {
-        if (activeTab === 'partners') {
-          return [
+  const formatLastActive = (lastActive?: Date) =>
+    new Date(lastActive).toLocaleString("ru-RU", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+  const tableData = hasRole("суперадмин")
+    ? paginatedCompanies.map((company) => {
+        if (activeTab === "partners") {
+          const row: React.ReactNode[] = [
             company.id.toString(),
             company.name,
-            <span 
+            <span
               onClick={() => handleOpenDirectorEdit(company.id, company.chief)}
-              style={{ cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ cursor: "pointer", textDecoration: "underline" }}
             >
               {company.chief}
             </span>,
-            <PhoneLink 
+            <PhoneLink
               href={formatPhoneHref(company.phone)}
               onClick={() => handleOpenPhoneEdit(company.id, company.phone)}
             >
               {company.phone}
             </PhoneLink>,
-            (company.balance?.toLocaleString() || '0') + '₽',
-            new Date(company.lastActive).toLocaleString('ru-RU', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            })
+            (company.balance?.toLocaleString() || "0") + "₽",
           ];
+          if (!salesMode) {
+            row.push(formatLastActive(company.lastActive));
+          }
+          return row;
         }
-        return [
+        const row: React.ReactNode[] = [
           company.id.toString(),
           company.name,
-          <span 
+          <span
             onClick={() => handleOpenDirectorEdit(company.id, company.chief)}
-            style={{ cursor: 'pointer', textDecoration: 'underline' }}
+            style={{ cursor: "pointer", textDecoration: "underline" }}
           >
             {company.chief}
           </span>,
-          <PhoneLink 
+          <PhoneLink
             href={formatPhoneHref(company.phone)}
             onClick={() => handleOpenPhoneEdit(company.id, company.phone)}
           >
             {company.phone}
           </PhoneLink>,
-          company.licenceDate ? formatDate(company.licenceDate) : 'Нет данных',
+          company.licenceDate ? formatDate(company.licenceDate) : "Нет данных",
           company.createdCreditsCount,
           company.totalCredits,
-          new Date(company.lastActive).toLocaleString('ru-RU', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          })
         ];
+        if (!salesMode) {
+          row.push(formatLastActive(company.lastActive));
+        }
+        return row;
       })
     : company
-      ? [
-          [
-            company.id.toString(),
-            company.name,
-            company.chief,
-            company.phone,
-            company.licenceDate 
-              ? formatDate(company.licenceDate)
-              : 'Нет данных'
-          ]
-        ]
-      : [];
+    ? [
+        [
+          company.id.toString(),
+          company.name,
+          company.chief,
+          company.phone,
+          company.licenceDate ? formatDate(company.licenceDate) : "Нет данных",
+        ],
+      ]
+    : [];
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {
     const company = paginatedCompanies[index];
-    
-    if (activeTab !== 'partners' && company && isLicenseExpiringSoon(company.licenceDate)) {
+
+    if (
+      activeTab !== "partners" &&
+      company &&
+      isLicenseExpiringSoon(company.licenceDate)
+    ) {
       styles[index] = {
-        backgroundColor: '#FFEBEE',
-        color: 'black',
-        fontWeight: 'normal'
+        backgroundColor: "#FFEBEE",
+        color: "black",
+        fontWeight: "normal",
       };
     }
 
-    if (activeTab !== 'partners' && company && isLicenseExpired(company.licenceDate)) {
+    if (
+      activeTab !== "partners" &&
+      company &&
+      isLicenseExpired(company.licenceDate)
+    ) {
       styles[index] = {
-        backgroundColor: 'rgba(145, 104, 104, 1)',
-        fontWeight: 'normal',
+        backgroundColor: "rgba(145, 104, 104, 1)",
+        fontWeight: "normal",
       };
     }
-    
+
     return styles;
   }, {} as Record<number, RowStyle>);
 
-  const broadcastContent = (
-    <BroadcastCampaignsManager />
-  );
+  const broadcastContent = <BroadcastCampaignsManager />;
 
-  const tableActions = hasRole('суперадмин') 
-    ? activeTab === 'partners'
+  const tableActionsAll = hasRole("суперадмин")
+    ? activeTab === "partners"
       ? [
           {
-            label: 'Личный кабинет',
-            action: (rowData: any[]) => handleOpenCompanyCabinet(Number(rowData[0])),
-            color: '#007D88'
+            label: "Личный кабинет",
+            action: (rowData: any[]) =>
+              handleOpenCompanyCabinet(Number(rowData[0])),
+            color: "#007D88",
           },
           {
-            label: 'Зайти в компанию',
+            label: "Зайти в компанию",
             action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
-            color: '#EF4444'
+            color: "#EF4444",
           },
           {
-            label: 'Добавить подписку',
-            action: (rowData: any[]) => handleOpenSubscriptionAdd(Number(rowData[0]), rowData[1]),
-            color: '#10B981'
+            label: "Добавить подписку",
+            action: (rowData: any[]) =>
+              handleOpenSubscriptionAdd(Number(rowData[0]), rowData[1]),
+            color: "#10B981",
           },
           {
-            label: 'Выплатить',
-            action: (rowData: any[]) => handleOpenPayoutModal(Number(rowData[0]), rowData[1]),
-            color: '#3B82F6'
+            label: "Выплатить",
+            action: (rowData: any[]) =>
+              handleOpenPayoutModal(Number(rowData[0]), rowData[1]),
+            color: "#3B82F6",
           },
           {
-            label: 'Изм. директора',
-            action: (rowData: any[]) => handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),
-            color: '#3B82F6'
+            label: "Изм. директора",
+            action: (rowData: any[]) =>
+              handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),
+            color: "#3B82F6",
           },
           {
-            label: 'Изм. телефон',
-            action: (rowData: any[]) => handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
-            color: '#3B82F6'
+            label: "Изм. телефон",
+            action: (rowData: any[]) =>
+              handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
+            color: "#3B82F6",
           },
           {
-            label: 'Удалить',
+            label: "Удалить",
             action: handleDeleteCompany,
-            color: '#EF4444'
-          }
+            color: "#EF4444",
+          },
         ]
       : [
           {
-            label: 'Личный кабинет',
-            action: (rowData: any[]) => handleOpenCompanyCabinet(Number(rowData[0])),
-            color: '#007D88'
+            label: "Личный кабинет",
+            action: (rowData: any[]) =>
+              handleOpenCompanyCabinet(Number(rowData[0])),
+            color: "#007D88",
           },
           {
-            label: 'Зайти в компанию',
+            label: "Зайти в компанию",
             action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
-            color: '#EF4444'
+            color: "#EF4444",
           },
           {
-            label: 'Добавить подписку',
-            action: (rowData: any[]) => handleOpenSubscriptionAdd(Number(rowData[0]), rowData[1]),
-            color: '#10B981'
+            label: "Добавить подписку",
+            action: (rowData: any[]) =>
+              handleOpenSubscriptionAdd(Number(rowData[0]), rowData[1]),
+            color: "#10B981",
           },
           {
-            label: 'Изм. директора',
-            action: (rowData: any[]) => handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),
-            color: '#3B82F6'
+            label: "Изм. директора",
+            action: (rowData: any[]) =>
+              handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),
+            color: "#3B82F6",
           },
           {
-            label: 'Изм. телефон',
-            action: (rowData: any[]) => handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
-            color: '#3B82F6'
+            label: "Изм. телефон",
+            action: (rowData: any[]) =>
+              handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
+            color: "#3B82F6",
           },
           {
-            label: 'Удалить',
+            label: "Удалить",
             action: handleDeleteCompany,
-            color: '#EF4444'
-          }
+            color: "#EF4444",
+          },
         ]
     : [];
+
+  // В режиме продажи скрываем «Зайти в компанию», чтобы клиент рядом не видел вход в чужой аккаунт
+  const tableActions = tableActionsAll.filter(
+    (action) => !(salesMode && action.label === "Зайти в компанию")
+  );
 
   const companiesContent = (
     <>
       {!isLoading && !error && (
         <>
-          <CustomTable 
-            columns={getTableColumns()} 
+          <SearchBar>
+            <CustomInput
+              inputType="text"
+              placeholder="Поиск по номеру, названию или телефону"
+              value={nameFilter}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
+          </SearchBar>
+
+          <CustomTable
+            columns={getTableColumns()}
             data={tableData}
             rowStyles={rowStyles}
             contextMenuActions={tableActions}
-            onRowDoubleClick={(rowData) => handleOpenCompanyCabinet(Number(rowData[0]))}
+            onRowDoubleClick={(rowData) =>
+              handleOpenCompanyCabinet(Number(rowData[0]))
+            }
           />
-          
+
           <PaginationLayout>
-            <CountInfoTitle 
-              total={filteredCompanies.length} 
-            />
-            
+            <CountInfoTitle total={filteredCompanies.length} />
+
             <Pagination
               total={filteredCompanies.length}
               current={currentPage}
@@ -1139,37 +1331,55 @@ const AdminPanelPage = () => {
     </>
   );
 
-  const creditApplicationsContent = (
-    <CreditApplicationCompaniesManager />
-  );
+  const creditApplicationsContent = <CreditApplicationCompaniesManager />;
 
   const notificationsContent = (
-    <div style={{ padding: '20px', maxWidth: '600px' }}>
+    <div style={{ padding: "20px", maxWidth: "600px" }}>
       <form onSubmit={handleSendNotification}>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black', textAlign: 'left' }}>
-            Тип рассылки:
-          </label>
-          <select 
-            value={notificationType}
-            onChange={(e) => setNotificationType(parseInt(e.target.value) as NotificationType)}
-            style={{ 
-              width: '100%', 
-              padding: '10px', 
-              border: '1px solid #ccc', 
-              backgroundColor: 'white',
-              color: 'black',
-              borderRadius: '4px' 
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "bold",
+              color: "black",
+              textAlign: "left",
             }}
           >
-            <option value={NotificationType.AllUsers}>Всем пользователям</option>
+            Тип рассылки:
+          </label>
+          <select
+            value={notificationType}
+            onChange={(e) =>
+              setNotificationType(parseInt(e.target.value) as NotificationType)
+            }
+            style={{
+              width: "100%",
+              padding: "10px",
+              border: "1px solid #ccc",
+              backgroundColor: "white",
+              color: "black",
+              borderRadius: "4px",
+            }}
+          >
+            <option value={NotificationType.AllUsers}>
+              Всем пользователям
+            </option>
             <option value={NotificationType.Clients}>Клиентам</option>
             <option value={NotificationType.Employees}>Сотрудникам</option>
           </select>
         </div>
 
-        <div style={{ margin: '0px', padding: '0' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black', textAlign: 'left' }}>
+        <div style={{ margin: "0px", padding: "0" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "bold",
+              color: "black",
+              textAlign: "left",
+            }}
+          >
             Заголовок уведомления:
           </label>
           <CustomInput
@@ -1180,38 +1390,46 @@ const AdminPanelPage = () => {
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black', textAlign: 'left' }}>
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: "bold",
+              color: "black",
+              textAlign: "left",
+            }}
+          >
             Сообщение:
           </label>
           <textarea
             value={notificationMessage}
             onChange={(e) => setNotificationMessage(e.target.value)}
             placeholder="Введите текст сообщения"
-            style={{ 
-              width: '100%', 
-              minHeight: '120px', 
-              padding: '10px', 
-              border: '1px solid #ccc', 
-              borderRadius: '4px',
-              resize: 'vertical',
-              color: 'black',
-              backgroundColor: 'white'
+            style={{
+              width: "100%",
+              minHeight: "120px",
+              padding: "10px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              resize: "vertical",
+              color: "black",
+              backgroundColor: "white",
             }}
             required
           />
         </div>
 
-        <DarkCyanButton 
+        <DarkCyanButton
           type="submit"
           disabled={isSendingNotification}
-          style={{ width: '200px' }}
+          style={{ width: "200px" }}
         >
-          {isSendingNotification ? 'Отправка...' : 'Отправить рассылку'}
+          {isSendingNotification ? "Отправка..." : "Отправить рассылку"}
         </DarkCyanButton>
 
         {notificationError && (
-          <div style={{ color: 'red', marginTop: '10px' }}>
+          <div style={{ color: "red", marginTop: "10px" }}>
             Ошибка: {notificationError}
           </div>
         )}
@@ -1221,51 +1439,51 @@ const AdminPanelPage = () => {
 
   const tabs = [
     {
-      id: 'companies',
-      label: 'Компании',
-      content: companiesContent
+      id: "companies",
+      label: "Компании",
+      content: companiesContent,
     },
     {
-      id: 'partners',
-      label: 'Партнёры',
-      content: companiesContent
+      id: "partners",
+      label: "Партнёры",
+      content: companiesContent,
     },
     {
-      id: 'credit-applications',
-      label: 'Заявкополучатели',
-      content: creditApplicationsContent
+      id: "credit-applications",
+      label: "Заявкополучатели",
+      content: creditApplicationsContent,
     },
     {
-      id: 'notifications',
-      label: 'Рассылка',
-      content: notificationsContent
+      id: "notifications",
+      label: "Рассылка",
+      content: notificationsContent,
     },
     {
-      id: 'broadcast',
-      label: 'Рекламные кампании',
-      content: broadcastContent
-    }
+      id: "broadcast",
+      label: "Рекламные кампании",
+      content: broadcastContent,
+    },
   ];
 
-  const addButton = activeTab === 'companies' && hasRole('суперадмин') ? (
-    <DarkCyanButton 
-      style={{ width: "15vw", maxHeight: "50px" }}
-      onClick={handleCreateCompany}
-    >
-      + Новая компания
-    </DarkCyanButton>
-  ) : activeTab === 'partners' && hasRole('суперадмин') ? (
-    <DarkCyanButton 
-      style={{ width: "15vw", maxHeight: "50px" }}
-      onClick={handleCreatePartner}
-    >
-      + Новый партнер
-    </DarkCyanButton>
-  ) : activeTab === 'credit-applications' && hasRole('суперадмин') ? (
-    null
-  ) : null;
+  const addButton =
+    activeTab === "companies" && hasRole("суперадмин") ? (
+      <DarkCyanButton
+        style={{ width: "15vw", maxHeight: "50px" }}
+        onClick={handleCreateCompany}
+      >
+        + Новая компания
+      </DarkCyanButton>
+    ) : activeTab === "partners" && hasRole("суперадмин") ? (
+      <DarkCyanButton
+        style={{ width: "15vw", maxHeight: "50px" }}
+        onClick={handleCreatePartner}
+      >
+        + Новый партнер
+      </DarkCyanButton>
+    ) : activeTab === "credit-applications" &&
+      hasRole("суперадмин") ? null : null;
 
-  if (!hasRole('суперадмин')) {
+  if (!hasRole("суперадмин")) {
     return (
       <PageLayout>
         <TitleField>
@@ -1274,14 +1492,14 @@ const AdminPanelPage = () => {
         {isLoading && <div>Загрузка...</div>}
         {error && <div>Ошибка: {error}</div>}
         {!isLoading && !error && company && (
-          <CustomTable 
+          <CustomTable
             columns={[
               { name: "ID" },
               { name: "Название компании", align: "left" },
               { name: "Директор", align: "left" },
               { name: "Телефон", align: "left" },
               { name: "Лицензия заканчивается", align: "center" },
-            ]} 
+            ]}
             data={tableData}
           />
         )}
@@ -1293,44 +1511,67 @@ const AdminPanelPage = () => {
     <PageLayout>
       <TitleField>
         <CustomTitle>Управление лицензиями</CustomTitle>
+        <SalesModeToggle title="Скрывает данные, которые не должен видеть клиент рядом">
+          Режим продажи
+          <ToggleSwitch checked={salesMode} onChange={setSalesMode} />
+        </SalesModeToggle>
       </TitleField>
-      
+
       <LocalTabs
         tabs={tabs}
         activeTab={activeTab}
         onChange={(tabId) => {
-          setActiveTab(tabId as 'companies' | 'partners' | 'notifications' | 'credit-applications' | 'broadcast');
+          setActiveTab(
+            tabId as
+              | "companies"
+              | "partners"
+              | "notifications"
+              | "credit-applications"
+              | "broadcast"
+          );
           setCurrentPage(1);
-          setNameFilter('');
+          setNameFilter("");
         }}
         addButton={addButton}
       />
-                
-      {isLoading && (activeTab === 'companies' || activeTab === 'partners') && <div>Загрузка...</div>}
-      {error && (activeTab === 'companies' || activeTab === 'partners') && <div>Ошибка: {error}</div>}
+
+      {isLoading && (activeTab === "companies" || activeTab === "partners") && (
+        <div>Загрузка...</div>
+      )}
+      {error && (activeTab === "companies" || activeTab === "partners") && (
+        <div>Ошибка: {error}</div>
+      )}
 
       {isCompanyModalOpen && (
         <CompanyModal
-            mode={modalMode}
-            isOpen={isCompanyModalOpen}
-            onClose={() => setIsCompanyModalOpen(false)}
-            onSubmit={handleSubmitCompany}
-            initialData={selectedCompany || { phone: '', licenceDate: activeTab === 'partners' ? new Date('2099-12-31') : new Date(), chief: '', company: '' }}
+          mode={modalMode}
+          isOpen={isCompanyModalOpen}
+          onClose={() => setIsCompanyModalOpen(false)}
+          onSubmit={handleSubmitCompany}
+          initialData={
+            selectedCompany || {
+              phone: "",
+              licenceDate:
+                activeTab === "partners" ? new Date("2099-12-31") : new Date(),
+              chief: "",
+              company: "",
+            }
+          }
         />
       )}
 
       {isPhoneModalOpen && (
         <BaseModal
-            title="Изменение телефона"
-            onClose={() => setIsPhoneModalOpen(false)}
-            onCancel={() => setIsPhoneModalOpen(false)}
-            onSave={handleSavePhone}
-            isSubmitting={isSaving}
+          title="Изменение телефона"
+          onClose={() => setIsPhoneModalOpen(false)}
+          onCancel={() => setIsPhoneModalOpen(false)}
+          onSave={handleSavePhone}
+          isSubmitting={isSaving}
         >
-            <CustomPhoneInput
-                value={phoneValue}
-                onChange={(e) => setPhoneValue(e)}
-            />
+          <CustomPhoneInput
+            value={phoneValue}
+            onChange={(e) => setPhoneValue(e)}
+          />
         </BaseModal>
       )}
 
@@ -1351,7 +1592,8 @@ const AdminPanelPage = () => {
         statistics={cabinetStatistics}
         isLoading={isCabinetStatisticsLoading}
         error={cabinetStatisticsError}
-        isPartner={activeTab === 'partners'}
+        isPartner={activeTab === "partners"}
+        salesMode={salesMode}
       />
 
       {isDirectorModalOpen && (
