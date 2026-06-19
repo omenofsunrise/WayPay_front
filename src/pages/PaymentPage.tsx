@@ -26,9 +26,24 @@ import PrintIcon from "../assets/ui/print.svg?react";
 import UserSelect from "../components/ui/fields/UserSelect";
 import { useEmployee } from "../api/hooks/useEmployee";
 import CustomSelect from "../components/ui/fields/CustomSelect";
+import useBankCards from "../api/hooks/useBankCard";
 import type { EmployeeFullnames } from "../api/types/employee";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
+
+// Человекочитаемое название типа платежа (наличные / карта / место оплаты)
+const formatPaymentType = (payment: Payment): string => {
+  switch (payment.type) {
+    case "cash":
+      return "Наличными";
+    case "card":
+      return `Картой ${payment.bankCardDetails}`;
+    case "paymentPlace":
+      return "Место оплаты";
+    default:
+      return "";
+  }
+};
 
 const PaymentPage = () => {
   const [fullnameFilter, setFullnameFilter] = useState("");
@@ -43,6 +58,8 @@ const PaymentPage = () => {
   const [isPool, setIsPool] = useState(false);
   const [employeeFullname, setEmployeeFullname] = useState("");
   const [confirmedFilter, setConfirmedFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [bankCardId, setBankCardId] = useState<number>(0);
   const [employees, setEmployees] = useState<EmployeeFullnames[]>([]);
   const [isPageSizeReady, setIsPageSizeReady] = useState(false);
   const columnToApiSortMap: Record<number, string> = {
@@ -72,6 +89,7 @@ const PaymentPage = () => {
   const itemsPerPage = responsivePageSize;
 
   const { fetchEmployeeFullnames } = useEmployee();
+  const { bankCards, getAll: getBankCards } = useBankCards();
 
   const {
     isLoading,
@@ -113,6 +131,10 @@ const PaymentPage = () => {
 
     loadEmployees();
   }, []);
+
+  useEffect(() => {
+    getBankCards({ pageSize: 50 });
+  }, [getBankCards]);
 
   const employeeOptions = [
     {
@@ -173,6 +195,15 @@ const PaymentPage = () => {
       }
     }
 
+    // Добавляем фильтр по типу платежа (наличные/карта/место оплаты)
+    // и по конкретной карте, если выбрана оплата картой
+    if (typeFilter !== "all") {
+      params.paymentType = typeFilter as PaymentParams["paymentType"];
+      if (typeFilter === "card" && bankCardId) {
+        params.bankCardId = bankCardId;
+      }
+    }
+
     return params;
   };
 
@@ -200,6 +231,8 @@ const PaymentPage = () => {
     isPool,
     employeeFullname,
     confirmedFilter,
+    typeFilter,
+    bankCardId,
     dateFromFilter,
     dateToFilter,
     sortConfig,
@@ -223,6 +256,8 @@ const PaymentPage = () => {
     isPool,
     employeeFullname,
     confirmedFilter,
+    typeFilter,
+    bankCardId,
     dateFromFilter,
     dateToFilter,
     sortConfig,
@@ -269,6 +304,21 @@ const PaymentPage = () => {
 
   const handleConfirmedChange = (event: { target: { value: string } }) => {
     setConfirmedFilter(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleTypeChange = (event: { target: { value: string } }) => {
+    const value = event.target.value;
+    setTypeFilter(value);
+    // Сбрасываем выбранную карту, если выбран не «Картой»
+    if (value !== "card") {
+      setBankCardId(0);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleBankCardChange = (event: { target: { value: number } }) => {
+    setBankCardId(event.target.value);
     setCurrentPage(1);
   };
 
@@ -332,6 +382,14 @@ const PaymentPage = () => {
             params.confirmed = false;
           }
 
+          // Добавляем фильтр по типу платежа и карте для экспорта
+          if (typeFilter !== "all") {
+            params.paymentType = typeFilter as PaymentParams["paymentType"];
+            if (typeFilter === "card" && bankCardId) {
+              params.bankCardId = bankCardId;
+            }
+          }
+
           const result = await paymentService.getPayments(params);
           return {
             items: Array.isArray(result?.items) ? result.items : [],
@@ -346,10 +404,7 @@ const PaymentPage = () => {
           "Дата платежа": payment.paymentDate
             ? formatDate(payment.paymentDate)
             : "",
-          "Тип платежа":
-            payment.type === "cash"
-              ? "Наличными"
-              : `Картой ${payment.bankCardDetails}`,
+          "Тип платежа": formatPaymentType(payment),
           "Платёж принял": payment.employeeFullName || "",
           Подтверждён: payment.accepted ? "Да" : "Нет",
         }),
@@ -367,9 +422,7 @@ const PaymentPage = () => {
       payment.clientFullName || "",
       formatMoney(payment.paymentAmount?.toString() || "0"),
       payment.paymentDate ? formatDate(payment.paymentDate) : "",
-      payment.type === "cash"
-        ? "Наличными"
-        : `Картой ${payment.bankCardDetails}`,
+      formatPaymentType(payment),
       payment.employeeFullName || "",
       payment.accepted ? "Да" : "Нет",
       payment.investorNickname || "",
@@ -558,6 +611,21 @@ const PaymentPage = () => {
     { value: "not-confirmed", label: "Не подтверждённые" },
   ];
 
+  const typeOptions = [
+    { value: "all", label: "Все" },
+    { value: "cash", label: "Наличными" },
+    { value: "card", label: "Картой" },
+    { value: "paymentPlace", label: "Место оплаты" },
+  ];
+
+  const bankCardOptions = [
+    { value: 0, label: "Все карты" },
+    ...bankCards.map((card) => ({
+      value: card.id,
+      label: card.details,
+    })),
+  ];
+
   return (
     <PageLayout ref={containerRef}>
       <TitleField>
@@ -636,6 +704,20 @@ const PaymentPage = () => {
           onChange={handleConfirmedChange}
           options={confirmedOptions}
         />
+        <CustomSelect
+          placeholder="Тип платежа"
+          value={typeFilter}
+          onChange={handleTypeChange}
+          options={typeOptions}
+        />
+        {typeFilter === "card" && (
+          <CustomSelect<number>
+            placeholder="Карта"
+            value={bankCardId}
+            onChange={handleBankCardChange}
+            options={bankCardOptions}
+          />
+        )}
         <CustomCalendar
           prefix="От"
           value={dateFromFilter}
