@@ -50,12 +50,25 @@ class AdminPanelService {
   async cancelBroadcastCampaign(id: number): Promise<void> {
     await apiClient.delete(`/AdminPanel/cancell/broadcast/campaigns/${id}`);
   }
+
+  async updateBroadcastCampaignMessage(campaignId: number, content: string): Promise<void> {
+    const formData = new FormData();
+    formData.append('CampaignId', campaignId.toString());
+    formData.append('Content', content);
+    
+    await apiClient.put('/AdminPanel/broadcast/campaigns/message', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
 }
 
 export interface CreateBroadcastCampaignRequest {
   title: string;
   content: string;
   file?: File | null;
+  test?: boolean;
 }
 
 export interface BroadcastCampaignMessage {
@@ -89,6 +102,11 @@ export interface BroadcastCampaignsPagedResponse {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+export interface UpdateBroadcastCampaignMessageRequest {
+  campaignId: number;
+  content: string;
 }
 
 export default new AdminPanelService();

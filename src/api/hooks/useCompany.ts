@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import companyService, { type AddSubscriptionRequest, type PaymentTypeValue } from '../services/companyService';
+import companyService, { type AddSubscriptionRequest, type PaymentTypeValue, type PaginatedResponse } from '../services/companyService';
 import type { CommonInfo, CompaneAccountDetails, Company, SubscriptionStatistic } from '../types/company';
 
 const useCompany = () => {
@@ -7,6 +7,12 @@ const useCompany = () => {
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
+  
+  // Добавляем состояние для пагинации
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const getCompany = useCallback(async (): Promise<Company | null> => {
     setIsLoading(true);
@@ -79,12 +85,20 @@ const useCompany = () => {
     }
   }, []);
 
-  const getAllCompanies = useCallback(async (isPartner: boolean): Promise<Company[] | null> => {
-    setIsLoading(true);
+  const getAllCompanies = useCallback(async (
+    isPartner: boolean, 
+    page: number = 1, 
+    pageSize: number = 10, 
+    search: string | null = null
+  ): Promise<PaginatedResponse<Company> | null> => {
     setError(null);
     try {
-      const result = await companyService.getAllCompanies(isPartner);
-      setCompanies(result);
+      const result = await companyService.getAllCompanies(isPartner, page, pageSize, search);
+      setCompanies(result.items);
+      setTotalCount(result.totalCount);
+      setTotalPages(result.totalPages);
+      setCurrentPage(result.page);
+      setPageSize(result.pageSize);
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -241,6 +255,10 @@ const useCompany = () => {
     error,
     company,
     companies,
+    totalCount,
+    totalPages,
+    currentPage,
+    pageSize,
     getCompany,
     getCompanyById,
     getAllCompanies,

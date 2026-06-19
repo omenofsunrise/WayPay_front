@@ -615,7 +615,6 @@ const PaymentPage = () => {
     { value: "all", label: "Все" },
     { value: "cash", label: "Наличными" },
     { value: "card", label: "Картой" },
-    { value: "paymentPlace", label: "Место оплаты" },
   ];
 
   const bankCardOptions = [

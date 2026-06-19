@@ -1,5 +1,10 @@
 import { useState, useCallback } from 'react';
-import adminPanelService, { type BroadcastCampaign, type BroadcastCampaignsPagedResponse, type CreateBroadcastCampaignRequest } from '../services/adminPanelService';
+import adminPanelService, { 
+  type BroadcastCampaign, 
+  type BroadcastCampaignsPagedResponse, 
+  type CreateBroadcastCampaignRequest,
+  type UpdateBroadcastCampaignMessageRequest 
+} from '../services/adminPanelService';
 import type { SendNotificationRequest } from '../types/notification';
 import type { CreditApplicationUsersResponse } from '../types/applicationUser';
 
@@ -154,6 +159,20 @@ const useAdminPanel = () => {
     }
   };
 
+  const updateBroadcastCampaignMessage = async (campaignId: number, content: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await adminPanelService.updateBroadcastCampaignMessage(campaignId, content);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -173,7 +192,8 @@ const useAdminPanel = () => {
     createBroadcastCampaign,
     fetchBroadcastCampaigns,
     cancelBroadcastCampaign,
-    toggleWhatsAppChannel
+    toggleWhatsAppChannel,
+    updateBroadcastCampaignMessage
   };
 };
 

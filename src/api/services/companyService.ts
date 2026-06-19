@@ -1,6 +1,15 @@
 import apiClient, { FILE_BASE_URL } from '../client';
 import type { CommonInfo, CompaneAccountDetails, Company, SubscriptionStatistic } from '../types/company';
 
+// Добавляем интерфейс для ответа с пагинацией
+export interface PaginatedResponse<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 class CompanyService {
   async getCompany(): Promise<Company> {
     const response = await apiClient.get<Company>('/Company');
@@ -42,9 +51,25 @@ class CompanyService {
     return text;
   }
 
-  async getAllCompanies(partners: boolean): Promise<Company[]> {
-    const response = await apiClient.get<Company[]>('/Company/all', {
-      params: { partners }
+  // Обновленный метод с пагинацией и поиском
+  async getAllCompanies(
+    partners: boolean, 
+    page: number = 1, 
+    pageSize: number = 10, 
+    search: string | null = null
+  ): Promise<PaginatedResponse<Company>> {
+    const params: any = { 
+      partners,
+      page,
+      pageSize
+    };
+    
+    if (search && search.trim()) {
+      params.search = search.trim();
+    }
+    
+    const response = await apiClient.get<PaginatedResponse<Company>>('/Company/all', {
+      params
     });
     return response.data;
   }

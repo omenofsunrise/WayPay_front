@@ -15,10 +15,9 @@ const Container = styled.div`
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Важно: предотвращает выход содержимого за пределы */
+  overflow: hidden;
   position: relative;
 `;
-
 
 const Header = styled.div`
   display: flex;
@@ -30,7 +29,6 @@ const Header = styled.div`
   flex-shrink: 0;
 `;
 
-// Вкладки
 const TabsContainer = styled.div`
   display: flex;
   border-bottom: 2px solid #E5E7EB;
@@ -58,17 +56,17 @@ const Tab = styled.button<{ active: boolean }>`
 
 const TabContent = styled.div`
   flex: 1;
-  overflow: hidden; /* Изменено с overflow-y: auto на hidden */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* ВАЖНО для flex-скролла */
+  min-height: 0;
 `;
 
 const CampaignsContentWrapper = styled.div`
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Добавлено */
+  overflow: hidden;
 `;
 
 const CampaignGrid = styled.div`
@@ -101,13 +99,14 @@ const CampaignGrid = styled.div`
   }
 `;
 
-const CampaignCard = styled.div<{ status: string }>`
+const CampaignCard = styled.div<{ status: string; isTest?: boolean }>`
   background: white;
   border-radius: 8px;
   padding: 16px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
+  position: relative;
 
   &:hover {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -115,6 +114,7 @@ const CampaignCard = styled.div<{ status: string }>`
   }
 
   border-left: 4px solid ${props => {
+    if (props.isTest) return '#8B5CF6';
     switch (props.status) {
       case 'Pending': return '#F59E0B';
       case 'InProgress': return '#3B82F6';
@@ -124,6 +124,25 @@ const CampaignCard = styled.div<{ status: string }>`
       default: return '#6B7280';
     }
   }};
+
+  ${props => props.isTest && `
+    background: #F8F5FF;
+    border-color: #C4B5FD;
+  `}
+`;
+
+const TestBadge = styled.span`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #8B5CF6;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 const CampaignHeader = styled.div`
@@ -131,6 +150,7 @@ const CampaignHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 12px;
+  padding-right: ${props => props.theme?.hasTestBadge ? '60px' : '0'};
 `;
 
 const CampaignTitle = styled.h3`
@@ -191,7 +211,7 @@ const InfoValue = styled.span`
   font-weight: 600;
 `;
 
-const CampaignContent = styled.p`
+const CampaignContent = styled.div`
   margin: 8px 0;
   font-size: 14px;
   color: #374151;
@@ -202,6 +222,12 @@ const CampaignContent = styled.p`
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  cursor: pointer;
+  position: relative;
+  
+  &:hover {
+    color: #007D88;
+  }
 `;
 
 const CampaignActions = styled.div`
@@ -210,21 +236,41 @@ const CampaignActions = styled.div`
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #F3F4F6;
+  flex-wrap: wrap;
 `;
 
-const CancelButton = styled.button`
+const ActionButton = styled.button<{ variant?: 'primary' | 'danger' | 'warning' }>`
   padding: 6px 12px;
-  background: #EF4444;
-  color: white;
   border: none;
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-weight: 500;
 
-  &:hover {
-    background: #DC2626;
-  }
+  ${props => {
+    switch (props.variant) {
+      case 'danger':
+        return `
+          background: #EF4444;
+          color: white;
+          &:hover { background: #DC2626; }
+        `;
+      case 'warning':
+        return `
+          background: #F59E0B;
+          color: white;
+          &:hover { background: #D97706; }
+        `;
+      case 'primary':
+      default:
+        return `
+          background: #007D88;
+          color: white;
+          &:hover { background: #005f66; }
+        `;
+    }
+  }}
 
   &:disabled {
     opacity: 0.5;
@@ -279,6 +325,29 @@ const FileInput = styled.input`
   margin-top: 8px;
 `;
 
+const CheckboxGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+`;
+
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #007D88;
+  }
+`;
+
 const ProgressBar = styled.div<{ progress: number }>`
   width: 100%;
   height: 6px;
@@ -295,7 +364,6 @@ const ProgressBar = styled.div<{ progress: number }>`
   }
 `;
 
-// Секция управления каналами
 const ChannelsManagementSection = styled.div`
   padding: 20px;
   background: white;
@@ -468,7 +536,13 @@ const PaginationWrapper = styled.div`
   padding-top: 16px;
   border-top: 1px solid #E5E7EB;
   margin-top: auto;
-  background: white; /* Добавлено для фиксации пагинации */
+  background: white;
+`;
+
+const EditMessageModal = styled(BaseModal)``;
+
+const EditMessageContent = styled.div`
+  padding: 20px;
 `;
 
 const BroadcastCampaignsManager: React.FC = () => {
@@ -481,15 +555,20 @@ const BroadcastCampaignsManager: React.FC = () => {
     fetchBroadcastCampaigns,
     cancelBroadcastCampaign,
     toggleWhatsAppChannel,
+    updateBroadcastCampaignMessage,
   } = useAdminPanel();
 
   const { getChannels } = useWhatsApp();
 
   const [activeTab, setActiveTab] = useState<'campaigns' | 'channels'>('campaigns');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<BroadcastCampaign | null>(null);
+  const [editContent, setEditContent] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [isTest, setIsTest] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [channels, setChannels] = useState<any[]>([]);
@@ -518,8 +597,10 @@ const BroadcastCampaignsManager: React.FC = () => {
     }
   };
 
+  // ✅ ФИКС: Добавляем e.preventDefault() и e.stopPropagation()
   const handleCreateCampaign = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Останавливаем перезагрузку страницы
+    e.stopPropagation(); // Останавливаем всплытие события
     
     if (!title.trim() || !content.trim()) {
       alert('Заполните название и содержание кампании');
@@ -528,11 +609,17 @@ const BroadcastCampaignsManager: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const success = await createBroadcastCampaign({ title, content, file: file || null });
+      const success = await createBroadcastCampaign({ 
+        title, 
+        content, 
+        file: file || null,
+        test: isTest 
+      });
       if (success) {
         setTitle('');
         setContent('');
         setFile(null);
+        setIsTest(false);
         setIsCreateModalOpen(false);
         await fetchBroadcastCampaigns(1, 10);
       }
@@ -542,6 +629,55 @@ const BroadcastCampaignsManager: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // ✅ ФИКС: Добавляем e.preventDefault() и e.stopPropagation()
+  const handleSaveEditMessage = async (e: React.FormEvent) => {
+    e.preventDefault(); // Останавливаем перезагрузку страницы
+    e.stopPropagation(); // Останавливаем всплытие события
+    
+    if (!editingCampaign) return;
+    
+    if (!editContent.trim()) {
+      alert('Содержание сообщения не может быть пустым');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await updateBroadcastCampaignMessage(editingCampaign.id, editContent);
+      if (success) {
+        setIsEditModalOpen(false);
+        setEditingCampaign(null);
+        setEditContent('');
+        await fetchBroadcastCampaigns(broadcastPagination.page, broadcastPagination.pageSize);
+      }
+    } catch (err) {
+      console.error('Error updating campaign message:', err);
+      alert('Ошибка при обновлении сообщения');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ✅ ФИКС: Добавляем stopPropagation для кликов по карточке
+  const handleEditClick = (e: React.MouseEvent, campaign: BroadcastCampaign) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleEditMessage(campaign);
+  };
+
+  const handleEditMessage = (campaign: BroadcastCampaign) => {
+    setEditingCampaign(campaign);
+    setEditContent(campaign.message.content);
+    setIsEditModalOpen(true);
+  };
+
+  // ✅ ФИКС: Добавляем stopPropagation для отмены кампании
+  const handleCancelClick = (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleCancelCampaign(id);
   };
 
   const handleCancelCampaign = async (id: number) => {
@@ -576,7 +712,7 @@ const BroadcastCampaignsManager: React.FC = () => {
     try {
       await toggleWhatsAppChannel(channelId);
       setChannels(prev => prev.map(ch => 
-        ch.id === channelId ? { ...ch, enabled: !currentStatus } : ch
+        ch.id === channelId ? { ...ch, adminBroadCast: !currentStatus } : ch
       ));
       alert(`Канал успешно ${currentStatus ? 'отключен' : 'включен'}`);
     } catch (error) {
@@ -601,6 +737,13 @@ const BroadcastCampaignsManager: React.FC = () => {
   const getProgress = (campaign: BroadcastCampaign): number => {
     if (campaign.totalRecipients === 0) return 0;
     return (campaign.sentCount / campaign.totalRecipients) * 100;
+  };
+
+  // ✅ ФИКС: Добавляем обработчик клика по контенту с предотвращением всплытия
+  const handleContentClick = (e: React.MouseEvent, campaign: BroadcastCampaign) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleEditMessage(campaign);
   };
 
   const renderCampaignsTab = () => (
@@ -628,65 +771,88 @@ const BroadcastCampaignsManager: React.FC = () => {
       ) : (
         <>
           <CampaignGrid>
-            {broadcastCampaigns.map((campaign) => (
-              <CampaignCard key={campaign.id} status={campaign.status}>
-                <CampaignHeader>
-                  <CampaignTitle>{campaign.title}</CampaignTitle>
-                  <StatusBadge status={campaign.status}>
-                    {getStatusText(campaign.status)}
-                  </StatusBadge>
-                </CampaignHeader>
+            {broadcastCampaigns.map((campaign) => {
+              const isTestCampaign = (campaign as any).isTest || (campaign as any).test || false;
+              
+              return (
+                <CampaignCard key={campaign.id} status={campaign.status} isTest={isTestCampaign}>
+                  {isTestCampaign && <TestBadge>Тест</TestBadge>}
+                  
+                  <CampaignHeader>
+                    <CampaignTitle>{campaign.title}</CampaignTitle>
+                    <StatusBadge status={campaign.status}>
+                      {getStatusText(campaign.status)}
+                    </StatusBadge>
+                  </CampaignHeader>
 
-                <CampaignContent>{campaign.message.content}</CampaignContent>
+                  <CampaignContent 
+                    onClick={(e) => handleContentClick(e, campaign)}
+                    title="Нажмите для редактирования сообщения"
+                  >
+                    {campaign.message.content}
+                  </CampaignContent>
 
-                <CampaignInfo>
-                  <InfoItem>
-                    <InfoLabel>Создана</InfoLabel>
-                    <InfoValue>
-                      {new Date(campaign.createdAt).toLocaleString('ru-RU')}
-                    </InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Завершена</InfoLabel>
-                    <InfoValue>
-                      {campaign.completedAt 
-                        ? new Date(campaign.completedAt).toLocaleString('ru-RU')
-                        : '—'}
-                    </InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Получатели</InfoLabel>
-                    <InfoValue>{campaign.totalRecipients}</InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Отправлено</InfoLabel>
-                    <InfoValue>{campaign.sentCount}</InfoValue>
-                  </InfoItem>
-                  {campaign.failedCount > 0 && (
+                  <CampaignInfo>
                     <InfoItem>
-                      <InfoLabel>Ошибок</InfoLabel>
-                      <InfoValue style={{ color: '#EF4444' }}>
-                        {campaign.failedCount}
+                      <InfoLabel>Создана</InfoLabel>
+                      <InfoValue>
+                        {new Date(campaign.createdAt).toLocaleString('ru-RU')}
                       </InfoValue>
                     </InfoItem>
-                  )}
-                </CampaignInfo>
+                    <InfoItem>
+                      <InfoLabel>Завершена</InfoLabel>
+                      <InfoValue>
+                        {campaign.completedAt 
+                          ? new Date(campaign.completedAt).toLocaleString('ru-RU')
+                          : '—'}
+                      </InfoValue>
+                    </InfoItem>
+                    <InfoItem>
+                      <InfoLabel>Получатели</InfoLabel>
+                      <InfoValue>{campaign.totalRecipients}</InfoValue>
+                    </InfoItem>
+                    <InfoItem>
+                      <InfoLabel>Отправлено</InfoLabel>
+                      <InfoValue>{campaign.sentCount}</InfoValue>
+                    </InfoItem>
+                    {campaign.failedCount > 0 && (
+                      <InfoItem>
+                        <InfoLabel>Ошибок</InfoLabel>
+                        <InfoValue style={{ color: '#EF4444' }}>
+                          {campaign.failedCount}
+                        </InfoValue>
+                      </InfoItem>
+                    )}
+                  </CampaignInfo>
 
-                {campaign.status === 'InProgress' && (
-                  <ProgressBar progress={getProgress(campaign)}>
-                    <div />
-                  </ProgressBar>
-                )}
-
-                <CampaignActions>
-                  {campaign.status === 'Pending' && (
-                    <CancelButton onClick={() => handleCancelCampaign(campaign.id)}>
-                      Отменить рассылку
-                    </CancelButton>
+                  {campaign.status === 'InProgress' && (
+                    <ProgressBar progress={getProgress(campaign)}>
+                      <div />
+                    </ProgressBar>
                   )}
-                </CampaignActions>
-              </CampaignCard>
-            ))}
+
+                  <CampaignActions>
+                    {(campaign.status === 'Pending' || campaign.status === 'InProgress') && (
+                      <ActionButton 
+                        variant="primary" 
+                        onClick={(e) => handleEditClick(e, campaign)}
+                      >
+                        ✏️ Редактировать
+                      </ActionButton>
+                    )}
+                    
+                    {campaign.status === 'Pending' && (
+                      <ActionButton 
+                        variant="danger" 
+                        onClick={(e) => handleCancelClick(e, campaign.id)}
+                      >
+                        Отменить
+                      </ActionButton>
+                    )}
+                  </CampaignActions>
+                </CampaignCard>
+              );
+            })}
           </CampaignGrid>
 
           <PaginationWrapper>
@@ -731,7 +897,7 @@ const BroadcastCampaignsManager: React.FC = () => {
       ) : (
         <ChannelsList>
           {channels.map((channel) => {
-            const isActive = channel.enabled !== false;
+            const isActive = channel.adminBroadCast !== false;
             const isToggling = togglingChannelId === channel.id;
             
             return (
@@ -803,45 +969,128 @@ const BroadcastCampaignsManager: React.FC = () => {
         width="600px"
       >
         <ModalContent>
-          <FormGroup>
-            <FormLabel>Название кампании *</FormLabel>
-            <CustomInput
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Введите название кампании"
-              required
-            />
-          </FormGroup>
+          <form onSubmit={handleCreateCampaign}>
+            <FormGroup>
+              <FormLabel>Название кампании *</FormLabel>
+              <CustomInput
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Введите название кампании"
+                required
+              />
+            </FormGroup>
 
-          <FormGroup>
-            <FormLabel>Содержание *</FormLabel>
-            <TextArea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Введите текст сообщения для рассылки"
-              required
-            />
-          </FormGroup>
+            <FormGroup>
+              <FormLabel>Содержание *</FormLabel>
+              <TextArea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Введите текст сообщения для рассылки"
+                required
+              />
+            </FormGroup>
 
-          <FormGroup>
-            <FormLabel>Файл (опционально)</FormLabel>
-            <FileInput
-              type="file"
-              onChange={(e) => {
-                const selectedFile = e.target.files?.[0];
-                if (selectedFile) {
-                  setFile(selectedFile);
-                }
-              }}
-            />
-            {file && (
-              <div style={{ marginTop: '8px', fontSize: '14px', color: '#6B7280' }}>
-                Выбран файл: {file.name} ({(file.size / 1024).toFixed(1)} KB)
+            <FormGroup>
+              <FormLabel>Файл (опционально)</FormLabel>
+              <FileInput
+                type="file"
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0];
+                  if (selectedFile) {
+                    setFile(selectedFile);
+                  }
+                }}
+              />
+              {file && (
+                <div style={{ marginTop: '8px', fontSize: '14px', color: '#6B7280' }}>
+                  Выбран файл: {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </FormGroup>
+
+            <FormGroup>
+              <CheckboxGroup>
+                <CheckboxLabel>
+                  <input
+                    type="checkbox"
+                    checked={isTest}
+                    onChange={(e) => setIsTest(e.target.checked)}
+                  />
+                  <span>Тестовая рассылка (только для проверки)</span>
+                </CheckboxLabel>
+              </CheckboxGroup>
+              <div style={{ marginTop: '4px', fontSize: '12px', color: '#6B7280' }}>
+                Тестовые кампании будут отправлены только на тестовые номера и не затронут реальных пользователей
               </div>
-            )}
-          </FormGroup>
+            </FormGroup>
+          </form>
         </ModalContent>
       </BaseModal>
+
+      <EditMessageModal
+        title="Редактирование сообщения"
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingCampaign(null);
+          setEditContent('');
+        }}
+        onCancel={() => {
+          setIsEditModalOpen(false);
+          setEditingCampaign(null);
+          setEditContent('');
+        }}
+        onSave={handleSaveEditMessage}
+        isSubmitting={isSubmitting}
+        width="600px"
+      >
+        <EditMessageContent>
+          {editingCampaign && (
+            <form onSubmit={handleSaveEditMessage}>
+              <FormGroup>
+                <FormLabel>Кампания</FormLabel>
+                <div style={{ padding: '8px 12px', background: '#F3F4F6', borderRadius: '4px', color: '#374151' }}>
+                  {editingCampaign.title}
+                </div>
+              </FormGroup>
+
+              <FormGroup>
+                <FormLabel>Текущий статус</FormLabel>
+                <div style={{ padding: '8px 12px', background: '#F3F4F6', borderRadius: '4px', color: '#374151' }}>
+                  {getStatusText(editingCampaign.status)}
+                </div>
+              </FormGroup>
+
+              <FormGroup>
+                <FormLabel>Редактировать сообщение *</FormLabel>
+                <TextArea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Введите новое содержание сообщения"
+                  required
+                  style={{ minHeight: '150px' }}
+                />
+                <div style={{ marginTop: '4px', fontSize: '12px', color: '#6B7280' }}>
+                  {editContent.length} символов
+                </div>
+              </FormGroup>
+
+              {editingCampaign.status === 'InProgress' && (
+                <div style={{ 
+                  padding: '12px', 
+                  background: '#FEF3C7', 
+                  borderRadius: '4px',
+                  color: '#92400E',
+                  fontSize: '13px',
+                  marginTop: '12px'
+                }}>
+                  ⚠️ Внимание: Кампания уже в процессе отправки. Изменение сообщения может повлиять на текущую рассылку.
+                </div>
+              )}
+            </form>
+          )}
+        </EditMessageContent>
+      </EditMessageModal>
     </Container>
   );
 };
