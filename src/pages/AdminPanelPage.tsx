@@ -6,7 +6,7 @@ import CustomTable, {
   type RowStyle,
   type Column,
 } from "../components/ui/tables/CustomTable";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import useCompany from "../api/hooks/useCompany";
 import CompanyModal, {
   type CompanyModalData,
@@ -704,16 +704,30 @@ const AdminPanelPage = () => {
     () => localStorage.getItem(SALES_MODE_STORAGE_KEY) === "true"
   );
   const pageSize = 10;
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Запоминаем режим продажи между сессиями
-  useEffect(() => {
-    localStorage.setItem(SALES_MODE_STORAGE_KEY, String(salesMode));
-  }, [salesMode]);
+  const {
+    isLoading,
+    error,
+    company,
+    companies,
+    totalCount,
+    getAllCompanies,
+    createCompany,
+    deleteCompany,
+    changeLicenceDate,
+    changePhone,
+    getSubscriptionStatistics,
+    payoutPartner,
+  } = useCompany();
 
-  const handleSearchChange = (value: string) => {
-    setNameFilter(value);
-    setCurrentPage(1);
-  };
+  const { updateDirectorFullname, setSelfCompany } = useEmployee();
+
+  const {
+    sendNotification,
+    isLoading: isNotificationLoading,
+    error: notificationError,
+  } = useAdminPanel();
 
   const [activeTab, setActiveTab] = useState<
     | "companies"
@@ -759,42 +773,37 @@ const AdminPanelPage = () => {
   const [targetId, setTargetId] = useState<string>("");
   const [isSendingNotification, setIsSendingNotification] = useState(false);
 
-  const {
-    isLoading,
-    error,
-    company,
-    companies,
-    getAllCompanies,
-    createCompany,
-    deleteCompany,
-    changeLicenceDate,
-    changePhone,
-    getSubscriptionStatistics,
-    payoutPartner,
-  } = useCompany();
-
-  const { updateDirectorFullname, setSelfCompany } = useEmployee();
-
-  const {
-    sendNotification,
-    isLoading: isNotificationLoading,
-    error: notificationError,
-  } = useAdminPanel();
+  // Запоминаем режим продажи между сессиями
+  useEffect(() => {
+    localStorage.setItem(SALES_MODE_STORAGE_KEY, String(salesMode));
+  }, [salesMode]);
 
   const loadCompanies = useCallback(
-    async (isPartner: boolean = false) => {
-      await getAllCompanies(isPartner);
+    async (isPartner: boolean = false, page: number = 1, search: string = nameFilter) => {
+      await getAllCompanies(isPartner, page, pageSize, search || null);
     },
-    [getAllCompanies]
+    [getAllCompanies, nameFilter, pageSize]
   );
 
   useEffect(() => {
-    if (activeTab === "companies") {
-      loadCompanies(false);
-    } else if (activeTab === "partners") {
-      loadCompanies(true);
+    if (activeTab === "companies" || activeTab === "partners") {
+      loadCompanies(activeTab === "partners", currentPage);
     }
-  }, [loadCompanies, activeTab]);
+  }, [loadCompanies, activeTab, currentPage]);
+
+  const handleSearchChange = (value: string) => {
+    setNameFilter(value);
+    setCurrentPage(1);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    loadCompanies(activeTab === "partners", page);
+  };
 
   const handleCreateCompany = () => {
     setModalMode("create");
@@ -824,7 +833,6 @@ const AdminPanelPage = () => {
     setIsPhoneModalOpen(true);
   };
 
-  // Изменено: открытие модального окна для добавления подписки
   const handleOpenSubscriptionAdd = (
     companyId: number,
     companyName: string
@@ -881,7 +889,7 @@ const AdminPanelPage = () => {
     try {
       const success = await changePhone(editingCompanyId, phoneValue);
       if (success) {
-        await loadCompanies(activeTab === "partners");
+        await loadCompanies(activeTab === "partners", currentPage);
         setIsPhoneModalOpen(false);
       } else {
         alert("Не удалось сохранить изменения");
@@ -911,7 +919,7 @@ const AdminPanelPage = () => {
       );
       if (success) {
         alert(`Подписка успешно добавлена!`);
-        await loadCompanies(activeTab === "partners");
+        await loadCompanies(activeTab === "partners", currentPage);
         setIsSubscriptionModalOpen(false);
       } else {
         alert("Не удалось добавить подписку");
@@ -931,7 +939,7 @@ const AdminPanelPage = () => {
     setIsSaving(true);
     try {
       await updateDirectorFullname(editingCompanyId, directorValue);
-      await loadCompanies(activeTab === "partners");
+      await loadCompanies(activeTab === "partners", currentPage);
       setIsDirectorModalOpen(false);
     } catch (err) {
       console.error("Ошибка при изменении имени директора:", err);
@@ -948,7 +956,7 @@ const AdminPanelPage = () => {
     try {
       await payoutPartner(editingCompanyId, amount);
       alert(`Выплата ${amount} ₽ успешно выполнена!`);
-      await loadCompanies(true);
+      await loadCompanies(true, currentPage);
       setIsPayoutModalOpen(false);
     } catch (err) {
       console.error("Ошибка при выплате:", err);
@@ -996,7 +1004,7 @@ const AdminPanelPage = () => {
     if (userInput === name) {
       try {
         await deleteCompany(Number(id));
-        loadCompanies(activeTab === "partners");
+        await loadCompanies(activeTab === "partners", currentPage);
       } catch (err) {
         console.error("Ошибка при удалении компании:", err);
         alert("Не удалось удалить компанию");
@@ -1017,7 +1025,7 @@ const AdminPanelPage = () => {
           IsPartner: activeTab === "partners",
         });
       }
-      loadCompanies(activeTab === "partners");
+      await loadCompanies(activeTab === "partners", currentPage);
       setIsCompanyModalOpen(false);
     } catch (err) {
       console.error("Ошибка при сохранении компании:", err);
@@ -1061,25 +1069,6 @@ const AdminPanelPage = () => {
     }
   };
 
-  const searchQuery = nameFilter.trim().toLowerCase();
-  // Только цифры из запроса — чтобы искать по телефону без учёта формата
-  // (скобок, пробелов, дефисов): "9162700169" находит "8 (916) 270-01-69".
-  const digitsQuery = nameFilter.replace(/\D/g, "");
-  const filteredCompanies =
-    companies?.filter((company) => {
-      const phoneDigits = (company.phone || "").replace(/\D/g, "");
-      return (
-        company.id.toString().includes(searchQuery) ||
-        company.name.toLowerCase().includes(searchQuery) ||
-        (digitsQuery.length > 0 && phoneDigits.includes(digitsQuery))
-      );
-    }) || [];
-
-  const paginatedCompanies = filteredCompanies.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
   const getTableColumns = (): Column[] => {
     if (activeTab === "partners") {
       const columns: Column[] = [
@@ -1120,7 +1109,7 @@ const AdminPanelPage = () => {
     });
 
   const tableData = hasRole("суперадмин")
-    ? paginatedCompanies.map((company) => {
+    ? companies.map((company) => {
         if (activeTab === "partners") {
           const row: React.ReactNode[] = [
             company.id.toString(),
@@ -1181,7 +1170,7 @@ const AdminPanelPage = () => {
     : [];
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {
-    const company = paginatedCompanies[index];
+    const company = companies[index];
 
     if (
       activeTab !== "partners" &&
@@ -1293,7 +1282,6 @@ const AdminPanelPage = () => {
         ]
     : [];
 
-  // В режиме продажи скрываем «Зайти в компанию», чтобы клиент рядом не видел вход в чужой аккаунт
   const tableActions = tableActionsAll.filter(
     (action) => !(salesMode && action.label === "Зайти в компанию")
   );
@@ -1305,7 +1293,7 @@ const AdminPanelPage = () => {
           <SearchBar>
             <CustomInput
               inputType="text"
-              placeholder="Поиск по номеру или названию"
+              placeholder="Поиск по названию или телефону"
               value={nameFilter}
               onChange={(e) => handleSearchChange(e.target.value)}
             />
@@ -1322,12 +1310,12 @@ const AdminPanelPage = () => {
           />
 
           <PaginationLayout>
-            <CountInfoTitle total={filteredCompanies.length} />
+            <CountInfoTitle total={totalCount} />
 
             <Pagination
-              total={filteredCompanies.length}
+              total={totalCount}
               current={currentPage}
-              onChange={setCurrentPage}
+              onChange={handlePageChange}
               itemsPerPage={pageSize}
             />
           </PaginationLayout>
