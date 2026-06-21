@@ -764,6 +764,7 @@ const AdminPanelPage = () => {
     error,
     company,
     companies,
+    companiesTotalCount,
     getAllCompanies,
     createCompany,
     deleteCompany,
@@ -783,17 +784,25 @@ const AdminPanelPage = () => {
 
   const loadCompanies = useCallback(
     async (isPartner: boolean = false) => {
-      await getAllCompanies(isPartner);
+      await getAllCompanies({
+        partners: isPartner,
+        page: currentPage,
+        pageSize,
+        search: nameFilter,
+      });
     },
-    [getAllCompanies]
+    [getAllCompanies, currentPage, nameFilter]
   );
 
+  // Серверная пагинация/поиск: перезапрос при смене вкладки, страницы или поиска.
+  // Поиск с дебаунсом, чтобы не слать запрос на каждый символ.
   useEffect(() => {
-    if (activeTab === "companies") {
-      loadCompanies(false);
-    } else if (activeTab === "partners") {
-      loadCompanies(true);
-    }
+    if (activeTab !== "companies" && activeTab !== "partners") return;
+    const isPartner = activeTab === "partners";
+    const timeout = setTimeout(() => {
+      loadCompanies(isPartner);
+    }, 300);
+    return () => clearTimeout(timeout);
   }, [loadCompanies, activeTab]);
 
   const handleCreateCompany = () => {
@@ -1061,25 +1070,8 @@ const AdminPanelPage = () => {
     }
   };
 
-  const searchQuery = nameFilter.trim().toLowerCase();
-  // Только цифры из запроса — чтобы искать по телефону без учёта формата
-  // (скобок, пробелов, дефисов): "9162700169" находит "8 (916) 270-01-69".
-  const digitsQuery = nameFilter.replace(/\D/g, "");
-  const filteredCompanies =
-    companies?.filter((company) => {
-      const phoneDigits = (company.phone || "").replace(/\D/g, "");
-      return (
-        company.id.toString().includes(searchQuery) ||
-        company.name.toLowerCase().includes(searchQuery) ||
-        (digitsQuery.length > 0 && phoneDigits.includes(digitsQuery))
-      );
-    }) || [];
-
-  const paginatedCompanies = filteredCompanies.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
+  // Пагинация и поиск выполняются на сервере (GET /Company/all?page&pageSize&search),
+  // поэтому companies — это уже текущая страница; фильтровать/резать локально не нужно.
   const getTableColumns = (): Column[] => {
     if (activeTab === "partners") {
       const columns: Column[] = [
@@ -1120,7 +1112,7 @@ const AdminPanelPage = () => {
     });
 
   const tableData = hasRole("суперадмин")
-    ? paginatedCompanies.map((company) => {
+    ? companies.map((company) => {
         if (activeTab === "partners") {
           const row: React.ReactNode[] = [
             company.id.toString(),
@@ -1181,7 +1173,7 @@ const AdminPanelPage = () => {
     : [];
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {
-    const company = paginatedCompanies[index];
+    const company = companies[index];
 
     if (
       activeTab !== "partners" &&
@@ -1305,7 +1297,7 @@ const AdminPanelPage = () => {
           <SearchBar>
             <CustomInput
               inputType="text"
-              placeholder="Поиск по номеру или названию"
+              placeholder="Поиск по номеру, названию или телефону"
               value={nameFilter}
               onChange={(e) => handleSearchChange(e.target.value)}
             />
@@ -1322,10 +1314,10 @@ const AdminPanelPage = () => {
           />
 
           <PaginationLayout>
-            <CountInfoTitle total={filteredCompanies.length} />
+            <CountInfoTitle total={companiesTotalCount} />
 
             <Pagination
-              total={filteredCompanies.length}
+              total={companiesTotalCount}
               current={currentPage}
               onChange={setCurrentPage}
               itemsPerPage={pageSize}

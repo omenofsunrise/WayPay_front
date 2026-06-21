@@ -1,18 +1,24 @@
-import { useState, useCallback } from 'react';
-import companyService, { type AddSubscriptionRequest, type PaymentTypeValue, type PaginatedResponse } from '../services/companyService';
-import type { CommonInfo, CompaneAccountDetails, Company, SubscriptionStatistic } from '../types/company';
+import { useState, useCallback } from "react";
+import companyService, {
+  type AddSubscriptionRequest,
+  type PaymentTypeValue,
+  type GetAllCompaniesParams,
+} from "../services/companyService";
+import type {
+  CommonInfo,
+  CompaneAccountDetails,
+  Company,
+  SubscriptionStatistic,
+} from "../types/company";
+import type { PaginatedResponse } from "../types/common";
 
 const useCompany = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
-  
-  // Добавляем состояние для пагинации
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [companiesTotalCount, setCompaniesTotalCount] = useState(0);
+  const [companiesTotalPages, setCompaniesTotalPages] = useState(0);
 
   const getCompany = useCallback(async (): Promise<Company | null> => {
     setIsLoading(true);
@@ -22,26 +28,29 @@ const useCompany = () => {
       setCompany(result);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const getCompanyById = useCallback(async (id: number): Promise<Company | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await companyService.getCompanyById(id);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const getCompanyById = useCallback(
+    async (id: number): Promise<Company | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await companyService.getCompanyById(id);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const getCommonInfo = useCallback(async (): Promise<CommonInfo | null> => {
     setIsLoading(true);
@@ -50,77 +59,85 @@ const useCompany = () => {
       const result = await companyService.getCommonInfo();
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const getAccountDetails = useCallback(async (): Promise<CompaneAccountDetails | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await companyService.getAccountDetails();
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const getAccountDetails =
+    useCallback(async (): Promise<CompaneAccountDetails | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await companyService.getAccountDetails();
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    }, []);
 
-  const getSubscriptionStatistics = useCallback(async (id: number): Promise<SubscriptionStatistic[] | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await companyService.getSubscriptionStatistics(id);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const getSubscriptionStatistics = useCallback(
+    async (id: number): Promise<SubscriptionStatistic[] | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await companyService.getSubscriptionStatistics(id);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
-  const getAllCompanies = useCallback(async (
-    isPartner: boolean, 
-    page: number = 1, 
-    pageSize: number = 10, 
-    search: string | null = null
-  ): Promise<PaginatedResponse<Company> | null> => {
-    setError(null);
-    try {
-      const result = await companyService.getAllCompanies(isPartner, page, pageSize, search);
-      setCompanies(result.items);
-      setTotalCount(result.totalCount);
-      setTotalPages(result.totalPages);
-      setCurrentPage(result.page);
-      setPageSize(result.pageSize);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const getAllCompanies = useCallback(
+    async (
+      params: GetAllCompaniesParams
+    ): Promise<PaginatedResponse<Company> | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await companyService.getAllCompanies(params);
+        setCompanies(result.items);
+        setCompaniesTotalCount(result.totalCount);
+        setCompaniesTotalPages(result.totalPages);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
-  const payoutPartner = async (partnerId: number, amount: number) : Promise<void> => {
+  const payoutPartner = async (
+    partnerId: number,
+    amount: number
+  ): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
       await companyService.payoutPartner(partnerId, amount);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
-    }    
-  }
+    }
+  };
 
-  const updateCompany = async (companyData: Partial<Company>): Promise<Company | null> => {
+  const updateCompany = async (
+    companyData: Partial<Company>
+  ): Promise<Company | null> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -128,21 +145,27 @@ const useCompany = () => {
       setCompany(updatedCompany);
       return updatedCompany;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateCompanyById = async (id: number, companyData: Partial<Company>): Promise<Company | null> => {
+  const updateCompanyById = async (
+    id: number,
+    companyData: Partial<Company>
+  ): Promise<Company | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedCompany = await companyService.updateCompanyById(id, companyData);
+      const updatedCompany = await companyService.updateCompanyById(
+        id,
+        companyData
+      );
       return updatedCompany;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
@@ -156,7 +179,7 @@ const useCompany = () => {
       await companyService.deleteCompany(id);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return false;
     } finally {
       setIsLoading(false);
@@ -176,89 +199,106 @@ const useCompany = () => {
       const newCompany = await companyService.createCompany(companyData);
       return newCompany;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const changeLicenceDate = useCallback(async (id: number, days: number, cost: number, paymentType: PaymentTypeValue): Promise<boolean> => {
+  const changeLicenceDate = useCallback(
+    async (
+      id: number,
+      days: number,
+      cost: number,
+      paymentType: PaymentTypeValue
+    ): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
       try {
-          const request: AddSubscriptionRequest = {
-              cost: cost,
-              days: days,
-              paymentType: paymentType
-          };
-          const success = await companyService.addSubscription(id, request);
-          return success;
+        const request: AddSubscriptionRequest = {
+          cost: cost,
+          days: days,
+          paymentType: paymentType,
+        };
+        const success = await companyService.addSubscription(id, request);
+        return success;
       } catch (err) {
-          setError(err instanceof Error ? err.message : 'Unknown error');
-          return false;
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return false;
       } finally {
-          setIsLoading(false);
+        setIsLoading(false);
       }
-  }, []);
+    },
+    []
+  );
 
-  const updateCompanyPhoto = useCallback(async (photo: File): Promise<Company | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const updatedCompany = await companyService.updateCompanyPhoto(photo);
-      setCompany(prev => prev ? {...prev, photoPath: updatedCompany.photoPath} : null);
-      return updatedCompany;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update photo');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const updateCompanyPhoto = useCallback(
+    async (photo: File): Promise<Company | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const updatedCompany = await companyService.updateCompanyPhoto(photo);
+        setCompany((prev) =>
+          prev ? { ...prev, photoPath: updatedCompany.photoPath } : null
+        );
+        return updatedCompany;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to update photo");
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const deleteCompanyPhoto = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
       await companyService.deleteCompanyPhoto();
-      setCompany(prev => prev ? {...prev, photoPath: undefined} : null);
+      setCompany((prev) => (prev ? { ...prev, photoPath: undefined } : null));
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete photo');
+      setError(err instanceof Error ? err.message : "Failed to delete photo");
       return false;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const getCompanyPhotoUrl = useCallback((photoPath?: string): string | null => {
-    return companyService.getCompanyPhotoUrl(photoPath);
-  }, []);
+  const getCompanyPhotoUrl = useCallback(
+    (photoPath?: string): string | null => {
+      return companyService.getCompanyPhotoUrl(photoPath);
+    },
+    []
+  );
 
-  const changePhone = useCallback(async (id: number, phone: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const success = await companyService.changePhone(id, phone);
-      return success;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const changePhone = useCallback(
+    async (id: number, phone: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const success = await companyService.changePhone(id, phone);
+        return success;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   return {
     isLoading,
     error,
     company,
     companies,
-    totalCount,
-    totalPages,
-    currentPage,
-    pageSize,
+    companiesTotalCount,
+    companiesTotalPages,
     getCompany,
     getCompanyById,
     getAllCompanies,
@@ -274,7 +314,7 @@ const useCompany = () => {
     getCommonInfo,
     getAccountDetails,
     getSubscriptionStatistics,
-    payoutPartner
+    payoutPartner,
   };
 };
 

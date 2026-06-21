@@ -1,18 +1,22 @@
-import apiClient, { FILE_BASE_URL } from '../client';
-import type { CommonInfo, CompaneAccountDetails, Company, SubscriptionStatistic } from '../types/company';
+import apiClient, { FILE_BASE_URL } from "../client";
+import type {
+  CommonInfo,
+  CompaneAccountDetails,
+  Company,
+  SubscriptionStatistic,
+} from "../types/company";
+import type { PaginatedResponse } from "../types/common";
 
-// Добавляем интерфейс для ответа с пагинацией
-export interface PaginatedResponse<T> {
-  items: T[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+export interface GetAllCompaniesParams {
+  partners: boolean;
+  page?: number;
+  pageSize?: number;
+  search?: string;
 }
 
 class CompanyService {
   async getCompany(): Promise<Company> {
-    const response = await apiClient.get<Company>('/Company');
+    const response = await apiClient.get<Company>("/Company");
     return response.data;
   }
 
@@ -27,20 +31,29 @@ class CompanyService {
   }
 
   async getAccountDetails(): Promise<CompaneAccountDetails> {
-    const response = await apiClient.get<CompaneAccountDetails>(`/Company/account-details`);
+    const response = await apiClient.get<CompaneAccountDetails>(
+      `/Company/account-details`
+    );
     return response.data;
   }
 
-  async getSubscriptionStatistics(id: number): Promise<SubscriptionStatistic[]> {
-    const response = await apiClient.get<SubscriptionStatistic[]>(`/Company/subscription/statistics/${id}`);
+  async getSubscriptionStatistics(
+    id: number
+  ): Promise<SubscriptionStatistic[]> {
+    const response = await apiClient.get<SubscriptionStatistic[]>(
+      `/Company/subscription/statistics/${id}`
+    );
     return response.data;
   }
 
   async getFilledSender(scheduleId: number): Promise<string> {
-    const response = await apiClient.get<ArrayBuffer>(`/SenderSettings/filled/${scheduleId}`, {
-      responseType: 'arraybuffer',
-    });
-    const text = new TextDecoder('utf-8').decode(response.data);
+    const response = await apiClient.get<ArrayBuffer>(
+      `/SenderSettings/filled/${scheduleId}`,
+      {
+        responseType: "arraybuffer",
+      }
+    );
+    const text = new TextDecoder("utf-8").decode(response.data);
     if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
       try {
         return JSON.parse(text);
@@ -51,35 +64,35 @@ class CompanyService {
     return text;
   }
 
-  // Обновленный метод с пагинацией и поиском
+  // GET /Company/all — серверная пагинация и поиск.
+  // Бэкенд отдаёт PagedResult { page, pageSize, totalCount, totalPages, items }.
   async getAllCompanies(
-    partners: boolean, 
-    page: number = 1, 
-    pageSize: number = 10, 
-    search: string | null = null
+    params: GetAllCompaniesParams
   ): Promise<PaginatedResponse<Company>> {
-    const params: any = { 
-      partners,
-      page,
-      pageSize
-    };
-    
-    if (search && search.trim()) {
-      params.search = search.trim();
-    }
-    
-    const response = await apiClient.get<PaginatedResponse<Company>>('/Company/all', {
-      params
-    });
+    const { partners, page = 1, pageSize = 10, search } = params;
+    const response = await apiClient.get<PaginatedResponse<Company>>(
+      "/Company/all",
+      {
+        params: {
+          partners,
+          page,
+          pageSize,
+          search: search?.trim() || undefined,
+        },
+      }
+    );
     return response.data;
   }
 
   async updateCompany(company: Partial<Company>): Promise<Company> {
-    const response = await apiClient.put<Company>('/Company', company);
+    const response = await apiClient.put<Company>("/Company", company);
     return response.data;
   }
 
-  async updateCompanyById(id: number, company: Partial<Company>): Promise<Company> {
+  async updateCompanyById(
+    id: number,
+    company: Partial<Company>
+  ): Promise<Company> {
     const response = await apiClient.put<Company>(`/Company/${id}`, company);
     return response.data;
   }
@@ -90,14 +103,14 @@ class CompanyService {
 
   async updateCompanyPhoto(photo: File): Promise<Company> {
     const formData = new FormData();
-    formData.append('photo', photo);
-    
+    formData.append("photo", photo);
+
     const response = await apiClient.patch<Company>(
-      '/Company/photo',
+      "/Company/photo",
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       }
     );
@@ -106,19 +119,19 @@ class CompanyService {
 
   async payoutPartner(partnerId: number, amount: number): Promise<void> {
     const response = await apiClient.patch<Company>(
-      '/Company/partner/payout',
+      "/Company/partner/payout",
       null,
       {
         params: {
           partnerId,
-          amount
-        }
+          amount,
+        },
       }
     );
   }
 
   async deleteCompanyPhoto(): Promise<void> {
-    await apiClient.delete('/Company/photo');
+    await apiClient.delete("/Company/photo");
   }
 
   getCompanyPhotoUrl(photoPath?: string): string | null {
@@ -133,35 +146,34 @@ class CompanyService {
     CompanyName: string;
     IsPartner: boolean;
   }): Promise<Company> {
-    const response = await apiClient.post<Company>('/Company', companyData);
+    const response = await apiClient.post<Company>("/Company", companyData);
     return response.data;
   }
 
-  async addSubscription(id: number, request: AddSubscriptionRequest): Promise<boolean> {
-      try {
-          await apiClient.patch(`/Company/licence-date/${id}`, request, {
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-          });
-          return true;
-      } catch (error) {
-          console.error('Failed to add subscription:', error);
-          return false;
-      }
+  async addSubscription(
+    id: number,
+    request: AddSubscriptionRequest
+  ): Promise<boolean> {
+    try {
+      await apiClient.patch(`/Company/licence-date/${id}`, request, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      return true;
+    } catch (error) {
+      console.error("Failed to add subscription:", error);
+      return false;
+    }
   }
 
   async changePhone(id: number, phone: string): Promise<boolean> {
     try {
-      await apiClient.patch(
-        `/Company/phone/${id}`,
-        `"${phone}"`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      await apiClient.patch(`/Company/phone/${id}`, `"${phone}"`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       return true;
     } catch {
       return false;
@@ -178,9 +190,9 @@ export interface AddSubscriptionRequest {
 const PaymentType = {
   ACQUIRING: 0,
   CASH: 1,
-  FREE: 2
+  FREE: 2,
 } as const;
 
-export type PaymentTypeValue = typeof PaymentType[keyof typeof PaymentType];
+export type PaymentTypeValue = (typeof PaymentType)[keyof typeof PaymentType];
 
 export default new CompanyService();
