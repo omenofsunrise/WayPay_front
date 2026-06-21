@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from "react";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import FilterField from "../components/ui/Layouts/FilterField";
@@ -7,15 +7,15 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import ClientSelectModal from "../components/modal/CrudInherited/ClientSelectModal";
 import useBlacklist from "../api/hooks/useBlacklist";
-import { useAuth } from '../сontext/AuthContext';
-import { Container } from 'react-bootstrap';
-import styled from 'styled-components';
-import ClientCard from '../components/ui/cards/ClientCard';
-import PhoneModalInput from '../components/ui/fields/PhoneModalInput';
-import ClientDossier from '../components/ui/Dossiers/ClientDossier';
-import CountInfoTitle from '../components/ui/Text/CountInfoTitle';
-import { TitleContainer } from './BlackCatalog';
-import { ClientCount } from './ClientPage';
+import { useAuth } from "../сontext/AuthContext";
+import { Container } from "react-bootstrap";
+import styled from "styled-components";
+import ClientCard from "../components/ui/cards/ClientCard";
+import PhoneModalInput from "../components/ui/fields/PhoneModalInput";
+import ClientDossier from "../components/ui/Dossiers/ClientDossier";
+import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
+import { TitleContainer } from "./BlackCatalog";
+import { ClientCount } from "./ClientPage";
 
 const EmptyStateContainer = styled.div`
   display: flex;
@@ -24,7 +24,7 @@ const EmptyStateContainer = styled.div`
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
-  color: #6B7280;
+  color: #6b7280;
 `;
 
 const EmptyStateIcon = styled.div`
@@ -80,8 +80,8 @@ const ContextMenu = styled.div<{ x: number; y: number }>`
   z-index: 1001;
   min-width: 160px;
   padding: 4px 0;
-  left: ${props => props.x}px;
-  top: ${props => props.y}px;
+  left: ${(props) => props.x}px;
+  top: ${(props) => props.y}px;
 `;
 
 const MenuItem = styled.div<{ danger?: boolean }>`
@@ -90,8 +90,8 @@ const MenuItem = styled.div<{ danger?: boolean }>`
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: ${props => props.danger ? '#ff4d4f' : '#333'};
-  
+  color: ${(props) => (props.danger ? "#ff4d4f" : "#333")};
+
   &:hover {
     background-color: #f5f5f5;
   }
@@ -107,7 +107,7 @@ const Backdrop = styled.div`
 `;
 
 const DebtBadge = styled.span`
-  background-color: #EF4444;
+  background-color: #ef4444;
   color: white;
   padding: 4px 8px;
   border-radius: 12px;
@@ -116,7 +116,7 @@ const DebtBadge = styled.span`
 `;
 
 const StyledCountInfo = styled(CountInfoTitle)`
-    margin-left: auto;
+  margin-left: auto;
 `;
 
 interface BlacklistClient {
@@ -136,348 +136,361 @@ interface BlacklistClient {
 }
 
 const BlacklistPage = () => {
-    const [nameFilter, setNameFilter] = useState('');
-    const [phoneFilter, setPhoneFilter] = useState('');
-    const [searchTriggered, setSearchTriggered] = useState(false);
-    const [hasSearched, setHasSearched] = useState(false);
-    const { hasRole } = useAuth();
-    const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
-    const [selectedClientDossier, setSelectedClientDossier] = useState<BlacklistClient | null>(null);
-    
-    // Добавляем состояние для общего количества клиентов в черном списке
-    const [totalBlacklistCount, setTotalBlacklistCount] = useState<number>(0);
-    
-    const { 
-        isLoading, 
-        error, 
-        data: blacklistData, 
-        getBlacklist,
-        addBlacklist,
-        deleteFromBlacklist
-    } = useBlacklist();
-    
-    const [contextMenu, setContextMenu] = useState<{
-        x: number;
-        y: number;
-        client: BlacklistClient | null;
-    } | null>(null);
+  const [nameFilter, setNameFilter] = useState("");
+  const [phoneFilter, setPhoneFilter] = useState("");
+  const [searchTriggered, setSearchTriggered] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const { hasRole } = useAuth();
+  const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
+  const [selectedClientDossier, setSelectedClientDossier] =
+    useState<BlacklistClient | null>(null);
 
-    // Загружаем общее количество клиентов в черном списке при инициализации
-    useEffect(() => {
-        const loadTotalBlacklistCount = async () => {
-            try {
-                // Делаем запрос с минимальными параметрами только для получения количества
-                const params = {
-                    page: 1,
-                    pageSize: 0, // Минимальный размер страницы, так как нам нужен только totalCount
-                    fullName: undefined,
-                    phone: undefined
-                };
+  // Добавляем состояние для общего количества клиентов в черном списке
+  const [totalBlacklistCount, setTotalBlacklistCount] = useState<number>(0);
 
-                const response = await getBlacklist(params);
-                setTotalBlacklistCount(response.totalCount || 0);
-            } catch (err) {
-                console.error('Ошибка при загрузке общего количества клиентов в черном списке:', err);
-                setTotalBlacklistCount(0);
-            }
+  const {
+    isLoading,
+    error,
+    data: blacklistData,
+    getBlacklist,
+    addBlacklist,
+    deleteFromBlacklist,
+  } = useBlacklist();
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    client: BlacklistClient | null;
+  } | null>(null);
+
+  // Загружаем общее количество клиентов в черном списке при инициализации
+  useEffect(() => {
+    const loadTotalBlacklistCount = async () => {
+      try {
+        // Делаем запрос с минимальными параметрами только для получения количества
+        const params = {
+          page: 1,
+          pageSize: 0, // Минимальный размер страницы, так как нам нужен только totalCount
+          fullName: undefined,
+          phone: undefined,
         };
 
-        loadTotalBlacklistCount();
-    }, []); // Пустой массив зависимостей - выполнится только при монтировании
-
-    const resetFilters = useCallback(() => {
-        setNameFilter('');
-        setPhoneFilter('');
-        setSearchTriggered(false);
-        setHasSearched(false);
-    }, []);
-
-    const loadBlacklist = useCallback(async () => {
-        const shouldSearch = searchTriggered && (
-            nameFilter.length >= 5 || 
-            (phoneFilter.replace(/\D/g, '').length >= 11 && phoneFilter.replace(/\D/g, '').length <= 15)
+        const response = await getBlacklist(params);
+        setTotalBlacklistCount(response.totalCount || 0);
+      } catch (err) {
+        console.error(
+          "Ошибка при загрузке общего количества клиентов в черном списке:",
+          err
         );
-
-        if (!shouldSearch && searchTriggered) {
-            return;
-        }
-
-        const params: any = {
-            page: 1,
-            pageSize: 1000,
-            fullName: nameFilter || undefined,
-            phone: phoneFilter || undefined
-        };
-
-        await getBlacklist(params);
-        setHasSearched(true);
-    }, [nameFilter, phoneFilter, getBlacklist, searchTriggered]);
-
-    useEffect(() => {
-        if (searchTriggered) {
-            loadBlacklist();
-        }
-    }, [searchTriggered, loadBlacklist]);
-
-    const handlePhoneFilterChange = (value: string) => {
-        setPhoneFilter(value);
-        setSearchTriggered(false);
-        
-        if (!value && !nameFilter) {
-            resetFilters();
-        }
+        setTotalBlacklistCount(0);
+      }
     };
 
-    const handleFilterChange = (value: string) => {
-        setNameFilter(value);
-        setSearchTriggered(false);
-        
-        if (!value && !phoneFilter) {
-            resetFilters();
-        }
+    loadTotalBlacklistCount();
+  }, []); // Пустой массив зависимостей - выполнится только при монтировании
+
+  const resetFilters = useCallback(() => {
+    setNameFilter("");
+    setPhoneFilter("");
+    setSearchTriggered(false);
+    setHasSearched(false);
+  }, []);
+
+  const loadBlacklist = useCallback(async () => {
+    const shouldSearch =
+      searchTriggered &&
+      (nameFilter.length >= 5 ||
+        (phoneFilter.replace(/\D/g, "").length >= 11 &&
+          phoneFilter.replace(/\D/g, "").length <= 15));
+
+    if (!shouldSearch && searchTriggered) {
+      return;
+    }
+
+    const params: any = {
+      page: 1,
+      pageSize: 1000,
+      fullName: nameFilter || undefined,
+      phone: phoneFilter || undefined,
     };
 
-    const handleSearch = () => {
-        setSearchTriggered(true);
+    await getBlacklist(params);
+    setHasSearched(true);
+  }, [nameFilter, phoneFilter, getBlacklist, searchTriggered]);
+
+  useEffect(() => {
+    if (searchTriggered) {
+      loadBlacklist();
+    }
+  }, [searchTriggered, loadBlacklist]);
+
+  const handlePhoneFilterChange = (value: string) => {
+    setPhoneFilter(value);
+    setSearchTriggered(false);
+
+    if (!value && !nameFilter) {
+      resetFilters();
+    }
+  };
+
+  const handleFilterChange = (value: string) => {
+    setNameFilter(value);
+    setSearchTriggered(false);
+
+    if (!value && !phoneFilter) {
+      resetFilters();
+    }
+  };
+
+  const handleSearch = () => {
+    setSearchTriggered(true);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
+  const handleCardRightClick = useCallback(
+    (e: React.MouseEvent, client: BlacklistClient) => {
+      e.preventDefault();
+      if (hasRole("суперадмин")) {
+        setContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          client,
+        });
+      }
+    },
+    [hasRole]
+  );
+
+  const handleContextMenuAction = useCallback(
+    (action: "delete") => {
+      if (!contextMenu?.client) return;
+
+      if (action === "delete") {
+        handleDeleteFromBlacklist(contextMenu.client);
+      }
+
+      setContextMenu(null);
+    },
+    [contextMenu]
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu) {
+        closeContextMenu();
+      }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
     };
+  }, [contextMenu]);
 
-    const handleCardRightClick = useCallback((e: React.MouseEvent, client: BlacklistClient) => {
-        e.preventDefault();
-        if (hasRole('суперадмин')) {
-            setContextMenu({
-                x: e.clientX,
-                y: e.clientY,
-                client
-            });
-        }
-    }, [hasRole]);
+  const handleDeleteFromBlacklist = async (client: BlacklistClient) => {
+    if (
+      window.confirm(
+        "Вы уверены, что хотите убрать этого клиента из чёрного списка?"
+      )
+    ) {
+      try {
+        await deleteFromBlacklist(client.id);
+        loadBlacklist();
+        // Обновляем общее количество после удаления
+        setTotalBlacklistCount((prev) => prev - 1);
+      } catch (err) {
+        console.error("Ошибка при удалении клиента:", err);
+      }
+    }
+  };
 
-    const handleContextMenuAction = useCallback((action: 'delete') => {
-        if (!contextMenu?.client) return;
+  const handleAddToBlacklist = () => {
+    setIsSelectModalOpen(true);
+  };
 
-        if (action === 'delete') {
-            handleDeleteFromBlacklist(contextMenu.client);
-        }
+  const handleClientSelect = async (client: {
+    id: number;
+    fullName: string;
+    phone: string;
+  }) => {
+    try {
+      await addBlacklist(client.id);
+      loadBlacklist();
+      // Обновляем общее количество после добавления
+      setTotalBlacklistCount((prev) => prev + 1);
+      setIsSelectModalOpen(false);
+    } catch (err) {
+      console.error("Ошибка при добавлении в черный список:", err);
+    }
+  };
 
-        setContextMenu(null);
-    }, [contextMenu]);
+  const handleOpenDossier = useCallback((client: BlacklistClient) => {
+    setSelectedClientDossier(client);
+  }, []);
 
-    const closeContextMenu = useCallback(() => {
-        setContextMenu(null);
-    }, []);
+  const handleCardClick = (client: BlacklistClient) => {
+    setSelectedClientDossier(client);
+  };
 
-    useEffect(() => {
-        const handleClickOutside = () => {
-            if (contextMenu) {
-                closeContextMenu();
-            }
-        };
+  const renderContent = () => {
+    if (isLoading) {
+      return <div>Загрузка...</div>;
+    }
 
-        document.addEventListener('click', handleClickOutside);
-        return () => {
-            document.removeEventListener('click', handleClickOutside);
-        };
-    }, [contextMenu]);
+    if (error) {
+      return <div>{error}</div>;
+    }
 
-    const handleDeleteFromBlacklist = async (client: BlacklistClient) => {
-        if (window.confirm('Вы уверены, что хотите убрать этого клиента из чёрного списка?')) {
-            try {
-                await deleteFromBlacklist(client.id);
-                loadBlacklist();
-                // Обновляем общее количество после удаления
-                setTotalBlacklistCount(prev => prev - 1);
-            } catch (err) {
-                console.error('Ошибка при удалении клиента:', err);
-            }
-        }
-    };
+    if (!hasSearched) {
+      return (
+        <EmptyStateContainer>
+          <EmptyStateIcon>🚫</EmptyStateIcon>
+          <EmptyStateTitle>Поиск в чёрном списке</EmptyStateTitle>
+          <EmptyStateText>
+            Введите ФИО клиента (минимум 5 символов) или полный номер телефона
+            для поиска в чёрном списке.
+          </EmptyStateText>
+        </EmptyStateContainer>
+      );
+    }
 
-    const handleAddToBlacklist = () => {
-        setIsSelectModalOpen(true);
-    };
-
-    const handleClientSelect = async (client: { id: number; fullName: string; phone: string }) => {
-        try {
-            await addBlacklist(client.id);
-            loadBlacklist();
-            // Обновляем общее количество после добавления
-            setTotalBlacklistCount(prev => prev + 1);
-            setIsSelectModalOpen(false);
-        } catch (err) {
-            console.error('Ошибка при добавлении в черный список:', err);
-        }
-    };
-
-    const handleOpenDossier = useCallback((client: BlacklistClient) => {
-        setSelectedClientDossier(client);
-    }, []);
-
-    const handleCardClick = (client: BlacklistClient) => {
-        setSelectedClientDossier(client);
-    };
-
-    const renderContent = () => {
-        if (isLoading) {
-            return <div>Загрузка...</div>;
-        }
-
-        if (error) {
-            return <div>{error}</div>;
-        }
-
-        if (!hasSearched) {
-            return (
-                <EmptyStateContainer>
-                    <EmptyStateIcon>🚫</EmptyStateIcon>
-                    <EmptyStateTitle>Поиск в чёрном списке</EmptyStateTitle>
-                    <EmptyStateText>
-                        Введите ФИО клиента (минимум 5 символов) или полный номер телефона для поиска в чёрном списке.
-                    </EmptyStateText>
-                </EmptyStateContainer>
-            );
-        }
-
-        if (blacklistData && blacklistData.items.length === 0) {
-            return (
-                <EmptyStateContainer>
-                    <EmptyStateIcon>🔍</EmptyStateIcon>
-                    <EmptyStateTitle>Клиент в чёрном списке не найден</EmptyStateTitle>
-                    <EmptyStateText>
-                        По вашему запросу "{nameFilter || phoneFilter}" ничего не найдено в чёрном списке.
-                    </EmptyStateText>
-                    <DarkCyanButton onClick={handleAddToBlacklist}>
-                        + Добавить в чёрный список
-                    </DarkCyanButton>
-                    <ResetButton onClick={resetFilters} style={{ marginTop: '16px' }}>
-                        Сбросить фильтры
-                    </ResetButton>
-                </EmptyStateContainer>
-            );
-        }
-
-        return (
-            <div>
-                {blacklistData?.items.map((client) => (
-                    <ClientCard 
-                        key={client.id} 
-                        client={{
-                            ...client,
-                            secondPhone: client.secondPhone || '',
-                            doc: client.doc || '',
-                            docIssueDate: client.docIssueDate || null,
-                            docIssueYear: client.docIssueYear || 0,
-                            registrationAddress: client.registrationAddress || '',
-                            birthdate: client.birthdate || null,
-                            creditIds: client.creditIds || [],
-                            creditRestTerms: client.creditRestTerms || []
-                        }}
-                        onEdit={() => {}}
-                        onDelete={() => handleDeleteFromBlacklist(client)}
-                        onRightClick={(e) => handleCardRightClick(e, client)}
-                        showMenu={false} 
-                        onOpenDossier={handleOpenDossier}
-                        additionalInfo={
-                            <DebtBadge>
-                                Просрочка: {client.debt?.toLocaleString('ru-RU')} ₽
-                            </DebtBadge>
-                        }
-                    />
-                ))}
-            </div>
-        );
-    };
+    if (blacklistData && blacklistData.items.length === 0) {
+      return (
+        <EmptyStateContainer>
+          <EmptyStateIcon>🔍</EmptyStateIcon>
+          <EmptyStateTitle>Клиент в чёрном списке не найден</EmptyStateTitle>
+          <EmptyStateText>
+            По вашему запросу "{nameFilter || phoneFilter}" ничего не найдено в
+            чёрном списке.
+          </EmptyStateText>
+          <ResetButton onClick={resetFilters} style={{ marginTop: "16px" }}>
+            Сбросить фильтры
+          </ResetButton>
+        </EmptyStateContainer>
+      );
+    }
 
     return (
-        <PageLayout onClick={closeContextMenu}>
-            {selectedClientDossier ? (
-                <ClientDossier
-                    client={selectedClientDossier}
-                    comments={[]}
-                    installments={[]}
-                    onBack={() => setSelectedClientDossier(null)}
-                    onAddComment={(comment) => console.log('Add comment:', comment)}
-                    onUploadPassport={(file) => console.log('Upload passport:', file)}
-                />
-            ) : (
-                <>
-                    <TitleContainer style={{ position: "sticky"}}>
-                        <TitleContainer style={{maxWidth: "290px"}}>
-                            <CustomTitle>Чёрный список</CustomTitle>
-                            {blacklistData && blacklistData.items.length > 0 && (
-                                <ClientCount>({blacklistData.totalItemsCount})</ClientCount>
-                            )}
-                        </TitleContainer>
-                        <StyledCountInfo 
-                            total={blacklistData?.totalItemsCount} 
-                        />
-                    </TitleContainer>
-                    
-                    <StickyFilterField>
-                        <Container style={{display: "flex", flexDirection: "row", width: "50vw", gap: "15px" }}>
-                            <CustomInput 
-                                inputType="fullname"
-                                placeholder="ФИО клиента (минимум 5 символов)"
-                                value={nameFilter}
-                                onChange={(e) => handleFilterChange(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                            />
-                            <PhoneModalInput 
-                                placeholder="Телефон (полный номер)"
-                                value={phoneFilter}
-                                onChange={(e) => handlePhoneFilterChange(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                name="phone"
-                            />
-                            <ResetButton onClick={resetFilters}>
-                                Сбросить фильтры
-                            </ResetButton>
-                            <DarkCyanButton 
-                                onClick={handleSearch}
-                                disabled={!(nameFilter.length >= 5 || phoneFilter.replace(/\D/g, '').length >= 11)}
-                            >
-                                Поиск
-                            </DarkCyanButton>
-                        </Container>
-                        <DarkCyanButton 
-                            style={{ width: "25vw", marginLeft: "auto" }}
-                            onClick={handleAddToBlacklist}
-                        >
-                            + Добавить
-                        </DarkCyanButton>
-                    </StickyFilterField>
-                    
-                    {renderContent()}
-                    
-                    <ClientSelectModal
-                        isOpen={isSelectModalOpen}
-                        onClose={() => setIsSelectModalOpen(false)}
-                        onSubmit={handleClientSelect}
-                        width="900px"
-                    />
-
-                    {contextMenu && hasRole('суперадмин') && (
-                        <>
-                            <Backdrop onClick={closeContextMenu} />
-                            <ContextMenu x={contextMenu.x} y={contextMenu.y}>
-                                <MenuItem 
-                                    danger 
-                                    onClick={() => handleContextMenuAction('delete')}
-                                >
-                                    Удалить из чёрного списка
-                                </MenuItem>
-                            </ContextMenu>
-                        </>
-                    )}
-                </>
-            )}
-        </PageLayout>
+      <div>
+        {blacklistData?.items.map((client) => (
+          <ClientCard
+            key={client.id}
+            client={{
+              ...client,
+              secondPhone: client.secondPhone || "",
+              doc: client.doc || "",
+              docIssueDate: client.docIssueDate || null,
+              docIssueYear: client.docIssueYear || 0,
+              registrationAddress: client.registrationAddress || "",
+              birthdate: client.birthdate || null,
+              creditIds: client.creditIds || [],
+              creditRestTerms: client.creditRestTerms || [],
+            }}
+            onEdit={() => {}}
+            onDelete={() => handleDeleteFromBlacklist(client)}
+            onRightClick={(e) => handleCardRightClick(e, client)}
+            showMenu={false}
+            onOpenDossier={handleOpenDossier}
+            additionalInfo={
+              <DebtBadge>
+                Просрочка: {client.debt?.toLocaleString("ru-RU")} ₽
+              </DebtBadge>
+            }
+          />
+        ))}
+      </div>
     );
+  };
+
+  return (
+    <PageLayout onClick={closeContextMenu}>
+      {selectedClientDossier ? (
+        <ClientDossier
+          client={selectedClientDossier}
+          comments={[]}
+          installments={[]}
+          onBack={() => setSelectedClientDossier(null)}
+          onAddComment={(comment) => console.log("Add comment:", comment)}
+          onUploadPassport={(file) => console.log("Upload passport:", file)}
+        />
+      ) : (
+        <>
+          <TitleContainer style={{ position: "sticky" }}>
+            <TitleContainer style={{ maxWidth: "290px" }}>
+              <CustomTitle>Чёрный список</CustomTitle>
+              {blacklistData && blacklistData.items.length > 0 && (
+                <ClientCount>({blacklistData.totalItemsCount})</ClientCount>
+              )}
+            </TitleContainer>
+            <StyledCountInfo total={blacklistData?.totalItemsCount} />
+          </TitleContainer>
+
+          <StickyFilterField>
+            <Container
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                width: "50vw",
+                gap: "15px",
+              }}
+            >
+              <CustomInput
+                inputType="fullname"
+                placeholder="ФИО клиента (минимум 5 символов)"
+                value={nameFilter}
+                onChange={(e) => handleFilterChange(e.target.value)}
+                onKeyPress={handleKeyPress}
+              />
+              <PhoneModalInput
+                placeholder="Телефон (полный номер)"
+                value={phoneFilter}
+                onChange={(e) => handlePhoneFilterChange(e.target.value)}
+                onKeyPress={handleKeyPress}
+                name="phone"
+              />
+              <ResetButton onClick={resetFilters}>Сбросить фильтры</ResetButton>
+              <DarkCyanButton
+                onClick={handleSearch}
+                disabled={
+                  !(
+                    nameFilter.length >= 5 ||
+                    phoneFilter.replace(/\D/g, "").length >= 11
+                  )
+                }
+              >
+                Поиск
+              </DarkCyanButton>
+            </Container>
+          </StickyFilterField>
+
+          {renderContent()}
+
+          {contextMenu && hasRole("суперадмин") && (
+            <>
+              <Backdrop onClick={closeContextMenu} />
+              <ContextMenu x={contextMenu.x} y={contextMenu.y}>
+                <MenuItem
+                  danger
+                  onClick={() => handleContextMenuAction("delete")}
+                >
+                  Удалить из чёрного списка
+                </MenuItem>
+              </ContextMenu>
+            </>
+          )}
+        </>
+      )}
+    </PageLayout>
+  );
 };
 
 export default BlacklistPage;

@@ -4,8 +4,6 @@ export interface BlackCatalogPageContentTexts {
   emptyStateDescription: string;
   notFoundTitle: string;
   notFoundDescription: (query: string) => string;
-  addButtonLabel: string;
-  addToCatalogLabel: string;
   deleteConfirmText: (fullname: string) => string;
 }
 

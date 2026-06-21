@@ -1,33 +1,38 @@
-import React, { useRef, useState } from 'react';
-import styled from 'styled-components';
-import { FaIdCard, FaEllipsisV, FaMapMarkerAlt, FaBirthdayCake, FaExclamationTriangle, FaEye } from 'react-icons/fa';
-import type { Blacklist } from '../../../api/types/blacklist';
+import React, { useRef, useState } from "react";
+import styled from "styled-components";
+import {
+  FaIdCard,
+  FaEllipsisV,
+  FaMapMarkerAlt,
+  FaBirthdayCake,
+  FaExclamationTriangle,
+} from "react-icons/fa";
+import type { Blacklist } from "../../../api/types/blacklist";
 
-const Card = styled.div<{ $isBlacklisted?: boolean; $hasActiveDebt?: boolean; $isDemo?: boolean }>`
+const Card = styled.div<{ $isBlacklisted?: boolean; $hasActiveDebt?: boolean }>`
   background: white;
   border-radius: 12px;
   border: 1px solid rgba(209, 213, 219, 1);
   padding: 20px;
   margin: 0;
   margin-bottom: 16px;
-  cursor: pointer;
+  cursor: default;
   transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
 
-  ${props => props.$isBlacklisted && `
+  ${(props) =>
+    props.$isBlacklisted &&
+    `
     border-color: #EF4444;
     background: linear-gradient(135deg, #ffffff 0%, #fff5f5 100%);
   `}
 
-  ${props => props.$hasActiveDebt && !props.$isBlacklisted && `
+  ${(props) =>
+    props.$hasActiveDebt &&
+    !props.$isBlacklisted &&
+    `
     border-color: #F59E0B;
     background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
-  `}
-
-  ${props => props.$isDemo && `
-    border: 2px dashed #9CA3AF;
-    background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
-    opacity: 0.9;
   `}
 
   &:hover {
@@ -65,16 +70,20 @@ const CardTitle = styled.h3`
   }
 `;
 
-const CardTitleText = styled.span<{ $hasBlackBadge?: boolean, $hasDebtBadge?: boolean, $hasDemoBadge?: boolean }>`
+const CardTitleText = styled.span<{
+  $hasBlackBadge?: boolean;
+  $hasDebtBadge?: boolean;
+}>`
   display: inline-block;
-  ${props => props.$hasBlackBadge && `
+  ${(props) =>
+    props.$hasBlackBadge &&
+    `
     margin-left: 170px;
   `}
-  ${props => props.$hasDebtBadge && `
+  ${(props) =>
+    props.$hasDebtBadge &&
+    `
     margin-left: 130px;
-  `}
-  ${props => props.$hasDemoBadge && `
-    margin-left: 120px;
   `}
 `;
 
@@ -93,8 +102,10 @@ const InfoItem = styled.div<{ $isHidden?: boolean }>`
   display: flex;
   flex-direction: column;
   min-height: 50px;
-  
-  ${props => props.$isHidden && `
+
+  ${(props) =>
+    props.$isHidden &&
+    `
     filter: blur(4px);
     user-select: none;
     pointer-events: none;
@@ -111,14 +122,18 @@ const InfoLabel = styled.span`
   gap: 6px;
 `;
 
-const InfoValue = styled.span<{ $highlight?: boolean; $warning?: boolean; $debt?: boolean }>`
+const InfoValue = styled.span<{
+  $highlight?: boolean;
+  $warning?: boolean;
+  $debt?: boolean;
+}>`
   font-size: 14px;
-  font-weight: ${props => props.$highlight ? '600' : '400'};
-  color: ${props => {
-    if (props.$warning) return '#EF4444';
-    if (props.$debt) return '#B45309';
-    if (props.$highlight) return '#007D88';
-    return '#111827';
+  font-weight: ${(props) => (props.$highlight ? "600" : "400")};
+  color: ${(props) => {
+    if (props.$warning) return "#EF4444";
+    if (props.$debt) return "#B45309";
+    if (props.$highlight) return "#007D88";
+    return "#111827";
   }};
   min-height: 20px;
   display: flex;
@@ -131,15 +146,12 @@ const IconWrapper = styled.span`
   align-items: center;
 `;
 
-const LeftBadge = styled.div<{ $type: 'blacklist' | 'debt' | 'demo' }>`
+const LeftBadge = styled.div<{ $type: "blacklist" | "debt" }>`
   position: absolute;
   top: 15px;
   left: 15px;
-  background: ${({ $type }) => 
-    $type === 'blacklist' ? '#000000' : 
-    $type === 'debt' ? '#F59E0B' : 
-    '#6B7280'};
-  color: ${({ $type }) => $type === 'blacklist' ? '#EF4444' : 'white'};
+  background: ${({ $type }) => ($type === "blacklist" ? "#000000" : "#F59E0B")};
+  color: ${({ $type }) => ($type === "blacklist" ? "#EF4444" : "white")};
   padding: 6px 10px;
   border-radius: 6px;
   font-weight: 700;
@@ -147,37 +159,11 @@ const LeftBadge = styled.div<{ $type: 'blacklist' | 'debt' | 'demo' }>`
   display: flex;
   align-items: center;
   gap: 6px;
-  box-shadow: ${({ $type }) => 
-    $type === 'blacklist' ? '0 2px 12px rgba(239, 68, 68, 0.5)' : 
-    $type === 'debt' ? '0 2px 12px rgba(245, 158, 11, 0.5)' : 
-    '0 2px 12px rgba(107, 114, 128, 0.5)'};
+  box-shadow: ${({ $type }) =>
+    $type === "blacklist"
+      ? "0 2px 12px rgba(239, 68, 68, 0.5)"
+      : "0 2px 12px rgba(245, 158, 11, 0.5)"};
   z-index: 10;
-`;
-
-const HiddenDataOverlay = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #6B7280;
-  font-size: 14px;
-  font-style: italic;
-  padding: 8px 0;
-  
-  svg {
-    opacity: 0.5;
-  }
-`;
-
-const DemoWatermark = styled.div`
-  position: absolute;
-  bottom: 10px;
-  right: 15px;
-  font-size: 11px;
-  color: #9CA3AF;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  opacity: 0.5;
-  pointer-events: none;
 `;
 
 export interface BlackCatalogItem {
@@ -192,14 +178,9 @@ export interface BlackCatalogItem {
 
 interface BlackCatalogCardProps {
   item: Blacklist;
-  isDemo?: boolean;
-  onDemoClick?: () => void; // Добавляем callback для демо-клика
 }
 
-const BlackCatalogCard: React.FC<BlackCatalogCardProps> = ({ 
-  item,
-  onDemoClick // Получаем callback из пропсов
-}) => {
+const BlackCatalogCard: React.FC<BlackCatalogCardProps> = ({ item }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -208,22 +189,24 @@ const BlackCatalogCard: React.FC<BlackCatalogCardProps> = ({
     const endDate = new Date(item.debtEndingAt);
     if (Number.isNaN(endDate.getTime())) return false;
     const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endDateStart = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const endDateStart = new Date(
+      endDate.getFullYear(),
+      endDate.getMonth(),
+      endDate.getDate()
+    );
     return endDateStart >= todayStart;
   })();
-
-  const handleCardClick = () => {
-    if (onDemoClick) {
-      onDemoClick(); // Вызываем callback вместо локального state
-    }
-  };
 
   const isBlackList = (() => {
     if (!item.debtEndingAt) return true;
     return false;
   })();
-  
+
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -231,9 +214,9 @@ const BlackCatalogCard: React.FC<BlackCatalogCardProps> = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -243,97 +226,84 @@ const BlackCatalogCard: React.FC<BlackCatalogCardProps> = ({
   };
 
   const getTitleMargin = () => {
-    return { $hasDemoBadge: true };
+    if (isBlackList) return { $hasBlackBadge: true };
+    if (isCurrentlyDebt) return { $hasDebtBadge: true };
+    return {};
   };
 
   return (
-    <Card 
-      $isBlacklisted={isBlackList}
-      $hasActiveDebt={isCurrentlyDebt}
-      $isDemo={true}
-      onClick={handleCardClick}
-    >
-      {true ? (
-        <LeftBadge $type="demo">
-          <FaEye size={14} />
-          ДЕМО
+    <Card $isBlacklisted={isBlackList} $hasActiveDebt={isCurrentlyDebt}>
+      {isBlackList && (
+        <LeftBadge $type="blacklist">
+          <FaExclamationTriangle size={14} />
+          Чёрный список
         </LeftBadge>
-      ) : (
-        <>
-          {isBlackList && (
-            <LeftBadge $type="blacklist">
-              <FaExclamationTriangle size={14} />
-              Чёрный список
-            </LeftBadge>
-          )}
-          
-          {isCurrentlyDebt && (
-            <LeftBadge $type="debt">
-              <FaExclamationTriangle size={14} />
-              Оформлен
-            </LeftBadge>
-          )}
-        </>
       )}
-      
+
+      {isCurrentlyDebt && (
+        <LeftBadge $type="debt">
+          <FaExclamationTriangle size={14} />
+          Оформлен
+        </LeftBadge>
+      )}
+
       <CardContent>
         <CardTitle>
           <CardTitleText {...getTitleMargin()}>
-            {item.fullName || 'Не указано'}
+            {item.fullName || "Не указано"}
           </CardTitleText>
         </CardTitle>
-        
+
         <InfoGrid>
-          <InfoItem $isHidden={true}>
+          <InfoItem>
             <InfoLabel>
-              <IconWrapper><FaIdCard size={12} /></IconWrapper>
+              <IconWrapper>
+                <FaIdCard size={12} />
+              </IconWrapper>
               ID
             </InfoLabel>
             <InfoValue $warning={isBlackList} $debt={isCurrentlyDebt}>
               {item.id}
             </InfoValue>
           </InfoItem>
-          
+
           <InfoItem>
             <InfoLabel>
-              <IconWrapper><FaBirthdayCake size={12} /></IconWrapper>
+              <IconWrapper>
+                <FaBirthdayCake size={12} />
+              </IconWrapper>
               Дата рождения
             </InfoLabel>
             <InfoValue $warning={isBlackList} $debt={isCurrentlyDebt}>
-              {item?.birthdate?.toString().split('T')[0]}
+              {item?.birthdate?.toString().split("T")[0]}
             </InfoValue>
           </InfoItem>
-          
-          <InfoItem $isHidden={true}>
+
+          <InfoItem>
             <InfoLabel>
-              <IconWrapper><FaIdCard size={12} /></IconWrapper>
+              <IconWrapper>
+                <FaIdCard size={12} />
+              </IconWrapper>
               Документ
             </InfoLabel>
             <InfoValue $warning={isBlackList} $debt={isCurrentlyDebt}>
-              {item.document || 'Не указан'}
+              {item.document || "Не указан"}
             </InfoValue>
           </InfoItem>
-          
-          <InfoItem $isHidden={true}>
+
+          <InfoItem>
             <InfoLabel>
-              <IconWrapper><FaMapMarkerAlt size={12} /></IconWrapper>
+              <IconWrapper>
+                <FaMapMarkerAlt size={12} />
+              </IconWrapper>
               Адрес
             </InfoLabel>
             <InfoValue $warning={isBlackList} $debt={isCurrentlyDebt}>
-              {item.address || 'Не указан'}
+              {item.address || "Не указан"}
             </InfoValue>
           </InfoItem>
         </InfoGrid>
-        
-        {true && (
-          <HiddenDataOverlay>
-            <FaEye size={14} />
-            <span>Подробные комментарии и информация скрыты в демо-режиме</span>
-          </HiddenDataOverlay>
-        )}
       </CardContent>
-
-      {true && <DemoWatermark>Только для просмотра</DemoWatermark>}
     </Card>
   );
 };

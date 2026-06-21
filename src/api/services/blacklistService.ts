@@ -1,10 +1,15 @@
-import apiClient from '../client';
-import type { Blacklist, BlacklistParams } from '../types/blacklist';
-import type { PaginatedResponse } from '../types/common';
+import apiClient from "../client";
+import type { Blacklist, BlacklistParams } from "../types/blacklist";
+import type { PaginatedResponse } from "../types/common";
 
 class BlacklistService {
-  async getBlacklist(params?: BlacklistParams): Promise<PaginatedResponse<Blacklist>> {
-    const response = await apiClient.get<PaginatedResponse<Blacklist>>('/Client/blacklist', { params });
+  async getBlacklist(
+    params?: BlacklistParams
+  ): Promise<PaginatedResponse<Blacklist>> {
+    const response = await apiClient.get<PaginatedResponse<Blacklist>>(
+      "/Client/blacklist",
+      { params }
+    );
     return response.data;
   }
 
@@ -19,12 +24,25 @@ class BlacklistService {
     return response.data;
   }
 
-
-
-
-  async getBlackCatalog(params?: BlacklistParams): Promise<PaginatedResponse<Blacklist>> {
-    const response = await apiClient.get<PaginatedResponse<Blacklist>>('/BlackList', { params });
+  async getBlackCatalog(
+    params?: BlacklistParams
+  ): Promise<PaginatedResponse<Blacklist>> {
+    const response = await apiClient.get<PaginatedResponse<Blacklist>>(
+      "/BlackList",
+      { params }
+    );
     return response.data;
+  }
+
+  // GET /BlackList/count — без параметров, возвращает общее количество.
+  // Бэкенд может отдавать как чистое число, так и объект вида { count: N } —
+  // нормализуем к числу, иначе объект уходит в рендер и роняет страницу.
+  async getBlackCatalogCount(): Promise<number> {
+    const response = await apiClient.get<number | { count: number }>(
+      "/BlackList/count"
+    );
+    const data = response.data;
+    return typeof data === "number" ? data : Number(data?.count ?? 0);
   }
 
   async addBlackCatalog(clientData: Partial<Blacklist>) {

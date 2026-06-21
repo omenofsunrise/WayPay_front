@@ -19,13 +19,13 @@ export const UserAvatar = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #007D88;
+  background: #007d88;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  
+
   svg {
     width: 24px;
     height: 24px;
@@ -119,58 +119,23 @@ export const ClearSearchButton = styled.button`
   border-radius: 50%;
   padding: 0;
   line-height: 1;
-  
+
   &:hover {
     color: #333;
     background-color: #f0f0f0;
   }
-  
+
   &:focus {
     outline: none;
   }
 `;
 
-export const DemoBadge = styled.div`
-  position: fixed;
-  top: 100px;
-  right: 20px;
-  background: linear-gradient(135deg, #007D88, #ff8e8e);
-  color: white;
-  padding: 8px 20px;
-  border-radius: 30px;
-  font-weight: bold;
-  font-size: 14px;
-  z-index: 1000;
-  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
-  animation: pulse 2s infinite;
-
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-  }
-`;
-
-export const DemoDisclaimer = styled.div`
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  color: #856404;
-  padding: 12px 20px;
-  border-radius: 8px;
-  margin: 20px 0;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-`;
-
 export const RealVersionLink = styled.a`
-  color: #007D88;
+  color: #007d88;
   font-weight: 600;
   text-decoration: none;
-  border-bottom: 1px dashed #007D88;
-  
+  border-bottom: 1px dashed #007d88;
+
   &:hover {
     color: #005f66;
     border-bottom: 1px solid #005f66;

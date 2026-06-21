@@ -46,7 +46,7 @@ import {
 } from "./components/modal/SettingsModal";
 import FinancePage from "./pages/FinancePage/FinancePage";
 import SettingsPage from "./pages/SettingsPage.tsx/SettingsPage";
-import BlackCatalogPage from "./pages/BlackCatalogPage/BlackCatalogPage";
+import BlackCatalogPage from "./pages/BlackCatalog";
 import BotManagementPage from "./pages/SettingsPage.tsx/BotManagementPage";
 import ReceptionPage from "./pages/ReceptionPage";
 import PaymentPendingPage from "./pages/PaymentPendingPage";

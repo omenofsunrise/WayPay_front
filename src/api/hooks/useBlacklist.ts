@@ -1,27 +1,32 @@
-import { useState, useCallback } from 'react';
-import blacklistService from '../services/blacklistService';
-import type { Blacklist, BlacklistParams } from '../types/blacklist';
-import type { PaginatedResponse } from '../types/common';
+import { useState, useCallback } from "react";
+import blacklistService from "../services/blacklistService";
+import type { Blacklist, BlacklistParams } from "../types/blacklist";
+import type { PaginatedResponse } from "../types/common";
 
 const useClient = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<Blacklist> | null>(null);
 
-  const getBlacklist = useCallback(async (params?: BlacklistParams): Promise<PaginatedResponse<Blacklist> | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await blacklistService.getBlacklist(params);
-      setData(result);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const getBlacklist = useCallback(
+    async (
+      params?: BlacklistParams
+    ): Promise<PaginatedResponse<Blacklist> | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await blacklistService.getBlacklist(params);
+        setData(result);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const addBlacklist = async (id: number) => {
     setIsLoading(true);
@@ -29,7 +34,7 @@ const useClient = () => {
     try {
       await blacklistService.addBlacklist(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
@@ -42,33 +47,39 @@ const useClient = () => {
     try {
       await blacklistService.deleteFromBlacklist(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
+  const getBlackCatalog = useCallback(
+    async (
+      params?: BlacklistParams
+    ): Promise<PaginatedResponse<Blacklist> | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await blacklistService.getBlackCatalog(params);
+        setData(result);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
-
-
-
-
-
-
-
-  const getBlackCatalog = useCallback(async (params?: BlacklistParams): Promise<PaginatedResponse<Blacklist> | null> => {
-    setIsLoading(true);
-    setError(null);
+  const getBlackCatalogCount = useCallback(async (): Promise<number | null> => {
     try {
-      const result = await blacklistService.getBlackCatalog(params);
-      setData(result);
-      return result;
+      return await blacklistService.getBlackCatalogCount();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
@@ -78,20 +89,23 @@ const useClient = () => {
     try {
       await blacklistService.addBlackCatalog(clientData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateBlackCatalog = async (id: number, updateData: Partial<Blacklist>) => {
+  const updateBlackCatalog = async (
+    id: number,
+    updateData: Partial<Blacklist>
+  ) => {
     setIsLoading(true);
     setError(null);
     try {
       await blacklistService.updateBlackCatalog(id, updateData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
@@ -104,7 +118,7 @@ const useClient = () => {
     try {
       await blacklistService.deleteFromBlackCatalog(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
       return null;
     } finally {
       setIsLoading(false);
@@ -119,9 +133,10 @@ const useClient = () => {
     addBlacklist,
     deleteFromBlacklist,
     getBlackCatalog,
+    getBlackCatalogCount,
     addBlackCatalog,
     updateBlackCatalog,
-    deleteFromBlackCatalog
+    deleteFromBlackCatalog,
   };
 };
 
