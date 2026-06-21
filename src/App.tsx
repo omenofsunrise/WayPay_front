@@ -20,6 +20,7 @@ import InvestorReportPage from "./pages/InvestorReportPage";
 import BudgetPage from "./pages/FinancePage/BudgetPage";
 import { AuthProvider } from "./сontext/AuthContext";
 import AdminPanelPage from "./pages/AdminPanelPage";
+import AdminWhatsAppChatPage from "./pages/AdminWhatsAppChatPage";
 import ToDoListPage from "./pages/ToDoListPage";
 import { TaskCountProvider } from "./сontext/TaskCountContext";
 import PaymentsIncomePage from "./pages/FinancePage/PaymentIncomePage";
@@ -590,6 +591,15 @@ function App() {
                 element={
                   <MainLayout>
                     <AdminPanelPage />
+                  </MainLayout>
+                }
+              />
+
+              <Route
+                path="admin/whatsapp/:phone"
+                element={
+                  <MainLayout>
+                    <AdminWhatsAppChatPage />
                   </MainLayout>
                 }
               />
