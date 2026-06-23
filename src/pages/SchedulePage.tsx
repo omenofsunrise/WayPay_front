@@ -15,9 +15,9 @@ import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
-import CustomTitle from "../components/ui/Text/CustomTitle";
 import useSchedule from "../api/hooks/useSchedule";
 import useExport from "../api/hooks/useExport";
+import { useUiSettings } from "../utils/uiSettings";
 import type { ScheduleDetails, ScheduleParams } from "../api/types/schedule";
 import scheduleService from "../api/services/scheduleService";
 import { formatDate, parseDateInput } from "../utils/dateFormatter";
@@ -455,6 +455,17 @@ const SchedulePage = ({
     3: "date",
   };
 
+  // Режим отображения платежей: постранично или единым списком (бесконечный скролл)
+  const uiSettings = useUiSettings();
+  const isListMode = uiSettings.paymentsDisplayMode === "list";
+  const [accumulatedItems, setAccumulatedItems] = useState<ScheduleDetails[]>(
+    []
+  );
+  const accumulatedItemsRef = useRef<ScheduleDetails[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
   // Используем хук для адаптивного размера страницы
   const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
     defaultPageSize: 10,
@@ -466,7 +477,10 @@ const SchedulePage = ({
   });
 
   const pageSizeRef = useRef(responsivePageSize);
-  const itemsPerPage = responsivePageSize;
+  // В режиме ленты грузим более крупными пачками, чтобы скролл не дёргался.
+  const itemsPerPage = isListMode
+    ? Math.max(responsivePageSize, 20)
+    : responsivePageSize;
 
   const { exportData, isExporting, exportProgress } =
     useExport<ScheduleDetails>();
@@ -481,6 +495,11 @@ const SchedulePage = ({
     getCalendar,
     updateSchedule,
   } = useSchedule();
+
+  // Платежи для отображения: в режиме ленты — накопленные, иначе — текущая страница.
+  const displayedSchedules = isListMode
+    ? accumulatedItems
+    : scheduleData?.items ?? [];
 
   const shouldShowScheduleTab =
     hasRole("директор") ||
@@ -677,7 +696,7 @@ const SchedulePage = ({
   };
 
   const handleRowDoubleClick = (rowData: any[]) => {
-    const schedule = scheduleData?.items.find(
+    const schedule = displayedSchedules.find(
       (s) => s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
     );
 
@@ -729,7 +748,25 @@ const SchedulePage = ({
       params.sortDirection = sortConfig.direction;
     }
 
-    await getList(params);
+    const result = await getList(params);
+
+    if (isListMode && result) {
+      const items = result.items || [];
+      const merged =
+        currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
+      // Дедуп по id, чтобы повторная загрузка страницы (например, после
+      // отправки уведомления) не создавала дубликаты строк.
+      const seen = new Set<number>();
+      const next = merged.filter((it) => {
+        if (seen.has(it.id)) return false;
+        seen.add(it.id);
+        return true;
+      });
+      accumulatedItemsRef.current = next;
+      setAccumulatedItems(next);
+      setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
+    }
+    setIsLoadingMore(false);
   }, [
     currentPage,
     clientNameFilter,
@@ -742,6 +779,57 @@ const SchedulePage = ({
     getList,
     itemsPerPage,
     isPageSizeReady,
+    isListMode,
+  ]);
+
+  // Сброс накопленного списка при смене фильтров/режима/сортировки.
+  useEffect(() => {
+    accumulatedItemsRef.current = [];
+    setAccumulatedItems([]);
+    setHasMore(true);
+    if (isListMode) {
+      setCurrentPage(1);
+    }
+  }, [
+    isListMode,
+    clientNameFilter,
+    investorFilter,
+    dateFromFilter,
+    dateToFilter,
+    selectedTableObjectType,
+    selectedEntity,
+    sortConfig,
+  ]);
+
+  // Бесконечная прокрутка: подгружаем следующую страницу при достижении сентинела.
+  useEffect(() => {
+    if (!isListMode) return;
+    if (activeTab !== "table") return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+    if (!hasMore) return;
+    if (isLoading || isLoadingMore) return;
+    if (accumulatedItems.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsLoadingMore(true);
+          setCurrentPage((prev) => prev + 1);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [
+    isListMode,
+    activeTab,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    accumulatedItems.length,
   ]);
 
   useEffect(() => {
@@ -1117,22 +1205,14 @@ const SchedulePage = ({
     {
       label: "Договор",
       action: (rowData: any[]) => {
-        const schedule = scheduleData?.items.find(
+        const schedule = displayedSchedules.find(
           (s) =>
             s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
         );
 
         if (schedule) {
-          const schedule = scheduleData?.items.find(
-            (s) =>
-              s.creditId.toString() === rowData[0] &&
-              s.clientName === rowData[1]
-          );
-
-          if (schedule) {
-            setViewingCreditId(schedule.creditId);
-            setIsViewModalOpen(true);
-          }
+          setViewingCreditId(schedule.creditId);
+          setIsViewModalOpen(true);
         }
       },
       color: "#007D88",
@@ -1140,7 +1220,7 @@ const SchedulePage = ({
     {
       label: "Добавить платёж",
       action: (rowData: any[]) => {
-        const schedule = scheduleData?.items.find(
+        const schedule = displayedSchedules.find(
           (s) =>
             s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
         );
@@ -1154,7 +1234,7 @@ const SchedulePage = ({
     {
       label: "Дата/комментарий",
       action: (_rowData: any[], rowIndex: number) => {
-        const schedule = scheduleData?.items[rowIndex];
+        const schedule = displayedSchedules[rowIndex];
         if (schedule) {
           openScheduleCommentModal(schedule);
         }
@@ -1164,7 +1244,7 @@ const SchedulePage = ({
   ];
 
   const tableData =
-    scheduleData?.items.map((schedule) => {
+    displayedSchedules.map((schedule) => {
       const formattedAmount = formatMoneyValue(schedule.paymentAmount);
       const formattedDate = formatDate(schedule.paymentDate);
 
@@ -1223,7 +1303,7 @@ const SchedulePage = ({
       ];
     }) || [];
 
-  const rowStyles = getRowStyles(tableData, scheduleData);
+  const rowStyles = getRowStyles(tableData, { items: displayedSchedules });
 
   const mainChart = scheduleAnalytics[0];
 
@@ -1661,46 +1741,68 @@ const SchedulePage = ({
                   </FilterField>
                 </FilterContainer>
 
-                {isLoading && <div>Загрузка...</div>}
+                {isLoading &&
+                  (!isListMode || displayedSchedules.length === 0) && (
+                    <div>Загрузка...</div>
+                  )}
                 {error && <div>Ошибка: {error}</div>}
 
-                {!isLoading && !error && (
-                  <>
-                    <CustomTable
-                      columns={[
-                        { name: "Договор №", isSortable: true },
-                        { name: "ФИО", isSortable: true, align: "left" },
-                        { name: "Платёж", isSortable: true, align: "right" },
-                        {
-                          name: "Дата платежа",
-                          isSortable: true,
-                          align: "right",
-                        },
-                        { name: "Комментарий", align: "left" },
-                        { name: "Уведомлён", align: "center" },
-                      ]}
-                      data={tableData}
-                      onSort={handleSort}
-                      onRowClick={handleRowClick}
-                      onRowDoubleClick={handleRowDoubleClick}
-                      sortConfig={sortConfig}
-                      rowStyles={rowStyles}
-                      selectedRow={selectedRow}
-                      contextMenuActions={tableActions}
-                    />
-
-                    <PaginationLayout>
-                      <CountInfoTitle total={scheduleData?.totalCount || 0} />
-
-                      <Pagination
-                        total={scheduleData?.totalCount || 0}
-                        current={currentPage}
-                        onChange={setCurrentPage}
-                        itemsPerPage={itemsPerPage}
+                {!error &&
+                  (!isLoading ||
+                    (isListMode && displayedSchedules.length > 0)) && (
+                    <>
+                      <CustomTable
+                        columns={[
+                          { name: "Договор №", isSortable: true },
+                          { name: "ФИО", isSortable: true, align: "left" },
+                          { name: "Платёж", isSortable: true, align: "right" },
+                          {
+                            name: "Дата платежа",
+                            isSortable: true,
+                            align: "right",
+                          },
+                          { name: "Комментарий", align: "left" },
+                          { name: "Уведомлён", align: "center" },
+                        ]}
+                        data={tableData}
+                        onSort={handleSort}
+                        onRowClick={handleRowClick}
+                        onRowDoubleClick={handleRowDoubleClick}
+                        sortConfig={sortConfig}
+                        rowStyles={rowStyles}
+                        selectedRow={selectedRow}
+                        contextMenuActions={tableActions}
                       />
-                    </PaginationLayout>
-                  </>
-                )}
+
+                      {isListMode ? (
+                        <>
+                          {hasMore && (
+                            <LoadMoreSentinel ref={loadMoreSentinelRef} />
+                          )}
+                          {isLoadingMore ? (
+                            <ListLoadingIndicator>
+                              Загрузка…
+                            </ListLoadingIndicator>
+                          ) : (
+                            <ListBottomSpacer />
+                          )}
+                        </>
+                      ) : (
+                        <PaginationLayout>
+                          <CountInfoTitle
+                            total={scheduleData?.totalCount || 0}
+                          />
+
+                          <Pagination
+                            total={scheduleData?.totalCount || 0}
+                            current={currentPage}
+                            onChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                          />
+                        </PaginationLayout>
+                      )}
+                    </>
+                  )}
               </>
             ),
           },
@@ -1716,12 +1818,13 @@ const SchedulePage = ({
     <PageLayout ref={containerRef}>
       {activeTab !== "calendar" && (
         <TitleField>
-          <CustomTitle>{title}</CustomTitle>
-          <ExportButton
-            onClick={handleExport}
-            isExporting={isExporting}
-            exportProgress={exportProgress}
-          />
+          <div style={{ marginLeft: "auto" }}>
+            <ExportButton
+              onClick={handleExport}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            />
+          </div>
         </TitleField>
       )}
 
@@ -1979,6 +2082,7 @@ const CalendarToolbar = styled.div`
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  margin-top: 12px;
   margin-bottom: 16px;
   padding: 12px;
   border: 1px solid #e2e8f0;
@@ -2476,6 +2580,22 @@ const CommentTextarea = styled.textarea`
     outline: none;
     border-color: #007d88;
   }
+`;
+
+const LoadMoreSentinel = styled.div`
+  width: 100%;
+  height: 1px;
+`;
+
+const ListLoadingIndicator = styled.div`
+  padding: 12px 0 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+`;
+
+const ListBottomSpacer = styled.div`
+  height: 32px;
 `;
 
 export default SchedulePage;

@@ -10,7 +10,6 @@ import PageLayout from "../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
-import CustomTitle from "../components/ui/Text/CustomTitle";
 import usePayment from "../api/hooks/usePayment";
 import useExport from "../api/hooks/useExport";
 import paymentService from "../api/services/paymentService";
@@ -627,9 +626,8 @@ const PaymentPage = () => {
 
   return (
     <PageLayout ref={containerRef}>
-      <TitleField>
-        <CustomTitle>История платежей</CustomTitle>
-        {authInfo?.employee.permissions.includes("MANAGE_ACCOUNTING") && (
+      {authInfo?.employee.permissions.includes("MANAGE_ACCOUNTING") && (
+        <TitleField>
           <DarkCyanButton
             style={{ marginTop: "15px", marginRight: "20px" }}
             onClick={async () => {
@@ -656,25 +654,8 @@ const PaymentPage = () => {
           >
             Подтвердить все платежи по указанным фильтрам
           </DarkCyanButton>
-        )}
-        <ExportButton
-          icon={<PrintIcon />}
-          onClick={() => {
-            if (!selectedPaymentForPrint) {
-              alert("Пожалуйста, выберите платёж в таблице (клик по строке)");
-              return;
-            }
-            setIsPrintModalOpen(true);
-          }}
-        >
-          Печать
-        </ExportButton>
-        <ExportButton
-          onClick={handleExport}
-          isExporting={isExporting}
-          exportProgress={exportProgress}
-        />
-      </TitleField>
+        </TitleField>
+      )}
 
       <FilterField style={{ gap: "15px" }}>
         <CustomInput
@@ -764,6 +745,48 @@ const PaymentPage = () => {
               {formatMoney((paymentsData.totalIncome ?? 0).toString())}
             </b>
           </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginLeft: "auto",
+            }}
+          >
+            <ExportButton
+              icon={<PrintIcon style={{ fontSize: 16 }} />}
+              style={{
+                margin: 0,
+                height: 32,
+                fontSize: 14,
+                padding: "4px 10px",
+                gap: 6,
+              }}
+              onClick={() => {
+                if (!selectedPaymentForPrint) {
+                  alert(
+                    "Пожалуйста, выберите платёж в таблице (клик по строке)"
+                  );
+                  return;
+                }
+                setIsPrintModalOpen(true);
+              }}
+            >
+              Печать
+            </ExportButton>
+            <ExportButton
+              style={{
+                margin: 0,
+                height: 32,
+                fontSize: 14,
+                padding: "4px 10px",
+                gap: 6,
+              }}
+              onClick={handleExport}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            />
+          </div>
         </div>
       )}
 

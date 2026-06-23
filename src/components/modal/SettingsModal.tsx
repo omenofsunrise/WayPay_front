@@ -184,6 +184,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     useState(false);
   const [creditsDisplayMode, setCreditsDisplayMode] =
     useState<CreditsDisplayMode>("pagination");
+  const [paymentsDisplayMode, setPaymentsDisplayMode] =
+    useState<CreditsDisplayMode>("pagination");
   const [activeTab, setActiveTab] = useState<SettingsTab>("interface");
 
   useEffect(() => {
@@ -196,6 +198,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     );
     setDisableWhatsAppNotifications(getDisableWhatsAppNotificationsSetting());
     setCreditsDisplayMode(getUiSettings().creditsDisplayMode);
+    setPaymentsDisplayMode(getUiSettings().paymentsDisplayMode);
   }, []);
 
   const handleSave = () => {
@@ -207,7 +210,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
       showContractCreationNotification
     );
     setDisableWhatsAppNotificationsSetting(disableWhatsAppNotifications);
-    setUiSettings({ creditsDisplayMode });
+    setUiSettings({ creditsDisplayMode, paymentsDisplayMode });
     onClose();
   };
 
@@ -259,6 +262,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               onClick={() => setCreditsDisplayMode("list")}
             >
               <Radio $active={creditsDisplayMode === "list"} />
+              <OptionText>
+                <OptionTitle>Списком</OptionTitle>
+                <OptionHint>
+                  Единый список, новые порции подгружаются автоматически при
+                  прокрутке.
+                </OptionHint>
+              </OptionText>
+            </DisplayModeOption>
+          </SectionGroup>
+
+          <SectionGroup>
+            <SectionGroupTitle>Отображение платежей</SectionGroupTitle>
+            <SectionGroupHint>
+              Применяется к разделу «Ожидаемые платежи».
+            </SectionGroupHint>
+
+            <DisplayModeOption
+              type="button"
+              $active={paymentsDisplayMode === "pagination"}
+              onClick={() => setPaymentsDisplayMode("pagination")}
+            >
+              <Radio $active={paymentsDisplayMode === "pagination"} />
+              <OptionText>
+                <OptionTitle>Постранично</OptionTitle>
+                <OptionHint>
+                  Платежи разбиваются на страницы «1, 2, 3…».
+                </OptionHint>
+              </OptionText>
+            </DisplayModeOption>
+
+            <DisplayModeOption
+              type="button"
+              $active={paymentsDisplayMode === "list"}
+              onClick={() => setPaymentsDisplayMode("list")}
+            >
+              <Radio $active={paymentsDisplayMode === "list"} />
               <OptionText>
                 <OptionTitle>Списком</OptionTitle>
                 <OptionHint>
