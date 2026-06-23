@@ -19,380 +19,411 @@ import UserSelect from "../components/ui/fields/UserSelect";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 
 const ToDoListPage = () => {
-    const { authInfo, hasRole } = useAuth();
-    const currentUserId = authInfo?.employee.id;
-    const isAdmin = hasRole('админ') || hasRole('директор') || hasRole('суперадмин');
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [assigneeOptions, setAssigneeOptions] = useState<{value: string, label: string, avatar?: string}[]>([
-        { value: "", label: "Все исполнители" }
-    ]);
-    const [isCompletedModalOpen, setIsCompletedModalOpen] = useState(false);
-    const [filters, setFilters] = useState<TaskParams>({
-        onlyMine: false,
-        includeCompleted: true,
-        priority: '',
-        taskEmployeeId: undefined
-    });
-    const { setActiveTasksCount } = useTaskCount();
-    const { getActiveTasksCount } = useTask();
-    const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-    const { 
-        getTasks, 
-        deleteTask,
-        setTaskPending,
-        setTaskInProgress,
-        setTaskInReview,
-        setTaskDone,
-        isLoading 
-    } = useTask();
+  const { authInfo, hasRole } = useAuth();
+  const currentUserId = authInfo?.employee.id;
+  const isAdmin =
+    hasRole("админ") || hasRole("директор") || hasRole("суперадмин");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [assigneeOptions, setAssigneeOptions] = useState<
+    { value: string; label: string; avatar?: string }[]
+  >([{ value: "", label: "Все исполнители" }]);
+  const [isCompletedModalOpen, setIsCompletedModalOpen] = useState(false);
+  const [filters, setFilters] = useState<TaskParams>({
+    onlyMine: false,
+    includeCompleted: true,
+    priority: "",
+    taskEmployeeId: undefined,
+  });
+  const { setActiveTasksCount } = useTaskCount();
+  const { getActiveTasksCount } = useTask();
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const {
+    getTasks,
+    deleteTask,
+    setTaskPending,
+    setTaskInProgress,
+    setTaskInReview,
+    setTaskDone,
+    isLoading,
+  } = useTask();
 
-    const updateTasksCount = async () => {
-        const count = await getActiveTasksCount();
-        if (count !== null) {
-        setActiveTasksCount(count);
-        }
-    };
+  const updateTasksCount = async () => {
+    const count = await getActiveTasksCount();
+    if (count !== null) {
+      setActiveTasksCount(count);
+    }
+  };
 
-    const { 
-        fetchEmployeeFullnames, 
-    } = useEmployee();
+  const { fetchEmployeeFullnames } = useEmployee();
 
-    useEffect(() => {
-        const loadEmployeeFullnames = async () => {
-            try {
-            const fullNames = await fetchEmployeeFullnames();
-            setAssigneeOptions([
-                { value: "", label: "Все исполнители" },
-                ...fullNames.map(emp => ({
-                value: emp.id.toString(),
-                label: emp.fullName,
-                avatar: emp.photoPath
-                }))
-            ]);
-            } catch (error) {
-            console.error("Failed to load employee fullnames:", error);
-            }
+  useEffect(() => {
+    const loadEmployeeFullnames = async () => {
+      try {
+        const fullNames = await fetchEmployeeFullnames();
+        setAssigneeOptions([
+          { value: "", label: "Все исполнители" },
+          ...fullNames.map((emp) => ({
+            value: emp.id.toString(),
+            label: emp.fullName,
+            avatar: emp.photoPath,
+          })),
+        ]);
+      } catch (error) {
+        console.error("Failed to load employee fullnames:", error);
+      }
     };
 
     loadEmployeeFullnames();
-    }, [fetchEmployeeFullnames]);
+  }, [fetchEmployeeFullnames]);
 
-    const [tasks, setTasks] = useState<Record<string, Task[]>>({
+  const [tasks, setTasks] = useState<Record<string, Task[]>>({
+    pending: [],
+    in_progress: [],
+    review: [],
+    done: [],
+  });
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+
+  const handleEditTask = (task: Task) => {
+    setTaskToEdit(task);
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    try {
+      await deleteTask(taskId);
+      await fetchTasks();
+      await updateTasksCount();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
+  };
+
+  const handleTaskUpdated = async () => {
+    await fetchTasks();
+    await updateTasksCount();
+    setTaskToEdit(null);
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, [filters]);
+
+  const fetchTasks = async () => {
+    try {
+      const params: TaskParams = {
+        ...filters,
+        priority: filters.priority as "low" | "medium" | "high" | undefined,
+      };
+
+      const response = await getTasks(params);
+
+      const tasksArray = Array.isArray(response)
+        ? response
+        : response?.items || [];
+
+      const groupedTasks = {
+        pending: tasksArray.filter((t) => t.taskStatus === "pending"),
+        in_progress: tasksArray.filter((t) => t.taskStatus === "in_progress"),
+        review: tasksArray.filter((t) => t.taskStatus === "review"),
+        done: tasksArray.filter((t) => t.taskStatus === "done").slice(0, 10),
+      };
+
+      setTasks(groupedTasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setTasks({
         pending: [],
         in_progress: [],
         review: [],
-        done: []
-    });
-    const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-    
-    const handleEditTask = (task: Task) => {
-        setTaskToEdit(task);
-    };
+        done: [],
+      });
+    }
+  };
 
-    const handleDeleteTask = async (taskId: number) => {
-        try {
-            await deleteTask(taskId);
-            await fetchTasks();
-            await updateTasksCount();
-        } catch (error) {
-            console.error("Error deleting task:", error);
-        }
-    };
+  const handleTaskDrop = async (
+    newStatus: "pending" | "in_progress" | "review" | "done",
+    taskId: number
+  ) => {
+    if (!draggedTask) return;
 
-    const handleTaskUpdated = async () => {
-        await fetchTasks();
-        await updateTasksCount();
-        setTaskToEdit(null);
-    };
-    
-    useEffect(() => {
-        fetchTasks();
-    }, [filters]);
+    try {
+      const canChangeStatus = checkStatusChangePermission(
+        draggedTask,
+        newStatus,
+        currentUserId,
+        isAdmin
+      );
+      if (!canChangeStatus) {
+        console.warn("Нет прав для изменения статуса задачи");
+        return;
+      }
 
-    const fetchTasks = async () => {
-        try {
-            const params: TaskParams = {
-                ...filters,
-                priority: filters.priority as 'low' | 'medium' | 'high' | undefined
-            };
+      setTasks((prev) => {
+        const newTasks = { ...prev };
+        Object.keys(newTasks).forEach((status) => {
+          newTasks[status] = newTasks[status].filter((t) => t.id !== taskId);
+        });
+        newTasks[newStatus] = [
+          ...newTasks[newStatus],
+          {
+            ...draggedTask,
+            taskStatus: newStatus,
+          },
+        ];
+        return newTasks;
+      });
 
-            const response = await getTasks(params);
-            
-            const tasksArray = Array.isArray(response) ? response : (response?.items || []);
-            
-            const groupedTasks = {
-                pending: tasksArray.filter(t => t.taskStatus === 'pending'),
-                in_progress: tasksArray.filter(t => t.taskStatus === 'in_progress'),
-                review: tasksArray.filter(t => t.taskStatus === 'review'),
-                done: tasksArray.filter(t => t.taskStatus === 'done').slice(0, 10)
-            };
-            
-            setTasks(groupedTasks);
-        } catch (error) {
-            console.error("Error fetching tasks:", error);
-            setTasks({
-                pending: [],
-                in_progress: [],
-                review: [],
-                done: []
-            });
-        }
-    };
+      let updatedTask: Task | null = null;
+      switch (newStatus) {
+        case "pending":
+          updatedTask = await setTaskPending(taskId);
+          break;
+        case "in_progress":
+          updatedTask = await setTaskInProgress(taskId);
+          break;
+        case "review":
+          updatedTask = await setTaskInReview(taskId);
+          break;
+        case "done":
+          updatedTask = await setTaskDone(taskId);
+          break;
+        default:
+          console.error("Unknown status:", newStatus);
+          return;
+      }
 
-    const handleTaskDrop = async (newStatus: 'pending' | 'in_progress' | 'review' | 'done', taskId: number) => {
-        if (!draggedTask) return;
-        
-        try {
-            const canChangeStatus = checkStatusChangePermission(draggedTask, newStatus, currentUserId, isAdmin);
-            if (!canChangeStatus) {
-                console.warn("Нет прав для изменения статуса задачи");
-                return;
-            }
+      if (updatedTask) {
+        setTasks((prev) => {
+          const newTasks = { ...prev };
+          newTasks[newStatus] = newTasks[newStatus].filter(
+            (t) => t.id !== taskId
+          );
+          newTasks[newStatus] = [...newTasks[newStatus], updatedTask!];
+          return newTasks;
+        });
+      }
+      await updateTasksCount();
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+      fetchTasks();
+    } finally {
+      setDraggedTask(null);
+    }
+  };
 
-            setTasks(prev => {
-                const newTasks = {...prev};
-                Object.keys(newTasks).forEach(status => {
-                    newTasks[status] = newTasks[status].filter(t => t.id !== taskId);
-                });
-                newTasks[newStatus] = [...newTasks[newStatus], {
-                    ...draggedTask,
-                    taskStatus: newStatus
-                }];
-                return newTasks;
-            });
+  useEffect(() => {
+    updateTasksCount();
+  }, []);
 
-            let updatedTask: Task | null = null;
-                    switch(newStatus) {
-                        case 'pending':
-                            updatedTask = await setTaskPending(taskId);
-                            break;
-                        case 'in_progress':
-                            updatedTask = await setTaskInProgress(taskId);
-                            break;
-                        case 'review':
-                            updatedTask = await setTaskInReview(taskId);
-                            break;
-                        case 'done':
-                            updatedTask = await setTaskDone(taskId);
-                            break;
-                        default:
-                            console.error('Unknown status:', newStatus);
-                            return;
-                    }
+  const checkStatusChangePermission = (
+    task: Task,
+    newStatus: "pending" | "in_progress" | "review" | "done",
+    currentUserId?: number,
+    isAdmin?: boolean
+  ) => {
+    if (!currentUserId) return false;
 
-                    if (updatedTask) {
-                        setTasks(prev => {
-                            const newTasks = {...prev};
-                            newTasks[newStatus] = newTasks[newStatus].filter(t => t.id !== taskId);
-                            newTasks[newStatus] = [...newTasks[newStatus], updatedTask!];
-                            return newTasks;
-                        });
-                    }
-                    await updateTasksCount();
-                } catch (error) {
-                    console.error("Failed to update task status:", error);
-                    fetchTasks();
-                } finally {
-                    setDraggedTask(null);
-                }
-            };
+    if (isAdmin) return true;
 
+    switch (newStatus) {
+      case "pending":
+        return (
+          task.employeeId === currentUserId ||
+          task.responsibleId === currentUserId ||
+          task.createdBy === currentUserId
+        );
+      case "in_progress":
+        return (
+          task.employeeId === currentUserId ||
+          task.responsibleId === currentUserId ||
+          task.createdBy === currentUserId
+        );
+      case "review":
+        return (
+          task.employeeId === currentUserId ||
+          task.responsibleId === currentUserId ||
+          task.createdBy === currentUserId
+        );
+      case "done":
+        return (
+          task.responsibleId === currentUserId ||
+          task.createdBy === currentUserId
+        );
+      default:
+        return false;
+    }
+  };
 
-    useEffect(() => {
-        updateTasksCount();
-    }, []);
+  const handleDragStart = (task: Task) => {
+    setDraggedTask(task);
+  };
 
-    const checkStatusChangePermission = (
-        task: Task, 
-        newStatus: 'pending' | 'in_progress' | 'review' | 'done',
-        currentUserId?: number,
-        isAdmin?: boolean
-    ) => {
-        if (!currentUserId) return false;
+  const handleTaskCreated = async () => {
+    await fetchTasks();
+    await updateTasksCount();
+    setIsCreateModalOpen(false);
+  };
 
-        if (isAdmin) return true;
+  const handleFilterChange = (newFilters: Partial<TaskParams>) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+  };
 
-        switch(newStatus) {
-            case 'pending':
-                return task.employeeId === currentUserId || 
-                    task.responsibleId === currentUserId || 
-                    task.createdBy === currentUserId;
-            case 'in_progress':
-                return task.employeeId === currentUserId || 
-                    task.responsibleId === currentUserId || 
-                    task.createdBy === currentUserId;
-            case 'review':
-                return task.employeeId === currentUserId || 
-                    task.responsibleId === currentUserId || 
-                    task.createdBy === currentUserId;
-            case 'done':
-                return task.responsibleId === currentUserId || 
-                    task.createdBy === currentUserId;
-            default:
-                return false;
-        }
-    };
-    
-    const handleDragStart = (task: Task) => {
-        setDraggedTask(task);
-    };
+  // Обработчик изменения чекбокса "Только свои"
+  const handleOnlyMineChange = (checked: boolean) => {
+    if (checked) {
+      // При активации "Только свои" сбрасываем фильтр по исполнителям
+      handleFilterChange({
+        onlyMine: checked,
+        taskEmployeeId: undefined,
+      });
+    } else {
+      handleFilterChange({ onlyMine: checked });
+    }
+  };
 
-    const handleTaskCreated = async () => {
-        await fetchTasks();
-        await updateTasksCount();
-        setIsCreateModalOpen(false);
-    };
+  return (
+    <PageLayout>
+      <TitleField>
+        <CustomTitle>To do</CustomTitle>
+        <DarkCyanButton style={{}} onClick={() => setIsCreateModalOpen(true)}>
+          Добавить задачу
+        </DarkCyanButton>
+      </TitleField>
+      <FilterField style={{ maxWidth: "800px", gap: "16px" }}>
+        <SelectPriority
+          value={filters.priority || ""}
+          onChange={(value) =>
+            handleFilterChange({
+              priority: value as "low" | "medium" | "high" | undefined,
+            })
+          }
+          className="priority-select"
+          showAnyOption={true}
+        />
+        <UserSelect
+          value={filters.taskEmployeeId?.toString() || ""}
+          onChange={(e) =>
+            handleFilterChange({
+              taskEmployeeId: e.target.value
+                ? parseInt(e.target.value)
+                : undefined,
+            })
+          }
+          options={assigneeOptions}
+          placeholder="Выберите исполнителя"
+          style={{ minWidth: "250px", height: "43px", margin: "0" }}
+          disabled={filters.onlyMine}
+        />
+        <ToggleContainer>
+          <Checkbox
+            label="Только свои"
+            checked={filters.onlyMine || false}
+            onChange={handleOnlyMineChange}
+          />
+        </ToggleContainer>
+      </FilterField>
+      <TaskListContainersWrapper>
+        <TaskListContainer
+          title="К выполнению"
+          tasks={tasks.pending}
+          status="pending"
+          onTaskDrop={handleTaskDrop}
+          onDragStart={handleDragStart}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+          draggedTask={draggedTask}
+          isAdmin={isAdmin}
+          currentUserId={currentUserId}
+        />
+        <TaskListContainer
+          title="В работе"
+          tasks={tasks.in_progress}
+          status="in_progress"
+          onTaskDrop={handleTaskDrop}
+          onDragStart={handleDragStart}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+          draggedTask={draggedTask}
+          isAdmin={isAdmin}
+          currentUserId={currentUserId}
+        />
+        <TaskListContainer
+          title="На проверке"
+          tasks={tasks.review}
+          status="review"
+          onTaskDrop={handleTaskDrop}
+          onDragStart={handleDragStart}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+          draggedTask={draggedTask}
+          isAdmin={isAdmin}
+          currentUserId={currentUserId}
+        />
+        <TaskListContainer
+          title="Выполнено"
+          tasks={tasks.done}
+          status="done"
+          onTaskDrop={handleTaskDrop}
+          onDragStart={handleDragStart}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+          draggedTask={draggedTask}
+          isAdmin={isAdmin}
+          currentUserId={currentUserId}
+          onShowAllCompleted={() => setIsCompletedModalOpen(true)}
+        />
+      </TaskListContainersWrapper>
 
-    const handleFilterChange = (newFilters: Partial<TaskParams>) => {
-        setFilters(prev => ({ ...prev, ...newFilters }));
-    };
+      {taskToEdit && (
+        <EditTaskModal
+          isOpen={!!taskToEdit}
+          onClose={() => setTaskToEdit(null)}
+          onTaskUpdated={handleTaskUpdated}
+          task={taskToEdit}
+        />
+      )}
 
-    // Обработчик изменения чекбокса "Только свои"
-    const handleOnlyMineChange = (checked: boolean) => {
-        if (checked) {
-            // При активации "Только свои" сбрасываем фильтр по исполнителям
-            handleFilterChange({ 
-                onlyMine: checked,
-                taskEmployeeId: undefined 
-            });
-        } else {
-            handleFilterChange({ onlyMine: checked });
-        }
-    };
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onTaskCreated={handleTaskCreated}
+        defaultAssigneeId={filters.taskEmployeeId}
+      />
 
-    return (
-        <PageLayout>
-            <TitleField>
-                <CustomTitle>To do</CustomTitle>
-                <DarkCyanButton 
-                    style={{}} 
-                    onClick={() => setIsCreateModalOpen(true)}
-                >
-                    Добавить задачу
-                </DarkCyanButton>
-            </TitleField>
-            <FilterField style={{maxWidth: "800px", gap: "16px" }}>
-                <SelectPriority
-                    value={filters.priority || ''}
-                    onChange={(value) => handleFilterChange({ 
-                        priority: value as 'low' | 'medium' | 'high' | undefined 
-                    })}
-                    className="priority-select"
-                    showAnyOption={true}
-                />
-                <UserSelect
-                    value={filters.taskEmployeeId?.toString() || ""}
-                    onChange={(e) => handleFilterChange({ 
-                        taskEmployeeId: e.target.value ? parseInt(e.target.value) : undefined 
-                    })}
-                    options={assigneeOptions}
-                    placeholder="Выберите исполнителя"
-                    style={{ minWidth: '250px', height: "43px", margin: "0" }}
-                    disabled={filters.onlyMine}
-                />
-                <ToggleContainer>
-                    <Checkbox
-                        label="Только свои"
-                        checked={filters.onlyMine || false}
-                        onChange={handleOnlyMineChange}
-                    />
-                </ToggleContainer>
-            </FilterField>
-            <TaskListContainersWrapper>
-                <TaskListContainer 
-                    title="К выполнению" 
-                    tasks={tasks.pending} 
-                    status="pending"
-                    onTaskDrop={handleTaskDrop}
-                    onDragStart={handleDragStart}
-                    onEditTask={handleEditTask}
-                    onDeleteTask={handleDeleteTask}
-                    draggedTask={draggedTask}
-                    isAdmin={isAdmin}
-                    currentUserId={currentUserId}
-                />
-                <TaskListContainer 
-                    title="В работе" 
-                    tasks={tasks.in_progress} 
-                    status="in_progress"
-                    onTaskDrop={handleTaskDrop}
-                    onDragStart={handleDragStart}
-                    onEditTask={handleEditTask}
-                    onDeleteTask={handleDeleteTask}
-                    draggedTask={draggedTask}
-                    isAdmin={isAdmin}
-                    currentUserId={currentUserId}
-                />
-                <TaskListContainer 
-                    title="На проверке" 
-                    tasks={tasks.review} 
-                    status="review"
-                    onTaskDrop={handleTaskDrop}
-                    onDragStart={handleDragStart}
-                    onEditTask={handleEditTask}
-                    onDeleteTask={handleDeleteTask}
-                    draggedTask={draggedTask}
-                    isAdmin={isAdmin}
-                    currentUserId={currentUserId}
-                />
-                <TaskListContainer 
-                    title="Выполнено" 
-                    tasks={tasks.done} 
-                    status="done"
-                    onTaskDrop={handleTaskDrop}
-                    onDragStart={handleDragStart}
-                    onEditTask={handleEditTask}
-                    onDeleteTask={handleDeleteTask}
-                    draggedTask={draggedTask}
-                    isAdmin={isAdmin}
-                    currentUserId={currentUserId}
-                    onShowAllCompleted={() => setIsCompletedModalOpen(true)}
-                />
-            </TaskListContainersWrapper>
-
-            {taskToEdit && (
-                <EditTaskModal 
-                    isOpen={!!taskToEdit}
-                    onClose={() => setTaskToEdit(null)}
-                    onTaskUpdated={handleTaskUpdated}
-                    task={taskToEdit}
-                />
-            )}
-            
-            <CreateTaskModal 
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onTaskCreated={handleTaskCreated}
-                defaultAssigneeId={filters.taskEmployeeId}
-            />
-
-            <CompletedTasksModal 
-                isOpen={isCompletedModalOpen}
-                onClose={() => setIsCompletedModalOpen(false)}
-            />
-        </PageLayout>
-    )
-}
+      <CompletedTasksModal
+        isOpen={isCompletedModalOpen}
+        onClose={() => setIsCompletedModalOpen(false)}
+      />
+    </PageLayout>
+  );
+};
 
 const TaskListContainersWrapper = styled.div`
-    display: flex;
-    gap: 20px;
-    overflow-x: auto;
-    padding-bottom: 20px;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 20px;
 `;
 
 const ToggleContainer = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  span {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
 `;
 
 const ToggleLabel = styled.span`
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-    white-space: nowrap;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
 `;
 
 export default ToDoListPage;
