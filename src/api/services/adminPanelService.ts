@@ -1,24 +1,41 @@
 import apiClient from "../client";
-import type { CreateCreditApplicationUser, CreditApplicationUsersResponse, UpdateCreditApplicationRequest } from "../types/applicationUser";
+import type {
+  CreateCreditApplicationUser,
+  CreditApplicationUsersResponse,
+  UpdateCreditApplicationRequest,
+} from "../types/applicationUser";
 import type { SendNotificationRequest } from "../types/notification";
 
 class AdminPanelService {
-  async sendNotification(notificationRequest: SendNotificationRequest): Promise<SendNotificationRequest> {
-    const response = await apiClient.post<SendNotificationRequest>('/AdminPanel/bulk', notificationRequest);
+  async sendNotification(
+    notificationRequest: SendNotificationRequest
+  ): Promise<SendNotificationRequest> {
+    const response = await apiClient.post<SendNotificationRequest>(
+      "/AdminPanel/bulk",
+      notificationRequest
+    );
     return response.data;
   }
 
-  async getCreditApplicationCompanies(): Promise<CreditApplicationUsersResponse[]> {
-    const response = await apiClient.get<CreditApplicationUsersResponse[]>('/AdminPanel/credit-application-companies');
+  async getCreditApplicationCompanies(): Promise<
+    CreditApplicationUsersResponse[]
+  > {
+    const response = await apiClient.get<CreditApplicationUsersResponse[]>(
+      "/AdminPanel/credit-application-companies"
+    );
     return response.data;
   }
 
-  async createCreditApplicationCompany(data: CreateCreditApplicationUser): Promise<void> {
-    await apiClient.post('/AdminPanel/credit-application-companies', data);
+  async createCreditApplicationCompany(
+    data: CreateCreditApplicationUser
+  ): Promise<void> {
+    await apiClient.post("/AdminPanel/credit-application-companies", data);
   }
 
-  async updateCreditApplicationCompany(data: UpdateCreditApplicationRequest): Promise<void> {
-    await apiClient.put('/AdminPanel/credit-application-companies', data);
+  async updateCreditApplicationCompany(
+    data: UpdateCreditApplicationRequest
+  ): Promise<void> {
+    await apiClient.put("/AdminPanel/credit-application-companies", data);
   }
 
   async deleteCreditApplicationCompany(id: string): Promise<void> {
@@ -32,18 +49,26 @@ class AdminPanelService {
     return response.data;
   }
 
-  async createBroadcastCampaign(data: CreateBroadcastCampaignRequest): Promise<void> {
-    await apiClient.post('/AdminPanel/broadcast/campaigns', data, {
+  async createBroadcastCampaign(
+    data: CreateBroadcastCampaignRequest
+  ): Promise<void> {
+    await apiClient.post("/AdminPanel/broadcast/campaigns", data, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
   }
 
-  async getBroadcastCampaigns(page: number = 1, pageSize: number = 10): Promise<BroadcastCampaignsPagedResponse> {
-    const response = await apiClient.get<BroadcastCampaignsPagedResponse>('/AdminPanel/broadcast/campaigns', {
-      params: { page, pageSize },
-    });
+  async getBroadcastCampaigns(
+    page: number = 1,
+    pageSize: number = 10
+  ): Promise<BroadcastCampaignsPagedResponse> {
+    const response = await apiClient.get<BroadcastCampaignsPagedResponse>(
+      "/AdminPanel/broadcast/campaigns",
+      {
+        params: { page, pageSize },
+      }
+    );
     return response.data;
   }
 
@@ -51,16 +76,41 @@ class AdminPanelService {
     await apiClient.delete(`/AdminPanel/cancell/broadcast/campaigns/${id}`);
   }
 
-  async updateBroadcastCampaignMessage(campaignId: number, content: string): Promise<void> {
+  async updateBroadcastCampaignMessage(
+    campaignId: number,
+    content: string
+  ): Promise<void> {
     const formData = new FormData();
-    formData.append('CampaignId', campaignId.toString());
-    formData.append('Content', content);
-    
-    await apiClient.put('/AdminPanel/broadcast/campaigns/message', formData, {
+    formData.append("CampaignId", campaignId.toString());
+    formData.append("Content", content);
+
+    await apiClient.put("/AdminPanel/broadcast/campaigns/message", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
+  }
+
+  async getBroadcastCampaignChats(
+    params: { nextCursor?: string; unread?: boolean; limit?: number } = {}
+  ): Promise<BroadcastCampaignChatsResponse> {
+    const response = await apiClient.get<BroadcastCampaignChatsResponse>(
+      "/AdminPanel/broadcast/campaigns/chats",
+      {
+        params: {
+          NextCursor: params.nextCursor || undefined,
+          Unread: params.unread || undefined,
+          Limit: params.limit || undefined,
+        },
+      }
+    );
+    return response.data;
+  }
+
+  async markBroadcastCampaignChatRead(chatId: number): Promise<void> {
+    await apiClient.patch(
+      `/AdminPanel/broadcast/campaigns/chat/${chatId}/mark/read`
+    );
   }
 }
 
@@ -82,7 +132,7 @@ export interface BroadcastCampaignMessage {
 export interface BroadcastCampaign {
   id: number;
   title: string;
-  status: 'Pending' | 'InProgress' | 'Completed' | 'Failed' | 'Cancelled';
+  status: "Pending" | "InProgress" | "Completed" | "Failed" | "Cancelled";
   createdAt: string;
   completedAt: string | null;
   totalRecipients: number;
@@ -107,6 +157,21 @@ export interface BroadcastCampaignsPagedResponse {
 export interface UpdateBroadcastCampaignMessageRequest {
   campaignId: number;
   content: string;
+}
+
+export interface BroadcastCampaignChat {
+  id: number;
+  lastMessage: string;
+  isRead: boolean;
+  time: string;
+  phone: string;
+}
+
+export interface BroadcastCampaignChatsResponse {
+  nextCursor: string | null;
+  totalCount: number;
+  items: BroadcastCampaignChat[];
+  hasMore: boolean;
 }
 
 export default new AdminPanelService();

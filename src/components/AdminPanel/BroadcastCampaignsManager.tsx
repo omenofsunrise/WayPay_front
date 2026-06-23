@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Pagination } from "react-bootstrap";
 import styled from "styled-components";
 import useAdminPanel from "../../api/hooks/useAdminPanel";
-import type { BroadcastCampaign } from "../../api/services/adminPanelService";
+import type {
+  BroadcastCampaign,
+  BroadcastCampaignChat,
+} from "../../api/services/adminPanelService";
 import BaseModal from "../modal/BASE/modalCRUBase";
 import DarkCyanButton from "../ui/Buttons/DarkCyanButton";
 import CustomInput from "../ui/fields/CustomInput";
@@ -579,6 +582,131 @@ const EditMessageContent = styled.div`
   padding: 20px;
 `;
 
+const ChatsSection = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+`;
+
+const ChatsFilterRow = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+`;
+
+const ChatsFilterButton = styled.button<{ active: boolean }>`
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid ${(props) => (props.active ? "#007D88" : "#d1d5db")};
+  background: ${(props) => (props.active ? "#007D88" : "#ffffff")};
+  color: ${(props) => (props.active ? "#ffffff" : "#6B7280")};
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #007d88;
+  }
+`;
+
+const ChatsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const ChatCard = styled.div<{ unread: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: ${(props) => (props.unread ? "#f0f9fa" : "#ffffff")};
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    border-color: #007d88;
+    background: #f0f9fa;
+  }
+`;
+
+const ChatBody = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const ChatTop = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+`;
+
+const ChatPhone = styled.span`
+  font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+`;
+
+const ChatTime = styled.span`
+  color: #9ca3af;
+  font-size: 12px;
+  flex-shrink: 0;
+`;
+
+const ChatLastMessage = styled.div<{ unread: boolean }>`
+  color: ${(props) => (props.unread ? "#374151" : "#6B7280")};
+  font-weight: ${(props) => (props.unread ? 500 : 400)};
+  font-size: 13px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const UnreadDot = styled.span`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #007d88;
+  flex-shrink: 0;
+`;
+
+const ChatsEmpty = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 14px;
+`;
+
+const LoadMoreChatsButton = styled.button`
+  align-self: center;
+  margin: 16px 0;
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 1px solid #007d88;
+  background: #ffffff;
+  color: #007d88;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: #007d88;
+    color: #ffffff;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
 const BroadcastCampaignsManager: React.FC = () => {
   const {
     broadcastCampaigns,
@@ -590,13 +718,21 @@ const BroadcastCampaignsManager: React.FC = () => {
     cancelBroadcastCampaign,
     toggleWhatsAppChannel,
     updateBroadcastCampaignMessage,
+    fetchBroadcastCampaignChats,
+    markBroadcastCampaignChatRead,
   } = useAdminPanel();
 
   const { getChannels } = useWhatsApp();
 
-  const [activeTab, setActiveTab] = useState<"campaigns" | "channels">(
-    "campaigns"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "campaigns" | "channels" | "chats"
+  >("campaigns");
+
+  const [chats, setChats] = useState<BroadcastCampaignChat[]>([]);
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  const [chatsNextCursor, setChatsNextCursor] = useState<string | null>(null);
+  const [chatsHasMore, setChatsHasMore] = useState(false);
+  const [chatsUnreadOnly, setChatsUnreadOnly] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] =
@@ -634,6 +770,70 @@ const BroadcastCampaignsManager: React.FC = () => {
     } finally {
       setIsLoadingChannels(false);
     }
+  };
+
+  // Загрузка чатов с ответами. reset=true — заново (смена фильтра/вкладки),
+  // иначе — догрузка следующей порции по курсору.
+  const loadChats = async (reset = false) => {
+    setIsLoadingChats(true);
+    try {
+      const result = await fetchBroadcastCampaignChats({
+        unread: chatsUnreadOnly || undefined,
+        nextCursor: reset ? undefined : chatsNextCursor || undefined,
+        limit: 20,
+      });
+      if (result) {
+        setChats((prev) => (reset ? result.items : [...prev, ...result.items]));
+        setChatsNextCursor(result.nextCursor);
+        setChatsHasMore(result.hasMore);
+      }
+    } catch (error) {
+      console.error("Error loading chats:", error);
+    } finally {
+      setIsLoadingChats(false);
+    }
+  };
+
+  // При переходе на вкладку «Ответы» и смене фильтра — загружаем заново.
+  useEffect(() => {
+    if (activeTab === "chats") {
+      loadChats(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, chatsUnreadOnly]);
+
+  const handleChatClick = async (chat: BroadcastCampaignChat) => {
+    // Открываем WhatsApp по номеру телефона из сущности чата.
+    const phone = (chat.phone || "").replace(/\D/g, "");
+    if (phone) {
+      window.open(`https://wa.me/${phone}`, "_blank");
+    }
+
+    // Помечаем чат прочитанным (оптимистично обновляем локально).
+    if (!chat.isRead) {
+      setChats((prev) =>
+        prev.map((c) => (c.id === chat.id ? { ...c, isRead: true } : c))
+      );
+      const ok = await markBroadcastCampaignChatRead(chat.id);
+      if (!ok) {
+        // откат при ошибке
+        setChats((prev) =>
+          prev.map((c) => (c.id === chat.id ? { ...c, isRead: false } : c))
+        );
+      }
+    }
+  };
+
+  const formatChatTime = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // ✅ ФИКС: Добавляем e.preventDefault() и e.stopPropagation()
@@ -1022,6 +1222,63 @@ const BroadcastCampaignsManager: React.FC = () => {
     </ChannelsManagementSection>
   );
 
+  const renderChatsTab = () => (
+    <ChatsSection>
+      <ChatsFilterRow>
+        <ChatsFilterButton
+          active={!chatsUnreadOnly}
+          onClick={() => setChatsUnreadOnly(false)}
+        >
+          Все
+        </ChatsFilterButton>
+        <ChatsFilterButton
+          active={chatsUnreadOnly}
+          onClick={() => setChatsUnreadOnly(true)}
+        >
+          Непрочитанные
+        </ChatsFilterButton>
+      </ChatsFilterRow>
+
+      {isLoadingChats && chats.length === 0 ? (
+        <ChatsEmpty>Загрузка...</ChatsEmpty>
+      ) : chats.length === 0 ? (
+        <ChatsEmpty>Чатов пока нет</ChatsEmpty>
+      ) : (
+        <>
+          <ChatsList>
+            {chats.map((chat) => (
+              <ChatCard
+                key={chat.id}
+                unread={!chat.isRead}
+                onClick={() => handleChatClick(chat)}
+                title="Открыть чат в WhatsApp"
+              >
+                <ChatBody>
+                  <ChatTop>
+                    <ChatPhone>{chat.phone || "Без номера"}</ChatPhone>
+                    <ChatTime>{formatChatTime(chat.time)}</ChatTime>
+                  </ChatTop>
+                  <ChatLastMessage unread={!chat.isRead}>
+                    {chat.lastMessage || "—"}
+                  </ChatLastMessage>
+                </ChatBody>
+                {!chat.isRead && <UnreadDot />}
+              </ChatCard>
+            ))}
+          </ChatsList>
+          {chatsHasMore && (
+            <LoadMoreChatsButton
+              onClick={() => loadChats(false)}
+              disabled={isLoadingChats}
+            >
+              {isLoadingChats ? "Загрузка..." : "Показать ещё"}
+            </LoadMoreChatsButton>
+          )}
+        </>
+      )}
+    </ChatsSection>
+  );
+
   if (
     isLoading &&
     (!broadcastCampaigns || broadcastCampaigns.length === 0) &&
@@ -1045,10 +1302,20 @@ const BroadcastCampaignsManager: React.FC = () => {
         >
           WhatsApp каналы
         </Tab>
+        <Tab
+          active={activeTab === "chats"}
+          onClick={() => setActiveTab("chats")}
+        >
+          Ответы
+        </Tab>
       </TabsContainer>
 
       <TabContent>
-        {activeTab === "campaigns" ? renderCampaignsTab() : renderChannelsTab()}
+        {activeTab === "campaigns"
+          ? renderCampaignsTab()
+          : activeTab === "channels"
+          ? renderChannelsTab()
+          : renderChatsTab()}
       </TabContent>
 
       <BaseModal
