@@ -3,8 +3,6 @@ import { ListFilter } from "lucide-react";
 
 // Ширина выезжающей панели фильтров (на столько отодвигается контент). Как у бокового меню.
 const FILTER_PANEL_WIDTH = 360;
-import CustomTitle from "../components/ui/Text/CustomTitle";
-import TitleField from "../components/ui/Layouts/TitleLayout";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
@@ -1103,10 +1101,6 @@ const CreditControlPage = () => {
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
       </FilterIconButton>
-
-      <TitleField>
-        <CustomTitle>Контроль договоров</CustomTitle>
-      </TitleField>
 
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
