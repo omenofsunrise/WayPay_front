@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
@@ -47,6 +47,8 @@ const EmptyState = styled.div`
 // (клиент ответил на рекламную рассылку). Путь: /admin/whatsapp/:phone
 const AdminWhatsAppChatPage = () => {
   const { phone } = useParams<{ phone: string }>();
+  const [searchParams] = useSearchParams();
+  const channelId = searchParams.get("channelId") || undefined;
   const navigate = useNavigate();
 
   return (
@@ -60,7 +62,7 @@ const AdminWhatsAppChatPage = () => {
       </Header>
 
       {phone ? (
-        <WhatsAppChat phoneNumber={phone} height="70vh" />
+        <WhatsAppChat phoneNumber={phone} channelId={channelId} height="70vh" />
       ) : (
         <EmptyState>Номер телефона не указан в ссылке.</EmptyState>
       )}

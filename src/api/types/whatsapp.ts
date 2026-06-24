@@ -13,7 +13,7 @@ export interface SendMessageRequest {
   fileName?: string;
   mediaKind?: string;
   caption?: string;
-  
+
   isMedia?: boolean;
 }
 
@@ -54,6 +54,7 @@ export interface GetChatWithClientRequest {
   clientPhone: string;
   limit?: number;
   offset?: number;
+  channelId?: string;
 }
 
 export interface ChatHistoryResponse {
@@ -236,14 +237,21 @@ export interface ChatMessage {
   chatName: string;
   fromName: string;
   timestamp: number;
-  status: 'UNKNOWN' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'DELETED' | 'PENDING';
+  status:
+    | "UNKNOWN"
+    | "SENT"
+    | "DELIVERED"
+    | "READ"
+    | "FAILED"
+    | "DELETED"
+    | "PENDING";
   isFromMe: boolean;
   source: string;
   deviceId: number;
   type: string;
   subtype: string;
   displayText: string;
-  
+
   // Контент (один из них будет заполнен)
   text?: TextContent;
   image?: ImageContent;
@@ -255,7 +263,7 @@ export interface ChatMessage {
   location?: LocationContent;
   contact?: ContactContent;
   poll?: PollContent;
-  
+
   // Дополнительно
   reactions: Reaction[];
   labels: Label[];
@@ -278,7 +286,7 @@ export interface ChannelStatusResponse {
 
 export interface QRResponse {
   qrString: string;
-  status: 'UNKNOWN' | 'AWAITING_SCAN' | 'CONNECTED' | 'EXPIRED';
+  status: "UNKNOWN" | "AWAITING_SCAN" | "CONNECTED" | "EXPIRED";
 }
 
 export interface ChannelResponse {
@@ -312,26 +320,30 @@ export interface ExtendChannelRequest {
   channelId: string;
 }
 
-export type BotType = 'Keywords' | 'Events';
+export type BotType = "Keywords" | "Events";
 
 export const BotType = {
-  Keywords: 'Keywords',
-  Events: 'Events',
+  Keywords: "Keywords",
+  Events: "Events",
 } as const;
 
-export type BotEventType = 'CreatedCredit' | 'CreatedPayment' | 'ClientBirthdate' | 'ComingPayment';
+export type BotEventType =
+  | "CreatedCredit"
+  | "CreatedPayment"
+  | "ClientBirthdate"
+  | "ComingPayment";
 
 export const BotEventType = {
-  CreatedCredit: 'CreatedCredit',
-  CreatedPayment: 'CreatedPayment',
-  ClientBirthdate: 'ClientBirthdate',
-  ComingPayment: 'ComingPayment',
+  CreatedCredit: "CreatedCredit",
+  CreatedPayment: "CreatedPayment",
+  ClientBirthdate: "ClientBirthdate",
+  ComingPayment: "ComingPayment",
 } as const;
 
-export type BotResponseTextType = 'WhatsAppBotNoClientResponse';
+export type BotResponseTextType = "WhatsAppBotNoClientResponse";
 
 export const BotResponseTextType = {
-  WhatsAppBotNoClientResponse: 'WhatsAppBotNoClientResponse',
+  WhatsAppBotNoClientResponse: "WhatsAppBotNoClientResponse",
 } as const;
 
 export interface CreateBotRequest {
@@ -360,14 +372,14 @@ export interface SetBotEventRequest {
 
 export interface AddBotKeywordRequest {
   botId: number;
-  type: 'Exact' | 'Contains' | 'StartsWith';
+  type: "Exact" | "Contains" | "StartsWith";
   keyword: string;
 }
 
 export interface BotKeywordResponse {
   id: number;
   botId: number;
-  matchType: 'Exact' | 'Contains' | 'StartsWith';
+  matchType: "Exact" | "Contains" | "StartsWith";
   keyword: string;
   createdAt?: string;
 }

@@ -165,6 +165,7 @@ export interface BroadcastCampaignChat {
   isRead: boolean;
   time: string;
   phone: string;
+  channelId?: string;
 }
 
 export interface BroadcastCampaignChatsResponse {
