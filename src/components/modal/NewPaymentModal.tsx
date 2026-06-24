@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled from 'styled-components';
-import CustomTitle from '../ui/Text/CustomTitle';
-import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
-import CustomInput from '../ui/fields/CustomInput';
-import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
-import GrayButton from '../ui/Buttons/GrayButton';
-import Checkbox from '../ui/CheckBoxes/Checkbox';
-import CustomCalendar from '../ui/fields/CustomCalendar';
-import BankCardSelect from '../ui/fields/BankCardSelect';
-import { useAuth } from '../../сontext/AuthContext';
-import { formatPhoneHref } from '../../utils/phoneUtils';
-import PhoneLink from '../ui/links/PhoneLink';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import styled from "styled-components";
+import CustomTitle from "../ui/Text/CustomTitle";
+import ModalInfoTitle from "../ui/Text/ModalInfoTitle";
+import CustomInput from "../ui/fields/CustomInput";
+import DarkCyanButton from "../ui/Buttons/DarkCyanButton";
+import GrayButton from "../ui/Buttons/GrayButton";
+import Checkbox from "../ui/CheckBoxes/Checkbox";
+import CustomCalendar from "../ui/fields/CustomCalendar";
+import BankCardSelect from "../ui/fields/BankCardSelect";
+import { useAuth } from "../../сontext/AuthContext";
+import { useClientFeedbackPrompt } from "../../сontext/ClientFeedbackContext";
+import type { CreatePaymentResponse } from "../../api/types/payment";
+import { formatPhoneHref } from "../../utils/phoneUtils";
+import PhoneLink from "../ui/links/PhoneLink";
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -24,14 +26,14 @@ export interface NewPaymentModalProps {
   onSubmit: (paymentData: {
     paymentDate: string;
     principalAmount: number;
-    paymentMethod: 'cash' | 'card';
+    paymentMethod: "cash" | "card";
     bankCardId?: number;
-  }) => Promise<number | void>;
+  }) => Promise<CreatePaymentResponse | number | null | void>;
   onPrintReceipt?: (paymentId: number) => void;
   clientId?: number;
 }
 
-export const PRINT_RECEIPT_STORAGE_KEY = 'new-payment-print-receipt-preference';
+export const PRINT_RECEIPT_STORAGE_KEY = "new-payment-print-receipt-preference";
 
 // Вспомогательная функция для блокировки скролла
 const useLockBodyScroll = (isOpen: boolean) => {
@@ -40,22 +42,22 @@ const useLockBodyScroll = (isOpen: boolean) => {
       // Сохраняем текущую позицию скролла
       const scrollY = window.scrollY;
       const body = document.body;
-      
+
       // Блокируем скролл
-      body.style.position = 'fixed';
+      body.style.position = "fixed";
       body.style.top = `-${scrollY}px`;
-      body.style.left = '0';
-      body.style.right = '0';
-      body.style.overflow = 'hidden';
-      
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.overflow = "hidden";
+
       return () => {
         // Восстанавливаем скролл
-        body.style.position = '';
-        body.style.top = '';
-        body.style.left = '';
-        body.style.right = '';
-        body.style.overflow = '';
-        
+        body.style.position = "";
+        body.style.top = "";
+        body.style.left = "";
+        body.style.right = "";
+        body.style.overflow = "";
+
         // Восстанавливаем позицию скролла
         window.scrollTo(0, scrollY);
       };
@@ -74,19 +76,21 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   onClose,
   onSubmit,
   onPrintReceipt,
-  clientId
+  clientId,
 }) => {
-  const [paymentDate, setPaymentDate] = useState<string>('');
-  const [principalAmount, setPrincipalAmount] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>();
+  const [paymentDate, setPaymentDate] = useState<string>("");
+  const [principalAmount, setPrincipalAmount] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">();
   const [selectedBankCardId, setSelectedBankCardId] = useState<number>(0);
-  const [selectedBankCardDetails, setSelectedBankCardDetails] = useState<string>('');
+  const [selectedBankCardDetails, setSelectedBankCardDetails] =
+    useState<string>("");
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [remainingDebt, setRemainingDebt] = useState<number>(currentDebt);
   const [isDebtPaid, setIsDebtPaid] = useState<boolean>(currentDebt <= 0);
   const [printReceipt, setPrintReceipt] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { denyPermission } = useAuth();
+  const { promptClientFeedback } = useClientFeedbackPrompt();
 
   // Блокируем скролл body при открытии модалки
   useLockBodyScroll(isOpen);
@@ -94,26 +98,28 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   // Обработчик клавиши Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
 
   // Загрузка предпочтений печати
   useEffect(() => {
-    const savedPrintPreference = localStorage.getItem(PRINT_RECEIPT_STORAGE_KEY);
+    const savedPrintPreference = localStorage.getItem(
+      PRINT_RECEIPT_STORAGE_KEY
+    );
     if (savedPrintPreference) {
       try {
         const preference = JSON.parse(savedPrintPreference);
         setPrintReceipt(preference === true);
       } catch (error) {
-        console.error('Ошибка при загрузке настройки печати:', error);
+        console.error("Ошибка при загрузке настройки печати:", error);
         setPrintReceipt(false);
       }
     }
@@ -122,11 +128,11 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   // Сброс состояния при открытии
   useEffect(() => {
     if (isOpen) {
-      setPaymentDate('');
-      setPrincipalAmount('');
+      setPaymentDate("");
+      setPrincipalAmount("");
       setPaymentMethod(undefined);
       setSelectedBankCardId(0);
-      setSelectedBankCardDetails('');
+      setSelectedBankCardDetails("");
       setTotalAmount(0);
       setRemainingDebt(currentDebt);
       setIsDebtPaid(currentDebt <= 0);
@@ -141,69 +147,81 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   }, [currentDebt, totalAmount]);
 
   const formatMoney = (value: number): string => {
-    return value.toLocaleString('ru-RU') + '₽';
+    return value.toLocaleString("ru-RU") + "₽";
   };
 
   const parseAmount = (formatted: string): number => {
-    return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
+    return parseInt(formatted.replace(/[^\d]/g, "")) || 0;
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    
-    if (inputValue === '₽' || inputValue === '') {
-      setPrincipalAmount('');
+
+    if (inputValue === "₽" || inputValue === "") {
+      setPrincipalAmount("");
       setTotalAmount(0);
       return;
     }
-    
+
     const numericValue = parseAmount(inputValue);
     const validatedValue = Math.min(numericValue, currentDebt);
     const formattedValue = formatMoney(validatedValue);
-    
+
     setPrincipalAmount(formattedValue);
     setTotalAmount(validatedValue);
   };
 
   const handleSubmit = async () => {
-    if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid) return;
-    
-    if (paymentMethod === 'card' && !selectedBankCardId) {
+    if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid)
+      return;
+
+    if (paymentMethod === "card" && !selectedBankCardId) {
       return;
     }
-    
+
     const paymentData = {
       paymentDate,
       principalAmount: totalAmount,
-      paymentMethod
+      paymentMethod,
     };
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      const paymentId = await onSubmit(
-        paymentMethod === 'card' && selectedBankCardId
+      const result = await onSubmit(
+        paymentMethod === "card" && selectedBankCardId
           ? { ...paymentData, bankCardId: selectedBankCardId }
           : paymentData
       );
+
+      // Ответ может быть числом (id, старое поведение) или объектом платежа.
+      const resultObj = result && typeof result === "object" ? result : null;
+      const paymentId = typeof result === "number" ? result : resultObj?.id;
+      const isLast = resultObj?.isLast ?? false;
+      const feedbackClientId = resultObj?.clientId ?? clientId;
+
       if (printReceipt && paymentId && onPrintReceipt) {
         await onPrintReceipt(paymentId);
       }
 
       onClose();
-      
+
+      // Последний платёж по договору — предлагаем оценить клиента.
+      if (isLast && feedbackClientId) {
+        promptClientFeedback(feedbackClientId, clientName);
+      }
     } catch (error) {
-      console.error('Ошибка при создании платежа:', error);
+      console.error("Ошибка при создании платежа:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
-    
+
   const handleCashChange = (checked: boolean) => {
     if (checked) {
-      setPaymentMethod('cash');
+      setPaymentMethod("cash");
       setSelectedBankCardId(0);
-      setSelectedBankCardDetails('');
+      setSelectedBankCardDetails("");
     } else {
       setPaymentMethod(null);
     }
@@ -211,18 +229,15 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
 
   const handleCardChange = (checked: boolean) => {
     if (checked) {
-      setPaymentMethod('card');
+      setPaymentMethod("card");
     } else {
       setPaymentMethod(null);
       setSelectedBankCardId(0);
-      setSelectedBankCardDetails('');
+      setSelectedBankCardDetails("");
     }
   };
 
-  const handleBankCardSelect = (bankCard: { 
-    id: number; 
-    details: string;
-  }) => {
+  const handleBankCardSelect = (bankCard: { id: number; details: string }) => {
     setSelectedBankCardId(bankCard.id);
     setSelectedBankCardDetails(bankCard.details);
   };
@@ -236,15 +251,13 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
 
   return (
     <ModalOverlay isOpen={isOpen}>
-      <ModalContent 
-        onClick={(e) => e.stopPropagation()}
-      >
+      <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalWrapper>
           <CloseButton onClick={onClose}>&times;</CloseButton>
-          
+
           <TitleField>
-            {denyPermission('FORBID_CREATING_PAYMENTS') ? (
-              <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>              
+            {denyPermission("FORBID_CREATING_PAYMENTS") ? (
+              <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>
             ) : (
               <PermissionWarning>
                 У вас недостаточно прав для создания платежей
@@ -254,63 +267,62 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
           {isDebtPaid ? (
             <DebtPaidMessage>
               <h3>Договор полностью погашен</h3>
-              <p>По данному договору нет задолженности. Новые платежи не принимаются.</p>
+              <p>
+                По данному договору нет задолженности. Новые платежи не
+                принимаются.
+              </p>
             </DebtPaidMessage>
           ) : (
             <>
-              {denyPermission('FORBID_CREATING_PAYMENTS') && (
+              {denyPermission("FORBID_CREATING_PAYMENTS") && (
                 <>
                   <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
-                  
+
                   <FormRow>
                     <InputGroup>
                       <InputLabel>№ договора</InputLabel>
-                      <CustomInput 
-                        value={creditId.toString()}
-                        readOnly
-                      />
+                      <CustomInput value={creditId.toString()} readOnly />
                     </InputGroup>
-                    
+
                     <InputGroup>
                       <InputLabel>Инвестор</InputLabel>
-                      <CustomInput 
-                        value={investorName}
-                        readOnly
-                      />
+                      <CustomInput value={investorName} readOnly />
                     </InputGroup>
                   </FormRow>
-                  
+
                   <FormRow>
                     <InputGroup>
                       <InputLabel>Клиент</InputLabel>
-                      <CustomInput 
-                        value={clientName}
-                        readOnly
-                      />
+                      <CustomInput value={clientName} readOnly />
                     </InputGroup>
-                    
+
                     <InputGroup>
                       <InputLabel>Телефон</InputLabel>
-                      <PhoneLinkBox href={formatPhoneHref(clientPhone)} onClick={(e) => e.stopPropagation()}>
+                      <PhoneLinkBox
+                        href={formatPhoneHref(clientPhone)}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {clientPhone}
                       </PhoneLinkBox>
                     </InputGroup>
                   </FormRow>
-                  
-                  <ModalInfoTitle style={{ marginTop: '30px' }}>Сведения о платеже</ModalInfoTitle>
-                  
+
+                  <ModalInfoTitle style={{ marginTop: "30px" }}>
+                    Сведения о платеже
+                  </ModalInfoTitle>
+
                   <FormRow>
                     <InputGroup>
                       <InputLabel>Дата платежа</InputLabel>
-                      <CustomCalendar 
-                        value={paymentDate} 
+                      <CustomCalendar
+                        value={paymentDate}
                         onChange={setPaymentDate}
                       />
                     </InputGroup>
-                    
+
                     <InputGroup>
                       <InputLabel>Сумма платежа</InputLabel>
-                      <CustomInput 
+                      <CustomInput
                         inputType="rubles"
                         placeholder="Сумма"
                         value={principalAmount}
@@ -318,57 +330,59 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                         max={currentDebt}
                       />
                       {totalAmount > currentDebt && (
-                        <ErrorText>Сумма платежа не может превышать остаток долга</ErrorText>
+                        <ErrorText>
+                          Сумма платежа не может превышать остаток долга
+                        </ErrorText>
                       )}
                     </InputGroup>
                   </FormRow>
-                  
+
                   <FormRow>
                     <InputGroup>
                       <InputLabel>Текущая задолженность</InputLabel>
-                      <CustomInput 
+                      <CustomInput
                         value={formatMoney(currentMonthDebt)}
                         readOnly
                       />
                     </InputGroup>
-                    
+
                     <InputGroup>
                       <InputLabel>Остаток всего долга</InputLabel>
-                      <CustomInput 
+                      <CustomInput
                         value={formatMoney(Math.max(0, remainingDebt))}
                         readOnly
                       />
                     </InputGroup>
                   </FormRow>
-                  
+
                   <FormRow>
                     <InputGroup>
                       <CheckboxWrapper>
                         <Checkbox
-                          label='Распечатать чек после создания платежа'
+                          label="Распечатать чек после создания платежа"
                           checked={printReceipt}
                           onChange={handlePrintReceiptChange}
                         />
                       </CheckboxWrapper>
                     </InputGroup>
                   </FormRow>
-                  
+
                   <FormRow>
                     <InputGroup>
                       <InputLabel>Способ оплаты</InputLabel>
                       <PaymentMethodContainer>
                         <CheckboxWrapper>
                           <Checkbox
-                            label='Наличными' 
-                            checked={paymentMethod === 'cash'} 
+                            label="Наличными"
+                            checked={paymentMethod === "cash"}
                             onChange={handleCashChange}
                           />
                         </CheckboxWrapper>
-                        
+
                         <CheckboxWrapper>
-                          <Checkbox 
-                            label='Картой'
-                            checked={paymentMethod === 'card'} 
+                          <Checkbox
+                            label="Картой"
+                            checked={paymentMethod === "card"}
                             onChange={handleCardChange}
                           />
                         </CheckboxWrapper>
@@ -376,47 +390,52 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                     </InputGroup>
                   </FormRow>
 
-                  {paymentMethod === 'card' && (
+                  {paymentMethod === "card" && (
                     <FormRow>
                       <InputGroup>
                         <InputLabel>Банковская карта</InputLabel>
                         <BankCardSelect
                           value={selectedBankCardDetails}
-                          onChange={(details) => setSelectedBankCardDetails(details)}
+                          onChange={(details) =>
+                            setSelectedBankCardDetails(details)
+                          }
                           onBankCardSelect={handleBankCardSelect}
                           placeholder="Выберите карту"
                           clientId={clientId}
                           selectedCardId={selectedBankCardId}
                         />
-                        {paymentMethod === 'card' && !selectedBankCardId && (
-                          <ErrorText>Пожалуйста, выберите банковскую карту</ErrorText>
+                        {paymentMethod === "card" && !selectedBankCardId && (
+                          <ErrorText>
+                            Пожалуйста, выберите банковскую карту
+                          </ErrorText>
                         )}
                       </InputGroup>
                     </FormRow>
                   )}
                 </>
               )}
-
             </>
           )}
-          
+
           <ButtonContainer>
             <GrayButton onClick={onClose} disabled={isSubmitting}>
-              {denyPermission('FORBID_CREATING_PAYMENTS') ? 'Отменить' : 'Закрыть'}
+              {denyPermission("FORBID_CREATING_PAYMENTS")
+                ? "Отменить"
+                : "Закрыть"}
             </GrayButton>
-            {!isDebtPaid &&  (
-              <DarkCyanButton 
+            {!isDebtPaid && (
+              <DarkCyanButton
                 onClick={handleSubmit}
                 disabled={
                   isSubmitting ||
-                  !paymentDate || 
-                  totalAmount <= 0 || 
-                  !paymentMethod || 
+                  !paymentDate ||
+                  totalAmount <= 0 ||
+                  !paymentMethod ||
                   totalAmount > currentDebt ||
-                  (paymentMethod === 'card' && !selectedBankCardId)
+                  (paymentMethod === "card" && !selectedBankCardId)
                 }
               >
-                {isSubmitting ? 'Создание...' : 'Создать платёж'}
+                {isSubmitting ? "Создание..." : "Создать платёж"}
               </DarkCyanButton>
             )}
           </ButtonContainer>
@@ -427,7 +446,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
 };
 
 const ModalOverlay = styled.div<{ isOpen: boolean }>`
-  display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+  display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
   position: fixed;
   top: 0;
   left: 0;
@@ -440,7 +459,7 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
   overflow-y: auto; // Разрешаем скролл оверлея
   padding: 20px; // Отступы для маленьких экранов
   overflow: hidden; // Отключаем скролл для оверлея
-  
+
   // Отключаем скролл для самого оверлея на мобильных
   @media (max-width: 768px) {
     padding: 0;
@@ -457,28 +476,28 @@ const ModalContent = styled.div`
   overflow-y: auto;
   margin: auto; // Центрирование
   position: relative;
-  
+
   // Для плавного скролла на мобильных
   -webkit-overflow-scrolling: touch;
-  
+
   // Скрываем стандартный скроллбар если нужно
   scrollbar-width: thin;
-  scrollbar-color: #007D88 #f0f0f0;
-  
+  scrollbar-color: #007d88 #f0f0f0;
+
   &::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: #f0f0f0;
     border-radius: 3px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
-    background: #007D88;
+    background: #007d88;
     border-radius: 3px;
   }
-  
+
   // Убираем скроллбар на очень маленьких экранах
   @media (max-width: 768px) {
     width: 100%;
@@ -486,11 +505,11 @@ const ModalContent = styled.div`
     max-height: 100vh;
     border-radius: 0;
     padding: 16px;
-    
+
     &::-webkit-scrollbar {
       display: none;
     }
-    
+
     scrollbar-width: none;
   }
 `;
@@ -508,7 +527,7 @@ const CloseButton = styled.button`
   font-size: 20px;
   cursor: pointer;
   z-index: 1;
-  
+
   &:hover {
     opacity: 0.7;
   }
@@ -533,7 +552,7 @@ const FormRow = styled.div`
   display: flex;
   gap: 20px;
   margin-bottom: 16px;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 12px;
@@ -570,7 +589,7 @@ const ButtonContainer = styled.div`
   justify-content: flex-end;
   gap: 12px;
   margin-top: 30px;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
   }
@@ -579,7 +598,7 @@ const ButtonContainer = styled.div`
 const PaymentMethodContainer = styled.div`
   display: flex;
   gap: 24px;
-  
+
   @media (max-width: 768px) {
     gap: 12px;
     flex-direction: column;
@@ -598,12 +617,12 @@ const DebtPaidMessage = styled.div`
   border-radius: 8px;
   margin-bottom: 20px;
   text-align: center;
-  
+
   h3 {
     color: #28a745;
     margin-bottom: 10px;
   }
-  
+
   p {
     color: #6c757d;
     margin: 0;
