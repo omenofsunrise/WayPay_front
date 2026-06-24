@@ -39,6 +39,7 @@ import useChat from "../../api/hooks/useChat";
 import useCompany from "../../api/hooks/useCompany";
 import PaymentConfirmationGenerator from "../../utils/doxcUtils/paymentConfirmationGenerator";
 import paymentService from "../../api/services/paymentService";
+import noteService from "../../api/services/noteService";
 import NewPaymentModal from "./NewPaymentModal";
 import EditScheduleDateModal from "./EditScheduleDateModal";
 import { sendWhatsAppMessage } from "../../utils/sendWhatsAppMessage";
@@ -416,6 +417,23 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [notes, setNotes] = useState<NoteWithFile[]>([]);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  // Заметки по конкретным платежам/строкам графика (noteableType: 'payment')
+  const [paymentsWithNotes, setPaymentsWithNotes] = useState<Set<number>>(
+    new Set()
+  );
+  const [schedulesWithNotes, setSchedulesWithNotes] = useState<Set<number>>(
+    new Set()
+  );
+  const [selectedNoteTarget, setSelectedNoteTarget] = useState<{
+    id: number;
+    label: string;
+    kind: "payment" | "schedule";
+  } | null>(null);
+  const [selectedPaymentNotes, setSelectedPaymentNotes] = useState<Note[]>([]);
+  const [isPaymentNoteModalOpen, setIsPaymentNoteModalOpen] = useState(false);
+  const [paymentNoteDraft, setPaymentNoteDraft] = useState("");
+  const [isSavingPaymentNote, setIsSavingPaymentNote] = useState(false);
+  const [isLoadingPaymentNotes, setIsLoadingPaymentNotes] = useState(false);
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [noteImages, setNoteImages] = useState<string[]>([]);
@@ -1157,6 +1175,145 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     setIsNoteModalOpen(false);
   };
 
+  // Подгружаем, у каких платежей есть заметки, чтобы показать индикатор в таблице.
+  useEffect(() => {
+    const items = paymentsData?.items;
+    if (!items || items.length === 0) {
+      setPaymentsWithNotes(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const results = await Promise.all(
+          items.map(async (p) => {
+            try {
+              const notes = await noteService.getNotes(
+                NOTEABLE_TYPES.PAYMENT,
+                p.id,
+                false
+              );
+              return notes && notes.length > 0 ? p.id : null;
+            } catch {
+              return null;
+            }
+          })
+        );
+        if (!cancelled) {
+          setPaymentsWithNotes(
+            new Set(results.filter((x): x is number => x !== null))
+          );
+        }
+      } catch {
+        // молча игнорируем — индикаторы просто не отобразятся
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentsData?.items]);
+
+  // Подгружаем, у каких строк графика есть заметки.
+  useEffect(() => {
+    const items = scheduleData?.items;
+    if (!items || items.length === 0) {
+      setSchedulesWithNotes(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const results = await Promise.all(
+          items.map(async (s) => {
+            try {
+              const notes = await noteService.getNotes(
+                NOTEABLE_TYPES.PAYMENT,
+                s.id,
+                false
+              );
+              return notes && notes.length > 0 ? s.id : null;
+            } catch {
+              return null;
+            }
+          })
+        );
+        if (!cancelled) {
+          setSchedulesWithNotes(
+            new Set(results.filter((x): x is number => x !== null))
+          );
+        }
+      } catch {
+        // молча игнорируем
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scheduleData?.items]);
+
+  const openNoteModal = async (target: {
+    id: number;
+    label: string;
+    kind: "payment" | "schedule";
+  }) => {
+    setSelectedNoteTarget(target);
+    setSelectedPaymentNotes([]);
+    setPaymentNoteDraft("");
+    setIsPaymentNoteModalOpen(true);
+    setIsLoadingPaymentNotes(true);
+    try {
+      const notes = await noteService.getNotes(
+        NOTEABLE_TYPES.PAYMENT,
+        target.id,
+        false
+      );
+      setSelectedPaymentNotes(notes || []);
+    } catch {
+      setSelectedPaymentNotes([]);
+    } finally {
+      setIsLoadingPaymentNotes(false);
+    }
+  };
+
+  const closePaymentNoteModal = () => {
+    setIsPaymentNoteModalOpen(false);
+    setSelectedNoteTarget(null);
+    setSelectedPaymentNotes([]);
+    setPaymentNoteDraft("");
+  };
+
+  const handleSavePaymentNote = async () => {
+    if (!selectedNoteTarget || !paymentNoteDraft.trim()) return;
+    setIsSavingPaymentNote(true);
+    try {
+      await noteService.createNote({
+        noteableType: NOTEABLE_TYPES.PAYMENT,
+        noteableId: selectedNoteTarget.id,
+        content: paymentNoteDraft.trim(),
+      });
+      const notes = await noteService.getNotes(
+        NOTEABLE_TYPES.PAYMENT,
+        selectedNoteTarget.id,
+        false
+      );
+      setSelectedPaymentNotes(notes || []);
+      if (selectedNoteTarget.kind === "schedule") {
+        setSchedulesWithNotes((prev) =>
+          new Set(prev).add(selectedNoteTarget.id)
+        );
+      } else {
+        setPaymentsWithNotes((prev) =>
+          new Set(prev).add(selectedNoteTarget.id)
+        );
+      }
+      setPaymentNoteDraft("");
+    } catch (e) {
+      console.error("Ошибка при сохранении заметки:", e);
+    } finally {
+      setIsSavingPaymentNote(false);
+    }
+  };
+
   const handleClosePhotoViewer = () => {
     setIsPhotoViewerOpen(false);
   };
@@ -1177,15 +1334,48 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const formatPaymentsData = (payments: Payment[] | undefined) => {
     if (!payments) return [];
 
-    return payments.map((payment) => [
-      payment.paymentDate ? formatDate(payment.paymentDate) : "",
-      formatMoney(payment.paymentAmount?.toString() || "0"),
-      payment.type === "cash"
-        ? "Наличными"
-        : `Картой ${payment.bankCardDetails ?? ""}`,
-      payment.employeeFullName || "",
-      payment.accepted ? "Да" : "Нет",
-    ]);
+    return payments.map((payment) => {
+      const hasNote = paymentsWithNotes.has(payment.id);
+      return [
+        payment.paymentDate ? formatDate(payment.paymentDate) : "",
+        formatMoney(payment.paymentAmount?.toString() || "0"),
+        payment.type === "cash"
+          ? "Наличными"
+          : `Картой ${payment.bankCardDetails ?? ""}`,
+        payment.employeeFullName || "",
+        payment.accepted ? "Да" : "Нет",
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openNoteModal({
+                id: payment.id,
+                label: payment.paymentDate
+                  ? formatDate(payment.paymentDate)
+                  : "",
+                kind: "payment",
+              });
+            }}
+            title={hasNote ? "Открыть заметку" : "Добавить заметку"}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+            }}
+          >
+            <StickyNote2OutlinedIcon
+              style={{
+                fontSize: 18,
+                color: hasNote ? "#007D88" : "#cbd5e0",
+              }}
+            />
+          </button>
+        </div>,
+      ];
+    });
   };
 
   const formatSchedulesData = (schedules: ScheduleDetails[] | undefined) => {
@@ -1257,6 +1447,41 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
             )}
           </>
         )}
+      </div>,
+      // Колонка-индикатор заметки
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            openNoteModal({
+              id: schedule.id,
+              label: formatDate(schedule.paymentDate || ""),
+              kind: "schedule",
+            });
+          }}
+          title={
+            schedulesWithNotes.has(schedule.id)
+              ? "Открыть заметку"
+              : "Добавить заметку"
+          }
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            display: "flex",
+          }}
+        >
+          <StickyNote2OutlinedIcon
+            style={{
+              fontSize: 18,
+              color: schedulesWithNotes.has(schedule.id)
+                ? "#007D88"
+                : "#cbd5e0",
+            }}
+          />
+        </button>
       </div>,
     ]);
   };
@@ -1694,6 +1919,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                                   { name: "Тип платежа" },
                                   { name: "Платёж принял" },
                                   { name: "Подтверждён" },
+                                  { name: "Заметка", align: "center" },
                                 ]}
                                 data={formatPaymentsData(paymentsData?.items)}
                               />
@@ -1721,6 +1947,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                               { name: "Сумма", align: "right" },
                               { name: "Примечание" },
                               { name: "Статус", align: "center" },
+                              { name: "Заметка", align: "center" },
                             ]}
                             data={formatSchedulesData(scheduleData?.items)}
                             rowStyles={
@@ -2010,6 +2237,54 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         onNoteContentChange={setNewNoteContent}
       />
 
+      <PaymentNoteOverlay
+        isOpen={isPaymentNoteModalOpen}
+        onClick={closePaymentNoteModal}
+      >
+        <PaymentNoteCard onClick={(e) => e.stopPropagation()}>
+          <PaymentNoteHeader>
+            <span>
+              Заметка по платежу
+              {selectedNoteTarget?.label
+                ? ` от ${selectedNoteTarget.label}`
+                : ""}
+            </span>
+            <PaymentNoteClose onClick={closePaymentNoteModal}>
+              ×
+            </PaymentNoteClose>
+          </PaymentNoteHeader>
+
+          <PaymentNoteBody>
+            {isLoadingPaymentNotes ? (
+              <PaymentNoteEmpty>Загрузка…</PaymentNoteEmpty>
+            ) : selectedPaymentNotes.length === 0 ? (
+              <PaymentNoteEmpty>Заметок по платежу пока нет</PaymentNoteEmpty>
+            ) : (
+              selectedPaymentNotes.map((note) => (
+                <PaymentNoteItem key={note.id}>{note.content}</PaymentNoteItem>
+              ))
+            )}
+          </PaymentNoteBody>
+
+          <PaymentNoteTextarea
+            placeholder="Добавить заметку к платежу…"
+            value={paymentNoteDraft}
+            onChange={(e) => setPaymentNoteDraft(e.target.value)}
+          />
+          <PaymentNoteActions>
+            <PaymentNoteCancel onClick={closePaymentNoteModal}>
+              Закрыть
+            </PaymentNoteCancel>
+            <PaymentNoteSave
+              onClick={handleSavePaymentNote}
+              disabled={!paymentNoteDraft.trim() || isSavingPaymentNote}
+            >
+              {isSavingPaymentNote ? "Сохранение…" : "Сохранить"}
+            </PaymentNoteSave>
+          </PaymentNoteActions>
+        </PaymentNoteCard>
+      </PaymentNoteOverlay>
+
       {contextMenu.visible && (
         <ContextMenu
           style={{
@@ -2118,6 +2393,137 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
 
 const ModalWrapper = styled.div`
   margin: 10px;
+`;
+
+const PaymentNoteOverlay = styled.div<{ isOpen: boolean }>`
+  display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  color: black;
+`;
+
+const PaymentNoteCard = styled.div`
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 20px;
+  width: 460px;
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+`;
+
+const PaymentNoteHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+`;
+
+const PaymentNoteClose = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+
+  &:hover {
+    color: #111827;
+  }
+`;
+
+const PaymentNoteBody = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  min-height: 40px;
+`;
+
+const PaymentNoteItem = styled.div`
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-word;
+`;
+
+const PaymentNoteEmpty = styled.div`
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 8px 0;
+`;
+
+const PaymentNoteTextarea = styled.textarea`
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: #007d88;
+  }
+`;
+
+const PaymentNoteActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+`;
+
+const PaymentNoteCancel = styled.button`
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+`;
+
+const PaymentNoteSave = styled.button`
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #007d88;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #005f66;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const VerticalContainer = styled.div`
