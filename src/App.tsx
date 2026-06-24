@@ -237,9 +237,17 @@ function App() {
 
   useEffect(() => {
     const checkAuth = () => {
+      // Миграция уже залогиненных в мультиаккаунт.
+      authStorage.ensureSeeded();
       const authenticated = updateAuthStatus();
+      // Режим добавления аккаунта: остаёмся на /auth, даже если уже залогинены.
+      const addingAccount = sessionStorage.getItem("wp_add_account") === "1";
 
-      if (authenticated && window.location.pathname === "/auth") {
+      if (
+        authenticated &&
+        window.location.pathname === "/auth" &&
+        !addingAccount
+      ) {
         window.location.href = "/credits";
       }
 
@@ -267,7 +275,9 @@ function App() {
               ) {
                 needsFullReloadRef.current = true;
               }
-              setShowPinModal(true);
+              if (!addingAccount) {
+                setShowPinModal(true);
+              }
             }
           })
           .catch(() => setAuthInfo(null));
@@ -382,7 +392,8 @@ function App() {
                 <Route
                   path="/auth"
                   element={
-                    isAuthenticated ? (
+                    isAuthenticated &&
+                    sessionStorage.getItem("wp_add_account") !== "1" ? (
                       <Navigate to="/credits" replace />
                     ) : (
                       <AuthPage
