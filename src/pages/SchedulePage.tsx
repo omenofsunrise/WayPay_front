@@ -1814,24 +1814,35 @@ const SchedulePage = ({
     ? getSchedulePaymentStatus(selectedCalendarSchedule)
     : "pending";
 
+  const exportButton =
+    activeTab !== "calendar" ? (
+      <ExportButton
+        onClick={handleExport}
+        isExporting={isExporting}
+        exportProgress={exportProgress}
+        style={{ margin: 0 }}
+      />
+    ) : undefined;
+
   return (
     <PageLayout ref={containerRef}>
-      {activeTab !== "calendar" && (
-        <TitleField>
-          <div style={{ marginLeft: "auto" }}>
-            <ExportButton
-              onClick={handleExport}
-              isExporting={isExporting}
-              exportProgress={exportProgress}
-            />
-          </div>
-        </TitleField>
-      )}
-
       {tabs.length > 1 ? (
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
+        // Вкладки («График», «Таблица») и кнопка «Экспорт» в одном ряду.
+        <Tabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+          addButton={exportButton}
+        />
       ) : (
-        tabs[0]?.content
+        <>
+          {exportButton && (
+            <TitleField>
+              <div style={{ marginLeft: "auto" }}>{exportButton}</div>
+            </TitleField>
+          )}
+          {tabs[0]?.content}
+        </>
       )}
 
       {isCommentModalOpen && selectedCalendarSchedule && (
