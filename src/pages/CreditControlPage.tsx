@@ -3,6 +3,8 @@ import { ListFilter } from "lucide-react";
 
 // Ширина выезжающей панели фильтров (на столько отодвигается контент). Как у бокового меню.
 const FILTER_PANEL_WIDTH = 360;
+import CustomTitle from "../components/ui/Text/CustomTitle";
+import TitleField from "../components/ui/Layouts/TitleLayout";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomTable, {
@@ -204,15 +206,13 @@ const CreditControlPage = () => {
     typeof savedFilters?.activeTab === "string" ? savedFilters.activeTab : "all"
   );
 
-  // Список для отображения. По умолчанию (как в разделе «Договоры») скрываем
-  // архивные/расторгнутые договоры — в «Договорах» это фильтр `terminated !== true`,
-  // плюс прячем неактивные (isActive === false). Показываем их только на
-  // вкладке «В архиве».
+  // Набор договоров по каждой вкладке формирует бэкенд по параметрам запроса.
+  // Клиентскую дофильтрацию по terminated/isActive убрали: иначе список мог
+  // расходиться с тем, что реально вернул бэк (и приводить к неожиданным
+  // последствиям).
   const displayedCredits = useMemo(() => {
-    const list = isListMode ? accumulatedItems : creditsData?.items ?? [];
-    if (activeTab === "archive") return list;
-    return list.filter((c) => c.terminated !== true && c.isActive !== false);
-  }, [isListMode, accumulatedItems, creditsData?.items, activeTab]);
+    return isListMode ? accumulatedItems : creditsData?.items ?? [];
+  }, [isListMode, accumulatedItems, creditsData?.items]);
 
   // Функция для подсчета количества активных фильтров (исключая выбранную вкладку)
   const getActiveFiltersCount = useMemo(() => {
@@ -1101,6 +1101,10 @@ const CreditControlPage = () => {
           <FilterBadge>{getActiveFiltersCount}</FilterBadge>
         )}
       </FilterIconButton>
+
+      <TitleField>
+        <CustomTitle>Контроль договоров</CustomTitle>
+      </TitleField>
 
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
