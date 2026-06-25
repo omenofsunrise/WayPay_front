@@ -9,12 +9,9 @@ import CreditCardList from "../components/ui/cards/CreditCardList";
 import type { CreditCardField } from "../components/ui/cards/CreditCard";
 import Pagination from "../components/ui/fields/CustomPagination";
 import PageLayout from "../components/ui/Layouts/PageLayout";
-import CustomTitle from "../components/ui/Text/CustomTitle";
-import TitleField from "../components/ui/Layouts/TitleLayout";
 import styled from "styled-components";
 import Tabs from "../components/ui/fields/Tabs";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
-import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import { useNavigate, useParams } from "react-router-dom";
 import useCredit from "../api/hooks/useCredit";
 import {
@@ -518,11 +515,12 @@ const CreditPage = () => {
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
-  // Набор договоров по каждой вкладке (в т.ч. «Расторгнутые») формирует бэкенд
-  // по параметрам запроса. Клиентскую дофильтрацию убрали: иначе список и итоги
-  // могли расходиться с тем, что реально вернул бэк (и приводить к
-  // неожиданным последствиям).
-  const displayedCredits = rawCredits;
+  const displayedCredits = useMemo(() => {
+    if (activeTab === "terminated") {
+      return rawCredits.filter((c) => c.terminated === true);
+    }
+    return rawCredits.filter((c) => c.terminated !== true);
+  }, [rawCredits, activeTab]);
 
   const handleCreateTab = useCallback(
     async (tabData: ObjectTypeCreateRequest) => {
@@ -1748,10 +1746,6 @@ const CreditPage = () => {
         )}
       </FilterIconButton>
 
-      <TitleField>
-        <CustomTitle>Договоры</CustomTitle>
-      </TitleField>
-
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
           onKeyDown={(e) => {
@@ -1985,10 +1979,6 @@ const CreditPage = () => {
               size={24}
             />
           )}
-
-          <TotalControls>
-            <CountInfoTitle total={creditsData?.totalCount || 0} />
-          </TotalControls>
 
           <SelectedCount />
         </SecondRaw>
@@ -2407,12 +2397,6 @@ const SecondRaw = styled.div`
   justify-content: space-between;
   align-items: center;
   position: relative;
-`;
-
-const TotalControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
 `;
 
 const StarIcon = styled.div`
