@@ -24,6 +24,7 @@ import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import { EditOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import PhoneLink from "../../components/ui/links/PhoneLink";
+import Checkbox from "../../components/ui/CheckBoxes/Checkbox";
 
 interface EmployeePageProps {
   onViewEmployee: (id: number) => void;
@@ -100,6 +101,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     updateEmployeeMinSurcharge,
     updateEmployeePhone,
     updateEmployeeRole,
+    togglePermission,
   } = useEmployee();
 
   const { customRoles, fetchCustomRoles } = usePermission();
@@ -192,6 +194,115 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       setIsSavingRole(false);
     }
   };
+
+  const handleToggleAccounting = useCallback(async (employee: Employee) => {
+    if (!employee.id) return;
+
+    if (!canEditAccounting(employee)) {
+      message.error("У вас нет прав для изменения права на бухгалтерию");
+      return;
+    }
+
+    const hasPermission = hasAccountingPermission(employee);
+    const action = hasPermission ? "снять" : "назначить";
+    
+    const isCurrentUser = employee.id === authInfo?.employee?.id;
+    if (isCurrentUser && action === "снять") {
+      message.error("Вы не можете лишить себя права на бухгалтерию");
+      return;
+    }
+
+    const confirmMessage = hasPermission
+      ? `Вы уверены, что хотите снять право на бухгалтерию с ${employee.fullName}?`
+      : `Вы уверены, что хотите назначить право на бухгалтерию ${employee.fullName}?${getCurrentAccountant() && getCurrentAccountant()?.id !== employee.id ? `\n\nУ текущего бухгалтера (${getCurrentAccountant()?.fullName}) право будет автоматически снято.` : ''}`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    const isGranting = !hasPermission;
+
+    try {
+      if (isGranting) {
+        const currentAccountant = localEmployees.find(e => 
+          e.permissions?.some(p => p.code === "MANAGE_ACCOUNTING")
+        );
+
+        setLocalEmployees(prev => 
+          prev.map(e => {
+            if (e.id === employee.id) {
+              const currentPerms = e.permissions || [];
+              if (!currentPerms.some(p => p.code === "MANAGE_ACCOUNTING")) {
+                const accountingPermission = {
+                  id: 10,
+                  code: "MANAGE_ACCOUNTING",
+                  description: "разрешение вести бухгалтерский учёт"
+                };
+                return { ...e, permissions: [...currentPerms, accountingPermission] };
+              }
+              return e;
+            }
+            if (currentAccountant && e.id === currentAccountant.id) {
+              return { 
+                ...e, 
+                permissions: e.permissions?.filter(p => p.code !== "MANAGE_ACCOUNTING") || null 
+              };
+            }
+            return e;
+          })
+        );
+      } else {
+        setLocalEmployees(prev => 
+          prev.map(e => {
+            if (e.id === employee.id) {
+              return { 
+                ...e, 
+                permissions: e.permissions?.filter(p => p.code !== "MANAGE_ACCOUNTING") || null 
+              };
+            }
+            return e;
+          })
+        );
+      }
+
+      await togglePermission(employee.id, "MANAGE_ACCOUNTING");
+      
+      if (isGranting) {
+        message.success(`Право на бухгалтерию назначено ${employee.fullName}`);
+      } else {
+        message.success(`Право на бухгалтерию снято с ${employee.fullName}`);
+      }
+
+      await loadEmployees();
+
+    } catch (error) {
+      console.error("Ошибка при изменении права на бухгалтерию:", error);
+      message.error("Не удалось изменить право на бухгалтерию");
+      await loadEmployees();
+    }
+  }, [togglePermission, localEmployees, authInfo, loadEmployees]);
+
+  const hasAccountingPermission = (employee: Employee): boolean => {
+    return employee.permissions?.some(p => p.code === "MANAGE_ACCOUNTING") || false;
+  };
+
+  const canEditAccounting = (employee: Employee): boolean => {
+    if (!authInfo) return false;
+    
+    if (employee.role === "суперадмин") return false;
+    
+    if (hasRole("суперадмин") || hasRole("директор")) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const getCurrentAccountant = useCallback(() => {
+    return localEmployees.find(e => 
+      e.permissions?.some(p => p.code === "MANAGE_ACCOUNTING")
+    );
+  }, [localEmployees]);
 
   const canEditEmployee = (employee: Employee): boolean => {
     if (!authInfo) return false;
@@ -603,6 +714,27 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       )}
     </div>,
     employee.address || "-",
+    <div 
+      style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center"
+      }}
+    >
+      {employee.role !== "суперадмин" && canEditAccounting(employee) ? (
+        <Checkbox
+          checked={hasAccountingPermission(employee)}
+          onChange={() => handleToggleAccounting(employee)}
+          disabled={false}
+        />
+      ) : employee.role === "суперадмин" ? (
+        <span style={{ color: "#999", fontSize: "12px" }}>—</span>
+      ) : (
+        <span style={{ color: "#999", fontSize: "12px" }}>
+          {hasAccountingPermission(employee) ? "✓" : "—"}
+        </span>
+      )}
+    </div>,
   ]);
 
   const rowStyles: { [rowIndex: number]: RowStyle } = {};
@@ -658,6 +790,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
               { name: "Мин. надбавка", align: "left" },
               { name: "Телефон", isSortable: false, align: "left" },
               { name: "Адрес", isSortable: false, align: "left" },
+              { name: "Бухгалтерия", isSortable: false, align: "center" },
             ]}
             data={tableData}
             onRowDoubleClick={handleRowDoubleClick}
@@ -762,7 +895,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           </div>
         </BaseModal>
       )}
-
     </PageLayout>
   );
 };
