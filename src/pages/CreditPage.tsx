@@ -870,7 +870,6 @@ const CreditPage = () => {
     const [_, id] = rowData;
     const credit = displayedCredits.find((c) => c.id === Number(id));
     if (credit) {
-      // Для обратной совместимости устанавливаем selectedCreditForPrint
       setSelectedCreditForPrint(credit);
     }
   };
@@ -911,7 +910,6 @@ const CreditPage = () => {
 
   const handlePrintReceipt = async (paymentId: number) => {
     try {
-      console.log("ПОЧАЛОСЬ");
       await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
       console.log("Чек успешно сгенерирован");
     } catch (error) {

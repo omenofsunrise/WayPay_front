@@ -11,6 +11,7 @@ import BankCardSelect from '../ui/fields/BankCardSelect';
 import { useAuth } from '../../сontext/AuthContext';
 import { formatPhoneHref } from '../../utils/phoneUtils';
 import PhoneLink from '../ui/links/PhoneLink';
+import type { Payment } from '../../api/types/payment';
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -26,7 +27,7 @@ export interface NewPaymentModalProps {
     principalAmount: number;
     paymentMethod: 'cash' | 'card';
     bankCardId?: number;
-  }) => Promise<number | void>;
+  }) => Promise<Payment | void>;
   onPrintReceipt?: (paymentId: number) => void;
   clientId?: number;
 }
@@ -181,13 +182,13 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      const paymentId = await onSubmit(
+      const payment = await onSubmit(
         paymentMethod === 'card' && selectedBankCardId
           ? { ...paymentData, bankCardId: selectedBankCardId }
           : paymentData
       );
-      if (printReceipt && paymentId && onPrintReceipt) {
-        await onPrintReceipt(paymentId);
+      if (printReceipt && payment.id && onPrintReceipt) {
+        await onPrintReceipt(payment.id);
       }
 
       onClose();
