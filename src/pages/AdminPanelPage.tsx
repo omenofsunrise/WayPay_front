@@ -1292,17 +1292,17 @@ const AdminPanelPage = () => {
 
   const companiesContent = (
     <>
+      <SearchBar>
+        <CustomInput
+          inputType="text"
+          placeholder="Поиск по номеру, названию или телефону"
+          value={nameFilter}
+          onChange={(e) => handleSearchChange(e.target.value)}
+        />
+      </SearchBar>
+
       {!isLoading && !error && (
         <>
-          <SearchBar>
-            <CustomInput
-              inputType="text"
-              placeholder="Поиск по номеру, названию или телефону"
-              value={nameFilter}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
-          </SearchBar>
-
           <CustomTable
             columns={getTableColumns()}
             data={tableData}
