@@ -97,9 +97,9 @@ const ClientFeedbackModal: React.FC<ClientFeedbackModalProps> = ({
           <SaveButton
             type="button"
             onClick={handleSave}
-            disabled={!mark || isSubmitting}
+            disabled={!mark || !stars || isSubmitting}
           >
-            {isSubmitting ? "Сохранение…" : "Сохранить"}
+            {isSubmitting ? "Отправка…" : "Отправить"}
           </SaveButton>
         </Actions>
       </Card>
