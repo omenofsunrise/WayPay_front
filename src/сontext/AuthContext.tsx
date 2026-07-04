@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const isSuperAdminId = (): boolean => {
     if (!authInfo) return false;
     return (
-      authInfo.employee.id === 1 ||
+      authInfo.employee.id === 1 || // Kirill
       authInfo.employee.id === 4 ||
       authInfo.employee.id === 102 ||
       authInfo.employee.id === 28 // ИЛЬЯ
