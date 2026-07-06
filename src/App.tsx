@@ -40,6 +40,10 @@ import InvestorsPoolPage from "./pages/InvestorsPoolPage";
 import { DesktopOnlyContent } from "./components/DesktopOnly";
 import MobileAppsPage from "./pages/MobileAppsPage";
 import CreditApplicationPage from "./pages/CreditApplicationPage";
+import PublicClientPage from "./pages/PublicClientPage";
+
+// Путь публичной страницы клиента по токену (должен совпадать с ClientLinkModal).
+const CLIENT_PUBLIC_PATH = "/client-public";
 import NotificationHandler from "./components/NotificationHandler/NotificationHandler";
 import {
   DISABLE_NOTIFICATIONS_KEY,
@@ -251,7 +255,11 @@ function App() {
         window.location.href = "/credits";
       }
 
-      if (!authenticated && window.location.pathname !== "/auth") {
+      if (
+        !authenticated &&
+        window.location.pathname !== "/auth" &&
+        !window.location.pathname.startsWith(CLIENT_PUBLIC_PATH)
+      ) {
         window.location.href = "/auth";
       }
 
@@ -321,7 +329,11 @@ function App() {
     window.location.href = "/auth";
   }, []);
 
-  if (isMobile) {
+  // Публичная страница клиента по токену должна открываться и на мобильных.
+  const isPublicClientRoute =
+    window.location.pathname.startsWith(CLIENT_PUBLIC_PATH);
+
+  if (isMobile && !isPublicClientRoute) {
     return <DesktopOnlyContent />;
   }
 
@@ -668,6 +680,12 @@ function App() {
                 />
 
                 <Route path="/licence-out" element={<LicenseOutPage />} />
+
+                {/* Публичный просмотр клиента по временному токену — без авторизации и без MainLayout. */}
+                <Route
+                  path={CLIENT_PUBLIC_PATH}
+                  element={<PublicClientPage />}
+                />
 
                 <Route
                   path="about"
