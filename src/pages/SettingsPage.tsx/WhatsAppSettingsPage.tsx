@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import CustomTitle from '../../components/ui/Text/CustomTitle';
-import useWhatsApp from '../../api/hooks/useWhatsApp';
-import { useEmployee } from '../../api/hooks/useEmployee';
-import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
-import GrayButton from '../../components/ui/Buttons/GrayButton';
-import CustomInput from '../../components/ui/fields/CustomInput';
-import type { ChannelResponse } from '../../api/types/whatsapp';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
+import CustomTitle from "../../components/ui/Text/CustomTitle";
+import useWhatsApp from "../../api/hooks/useWhatsApp";
+import { useEmployee } from "../../api/hooks/useEmployee";
+import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
+import GrayButton from "../../components/ui/Buttons/GrayButton";
+import CustomInput from "../../components/ui/fields/CustomInput";
+import type { ChannelResponse } from "../../api/types/whatsapp";
+import { useNavigate } from "react-router-dom";
 
 const WhatsAppSettingsPage: React.FC = () => {
-  const { 
-    getChannels, 
+  const {
+    getChannels,
     createChannel,
     deleteChannel,
     setCurrentChannel,
-    channels, 
+    channels,
     isLoading,
     setChannelEmployees,
     extendChannel,
     getQR,
-    logout
+    logout,
   } = useWhatsApp();
 
   const { employees, fetchEmployees, employeesLoading } = useEmployee();
@@ -29,7 +29,9 @@ const WhatsAppSettingsPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [selectedNumber, setSelectedNumber] = useState<ChannelResponse | null>(null);
+  const [selectedNumber, setSelectedNumber] = useState<ChannelResponse | null>(
+    null
+  );
   const [isCreating, setIsCreating] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
@@ -38,14 +40,14 @@ const WhatsAppSettingsPage: React.FC = () => {
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [extendChannelId, setExtendChannelId] = useState<string | null>(null);
   const [extendDays, setExtendDays] = useState<number>(30);
-  const [extendChannelName, setExtendChannelName] = useState<string>('');
+  const [extendChannelName, setExtendChannelName] = useState<string>("");
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [qrCode, setQrCode] = useState<string>('');
-  const [qrStatus, setQrStatus] = useState<string>('');
-  const navigate = useNavigate(); 
+  const [qrCode, setQrCode] = useState<string>("");
+  const [qrStatus, setQrStatus] = useState<string>("");
+  const navigate = useNavigate();
   const [newNumber, setNewNumber] = useState({
-    name: '',
-    assignedTo: [] as number[]
+    name: "",
+    assignedTo: [] as number[],
   });
 
   useEffect(() => {
@@ -57,7 +59,7 @@ const WhatsAppSettingsPage: React.FC = () => {
     try {
       await fetchEmployees({ page: 1, pageSize: 100 });
     } catch (error) {
-      console.error('Error loading employees:', error);
+      console.error("Error loading employees:", error);
     }
   };
 
@@ -81,22 +83,24 @@ const WhatsAppSettingsPage: React.FC = () => {
   // Проверка можно ли выполнить действие с каналом
   const canPerformAction = (number: ChannelResponse): boolean => {
     if (number.stopped) {
-      alert('Невозможно выполнить действие: канал остановлен');
+      alert("Невозможно выполнить действие: канал остановлен");
       return false;
     }
     if (number.blocked) {
-      alert('Невозможно выполнить действие: канал заблокирован');
+      alert("Невозможно выполнить действие: канал заблокирован");
       return false;
     }
     if (isSubscriptionExpired(number.activeTill)) {
-      alert('Невозможно выполнить действие: подписка истекла. Необходимо продлить подписку');
+      alert(
+        "Невозможно выполнить действие: подписка истекла. Необходимо продлить подписку"
+      );
       return false;
     }
     return true;
   };
 
   const handleLogin = async (numberId: string, numberName: string) => {
-    const number = whatsAppNumbers.find(n => n.id === numberId);
+    const number = whatsAppNumbers.find((n) => n.id === numberId);
     if (number && !canPerformAction(number)) return;
 
     setIsLoggingIn(numberId);
@@ -107,14 +111,14 @@ const WhatsAppSettingsPage: React.FC = () => {
         setQrStatus(qrResult.status);
         setSelectedNumber(number);
         setShowQRModal(true);
-        
+
         pollConnectionStatus(numberId);
       } else {
-        alert('Попробуйте снова через 10 секунд!');
+        alert("Попробуйте снова через 10 секунд!");
       }
     } catch (error) {
-      console.error('Error getting QR:', error);
-      alert('Ошибка при получении QR кода');
+      console.error("Error getting QR:", error);
+      alert("Ошибка при получении QR кода");
     } finally {
       setIsLoggingIn(null);
     }
@@ -124,18 +128,18 @@ const WhatsAppSettingsPage: React.FC = () => {
     const interval = setInterval(async () => {
       try {
         const status = await getQR(channelId);
-        if (status && status.status === 'CONNECTED') {
-          setQrStatus('CONNECTED');
+        if (status && status.status === "CONNECTED") {
+          setQrStatus("CONNECTED");
           clearInterval(interval);
           setTimeout(() => {
             setShowQRModal(false);
-            setQrCode('');
+            setQrCode("");
             loadChannels();
-            alert('WhatsApp успешно подключен!');
+            alert("WhatsApp успешно подключен!");
           }, 2000);
         }
       } catch (error) {
-        console.error('Error polling status:', error);
+        console.error("Error polling status:", error);
       }
     }, 3000);
 
@@ -146,9 +150,13 @@ const WhatsAppSettingsPage: React.FC = () => {
   };
 
   const handleLogout = async (numberId: string, numberName: string) => {
-    const number = whatsAppNumbers.find(n => n.id === numberId);
-    
-    if (!window.confirm(`Вы уверены, что хотите выйти из WhatsApp канала "${numberName}"?`)) {
+    const number = whatsAppNumbers.find((n) => n.id === numberId);
+
+    if (
+      !window.confirm(
+        `Вы уверены, что хотите выйти из WhatsApp канала "${numberName}"?`
+      )
+    ) {
       return;
     }
 
@@ -156,40 +164,43 @@ const WhatsAppSettingsPage: React.FC = () => {
     try {
       const success = await logout(numberId);
       if (success) {
-        alert('Успешный выход из канала');
+        alert("Успешный выход из канала");
         await loadChannels();
       } else {
-        alert('Ошибка при выходе из канала');
+        alert("Ошибка при выходе из канала");
       }
     } catch (error) {
-      console.error('Error logging out:', error);
-      alert('Произошла ошибка при выходе из канала');
+      console.error("Error logging out:", error);
+      alert("Произошла ошибка при выходе из канала");
     } finally {
       setIsLoggingOut(null);
     }
   };
 
   const handleDisconnectNumber = async (numberId: string) => {
-    const number = whatsAppNumbers.find(n => n.id === numberId);
+    const number = whatsAppNumbers.find((n) => n.id === numberId);
     if (number && isSubscriptionExpired(number.activeTill)) {
-      if (!window.confirm('У этого канала истекла подписка. Удалить канал?')) {
+      if (!window.confirm("У этого канала истекла подписка. Удалить канал?")) {
         return;
       }
-    } else if (!window.confirm('Вы уверены, что хотите удалить этот канал?')) {
+    } else if (!window.confirm("Вы уверены, что хотите удалить этот канал?")) {
       return;
     }
 
     try {
       await deleteChannel(numberId);
-      alert('Канал успешно удален');
+      alert("Канал успешно удален");
       await loadChannels();
     } catch (error) {
-      console.error('Error deleting channel:', error);
-      alert('Ошибка при удалении канала');
+      console.error("Error deleting channel:", error);
+      alert("Ошибка при удалении канала");
     }
   };
 
-  const handleExtendSubscription = async (channelId: string, channelName: string) => {
+  const handleExtendSubscription = async (
+    channelId: string,
+    channelName: string
+  ) => {
     setExtendChannelId(channelId);
     setExtendChannelName(channelName);
     setPaymentUrl(null);
@@ -197,54 +208,58 @@ const WhatsAppSettingsPage: React.FC = () => {
   };
 
   const handleCreatePaymentLink = async () => {
-      if (!extendChannelId) return;
-      
-      setIsExtending(true);
-      
-      try {
-          const response = await fetch('https://web.waypay.one:5001/api/WhatsApp/days', {
-              method: 'GET',
-              headers: {
-                  'accept': '*/*'
-              }
-          });
-          
-          if (!response.ok) {
-              throw new Error('Failed to fetch available days');
-          }
-          
-          const availableDays = await response.json();
-          
-          if (extendDays > availableDays) {
-              alert('К сожалению, дни распроданы. Пожалуйста, обратитесь в поддержку для пополнения.');
-              return;
-          }
-          
-          const url = await extendChannel(extendDays, extendChannelId);
-          
-          if (url) {
-              setPaymentUrl(url);
-          } else {
-              alert('Ошибка при создании платежной ссылки. Попробуйте позже.');
-          }
-          
-      } catch (error) {
-          console.error('Error extending channel:', error);
-          alert('Произошла ошибка при создании платежной ссылки');
-      } finally {
-          setIsExtending(false);
+    if (!extendChannelId) return;
+
+    setIsExtending(true);
+
+    try {
+      const response = await fetch(
+        "https://web.waypay.one:5001/api/WhatsApp/days",
+        {
+          method: "GET",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch available days");
       }
+
+      const availableDays = await response.json();
+
+      if (extendDays > availableDays) {
+        alert(
+          "К сожалению, дни распроданы. Пожалуйста, обратитесь в поддержку для пополнения."
+        );
+        return;
+      }
+
+      const url = await extendChannel(extendDays, extendChannelId);
+
+      if (url) {
+        setPaymentUrl(url);
+      } else {
+        alert("Ошибка при создании платежной ссылки. Попробуйте позже.");
+      }
+    } catch (error) {
+      console.error("Error extending channel:", error);
+      alert("Произошла ошибка при создании платежной ссылки");
+    } finally {
+      setIsExtending(false);
+    }
   };
 
   const handleGoToPayment = () => {
     if (paymentUrl) {
-      window.open(paymentUrl, '_blank');
+      window.open(paymentUrl, "_blank");
       setShowExtendModal(false);
       setExtendChannelId(null);
       setExtendDays(30);
-      setExtendChannelName('');
+      setExtendChannelName("");
       setPaymentUrl(null);
-      
+
       setTimeout(() => {
         loadChannels();
       }, 3000);
@@ -253,34 +268,37 @@ const WhatsAppSettingsPage: React.FC = () => {
 
   const handleAddNumber = async () => {
     if (!newNumber.name.trim()) {
-      alert('Пожалуйста, введите название канала');
+      alert("Пожалуйста, введите название канала");
       return;
     }
 
     if (newNumber.assignedTo.length === 0) {
-      alert('Пожалуйста, выберите хотя бы одного сотрудника для канала');
+      alert("Пожалуйста, выберите хотя бы одного сотрудника для канала");
       return;
     }
 
     setIsCreating(true);
     try {
-      const createdChannel = await createChannel(newNumber.name, newNumber.assignedTo);
-      
+      const createdChannel = await createChannel(
+        newNumber.name,
+        newNumber.assignedTo
+      );
+
       if (createdChannel) {
         alert(`Канал "${createdChannel.name}" успешно создан!`);
         await loadChannels();
-        
+
         setNewNumber({
-          name: '',
-          assignedTo: []
+          name: "",
+          assignedTo: [],
         });
         setShowAddModal(false);
       } else {
-        alert('Ошибка при создании канала. Попробуйте позже.');
+        alert("Ошибка при создании канала. Попробуйте позже.");
       }
     } catch (error) {
-      console.error('Error creating channel:', error);
-      alert('Произошла ошибка при создании канала');
+      console.error("Error creating channel:", error);
+      alert("Произошла ошибка при создании канала");
     } finally {
       setIsCreating(false);
     }
@@ -293,39 +311,42 @@ const WhatsAppSettingsPage: React.FC = () => {
 
     setIsAssigning(true);
     try {
-      const success = await setChannelEmployees(selectedNumber.id, selectedNumber.employeeIds);
-      
+      const success = await setChannelEmployees(
+        selectedNumber.id,
+        selectedNumber.employeeIds
+      );
+
       if (success) {
-        alert('Сотрудники успешно назначены!');
+        alert("Сотрудники успешно назначены!");
         await loadChannels();
         setShowAssignModal(false);
         setSelectedNumber(null);
       } else {
-        alert('Ошибка при назначении сотрудников');
+        alert("Ошибка при назначении сотрудников");
       }
     } catch (error) {
-      console.error('Error assigning employees:', error);
-      alert('Произошла ошибка при назначении сотрудников');
+      console.error("Error assigning employees:", error);
+      alert("Произошла ошибка при назначении сотрудников");
     } finally {
       setIsAssigning(false);
     }
   };
 
   const handleSetMainNumber = async (numberId: string) => {
-    const number = whatsAppNumbers.find(n => n.id === numberId);
+    const number = whatsAppNumbers.find((n) => n.id === numberId);
     if (number && !canPerformAction(number)) return;
 
     try {
       const success = await setCurrentChannel(numberId);
       if (success) {
-        alert('Основной канал успешно изменен');
+        alert("Основной канал успешно изменен");
         await loadChannels();
       } else {
-        alert('Ошибка при изменении основного канала');
+        alert("Ошибка при изменении основного канала");
       }
     } catch (error) {
-      console.error('Error setting main channel:', error);
-      alert('Произошла ошибка');
+      console.error("Error setting main channel:", error);
+      alert("Произошла ошибка");
     }
   };
 
@@ -333,21 +354,21 @@ const WhatsAppSettingsPage: React.FC = () => {
 
   const getEmployeeNames = (employeeIds: number[]): string[] => {
     return employeeIds
-      .map(id => {
-        const employee = employeeList.find(emp => emp.id === id);
-        return employee?.fullName || '';
+      .map((id) => {
+        const employee = employeeList.find((emp) => emp.id === id);
+        return employee?.fullName || "";
       })
-      .filter(name => name);
+      .filter((name) => name);
   };
 
   const formatExpiryDate = (dateStr: string): string => {
-    if (!dateStr) return 'Не указана';
+    if (!dateStr) return "Не указана";
     const date = new Date(dateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const isExpired = date < today;
-    
-    const formattedDate = date.toLocaleDateString('ru-RU');
+
+    const formattedDate = date.toLocaleDateString("ru-RU");
     return isExpired ? `${formattedDate} (истекла)` : formattedDate;
   };
 
@@ -355,18 +376,22 @@ const WhatsAppSettingsPage: React.FC = () => {
   const shouldShowConnectButton = (channel: ChannelResponse): boolean => {
     const subscriptionExpired = isSubscriptionExpired(channel.activeTill);
     if (subscriptionExpired) return false;
-    
+
     // Показываем кнопку "Подключить" если статус Disconnected и не истекла подписка
-    return channel.status === 'Disconnected' && !channel.stopped && !channel.blocked;
+    return (
+      channel.status === "Disconnected" && !channel.stopped && !channel.blocked
+    );
   };
 
   // Определяем, показывать ли кнопку выхода
   const shouldShowLogoutButton = (channel: ChannelResponse): boolean => {
     const subscriptionExpired = isSubscriptionExpired(channel.activeTill);
     if (subscriptionExpired) return false;
-    
+
     // Показываем кнопку "Выйти" если статус Connected и не истекла подписка
-    return channel.status === 'Connected' && !channel.stopped && !channel.blocked;
+    return (
+      channel.status === "Connected" && !channel.stopped && !channel.blocked
+    );
   };
 
   // Определяем, активен ли канал для управления
@@ -377,11 +402,14 @@ const WhatsAppSettingsPage: React.FC = () => {
 
   // Форматирование номера телефона для отображения
   const formatPhoneNumber = (phone: string | undefined): string => {
-    if (!phone) return '';
+    if (!phone) return "";
     // Убираем знак + если есть и форматируем
-    let cleanPhone = phone.replace(/\+/g, '');
+    let cleanPhone = phone.replace(/\+/g, "");
     if (cleanPhone.length === 11) {
-      return `+${cleanPhone[0]} (${cleanPhone.slice(1, 4)}) ${cleanPhone.slice(4, 7)}-${cleanPhone.slice(7, 9)}-${cleanPhone.slice(9, 11)}`;
+      return `+${cleanPhone[0]} (${cleanPhone.slice(1, 4)}) ${cleanPhone.slice(
+        4,
+        7
+      )}-${cleanPhone.slice(7, 9)}-${cleanPhone.slice(9, 11)}`;
     }
     return `+${cleanPhone}`;
   };
@@ -402,9 +430,14 @@ const WhatsAppSettingsPage: React.FC = () => {
       <Header>
         <HeaderTop>
           <CustomTitle>Настройка WhatsApp номеров</CustomTitle>
-          <DarkCyanButton onClick={() => setShowAddModal(true)}>
-            + Добавить WhatsApp
-          </DarkCyanButton>
+          <HeaderButtons>
+            <GrayButton onClick={() => navigate("/whatsapp/senders")}>
+              Рассылки
+            </GrayButton>
+            <DarkCyanButton onClick={() => setShowAddModal(true)}>
+              + Добавить WhatsApp
+            </DarkCyanButton>
+          </HeaderButtons>
         </HeaderTop>
       </Header>
 
@@ -412,34 +445,50 @@ const WhatsAppSettingsPage: React.FC = () => {
         <EmptyState>
           <EmptyTitle>Нет WhatsApp каналов</EmptyTitle>
           <EmptyDescription>
-            У вас пока нет подключенных WhatsApp номеров. Нажмите кнопку "Добавить WhatsApp", чтобы начать.
+            У вас пока нет подключенных WhatsApp номеров. Нажмите кнопку
+            "Добавить WhatsApp", чтобы начать.
           </EmptyDescription>
         </EmptyState>
       ) : (
         <NumbersList>
-          {whatsAppNumbers.map(number => {
+          {whatsAppNumbers.map((number) => {
             const employeeNames = getEmployeeNames(number.employeeIds);
-            const subscriptionExpired = isSubscriptionExpired(number.activeTill);
+            const subscriptionExpired = isSubscriptionExpired(
+              number.activeTill
+            );
             const channelActive = isChannelActive(number);
             const formattedPhone = formatPhoneNumber(number.phone);
-            
+
             return (
-              <NumberCard key={number.id} isActive={!subscriptionExpired} isExpired={subscriptionExpired}>
+              <NumberCard
+                key={number.id}
+                isActive={!subscriptionExpired}
+                isExpired={subscriptionExpired}
+              >
                 <CardHeader>
                   <NumberInfo>
                     <NumberName>
                       {number.name}
                       {number.isCurrent && <MainBadge>Ваш текущий</MainBadge>}
-                      {number.stopped && <StoppedBadge>Остановлен</StoppedBadge>}
-                      {number.blocked && <BlockedBadge>Заблокирован</BlockedBadge>}
-                      {subscriptionExpired && <ExpiredBadge>Подписка истекла</ExpiredBadge>}
-                      {number.status === 'Connected' && <ConnectedBadge>Подключен</ConnectedBadge>}
-                      {number.status === 'Disconnected' && !subscriptionExpired && <DisconnectedBadge>Не подключен</DisconnectedBadge>}
+                      {number.stopped && (
+                        <StoppedBadge>Остановлен</StoppedBadge>
+                      )}
+                      {number.blocked && (
+                        <BlockedBadge>Заблокирован</BlockedBadge>
+                      )}
+                      {subscriptionExpired && (
+                        <ExpiredBadge>Подписка истекла</ExpiredBadge>
+                      )}
+                      {number.status === "Connected" && (
+                        <ConnectedBadge>Подключен</ConnectedBadge>
+                      )}
+                      {number.status === "Disconnected" &&
+                        !subscriptionExpired && (
+                          <DisconnectedBadge>Не подключен</DisconnectedBadge>
+                        )}
                     </NumberName>
                     {formattedPhone && (
-                      <PhoneNumberDisplay>
-                        {formattedPhone}
-                      </PhoneNumberDisplay>
+                      <PhoneNumberDisplay>{formattedPhone}</PhoneNumberDisplay>
                     )}
                   </NumberInfo>
                 </CardHeader>
@@ -448,7 +497,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                   <InfoRow>
                     <InfoLabel>Доступ сотрудникам:</InfoLabel>
                     <EmployeesList>
-                      {employeeNames.map(name => (
+                      {employeeNames.map((name) => (
                         <EmployeeBadge key={name}>{name}</EmployeeBadge>
                       ))}
                       {employeeNames.length === 0 && (
@@ -456,12 +505,14 @@ const WhatsAppSettingsPage: React.FC = () => {
                       )}
                     </EmployeesList>
                     {channelActive && (
-                      <GrayButton onClick={() => {
-                        setSelectedNumber({
-                          ...number
-                        });
-                        setShowAssignModal(true);
-                      }}>
+                      <GrayButton
+                        onClick={() => {
+                          setSelectedNumber({
+                            ...number,
+                          });
+                          setShowAssignModal(true);
+                        }}
+                      >
                         Назначить
                       </GrayButton>
                     )}
@@ -482,38 +533,52 @@ const WhatsAppSettingsPage: React.FC = () => {
                   {shouldShowConnectButton(number) && (
                     <DarkCyanButton
                       onClick={() => handleLogin(number.id, number.name)}
-                      disabled={isLoggingIn === number.id || isLoggingOut === number.id}
+                      disabled={
+                        isLoggingIn === number.id || isLoggingOut === number.id
+                      }
                     >
-                      {isLoggingIn === number.id ? 'Получение QR...' : 'Подключить'}
+                      {isLoggingIn === number.id
+                        ? "Получение QR..."
+                        : "Подключить"}
                     </DarkCyanButton>
                   )}
 
                   {/* Кнопка выхода - показываем только если статус Connected и подписка активна */}
                   {shouldShowLogoutButton(number) && (
-                    <GrayButton 
+                    <GrayButton
                       onClick={() => handleLogout(number.id, number.name)}
-                      disabled={isLoggingIn === number.id || isLoggingOut === number.id}
+                      disabled={
+                        isLoggingIn === number.id || isLoggingOut === number.id
+                      }
                     >
-                      {isLoggingOut === number.id ? 'Выход...' : 'Выйти'}
+                      {isLoggingOut === number.id ? "Выход..." : "Выйти"}
                     </GrayButton>
                   )}
 
                   {/* Кнопка продления - всегда активна, даже если подписка истекла */}
-                  <DarkCyanButton 
-                    onClick={() => handleExtendSubscription(number.id, number.name)}
+                  <DarkCyanButton
+                    onClick={() =>
+                      handleExtendSubscription(number.id, number.name)
+                    }
                   >
                     Продлить
                   </DarkCyanButton>
-                  
+
                   {/* Кнопка "Сделать основным" - только для активных каналов */}
-                  {channelActive && number.status === 'Connected' && (
-                    <DarkCyanButton onClick={() => handleSetMainNumber(number.id)}>
+                  {channelActive && number.status === "Connected" && (
+                    <DarkCyanButton
+                      onClick={() => handleSetMainNumber(number.id)}
+                    >
                       Сделать основным
                     </DarkCyanButton>
                   )}
-                  
-                  {channelActive && number.status === 'Connected' && (
-                    <DarkCyanButton onClick={() => navigate(`/whatsapp/channel/${number.id}/bots`)}>
+
+                  {channelActive && number.status === "Connected" && (
+                    <DarkCyanButton
+                      onClick={() =>
+                        navigate(`/whatsapp/channel/${number.id}/bots`)
+                      }
+                    >
                       Настроить бота
                     </DarkCyanButton>
                   )}
@@ -532,9 +597,11 @@ const WhatsAppSettingsPage: React.FC = () => {
       {/* Modal для QR кода */}
       {showQRModal && selectedNumber && qrCode && (
         <ModalOverlay onClick={() => setShowQRModal(false)}>
-          <ModalContent onClick={e => e.stopPropagation()}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
-              <ModalTitle>Подключение WhatsApp - {selectedNumber.name}</ModalTitle>
+              <ModalTitle>
+                Подключение WhatsApp - {selectedNumber.name}
+              </ModalTitle>
               <CloseButton onClick={() => setShowQRModal(false)}>×</CloseButton>
             </ModalHeader>
 
@@ -550,20 +617,24 @@ const WhatsAppSettingsPage: React.FC = () => {
               </QRInstruction>
               <QRInstruction>
                 <StepIcon>3</StepIcon>
-                <StepText>Нажмите "Связать устройство" и отсканируйте QR код</StepText>
+                <StepText>
+                  Нажмите "Связать устройство" и отсканируйте QR код
+                </StepText>
               </QRInstruction>
               <QRInstruction>
                 <StepIcon>4</StepIcon>
-                <StepText>После успешного подключения перезагрузите страницу!</StepText>
+                <StepText>
+                  После успешного подключения перезагрузите страницу!
+                </StepText>
               </QRInstruction>
-              
-              {qrStatus === 'CONNECTED' && (
+
+              {qrStatus === "CONNECTED" && (
                 <SuccessMessage>
                   ✓ Успешно подключено! Перенаправление...
                 </SuccessMessage>
               )}
-              
-              {qrStatus === 'EXPIRED' && (
+
+              {qrStatus === "EXPIRED" && (
                 <ErrorMessage>
                   QR код истек. Пожалуйста, попробуйте снова.
                 </ErrorMessage>
@@ -582,17 +653,23 @@ const WhatsAppSettingsPage: React.FC = () => {
       {/* Modal для добавления канала */}
       {showAddModal && (
         <ModalOverlay onClick={() => !isCreating && setShowAddModal(false)}>
-          <ModalContent onClick={e => e.stopPropagation()}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Добавить WhatsApp канал</ModalTitle>
-              <CloseButton onClick={() => !isCreating && setShowAddModal(false)}>×</CloseButton>
+              <CloseButton
+                onClick={() => !isCreating && setShowAddModal(false)}
+              >
+                ×
+              </CloseButton>
             </ModalHeader>
-            
+
             <FormGroup>
               <CustomInput
                 type="text"
                 value={newNumber.name}
-                onChange={e => setNewNumber({...newNumber, name: e.target.value})}
+                onChange={(e) =>
+                  setNewNumber({ ...newNumber, name: e.target.value })
+                }
                 placeholder="Название канала"
                 disabled={isCreating}
                 autoFocus
@@ -605,21 +682,21 @@ const WhatsAppSettingsPage: React.FC = () => {
                 <LoadingText>Загрузка сотрудников...</LoadingText>
               ) : (
                 <EmployeesGrid>
-                  {employeeList.map(emp => (
-                    <EmployeeCheckbox 
+                  {employeeList.map((emp) => (
+                    <EmployeeCheckbox
                       key={emp.id}
                       active={newNumber.assignedTo.includes(emp.id)}
                       onClick={() => {
                         setNewNumber({
                           ...newNumber,
                           assignedTo: newNumber.assignedTo.includes(emp.id)
-                            ? newNumber.assignedTo.filter(id => id !== emp.id)
-                            : [...newNumber.assignedTo, emp.id]
+                            ? newNumber.assignedTo.filter((id) => id !== emp.id)
+                            : [...newNumber.assignedTo, emp.id],
                         });
                       }}
                     >
                       <CheckIcon active={newNumber.assignedTo.includes(emp.id)}>
-                        {newNumber.assignedTo.includes(emp.id) && '✓'}
+                        {newNumber.assignedTo.includes(emp.id) && "✓"}
                       </CheckIcon>
                       <EmployeeInfo>
                         <EmployeeName>{emp.fullName}</EmployeeName>
@@ -635,11 +712,17 @@ const WhatsAppSettingsPage: React.FC = () => {
             </FormGroup>
 
             <ModalActions>
-              <GrayButton onClick={() => !isCreating && setShowAddModal(false)} disabled={isCreating}>
+              <GrayButton
+                onClick={() => !isCreating && setShowAddModal(false)}
+                disabled={isCreating}
+              >
                 Отмена
               </GrayButton>
-              <DarkCyanButton onClick={handleAddNumber} disabled={isCreating || newNumber.assignedTo.length === 0}>
-                {isCreating ? 'Создание...' : 'Создать канал'}
+              <DarkCyanButton
+                onClick={handleAddNumber}
+                disabled={isCreating || newNumber.assignedTo.length === 0}
+              >
+                {isCreating ? "Создание..." : "Создать канал"}
               </DarkCyanButton>
             </ModalActions>
           </ModalContent>
@@ -649,10 +732,16 @@ const WhatsAppSettingsPage: React.FC = () => {
       {/* Modal для назначения сотрудников */}
       {showAssignModal && selectedNumber && (
         <ModalOverlay onClick={() => !isAssigning && setShowAssignModal(false)}>
-          <ModalContent onClick={e => e.stopPropagation()}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
-              <ModalTitle>Назначить сотрудников на канал "{selectedNumber.name}"</ModalTitle>
-              <CloseButton onClick={() => !isAssigning && setShowAssignModal(false)}>×</CloseButton>
+              <ModalTitle>
+                Назначить сотрудников на канал "{selectedNumber.name}"
+              </ModalTitle>
+              <CloseButton
+                onClick={() => !isAssigning && setShowAssignModal(false)}
+              >
+                ×
+              </CloseButton>
             </ModalHeader>
 
             <FormGroup>
@@ -660,21 +749,27 @@ const WhatsAppSettingsPage: React.FC = () => {
                 <LoadingText>Загрузка сотрудников...</LoadingText>
               ) : (
                 <EmployeesGrid>
-                  {employeeList.map(emp => (
-                    <EmployeeCheckbox 
+                  {employeeList.map((emp) => (
+                    <EmployeeCheckbox
                       key={emp.id}
                       active={selectedNumber.employeeIds.includes(emp.id)}
                       onClick={() => {
                         setSelectedNumber({
                           ...selectedNumber,
-                          employeeIds: selectedNumber.employeeIds.includes(emp.id)
-                            ? selectedNumber.employeeIds.filter(id => id !== emp.id)
-                            : [...selectedNumber.employeeIds, emp.id]
+                          employeeIds: selectedNumber.employeeIds.includes(
+                            emp.id
+                          )
+                            ? selectedNumber.employeeIds.filter(
+                                (id) => id !== emp.id
+                              )
+                            : [...selectedNumber.employeeIds, emp.id],
                         });
                       }}
                     >
-                      <CheckIcon active={selectedNumber.employeeIds.includes(emp.id)}>
-                        {selectedNumber.employeeIds.includes(emp.id) && '✓'}
+                      <CheckIcon
+                        active={selectedNumber.employeeIds.includes(emp.id)}
+                      >
+                        {selectedNumber.employeeIds.includes(emp.id) && "✓"}
                       </CheckIcon>
                       <EmployeeInfo>
                         <EmployeeName>{emp.fullName}</EmployeeName>
@@ -690,11 +785,17 @@ const WhatsAppSettingsPage: React.FC = () => {
             </FormGroup>
 
             <ModalActions>
-              <GrayButton onClick={() => !isAssigning && setShowAssignModal(false)} disabled={isAssigning}>
+              <GrayButton
+                onClick={() => !isAssigning && setShowAssignModal(false)}
+                disabled={isAssigning}
+              >
                 Отмена
               </GrayButton>
-              <DarkCyanButton onClick={handleAssignEmployees} disabled={isAssigning}>
-                {isAssigning ? 'Сохранение...' : 'Сохранить'}
+              <DarkCyanButton
+                onClick={handleAssignEmployees}
+                disabled={isAssigning}
+              >
+                {isAssigning ? "Сохранение..." : "Сохранить"}
               </DarkCyanButton>
             </ModalActions>
           </ModalContent>
@@ -703,11 +804,21 @@ const WhatsAppSettingsPage: React.FC = () => {
 
       {/* Modal для продления подписки */}
       {showExtendModal && extendChannelId && (
-        <ModalOverlay onClick={() => !isExtending && !paymentUrl && setShowExtendModal(false)}>
-          <ModalContent onClick={e => e.stopPropagation()}>
+        <ModalOverlay
+          onClick={() =>
+            !isExtending && !paymentUrl && setShowExtendModal(false)
+          }
+        >
+          <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Продление подписки</ModalTitle>
-              <CloseButton onClick={() => !isExtending && !paymentUrl && setShowExtendModal(false)}>×</CloseButton>
+              <CloseButton
+                onClick={() =>
+                  !isExtending && !paymentUrl && setShowExtendModal(false)
+                }
+              >
+                ×
+              </CloseButton>
             </ModalHeader>
 
             {!paymentUrl ? (
@@ -715,7 +826,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                 <FormGroup>
                   <Label>Выберите срок продления:</Label>
                   <DaysSelector>
-                    <DayOption 
+                    <DayOption
                       selected={extendDays === 30}
                       onClick={() => setExtendDays(30)}
                       disabled={isExtending}
@@ -723,7 +834,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                       <DaysValue>30 дней</DaysValue>
                       <DaysPrice>1000 ₽</DaysPrice>
                     </DayOption>
-                    <DayOption 
+                    <DayOption
                       selected={extendDays === 90}
                       onClick={() => setExtendDays(90)}
                       disabled={isExtending}
@@ -731,7 +842,7 @@ const WhatsAppSettingsPage: React.FC = () => {
                       <DaysValue>90 дней</DaysValue>
                       <DaysPrice>3000 ₽</DaysPrice>
                     </DayOption>
-                    <DayOption 
+                    <DayOption
                       selected={extendDays === 365}
                       onClick={() => setExtendDays(365)}
                       disabled={isExtending}
@@ -743,11 +854,17 @@ const WhatsAppSettingsPage: React.FC = () => {
                 </FormGroup>
 
                 <ModalActions>
-                  <GrayButton onClick={() => setShowExtendModal(false)} disabled={isExtending}>
+                  <GrayButton
+                    onClick={() => setShowExtendModal(false)}
+                    disabled={isExtending}
+                  >
                     Отмена
                   </GrayButton>
-                  <DarkCyanButton onClick={handleCreatePaymentLink} disabled={isExtending}>
-                    {isExtending ? 'Создание платежа...' : 'Создать платеж'}
+                  <DarkCyanButton
+                    onClick={handleCreatePaymentLink}
+                    disabled={isExtending}
+                  >
+                    {isExtending ? "Создание платежа..." : "Создать платеж"}
                   </DarkCyanButton>
                 </ModalActions>
               </>
@@ -761,19 +878,21 @@ const WhatsAppSettingsPage: React.FC = () => {
                 <InfoBox>
                   <InfoIcon>🔒</InfoIcon>
                   <InfoText>
-                    Вы будете перенаправлены на страницу оплаты. 
-                    Подписка будет активирована после оплаты и подтверждения транзакции банком.
+                    Вы будете перенаправлены на страницу оплаты. Подписка будет
+                    активирована после оплаты и подтверждения транзакции банком.
                   </InfoText>
                 </InfoBox>
 
                 <ModalActions>
-                  <GrayButton onClick={() => {
-                    setShowExtendModal(false);
-                    setPaymentUrl(null);
-                    setExtendChannelId(null);
-                    setExtendDays(30);
-                    setExtendChannelName('');
-                  }}>
+                  <GrayButton
+                    onClick={() => {
+                      setShowExtendModal(false);
+                      setPaymentUrl(null);
+                      setExtendChannelId(null);
+                      setExtendDays(30);
+                      setExtendChannelName("");
+                    }}
+                  >
                     Закрыть
                   </GrayButton>
                   <DarkCyanButton onClick={handleGoToPayment}>
@@ -806,6 +925,12 @@ const HeaderTop = styled.div`
   margin-bottom: 12px;
 `;
 
+const HeaderButtons = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
+
 const Description = styled.p`
   color: #666;
   font-size: 14px;
@@ -822,14 +947,15 @@ const NumberCard = styled.div<{ isActive: boolean; isExpired?: boolean }>`
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid ${props => {
-    if (props.isExpired) return '#faad14';
-    if (props.isActive) return '#52c41a';
-    return '#d9d9d9';
-  }};
+  border-left: 4px solid
+    ${(props) => {
+      if (props.isExpired) return "#faad14";
+      if (props.isActive) return "#52c41a";
+      return "#d9d9d9";
+    }};
   transition: all 0.2s;
-  opacity: ${props => props.isExpired ? 0.85 : 1};
-  
+  opacity: ${(props) => (props.isExpired ? 0.85 : 1)};
+
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
@@ -933,20 +1059,28 @@ const StatusBadge = styled.span<{ status: string }>`
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
-  background: ${props => {
-    switch(props.status) {
-      case 'Connected': return '#e6f7e6';
-      case 'Connecting': return '#fff7e6';
-      case 'Disconnected': return '#f5f5f5';
-      default: return '#fff2f0';
+  background: ${(props) => {
+    switch (props.status) {
+      case "Connected":
+        return "#e6f7e6";
+      case "Connecting":
+        return "#fff7e6";
+      case "Disconnected":
+        return "#f5f5f5";
+      default:
+        return "#fff2f0";
     }
   }};
-  color: ${props => {
-    switch(props.status) {
-      case 'Connected': return '#52c41a';
-      case 'Connecting': return '#faad14';
-      case 'Disconnected': return '#999';
-      default: return '#ff4d4f';
+  color: ${(props) => {
+    switch (props.status) {
+      case "Connected":
+        return "#52c41a";
+      case "Connecting":
+        return "#faad14";
+      case "Disconnected":
+        return "#999";
+      default:
+        return "#ff4d4f";
     }
   }};
 `;
@@ -972,8 +1106,8 @@ const InfoLabel = styled.span`
 
 const InfoValue = styled.span<{ expired?: boolean }>`
   font-size: 14px;
-  color: ${props => props.expired ? '#ff4d4f' : '#333'};
-  font-weight: ${props => props.expired ? '500' : 'normal'};
+  color: ${(props) => (props.expired ? "#ff4d4f" : "#333")};
+  font-weight: ${(props) => (props.expired ? "500" : "normal")};
 `;
 
 const WarningRow = styled.div`
@@ -1067,7 +1201,7 @@ const CloseButton = styled.button`
   font-size: 28px;
   cursor: pointer;
   color: #999;
-  
+
   &:hover {
     color: #333;
   }
@@ -1105,12 +1239,12 @@ const CancelButton = styled.button`
   border: 1px solid #d9d9d9;
   border-radius: 6px;
   cursor: pointer;
-  
+
   &:hover {
     border-color: #1890ff;
     color: #1890ff;
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -1130,7 +1264,8 @@ const EmployeeCheckbox = styled.div<{ active: boolean }>`
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border: 1px solid ${props => props.active ? 'rgba(0, 125, 136, 1)' : '#e8e8e8'};
+  border: 1px solid
+    ${(props) => (props.active ? "rgba(0, 125, 136, 1)" : "#e8e8e8")};
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -1144,12 +1279,13 @@ const EmployeeCheckbox = styled.div<{ active: boolean }>`
 const CheckIcon = styled.div<{ active: boolean }>`
   width: 20px;
   height: 20px;
-  border: 2px solid ${props => props.active ? 'rgba(0, 125, 136, 1)' : '#d9d9d9'};
+  border: 2px solid
+    ${(props) => (props.active ? "rgba(0, 125, 136, 1)" : "#d9d9d9")};
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.active ? 'rgba(0, 125, 136, 1)' : 'transparent'};
+  color: ${(props) => (props.active ? "rgba(0, 125, 136, 1)" : "transparent")};
   font-weight: bold;
 `;
 
@@ -1216,17 +1352,17 @@ const DaysSelector = styled.div`
 
 const DayOption = styled.div<{ selected: boolean; disabled: boolean }>`
   padding: 16px;
-  border: 2px solid ${props => props.selected ? '#128C7E' : '#e8e8e8'};
+  border: 2px solid ${(props) => (props.selected ? "#128C7E" : "#e8e8e8")};
   border-radius: 8px;
   text-align: center;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
   background: white;
   transition: all 0.2s;
   position: relative;
-  
+
   &:hover {
-    border-color: ${props => props.disabled ? '#e8e8e8' : '#128C7E'};
-    transform: ${props => props.disabled ? 'none' : 'translateY(-2px)'};
+    border-color: ${(props) => (props.disabled ? "#e8e8e8" : "#128C7E")};
+    transform: ${(props) => (props.disabled ? "none" : "translateY(-2px)")};
   }
 `;
 
@@ -1240,7 +1376,7 @@ const DaysValue = styled.div`
 const DaysPrice = styled.div`
   font-size: 20px;
   font-weight: bold;
-  color: #128C7E;
+  color: #128c7e;
 `;
 
 const PaymentLinkContainer = styled.div`

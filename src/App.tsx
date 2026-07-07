@@ -54,6 +54,7 @@ import FinancePage from "./pages/FinancePage/FinancePage";
 import SettingsPage from "./pages/SettingsPage.tsx/SettingsPage";
 import BlackCatalogPage from "./pages/BlackCatalog";
 import BotManagementPage from "./pages/SettingsPage.tsx/BotManagementPage";
+import WhatsAppSendersPage from "./pages/SettingsPage.tsx/WhatsAppSendersPage";
 import ReceptionPage from "./pages/ReceptionPage";
 import PaymentPendingPage from "./pages/PaymentPendingPage";
 
@@ -585,6 +586,15 @@ function App() {
                   element={
                     <MainLayout>
                       <BotManagementPage />
+                    </MainLayout>
+                  }
+                />
+
+                <Route
+                  path="/whatsapp/senders"
+                  element={
+                    <MainLayout>
+                      <WhatsAppSendersPage />
                     </MainLayout>
                   }
                 />

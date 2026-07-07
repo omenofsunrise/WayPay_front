@@ -486,34 +486,6 @@ export const BOT_VARIABLE_GROUPS: BotVariableGroup[] = [
     ],
   },
   {
-    title: "Текущий платёж по графику (ивент ComingPayment)",
-    scope: "global",
-    description: "Доступны только когда выбран ивент «Приближающийся платёж»",
-    requiredEvent: "ComingPayment",
-    variables: [
-      {
-        key: "current_schedule_payment_date",
-        label: "Дата платежа по графику",
-        preview: "17.06.2026",
-      },
-      {
-        key: "current_schedule_amount",
-        label: "Сумма платежа",
-        preview: "15 000 ₽",
-      },
-      {
-        key: "current_schedule_rest",
-        label: "Остаток долга",
-        preview: "90 000 ₽",
-      },
-      {
-        key: "current_schedule_comment",
-        label: "Номер взноса",
-        preview: "3 из 12",
-      },
-    ],
-  },
-  {
     title: "Текущий платёж (ивент CreatedPayment)",
     scope: "global",
     description: "Доступны только когда выбран ивент «Создание платежа»",

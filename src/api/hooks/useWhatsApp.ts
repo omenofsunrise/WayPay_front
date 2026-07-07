@@ -800,15 +800,11 @@ const useWhatsApp = () => {
   );
 
   const setBotEvent = useCallback(
-    async (
-      botId: number,
-      eventType: BotEventType,
-      eventDays?: number | null
-    ): Promise<boolean> => {
+    async (botId: number, eventType: BotEventType): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
       try {
-        await whatsappService.setBotEvent(botId, eventType, eventDays);
+        await whatsappService.setBotEvent(botId, eventType);
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");

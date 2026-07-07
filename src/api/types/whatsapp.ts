@@ -327,17 +327,17 @@ export const BotType = {
   Events: "Events",
 } as const;
 
+// ComingPayment убран: сценарий «за N дней до платежа» теперь реализуется
+// отдельной рассылкой типа Schedule (см. types/whatsappSender.ts).
 export type BotEventType =
   | "CreatedCredit"
   | "CreatedPayment"
-  | "ClientBirthdate"
-  | "ComingPayment";
+  | "ClientBirthdate";
 
 export const BotEventType = {
   CreatedCredit: "CreatedCredit",
   CreatedPayment: "CreatedPayment",
   ClientBirthdate: "ClientBirthdate",
-  ComingPayment: "ComingPayment",
 } as const;
 
 export type BotResponseTextType = "WhatsAppBotNoClientResponse";
@@ -367,7 +367,6 @@ export interface AddBotResponseRequest {
 export interface SetBotEventRequest {
   botId: number;
   eventType: BotEventType;
-  eventDays?: number | null;
 }
 
 export interface AddBotKeywordRequest {

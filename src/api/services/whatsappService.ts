@@ -217,15 +217,8 @@ class WhatsAppService {
     await apiClient.post("/WhatsApp/bot/response", request);
   }
 
-  async setBotEvent(
-    botId: number,
-    eventType: BotEventType,
-    eventDays?: number | null
-  ): Promise<void> {
-    const request: SetBotEventRequest =
-      eventType === "ComingPayment"
-        ? { botId, eventType, eventDays: eventDays ?? null }
-        : { botId, eventType };
+  async setBotEvent(botId: number, eventType: BotEventType): Promise<void> {
+    const request: SetBotEventRequest = { botId, eventType };
     await apiClient.patch("/WhatsApp/bot/event", request);
   }
 
