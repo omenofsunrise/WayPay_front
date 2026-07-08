@@ -12,29 +12,18 @@ import type {
   WhatsAppSender,
   UpsertWhatsAppSenderRequest,
 } from "../../api/types/whatsappSender";
-import {
-  buildCron,
-  parseCron,
-  describeCron,
-  describeSchedule,
-  defaultSchedule,
-  FREQUENCY_LABEL,
-  WEEKDAYS,
-  type Frequency,
-} from "./cronSchedule";
+import BotResponseConstructor from "./BotResponseConstructor";
 import SenderReportModal from "./SenderReportModal";
+
+// Описание, за сколько дней до платежа уходит рассылка.
+const describeDays = (eventDays: number): string =>
+  eventDays > 0 ? `За ${eventDays} дн. до платежа` : "В день платежа";
 
 interface EditState {
   isOpen: boolean;
   editing: WhatsAppSender | null;
   eventDays: string;
-  // Конструктор расписания
-  frequency: Frequency;
-  time: string;
-  weekday: number;
-  monthday: number;
-  manual: boolean; // ручной ввод cron
-  pattern: string; // используется в ручном режиме
+  pattern: string; // текст рассылки (шаблон из конструктора)
   saving: boolean;
 }
 
@@ -42,11 +31,6 @@ const emptyEdit: EditState = {
   isOpen: false,
   editing: null,
   eventDays: "",
-  frequency: defaultSchedule.frequency,
-  time: defaultSchedule.time,
-  weekday: defaultSchedule.weekday,
-  monthday: defaultSchedule.monthday,
-  manual: false,
   pattern: "",
   saving: false,
 };
@@ -110,41 +94,24 @@ const WhatsAppSendersPage: React.FC = () => {
   // === CRUD ===
   const openCreate = () => setEdit({ ...emptyEdit, isOpen: true });
 
-  const openEdit = (sender: WhatsAppSender) => {
-    const parsed = parseCron(sender.pattern ?? "");
+  const openEdit = (sender: WhatsAppSender) =>
     setEdit({
       isOpen: true,
       editing: sender,
       eventDays: sender.eventDays ? String(sender.eventDays) : "",
-      frequency: parsed?.frequency ?? defaultSchedule.frequency,
-      time: parsed?.time ?? defaultSchedule.time,
-      weekday: parsed?.weekday ?? defaultSchedule.weekday,
-      monthday: parsed?.monthday ?? defaultSchedule.monthday,
-      // Нераспознанный шаблон открываем в ручном режиме.
-      manual: !parsed && !!sender.pattern,
       pattern: sender.pattern ?? "",
       saving: false,
     });
-  };
 
   const handleSave = async () => {
-    const pattern = edit.manual
-      ? edit.pattern.trim()
-      : buildCron({
-          frequency: edit.frequency,
-          time: edit.time,
-          weekday: edit.weekday,
-          monthday: edit.monthday,
-        });
-
-    if (!pattern) {
-      alert("Укажите расписание");
+    if (!edit.pattern.trim()) {
+      alert("Введите текст рассылки");
       return;
     }
     const body: UpsertWhatsAppSenderRequest = {
       type: "Schedule",
       eventDays: Number(edit.eventDays) || 0,
-      pattern,
+      pattern: edit.pattern,
     };
 
     setEdit((p) => ({ ...p, saving: true }));
@@ -203,6 +170,14 @@ const WhatsAppSendersPage: React.FC = () => {
     }
   };
 
+  const closeBots = () =>
+    setBotsState({
+      isOpen: false,
+      sender: null,
+      selected: new Set(),
+      saving: false,
+    });
+
   return (
     <Container>
       <Header>
@@ -230,19 +205,15 @@ const WhatsAppSendersPage: React.FC = () => {
           {senders.map((sender) => (
             <Card key={sender.id}>
               <CardTop>
-                <TypeBadge>По расписанию</TypeBadge>
+                <TypeBadge>{describeDays(sender.eventDays)}</TypeBadge>
                 <SenderId>#{sender.id}</SenderId>
               </CardTop>
               <CardBody>
-                <CardWhen>
-                  {sender.pattern
-                    ? describeCron(sender.pattern)
-                    : "— расписание не задано —"}
-                </CardWhen>
-                {sender.pattern && <CardCron>{sender.pattern}</CardCron>}
-                {sender.eventDays > 0 && (
-                  <CardSub>за {sender.eventDays} дн. до платежа</CardSub>
-                )}
+                <CardPreview>
+                  {sender.pattern?.trim()
+                    ? sender.pattern
+                    : "— текст не задан —"}
+                </CardPreview>
               </CardBody>
               <CardActions>
                 <SmallBtn onClick={() => openBots(sender)}>Боты</SmallBtn>
@@ -259,7 +230,7 @@ const WhatsAppSendersPage: React.FC = () => {
       {/* Создание / редактирование */}
       {edit.isOpen && (
         <Overlay onClick={() => !edit.saving && setEdit(emptyEdit)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
+          <WideModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>
                 {edit.editing ? "Редактировать рассылку" : "Новая рассылка"}
@@ -270,130 +241,31 @@ const WhatsAppSendersPage: React.FC = () => {
             </ModalHeader>
 
             <Field>
-              <ScheduleHead>
-                <FieldLabel>Расписание</FieldLabel>
-                <ModeToggle
-                  type="button"
-                  onClick={() => setEdit((p) => ({ ...p, manual: !p.manual }))}
-                >
-                  {edit.manual ? "Простой режим" : "Ручной ввод (cron)"}
-                </ModeToggle>
-              </ScheduleHead>
-
-              {edit.manual ? (
-                <>
-                  <CustomInput
-                    value={edit.pattern}
-                    onChange={(e) =>
-                      setEdit((p) => ({ ...p, pattern: e.target.value }))
-                    }
-                    placeholder="0 10 * * *"
-                    disabled={edit.saving}
-                  />
-                  <Hint>
-                    Формат cron: «минуты часы день месяц день-недели». Напр. «0
-                    10 * * *» — каждый день в 10:00.
-                  </Hint>
-                </>
-              ) : (
-                <>
-                  <ScheduleRow>
-                    <Select
-                      value={edit.frequency}
-                      onChange={(e) =>
-                        setEdit((p) => ({
-                          ...p,
-                          frequency: e.target.value as Frequency,
-                        }))
-                      }
-                      disabled={edit.saving}
-                    >
-                      {(Object.keys(FREQUENCY_LABEL) as Frequency[]).map(
-                        (f) => (
-                          <option key={f} value={f}>
-                            {FREQUENCY_LABEL[f]}
-                          </option>
-                        )
-                      )}
-                    </Select>
-
-                    {edit.frequency === "weekly" && (
-                      <Select
-                        value={edit.weekday}
-                        onChange={(e) =>
-                          setEdit((p) => ({
-                            ...p,
-                            weekday: Number(e.target.value),
-                          }))
-                        }
-                        disabled={edit.saving}
-                      >
-                        {WEEKDAYS.map((d) => (
-                          <option key={d.value} value={d.value}>
-                            {d.label}
-                          </option>
-                        ))}
-                      </Select>
-                    )}
-
-                    {edit.frequency === "monthly" && (
-                      <Select
-                        value={edit.monthday}
-                        onChange={(e) =>
-                          setEdit((p) => ({
-                            ...p,
-                            monthday: Number(e.target.value),
-                          }))
-                        }
-                        disabled={edit.saving}
-                      >
-                        {Array.from({ length: 28 }, (_, i) => i + 1).map(
-                          (d) => (
-                            <option key={d} value={d}>
-                              {d}-го числа
-                            </option>
-                          )
-                        )}
-                      </Select>
-                    )}
-
-                    <TimeInput
-                      type="time"
-                      value={edit.time}
-                      onChange={(e) =>
-                        setEdit((p) => ({ ...p, time: e.target.value }))
-                      }
-                      disabled={edit.saving}
-                    />
-                  </ScheduleRow>
-                  <ScheduleSummary>
-                    {describeSchedule({
-                      frequency: edit.frequency,
-                      time: edit.time,
-                      weekday: edit.weekday,
-                      monthday: edit.monthday,
-                    })}
-                  </ScheduleSummary>
-                </>
-              )}
-            </Field>
-            <Field>
-              <FieldLabel>
-                За сколько дней до платежа (необязательно)
-              </FieldLabel>
-              <CustomInput
-                inputType="number"
-                value={edit.eventDays}
-                onChange={(e) =>
-                  setEdit((p) => ({ ...p, eventDays: e.target.value }))
-                }
-                placeholder="Например: 3"
-                disabled={edit.saving}
-              />
+              <FieldLabel>За сколько дней до платежа</FieldLabel>
+              <NarrowInput>
+                <CustomInput
+                  inputType="number"
+                  value={edit.eventDays}
+                  onChange={(e) =>
+                    setEdit((p) => ({ ...p, eventDays: e.target.value }))
+                  }
+                  placeholder="Например: 3"
+                  disabled={edit.saving}
+                />
+              </NarrowInput>
               <Hint>
                 0 — слать в день платежа. Заменяет прежний бот-ивент
                 «Приближающийся платёж».
               </Hint>
+            </Field>
+
+            <Field>
+              <FieldLabel>Текст рассылки</FieldLabel>
+              <BotResponseConstructor
+                value={edit.pattern}
+                onChange={(next) => setEdit((p) => ({ ...p, pattern: next }))}
+                disabled={edit.saving}
+              />
             </Field>
 
             <ModalActions>
@@ -403,43 +275,24 @@ const WhatsAppSendersPage: React.FC = () => {
               >
                 Отмена
               </GrayButton>
-              <DarkCyanButton onClick={handleSave} disabled={edit.saving}>
+              <DarkCyanButton
+                onClick={handleSave}
+                disabled={edit.saving || !edit.pattern.trim()}
+              >
                 {edit.saving ? "Сохранение…" : "Сохранить"}
               </DarkCyanButton>
             </ModalActions>
-          </ModalContent>
+          </WideModalContent>
         </Overlay>
       )}
 
       {/* Назначение ботов */}
       {botsState.isOpen && botsState.sender && (
-        <Overlay
-          onClick={() =>
-            !botsState.saving &&
-            setBotsState({
-              isOpen: false,
-              sender: null,
-              selected: new Set(),
-              saving: false,
-            })
-          }
-        >
+        <Overlay onClick={() => !botsState.saving && closeBots()}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Боты рассылки #{botsState.sender.id}</ModalTitle>
-              <Close
-                onClick={() =>
-                  !botsState.saving &&
-                  setBotsState({
-                    isOpen: false,
-                    sender: null,
-                    selected: new Set(),
-                    saving: false,
-                  })
-                }
-              >
-                ✖
-              </Close>
+              <Close onClick={() => !botsState.saving && closeBots()}>✖</Close>
             </ModalHeader>
 
             <Hint>
@@ -479,17 +332,7 @@ const WhatsAppSendersPage: React.FC = () => {
             </BotsList>
 
             <ModalActions>
-              <GrayButton
-                onClick={() =>
-                  setBotsState({
-                    isOpen: false,
-                    sender: null,
-                    selected: new Set(),
-                    saving: false,
-                  })
-                }
-                disabled={botsState.saving}
-              >
+              <GrayButton onClick={closeBots} disabled={botsState.saving}>
                 Отмена
               </GrayButton>
               <DarkCyanButton
@@ -625,22 +468,16 @@ const CardBody = styled.div`
   min-height: 40px;
 `;
 
-const CardWhen = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-`;
-
-const CardCron = styled.code`
-  font-size: 11.5px;
-  color: #94a3b8;
-  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+const CardPreview = styled.div`
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.45;
+  white-space: pre-wrap;
   word-break: break-word;
-`;
-
-const CardSub = styled.div`
-  font-size: 12.5px;
-  color: #64748b;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const TypeBadge = styled.span`
@@ -707,6 +544,12 @@ const ModalContent = styled.div`
   padding: 26px;
 `;
 
+const WideModalContent = styled(ModalContent)`
+  width: 1100px;
+  max-width: 95vw;
+  max-height: 92vh;
+`;
+
 const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -744,64 +587,8 @@ const FieldLabel = styled.label`
   font-size: 14px;
 `;
 
-const Select = styled.select`
-  flex: 1;
-  min-width: 130px;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  background: white;
-  cursor: pointer;
-  &:focus {
-    outline: none;
-    border-color: #007d88;
-  }
-`;
-
-const ScheduleHead = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-`;
-
-const ModeToggle = styled.button`
-  background: none;
-  border: none;
-  color: #007d88;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-const ScheduleRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-`;
-
-const TimeInput = styled.input`
-  width: 110px;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  &:focus {
-    outline: none;
-    border-color: #007d88;
-  }
-`;
-
-const ScheduleSummary = styled.div`
-  margin-top: 8px;
-  font-size: 13px;
-  color: #007d88;
-  font-weight: 600;
+const NarrowInput = styled.div`
+  max-width: 220px;
 `;
 
 const Hint = styled.div`
