@@ -13,13 +13,11 @@ import ViewCreditModal from "../../components/modal/ViewCreditModal";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import useSchedule from "../../api/hooks/useSchedule";
 import usePayment from "../../api/hooks/usePayment";
-import useCompany from "../../api/hooks/useCompany";
 import creditService from "../../api/services/creditService";
 import paymentService from "../../api/services/paymentService";
 import type { ScheduleDetails, ScheduleParams } from "../../api/types/schedule";
 import type { Credit } from "../../api/types/credit";
 import type { PaymentTab } from "../../api/types/payment";
-import { useAuth } from "../../сontext/AuthContext";
 import { formatDate, parseDateInput } from "../../utils/dateFormatter";
 import { formatMoney } from "../../utils/formatPrice";
 import PaymentConfirmationGenerator from "../../utils/doxcUtils/paymentConfirmationGenerator";
@@ -28,7 +26,6 @@ import {
   sendCustomWhatsAppMessage,
 } from "../../utils/sendWhatsAppMessage";
 import useSender from "../../api/hooks/useSender";
-
 
 interface ScheduleTableProps {
   isListMode: boolean;
@@ -489,44 +486,66 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
     },
   ], [displayedSchedules, handleOpenPaymentModal, openScheduleCommentModal]);
 
+  const totalAmount = useMemo(() => {
+    return displayedSchedules.reduce((sum, item) => sum + (item.paymentAmount || 0), 0);
+  }, [displayedSchedules]);
+
+  const totalCount = isListMode 
+    ? accumulatedItems.length 
+    : scheduleData?.totalCount || 0;
+
   return (
     <>
       <FilterContainer>
         <FilterField>
-          <InputWrapper>
-            <CustomInput
-              inputType="text"
-              placeholder="Клиент"
-              value={clientNameFilter}
-              onChange={(e) => handleClientNameChange(e.target.value)}
-            />
-          </InputWrapper>
-          <InputWrapper>
-            <InvestorSelect
-              placeholder="Инвестор или пул"
-              value={investorFilter}
-              onChange={handleInvestorChange}
-              onInvestorSelect={handleEntitySelect}
-              includePools={true}
-            />
-          </InputWrapper>
-          <InputWrapper>
-            <ObjectTypeSelect
-              value={tableObjectTypeName}
-              onChange={handleObjectTypeNameChange}
-              onObjectTypeSelect={handleObjectTypeSelect}
-              placeholder="Папка договора"
-              entityType="credit"
-            />
-          </InputWrapper>
-          <DateInputWrapper>
-            <CustomCalendar prefix="От" value={dateFromFilter} onChange={handleDateFromChange} />
-          </DateInputWrapper>
-          <DateInputWrapper>
-            <CustomCalendar prefix="До" value={dateToFilter} onChange={handleDateToChange} />
-          </DateInputWrapper>
+          <FilterFieldItem>
+            <InputWrapper>
+              <CustomInput
+                inputType="text"
+                placeholder="Клиент"
+                value={clientNameFilter}
+                onChange={(e) => handleClientNameChange(e.target.value)}
+              />
+            </InputWrapper>
+            <InputWrapper>
+              <InvestorSelect
+                placeholder="Инвестор или пул"
+                value={investorFilter}
+                onChange={handleInvestorChange}
+                onInvestorSelect={handleEntitySelect}
+                includePools={true}
+              />
+            </InputWrapper>
+            <InputWrapper>
+              <ObjectTypeSelect
+                value={tableObjectTypeName}
+                onChange={handleObjectTypeNameChange}
+                onObjectTypeSelect={handleObjectTypeSelect}
+                placeholder="Папка договора"
+                entityType="credit"
+              />
+            </InputWrapper>
+            <DateInputWrapper>
+              <CustomCalendar prefix="От" value={dateFromFilter} onChange={handleDateFromChange} />
+            </DateInputWrapper>
+            <DateInputWrapper>
+              <CustomCalendar prefix="До" value={dateToFilter} onChange={handleDateToChange} />
+            </DateInputWrapper>
+          </FilterFieldItem>
         </FilterField>
       </FilterContainer>
+
+      {!isLoading && !error && displayedSchedules.length > 0 && (
+        <SummaryBlock>
+          <SummaryLabel>Итоги:</SummaryLabel>
+          <SummaryItem>
+            Ожидается: <b>{totalCount}</b>
+          </SummaryItem>
+          <SummaryItem>
+            Сумма ожидаемых платежей: <b>{formatMoney(totalAmount.toString())}</b>
+          </SummaryItem>
+        </SummaryBlock>
+      )}
 
       {isLoading && (!isListMode || displayedSchedules.length === 0) && <div>Загрузка...</div>}
       {error && <div>Ошибка: {error}</div>}
@@ -655,6 +674,10 @@ const FilterContainer = styled.div`
 `;
 
 const FilterField = styled.div`
+  width: 100%;
+`;
+
+const FilterFieldItem = styled.div`
   display: flex;
   gap: 16px;
   width: 100%;
@@ -737,6 +760,31 @@ const CommentTextarea = styled.textarea`
   &:focus {
     outline: none;
     border-color: #007d88;
+  }
+`;
+
+const SummaryBlock = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 16px;
+  margin: 0 0 20px 0;
+  background: rgba(249, 250, 250, 1);
+  border: 1px solid rgba(229, 231, 235, 1);
+  border-radius: 8px;
+  color: rgba(80, 85, 92, 1);
+  font-size: 14px;
+`;
+
+const SummaryLabel = styled.span`
+  font-weight: 600;
+  color: rgba(0, 125, 136, 1);
+`;
+
+const SummaryItem = styled.span`
+  b {
+    color: #000;
   }
 `;
 
