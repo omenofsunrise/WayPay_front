@@ -13,7 +13,7 @@ import ClientPage from "./pages/ClientPage";
 import BlacklistPage from "./pages/BlacklistPage";
 import InvestorPage from "./pages/InvestorPage";
 import NewCreditPage from "./pages/NewCreditPage";
-import SchedulePage from "./pages/SchedulePage";
+import SchedulePage from "./pages/Schedule/SchedulePage";
 import CreditControlPage from "./pages/CreditControlPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import InvestorReportPage from "./pages/InvestorReportPage";
