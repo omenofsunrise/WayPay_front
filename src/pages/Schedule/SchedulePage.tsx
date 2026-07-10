@@ -42,12 +42,15 @@ const SchedulePage = ({
     paginationHeight: 65,
   });
 
-  const { exportData, isExporting, exportProgress } = useExport<ScheduleDetails>();
+  const { exportData, isExporting, exportProgress } =
+    useExport<ScheduleDetails>();
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
     return savedTab &&
-      (savedTab === "calendar" || savedTab === "schedule" || savedTab === "table") &&
+      (savedTab === "calendar" ||
+        savedTab === "schedule" ||
+        savedTab === "table") &&
       !hiddenTabs.includes(savedTab)
       ? savedTab
       : initialTab;
@@ -94,70 +97,85 @@ const SchedulePage = ({
     [saveActiveTabToStorage]
   );
 
-  const handleExport = useCallback(async (filters: any) => {
-    try {
-      const columnToApiSortMap: Record<number, string> = {
-        0: "creditid",
-        1: "client",
-        2: "amount",
-        3: "date",
-      };
+  const handleExport = useCallback(
+    async (filters: any) => {
+      try {
+        const columnToApiSortMap: Record<number, string> = {
+          0: "creditid",
+          1: "client",
+          2: "amount",
+          3: "date",
+        };
 
-      await exportData({
-        fetchData: async (page, pageSize) => {
-          const params: ScheduleParams = {
-            page,
-            pageSize,
-            clientName: filters.clientName || undefined,
-            investorNickname: filters.investorName || undefined,
-            dateFrom: filters.dateFrom ? parseDateInput(filters.dateFrom) : undefined,
-            dateTo: filters.dateTo ? parseDateInput(filters.dateTo) : undefined,
-            creditTypeId: filters.objectTypeId || undefined,
-            sortBy: filters.sortKey !== null && filters.sortKey !== undefined
-              ? columnToApiSortMap[filters.sortKey]
-              : undefined,
-            sortDirection: filters.sortDirection,
-          };
+        await exportData({
+          fetchData: async (page, pageSize) => {
+            const params: ScheduleParams = {
+              page,
+              pageSize,
+              clientName: filters.clientName || undefined,
+              investorNickname: filters.investorName || undefined,
+              dateFrom: filters.dateFrom
+                ? parseDateInput(filters.dateFrom)
+                : undefined,
+              dateTo: filters.dateTo
+                ? parseDateInput(filters.dateTo)
+                : undefined,
+              creditTypeId: filters.objectTypeId || undefined,
+              sortBy:
+                filters.sortKey !== null && filters.sortKey !== undefined
+                  ? columnToApiSortMap[filters.sortKey]
+                  : undefined,
+              sortDirection: filters.sortDirection,
+            };
 
-          if (filters.entityId && filters.entityId != 0) {
-            if (filters.entityType === "investor") {
-              params.investorId = filters.entityId;
-            } else if (filters.entityType === "pool") {
-              params.poolId = filters.entityId;
+            if (filters.entityId && filters.entityId != 0) {
+              if (filters.entityType === "investor") {
+                params.investorId = filters.entityId;
+              } else if (filters.entityType === "pool") {
+                params.poolId = filters.entityId;
+              }
             }
-          }
 
-          const result = await scheduleService.getList(params);
-          return {
-            items: Array.isArray(result.items) ? result.items : [],
-            totalCount: result.totalCount || 0,
-          };
-        },
-        fileName: "schedules_export",
-        transformData: (schedule) => ({
-          "Договор №": schedule.creditId,
-          ФИО: schedule.clientName,
-          Телефон: schedule.clientPhone,
-          "ФИО поручителя": schedule.guarantorFullname,
-          "Телефон поручителя": schedule.guarantorPhone,
-          Платеж: formatMoney(String(schedule.paymentAmount ?? 0)),
-          "Дата платежа": formatDate(schedule.paymentDate),
-          Комментарий: schedule.userComment || "",
-          Уведомлен: schedule.notified ? "Да" : "Нет",
-        }),
-      });
-    } catch (error) {
-      console.error("Export failed:", error);
-    }
-  }, [exportData]);
+            const result = await scheduleService.getList(params);
+            return {
+              items: Array.isArray(result.items) ? result.items : [],
+              totalCount: result.totalCount || 0,
+            };
+          },
+          fileName: "schedules_export",
+          transformData: (schedule) => ({
+            "Договор №": schedule.creditId,
+            ФИО: schedule.clientName,
+            Телефон: schedule.clientPhone,
+            "ФИО поручителя": schedule.guarantorFullname,
+            "Телефон поручителя": schedule.guarantorPhone,
+            Платеж: formatMoney(String(schedule.paymentAmount ?? 0)),
+            "Дата платежа": formatDate(schedule.paymentDate),
+            Комментарий: schedule.userComment || "",
+            Уведомлен: schedule.notified ? "Да" : "Нет",
+          }),
+        });
+      } catch (error) {
+        console.error("Export failed:", error);
+      }
+    },
+    [exportData]
+  );
 
   useEffect(() => {
     const handleExportData = (event: CustomEvent) => {
       setCurrentFilters(event.detail);
     };
 
-    window.addEventListener("schedule-export-data", handleExportData as EventListener);
-    return () => window.removeEventListener("schedule-export-data", handleExportData as EventListener);
+    window.addEventListener(
+      "schedule-export-data",
+      handleExportData as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "schedule-export-data",
+        handleExportData as EventListener
+      );
   }, []);
 
   const handleExportClick = useCallback(() => {
@@ -207,24 +225,35 @@ const SchedulePage = ({
       : []),
   ];
 
+  const exportButton =
+    activeTab !== "calendar" ? (
+      <ExportButton
+        onClick={handleExportClick}
+        isExporting={isExporting}
+        exportProgress={exportProgress}
+        style={{ margin: 0 }}
+      />
+    ) : undefined;
+
   return (
     <PageLayout ref={containerRef}>
-      {activeTab !== "calendar" && (
-        <TitleField>
-          <div style={{ marginLeft: "auto" }}>
-            <ExportButton
-              onClick={handleExportClick}
-              isExporting={isExporting}
-              exportProgress={exportProgress}
-            />
-          </div>
-        </TitleField>
-      )}
-
       {tabs.length > 1 ? (
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
+        // Вкладки («График», «Таблица») и кнопка «Экспорт» в одном ряду.
+        <Tabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+          addButton={exportButton}
+        />
       ) : (
-        tabs[0]?.content
+        <>
+          {exportButton && (
+            <TitleField>
+              <div style={{ marginLeft: "auto" }}>{exportButton}</div>
+            </TitleField>
+          )}
+          {tabs[0]?.content}
+        </>
       )}
     </PageLayout>
   );
