@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Pagination } from "react-bootstrap";
 import styled from "styled-components";
 import useAdminPanel from "../../api/hooks/useAdminPanel";
@@ -708,6 +709,7 @@ const LoadMoreChatsButton = styled.button`
 `;
 
 const BroadcastCampaignsManager: React.FC = () => {
+  const navigate = useNavigate();
   const {
     broadcastCampaigns,
     broadcastPagination,
@@ -803,10 +805,13 @@ const BroadcastCampaignsManager: React.FC = () => {
   }, [activeTab, chatsUnreadOnly]);
 
   const handleChatClick = async (chat: BroadcastCampaignChat) => {
-    // Открываем WhatsApp по номеру телефона из сущности чата.
+    // Открываем WhatsApp-чат внутри WayPay по номеру и каналу из сущности чата.
     const phone = (chat.phone || "").replace(/\D/g, "");
     if (phone) {
-      window.open(`https://wa.me/${phone}`, "_blank");
+      const query = chat.channelId
+        ? `?channelId=${encodeURIComponent(chat.channelId)}`
+        : "";
+      navigate(`/admin/whatsapp/${phone}${query}`);
     }
 
     // Помечаем чат прочитанным (оптимистично обновляем локально).

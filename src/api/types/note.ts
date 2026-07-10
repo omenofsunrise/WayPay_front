@@ -1,8 +1,9 @@
-export type NoteableType = 'credit' | 'client';
+export type NoteableType = "credit" | "client" | "payment";
 
 export const NOTEABLE_TYPES = {
-  CREDIT: 'credit' as NoteableType,
-  CLIENT: 'client' as NoteableType,
+  CREDIT: "credit" as NoteableType,
+  CLIENT: "client" as NoteableType,
+  PAYMENT: "payment" as NoteableType,
 };
 
 export interface Note {

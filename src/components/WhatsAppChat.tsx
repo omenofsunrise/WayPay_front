@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled from 'styled-components';
-import type { ChatMessage, SendMessageRequest } from '../api/types/whatsapp';
-import useWhatsApp from '../api/hooks/useWhatsApp';
-import MessageContent from './MessageContent';
-import { WHATSAPP_WS_EVENT, type WebSocketMessage } from '../api/hooks/useWebSocket';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import styled from "styled-components";
+import type { ChatMessage, SendMessageRequest } from "../api/types/whatsapp";
+import useWhatsApp from "../api/hooks/useWhatsApp";
+import MessageContent from "./MessageContent";
+import {
+  WHATSAPP_WS_EVENT,
+  type WebSocketMessage,
+} from "../api/hooks/useWebSocket";
 
 interface WhatsAppChatProps {
   phoneNumber: string;
@@ -12,15 +15,17 @@ interface WhatsAppChatProps {
   width?: string | number;
   showHeader?: boolean;
   className?: string;
+  channelId?: string;
 }
 
 const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   phoneNumber,
   clientName,
-  height = '600px',
-  width = '100%',
+  height = "600px",
+  width = "100%",
   showHeader = true,
-  className
+  className,
+  channelId,
 }) => {
   const {
     isLoading,
@@ -37,10 +42,10 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     clearChatData,
     isLoadingMore,
     canLoadMore,
-    loadOlderMessages
+    loadOlderMessages,
   } = useWhatsApp();
 
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [isInitializing, setIsInitializing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -52,17 +57,23 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   const initialScrollDoneRef = useRef(false);
 
   const formatPhoneForDisplay = (phone: string): string => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length === 11 && digits.startsWith('7')) {
-      return `${digits.slice(0, 1)} ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`;
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 11 && digits.startsWith("7")) {
+      return `${digits.slice(0, 1)} ${digits.slice(1, 4)} ${digits.slice(
+        4,
+        7
+      )} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`;
     }
     if (digits.length === 10) {
-      return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8, 10)}`;
+      return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(
+        6,
+        8
+      )} ${digits.slice(8, 10)}`;
     }
     return `${digits}`;
   };
 
-  const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  const cleanPhoneNumber = phoneNumber.replace(/\D/g, "");
   const displayPhoneNumber = formatPhoneForDisplay(phoneNumber);
   const chatExists = foundChat?.exists ?? false;
   const displayName = clientName || foundChat?.clientName || displayPhoneNumber;
@@ -74,7 +85,8 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     return () => {
       clearChatData();
     };
-  }, [phoneNumber]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phoneNumber, channelId]);
 
   useEffect(() => {
     if (!cleanPhoneNumber) return;
@@ -83,7 +95,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
       const detail = (event as CustomEvent<WebSocketMessage>).detail;
       if (!detail) return;
 
-      const incomingPhone = (detail.Title || '').replace(/\D/g, '');
+      const incomingPhone = (detail.Title || "").replace(/\D/g, "");
       if (!incomingPhone) return;
 
       const matches =
@@ -93,8 +105,10 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
 
       if (!matches) return;
 
-      const timestampMs = detail.Timestamp ? new Date(detail.Timestamp).getTime() : Date.now();
-      addIncomingMessage(incomingPhone, detail.Body || '', timestampMs);
+      const timestampMs = detail.Timestamp
+        ? new Date(detail.Timestamp).getTime()
+        : Date.now();
+      addIncomingMessage(incomingPhone, detail.Body || "", timestampMs);
     };
 
     window.addEventListener(WHATSAPP_WS_EVENT, handleWsMessage);
@@ -140,62 +154,76 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [chatExists, isLoading]);
-  
+
   const initializeChat = async () => {
     setIsInitializing(true);
     try {
       await getChannelStatus();
-      
+
       const chat = await findChatByPhone(cleanPhoneNumber);
-      
+
       if (chat?.exists) {
-        await loadChatWithClient(cleanPhoneNumber, 12, 0, false);
+        await loadChatWithClient(cleanPhoneNumber, 12, 0, false, channelId);
       }
     } catch (err) {
-      console.error('Failed to initialize chat:', err);
+      console.error("Failed to initialize chat:", err);
     } finally {
       setIsInitializing(false);
     }
   };
 
-  const handleScroll = useCallback(async (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const isNearTop = target.scrollTop < 100;
-    
-    if (isNearTop && !isLoadingMore && canLoadMore && !isScrollingUp) {
-      setIsScrollingUp(true);
-      
-      const previousScrollHeight = target.scrollHeight;
-      const previousScrollTop = target.scrollTop;
-      
-      await loadOlderMessages(cleanPhoneNumber);
-      
-      requestAnimationFrame(() => {
-        const newScrollHeight = target.scrollHeight;
-        const addedHeight = newScrollHeight - previousScrollHeight;
-        target.scrollTop = previousScrollTop + addedHeight;
-        setIsScrollingUp(false);
-      });
-    }
-  }, [isLoadingMore, canLoadMore, loadOlderMessages, cleanPhoneNumber, isScrollingUp]);
+  const handleScroll = useCallback(
+    async (e: React.UIEvent<HTMLDivElement>) => {
+      const target = e.currentTarget;
+      const isNearTop = target.scrollTop < 100;
+
+      if (isNearTop && !isLoadingMore && canLoadMore && !isScrollingUp) {
+        setIsScrollingUp(true);
+
+        const previousScrollHeight = target.scrollHeight;
+        const previousScrollTop = target.scrollTop;
+
+        await loadOlderMessages(cleanPhoneNumber);
+
+        requestAnimationFrame(() => {
+          const newScrollHeight = target.scrollHeight;
+          const addedHeight = newScrollHeight - previousScrollHeight;
+          target.scrollTop = previousScrollTop + addedHeight;
+          setIsScrollingUp(false);
+        });
+      }
+    },
+    [
+      isLoadingMore,
+      canLoadMore,
+      loadOlderMessages,
+      cleanPhoneNumber,
+      isScrollingUp,
+    ]
+  );
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
 
     const result = await sendMessage({
       to: cleanPhoneNumber,
-      body: newMessage.trim()
+      body: newMessage.trim(),
     });
-    
+
     if (result?.success) {
-      setNewMessage('');
+      setNewMessage("");
       inputRef.current?.focus();
     } else {
-      alert('Ошибка при отправке сообщения: ' + (result?.error || 'Неизвестная ошибка'));
+      alert(
+        "Ошибка при отправке сообщения: " +
+          (result?.error || "Неизвестная ошибка")
+      );
     }
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -203,16 +231,16 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     setShowAttachmentMenu(false);
 
     try {
-      let mediaKind = 'document';
-      if (file.type.startsWith('image/')) {
-        mediaKind = 'image';
-      } else if (file.type.startsWith('video/')) {
-        mediaKind = 'video';
-      } else if (file.type.startsWith('audio/')) {
-        if (file.type.includes('ogg') || file.size < 1024 * 1024) {
-          mediaKind = 'voice';
+      let mediaKind = "document";
+      if (file.type.startsWith("image/")) {
+        mediaKind = "image";
+      } else if (file.type.startsWith("video/")) {
+        mediaKind = "video";
+      } else if (file.type.startsWith("audio/")) {
+        if (file.type.includes("ogg") || file.size < 1024 * 1024) {
+          mediaKind = "voice";
         } else {
-          mediaKind = 'audio';
+          mediaKind = "audio";
         }
       }
 
@@ -224,59 +252,65 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
       );
 
       if (!result?.success) {
-        alert('Ошибка при отправке файла: ' + (result?.error || 'Неизвестная ошибка'));
+        alert(
+          "Ошибка при отправке файла: " +
+            (result?.error || "Неизвестная ошибка")
+        );
       }
     } catch (error) {
-      console.error('Error sending file:', error);
-      alert('Ошибка при отправке файла');
+      console.error("Error sending file:", error);
+      alert("Ошибка при отправке файла");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
 
-  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
-    for (const item of Array.from(items)) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          setIsUploading(true);
-          try {
-            const result = await sendMediaMessage(
-              cleanPhoneNumber,
-              file,
-              'image',
-              '📷 Изображение из буфера обмена'
-            );
-            if (!result?.success) {
-              alert('Ошибка при отправке изображения');
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            setIsUploading(true);
+            try {
+              const result = await sendMediaMessage(
+                cleanPhoneNumber,
+                file,
+                "image",
+                "📷 Изображение из буфера обмена"
+              );
+              if (!result?.success) {
+                alert("Ошибка при отправке изображения");
+              }
+            } finally {
+              setIsUploading(false);
             }
-          } finally {
-            setIsUploading(false);
           }
+          break;
         }
-        break;
       }
-    }
-  }, [cleanPhoneNumber, sendMediaMessage]);
+    },
+    [cleanPhoneNumber, sendMediaMessage]
+  );
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
   const formatTime = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(timestamp * 1000).toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -287,17 +321,17 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (msgDate.toDateString() === today.toDateString()) {
-      return 'Сегодня';
+      return "Сегодня";
     } else if (msgDate.toDateString() === yesterday.toDateString()) {
-      return 'Вчера';
+      return "Вчера";
     } else {
-      return msgDate.toLocaleDateString('ru-RU');
+      return msgDate.toLocaleDateString("ru-RU");
     }
   };
 
   const groupMessagesByDate = () => {
     const groups: { [key: string]: ChatMessage[] } = {};
-    messages.forEach(message => {
+    messages.forEach((message) => {
       const dateKey = formatDate(message.timestamp);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -309,34 +343,38 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
 
   const getStatusIcon = (status: string, isFromMe: boolean) => {
     if (!isFromMe) return null;
-    
+
     switch (status) {
-      case 'FAILED':
-        return <span style={{ color: '#ff4444' }}>⚠️</span>;
-      case 'PENDING':
-        return <span style={{ color: '#8696A0' }}>⏱️</span>;
+      case "FAILED":
+        return <span style={{ color: "#ff4444" }}>⚠️</span>;
+      case "PENDING":
+        return <span style={{ color: "#8696A0" }}>⏱️</span>;
       default:
         return null;
     }
   };
 
   const getConnectionStatusText = () => {
-    if (!channelStatus) return 'WhatsApp • Подключение...';
+    if (!channelStatus) return "WhatsApp • Подключение...";
     const detail = channelStatus.name || channelStatus.phoneNumber;
     if (detail) return `WhatsApp • ${detail}`;
-    return channelStatus.connected ? 'WhatsApp • В сети' : 'WhatsApp • Не подключён';
+    return channelStatus.connected
+      ? "WhatsApp • В сети"
+      : "WhatsApp • Не подключён";
   };
 
   const getConnectionStatusColor = () => {
-    return channelStatus?.connected ? '#25D366' : '#FFA500';
+    return channelStatus?.connected ? "#25D366" : "#FFA500";
   };
 
-  const isConnected = channelStatus?.status !== 'NotSupported';
-  const isNotSupported = channelStatus?.status === 'NotSupported';
+  const isConnected = channelStatus?.status !== "NotSupported";
+  const isNotSupported = channelStatus?.status === "NotSupported";
 
   const showLoading = isInitializing || (isLoading && messages.length === 0);
-  const showEmptyState = !showLoading && messages.length === 0 && chatExists && isConnected;
-  const showNoChatState = !showLoading && !chatExists && !isInitializing && isConnected;
+  const showEmptyState =
+    !showLoading && messages.length === 0 && chatExists && isConnected;
+  const showNoChatState =
+    !showLoading && !chatExists && !isInitializing && isConnected;
   const showWhatsAppPromo = !isConnected && !isNotSupported;
 
   if (isNotSupported) {
@@ -344,9 +382,10 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
       <PromoContainer className={className} style={{ width, height }}>
         <PromoTitle>WhatsApp не настроен</PromoTitle>
         <PromoDescription>
-          Для использования чата необходимо подключить и оплатить WhatsApp в настройках
+          Для использования чата необходимо подключить и оплатить WhatsApp в
+          настройках
         </PromoDescription>
-        <PromoButton onClick={() => window.open('/settings/', '_blank')}>
+        <PromoButton onClick={() => window.open("/settings/", "_blank")}>
           Настроить интеграцию
         </PromoButton>
       </PromoContainer>
@@ -363,8 +402,17 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
               {isInitializing ? (
                 <Spinner size="small" color="white" />
               ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="#fff"/>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"
+                    fill="#fff"
+                  />
                 </svg>
               )}
             </Avatar>
@@ -392,9 +440,12 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             <PromoBannerIcon>💬</PromoBannerIcon>
             <PromoBannerTitle>WhatsApp не подключен</PromoBannerTitle>
             <PromoBannerText>
-              Подключите WhatsApp Business, чтобы общаться с клиентами прямо из системы.
+              Подключите WhatsApp Business, чтобы общаться с клиентами прямо из
+              системы.
             </PromoBannerText>
-            <PromoBannerButton onClick={() => window.open('/settings/integrations', '_blank')}>
+            <PromoBannerButton
+              onClick={() => window.open("/settings/integrations", "_blank")}
+            >
               Подключить WhatsApp
             </PromoBannerButton>
           </PromoBanner>
@@ -418,27 +469,35 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
           </EmptyState>
         )}
 
-        {!showLoading && !showEmptyState && !showNoChatState && !showWhatsAppPromo && messages.length > 0 && (
-          <>
-            {Object.entries(groupMessagesByDate()).map(([date, dateMessages]) => (
-              <React.Fragment key={date}>
-                <DateDivider>
-                  <DateDividerText>{date}</DateDividerText>
-                </DateDivider>
-                {dateMessages.map((message) => (
-                  <MessageBubble key={message.id} isOwn={message.isFromMe}>
-                    <MessageContent message={message} />
-                    <MessageMeta>
-                      <MessageTime>{formatTime(message.timestamp)}</MessageTime>
-                      {getStatusIcon(message.status, message.isFromMe)}
-                    </MessageMeta>
-                  </MessageBubble>
-                ))}
-              </React.Fragment>
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
+        {!showLoading &&
+          !showEmptyState &&
+          !showNoChatState &&
+          !showWhatsAppPromo &&
+          messages.length > 0 && (
+            <>
+              {Object.entries(groupMessagesByDate()).map(
+                ([date, dateMessages]) => (
+                  <React.Fragment key={date}>
+                    <DateDivider>
+                      <DateDividerText>{date}</DateDividerText>
+                    </DateDivider>
+                    {dateMessages.map((message) => (
+                      <MessageBubble key={message.id} isOwn={message.isFromMe}>
+                        <MessageContent message={message} />
+                        <MessageMeta>
+                          <MessageTime>
+                            {formatTime(message.timestamp)}
+                          </MessageTime>
+                          {getStatusIcon(message.status, message.isFromMe)}
+                        </MessageMeta>
+                      </MessageBubble>
+                    ))}
+                  </React.Fragment>
+                )
+              )}
+              <div ref={messagesEndRef} />
+            </>
+          )}
       </MessagesArea>
 
       {/* Input Area - показываем только если WhatsApp подключен */}
@@ -448,8 +507,17 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
             disabled={!isConnected || isLoading}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" fill="#075E54"/>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"
+                fill="#075E54"
+              />
             </svg>
           </AttachmentButton>
 
@@ -458,20 +526,25 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
               <AttachmentMenuItem onClick={() => fileInputRef.current?.click()}>
                 <span>📷</span> Фото/Видео
               </AttachmentMenuItem>
-              <AttachmentMenuItem onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt';
-                  fileInputRef.current.click();
-                }
-              }}>
+              <AttachmentMenuItem
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.accept =
+                      "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt";
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
                 <span>📄</span> Документ
               </AttachmentMenuItem>
-              <AttachmentMenuItem onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.accept = 'audio/*';
-                  fileInputRef.current.click();
-                }
-              }}>
+              <AttachmentMenuItem
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.accept = "audio/*";
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
                 <span>🎵</span> Аудио
               </AttachmentMenuItem>
             </AttachmentMenu>
@@ -485,7 +558,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             onKeyPress={handleKeyPress}
             onPaste={handlePaste}
             placeholder={
-              !isConnected 
+              !isConnected
                 ? "Подключите WhatsApp для отправки сообщений"
                 : !chatExists
                 ? "Номер не в WhatsApp"
@@ -495,40 +568,64 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
             }
             disabled={!isConnected || isLoading || isUploading || !chatExists}
           />
-          
+
           <input
             ref={fileInputRef}
             type="file"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={handleFileSelect}
             accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
           />
 
-          {(newMessage.trim() || isUploading) ? (
-            <SendButton 
+          {newMessage.trim() || isUploading ? (
+            <SendButton
               onClick={handleSendMessage}
-              disabled={(!newMessage.trim() && !isUploading) || !isConnected || isLoading || isUploading}
+              disabled={
+                (!newMessage.trim() && !isUploading) ||
+                !isConnected ||
+                isLoading ||
+                isUploading
+              }
             >
               {isUploading ? (
                 <Spinner size="small" />
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
               )}
             </SendButton>
           ) : (
             <VoiceButton disabled={!isConnected || isLoading}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H6c0 3.66 2.95 6.68 6.5 7.16V21h-2v2h6v-2h-2v-2.84c3.55-.48 6.5-3.5 6.5-7.16h-2z" fill="#075E54"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H6c0 3.66 2.95 6.68 6.5 7.16V21h-2v2h6v-2h-2v-2.84c3.55-.48 6.5-3.5 6.5-7.16h-2z"
+                  fill="#075E54"
+                />
               </svg>
             </VoiceButton>
           )}
         </InputArea>
       ) : (
         <PromoFooter>
-          <PromoFooterText>💬 Для отправки сообщений подключите WhatsApp</PromoFooterText>
-          <PromoFooterButton onClick={() => window.open('/settings/integrations', '_blank')}>
+          <PromoFooterText>
+            💬 Для отправки сообщений подключите WhatsApp
+          </PromoFooterText>
+          <PromoFooterButton
+            onClick={() => window.open("/settings/integrations", "_blank")}
+          >
             Подключить
           </PromoFooterButton>
         </PromoFooter>
@@ -573,7 +670,7 @@ const PromoDescription = styled.p`
 `;
 
 const PromoButton = styled.button`
-  background-color: #075E54;
+  background-color: #075e54;
   color: white;
   border: none;
   border-radius: 24px;
@@ -582,9 +679,9 @@ const PromoButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
-  
+
   &:hover {
-    background-color: #128C7E;
+    background-color: #128c7e;
   }
 `;
 
@@ -595,7 +692,7 @@ const PromoBanner = styled.div`
   justify-content: center;
   text-align: center;
   padding: 40px 24px;
-  background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+  background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
   border-radius: 16px;
   margin: 16px;
   color: white;
@@ -621,7 +718,7 @@ const PromoBannerText = styled.p`
 
 const PromoBannerButton = styled.button`
   background-color: white;
-  color: #075E54;
+  color: #075e54;
   border: none;
   border-radius: 24px;
   padding: 8px 20px;
@@ -630,7 +727,7 @@ const PromoBannerButton = styled.button`
   cursor: pointer;
   margin-top: 8px;
   transition: transform 0.2s;
-  
+
   &:hover {
     transform: scale(1.02);
   }
@@ -654,7 +751,7 @@ const PromoFooterText = styled.span`
 `;
 
 const PromoFooterButton = styled.button`
-  background-color: #075E54;
+  background-color: #075e54;
   color: white;
   border: none;
   border-radius: 20px;
@@ -663,9 +760,9 @@ const PromoFooterButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  
+
   &:hover {
-    background-color: #128C7E;
+    background-color: #128c7e;
   }
 `;
 
@@ -680,7 +777,7 @@ const Container = styled.div`
 `;
 
 const ChatHeader = styled.div`
-  background-color: #075E54;
+  background-color: #075e54;
   color: white;
   padding: 16px;
   display: flex;
@@ -698,7 +795,7 @@ const HeaderInfo = styled.div`
 const Avatar = styled.div`
   width: 40px;
   height: 40px;
-  background-color: #128C7E;
+  background-color: #128c7e;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -718,14 +815,14 @@ const ClientName = styled.div`
 const StatusIndicator = styled.div<{ color: string }>`
   font-size: 12px;
   opacity: 0.8;
-  color: ${props => props.color};
+  color: ${(props) => props.color};
 `;
 
 const MessagesArea = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background-color: #ECE5DD;
+  background-color: #ece5dd;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -746,8 +843,8 @@ const DateDividerText = styled.span`
 
 const MessageBubble = styled.div<{ isOwn: boolean }>`
   max-width: 70%;
-  align-self: ${props => props.isOwn ? 'flex-end' : 'flex-start'};
-  background-color: ${props => props.isOwn ? '#DCF8C6' : '#fff'};
+  align-self: ${(props) => (props.isOwn ? "flex-end" : "flex-start")};
+  background-color: ${(props) => (props.isOwn ? "#DCF8C6" : "#fff")};
   padding: 8px 12px;
   border-radius: 12px;
   position: relative;
@@ -762,7 +859,7 @@ const MessageMeta = styled.div`
   gap: 4px;
   margin-top: 4px;
   font-size: 11px;
-  color: #8696A0;
+  color: #8696a0;
 `;
 
 const MessageTime = styled.span`
@@ -789,11 +886,11 @@ const AttachmentButton = styled.button`
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  
+
   &:hover:not(:disabled) {
     background-color: rgba(0, 0, 0, 0.1);
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -818,11 +915,11 @@ const AttachmentMenuItem = styled.div`
   gap: 12px;
   cursor: pointer;
   transition: background-color 0.2s;
-  
+
   &:hover {
     background-color: #f0f0f0;
   }
-  
+
   span {
     font-size: 20px;
   }
@@ -835,7 +932,7 @@ const MessageInput = styled.input`
   border-radius: 24px;
   outline: none;
   font-size: 14px;
-  
+
   &:disabled {
     background-color: #e0e0e0;
     cursor: not-allowed;
@@ -843,7 +940,7 @@ const MessageInput = styled.input`
 `;
 
 const SendButton = styled.button`
-  background-color: #075E54;
+  background-color: #075e54;
   border: none;
   width: 40px;
   height: 40px;
@@ -853,11 +950,11 @@ const SendButton = styled.button`
   justify-content: center;
   cursor: pointer;
   color: white;
-  
+
   &:hover:not(:disabled) {
-    background-color: #128C7E;
+    background-color: #128c7e;
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -874,28 +971,33 @@ const VoiceButton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  
+
   &:hover:not(:disabled) {
     background-color: rgba(0, 0, 0, 0.1);
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
-const Spinner = styled.div<{ size?: 'small' | 'normal' }>`
-  width: ${props => props.size === 'small' ? '20px' : '40px'};
-  height: ${props => props.size === 'small' ? '20px' : '40px'};
-  border: ${props => props.size === 'small' ? '2px' : '3px'} solid #f3f3f3;
-  border-top: ${props => props.size === 'small' ? '2px' : '3px'} solid #075E54;
+const Spinner = styled.div<{ size?: "small" | "normal" }>`
+  width: ${(props) => (props.size === "small" ? "20px" : "40px")};
+  height: ${(props) => (props.size === "small" ? "20px" : "40px")};
+  border: ${(props) => (props.size === "small" ? "2px" : "3px")} solid #f3f3f3;
+  border-top: ${(props) => (props.size === "small" ? "2px" : "3px")} solid
+    #075e54;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  
+
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 `;
 

@@ -9,12 +9,9 @@ import CreditCardList from "../components/ui/cards/CreditCardList";
 import type { CreditCardField } from "../components/ui/cards/CreditCard";
 import Pagination from "../components/ui/fields/CustomPagination";
 import PageLayout from "../components/ui/Layouts/PageLayout";
-import CustomTitle from "../components/ui/Text/CustomTitle";
-import TitleField from "../components/ui/Layouts/TitleLayout";
 import styled from "styled-components";
 import Tabs from "../components/ui/fields/Tabs";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
-import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import { useNavigate, useParams } from "react-router-dom";
 import useCredit from "../api/hooks/useCredit";
 import {
@@ -33,6 +30,7 @@ import usePayment from "../api/hooks/usePayment";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { useAuth } from "../сontext/AuthContext";
 import PrintOptionModal from "../components/modal/PrintOptionModal";
+import ClientLinkModal from "../components/modal/ClientLinkModal";
 import DocxGenerator from "../utils/doxcUtils/docxGenerator";
 import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import ObjectTypeSelect from "../components/ui/fields/ObjectTypeSelect";
@@ -262,6 +260,7 @@ const CreditPage = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isClientLinkModalOpen, setIsClientLinkModalOpen] = useState(false);
   // Состояние панели фильтров. Если авто-сворачивание ВЫКЛ — фильтр всегда
   // открыт. Если ВКЛ — восстанавливаем сохранённое состояние (по умолчанию
   // свёрнут), чтобы он сворачивался, когда не используется.
@@ -870,6 +869,7 @@ const CreditPage = () => {
     const [_, id] = rowData;
     const credit = displayedCredits.find((c) => c.id === Number(id));
     if (credit) {
+      // Для обратной совместимости устанавливаем selectedCreditForPrint
       setSelectedCreditForPrint(credit);
     }
   };
@@ -910,6 +910,7 @@ const CreditPage = () => {
 
   const handlePrintReceipt = async (paymentId: number) => {
     try {
+      console.log("ПОЧАЛОСЬ");
       await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
       console.log("Чек успешно сгенерирован");
     } catch (error) {
@@ -1372,6 +1373,14 @@ const CreditPage = () => {
     }
   };
 
+  const handleRowClientLink = (rowData: any[]) => {
+    const credit = getRowCredit(rowData);
+    if (credit) {
+      setSelectedCreditForPrint(credit);
+      setIsClientLinkModalOpen(true);
+    }
+  };
+
   const handleRowPrint = (rowData: any[]) => {
     if (selectedRows.length > 1) {
       if (
@@ -1430,6 +1439,11 @@ const CreditPage = () => {
     {
       label: "Поделиться",
       action: handleRowShare,
+      color: "#007d88",
+    },
+    {
+      label: "Ссылка для клиента",
+      action: handleRowClientLink,
       color: "#007d88",
     },
     {
@@ -1746,10 +1760,6 @@ const CreditPage = () => {
         )}
       </FilterIconButton>
 
-      <TitleField>
-        <CustomTitle>Договоры</CustomTitle>
-      </TitleField>
-
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
           onKeyDown={(e) => {
@@ -1984,10 +1994,6 @@ const CreditPage = () => {
             />
           )}
 
-          <TotalControls>
-            <CountInfoTitle total={creditsData?.totalCount || 0} />
-          </TotalControls>
-
           <SelectedCount />
         </SecondRaw>
       </StickyHeader>
@@ -2111,6 +2117,13 @@ const CreditPage = () => {
         onClose={() => setIsShareModalOpen(false)}
         onSelect={handleShareOptionSelect}
         selectedCredit={selectedCreditForPrint}
+      />
+
+      <ClientLinkModal
+        isOpen={isClientLinkModalOpen}
+        clientId={selectedCreditForPrint?.clientId}
+        clientName={selectedCreditForPrint?.clientFullName}
+        onClose={() => setIsClientLinkModalOpen(false)}
       />
 
       <InvestorSelectModal
@@ -2405,12 +2418,6 @@ const SecondRaw = styled.div`
   justify-content: space-between;
   align-items: center;
   position: relative;
-`;
-
-const TotalControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
 `;
 
 const StarIcon = styled.div`

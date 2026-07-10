@@ -41,6 +41,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await apiClient.get<AuthInfo>("/Auth/info");
       setAuthInfo(response.data);
       authStorage.setUserType(response.data.type);
+      // Сохраняем подпись активного аккаунта для переключателя (+ дедуп).
+      authStorage.updateActiveAccountInfo({
+        label: response.data.employee?.fullName,
+        employeeId: response.data.employee?.id,
+        userType: response.data.type,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       setAuthInfo(null);
@@ -110,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const isSuperAdminId = (): boolean => {
     if (!authInfo) return false;
     return (
-      authInfo.employee.id === 1 ||
+      authInfo.employee.id === 1 || // Kirill
       authInfo.employee.id === 4 ||
       authInfo.employee.id === 102 ||
       authInfo.employee.id === 28 // ИЛЬЯ

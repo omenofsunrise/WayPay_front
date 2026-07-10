@@ -5,8 +5,9 @@ import {
   BOT_LOOPS,
   BOT_TEMPLATES,
   BOT_VARIABLE_GROUPS,
+  MESSAGE_SEPARATOR,
   isNestingAllowed,
-  renderBotTemplate,
+  renderBotTemplateMessages,
   validateBotTemplate,
   type BotLoop,
   type BotTemplate,
@@ -63,11 +64,21 @@ interface HighlightToken {
 
 function tokenizeTemplate(template: string): HighlightToken[] {
   const tokens: HighlightToken[] = [];
-  const regex = /\{(\/?)([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
+  // Матчим либо переменную/цикл {...}, либо сепаратор сообщений ---MSG---.
+  const regex = /\{(\/?)([a-zA-Z_][a-zA-Z0-9_]*)\}|---MSG---/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = regex.exec(template)) !== null) {
     if (m.index > last) tokens.push({ text: template.slice(last, m.index) });
+    if (m[0] === MESSAGE_SEPARATOR) {
+      tokens.push({
+        text: m[0],
+        color: "#15803d",
+        bg: "rgba(37, 211, 102, 0.15)",
+      });
+      last = m.index + m[0].length;
+      continue;
+    }
     const isClose = m[1] === "/";
     const name = m[2];
     if (LOOP_TYPE_SET.has(name as LoopType)) {
@@ -148,6 +159,8 @@ const BotResponseConstructor = ({
 
   const insertVariable = (key: string) => insertAtCursor(`{${key}}`);
 
+  const insertSeparator = () => insertAtCursor(`\n${MESSAGE_SEPARATOR}\n`);
+
   const insertLoop = (loop: BotLoop) => {
     const indent = "  ";
     const snippet = `{${loop.type}}\n${indent}\n{/${loop.type}}`;
@@ -181,7 +194,10 @@ const BotResponseConstructor = ({
     [value, cursorPos]
   );
   const issues = useMemo(() => validateBotTemplate(value), [value]);
-  const preview = useMemo(() => renderBotTemplate(value), [value]);
+  const previewMessages = useMemo(
+    () => renderBotTemplateMessages(value),
+    [value]
+  );
   const tokens = useMemo(() => tokenizeTemplate(value), [value]);
   const charCount = value.length;
 
@@ -264,13 +280,25 @@ const BotResponseConstructor = ({
             <CardTitle>
               <Dot $color="#007D88" /> Шаблон ответа
             </CardTitle>
-            <ContextChip $context={cursorContext}>
-              {cursorContext.length === 0
-                ? "Курсор: вне циклов"
-                : `Курсор: ${cursorContext
-                    .map((c) => "{" + c + "}")
-                    .join(" → ")}`}
-            </ContextChip>
+            <HeaderTools>
+              {!isCompanyOnly && (
+                <SeparatorButton
+                  type="button"
+                  onClick={insertSeparator}
+                  disabled={disabled}
+                  title="Вставить разделитель — текст после него уйдёт клиенту отдельным сообщением"
+                >
+                  Новое сообщение
+                </SeparatorButton>
+              )}
+              <ContextChip $context={cursorContext}>
+                {cursorContext.length === 0
+                  ? "Курсор: вне циклов"
+                  : `Курсор: ${cursorContext
+                      .map((c) => "{" + c + "}")
+                      .join(" → ")}`}
+              </ContextChip>
+            </HeaderTools>
           </CardHeader>
 
           <EditorShell $hasIssues={issues.length > 0}>
@@ -338,11 +366,17 @@ const BotResponseConstructor = ({
             <CardTitle>
               <Dot $color="#25D366" /> Предпросмотр сообщения
             </CardTitle>
-            <CardHint>Данные подставлены для демонстрации</CardHint>
+            <CardHint>
+              {previewMessages.length > 1
+                ? `${previewMessages.length} сообщения — так придут клиенту`
+                : "Данные подставлены для демонстрации"}
+            </CardHint>
           </CardHeader>
           <PreviewStage>
-            {preview ? (
-              <PreviewBubble>{preview}</PreviewBubble>
+            {previewMessages.length > 0 ? (
+              previewMessages.map((message, idx) => (
+                <PreviewBubble key={idx}>{message}</PreviewBubble>
+              ))
             ) : (
               <PreviewEmpty>
                 Здесь появится сообщение, которое получит клиент
@@ -634,6 +668,32 @@ const LoopCardBadge = styled.span`
   align-self: flex-start;
 `;
 
+const HeaderTools = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const SeparatorButton = styled.button`
+  background: rgba(37, 211, 102, 0.12);
+  color: #15803d;
+  border: 1px solid rgba(37, 211, 102, 0.4);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: ${(p) => (p.disabled ? "not-allowed" : "pointer")};
+  opacity: ${(p) => (p.disabled ? 0.5 : 1)};
+  transition: all 0.12s ease;
+
+  &:hover:not(:disabled) {
+    background: #25d366;
+    color: white;
+    border-color: #25d366;
+  }
+`;
+
 const ContextChip = styled.span<{ $context: LoopType[] }>`
   font-size: 11px;
   padding: 4px 10px;
@@ -790,6 +850,7 @@ const PreviewStage = styled.div`
   min-height: 100px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
 `;
 
 const PreviewBubble = styled.div`

@@ -41,6 +41,13 @@ export interface CreatePaymentRequest {
   type: "cash" | "card" | "paymentPlace";
 }
 
+// Ответ POST /Payment: платёж + признак последнего платежа по договору
+// (isLast) и id клиента — для запуска окна отзыва о клиенте.
+export interface CreatePaymentResponse extends Payment {
+  isLast?: boolean;
+  clientId?: number;
+}
+
 export interface PaymentResponse extends PaginatedResponse<Payment> {
   totalPayments: number;
   totalIncome: number;

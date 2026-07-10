@@ -1,5 +1,9 @@
 import type { BotEventType } from "../../api/types/whatsapp";
 
+// Сепаратор: текст после него уходит клиенту отдельным сообщением.
+// Должен совпадать с backend-константой MessageSeparator.
+export const MESSAGE_SEPARATOR = "---MSG---";
+
 export interface BotVariable {
   key: string;
   label: string;
@@ -208,6 +212,26 @@ export const BOT_VARIABLE_GROUPS: BotVariableGroup[] = [
         preview: "10 000 ₽",
       },
       {
+        key: "loan_payment_day",
+        label: "День оплаты (число месяца)",
+        preview: "20",
+      },
+      {
+        key: "loan_product_name",
+        label: "Название продукта",
+        preview: "iPhone 15 128GB",
+      },
+      {
+        key: "overdue_days",
+        label: "Дней просрочки",
+        preview: "12",
+      },
+      {
+        key: "overdue_sum",
+        label: "Сумма просрочки",
+        preview: "15 000 ₽",
+      },
+      {
         key: "guarantor_fullname",
         label: "ФИО поручителя",
         preview: "Петров Пётр Петрович",
@@ -401,6 +425,26 @@ export const BOT_VARIABLE_GROUPS: BotVariableGroup[] = [
         preview: "15 000 ₽",
       },
       {
+        key: "current_loan_payment_day",
+        label: "День оплаты (число месяца)",
+        preview: "17",
+      },
+      {
+        key: "current_loan_product_name",
+        label: "Название продукта",
+        preview: "iPhone 15 128GB",
+      },
+      {
+        key: "current_loan_overdue_days",
+        label: "Дней просрочки",
+        preview: "5",
+      },
+      {
+        key: "current_loan_overdue_sum",
+        label: "Сумма просрочки",
+        preview: "7 500 ₽",
+      },
+      {
         key: "current_guarantor_fullname",
         label: "ФИО поручителя",
         preview: "Сидоров С.С.",
@@ -437,34 +481,6 @@ export const BOT_VARIABLE_GROUPS: BotVariableGroup[] = [
       {
         key: "schedule_in_current_loan_comment",
         label: "Номер взноса по графику",
-        preview: "3 из 12",
-      },
-    ],
-  },
-  {
-    title: "Текущий платёж по графику (ивент ComingPayment)",
-    scope: "global",
-    description: "Доступны только когда выбран ивент «Приближающийся платёж»",
-    requiredEvent: "ComingPayment",
-    variables: [
-      {
-        key: "current_schedule_payment_date",
-        label: "Дата платежа по графику",
-        preview: "17.06.2026",
-      },
-      {
-        key: "current_schedule_amount",
-        label: "Сумма платежа",
-        preview: "15 000 ₽",
-      },
-      {
-        key: "current_schedule_rest",
-        label: "Остаток долга",
-        preview: "90 000 ₽",
-      },
-      {
-        key: "current_schedule_comment",
-        label: "Номер взноса",
         preview: "3 из 12",
       },
     ],
@@ -566,6 +582,10 @@ interface SampleLoan extends SimpleRecord {
   term: string;
   start_date: string;
   month_payment: string;
+  loan_payment_day: string;
+  loan_product_name: string;
+  overdue_days: string;
+  overdue_sum: string;
   guarantor_fullname: string;
   guarantor_phone: string;
 }
@@ -612,6 +632,10 @@ const SAMPLE_LOANS: SampleLoan[] = [
     term: "12",
     start_date: "01.02.2024",
     month_payment: "10 000 ₽",
+    loan_payment_day: "20",
+    loan_product_name: "iPhone 15 128GB",
+    overdue_days: "12",
+    overdue_sum: "15 000 ₽",
     guarantor_fullname: "Петров Пётр Петрович",
     guarantor_phone: "+7 (999) 765-43-21",
   },
@@ -624,6 +648,10 @@ const SAMPLE_LOANS: SampleLoan[] = [
     term: "6",
     start_date: "15.04.2024",
     month_payment: "8 333 ₽",
+    loan_payment_day: "15",
+    loan_product_name: 'Samsung TV 55"',
+    overdue_days: "0",
+    overdue_sum: "0 ₽",
     guarantor_fullname: "—",
     guarantor_phone: "—",
   },
@@ -789,6 +817,18 @@ export function renderBotTemplate(template: string): string {
   result = renderScheduleLoop(result);
   result = renderScheduleInCurrentLoanLoop(result);
   return result;
+}
+
+// Рендерит шаблон и разбивает его на отдельные сообщения по сепаратору
+// {@link MESSAGE_SEPARATOR}. Так клиент видит предпросмотр так же, как получит
+// в WhatsApp — несколькими сообщениями. Пустые сегменты отбрасываем.
+export function renderBotTemplateMessages(template: string): string[] {
+  const rendered = renderBotTemplate(template);
+  if (!rendered) return [];
+  return rendered
+    .split(MESSAGE_SEPARATOR)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
 }
 
 export interface TemplateValidationIssue {
