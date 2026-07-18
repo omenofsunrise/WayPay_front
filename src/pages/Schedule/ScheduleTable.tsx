@@ -72,8 +72,8 @@ export const GuarantorWhatsAppIcon = () => (
 
 const columnToApiSortMap: Record<number, string> = {
   0: "creditid",
-  1: "client",
-  2: "amount",
+  1: "clientname",
+  2: "payment",
   3: "date",
 };
 
