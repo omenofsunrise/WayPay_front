@@ -1482,6 +1482,7 @@ const InvestorReportPage = () => {
               : report?.investorIncome || 0
           }
           investorIncome={report?.investorPaymentIncome || 0}
+          selfIncome={report?.selfPaymentIncome || 0}
           isCompany={report?.isCompany || false}
         />
 

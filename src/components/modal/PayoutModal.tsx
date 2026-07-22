@@ -18,6 +18,7 @@ interface PayoutModalProps {
   poolSelfIncome?: number | null;
   expectedIncome?: number | null;
   investorIncome?: number | null;
+  selfIncome?: number | null;
   payoutSource: PayoutSource;
   onPayoutSourceChange?: (source: PayoutSource) => void;
   investment?: number | null;
@@ -38,6 +39,7 @@ const PayoutModal = ({
   poolSelfIncome,
   expectedIncome,
   investorIncome,
+  selfIncome,
   investment,
   firstContribution,
   payoutSource,
@@ -289,7 +291,7 @@ const PayoutModal = ({
                 <IncomeItem>
                   <IncomeLabel>Собственный доход:</IncomeLabel>
                   <IncomeValue>
-                    {formatMoney((currentIncome ?? 0).toString())}
+                    {formatMoney((selfIncome ?? 0).toString())}
                   </IncomeValue>
                 </IncomeItem>
                 <IncomeItem>
