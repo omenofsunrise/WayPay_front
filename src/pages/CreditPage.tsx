@@ -129,12 +129,6 @@ interface EmptyStarIconProps {
   isSelected?: boolean;
 }
 
-interface SetCategoryActionProps {
-  creditId: number;
-  onCategorySet: () => void;
-  customTabs: ObjectType[];
-}
-
 const CreditPage = () => {
   const colors = {
     primary: "#007D88",
@@ -230,6 +224,9 @@ const CreditPage = () => {
   const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
   const [customTabs, setCustomTabs] = useState<ObjectType[]>([]);
+  // Папки-категории (entityType "credit") — те же, что в фильтре «Папка».
+  // Нужны, чтобы переносить договор не только в кастомные вкладки.
+  const [creditFolders, setCreditFolders] = useState<ObjectType[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [isPageSizeReady, setIsPageSizeReady] = useState(false);
   const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
@@ -316,6 +313,7 @@ const CreditPage = () => {
 
   useEffect(() => {
     loadCustomTabs();
+    loadCreditFolders();
   }, []);
 
   const handleMultiSelectChange = useCallback((selectedIndices: number[]) => {
@@ -432,35 +430,36 @@ const CreditPage = () => {
     [generateShareMessage, selectedCreditForPrint]
   );
 
-  const getCategoryMenuItems = ({
-    creditId,
-    onCategorySet,
-    customTabs,
-  }: SetCategoryActionProps): ContextMenuItem[] => {
-    const handleSetCategory = async (objectTypeId: number | null) => {
+  // Универсальное подменю переноса: один список назначений (вкладки ИЛИ папки).
+  // Перенос и туда, и туда идёт через одно поле категории договора (set-category).
+  const getMoveMenuItems = (
+    creditId: number,
+    onDone: () => void,
+    targets: ObjectType[],
+    emptyHint: string
+  ): ContextMenuItem[] => {
+    const handleSet = async (objectTypeId: number | null) => {
       try {
         await creditService.setCreditType(creditId, objectTypeId);
-        onCategorySet();
+        onDone();
       } catch (error) {
-        console.error("Ошибка при установке категории:", error);
-        alert("Произошла ошибка при установке категории");
+        console.error("Ошибка при переносе договора:", error);
+        alert("Произошла ошибка при переносе договора");
       }
     };
 
-    const categoryItems: ContextMenuItem[] = [
-      {
-        label: "Без категории",
-        action: () => handleSetCategory(null),
-        color: "#666",
-      },
-      ...customTabs.map((tab) => ({
-        label: tab.name,
-        action: () => handleSetCategory(tab.id),
+    if (targets.length === 0) {
+      return [{ label: emptyHint, color: "#999", disabled: true }];
+    }
+
+    return [
+      { label: "Убрать", action: () => handleSet(null), color: "#666" },
+      ...targets.map((t) => ({
+        label: t.name,
+        action: () => handleSet(t.id),
         color: "#007d88",
       })),
     ];
-
-    return categoryItems;
   };
 
   const loadCustomTabs = useCallback(async () => {
@@ -469,6 +468,16 @@ const CreditPage = () => {
     });
     if (result) {
       setCustomTabs(result.items);
+    }
+  }, [getAllObjectTypes]);
+
+  const loadCreditFolders = useCallback(async () => {
+    const result = await getAllObjectTypes({
+      entityType: "credit",
+      pageSize: 100,
+    });
+    if (result) {
+      setCreditFolders(result.items);
     }
   }, [getAllObjectTypes]);
 
@@ -1461,21 +1470,38 @@ const CreditPage = () => {
         denyPermission("MANAGE_ACCOUNTING", true),
     },
     {
-      label: "Установить категорию",
+      label: "Перенести в категорию",
       action: (rowData: any[]) => {
-        console.log("Установка категории для:", rowData);
+        console.log("Перенос в категорию для:", rowData);
       },
       color: "#007d88",
-      shouldShow: (rowData: any[]) => customTabs.length > 0,
       getSubmenu: (rowData: any[]) => {
         const [_, id] = rowData;
         const creditId = Number(id);
-
-        return getCategoryMenuItems({
+        return getMoveMenuItems(
           creditId,
-          onCategorySet: loadCredits,
+          loadCredits,
           customTabs,
-        });
+          "Сначала создайте категорию (вкладку сверху)"
+        );
+      },
+      showOnHover: true,
+    },
+    {
+      label: "Перенести в папку",
+      action: (rowData: any[]) => {
+        console.log("Перенос в папку для:", rowData);
+      },
+      color: "#007d88",
+      getSubmenu: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const creditId = Number(id);
+        return getMoveMenuItems(
+          creditId,
+          loadCredits,
+          creditFolders,
+          "Папок пока нет"
+        );
       },
       showOnHover: true,
     },
