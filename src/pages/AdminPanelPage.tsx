@@ -16,7 +16,11 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import CustomInput from "../components/ui/fields/CustomInput";
 import { formatDate } from "../utils/dateFormatter";
-import { formatPhoneHref } from "../utils/phoneUtils";
+import {
+  formatPhoneHref,
+  formatPhoneForSearch,
+  maskSearchPhone,
+} from "../utils/phoneUtils";
 import PhoneLink from "../components/ui/links/PhoneLink";
 import CustomPhoneInput from "../components/ui/fields/PhoneInput";
 import Pagination from "../components/ui/fields/CustomPagination";
@@ -622,7 +626,9 @@ const AdminPanelPage = () => {
   }, [salesMode]);
 
   const handleSearchChange = (value: string) => {
-    setNameFilter(value);
+    // телефоноподобный ввод форматируем в "8 (XXX) XXX-XX-XX" на лету,
+    // текст с буквами (название) оставляем как есть
+    setNameFilter(maskSearchPhone(value));
     setCurrentPage(1);
   };
 
@@ -699,7 +705,8 @@ const AdminPanelPage = () => {
         partners: isPartner,
         page: currentPage,
         pageSize,
-        search: nameFilter,
+        // телефон приводим к формату базы "8 (XXX) XXX-XX-XX", остальное шлём как есть
+        search: formatPhoneForSearch(nameFilter),
       });
     },
     [getAllCompanies, currentPage, nameFilter]

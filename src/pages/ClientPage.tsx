@@ -261,11 +261,15 @@ const ClientPage = () => {
   };
 
   const loadClients = useCallback(async () => {
+    // обрезаем пробелы по краям, чтобы поиск находил при вводе с хвостовыми пробелами
+    const trimmedName = nameFilter.trim();
+    const trimmedPhone = phoneFilter.trim();
+
     const shouldSearch =
       searchTriggered &&
-      (nameFilter.length >= 5 ||
-        (phoneFilter.replace(/\D/g, "").length >= 11 &&
-          phoneFilter.replace(/\D/g, "").length <= 15));
+      (trimmedName.length >= 5 ||
+        (trimmedPhone.replace(/\D/g, "").length >= 11 &&
+          trimmedPhone.replace(/\D/g, "").length <= 15));
 
     if (!shouldSearch && searchTriggered) {
       return;
@@ -274,8 +278,8 @@ const ClientPage = () => {
     const params: any = {
       page: 1,
       pageSize: 1000,
-      FullName: nameFilter || undefined,
-      Phone: phoneFilter || undefined,
+      FullName: trimmedName || undefined,
+      Phone: trimmedPhone || undefined,
     };
 
     if (sortConfig.key !== null) {
@@ -570,8 +574,8 @@ const ClientPage = () => {
                 onClick={handleSearch}
                 disabled={
                   !(
-                    nameFilter.length >= 5 ||
-                    phoneFilter.replace(/\D/g, "").length >= 11
+                    nameFilter.trim().length >= 5 ||
+                    phoneFilter.trim().replace(/\D/g, "").length >= 11
                   )
                 }
               >
