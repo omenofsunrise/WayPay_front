@@ -125,8 +125,12 @@ const usePayment = () => {
       await paymentService.deletePayment(id);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      return false;
+      const message =
+        err instanceof Error ? err.message : "Не удалось удалить платёж";
+      setError(message);
+      // Пробрасываем, чтобы вызывающий код не убирал платёж из списка
+      // и показал пользователю реальную причину отказа.
+      throw err instanceof Error ? err : new Error(message);
     } finally {
       setIsLoading(false);
     }

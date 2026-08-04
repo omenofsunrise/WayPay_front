@@ -78,9 +78,10 @@ const ReceptionPage = () => {
     if (!window.confirm("Удалить добавленный платёж?")) return;
     try {
       await deletePayment(payment.id);
+      // Убираем из списка только после подтверждённого удаления на бэке.
       setAddedPayments((prev) => prev.filter((p) => p.id !== payment.id));
-    } catch {
-      // ошибка уже записана в error хука
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Не удалось удалить платёж");
     }
   };
 

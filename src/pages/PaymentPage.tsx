@@ -473,6 +473,7 @@ const PaymentPage = () => {
         loadPayments();
       } catch (err) {
         console.error("Ошибка при удалении платежа:", err);
+        alert(err instanceof Error ? err.message : "Не удалось удалить платёж");
       }
     }
   };
