@@ -1,16 +1,16 @@
-import { useState, useCallback, useEffect } from 'react';
-import BaseModal from '../BASE/modalCRUBase';
-import CustomInput from '../../ui/fields/CustomInput';
-import DarkCyanButton from '../../ui/Buttons/DarkCyanButton';
-import useClients from '../../../api/hooks/useClient';
-import Pagination from '../../ui/fields/CustomPagination';
-import styled from 'styled-components';
-import { formatDate } from '../../../utils/dateFormatter';
-import ClientModal from './ClientModal';
-import { useAuth } from '../../../сontext/AuthContext';
-import type { Client } from '../../../api/types/client';
-import PhoneModalInput from '../../ui/fields/PhoneModalInput';
-import ClientCard from '../../ui/cards/ClientCard';
+import { useState, useCallback, useEffect } from "react";
+import BaseModal from "../BASE/modalCRUBase";
+import CustomInput from "../../ui/fields/CustomInput";
+import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
+import useClients from "../../../api/hooks/useClient";
+import Pagination from "../../ui/fields/CustomPagination";
+import styled from "styled-components";
+import { formatDate } from "../../../utils/dateFormatter";
+import ClientModal from "./ClientModal";
+import { useAuth } from "../../../сontext/AuthContext";
+import type { Client } from "../../../api/types/client";
+import PhoneModalInput from "../../ui/fields/PhoneModalInput";
+import ClientCard from "../../ui/cards/ClientCard";
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -31,13 +31,13 @@ const ClientSelectModal = ({
   createTitle,
   namePlaceholder,
 }: ClientSelectModalProps) => {
-  const [nameFilter, setNameFilter] = useState('');
-  const [phoneFilter, setPhoneFilter] = useState('');
+  const [nameFilter, setNameFilter] = useState("");
+  const [phoneFilter, setPhoneFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
-    direction: 'asc' | 'desc';
-  }>({ key: null, direction: 'asc' });
+    direction: "asc" | "desc";
+  }>({ key: null, direction: "asc" });
   const [selectedClient, setSelectedClient] = useState<{
     id: number;
     fullName: string;
@@ -47,26 +47,28 @@ const ClientSelectModal = ({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTriggered, setSearchTriggered] = useState(false);
   const pageSize = 5;
-  
+
   const columnToApiSortMap: Record<number, string> = {
-    0: 'id',
-    1: 'fullName',
-    3: 'birthdate'
+    0: "id",
+    1: "fullName",
+    3: "birthdate",
   };
-  
-  const { 
-    isLoading, 
-    error, 
-    data: clientsData, 
+
+  const {
+    isLoading,
+    error,
+    data: clientsData,
     getClients,
-    createClient
+    createClient,
   } = useClients();
-  
+
   const loadClients = useCallback(async () => {
-    const shouldSearch = searchTriggered && (
-      nameFilter.length >= 5 || 
-      (phoneFilter.replace(/\D/g, '').length >= 11 && phoneFilter.replace(/\D/g, '').length <= 15)
-    );
+    const trimmedName = nameFilter.trim();
+    const shouldSearch =
+      searchTriggered &&
+      (trimmedName.length >= 5 ||
+        (phoneFilter.replace(/\D/g, "").length >= 11 &&
+          phoneFilter.replace(/\D/g, "").length <= 15));
 
     if (!shouldSearch && searchTriggered) {
       return;
@@ -75,8 +77,8 @@ const ClientSelectModal = ({
     const params: any = {
       page: currentPage,
       pageSize,
-      FullName: nameFilter || undefined,
-      Phone: phoneFilter || undefined
+      FullName: trimmedName || undefined,
+      Phone: phoneFilter || undefined,
     };
 
     if (sortConfig.key !== null) {
@@ -85,8 +87,15 @@ const ClientSelectModal = ({
     }
 
     await getClients(params);
-  }, [currentPage, nameFilter, phoneFilter, sortConfig, getClients, searchTriggered]);
-  
+  }, [
+    currentPage,
+    nameFilter,
+    phoneFilter,
+    sortConfig,
+    getClients,
+    searchTriggered,
+  ]);
+
   useEffect(() => {
     if (isOpen) {
       if (searchTriggered) {
@@ -98,7 +107,7 @@ const ClientSelectModal = ({
 
   // Сброс фильтров при очистке полей
   useEffect(() => {
-    if (nameFilter === '' && phoneFilter === '' && searchTriggered) {
+    if (nameFilter === "" && phoneFilter === "" && searchTriggered) {
       setSearchTriggered(false);
       setCurrentPage(1);
     }
@@ -121,24 +130,24 @@ const ClientSelectModal = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSearch();
     }
   };
 
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
-    
-    setSortConfig(prev => {
+
+    setSortConfig((prev) => {
       if (prev.key === columnIndex) {
         return {
           key: columnIndex,
-          direction: prev.direction === 'asc' ? 'desc' : 'asc'
+          direction: prev.direction === "asc" ? "desc" : "asc",
         };
       }
       return {
         key: columnIndex,
-        direction: 'asc'
+        direction: "asc",
       };
     });
   };
@@ -147,7 +156,7 @@ const ClientSelectModal = ({
     setSelectedClient({
       id: client.id,
       fullName: client.fullName,
-      phone: client.phone
+      phone: client.phone,
     });
   };
 
@@ -161,8 +170,8 @@ const ClientSelectModal = ({
 
   const parseDateString = (dateStr: string): Date | null => {
     if (!dateStr) return null;
-    
-    const [day, month, year] = dateStr.split('.').map(Number);
+
+    const [day, month, year] = dateStr.split(".").map(Number);
     return new Date(year, month - 1, day);
   };
 
@@ -176,21 +185,25 @@ const ClientSelectModal = ({
       await createClient({
         fullName: clientData.fullName,
         phone: clientData.phone,
-        birthdate: clientData.birthdate ? parseDateString(clientData.birthdate) : null,
+        birthdate: clientData.birthdate
+          ? parseDateString(clientData.birthdate)
+          : null,
         doc: clientData.doc || undefined,
-        docIssueDate: clientData.docIssueDate ? parseDateString(clientData.docIssueDate) : undefined,
+        docIssueDate: clientData.docIssueDate
+          ? parseDateString(clientData.docIssueDate)
+          : undefined,
         docIssueYear: clientData.docIssueYear || 0,
-        registrationAddress: clientData.registrationAddress || '',
-        secondPhone: clientData.secondPhone || '',
+        registrationAddress: clientData.registrationAddress || "",
+        secondPhone: clientData.secondPhone || "",
         creditIds: null,
-        creditRestTerms: null
+        creditRestTerms: null,
       });
-      
+
       loadClients();
       setIsCreateModalOpen(false);
       return true;
     } catch (error) {
-      console.error('Error creating client:', error);
+      console.error("Error creating client:", error);
       return false;
     }
   };
@@ -200,7 +213,7 @@ const ClientSelectModal = ({
     fullName: client.fullName,
     phone: client.phone,
     secondPhone: client.secondPhone || null,
-    doc: client.doc || '',
+    doc: client.doc || "",
     birthdate: client.birthdate ? new Date(client.birthdate) : null,
     docIssueDate: client.docIssueDate ? new Date(client.docIssueDate) : null,
     docIssueYear: client.docIssueYear || null,
@@ -209,7 +222,7 @@ const ClientSelectModal = ({
     creditRestTerms: client.creditRestTerms || null,
     hasPassportPhoto: client.hasPassportPhoto || null,
     blacklist: client.blacklist || false,
-    guarantors: client.guarantors || null
+    guarantors: client.guarantors || null,
   });
 
   if (!isOpen) return null;
@@ -227,7 +240,7 @@ const ClientSelectModal = ({
       >
         <ModalContent>
           <FilterContainer>
-            <CustomInput 
+            <CustomInput
               style={{ maxWidth: "none" }}
               inputType="fullname"
               placeholder="Поиск по ФИО (минимум 5 символов)"
@@ -235,49 +248,59 @@ const ClientSelectModal = ({
               onChange={(e) => handleFilterChange(e.target.value)}
               onKeyPress={handleKeyPress}
             />
-            <PhoneModalInput 
+            <PhoneModalInput
               placeholder="Телефон (полный номер)"
               value={phoneFilter}
               onChange={(e) => handlePhoneFilterChange(e.target.value)}
               onKeyPress={handleKeyPress}
               name="phone"
             />
-            <DarkCyanButton 
-              style={{ marginLeft: '16px', width: "auto" }}
+            <DarkCyanButton
+              style={{ marginLeft: "16px", width: "auto" }}
               onClick={handleSearch}
-              disabled={!(nameFilter.length >= 5 || phoneFilter.replace(/\D/g, '').length >= 11)}
+              disabled={
+                !(
+                  nameFilter.trim().length >= 5 ||
+                  phoneFilter.replace(/\D/g, "").length >= 11
+                )
+              }
             >
               Поиск
             </DarkCyanButton>
-            <DarkCyanButton 
-              style={{ marginLeft: '16px', width: "auto" }}
+            <DarkCyanButton
+              style={{ marginLeft: "16px", width: "auto" }}
               onClick={handleCreateClient}
             >
               + Добавить
             </DarkCyanButton>
           </FilterContainer>
-          
+
           {isLoading && <LoadingMessage>Загрузка клиентов...</LoadingMessage>}
           {error && <ErrorMessage>Ошибка загрузки: {error}</ErrorMessage>}
-          
+
           {!isLoading && !error && (
             <>
               {!searchTriggered ? (
                 <SearchPrompt>
                   <SearchIcon>🔍</SearchIcon>
                   <SearchText>Введите данные для поиска клиента</SearchText>
-                  <SearchHint>Для поиска введите минимум 5 символов в поле ФИО или полный номер телефона</SearchHint>
+                  <SearchHint>
+                    Для поиска введите минимум 5 символов в поле ФИО или полный
+                    номер телефона
+                  </SearchHint>
                 </SearchPrompt>
               ) : (
                 <>
                   <CardsContainer>
                     {clientsData?.items?.map((client: any) => (
-                      <ClientCardWrapper 
-                        key={client.id} 
+                      <ClientCardWrapper
+                        key={client.id}
                         $isSelected={selectedClient?.id === client.id}
-                        onClick={() => handleClientCardClick(transformClientData(client))}
+                        onClick={() =>
+                          handleClientCardClick(transformClientData(client))
+                        }
                       >
-                        <ClientCard 
+                        <ClientCard
                           client={transformClientData(client)}
                           onEdit={() => {}}
                           onDelete={() => {}}
@@ -302,18 +325,19 @@ const ClientSelectModal = ({
         onSubmit={handleSubmitNewClient}
         createTitle={createTitle}
         namePlaceholder={namePlaceholder}
-        initialData={ 
+        initialData={
           creatingClient || {
-                    id: 0,
-                    fullName: '',
-                    phone: '',
-                    secondPhone: '',
-                    doc: '',
-                    birthdate: null,
-                    docIssueDate: null,
-                    docIssueYear: 0,
-                    registrationAddress: ''
-                }}
+            id: 0,
+            fullName: "",
+            phone: "",
+            secondPhone: "",
+            doc: "",
+            birthdate: null,
+            docIssueDate: null,
+            docIssueYear: 0,
+            registrationAddress: "",
+          }
+        }
       />
     </>
   );
@@ -341,20 +365,21 @@ const ClientCardWrapper = styled.div<{ $isSelected: boolean }>`
   margin-bottom: 10px;
   margin-top: 10px;
   cursor: pointer;
-  
+
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    border: 2px solid ${props => props.$isSelected ? '#007D88' : 'transparent'};
+    border: 2px solid
+      ${(props) => (props.$isSelected ? "#007D88" : "transparent")};
     border-radius: 12px;
     pointer-events: none;
     z-index: 1;
   }
-  
+
   &:hover {
     transform: translateY(-2px);
     transition: transform 0.2s;
