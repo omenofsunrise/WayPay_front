@@ -7,7 +7,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from "../api/types/investor";
 import useInvestor from "../api/hooks/useInvestor";
-import { formatDate } from "../utils/dateFormatter";
+import { formatDate, formatExactDate } from "../utils/dateFormatter";
 import { formatPhoneHref } from "../utils/phoneUtils";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
 import PhoneLink from "../components/ui/links/PhoneLink";
@@ -848,7 +848,7 @@ const InvestorsPoolPage = () => {
   const contributionsTableData =
     (filteredContributions?.items || contributionsData?.items || []).map(
       (contribution: InvestorContribution) => [
-        formatDate(contribution.date.toString()),
+        formatExactDate(new Date(contribution.date)),
         contribution.investorNickname || "-",
         formatMoney(contribution.amount.toString()),
         contribution.confirmed ? (
@@ -1417,7 +1417,7 @@ const InvestorsPoolPage = () => {
 
     return items.map((reinvestment: Reinvestment) => [
       reinvestment.id.toString(),
-      formatDate(reinvestment.date.toString()),
+      formatExactDate(new Date(reinvestment.date)),
       reinvestment.investorNickname,
       formatMoney(reinvestment.amount.toString()),
     ]);
@@ -1837,7 +1837,7 @@ const InvestorsPoolPage = () => {
             <CustomTable
               columns={[
                 { name: "ID", isSortable: true },
-                { name: "Дата реинвестиции", isSortable: true },
+                { name: "Дата и время реинвестиции", isSortable: true },
                 { name: "Инвестор", align: "left" },
                 { name: "Сумма", align: "right", isSortable: true },
               ]}
@@ -1956,7 +1956,7 @@ const InvestorsPoolPage = () => {
           <>
             <CustomTable
               columns={[
-                { name: "Дата", isSortable: true },
+                { name: "Дата и время", isSortable: true },
                 { name: "Инвестор", align: "left" },
                 { name: "Сумма", align: "right" },
                 { name: "Действия", align: "center" },
