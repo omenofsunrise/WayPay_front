@@ -490,6 +490,17 @@ const CalculatorModal = ({ onClose }: CalculatorModalProps) => {
         ...prev,
         [name]: decimalValue,
       }));
+    } else if (name === "round") {
+      const numericValue = value.replace(/\D/g, "");
+      setFormData((prev) => ({
+        ...prev,
+        round: numericValue,
+      }));
+      setSettings((prev) => {
+        const next = { ...prev, round: numericValue };
+        saveCalculatorSettings(next);
+        return next;
+      });
     } else {
       setFormData((prev) => ({
         ...prev,
