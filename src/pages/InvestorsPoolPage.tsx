@@ -7,7 +7,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from "../api/types/investor";
 import useInvestor from "../api/hooks/useInvestor";
-import { formatDate } from "../utils/dateFormatter";
+import { formatDate, formatExactDate } from "../utils/dateFormatter";
 import { formatPhoneHref } from "../utils/phoneUtils";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
 import PhoneLink from "../components/ui/links/PhoneLink";
@@ -848,7 +848,7 @@ const InvestorsPoolPage = () => {
   const contributionsTableData =
     (filteredContributions?.items || contributionsData?.items || []).map(
       (contribution: InvestorContribution) => [
-        formatDate(contribution.date.toString()),
+        formatExactDate(new Date(contribution.date)),
         contribution.investorNickname || "-",
         formatMoney(contribution.amount.toString()),
         contribution.confirmed ? (
@@ -1417,7 +1417,7 @@ const InvestorsPoolPage = () => {
 
     return items.map((reinvestment: Reinvestment) => [
       reinvestment.id.toString(),
-      formatDate(reinvestment.date.toString()),
+      formatExactDate(new Date(reinvestment.date)),
       reinvestment.investorNickname,
       formatMoney(reinvestment.amount.toString()),
     ]);
@@ -1478,14 +1478,25 @@ const InvestorsPoolPage = () => {
   );
 
   const investorCreditsTableData = (() => {
+    let totalExpectedIncome = 0;
+
     const rows =
       investorCreditsData?.items.map((credit: Credit, index: number) => {
+        // Используем долю, зафиксированную на дату оформления договора.
+        // Если бэкенд вернул историческое значение — берём его,
+        // иначе fallback на текущую долю инвестора.
+        const pieInPoolForCredit =
+          credit.investorPieInPool !== undefined &&
+          credit.investorPieInPool !== null
+            ? credit.investorPieInPool
+            : selectedInvestorForCredits?.pieInPool || 0;
+
         const expectedIncome =
-          (((credit.defferedIncome *
-            (selectedInvestorForCredits?.pieInPool || 0)) /
-            100) *
+          (((credit.defferedIncome * pieInPoolForCredit) / 100) *
             (selectedInvestorForCredits?.investorPie || 0)) /
           100;
+
+        totalExpectedIncome += expectedIncome;
 
         const row: ReactNode[] = [
           credit.id,
@@ -1512,21 +1523,13 @@ const InvestorsPoolPage = () => {
       }) || [];
 
     if (rows.length > 0) {
-      // Добавляем строку "Итого"
+      // Итого считается как сумма по историческим долям каждого договора
       const totalRow: ReactNode[] = [
         "",
         "",
         "",
         "Итого:",
-        formatMoney(
-          (
-            (((investorCreditsData.totalDefferedIncome *
-              (selectedInvestorForCredits?.pieInPool || 0)) /
-              100) *
-              (selectedInvestorForCredits?.investorPie || 0)) /
-            100
-          ).toString()
-        ),
+        formatMoney(totalExpectedIncome.toString()),
       ];
 
       if (showOwnCashExpectedIncome) {
@@ -1837,7 +1840,7 @@ const InvestorsPoolPage = () => {
             <CustomTable
               columns={[
                 { name: "ID", isSortable: true },
-                { name: "Дата реинвестиции", isSortable: true },
+                { name: "Дата и время реинвестиции", isSortable: true },
                 { name: "Инвестор", align: "left" },
                 { name: "Сумма", align: "right", isSortable: true },
               ]}
@@ -1956,7 +1959,7 @@ const InvestorsPoolPage = () => {
           <>
             <CustomTable
               columns={[
-                { name: "Дата", isSortable: true },
+                { name: "Дата и время", isSortable: true },
                 { name: "Инвестор", align: "left" },
                 { name: "Сумма", align: "right" },
                 { name: "Действия", align: "center" },
