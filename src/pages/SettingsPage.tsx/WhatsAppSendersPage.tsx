@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { useNavigate } from "react-router-dom";
+import PageLayout from "../../components/ui/Layouts/PageLayout";
+import TitleField from "../../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import GrayButton from "../../components/ui/Buttons/GrayButton";
+import BackButtonComponent from "../../components/ui/Buttons/BackButton";
+import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import useWhatsAppSender from "../../api/hooks/useWhatsAppSender";
 import whatsappService from "../../api/services/whatsappService";
@@ -15,15 +19,66 @@ import type {
 import BotResponseConstructor from "./BotResponseConstructor";
 import SenderReportModal from "./SenderReportModal";
 
-// Описание, за сколько дней до платежа уходит рассылка.
+// ─── Animations ───────────────────────────────────────────────────────────────
+
+const slideIn = keyframes`
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+`;
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 12px 18px;
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  animation: ${slideIn} 0.3s ease-out;
+  min-width: 280px;
+  max-width: 400px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+`;
+
+const ConfirmText = styled.p`
+  padding: 16px 28px;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.55;
+  margin: 0;
+`;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const describeDays = (eventDays: number): string =>
   eventDays > 0 ? `За ${eventDays} дн. до платежа` : "В день платежа";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface EditState {
   isOpen: boolean;
   editing: WhatsAppSender | null;
   eventDays: string;
-  pattern: string; // текст рассылки (шаблон из конструктора)
+  pattern: string;
   saving: boolean;
 }
 
@@ -42,6 +97,8 @@ interface BotsState {
   saving: boolean;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const WhatsAppSendersPage: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -58,7 +115,6 @@ const WhatsAppSendersPage: React.FC = () => {
   const [edit, setEdit] = useState<EditState>(emptyEdit);
   const [reportOpen, setReportOpen] = useState(false);
 
-  // Боты по каналам — для назначения на рассылку.
   const [channels, setChannels] = useState<ChannelResponse[]>([]);
   const [botsByChannel, setBotsByChannel] = useState<
     Record<string, BotResponse[]>
@@ -69,6 +125,53 @@ const WhatsAppSendersPage: React.FC = () => {
     selected: new Set(),
     saving: false,
   });
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
+
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", msg: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message: msg }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
+
+  const openConfirm = (msg: string, onConfirm: () => void) =>
+    setConfirmState({
+      isOpen: true,
+      message: msg,
+      onConfirm,
+      isSubmitting: false,
+    });
+
+  const closeConfirm = () =>
+    setConfirmState((prev) => ({
+      ...prev,
+      isOpen: false,
+      isSubmitting: false,
+    }));
+
+  const handleConfirm = async () => {
+    setConfirmState((prev) => ({ ...prev, isSubmitting: true }));
+    try {
+      await confirmState.onConfirm();
+    } finally {
+      closeConfirm();
+    }
+  };
 
   useEffect(() => {
     loadSenders();
@@ -91,7 +194,8 @@ const WhatsAppSendersPage: React.FC = () => {
     setBotsByChannel(map);
   }, []);
 
-  // === CRUD ===
+  // ── CRUD ──────────────────────────────────────────────────────────────────
+
   const openCreate = () => setEdit({ ...emptyEdit, isOpen: true });
 
   const openEdit = (sender: WhatsAppSender) =>
@@ -103,9 +207,10 @@ const WhatsAppSendersPage: React.FC = () => {
       saving: false,
     });
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!edit.pattern.trim()) {
-      alert("Введите текст рассылки");
+      addToast("warning", "Введите текст рассылки");
       return;
     }
     const body: UpsertWhatsAppSenderRequest = {
@@ -113,29 +218,37 @@ const WhatsAppSendersPage: React.FC = () => {
       eventDays: Number(edit.eventDays) || 0,
       pattern: edit.pattern,
     };
-
     setEdit((p) => ({ ...p, saving: true }));
     const ok = edit.editing
       ? await updateSender(edit.editing.id, body)
       : await createSender(body);
     setEdit((p) => ({ ...p, saving: false }));
-
     if (ok) {
       setEdit(emptyEdit);
       await loadSenders();
+      addToast(
+        "success",
+        edit.editing ? "Рассылка обновлена" : "Рассылка создана"
+      );
     } else {
-      alert("Не удалось сохранить рассылку");
+      addToast("error", "Не удалось сохранить рассылку");
     }
   };
 
-  const handleDelete = async (sender: WhatsAppSender) => {
-    if (!window.confirm(`Удалить рассылку #${sender.id}?`)) return;
-    const ok = await deleteSender(sender.id);
-    if (ok) await loadSenders();
-    else alert("Не удалось удалить рассылку");
+  const handleDelete = (sender: WhatsAppSender) => {
+    openConfirm(`Удалить рассылку #${sender.id}?`, async () => {
+      const ok = await deleteSender(sender.id);
+      if (ok) {
+        await loadSenders();
+        addToast("success", "Рассылка удалена");
+      } else {
+        addToast("error", "Не удалось удалить рассылку");
+      }
+    });
   };
 
-  // === Назначение ботов ===
+  // ── Боты ──────────────────────────────────────────────────────────────────
+
   const openBots = async (sender: WhatsAppSender) => {
     setBotsState({ isOpen: true, sender, selected: new Set(), saving: false });
     if (channels.length === 0) await loadAllBots();
@@ -149,7 +262,8 @@ const WhatsAppSendersPage: React.FC = () => {
       return { ...p, selected: next };
     });
 
-  const handleSaveBots = async () => {
+  const handleSaveBots = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!botsState.sender) return;
     setBotsState((p) => ({ ...p, saving: true }));
     const ok = await setSenderBots(
@@ -164,9 +278,9 @@ const WhatsAppSendersPage: React.FC = () => {
         selected: new Set(),
         saving: false,
       });
-      alert("Боты назначены");
+      addToast("success", "Боты успешно назначены");
     } else {
-      alert("Не удалось назначить ботов");
+      addToast("error", "Не удалось назначить ботов");
     }
   };
 
@@ -178,27 +292,38 @@ const WhatsAppSendersPage: React.FC = () => {
       saving: false,
     });
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
-    <Container>
-      <Header>
-        <BackButton onClick={() => navigate(-1)}>← Назад</BackButton>
-        <Title>Рассылки</Title>
-        <Actions>
+    <PageLayout>
+      <TitleField style={{ marginTop: 0 }}>
+        <BackButtonComponent
+          style={{ margin: 0, marginRight: 12 }}
+          onClick={() => navigate(-1)}
+        >
+          Назад
+        </BackButtonComponent>
+        <CustomTitle style={{ margin: 0 }}>Рассылки</CustomTitle>
+        <HeaderRight>
           <GrayButton onClick={() => setReportOpen(true)}>Отчёты</GrayButton>
           <DarkCyanButton onClick={openCreate}>+ Новая рассылка</DarkCyanButton>
-        </Actions>
-      </Header>
+        </HeaderRight>
+      </TitleField>
 
       {error && <ErrorBanner>{error}</ErrorBanner>}
 
       {isLoading && senders.length === 0 ? (
-        <Muted>Загрузка…</Muted>
+        <MutedCenter>Загрузка…</MutedCenter>
       ) : senders.length === 0 ? (
         <EmptyState>
+          <EmptyIcon>📨</EmptyIcon>
           <EmptyTitle>Нет рассылок</EmptyTitle>
-          <EmptyText>
+          <EmptyDescription>
             Создайте первую рассылку и назначьте на неё ботов
-          </EmptyText>
+          </EmptyDescription>
+          <DarkCyanButton onClick={openCreate}>
+            + Создать рассылку
+          </DarkCyanButton>
         </EmptyState>
       ) : (
         <Grid>
@@ -227,20 +352,21 @@ const WhatsAppSendersPage: React.FC = () => {
         </Grid>
       )}
 
-      {/* Создание / редактирование */}
+      {/* ── Создание / редактирование ── */}
       {edit.isOpen && (
-        <Overlay onClick={() => !edit.saving && setEdit(emptyEdit)}>
-          <WideModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>
-                {edit.editing ? "Редактировать рассылку" : "Новая рассылка"}
-              </ModalTitle>
-              <Close onClick={() => !edit.saving && setEdit(emptyEdit)}>
-                ✖
-              </Close>
-            </ModalHeader>
-
-            <Field>
+        <BaseModal
+          title={edit.editing ? "Редактировать рассылку" : "Новая рассылка"}
+          onClose={() => !edit.saving && setEdit(emptyEdit)}
+          onCancel={() => !edit.saving && setEdit(emptyEdit)}
+          onSave={handleSave}
+          isSubmitting={edit.saving}
+          isSaveDisabled={edit.saving || !edit.pattern.trim()}
+          saveButtonText={edit.saving ? "Сохранение…" : "Сохранить"}
+          width="1100px"
+          maxHeight="95vh"
+        >
+          <EditModalBody>
+            <FieldRow>
               <FieldLabel>За сколько дней до платежа</FieldLabel>
               <NarrowInput>
                 <CustomInput
@@ -253,56 +379,40 @@ const WhatsAppSendersPage: React.FC = () => {
                   disabled={edit.saving}
                 />
               </NarrowInput>
-              <Hint>
-                0 — слать в день платежа. Заменяет прежний бот-ивент
-                «Приближающийся платёж».
-              </Hint>
-            </Field>
+              <Hint>0 — отправить в день платежа</Hint>
+            </FieldRow>
 
-            <Field>
+            <FieldRow>
               <FieldLabel>Текст рассылки</FieldLabel>
               <BotResponseConstructor
                 value={edit.pattern}
                 onChange={(next) => setEdit((p) => ({ ...p, pattern: next }))}
                 disabled={edit.saving}
               />
-            </Field>
-
-            <ModalActions>
-              <GrayButton
-                onClick={() => setEdit(emptyEdit)}
-                disabled={edit.saving}
-              >
-                Отмена
-              </GrayButton>
-              <DarkCyanButton
-                onClick={handleSave}
-                disabled={edit.saving || !edit.pattern.trim()}
-              >
-                {edit.saving ? "Сохранение…" : "Сохранить"}
-              </DarkCyanButton>
-            </ModalActions>
-          </WideModalContent>
-        </Overlay>
+            </FieldRow>
+          </EditModalBody>
+        </BaseModal>
       )}
 
-      {/* Назначение ботов */}
+      {/* ── Назначение ботов ── */}
       {botsState.isOpen && botsState.sender && (
-        <Overlay onClick={() => !botsState.saving && closeBots()}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>Боты рассылки #{botsState.sender.id}</ModalTitle>
-              <Close onClick={() => !botsState.saving && closeBots()}>✖</Close>
-            </ModalHeader>
-
-            <Hint>
+        <BaseModal
+          title={`Боты рассылки #${botsState.sender.id}`}
+          onClose={() => !botsState.saving && closeBots()}
+          onCancel={() => !botsState.saving && closeBots()}
+          onSave={handleSaveBots}
+          isSubmitting={botsState.saving}
+          saveButtonText={botsState.saving ? "Сохранение…" : "Сохранить"}
+          width="520px"
+        >
+          <BotsModalBody>
+            <BotsHint>
               Отметьте ботов, которые будут отправлять эту рассылку. Сохранение
-              заменяет весь список ботов рассылки.
-            </Hint>
-
+              заменяет весь список.
+            </BotsHint>
             <BotsList>
               {channels.length === 0 ? (
-                <Muted>Загрузка ботов…</Muted>
+                <MutedCenter>Загрузка ботов…</MutedCenter>
               ) : (
                 channels.map((channel) => {
                   const bots = botsByChannel[channel.id] ?? [];
@@ -315,11 +425,16 @@ const WhatsAppSendersPage: React.FC = () => {
                         <MutedSmall>Нет ботов</MutedSmall>
                       ) : (
                         bots.map((bot) => (
-                          <BotRow key={bot.id}>
-                            <input
+                          <BotRow
+                            key={bot.id}
+                            $checked={botsState.selected.has(bot.id)}
+                            onClick={() => toggleBot(bot.id)}
+                          >
+                            <BotCheckbox
                               type="checkbox"
                               checked={botsState.selected.has(bot.id)}
                               onChange={() => toggleBot(bot.id)}
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <span>{bot.name || `Бот #${bot.id}`}</span>
                           </BotRow>
@@ -330,80 +445,54 @@ const WhatsAppSendersPage: React.FC = () => {
                 })
               )}
             </BotsList>
+          </BotsModalBody>
+        </BaseModal>
+      )}
 
-            <ModalActions>
-              <GrayButton onClick={closeBots} disabled={botsState.saving}>
-                Отмена
-              </GrayButton>
-              <DarkCyanButton
-                onClick={handleSaveBots}
-                disabled={botsState.saving}
-              >
-                {botsState.saving ? "Сохранение…" : "Сохранить"}
-              </DarkCyanButton>
-            </ModalActions>
-          </ModalContent>
-        </Overlay>
+      {/* ── Подтверждение ── */}
+      {confirmState.isOpen && (
+        <BaseModal
+          title="Подтверждение"
+          onClose={closeConfirm}
+          onCancel={closeConfirm}
+          onSave={(e) => {
+            e.preventDefault();
+            handleConfirm();
+          }}
+          isSubmitting={confirmState.isSubmitting}
+          saveButtonText="Удалить"
+          width="400px"
+        >
+          <ConfirmText>{confirmState.message}</ConfirmText>
+        </BaseModal>
       )}
 
       <SenderReportModal
         isOpen={reportOpen}
         onClose={() => setReportOpen(false)}
       />
-    </Container>
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
+    </PageLayout>
   );
 };
 
 export default WhatsAppSendersPage;
 
-const Container = styled.div`
-  padding: 24px;
-  background: #f5f5f5;
-  min-height: 100vh;
-`;
+// ─── Styled components ─────────────────────────────────────────────────────────
 
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-const BackButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  color: #007d88;
-  padding: 8px 12px;
-  border-radius: 6px;
-  &:hover {
-    background: #e8e8e8;
-  }
-`;
-
-const Title = styled(CustomTitle)`
-  margin: 0;
-  flex: 1;
-`;
-
-const Actions = styled.div`
+const HeaderRight = styled.div`
   display: flex;
   gap: 10px;
+  margin-left: auto;
   flex-wrap: wrap;
-`;
-
-const Muted = styled.div`
-  color: #6b7280;
-  padding: 20px;
-`;
-
-const MutedSmall = styled.div`
-  color: #9ca3af;
-  font-size: 13px;
-  padding: 4px 0 4px 24px;
 `;
 
 const ErrorBanner = styled.div`
@@ -416,42 +505,65 @@ const ErrorBanner = styled.div`
   font-size: 13px;
 `;
 
-const EmptyState = styled.div`
+const MutedCenter = styled.div`
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 40px;
   text-align: center;
-  padding: 80px 20px;
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 72px 20px;
   background: white;
-  border-radius: 12px;
+  border-radius: 14px;
+  margin-top: 8px;
+  gap: 12px;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 4px;
 `;
 
 const EmptyTitle = styled.h3`
-  font-size: 20px;
-  color: #333;
-  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
 `;
 
-const EmptyText = styled.p`
-  color: #999;
+const EmptyDescription = styled.p`
+  color: #9ca3af;
   font-size: 14px;
+  margin: 0 0 8px;
+  max-width: 320px;
+  line-height: 1.5;
 `;
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
+  margin-top: 4px;
 `;
 
 const Card = styled.div`
   background: white;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: all 0.2s;
+  transition: box-shadow 0.2s ease;
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.11);
   }
 `;
 
@@ -462,10 +574,8 @@ const CardTop = styled.div`
 `;
 
 const CardBody = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 40px;
+  flex: 1;
+  min-height: 48px;
 `;
 
 const CardPreview = styled.div`
@@ -481,8 +591,8 @@ const CardPreview = styled.div`
 `;
 
 const TypeBadge = styled.span`
-  background: #007d88;
-  color: #fff;
+  background: rgba(0, 125, 136, 1);
+  color: white;
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
@@ -498,21 +608,24 @@ const SenderId = styled.span`
 const CardActions = styled.div`
   display: flex;
   gap: 8px;
-  margin-top: auto;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 12px;
 `;
 
 const SmallBtn = styled.button`
   flex: 1;
   padding: 7px 10px;
   border: 1px solid #d1d5db;
-  background: #fff;
+  background: white;
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   color: #374151;
+  transition: all 0.15s;
+
   &:hover {
-    border-color: #007d88;
-    color: #007d88;
+    border-color: rgba(0, 125, 136, 1);
+    color: rgba(0, 125, 136, 1);
   }
 `;
 
@@ -524,67 +637,25 @@ const SmallBtnDanger = styled(SmallBtn)`
   }
 `;
 
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+// ─── Edit modal ───────────────────────────────────────────────────────────────
+
+const EditModalBody = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 24px 8px;
 `;
 
-const ModalContent = styled.div`
-  background: white;
-  border-radius: 12px;
-  width: 520px;
-  max-width: 92%;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 26px;
-`;
-
-const WideModalContent = styled(ModalContent)`
-  width: 1100px;
-  max-width: 95vw;
-  max-height: 92vh;
-`;
-
-const ModalHeader = styled.div`
+const FieldRow = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-`;
-
-const ModalTitle = styled.h3`
-  font-size: 19px;
-  font-weight: 600;
-  margin: 0;
-  color: #111827;
-`;
-
-const Close = styled.button`
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #9ca3af;
-  &:hover {
-    color: #111827;
-  }
-`;
-
-const Field = styled.div`
-  margin-bottom: 18px;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const FieldLabel = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: #374151;
-  font-size: 14px;
 `;
 
 const NarrowInput = styled.div`
@@ -593,44 +664,82 @@ const NarrowInput = styled.div`
 
 const Hint = styled.div`
   font-size: 12px;
-  color: #6b7280;
-  margin-top: 6px;
+  color: #9ca3af;
   line-height: 1.4;
 `;
 
-const ModalActions = styled.div`
+// ─── Bots modal ───────────────────────────────────────────────────────────────
+
+const BotsModalBody = styled.div`
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: 12px;
-  margin-top: 24px;
+  padding: 4px 24px 8px;
+`;
+
+const BotsHint = styled.div`
+  font-size: 13px;
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  line-height: 1.5;
 `;
 
 const BotsList = styled.div`
   max-height: 340px;
   overflow-y: auto;
-  margin: 12px 0;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
 `;
 
 const ChannelGroup = styled.div`
-  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
 const ChannelName = styled.div`
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #374151;
-  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 6px 0 2px;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 4px;
 `;
 
-const BotRow = styled.label`
+const MutedSmall = styled.div`
+  color: #9ca3af;
+  font-size: 13px;
+  padding: 4px 12px;
+`;
+
+const BotRow = styled.div<{ $checked: boolean }>`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0 6px 24px;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid ${(p) => (p.$checked ? "rgba(0,125,136,1)" : "#e5e7eb")};
+  border-radius: 8px;
+  cursor: pointer;
+  background: ${(p) => (p.$checked ? "rgba(0,125,136,0.04)" : "white")};
   font-size: 14px;
   color: #374151;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: rgba(0, 125, 136, 1);
+  }
+`;
+
+const BotCheckbox = styled.input`
+  width: 16px;
+  height: 16px;
   cursor: pointer;
+  accent-color: rgba(0, 125, 136, 1);
 `;

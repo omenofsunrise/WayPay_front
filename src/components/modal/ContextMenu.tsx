@@ -8,6 +8,7 @@ export interface ContextMenuItem {
   color?: string;
   submenu?: ContextMenuItem[];
   disabled?: boolean;
+  dividerBefore?: boolean;
 }
 
 interface ContextMenuProps extends HTMLMotionProps<"div"> {
@@ -117,6 +118,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           key={index}
           $hasSubmenu={!!item.submenu}
           $disabled={item.disabled}
+          $dividerBefore={item.dividerBefore}
         >
           <ContextMenuItem
             onClick={(e) => {
@@ -126,7 +128,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               }
             }}
             onMouseEnter={() => !item.disabled && handleMouseEnter(index)}
-            whileHover={!item.disabled ? { backgroundColor: "#f3f4f6" } : {}}
+            whileHover={
+              !item.disabled
+                ? {
+                    backgroundColor:
+                      item.color === "#EF4444" ? "#FEF2F2" : "#f3f4f6",
+                  }
+                : {}
+            }
             initial={{ backgroundColor: "#ffffff" }}
             $color={item.color}
             $disabled={item.disabled}
@@ -186,9 +195,17 @@ const ContextMenuContainer = styled(motion.div)`
 const ContextMenuItemWrapper = styled.div<{
   $hasSubmenu?: boolean;
   $disabled?: boolean;
+  $dividerBefore?: boolean;
 }>`
   position: relative;
   opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
+  ${({ $dividerBefore }) =>
+    $dividerBefore &&
+    `
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #E5E7EB;
+  `}
 `;
 
 const ContextMenuItem = styled(motion.div)<{

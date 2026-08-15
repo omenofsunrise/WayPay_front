@@ -1,5 +1,6 @@
-import React, { useState, useRef, useLayoutEffect } from "react";
+import React, { useState, useRef, useLayoutEffect, useEffect } from "react";
 import styled from "styled-components";
+import { AnimatePresence, motion } from "framer-motion";
 import type { Credit } from "../../../api/types/credit";
 import type { TableAction } from "../tables/CustomTable";
 import ContextMenu, { type ContextMenuItem } from "../../modal/ContextMenu";
@@ -92,6 +93,14 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
     setMenuPos({ left, top });
   }, [menu]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (menu) setMenu(null);
+    };
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [menu]);
+
   if (credits.length === 0) {
     return <Empty>{emptyText}</Empty>;
   }
@@ -127,41 +136,48 @@ const CreditCardList: React.FC<CreditCardListProps> = ({
         );
       })}
 
-      {menu && (
-        <MenuPositioner
-          ref={menuRef}
-          style={{
-            left: menuPos?.left ?? menu.x,
-            top: menuPos?.top ?? menu.y,
-            visibility: menuPos ? "visible" : "hidden",
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <ContextMenu
-            x={0}
-            y={0}
-            items={visibleActions(menu.rowData).map(
-              (action): ContextMenuItem => {
-                const item: ContextMenuItem = {
-                  label: action.label,
-                  color: action.color,
-                  disabled: action.disabled,
-                };
-                if (action.getSubmenu) {
-                  item.submenu = action.getSubmenu(menu.rowData);
-                } else {
-                  item.action = () => {
-                    action.action(menu.rowData, menu.rowIndex);
-                    setMenu(null);
+      <AnimatePresence>
+        {menu && (
+          <MenuPositioner
+            ref={menuRef}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              left: menuPos?.left ?? menu.x,
+              top: menuPos?.top ?? menu.y,
+              visibility: menuPos ? "visible" : "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ContextMenu
+              x={0}
+              y={0}
+              items={visibleActions(menu.rowData).map(
+                (action): ContextMenuItem => {
+                  const item: ContextMenuItem = {
+                    label: action.label,
+                    color: action.color,
+                    disabled: action.disabled,
+                    dividerBefore: action.dividerBefore,
                   };
+                  if (action.getSubmenu) {
+                    item.submenu = action.getSubmenu(menu.rowData);
+                  } else {
+                    item.action = () => {
+                      action.action(menu.rowData, menu.rowIndex);
+                      setMenu(null);
+                    };
+                  }
+                  return item;
                 }
-                return item;
-              }
-            )}
-            onClose={() => setMenu(null)}
-          />
-        </MenuPositioner>
-      )}
+              )}
+              onClose={() => setMenu(null)}
+            />
+          </MenuPositioner>
+        )}
+      </AnimatePresence>
     </Wrapper>
   );
 };
@@ -183,7 +199,7 @@ const Empty = styled.div`
   background: #f9fafb;
 `;
 
-const MenuPositioner = styled.div`
+const MenuPositioner = styled(motion.div)`
   position: fixed;
   z-index: 1000;
 `;

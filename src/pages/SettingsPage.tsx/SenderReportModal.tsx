@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import useWhatsAppSender from "../../api/hooks/useWhatsAppSender";
+import CustomCalendar from "../../components/ui/fields/CustomCalendar";
 import type {
   SenderReport,
   SenderReportDetails,
@@ -106,10 +107,10 @@ const SenderReportModal: React.FC<SenderReportModalProps> = ({
         <Toolbar>
           <DateField>
             <label>Дата</label>
-            <input
-              type="date"
+            <CustomCalendar
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(val) => setDate(val)}
+              placeholder="дд.мм.гггг"
             />
           </DateField>
           <RefreshBtn onClick={load} disabled={loading}>
@@ -351,15 +352,10 @@ const DateField = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 200px;
   label {
     font-size: 12px;
     color: #6b7280;
-  }
-  input {
-    padding: 8px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
   }
 `;
 

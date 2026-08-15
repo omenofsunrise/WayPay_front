@@ -1,11 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import styled from "styled-components";
-
-import type {
-  PaymentPlace,
-  CreatePaymentPlaceRequest,
-} from "../../api/types/paymentPlace";
-import usePaymentPlace from "../../api/hooks/usePaymentPlace";
+import PageLayout from "../../components/ui/Layouts/PageLayout";
+import TitleField from "../../components/ui/Layouts/TitleLayout";
+import CustomTitle from "../../components/ui/Text/CustomTitle";
+import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import CustomTable, {
   type Column,
@@ -13,9 +11,13 @@ import CustomTable, {
 } from "../../components/ui/tables/CustomTable";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
+import usePaymentPlace from "../../api/hooks/usePaymentPlace";
+import type {
+  PaymentPlace,
+  CreatePaymentPlaceRequest,
+} from "../../api/types/paymentPlace";
 
 const POLLING_INTERVAL_MS = 10_000;
-
 const emptyForm: CreatePaymentPlaceRequest = { name: "", phone: "" };
 
 const formatDate = (value: string | null): string => {
@@ -30,6 +32,59 @@ const formatDate = (value: string | null): string => {
     minute: "2-digit",
   });
 };
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 280px;
+  max-width: 400px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const ConfirmText = styled.p`
+  padding: 16px 30px;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.5;
+`;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const PaymentPlacePage = () => {
   const {
@@ -51,15 +106,60 @@ const PaymentPlacePage = () => {
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Активные (не удалённые) пункты
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
+
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", msg: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message: msg }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
+
+  const openConfirm = (msg: string, onConfirm: () => void) =>
+    setConfirmState({
+      isOpen: true,
+      message: msg,
+      onConfirm,
+      isSubmitting: false,
+    });
+
+  const closeConfirm = () =>
+    setConfirmState((prev) => ({
+      ...prev,
+      isOpen: false,
+      isSubmitting: false,
+    }));
+
+  const handleConfirm = async () => {
+    setConfirmState((prev) => ({ ...prev, isSubmitting: true }));
+    try {
+      await confirmState.onConfirm();
+    } finally {
+      closeConfirm();
+    }
+  };
+
   const activePlaces = useMemo(
-    () => paymentPlaces.filter((place) => !place.isDeleted),
+    () => paymentPlaces.filter((p) => !p.isDeleted),
     [paymentPlaces]
   );
 
-  // Пункт, ожидающий оплаты — пока он есть, показываем экран оплаты вместо CRUD
   const pendingPlace = useMemo(
-    () => activePlaces.find((place) => !place.payed) ?? null,
+    () => activePlaces.find((p) => !p.payed) ?? null,
     [activePlaces]
   );
 
@@ -67,30 +167,11 @@ const PaymentPlacePage = () => {
     getPaymentPlaces();
   }, [getPaymentPlaces]);
 
-  // Polling статуса оплаты раз в 10 секунд, пока есть неоплаченный пункт
   useEffect(() => {
     if (!pendingPlace) return;
-
-    const intervalId = setInterval(() => {
-      getPaymentPlaces(true);
-    }, POLLING_INTERVAL_MS);
-
-    return () => clearInterval(intervalId);
+    const id = setInterval(() => getPaymentPlaces(true), POLLING_INTERVAL_MS);
+    return () => clearInterval(id);
   }, [pendingPlace, getPaymentPlaces]);
-
-  const columns: Column[] = [
-    { name: "Название", align: "left" },
-    { name: "Телефон", align: "center" },
-    { name: "Статус", align: "center" },
-    { name: "Создан", align: "center" },
-  ];
-
-  const tableData = activePlaces.map((place) => [
-    place.name,
-    place.phone,
-    place.payed ? "Оплачен" : "Ожидает оплаты",
-    formatDate(place.createdAt),
-  ]);
 
   const handleCreate = () => {
     setModalMode("create");
@@ -100,8 +181,8 @@ const PaymentPlacePage = () => {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (rowIndex: number) => {
-    const place = activePlaces[rowIndex];
+  const handleEdit = (placeId: number) => {
+    const place = activePlaces.find((p) => p.id === placeId);
     if (!place) return;
     setModalMode("edit");
     setSelectedPlace(place);
@@ -110,35 +191,33 @@ const PaymentPlacePage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (rowIndex: number) => {
-    const place = activePlaces[rowIndex];
+  const handleDelete = (placeId: number) => {
+    const place = activePlaces.find((p) => p.id === placeId);
     if (!place) return;
-    if (
-      !window.confirm(
-        `Вы уверены, что хотите удалить пункт приёма «${place.name}»?`
-      )
-    )
-      return;
-
-    try {
-      await deletePaymentPlace(place.id);
-    } catch (err) {
-      console.error("Ошибка при удалении пункта приёма:", err);
-    }
+    openConfirm(`Удалить пункт приёма «${place.name}»?`, async () => {
+      try {
+        await deletePaymentPlace(place.id);
+        addToast("success", "Пункт приёма удалён");
+      } catch {
+        addToast("error", "Не удалось удалить пункт приёма");
+      }
+    });
   };
 
-  const contextMenuActions: TableAction[] = [
-    {
-      label: "Редактировать",
-      action: (_rowData, rowIndex) => handleEdit(rowIndex),
-      color: "#007D88",
-    },
-    {
-      label: "Удалить",
-      action: (_rowData, rowIndex) => handleDelete(rowIndex),
-      color: "#dc2626",
-    },
-  ];
+  const handleCancelPending = () => {
+    if (!pendingPlace) return;
+    openConfirm(
+      "Отменить создание и удалить неоплаченный пункт приёма?",
+      async () => {
+        try {
+          await deletePaymentPlace(pendingPlace.id);
+          addToast("success", "Пункт приёма удалён");
+        } catch {
+          addToast("error", "Не удалось удалить пункт приёма");
+        }
+      }
+    );
+  };
 
   const handleInputChange = (
     field: keyof CreatePaymentPlaceRequest,
@@ -150,7 +229,6 @@ const PaymentPlacePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.name.trim()) {
       setModalError("Укажите название пункта приёма");
       return;
@@ -165,12 +243,13 @@ const PaymentPlacePage = () => {
     try {
       if (modalMode === "create") {
         await createPaymentPlace(formData);
+        addToast("success", "Пункт приёма успешно добавлен");
       } else if (selectedPlace) {
         await updatePaymentPlace(selectedPlace.id, formData);
+        addToast("success", "Пункт приёма обновлён");
       }
       setIsModalOpen(false);
     } catch (err) {
-      // Здесь ловим в т.ч. 400 "Этот номер занят!"
       setModalError(
         err instanceof Error ? err.message : "Не удалось сохранить пункт приёма"
       );
@@ -179,27 +258,44 @@ const PaymentPlacePage = () => {
     }
   };
 
-  const handleCancelPending = async () => {
-    if (!pendingPlace) return;
-    if (
-      !window.confirm("Отменить создание и удалить неоплаченный пункт приёма?")
-    )
-      return;
-    try {
-      await deletePaymentPlace(pendingPlace.id);
-    } catch (err) {
-      console.error("Ошибка при отмене пункта приёма:", err);
-    }
-  };
+  const columns: Column[] = [
+    { name: "id", isHidden: true },
+    { name: "Название", align: "left" },
+    { name: "Телефон", align: "center" },
+    { name: "Статус", align: "center" },
+    { name: "Создан", align: "center" },
+  ];
 
-  // ===== Экран ожидания оплаты =====
+  const tableData = activePlaces.map((place) => [
+    place.id.toString(),
+    place.name,
+    place.phone,
+    place.payed ? "Оплачен" : "Ожидает оплаты",
+    formatDate(place.createdAt),
+  ]);
+
+  const contextMenuActions: TableAction[] = [
+    {
+      label: "Редактировать",
+      action: (rowData: any[]) => handleEdit(Number(rowData[0])),
+      color: "#007D88",
+    },
+    {
+      label: "Удалить",
+      action: (rowData: any[]) => handleDelete(Number(rowData[0])),
+      color: "#EF4444",
+      dividerBefore: true,
+    },
+  ];
+
+  // ─── Экран ожидания оплаты ─────────────────────────────────────────────────
   if (pendingPlace) {
     const isExpired = pendingPlace.paymentExpiresAt
       ? new Date(pendingPlace.paymentExpiresAt).getTime() < Date.now()
       : false;
 
     return (
-      <PageContainer>
+      <PageLayout>
         <PaymentScreen>
           <PaymentCard>
             <PaymentTitle>Ожидаем оплату подписки</PaymentTitle>
@@ -241,35 +337,67 @@ const PaymentPlacePage = () => {
               Отменить и удалить пункт
             </CancelLink>
 
-            {error && <ErrorMessage>{error}</ErrorMessage>}
+            {error && <PageErrorMessage>{error}</PageErrorMessage>}
           </PaymentCard>
         </PaymentScreen>
-      </PageContainer>
+
+        {confirmState.isOpen && (
+          <BaseModal
+            title="Подтверждение"
+            onClose={closeConfirm}
+            onCancel={closeConfirm}
+            onSave={(e) => {
+              e.preventDefault();
+              handleConfirm();
+            }}
+            isSubmitting={confirmState.isSubmitting}
+            saveButtonText="Подтвердить"
+            width="400px"
+          >
+            <ConfirmText>{confirmState.message}</ConfirmText>
+          </BaseModal>
+        )}
+
+        <ToastContainer>
+          {toasts.map((t) => (
+            <Toast key={t.id} $type={t.type}>
+              {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+              {t.message}
+            </Toast>
+          ))}
+        </ToastContainer>
+      </PageLayout>
     );
   }
 
-  // ===== Основной CRUD =====
+  // ─── Основной CRUD ─────────────────────────────────────────────────────────
   return (
-    <PageContainer>
-      <PageHeader>
-        <Title>Пункты приёма платежей</Title>
-        <CreateButton onClick={handleCreate}>+ Добавить пункт</CreateButton>
-      </PageHeader>
+    <PageLayout>
+      <TitleField style={{ marginTop: 0 }}>
+        <CustomTitle style={{ marginTop: 0 }}>
+          Пункты приёма платежей
+        </CustomTitle>
+        <DarkCyanButton
+          style={{ width: "15vw", marginLeft: "auto" }}
+          onClick={handleCreate}
+        >
+          + Добавить пункт
+        </DarkCyanButton>
+      </TitleField>
 
       {error && (
-        <ErrorMessage onClick={clearError} style={{ cursor: "pointer" }}>
+        <PageErrorMessage onClick={clearError} $clickable>
           {error}
-        </ErrorMessage>
+        </PageErrorMessage>
       )}
 
-      <TableContainer>
-        <CustomTable
-          columns={columns}
-          data={tableData}
-          contextMenuActions={contextMenuActions}
-          isLoading={isLoading}
-        />
-      </TableContainer>
+      <CustomTable
+        columns={columns}
+        data={tableData}
+        contextMenuActions={contextMenuActions}
+        isLoading={isLoading}
+        onRowDoubleClick={(rowData) => handleEdit(Number(rowData[0]))}
+      />
 
       {isModalOpen && (
         <BaseModal
@@ -287,17 +415,19 @@ const PaymentPlacePage = () => {
         >
           <FormContainer>
             <FormGroup>
-              <Label>Название пункта *</Label>
+              <FormLabel>
+                Название пункта <Required>*</Required>
+              </FormLabel>
               <CustomInput
-                type="text"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
-                required
               />
             </FormGroup>
 
             <FormGroup>
-              <Label>Телефон *</Label>
+              <FormLabel>
+                Телефон <Required>*</Required>
+              </FormLabel>
               <PhoneModalInput
                 name="phone"
                 value={formData.phone}
@@ -309,90 +439,80 @@ const PaymentPlacePage = () => {
           </FormContainer>
         </BaseModal>
       )}
-    </PageContainer>
+
+      {confirmState.isOpen && (
+        <BaseModal
+          title="Подтверждение"
+          onClose={closeConfirm}
+          onCancel={closeConfirm}
+          onSave={(e) => {
+            e.preventDefault();
+            handleConfirm();
+          }}
+          isSubmitting={confirmState.isSubmitting}
+          saveButtonText="Удалить"
+          width="400px"
+        >
+          <ConfirmText>{confirmState.message}</ConfirmText>
+        </BaseModal>
+      )}
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
+    </PageLayout>
   );
 };
 
-export default PaymentPlacePage;
+// ─── Styled components ─────────────────────────────────────────────────────────
 
-const PageContainer = styled.div`
-  padding: 24px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-`;
-
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const Title = styled.h1`
-  font-size: 24px;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-`;
-
-const CreateButton = styled.button`
-  background-color: #007d88;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-
-  &:hover {
-    background-color: #006670;
-  }
-`;
-
-const ErrorMessage = styled.div`
-  background-color: #fee2e2;
+const PageErrorMessage = styled.div<{ $clickable?: boolean }>`
+  background: #fee2e2;
   color: #dc2626;
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 16px;
   border: 1px solid #fecaca;
-`;
-
-const TableContainer = styled.div`
-  flex: 1;
-  min-height: 400px;
+  font-size: 14px;
+  cursor: ${(p) => (p.$clickable ? "pointer" : "default")};
 `;
 
 const FormContainer = styled.div`
   display: flex;
-  padding: 0 25px;
   flex-direction: column;
   gap: 16px;
+  padding: 0 25px;
 `;
 
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 `;
 
-const Label = styled.label`
-  font-size: 14px;
-  text-align: left;
-  font-weight: 500;
+const FormLabel = styled.label`
+  font-size: 13px;
+  font-weight: 600;
   color: #374151;
 `;
 
+const Required = styled.span`
+  color: #ef4444;
+  margin-left: 2px;
+`;
+
 const ModalError = styled.div`
-  background-color: #fee2e2;
-  color: #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid #fecaca;
-  font-size: 14px;
-  text-align: center;
+  font-size: 13px;
 `;
 
 const PaymentScreen = styled.div`
@@ -413,7 +533,7 @@ const PaymentCard = styled.div`
   padding: 32px;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  background-color: #ffffff;
+  background: #ffffff;
   text-align: center;
 `;
 
@@ -438,16 +558,17 @@ const PaymentMeta = styled.div`
 
 const PayButton = styled.a`
   display: inline-block;
-  background-color: #007d88;
+  background: #007d88;
   color: white;
   padding: 12px 28px;
   border-radius: 8px;
   font-size: 15px;
   font-weight: 500;
   text-decoration: none;
+  transition: background 0.2s ease;
 
   &:hover {
-    background-color: #006670;
+    background: #006670;
   }
 `;
 
@@ -460,7 +581,7 @@ const PollingStatus = styled.div`
 `;
 
 const ExpiredNotice = styled.div`
-  background-color: #fef3c7;
+  background: #fef3c7;
   color: #92400e;
   padding: 12px;
   border-radius: 8px;
@@ -476,6 +597,7 @@ const CancelLink = styled.button`
   cursor: pointer;
   text-decoration: underline;
   padding: 0;
+  transition: color 0.15s;
 
   &:hover {
     color: #dc2626;
@@ -497,3 +619,5 @@ const Spinner = styled.span`
     }
   }
 `;
+
+export default PaymentPlacePage;

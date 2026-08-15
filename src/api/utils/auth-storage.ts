@@ -71,6 +71,8 @@ class AuthStorage {
     localStorage.removeItem(this.SESSION_ID_KEY);
     localStorage.removeItem(this.ACCOUNTS_KEY);
     localStorage.removeItem(this.ACTIVE_ACCOUNT_KEY);
+    localStorage.removeItem("enteredCompanyName");
+    localStorage.removeItem("originalCompanyId");
   }
 
   // ===== Мультиаккаунт =====

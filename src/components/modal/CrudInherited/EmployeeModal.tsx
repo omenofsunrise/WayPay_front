@@ -3,7 +3,6 @@ import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
 import Avatar from "../../Profile/Avatar";
-import { ModalTitle } from "react-bootstrap";
 import styled from "styled-components";
 import { BASE_URL } from "../../../api/client";
 import { generateAvatar, getInitials } from "../../../utils/avatarUtils";
@@ -306,8 +305,8 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       width={"750px"}
       mode={mode}
       customLayout={
-        <div style={{ display: "flex", gap: "20px", width: "100%" }}>
-          <div style={{ flexShrink: 0, padding: "40px 0" }}>
+        <ModalLayout>
+          <AvatarSection>
             <Avatar
               src={avatarSrc}
               size={220}
@@ -316,83 +315,100 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
               showCameraIndicator={mode === "edit"}
               onPhotoChange={mode === "edit" ? handlePhotoChange : undefined}
             />
-          </div>
-          <div style={{ flexGrow: 1, padding: "20px 20px 20px 0" }}>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
-              <Title>ФИО</Title>
-              <CustomInput
-                style={{ marginTop: "0" }}
-                name="fullName"
-                inputType="fullname"
-                placeholder="ФИО сотрудника"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                disabled={mode === "view"}
-                hasError={touchedFields.fullName && validationErrors.fullName}
-                errorMessage={
-                  touchedFields.fullName ? errorMessages.fullName : undefined
-                }
-              />
+          </AvatarSection>
 
-              <Title>Адрес</Title>
-              <CustomInput
-                name="address"
-                inputType="text"
-                placeholder="Адрес"
-                value={formData.address}
-                onChange={handleInputChange}
-                disabled={mode === "view"}
-              />
+          <FormSection>
+            <Title>ФИО</Title>
+            <CustomInput
+              name="fullName"
+              inputType="fullname"
+              placeholder="ФИО сотрудника"
+              value={formData.fullName}
+              onChange={handleInputChange}
+              disabled={mode === "view"}
+              hasError={touchedFields.fullName && validationErrors.fullName}
+              errorMessage={
+                touchedFields.fullName ? errorMessages.fullName : undefined
+              }
+            />
 
-              <RowContainer>
-                <FieldContainer>
-                  <Title>Роль</Title>
-                  <CustomSelect
-                    options={roleOptions}
-                    disabled={mode === "view" || mode === "edit"}
-                    placeholder="Выберите роль"
-                    value={formData.role}
-                    onChange={handleSelectChange}
-                  />
-                </FieldContainer>
+            <Title>Адрес</Title>
+            <CustomInput
+              name="address"
+              inputType="text"
+              placeholder="Адрес"
+              value={formData.address}
+              onChange={handleInputChange}
+              disabled={mode === "view"}
+            />
 
-                <FieldContainer>
-                  <Title>Телефон</Title>
-                  <PhoneModalInput
-                    name="phone"
-                    placeholder="8 (XXX) XXX-XX-XX"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    disabled={mode === "view" || mode === "edit"}
-                    hasError={touchedFields.phone && validationErrors.phone}
-                    errorMessage={
-                      touchedFields.phone ? errorMessages.phone : undefined
-                    }
-                  />
-                </FieldContainer>
+            <RowContainer>
+              <FieldContainer>
+                <Title>Роль</Title>
+                <CustomSelect
+                  options={roleOptions}
+                  disabled={mode === "view" || mode === "edit"}
+                  placeholder="Выберите роль"
+                  value={formData.role}
+                  onChange={handleSelectChange}
+                  dropdownInPortal
+                />
+              </FieldContainer>
 
-                <FieldContainer>
-                  <Title>Мин. надбавка%</Title>
-                  <CustomInput
-                    name="minSurcharge"
-                    inputType="number"
-                    placeholder="Минимальная надбавка"
-                    value={formData.minSurcharge.toString()}
-                    onChange={handleNumberChange}
-                    disabled={mode === "view" || mode === "edit"}
-                    min={0}
-                  />
-                </FieldContainer>
-              </RowContainer>
-            </div>
-          </div>
-        </div>
+              <FieldContainer>
+                <Title>Телефон</Title>
+                <PhoneModalInput
+                  name="phone"
+                  placeholder="8 (XXX) XXX-XX-XX"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  disabled={mode === "view" || mode === "edit"}
+                  hasError={touchedFields.phone && validationErrors.phone}
+                  errorMessage={
+                    touchedFields.phone ? errorMessages.phone : undefined
+                  }
+                />
+              </FieldContainer>
+
+              <FieldContainer>
+                <Title>Мин. надбавка%</Title>
+                <CustomInput
+                  name="minSurcharge"
+                  inputType="number"
+                  placeholder="Минимальная надбавка"
+                  value={formData.minSurcharge.toString()}
+                  onChange={handleNumberChange}
+                  disabled={mode === "view" || mode === "edit"}
+                  min={0}
+                />
+              </FieldContainer>
+            </RowContainer>
+          </FormSection>
+        </ModalLayout>
       }
     />
   );
 };
+
+const ModalLayout = styled.div`
+  display: flex;
+  gap: 20px;
+  width: 100%;
+`;
+
+const AvatarSection = styled.div`
+  flex-shrink: 0;
+  padding: 40px 0;
+`;
+
+const FormSection = styled.div`
+  flex: 1;
+  min-width: 0;
+  padding: 20px 20px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
 
 const Title = styled.h3`
   color: black;

@@ -40,6 +40,7 @@ import type { PaymentTab } from "../api/types/payment";
 import PaymentConfirmationGenerator from "../utils/doxcUtils/paymentConfirmationGenerator";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
 import { useUiSettings } from "../utils/uiSettings";
+import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 
 interface EmptyStarIconProps {
   isSelected?: boolean;
@@ -65,6 +66,7 @@ const CreditControlPage = () => {
   }, []);
 
   const uiSettings = useUiSettings();
+  const { setRightAction } = useTopMenuActions();
   const isListMode = uiSettings.creditsDisplayMode === "list";
   const [accumulatedItems, setAccumulatedItems] = useState<Credit[]>([]);
   const accumulatedItemsRef = useRef<Credit[]>([]);
@@ -588,6 +590,29 @@ const CreditControlPage = () => {
     sortConfig,
   ]);
 
+  useEffect(() => {
+    setRightAction(
+      <FilterIconButton
+        type="button"
+        onClick={() => setIsFilterModalOpen((v) => !v)}
+        $hasActiveFilters={hasActiveFilters}
+        aria-label="Фильтр"
+        title="Фильтр"
+      >
+        <ListFilter
+          aria-hidden="true"
+          size={20}
+          strokeWidth={2.2}
+          color={hasActiveFilters ? "#007D88" : "#50555C"}
+        />
+        {hasActiveFilters && getActiveFiltersCount > 0 && (
+          <FilterBadge>{getActiveFiltersCount}</FilterBadge>
+        )}
+      </FilterIconButton>
+    );
+    return () => setRightAction(null);
+  }, [hasActiveFilters, getActiveFiltersCount, setRightAction]);
+
   // Бесконечная прокрутка
   useEffect(() => {
     if (!isListMode) return;
@@ -767,7 +792,7 @@ const CreditControlPage = () => {
     {
       label: "Подтвердить договор",
       action: handleAccept,
-      color: "#007d88",
+      color: "#007D88",
       shouldShow: (rowData: any[]) => {
         const [_, id] = rowData;
         const credit = displayedCredits.find((c) => c.id === Number(id));
@@ -782,19 +807,20 @@ const CreditControlPage = () => {
     {
       label: "Добавить платёж",
       action: handleOpenPaymentModal,
-      color: "#008b8b",
+      color: "#10B981",
       shouldShow: () => denyPermission("MANAGE_ACCOUNTING", true),
     },
     {
       label: "Редактировать",
       action: handleEditCredit,
-      color: "#007d88",
+      color: "#6366F1",
       shouldShow: () => hasPermission("EDIT_CREDITS", true),
     },
     {
       label: "Удалить",
       action: handleDeleteCredit,
       color: "#EF4444",
+      dividerBefore: true,
       shouldShow: () =>
         hasPermission("DELETE_CREDITS") &&
         denyPermission("MANAGE_ACCOUNTING", true),
@@ -1078,29 +1104,10 @@ const CreditControlPage = () => {
 
   return (
     <FilterAwarePageLayout ref={containerRef} $filterOpen={isFilterModalOpen}>
-      {/* На узких экранах фильтр выезжает поверх контента — затемняем фон,
-          клик по нему закрывает фильтр. */}
       <FilterBackdrop
         $visible={isFilterModalOpen}
         onClick={() => setIsFilterModalOpen(false)}
       />
-      <FilterIconButton
-        type="button"
-        onClick={() => setIsFilterModalOpen((v) => !v)}
-        $hasActiveFilters={hasActiveFilters}
-        aria-label="Фильтр"
-        title="Фильтр"
-      >
-        <ListFilter
-          aria-hidden="true"
-          size={20}
-          strokeWidth={2.2}
-          color={hasActiveFilters ? "#007D88" : "#50555C"}
-        />
-        {hasActiveFilters && getActiveFiltersCount > 0 && (
-          <FilterBadge>{getActiveFiltersCount}</FilterBadge>
-        )}
-      </FilterIconButton>
 
       <TitleField>
         <CustomTitle>Контроль договоров</CustomTitle>
@@ -1488,7 +1495,7 @@ const FilterAwarePageLayout = styled(PageLayout)<{ $filterOpen: boolean }>`
   padding-right: ${({ $filterOpen }) =>
     $filterOpen ? FILTER_PANEL_WIDTH : 0}px;
   transition: padding-right 0.3s ease;
-  height: calc(100vh - 56px);
+  height: calc(100vh - var(--header-height, 56px));
   overflow: hidden;
 
   @media (max-width: 1280px) {
@@ -1496,14 +1503,13 @@ const FilterAwarePageLayout = styled(PageLayout)<{ $filterOpen: boolean }>`
   }
 `;
 
-// Затемнение под выехавшим фильтром — только на узких экранах.
 const FilterBackdrop = styled.div<{ $visible: boolean }>`
   display: none;
 
   @media (max-width: 1280px) {
     display: ${({ $visible }) => ($visible ? "block" : "none")};
     position: fixed;
-    inset: 56px 0 0 0;
+    inset: var(--header-height, 56px) 0 0 0;
     background: rgba(0, 0, 0, 0.35);
     z-index: 99;
   }
@@ -1513,9 +1519,7 @@ const FilterBackdrop = styled.div<{ $visible: boolean }>`
 // Кнопки 36px с шагом 46px дают одинаковый зазор 10px:
 // настройки right:10 → колокол right:56 → фильтр right:102.
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
-  position: fixed;
-  top: 10px;
-  right: 102px;
+  position: relative;
   z-index: 101;
   width: 36px;
   height: 36px;
@@ -1568,9 +1572,9 @@ const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
 // (TopMenu с уведомлениями).
 const FilterPanel = styled.div<{ $open: boolean }>`
   position: fixed;
-  top: 56px;
+  top: var(--header-height, 56px);
   right: 0;
-  height: calc(100vh - 56px);
+  height: calc(100vh - var(--header-height, 56px));
   width: ${FILTER_PANEL_WIDTH}px;
   background: #ffffff;
   box-shadow: -1px 0 7px rgba(0, 0, 0, 0.08);

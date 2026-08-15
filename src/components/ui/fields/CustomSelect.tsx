@@ -1,8 +1,9 @@
-import styled from 'styled-components';
-import React from 'react';
-import { createPortal } from 'react-dom';
+import styled from "styled-components";
+import React from "react";
+import { createPortal } from "react-dom";
 
-interface CustomSelectProps<T = string> extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+interface CustomSelectProps<T = string>
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> {
   placeholder?: string;
   customPlaceholder?: string;
   hasError?: boolean;
@@ -17,7 +18,7 @@ interface CustomSelectProps<T = string> extends Omit<React.HTMLAttributes<HTMLDi
 }
 
 const CustomSelect = <T extends string | number = string>({
-  placeholder = '',
+  placeholder = "",
   customPlaceholder,
   value,
   onChange,
@@ -40,13 +41,15 @@ const CustomSelect = <T extends string | number = string>({
   const selectRef = React.useRef<HTMLDivElement>(null);
   const selectContainerRef = React.useRef<HTMLDivElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
-  
-  const showCustomPlaceholder = Boolean(customPlaceholder && !value && !isFocused);
+
+  const showCustomPlaceholder = Boolean(
+    customPlaceholder && !value && !isFocused
+  );
 
   const handleOptionClick = (optionValue: T) => {
     if (onChange && !disabled) {
       const event = {
-        target: { value: optionValue, name }
+        target: { value: optionValue, name },
       };
       onChange(event);
     }
@@ -88,9 +91,9 @@ const CustomSelect = <T extends string | number = string>({
   };
 
   React.useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -98,30 +101,34 @@ const CustomSelect = <T extends string | number = string>({
     if (!isOpen || !dropdownInPortal) return;
 
     updateDropdownPosition();
-    window.addEventListener('resize', updateDropdownPosition);
-    window.addEventListener('scroll', updateDropdownPosition, true);
+    window.addEventListener("resize", updateDropdownPosition);
+    window.addEventListener("scroll", updateDropdownPosition, true);
 
     return () => {
-      window.removeEventListener('resize', updateDropdownPosition);
-      window.removeEventListener('scroll', updateDropdownPosition, true);
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
     };
   }, [isOpen, dropdownInPortal, updateDropdownPosition]);
 
-  const selectedOption = options.find(option => option.value === value);
-  const displayValue = selectedOption ? selectedOption.label : '';
+  const selectedOption = options.find((option) => option.value === value);
+  const displayValue = selectedOption ? selectedOption.label : "";
   const dropdown = (
     <Dropdown
       ref={dropdownRef}
       $inPortal={dropdownInPortal}
-      style={dropdownInPortal && dropdownRect ? {
-        top: dropdownRect.top,
-        left: dropdownRect.left,
-        width: dropdownRect.width,
-      } : undefined}
+      style={
+        dropdownInPortal && dropdownRect
+          ? {
+              top: dropdownRect.top,
+              left: dropdownRect.left,
+              width: dropdownRect.width,
+            }
+          : undefined
+      }
     >
       {options.map((option) => (
-        <OptionItem 
-          key={option.value} 
+        <OptionItem
+          key={option.value}
           $isSelected={option.value === value}
           onClick={() => handleOptionClick(option.value)}
         >
@@ -147,32 +154,46 @@ const CustomSelect = <T extends string | number = string>({
           tabIndex={disabled ? -1 : 0}
         >
           <SelectValue>
-            {displayValue || (placeholder && <PlaceholderText>{placeholder}</PlaceholderText>)}
+            {displayValue ||
+              (placeholder && <PlaceholderText>{placeholder}</PlaceholderText>)}
           </SelectValue>
           <SelectArrow isOpen={isOpen} disabled={disabled}>
-            <svg width="17" height="9" viewBox="0 0 17 9" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M1.5 1L8.5 8L15.5 1" stroke={disabled ? '#CCCCCC' : '#50555C'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg
+              width="17"
+              height="9"
+              viewBox="0 0 17 9"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M1.5 1L8.5 8L15.5 1"
+                stroke={disabled ? "#CCCCCC" : "#50555C"}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </SelectArrow>
         </StyledSelect>
-        
+
         {isOpen && !dropdownInPortal && dropdown}
-        {isOpen && dropdownInPortal && dropdownRect && createPortal(dropdown, document.body)}
+        {isOpen &&
+          dropdownInPortal &&
+          dropdownRect &&
+          createPortal(dropdown, document.body)}
       </SelectContainer>
-      
+
       {customPlaceholder && (
         <PlaceholderLabel isVisible={showCustomPlaceholder}>
           {customPlaceholder}
         </PlaceholderLabel>
       )}
-      
-      {hasError && errorMessage && (
-        <ErrorMessage>{errorMessage}</ErrorMessage>
-      )}
-      
+
+      {hasError && errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
+
       <HiddenSelect
         name={name}
-        value={value || ''}
+        value={value || ""}
         onChange={() => {}}
         tabIndex={-1}
         required={required}
@@ -189,22 +210,30 @@ const CustomSelect = <T extends string | number = string>({
 
 const InputContainer = styled.div`
   position: relative;
-  display: inline-block;
+  display: block;
   width: 100%;
-  margin-right: auto;
 `;
 
 const SelectContainer = styled.div`
   position: relative;
-  width: auto;
+  width: 100%;
   max-width: 500px;
 `;
 
-const StyledSelect = styled.div<{ hasError?: boolean; isOpen: boolean; disabled?: boolean }>`
-  border: 1px solid ${({ hasError, isOpen, disabled }) => 
-    disabled ? 'rgba(209, 213, 219, 0.5)' : 
-    hasError ? 'rgba(239, 68, 68, 1)' : 
-    isOpen ? 'rgba(0, 125, 136, 1)' : 'rgba(209, 213, 219, 1)'};
+const StyledSelect = styled.div<{
+  hasError?: boolean;
+  isOpen: boolean;
+  disabled?: boolean;
+}>`
+  border: 1px solid
+    ${({ hasError, isOpen, disabled }) =>
+      disabled
+        ? "rgba(209, 213, 219, 0.5)"
+        : hasError
+        ? "rgba(239, 68, 68, 1)"
+        : isOpen
+        ? "rgba(0, 125, 136, 1)"
+        : "rgba(209, 213, 219, 1)"};
   border-radius: 5px;
   font-size: 14px;
   width: 100%;
@@ -212,10 +241,11 @@ const StyledSelect = styled.div<{ hasError?: boolean; isOpen: boolean; disabled?
   transition: border-color 0.2s ease;
   height: auto;
   box-sizing: border-box;
-  background-color: ${({ disabled }) => disabled ? 'rgba(249, 250, 251, 1)' : 'white'};
-  color: ${({ disabled }) => disabled ? 'rgba(156, 163, 175, 1)' : 'black'};
+  background-color: ${({ disabled }) =>
+    disabled ? "rgba(249, 250, 251, 1)" : "white"};
+  color: ${({ disabled }) => (disabled ? "rgba(156, 163, 175, 1)" : "black")};
   padding: 10px 15px;
-  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -223,10 +253,14 @@ const StyledSelect = styled.div<{ hasError?: boolean; isOpen: boolean; disabled?
   max-height: 37.5px;
 
   &:hover {
-    border-color: ${({ hasError, disabled, isOpen }) => 
-      disabled ? 'rgba(209, 213, 219, 0.5)' : 
-      hasError ? 'rgba(239, 68, 68, 1)' : 
-      isOpen ? 'rgba(0, 125, 136, 1)' : 'rgba(0, 125, 136, 1)'};
+    border-color: ${({ hasError, disabled, isOpen }) =>
+      disabled
+        ? "rgba(209, 213, 219, 0.5)"
+        : hasError
+        ? "rgba(239, 68, 68, 1)"
+        : isOpen
+        ? "rgba(0, 125, 136, 1)"
+        : "rgba(0, 125, 136, 1)"};
   }
 `;
 
@@ -242,22 +276,22 @@ const PlaceholderText = styled.span`
 `;
 
 const SelectArrow = styled.div<{ isOpen: boolean; disabled?: boolean }>`
-  transform: ${({ isOpen }) => isOpen ? 'rotate(180deg)' : 'rotate(0)'};
+  transform: ${({ isOpen }) => (isOpen ? "rotate(180deg)" : "rotate(0)")};
   transition: transform 0.2s ease;
   margin-left: 10px;
   flex-shrink: 0;
 `;
 
 const Dropdown = styled.div<{ $inPortal?: boolean }>`
-  position: ${({ $inPortal }) => $inPortal ? 'fixed' : 'absolute'};
-  top: ${({ $inPortal }) => $inPortal ? 'auto' : '100%'};
-  left: ${({ $inPortal }) => $inPortal ? 'auto' : '0'};
+  position: ${({ $inPortal }) => ($inPortal ? "fixed" : "absolute")};
+  top: ${({ $inPortal }) => ($inPortal ? "auto" : "100%")};
+  left: ${({ $inPortal }) => ($inPortal ? "auto" : "0")};
   width: 100%;
-  margin-top: ${({ $inPortal }) => $inPortal ? '0' : '4px'};
-  background: #FFFFFF;
+  margin-top: ${({ $inPortal }) => ($inPortal ? "0" : "4px")};
+  background: #ffffff;
   box-shadow: 2px 2px 25px 2px rgba(0, 0, 0, 0.25);
   border-radius: 5px;
-  z-index: ${({ $inPortal }) => $inPortal ? 2000 : 1001};
+  z-index: ${({ $inPortal }) => ($inPortal ? 2000 : 1001)};
   max-height: 300px;
   overflow-y: auto;
 `;
@@ -269,7 +303,8 @@ const OptionItem = styled.div<{ $isSelected: boolean }>`
   width: auto;
   min-height: 38px;
   text-align: left;
-  background: ${({ $isSelected }) => ($isSelected ? 'rgba(232, 216, 216, 1)' : 'transparent')};
+  background: ${({ $isSelected }) =>
+    $isSelected ? "rgba(232, 216, 216, 1)" : "transparent"};
   cursor: pointer;
 
   &:hover {
@@ -291,7 +326,8 @@ const RadioButton = styled.div<{ $isSelected: boolean }>`
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 1px solid ${({ $isSelected }) => ($isSelected ? '#007D88' : '#ADB3BC')};
+  border: 1px solid
+    ${({ $isSelected }) => ($isSelected ? "#007D88" : "#ADB3BC")};
   margin-right: 10px;
   display: flex;
   align-items: center;
@@ -303,11 +339,11 @@ const RadioButtonInner = styled.div`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #007D88;
+  background: #007d88;
 `;
 
 const OptionLabel = styled.span`
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-style: normal;
   font-weight: 400;
   text-align: left;

@@ -6,6 +6,7 @@ import { SideMenuContext } from "./SideMenuContext";
 import { useLocation } from "react-router-dom";
 import LicenseExpiryNotice from "../../Subscription/LicenseExpiryNotice";
 import { authStorage } from "../../../api/utils/auth-storage";
+import { TopMenuActionsProvider } from "../../../сontext/TopMenuActionsContext";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -77,26 +78,28 @@ const FullLayout = ({ children }: MainLayoutProps) => {
   };
 
   return (
-    <SideMenuContext.Provider
-      value={{
-        collapsed,
-        toggleCollapsed,
-        selectedSideMenuItem,
-        setSelectedSideMenuItem,
-        selectedTopMenuItem,
-        setSelectedTopMenuItem,
-      }}
-    >
-      <LayoutContainer>
-        <SideMenu />
-        {/* На узких экранах развёрнутое меню выезжает поверх контента —
+    <TopMenuActionsProvider>
+      <SideMenuContext.Provider
+        value={{
+          collapsed,
+          toggleCollapsed,
+          selectedSideMenuItem,
+          setSelectedSideMenuItem,
+          selectedTopMenuItem,
+          setSelectedTopMenuItem,
+        }}
+      >
+        <LayoutContainer>
+          <SideMenu />
+          {/* На узких экранах развёрнутое меню выезжает поверх контента —
             затемняем фон, клик по нему сворачивает меню. */}
-        <SideMenuBackdrop $visible={!collapsed} onClick={toggleCollapsed} />
-        <TopMenu />
-        <ContentContainer $collapsed={collapsed}>{children}</ContentContainer>
-        <LicenseExpiryNotice />
-      </LayoutContainer>
-    </SideMenuContext.Provider>
+          <SideMenuBackdrop $visible={!collapsed} onClick={toggleCollapsed} />
+          <TopMenu />
+          <ContentContainer $collapsed={collapsed}>{children}</ContentContainer>
+          <LicenseExpiryNotice />
+        </LayoutContainer>
+      </SideMenuContext.Provider>
+    </TopMenuActionsProvider>
   );
 };
 
@@ -115,17 +118,13 @@ const LayoutContainer = styled.div`
 
 const ContentContainer = styled.div<{ $collapsed: boolean }>`
   flex: 1;
-  /* Без этого широкий контент (например, грид календаря) распирает страницу
-     и горизонтально листается вся страница вместо внутренней области. */
   min-width: 0;
   margin-left: ${({ $collapsed }) => ($collapsed ? "65px" : "315px")};
-  margin-top: 56px;
+  margin-top: var(--header-height, 56px);
   box-sizing: border-box;
-  transition: all 0.3s ease;
-  min-height: calc(100vh - 56px); /* Высота минус TopMenu */
+  transition: margin-left 0.3s ease;
+  min-height: calc(100vh - var(--header-height, 56px));
 
-  /* Узкие экраны: меню не раздвигает контент, а выезжает поверх него.
-     Контент всегда занимает всю ширину, оставляя только узкую полосу иконок. */
   @media (max-width: 1280px) {
     margin-left: 70px;
   }

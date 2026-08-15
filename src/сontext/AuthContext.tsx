@@ -47,6 +47,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         employeeId: response.data.employee?.id,
         userType: response.data.type,
       });
+      // Обновляем originalCompanyId только когда пользователь в своей компании
+      // (нет enteredCompanyName). Это гарантирует актуальность значения после logout/login.
+      if (
+        !localStorage.getItem("enteredCompanyName") &&
+        response.data.employee?.companyId
+      ) {
+        localStorage.setItem(
+          "originalCompanyId",
+          String(response.data.employee.companyId)
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       setAuthInfo(null);
