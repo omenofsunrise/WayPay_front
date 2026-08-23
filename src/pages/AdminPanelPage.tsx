@@ -16,6 +16,7 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import CustomInput from "../components/ui/fields/CustomInput";
 import { formatDate } from "../utils/dateFormatter";
+import { formatMoney } from "../utils/formatPrice";
 import {
   formatPhoneHref,
   formatPhoneForSearch,
@@ -33,10 +34,13 @@ import {
 } from "../api/types/notification";
 import styled from "styled-components";
 import { useEmployee } from "../api/hooks/useEmployee";
+import UserSelect from "../components/ui/fields/UserSelect";
 import CreditApplicationCompaniesManager from "../components/CreditApplicationCompaniesManager";
 import BroadcastCampaignsManager from "../components/AdminPanel/BroadcastCampaignsManager";
+import CustomTextArea from "../components/ui/fields/CustomTextArea";
 import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Tabs from "../components/ui/fields/Tabs";
+import CustomSelect from "../components/ui/fields/CustomSelect";
 
 const SALES_MODE_STORAGE_KEY = "adminSalesMode";
 
@@ -77,6 +81,17 @@ const getPeriodDays = (startAt: string, endAt: string): number => {
   );
 };
 
+const getLicenseStatus = (
+  licenceDate: Date | null | undefined
+): "expired" | "expiring" | "ok" => {
+  if (!licenceDate) return "ok";
+  const days =
+    (new Date(licenceDate).getTime() - Date.now()) / (1000 * 3600 * 24);
+  if (days <= 0) return "expired";
+  if (days <= 30) return "expiring";
+  return "ok";
+};
+
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -101,115 +116,91 @@ const SubscriptionModal = ({
   const [paymentType, setPaymentType] = useState<PaymentTypeValue>(
     PaymentType.CASH
   );
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     const numericDays = parseInt(days);
     const numericCost = parseInt(cost);
 
     if (isNaN(numericDays) || numericDays <= 0) {
-      alert("Количество дней должно быть больше 0");
+      setError("Количество дней должно быть больше 0");
       return;
     }
-
     if (
       paymentType === PaymentType.CASH &&
       (isNaN(numericCost) || numericCost <= 0)
     ) {
-      alert("При оплате наличными сумма должна быть больше 0");
+      setError("При оплате наличными укажите сумму больше 0");
       return;
     }
 
-    if (paymentType === PaymentType.FREE) {
-      onConfirm(numericDays, 0, paymentType);
-    } else {
-      onConfirm(numericDays, numericCost * 100, paymentType);
-    }
+    onConfirm(
+      numericDays,
+      paymentType === PaymentType.FREE ? 0 : numericCost * 100,
+      paymentType
+    );
   };
 
   if (!isOpen) return null;
 
   return (
     <BaseModal
-      title={`Добавление подписки для: ${companyName}`}
+      title={`Добавление подписки: ${companyName}`}
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
       isSubmitting={isSubmitting}
     >
-      <div style={{ padding: "20px" }}>
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: "bold",
-              color: "black",
-            }}
-          >
-            Тип оплаты:
-          </label>
-          <select
+      <ModalForm>
+        <ModalField>
+          <ModalLabel>Тип оплаты</ModalLabel>
+          <CustomSelect
             value={paymentType}
-            onChange={(e) =>
-              setPaymentType(parseInt(e.target.value) as PaymentTypeValue)
-            }
-            style={{
-              width: "100%",
-              padding: "10px",
-              border: "1px solid #ccc",
-              backgroundColor: "white",
-              color: "black",
-              borderRadius: "4px",
+            onChange={(e) => {
+              setPaymentType(e.target.value as PaymentTypeValue);
+              setError(null);
             }}
-          >
-            <option value={PaymentType.CASH}>Наличные</option>
-            <option value={PaymentType.FREE}>Бесплатно по акции</option>
-          </select>
-        </div>
+            options={[
+              { value: PaymentType.CASH, label: "Наличные" },
+              { value: PaymentType.FREE, label: "Бесплатно по акции" },
+            ]}
+          />
+        </ModalField>
 
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: "bold",
-              color: "black",
-            }}
-          >
-            Количество дней:
-          </label>
+        <ModalField>
+          <ModalLabel>Количество дней</ModalLabel>
           <CustomInput
             type="number"
             value={days}
-            onChange={(e) => setDays(e.target.value)}
-            placeholder="Введите количество дней"
+            onChange={(e) => {
+              setDays(e.target.value);
+              setError(null);
+            }}
+            placeholder="Количество дней"
             min="1"
           />
-        </div>
+        </ModalField>
 
         {paymentType === PaymentType.CASH && (
-          <div style={{ marginBottom: "20px" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                fontWeight: "bold",
-                color: "black",
-              }}
-            >
-              Стоимость (₽):
-            </label>
+          <ModalField>
+            <ModalLabel>Стоимость (₽)</ModalLabel>
             <CustomInput
               type="number"
               value={cost}
-              onChange={(e) => setCost(e.target.value)}
-              placeholder="Введите стоимость"
+              onChange={(e) => {
+                setCost(e.target.value);
+                setError(null);
+              }}
+              placeholder="Сумма"
               min="0"
             />
-          </div>
+          </ModalField>
         )}
-      </div>
+
+        {error && <ModalError>{error}</ModalError>}
+      </ModalForm>
     </BaseModal>
   );
 };
@@ -230,12 +221,14 @@ const PayoutModal = ({
   isSubmitting,
 }: PayoutModalProps) => {
   const [amount, setAmount] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      alert("Сумма должна быть больше 0");
+      setError("Укажите сумму больше 0");
       return;
     }
     onConfirm(numericAmount);
@@ -245,30 +238,91 @@ const PayoutModal = ({
 
   return (
     <BaseModal
-      title={`Выплата партнеру: ${partnerName}`}
+      title={`Выплата партнёру: ${partnerName}`}
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
       isSubmitting={isSubmitting}
     >
-      <div style={{ padding: "20px" }}>
-        <label
-          style={{
-            display: "block",
-            marginBottom: "8px",
-            fontWeight: "bold",
-            color: "black",
-          }}
-        >
-          Сумма выплаты (₽):
-        </label>
-        <CustomInput
-          type="text"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Введите сумму"
-        />
-      </div>
+      <ModalForm>
+        <ModalField>
+          <ModalLabel>Сумма выплаты (₽)</ModalLabel>
+          <CustomInput
+            type="text"
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setError(null);
+            }}
+            placeholder="Введите сумму"
+          />
+        </ModalField>
+        {error && <ModalError>{error}</ModalError>}
+      </ModalForm>
+    </BaseModal>
+  );
+};
+
+interface DeleteConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  companyName: string;
+  isSubmitting: boolean;
+}
+
+const DeleteConfirmModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  companyName,
+  isSubmitting,
+}: DeleteConfirmModalProps) => {
+  const [inputValue, setInputValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputValue !== companyName) {
+      setError("Название компании не совпадает");
+      return;
+    }
+    onConfirm();
+  };
+
+  const handleClose = () => {
+    setInputValue("");
+    setError(null);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <BaseModal
+      title="Удаление компании"
+      onClose={handleClose}
+      onCancel={handleClose}
+      onSave={handleSubmit}
+      isSubmitting={isSubmitting}
+    >
+      <ModalForm>
+        <ModalField>
+          <ModalLabel>
+            Для подтверждения введите название компании:{" "}
+            <strong>{companyName}</strong>
+          </ModalLabel>
+          <CustomInput
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              setError(null);
+            }}
+            placeholder="Название компании"
+          />
+        </ModalField>
+        {error && <ModalError>{error}</ModalError>}
+      </ModalForm>
     </BaseModal>
   );
 };
@@ -303,6 +357,9 @@ const CompanyCabinetModal = ({
     0
   );
   const paidTotal = paidSubscriptions.reduce((sum, item) => sum + item.cost, 0);
+  const licenseStatus = !isPartner
+    ? getLicenseStatus(company.licenceDate)
+    : "ok";
 
   return (
     <BaseModal
@@ -344,12 +401,30 @@ const CompanyCabinetModal = ({
             </CabinetItem>
             {!isPartner && (
               <>
-                <CabinetItem>
+                <CabinetItem
+                  style={
+                    licenseStatus === "expired"
+                      ? { background: "#FEF2F2", borderColor: "#FECACA" }
+                      : licenseStatus === "expiring"
+                      ? { background: "#FFFBEB", borderColor: "#FDE68A" }
+                      : undefined
+                  }
+                >
                   <CabinetLabel>Лицензия до</CabinetLabel>
-                  <CabinetValue>
+                  <CabinetValue
+                    style={
+                      licenseStatus === "expired"
+                        ? { color: "#991B1B" }
+                        : licenseStatus === "expiring"
+                        ? { color: "#92400E" }
+                        : undefined
+                    }
+                  >
                     {company.licenceDate
                       ? formatDate(company.licenceDate)
                       : "Нет данных"}
+                    {licenseStatus === "expired" && " — просрочена"}
+                    {licenseStatus === "expiring" && " — скоро истекает"}
                   </CabinetValue>
                 </CabinetItem>
                 <CabinetItem>
@@ -368,7 +443,7 @@ const CompanyCabinetModal = ({
               <CabinetItem>
                 <CabinetLabel>Баланс</CabinetLabel>
                 <CabinetValue>
-                  {formatCurrency((company.balance ?? 0) * 100)}
+                  {formatMoney((company.balance ?? 0).toString())}
                 </CabinetValue>
               </CabinetItem>
             )}
@@ -383,77 +458,83 @@ const CompanyCabinetModal = ({
           </CabinetGrid>
         </CabinetSection>
 
-        <CabinetSection>
-          <CabinetSectionTitle>Итоги по подпискам</CabinetSectionTitle>
-          <SummaryGrid>
-            <SummaryItem>
-              <CabinetLabel>Всего записей</CabinetLabel>
-              <SummaryValue>{statistics.length}</SummaryValue>
-            </SummaryItem>
-            <SummaryItem>
-              <CabinetLabel>Платных продлений</CabinetLabel>
-              <SummaryValue>{paidSubscriptions.length}</SummaryValue>
-            </SummaryItem>
-            <SummaryItem>
-              <CabinetLabel>Подаренных продлений</CabinetLabel>
-              <SummaryValue>{freeSubscriptions.length}</SummaryValue>
-            </SummaryItem>
-            <SummaryItem>
-              <CabinetLabel>Подаренные дни</CabinetLabel>
-              <SummaryValue>{giftedDays}</SummaryValue>
-            </SummaryItem>
-            <SummaryItem>
-              <CabinetLabel>Оплачено всего</CabinetLabel>
-              <SummaryValue>{formatCurrency(paidTotal)}</SummaryValue>
-            </SummaryItem>
-          </SummaryGrid>
-        </CabinetSection>
+        {!isPartner && !isLoading && (
+          <CabinetSection>
+            <CabinetSectionTitle>Итоги по подпискам</CabinetSectionTitle>
+            <SummaryGrid>
+              <SummaryItem>
+                <CabinetLabel>Всего записей</CabinetLabel>
+                <SummaryValue>{statistics.length}</SummaryValue>
+              </SummaryItem>
+              <SummaryItem>
+                <CabinetLabel>Платных продлений</CabinetLabel>
+                <SummaryValue>{paidSubscriptions.length}</SummaryValue>
+              </SummaryItem>
+              <SummaryItem>
+                <CabinetLabel>Подаренных продлений</CabinetLabel>
+                <SummaryValue>{freeSubscriptions.length}</SummaryValue>
+              </SummaryItem>
+              <SummaryItem>
+                <CabinetLabel>Подаренные дни</CabinetLabel>
+                <SummaryValue>{giftedDays}</SummaryValue>
+              </SummaryItem>
+              <SummaryItem>
+                <CabinetLabel>Оплачено всего</CabinetLabel>
+                <SummaryValue>
+                  {formatMoney((paidTotal / 100).toString())}
+                </SummaryValue>
+              </SummaryItem>
+            </SummaryGrid>
+          </CabinetSection>
+        )}
 
-        <CabinetSection>
-          <CabinetSectionTitle>История подписки</CabinetSectionTitle>
-          {isLoading && (
-            <CabinetMuted>Загрузка истории подписки...</CabinetMuted>
-          )}
-          {error && <CabinetError>{error}</CabinetError>}
-          {!isLoading && !error && statistics.length === 0 && (
-            <CabinetMuted>История подписки пока пустая</CabinetMuted>
-          )}
-          {!isLoading && statistics.length > 0 && (
-            <CabinetTableWrapper>
-              <CabinetTable>
-                <thead>
-                  <tr>
-                    <th>Тип</th>
-                    <th>Дни</th>
-                    <th>Стоимость</th>
-                    <th>Начало</th>
-                    <th>Окончание</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statistics.map((item) => {
-                    const days = getPeriodDays(item.startAt, item.endAt);
-                    return (
-                      <tr key={item.id}>
-                        <td>
-                          <SubscriptionBadge $isFree={item.isFree}>
-                            {item.isFree ? "Подарено" : item.type || "Оплата"}
-                          </SubscriptionBadge>
-                        </td>
-                        <td>{days}</td>
-                        <td>
-                          {item.isFree ? "0 ₽" : formatCurrency(item.cost)}
-                        </td>
-                        <td>{formatDate(item.startAt)}</td>
-                        <td>{formatDate(item.endAt)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </CabinetTable>
-            </CabinetTableWrapper>
-          )}
-        </CabinetSection>
+        {!isPartner && (
+          <CabinetSection>
+            <CabinetSectionTitle>История подписки</CabinetSectionTitle>
+            {isLoading && (
+              <CabinetMuted>Загрузка истории подписки...</CabinetMuted>
+            )}
+            {error && <CabinetError>{error}</CabinetError>}
+            {!isLoading && !error && statistics.length === 0 && (
+              <CabinetMuted>История подписки пока пустая</CabinetMuted>
+            )}
+            {!isLoading && statistics.length > 0 && (
+              <CabinetTableWrapper>
+                <CabinetTable>
+                  <thead>
+                    <tr>
+                      <th>Тип</th>
+                      <th>Дни</th>
+                      <th>Стоимость</th>
+                      <th>Начало</th>
+                      <th>Окончание</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statistics.map((item) => {
+                      const days = getPeriodDays(item.startAt, item.endAt);
+                      return (
+                        <tr key={item.id}>
+                          <td>
+                            <SubscriptionBadge $isFree={item.isFree}>
+                              {item.isFree ? "Подарено" : item.type || "Оплата"}
+                            </SubscriptionBadge>
+                          </td>
+                          <td>{days}</td>
+                          <td>
+                            {item.isFree ? "—" : formatCurrency(item.cost)}
+                          </td>
+                          <td>{formatDate(item.startAt)}</td>
+                          <td>{formatDate(item.endAt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </CabinetTable>
+              </CabinetTableWrapper>
+            )}
+          </CabinetSection>
+        )}
       </CabinetContent>
     </BaseModal>
   );
@@ -582,11 +663,102 @@ const CabinetTable = styled.table`
   tr:last-child td {
     border-bottom: none;
   }
+
+  tbody tr:hover td {
+    background: #f9fafb;
+  }
 `;
 
 const SearchBar = styled.div`
-  max-width: 360px;
+  max-width: 480px;
   margin-bottom: 16px;
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 11px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+`;
+
+const ClearButton = styled.button`
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #374151;
+  }
+`;
+
+const ModalForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 30px;
+`;
+
+const ModalField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ModalLabel = styled.label`
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+`;
+
+const ModalError = styled.div`
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+`;
+
+const LoadingText = styled.div`
+  padding: 20px;
+  color: #6b7280;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: "";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top-color: #007d88;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 const SalesModeToggle = styled.div`
@@ -605,14 +777,64 @@ const SubscriptionBadge = styled.span<{ $isFree: boolean }>`
   min-height: 24px;
   padding: 3px 9px;
   border-radius: 999px;
-  color: ${(props) => (props.$isFree ? "#92400e" : "#065f46")};
-  background: ${(props) => (props.$isFree ? "#fef3c7" : "#d1fae5")};
+  color: ${(props) => (props.$isFree ? "#3730a3" : "#065f46")};
+  background: ${(props) => (props.$isFree ? "#e0e7ff" : "#d1fae5")};
   font-size: 12px;
   font-weight: 700;
 `;
 
+const NotificationForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 500px;
+  padding: 4px 0;
+`;
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 300px;
+  max-width: 400px;
+  background: ${(props) =>
+    props.$type === "success"
+      ? "#10b981"
+      : props.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
 const AdminPanelPage = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, refresh } = useAuth();
   const [nameFilter, setNameFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [salesMode, setSalesMode] = useState<boolean>(
@@ -668,6 +890,33 @@ const AdminPanelPage = () => {
   const [directorValue, setDirectorValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", message: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message }]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4000);
+    },
+    []
+  );
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [deleteTargetName, setDeleteTargetName] = useState("");
+
+  const [isCreditAppCreateOpen, setIsCreditAppCreateOpen] = useState(false);
+
+  const [activeBroadcastTab, setActiveBroadcastTab] = useState<
+    "campaigns" | "channels" | "chats"
+  >("campaigns");
+  const [isBroadcastCreateOpen, setIsBroadcastCreateOpen] = useState(false);
+  const [broadcastRefreshTick, setBroadcastRefreshTick] = useState(0);
+
   const [notificationType, setNotificationType] = useState<NotificationType>(
     NotificationType.AllUsers
   );
@@ -691,7 +940,8 @@ const AdminPanelPage = () => {
     payoutPartner,
   } = useCompany();
 
-  const { updateDirectorFullname, setSelfCompany } = useEmployee();
+  const { updateDirectorFullname, setSelfCompany, fetchEmployees, employees } =
+    useEmployee();
 
   const {
     sendNotification,
@@ -711,6 +961,12 @@ const AdminPanelPage = () => {
     },
     [getAllCompanies, currentPage, nameFilter]
   );
+
+  useEffect(() => {
+    if (notificationType === NotificationType.Single && !employees) {
+      fetchEmployees({ page: 1, pageSize: 200 });
+    }
+  }, [notificationType]);
 
   // Серверная пагинация/поиск: перезапрос при смене вкладки, страницы или поиска.
   // Поиск с дебаунсом, чтобы не слать запрос на каждый символ.
@@ -796,8 +1052,16 @@ const AdminPanelPage = () => {
     setIsPayoutModalOpen(true);
   };
 
-  const handleEnterCopany = (companyId: number) => {
-    setSelfCompany(companyId);
+  const handleEnterCopany = async (companyId: number) => {
+    const company = companies.find((c) => c.id === companyId);
+    if (company) {
+      localStorage.setItem(
+        "enteredCompanyName",
+        company.name || `#${companyId}`
+      );
+    }
+    await setSelfCompany(companyId);
+    await refresh();
   };
 
   const handleSavePhone = async (e: React.FormEvent) => {
@@ -811,11 +1075,11 @@ const AdminPanelPage = () => {
         await loadCompanies(activeTab === "partners");
         setIsPhoneModalOpen(false);
       } else {
-        alert("Не удалось сохранить изменения");
+        addToast("error", "Не удалось сохранить изменения");
       }
     } catch (err) {
       console.error("Ошибка при изменении телефона:", err);
-      alert("Произошла ошибка при сохранении");
+      addToast("error", "Произошла ошибка при сохранении");
     } finally {
       setIsSaving(false);
     }
@@ -837,15 +1101,15 @@ const AdminPanelPage = () => {
         paymentType
       );
       if (success) {
-        alert(`Подписка успешно добавлена!`);
+        addToast("success", "Подписка успешно добавлена");
         await loadCompanies(activeTab === "partners");
         setIsSubscriptionModalOpen(false);
       } else {
-        alert("Не удалось добавить подписку");
+        addToast("error", "Не удалось добавить подписку");
       }
     } catch (err) {
       console.error("Ошибка при добавлении подписки:", err);
-      alert("Произошла ошибка при добавлении подписки");
+      addToast("error", "Произошла ошибка при добавлении подписки");
     } finally {
       setIsSaving(false);
     }
@@ -862,7 +1126,7 @@ const AdminPanelPage = () => {
       setIsDirectorModalOpen(false);
     } catch (err) {
       console.error("Ошибка при изменении имени директора:", err);
-      alert("Произошла ошибка при сохранении");
+      addToast("error", "Произошла ошибка при сохранении");
     } finally {
       setIsSaving(false);
     }
@@ -874,62 +1138,37 @@ const AdminPanelPage = () => {
     setIsSaving(true);
     try {
       await payoutPartner(editingCompanyId, amount);
-      alert(`Выплата ${amount} ₽ успешно выполнена!`);
+      addToast("success", `Выплата ${amount} ₽ успешно выполнена`);
       await loadCompanies(true);
       setIsPayoutModalOpen(false);
     } catch (err) {
       console.error("Ошибка при выплате:", err);
-      alert("Произошла ошибка при выплате");
+      addToast("error", "Произошла ошибка при выплате");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const isLicenseExpiringSoon = (
-    licenceDate: Date | null | undefined
-  ): boolean => {
-    if (!licenceDate) return false;
-
-    const today = new Date();
-    const licenseEnd = new Date(licenceDate);
-    const timeDiff = licenseEnd.getTime() - today.getTime();
-    const daysDiff = timeDiff / (1000 * 3600 * 24);
-
-    return daysDiff <= 30;
-  };
-
-  const isLicenseExpired = (licenceDate: Date | null | undefined): boolean => {
-    if (!licenceDate) return false;
-
-    const today = new Date();
-    const licenseEnd = new Date(licenceDate);
-    const timeDiff = licenseEnd.getTime() - today.getTime();
-    const daysDiff = timeDiff / (1000 * 3600 * 24);
-
-    return daysDiff <= 0;
-  };
-
-  const handleDeleteCompany = async (rowData: any[]) => {
+  const handleDeleteCompany = (rowData: any[]) => {
     const [id, name] = rowData;
+    setDeleteTargetId(Number(id));
+    setDeleteTargetName(name as string);
+    setIsDeleteModalOpen(true);
+  };
 
-    if (!window.confirm("Вы уверены, что хотите удалить эту компанию?")) {
-      return;
-    }
-
-    const userInput = prompt(
-      `Для подтверждения удаления компании "${name}", введите её название:`
-    );
-
-    if (userInput === name) {
-      try {
-        await deleteCompany(Number(id));
-        loadCompanies(activeTab === "partners");
-      } catch (err) {
-        console.error("Ошибка при удалении компании:", err);
-        alert("Не удалось удалить компанию");
-      }
-    } else if (userInput !== null) {
-      alert("Название компании не совпадает. Удаление отменено.");
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setIsSaving(true);
+    try {
+      await deleteCompany(deleteTargetId);
+      await loadCompanies(activeTab === "partners");
+      setIsDeleteModalOpen(false);
+      addToast("success", "Компания успешно удалена");
+    } catch (err) {
+      console.error("Ошибка при удалении компании:", err);
+      addToast("error", "Не удалось удалить компанию");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -955,7 +1194,11 @@ const AdminPanelPage = () => {
     e.preventDefault();
 
     if (!notificationTitle.trim() || !notificationMessage.trim()) {
-      alert("Заполните заголовок и сообщение");
+      addToast("warning", "Заполните заголовок и сообщение");
+      return;
+    }
+    if (notificationType === NotificationType.Single && !targetId) {
+      addToast("warning", "Выберите сотрудника");
       return;
     }
 
@@ -974,15 +1217,18 @@ const AdminPanelPage = () => {
         avatarPath: null,
       };
 
-      await sendNotification(notificationData);
-      alert("Рассылка отправлена успешно!");
-
-      setNotificationTitle("");
-      setNotificationMessage("");
-      setTargetId("");
+      const ok = await sendNotification(notificationData);
+      if (ok) {
+        addToast("success", "Рассылка отправлена успешно");
+        setNotificationTitle("");
+        setNotificationMessage("");
+        setTargetId("");
+      } else {
+        addToast("error", "Не удалось отправить рассылку");
+      }
     } catch (err) {
       console.error("Ошибка при отправке рассылки:", err);
-      alert("Произошла ошибка при отправке рассылки");
+      addToast("error", "Произошла ошибка при отправке рассылки");
     } finally {
       setIsSendingNotification(false);
     }
@@ -1009,9 +1255,9 @@ const AdminPanelPage = () => {
       { name: "Название компании", align: "left" },
       { name: "Директор", align: "left" },
       { name: "Телефон", align: "left" },
-      { name: "Лицензия заканчивается", align: "right" },
-      { name: "Договоров за последние 10 дней", align: "right" },
-      { name: "Договоров всего", align: "right" },
+      { name: "Лицензия до", align: "right" },
+      { name: "За 10 дней", align: "right" },
+      { name: "Всего", align: "right" },
     ];
     if (!salesMode) {
       columns.push({ name: "Последний заход в сеть", align: "right" });
@@ -1026,7 +1272,6 @@ const AdminPanelPage = () => {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
     });
 
   const tableData = hasRole("суперадмин")
@@ -1035,19 +1280,11 @@ const AdminPanelPage = () => {
           const row: React.ReactNode[] = [
             company.id.toString(),
             company.name,
-            <span
-              onClick={() => handleOpenDirectorEdit(company.id, company.chief)}
-              style={{ cursor: "pointer", textDecoration: "underline" }}
-            >
-              {company.chief}
-            </span>,
-            <PhoneLink
-              href={formatPhoneHref(company.phone)}
-              onClick={() => handleOpenPhoneEdit(company.id, company.phone)}
-            >
+            company.chief,
+            <PhoneLink href={formatPhoneHref(company.phone)}>
               {company.phone}
             </PhoneLink>,
-            (company.balance?.toLocaleString() || "0") + "₽",
+            formatMoney((company.balance ?? 0).toString()),
           ];
           if (!salesMode) {
             row.push(formatLastActive(company.lastActive));
@@ -1057,16 +1294,8 @@ const AdminPanelPage = () => {
         const row: React.ReactNode[] = [
           company.id.toString(),
           company.name,
-          <span
-            onClick={() => handleOpenDirectorEdit(company.id, company.chief)}
-            style={{ cursor: "pointer", textDecoration: "underline" }}
-          >
-            {company.chief}
-          </span>,
-          <PhoneLink
-            href={formatPhoneHref(company.phone)}
-            onClick={() => handleOpenPhoneEdit(company.id, company.phone)}
-          >
+          company.chief,
+          <PhoneLink href={formatPhoneHref(company.phone)}>
             {company.phone}
           </PhoneLink>,
           company.licenceDate ? formatDate(company.licenceDate) : "Нет данных",
@@ -1091,35 +1320,35 @@ const AdminPanelPage = () => {
     : [];
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {
+    if (activeTab === "partners") return styles;
     const company = companies[index];
-
-    if (
-      activeTab !== "partners" &&
-      company &&
-      isLicenseExpiringSoon(company.licenceDate)
-    ) {
+    if (!company) return styles;
+    const status = getLicenseStatus(company.licenceDate);
+    if (status === "expiring") {
       styles[index] = {
-        backgroundColor: "#FFEBEE",
-        color: "black",
+        backgroundColor: "#FFFBEB",
+        color: "#92400E",
+        fontWeight: "normal",
+      };
+    } else if (status === "expired") {
+      styles[index] = {
+        backgroundColor: "#FEF2F2",
+        color: "#991B1B",
         fontWeight: "normal",
       };
     }
-
-    if (
-      activeTab !== "partners" &&
-      company &&
-      isLicenseExpired(company.licenceDate)
-    ) {
-      styles[index] = {
-        backgroundColor: "rgba(145, 104, 104, 1)",
-        fontWeight: "normal",
-      };
-    }
-
     return styles;
   }, {} as Record<number, RowStyle>);
 
-  const broadcastContent = <BroadcastCampaignsManager />;
+  const broadcastContent = (
+    <BroadcastCampaignsManager
+      activeTab={activeBroadcastTab}
+      onTabChange={setActiveBroadcastTab}
+      isCreateModalOpen={isBroadcastCreateOpen}
+      setIsCreateModalOpen={setIsBroadcastCreateOpen}
+      refreshChannelsTick={broadcastRefreshTick}
+    />
+  );
 
   const tableActionsAll = hasRole("суперадмин")
     ? activeTab === "partners"
@@ -1133,13 +1362,7 @@ const AdminPanelPage = () => {
           {
             label: "Зайти в компанию",
             action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
-            color: "#EF4444",
-          },
-          {
-            label: "Добавить подписку",
-            action: (rowData: any[]) =>
-              handleOpenSubscriptionAdd(Number(rowData[0]), rowData[1]),
-            color: "#10B981",
+            color: "#6366F1",
           },
           {
             label: "Выплатить",
@@ -1149,20 +1372,29 @@ const AdminPanelPage = () => {
           },
           {
             label: "Изм. директора",
-            action: (rowData: any[]) =>
-              handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),
-            color: "#3B82F6",
+            action: (rowData: any[]) => {
+              const company = companies.find(
+                (c) => c.id === Number(rowData[0])
+              );
+              handleOpenDirectorEdit(Number(rowData[0]), company?.chief || "");
+            },
+            color: "#6B7280",
           },
           {
             label: "Изм. телефон",
-            action: (rowData: any[]) =>
-              handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
-            color: "#3B82F6",
+            action: (rowData: any[]) => {
+              const company = companies.find(
+                (c) => c.id === Number(rowData[0])
+              );
+              handleOpenPhoneEdit(Number(rowData[0]), company?.phone || "");
+            },
+            color: "#6B7280",
           },
           {
             label: "Удалить",
             action: handleDeleteCompany,
             color: "#EF4444",
+            dividerBefore: true,
           },
         ]
       : [
@@ -1175,7 +1407,7 @@ const AdminPanelPage = () => {
           {
             label: "Зайти в компанию",
             action: (rowData: any[]) => handleEnterCopany(Number(rowData[0])),
-            color: "#EF4444",
+            color: "#6366F1",
           },
           {
             label: "Добавить подписку",
@@ -1185,20 +1417,29 @@ const AdminPanelPage = () => {
           },
           {
             label: "Изм. директора",
-            action: (rowData: any[]) =>
-              handleOpenDirectorEdit(Number(rowData[0]), rowData[2]),
-            color: "#3B82F6",
+            action: (rowData: any[]) => {
+              const company = companies.find(
+                (c) => c.id === Number(rowData[0])
+              );
+              handleOpenDirectorEdit(Number(rowData[0]), company?.chief || "");
+            },
+            color: "#6B7280",
           },
           {
             label: "Изм. телефон",
-            action: (rowData: any[]) =>
-              handleOpenPhoneEdit(Number(rowData[0]), rowData[3]),
-            color: "#3B82F6",
+            action: (rowData: any[]) => {
+              const company = companies.find(
+                (c) => c.id === Number(rowData[0])
+              );
+              handleOpenPhoneEdit(Number(rowData[0]), company?.phone || "");
+            },
+            color: "#6B7280",
           },
           {
             label: "Удалить",
             action: handleDeleteCompany,
             color: "#EF4444",
+            dividerBefore: true,
           },
         ]
     : [];
@@ -1211,12 +1452,42 @@ const AdminPanelPage = () => {
   const companiesContent = (
     <>
       <SearchBar>
-        <CustomInput
-          inputType="text"
-          placeholder="Поиск по номеру, названию или телефону"
-          value={nameFilter}
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
+        <SearchWrapper>
+          <SearchIcon>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle
+                cx="6.5"
+                cy="6.5"
+                r="5"
+                stroke="#9CA3AF"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M10.5 10.5L14 14"
+                stroke="#9CA3AF"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </SearchIcon>
+          <CustomInput
+            inputType="text"
+            placeholder="Поиск по номеру, названию или телефону"
+            value={nameFilter}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            style={{ paddingLeft: "36px" }}
+          />
+          {nameFilter && (
+            <ClearButton
+              onClick={() => {
+                setNameFilter("");
+                setCurrentPage(1);
+              }}
+            >
+              ✕
+            </ClearButton>
+          )}
+        </SearchWrapper>
       </SearchBar>
 
       {!isLoading && !error && (
@@ -1246,110 +1517,81 @@ const AdminPanelPage = () => {
     </>
   );
 
-  const creditApplicationsContent = <CreditApplicationCompaniesManager />;
+  const creditApplicationsContent = (
+    <CreditApplicationCompaniesManager
+      isCreateModalOpen={isCreditAppCreateOpen}
+      setIsCreateModalOpen={setIsCreditAppCreateOpen}
+    />
+  );
 
   const notificationsContent = (
-    <div style={{ padding: "20px", maxWidth: "600px" }}>
-      <form onSubmit={handleSendNotification}>
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: "bold",
-              color: "black",
-              textAlign: "left",
-            }}
-          >
-            Тип рассылки:
-          </label>
-          <select
-            value={notificationType}
-            onChange={(e) =>
-              setNotificationType(parseInt(e.target.value) as NotificationType)
+    <NotificationForm onSubmit={handleSendNotification}>
+      <ModalField>
+        <ModalLabel>Тип рассылки</ModalLabel>
+        <CustomSelect
+          value={notificationType}
+          onChange={(e) =>
+            setNotificationType(parseInt(e.target.value) as NotificationType)
+          }
+          options={[
+            { value: NotificationType.AllUsers, label: "Всем пользователям" },
+            { value: NotificationType.Clients, label: "Клиентам" },
+            { value: NotificationType.Employees, label: "Сотрудникам" },
+            { value: NotificationType.Single, label: "Одному пользователю" },
+          ]}
+          dropdownInPortal
+        />
+      </ModalField>
+
+      {notificationType === NotificationType.Single && (
+        <ModalField>
+          <ModalLabel>Сотрудник</ModalLabel>
+          <UserSelect
+            value={targetId}
+            onChange={(e) => setTargetId(e.target.value)}
+            placeholder="Выберите сотрудника"
+            options={
+              employees?.items.map((emp) => ({
+                value: emp.id.toString(),
+                label: emp.fullName,
+                avatar: emp.photoPath,
+              })) ?? []
             }
-            style={{
-              width: "100%",
-              padding: "10px",
-              border: "1px solid #ccc",
-              backgroundColor: "white",
-              color: "black",
-              borderRadius: "4px",
-            }}
-          >
-            <option value={NotificationType.AllUsers}>
-              Всем пользователям
-            </option>
-            <option value={NotificationType.Clients}>Клиентам</option>
-            <option value={NotificationType.Employees}>Сотрудникам</option>
-          </select>
-        </div>
-
-        <div style={{ margin: "0px", padding: "0" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: "bold",
-              color: "black",
-              textAlign: "left",
-            }}
-          >
-            Заголовок уведомления:
-          </label>
-          <CustomInput
-            value={notificationTitle}
-            onChange={(e) => setNotificationTitle(e.target.value)}
-            placeholder="Введите заголовок"
-            required
           />
-        </div>
+        </ModalField>
+      )}
 
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: "bold",
-              color: "black",
-              textAlign: "left",
-            }}
-          >
-            Сообщение:
-          </label>
-          <textarea
-            value={notificationMessage}
-            onChange={(e) => setNotificationMessage(e.target.value)}
-            placeholder="Введите текст сообщения"
-            style={{
-              width: "100%",
-              minHeight: "120px",
-              padding: "10px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              resize: "vertical",
-              color: "black",
-              backgroundColor: "white",
-            }}
-            required
-          />
-        </div>
+      <ModalField>
+        <ModalLabel>Заголовок уведомления</ModalLabel>
+        <CustomInput
+          value={notificationTitle}
+          onChange={(e) => setNotificationTitle(e.target.value)}
+          placeholder="Введите заголовок"
+        />
+      </ModalField>
 
-        <DarkCyanButton
-          type="submit"
-          disabled={isSendingNotification}
-          style={{ width: "200px" }}
-        >
-          {isSendingNotification ? "Отправка..." : "Отправить рассылку"}
-        </DarkCyanButton>
+      <ModalField>
+        <ModalLabel>Сообщение</ModalLabel>
+        <CustomTextArea
+          value={notificationMessage}
+          onChange={(e) => setNotificationMessage(e.target.value)}
+          placeholder="Введите текст сообщения"
+          rows={5}
+        />
+      </ModalField>
 
-        {notificationError && (
-          <div style={{ color: "red", marginTop: "10px" }}>
-            Ошибка: {notificationError}
-          </div>
-        )}
-      </form>
-    </div>
+      {notificationError && (
+        <ModalError>Ошибка: {notificationError}</ModalError>
+      )}
+
+      <DarkCyanButton
+        type="submit"
+        disabled={isSendingNotification}
+        style={{ width: "200px" }}
+      >
+        {isSendingNotification ? "Отправка..." : "Отправить рассылку"}
+      </DarkCyanButton>
+    </NotificationForm>
   );
 
   const tabs = [
@@ -1395,8 +1637,32 @@ const AdminPanelPage = () => {
       >
         + Новый партнер
       </DarkCyanButton>
-    ) : activeTab === "credit-applications" &&
-      hasRole("суперадмин") ? null : null;
+    ) : activeTab === "credit-applications" && hasRole("суперадмин") ? (
+      <DarkCyanButton
+        style={{ width: "15vw", maxHeight: "50px" }}
+        onClick={() => setIsCreditAppCreateOpen(true)}
+      >
+        + Новый заявкополучатель
+      </DarkCyanButton>
+    ) : activeTab === "broadcast" &&
+      activeBroadcastTab === "campaigns" &&
+      hasRole("суперадмин") ? (
+      <DarkCyanButton
+        style={{ width: "15vw", maxHeight: "50px" }}
+        onClick={() => setIsBroadcastCreateOpen(true)}
+      >
+        + Создать кампанию
+      </DarkCyanButton>
+    ) : activeTab === "broadcast" &&
+      activeBroadcastTab === "channels" &&
+      hasRole("суперадмин") ? (
+      <DarkCyanButton
+        style={{ width: "15vw", maxHeight: "50px" }}
+        onClick={() => setBroadcastRefreshTick((t) => t + 1)}
+      >
+        Обновить
+      </DarkCyanButton>
+    ) : null;
 
   if (!hasRole("суперадмин")) {
     return (
@@ -1404,7 +1670,7 @@ const AdminPanelPage = () => {
         <TitleField>
           <CustomTitle>Моя компания</CustomTitle>
         </TitleField>
-        {isLoading && <div>Загрузка...</div>}
+        {isLoading && <LoadingText>Загрузка...</LoadingText>}
         {error && <div>Ошибка: {error}</div>}
         {!isLoading && !error && company && (
           <CustomTable
@@ -1484,10 +1750,15 @@ const AdminPanelPage = () => {
           onSave={handleSavePhone}
           isSubmitting={isSaving}
         >
-          <CustomPhoneInput
-            value={phoneValue}
-            onChange={(e) => setPhoneValue(e)}
-          />
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Номер телефона</ModalLabel>
+              <CustomPhoneInput
+                value={phoneValue}
+                onChange={(e) => setPhoneValue(e)}
+              />
+            </ModalField>
+          </ModalForm>
         </BaseModal>
       )}
 
@@ -1520,10 +1791,16 @@ const AdminPanelPage = () => {
           onSave={handleSaveDirector}
           isSubmitting={isSaving}
         >
-          <CustomInput
-            value={directorValue}
-            onChange={(e) => setDirectorValue(e.target.value)}
-          />
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>ФИО директора</ModalLabel>
+              <CustomInput
+                value={directorValue}
+                onChange={(e) => setDirectorValue(e.target.value)}
+                placeholder="Введите ФИО директора"
+              />
+            </ModalField>
+          </ModalForm>
         </BaseModal>
       )}
 
@@ -1534,6 +1811,23 @@ const AdminPanelPage = () => {
         partnerName={selectedPartnerName}
         isSubmitting={isSaving}
       />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        companyName={deleteTargetName}
+        isSubmitting={isSaving}
+      />
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
     </PageLayout>
   );
 };

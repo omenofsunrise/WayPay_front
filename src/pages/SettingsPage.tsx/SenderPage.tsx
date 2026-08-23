@@ -1,8 +1,12 @@
 import PageLayout from "../../components/ui/Layouts/PageLayout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import styled from "styled-components";
+import TitleField from "../../components/ui/Layouts/TitleLayout";
+import CustomTitle from "../../components/ui/Text/CustomTitle";
 import ModalInfoTitle from "../../components/ui/Text/ModalInfoTitle";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
+import BaseModal from "../../components/modal/BASE/modalCRUBase";
+import CustomTextArea from "../../components/ui/fields/CustomTextArea";
 import useSender from "../../api/hooks/useSender";
 import { TextPatternType } from "../../api/types/sender";
 import type {
@@ -13,6 +17,59 @@ import DefaultContainer from "../../components/ui/containers/defaultContainer";
 import AddSenderScheduleModal from "../../components/modal/AddSenderScheduleModal";
 import { describeSenderSetting } from "../../api/utils/senderSchedule";
 import DeleteButton from "../../components/ui/Buttons/DeleteButton";
+
+// ─── Toast & Confirm ──────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 280px;
+  max-width: 400px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const ConfirmText = styled.p`
+  padding: 16px 30px;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.5;
+`;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type TemplateKey =
   | "upcomingPaymentText"
@@ -229,6 +286,53 @@ const SenderPage = () => {
     SenderSettingResponse[]
   >([]);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", msg: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message: msg }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
+
+  const openConfirm = (msg: string, onConfirm: () => void) =>
+    setConfirmState({
+      isOpen: true,
+      message: msg,
+      onConfirm,
+      isSubmitting: false,
+    });
+
+  const closeConfirm = () =>
+    setConfirmState((prev) => ({
+      ...prev,
+      isOpen: false,
+      isSubmitting: false,
+    }));
+
+  const handleConfirm = async () => {
+    setConfirmState((prev) => ({ ...prev, isSubmitting: true }));
+    try {
+      await confirmState.onConfirm();
+    } finally {
+      closeConfirm();
+    }
+  };
+
   const [changedFlags, setChangedFlags] = useState<
     Record<TemplateKey, boolean>
   >({
@@ -284,8 +388,10 @@ const SenderPage = () => {
         patternType: config.patternType,
       });
       setChangedFlags((prev) => ({ ...prev, [config.key]: false }));
+      addToast("success", "Шаблон сохранён");
     } catch (e) {
       console.error("Error saving text pattern:", e);
+      addToast("error", "Не удалось сохранить шаблон");
     }
   };
 
@@ -295,9 +401,16 @@ const SenderPage = () => {
     setIsScheduleModalOpen(false);
   };
 
-  const handleDeleteSchedule = async (id: number) => {
-    await DeleteSenderSetting(id);
-    await loadSenderData();
+  const handleDeleteSchedule = (id: number) => {
+    openConfirm("Удалить это расписание рассылки?", async () => {
+      try {
+        await DeleteSenderSetting(id);
+        await loadSenderData();
+        addToast("success", "Расписание удалено");
+      } catch {
+        addToast("error", "Не удалось удалить расписание");
+      }
+    });
   };
 
   const insertVariable = (key: TemplateKey, variable: string) => {
@@ -331,12 +444,14 @@ const SenderPage = () => {
     return text;
   };
 
-  if (error) {
-    console.error("API Error:", error);
-  }
-
   return (
     <PageLayout>
+      <TitleField style={{ marginTop: 0 }}>
+        <CustomTitle style={{ marginTop: 0 }}>Рассылка</CustomTitle>
+      </TitleField>
+
+      {error && <ErrorBanner>{error}</ErrorBanner>}
+
       <ScheduleSection>
         <DefaultContainer>
           <ScheduleHeader>
@@ -344,7 +459,6 @@ const SenderPage = () => {
             <DarkCyanButton
               onClick={() => setIsScheduleModalOpen(true)}
               disabled={isLoading}
-              style={{ minWidth: "100px", flexShrink: 0 }}
             >
               + Добавить рассылку
             </DarkCyanButton>
@@ -384,13 +498,12 @@ const SenderPage = () => {
             <DefaultContainer>
               <MessageHeader>
                 <ModalInfoTitle>{config.title}</ModalInfoTitle>
-                <DarkCyanButton
+                <SaveButton
                   onClick={() => handleSaveText(config)}
                   disabled={isLoading || !changedFlags[config.key]}
-                  style={{ minWidth: "100px", flexShrink: 0 }}
                 >
                   {isLoading ? "..." : "Сохранить"}
-                </DarkCyanButton>
+                </SaveButton>
               </MessageHeader>
 
               <ContentWrapper>
@@ -410,12 +523,13 @@ const SenderPage = () => {
                   </VariableButtons>
                 </VariableSection>
 
-                <MessageTextarea
+                <CustomTextArea
                   id={config.key}
                   value={settings[config.key]}
                   onChange={(e) => handleTextChange(config.key, e.target.value)}
                   placeholder={config.placeholder}
                   disabled={isLoading}
+                  rows={8}
                 />
 
                 <PreviewSection>
@@ -436,11 +550,52 @@ const SenderPage = () => {
         onClose={() => setIsScheduleModalOpen(false)}
         onConfirm={handleAddSchedule}
       />
+
+      {confirmState.isOpen && (
+        <BaseModal
+          title="Подтверждение"
+          onClose={closeConfirm}
+          onCancel={closeConfirm}
+          onSave={(e) => {
+            e.preventDefault();
+            handleConfirm();
+          }}
+          isSubmitting={confirmState.isSubmitting}
+          saveButtonText="Удалить"
+          width="400px"
+        >
+          <ConfirmText>{confirmState.message}</ConfirmText>
+        </BaseModal>
+      )}
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
     </PageLayout>
   );
 };
 
 export default SenderPage;
+
+const ErrorBanner = styled.div`
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #fecaca;
+  font-size: 14px;
+`;
+
+const SaveButton = styled(DarkCyanButton)`
+  min-width: 100px;
+  flex-shrink: 0;
+`;
 
 const ScheduleSection = styled.div`
   padding: 24px 16px 0;
@@ -588,38 +743,6 @@ const VariableButton = styled.button<{ disabled?: boolean }>`
   }
   &:active:not(:disabled) {
     transform: translateY(0);
-  }
-`;
-
-const MessageTextarea = styled.textarea<{ disabled?: boolean }>`
-  width: 100%;
-  padding: 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  resize: vertical;
-  min-height: 180px;
-  max-height: 250px;
-  color: #1f2937;
-  background-color: white;
-  opacity: ${(props) => (props.disabled ? 0.6 : 1)};
-  cursor: ${(props) => (props.disabled ? "not-allowed" : "text")};
-  box-sizing: border-box;
-  font-family: "Inter", "Segoe UI", sans-serif;
-  line-height: 1.5;
-  margin-bottom: 24px;
-  flex-shrink: 0;
-
-  &:focus {
-    outline: none;
-    border-color: #007d88;
-    box-shadow: 0 0 0 3px rgba(0, 125, 136, 0.1);
-  }
-
-  &::placeholder {
-    color: #9ca3af;
-    font-size: 13px;
-    line-height: 1.4;
   }
 `;
 

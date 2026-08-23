@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import styled from "styled-components";
 import { useParams, useNavigate } from "react-router-dom";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
-import GrayButton from "../../components/ui/Buttons/GrayButton";
 import CustomInput from "../../components/ui/fields/CustomInput";
+import CustomSelect from "../../components/ui/fields/CustomSelect";
+import PageLayout from "../../components/ui/Layouts/PageLayout";
+import TitleField from "../../components/ui/Layouts/TitleLayout";
+import BackButtonComponent from "../../components/ui/Buttons/BackButton";
+import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import useWhatsApp from "../../api/hooks/useWhatsApp";
 import type {
   BotResponse,
@@ -31,6 +35,60 @@ const EVENT_OPTIONS: BotEventType[] = [
   "CreatedPayment",
   "ClientBirthdate",
 ];
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 280px;
+  max-width: 420px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const ConfirmText = styled.p`
+  padding: 16px 30px;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.5;
+  white-space: pre-line;
+`;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const BotManagementPage: React.FC = () => {
   const { channelId } = useParams<{ channelId: string }>();
@@ -107,6 +165,53 @@ const BotManagementPage: React.FC = () => {
     saving: false,
   });
 
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
+
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", msg: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message: msg }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
+
+  const openConfirm = (msg: string, onConfirm: () => void) =>
+    setConfirmState({
+      isOpen: true,
+      message: msg,
+      onConfirm,
+      isSubmitting: false,
+    });
+
+  const closeConfirm = () =>
+    setConfirmState((prev) => ({
+      ...prev,
+      isOpen: false,
+      isSubmitting: false,
+    }));
+
+  const handleConfirm = async () => {
+    setConfirmState((prev) => ({ ...prev, isSubmitting: true }));
+    try {
+      await confirmState.onConfirm();
+    } finally {
+      closeConfirm();
+    }
+  };
+
   useEffect(() => {
     if (channelId) {
       loadRules();
@@ -124,6 +229,7 @@ const BotManagementPage: React.FC = () => {
   };
 
   // === Управление правилами ===
+
   const handleCreateRule = () => {
     setRuleModal({
       isOpen: true,
@@ -146,9 +252,10 @@ const BotManagementPage: React.FC = () => {
     });
   };
 
-  const handleSaveRule = async () => {
+  const handleSaveRule = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!ruleModal.name.trim()) {
-      alert("Введите название правила");
+      addToast("warning", "Введите название правила");
       return;
     }
 
@@ -161,7 +268,7 @@ const BotManagementPage: React.FC = () => {
           ruleModal.editingRule.id,
           ruleModal.isActive
         );
-        alert("Название правила обновлено");
+        addToast("success", "Название правила обновлено");
       } else {
         if (!channelId) return;
         const newBot = await createBot(
@@ -172,13 +279,12 @@ const BotManagementPage: React.FC = () => {
         if (newBot && ruleModal.isActive !== undefined) {
           await updateBot(newBot.name, newBot.id, ruleModal.isActive);
         }
-        alert("Правило создано");
+        addToast("success", "Правило создано");
       }
       await loadRules();
       setRuleModal((prev) => ({ ...prev, isOpen: false }));
-    } catch (error) {
-      console.error("Error saving rule:", error);
-      alert("Ошибка при сохранении");
+    } catch {
+      addToast("error", "Ошибка при сохранении");
     } finally {
       setRuleModal((prev) => ({ ...prev, saving: false }));
     }
@@ -188,26 +294,25 @@ const BotManagementPage: React.FC = () => {
     try {
       await updateBot(rule.name, rule.id, !rule.isActive);
       await loadRules();
-    } catch (error) {
-      console.error("Error toggling rule:", error);
-      alert("Ошибка при изменении статуса");
+    } catch {
+      addToast("error", "Ошибка при изменении статуса");
     }
   };
 
-  const handleDeleteRule = async (rule: BotResponse) => {
-    if (!confirm(`Удалить правило "${rule.name}"?`)) return;
-
-    try {
-      await deleteBot(rule.id);
-      await loadRules();
-      alert("Правило удалено");
-    } catch (error) {
-      console.error("Error deleting rule:", error);
-      alert("Ошибка при удалении");
-    }
+  const handleDeleteRule = (rule: BotResponse) => {
+    openConfirm(`Удалить правило "${rule.name}"?`, async () => {
+      try {
+        await deleteBot(rule.id);
+        await loadRules();
+        addToast("success", "Правило удалено");
+      } catch {
+        addToast("error", "Ошибка при удалении");
+      }
+    });
   };
 
   // === Управление ответами ===
+
   const handleEditResponse = (rule: BotResponse) => {
     setResponseModal({
       isOpen: true,
@@ -228,26 +333,33 @@ const BotManagementPage: React.FC = () => {
     });
   };
 
-  const handleSaveResponse = async () => {
+  const handleSaveResponse = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!responseModal.response.trim()) {
-      alert("Введите ответ бота");
+      addToast("warning", "Введите ответ бота");
       return;
     }
-
     if (!responseModal.rule) return;
 
     const issues = validateBotTemplate(responseModal.response);
     if (issues.length > 0) {
-      const confirmSave = confirm(
+      openConfirm(
         `Найдены проблемы в шаблоне:\n\n${issues
           .map((i) => "• " + i.message)
-          .join("\n")}\n\nСохранить всё равно?`
+          .join("\n")}\n\nСохранить всё равно?`,
+        async () => {
+          await doSaveResponse();
+        }
       );
-      if (!confirmSave) return;
+      return;
     }
 
-    setResponseModal((prev) => ({ ...prev, saving: true }));
+    await doSaveResponse();
+  };
 
+  const doSaveResponse = async () => {
+    if (!responseModal.rule) return;
+    setResponseModal((prev) => ({ ...prev, saving: true }));
     try {
       const type =
         responseModal.kind === "noClient"
@@ -255,17 +367,17 @@ const BotManagementPage: React.FC = () => {
           : undefined;
       await setBotResponse(responseModal.rule.id, responseModal.response, type);
       await loadRules();
-      alert("Ответ обновлен");
+      addToast("success", "Ответ обновлён");
       setResponseModal((prev) => ({ ...prev, isOpen: false }));
-    } catch (error) {
-      console.error("Error saving response:", error);
-      alert("Ошибка при сохранении ответа");
+    } catch {
+      addToast("error", "Ошибка при сохранении ответа");
     } finally {
       setResponseModal((prev) => ({ ...prev, saving: false }));
     }
   };
 
   // === Управление ключевыми словами ===
+
   const handleOpenKeywords = (rule: BotResponse) => {
     setKeywordModal({
       isOpen: true,
@@ -278,13 +390,12 @@ const BotManagementPage: React.FC = () => {
 
   const handleAddKeyword = async () => {
     if (!keywordModal.keyword.trim()) {
-      alert("Введите ключевое слово");
+      addToast("warning", "Введите ключевое слово");
       return;
     }
     if (!keywordModal.rule) return;
 
     setKeywordModal((prev) => ({ ...prev, adding: true }));
-
     try {
       await addBotKeyword(
         keywordModal.rule.id,
@@ -293,28 +404,27 @@ const BotManagementPage: React.FC = () => {
       );
       await loadRules();
       setKeywordModal((prev) => ({ ...prev, keyword: "" }));
-      alert("Ключевое слово добавлено");
-    } catch (error) {
-      console.error("Error adding keyword:", error);
-      alert("Ошибка при добавлении");
+      addToast("success", "Ключевое слово добавлено");
+    } catch {
+      addToast("error", "Ошибка при добавлении");
     } finally {
       setKeywordModal((prev) => ({ ...prev, adding: false }));
     }
   };
 
-  const handleDeleteKeyword = async (keywordId: number, ruleId: number) => {
-    if (!confirm("Удалить ключевое слово?")) return;
-
-    try {
-      await deleteBotKeyword(keywordId, ruleId);
-      await loadRules();
-    } catch (error) {
-      console.error("Error deleting keyword:", error);
-      alert("Ошибка при удалении");
-    }
+  const handleDeleteKeyword = (keywordId: number, ruleId: number) => {
+    openConfirm("Удалить ключевое слово?", async () => {
+      try {
+        await deleteBotKeyword(keywordId, ruleId);
+        await loadRules();
+      } catch {
+        addToast("error", "Ошибка при удалении");
+      }
+    });
   };
 
   // === Управление событием ===
+
   const handleOpenEvent = (rule: BotResponse) => {
     setEventModal({
       isOpen: true,
@@ -324,58 +434,67 @@ const BotManagementPage: React.FC = () => {
     });
   };
 
-  const handleSaveEvent = async () => {
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!eventModal.rule) return;
 
     setEventModal((prev) => ({ ...prev, saving: true }));
     try {
       await setBotEvent(eventModal.rule.id, eventModal.eventType);
       await loadRules();
-      alert("Событие установлено");
+      addToast("success", "Событие установлено");
       setEventModal((prev) => ({ ...prev, isOpen: false }));
-    } catch (error) {
-      console.error("Error saving event:", error);
-      alert("Ошибка при установке события");
+    } catch {
+      addToast("error", "Ошибка при установке события");
     } finally {
       setEventModal((prev) => ({ ...prev, saving: false }));
     }
   };
 
   const getMatchTypeLabel = (type: string) => {
-    const types = {
+    const types: Record<string, string> = {
       Exact: "Точно совпадает",
       Contains: "Содержит",
       StartsWith: "Начинается с",
     };
-    return types[type as keyof typeof types] || type;
+    return types[type] || type;
   };
 
   const getMatchTypeColor = (type: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       Exact: "#1890ff",
       Contains: "#52c41a",
       StartsWith: "#faad14",
     };
-    return colors[type as keyof typeof colors] || "#666";
+    return colors[type] || "#666";
   };
+
+  const keywordRule = keywordModal.rule
+    ? localBots.find((b) => b.id === keywordModal.rule!.id) ?? keywordModal.rule
+    : null;
 
   if (isLoading && localBots.length === 0) {
     return (
-      <Container>
+      <PageLayout>
         <LoadingText>Загрузка...</LoadingText>
-      </Container>
+      </PageLayout>
     );
   }
 
   return (
-    <Container>
-      <Header>
-        <BackButton onClick={() => navigate(-1)}>← Назад</BackButton>
-        <Title>Правила бота</Title>
+    <PageLayout>
+      <TitleField style={{ marginTop: 0 }}>
+        <BackButtonComponent
+          style={{ margin: 0, marginRight: 12 }}
+          onClick={() => navigate(-1)}
+        >
+          Назад
+        </BackButtonComponent>
+        <CustomTitle style={{ margin: 0, flex: 1 }}>Правила бота</CustomTitle>
         <DarkCyanButton onClick={handleCreateRule}>
-          ➕ Новое правило
+          + Новое правило
         </DarkCyanButton>
-      </Header>
+      </TitleField>
 
       {localBots.length === 0 ? (
         <EmptyState>
@@ -394,11 +513,10 @@ const BotManagementPage: React.FC = () => {
                   <CardTitleRow>
                     <RuleName>{rule.name || "Без названия"}</RuleName>
                     <TypeBadge $kind={rule.botType}>
-                      {rule.botType === "Events" ? "⚡" : "🔑"}{" "}
                       {BOT_TYPE_LABEL[rule.botType]}
                     </TypeBadge>
                     <StatusBadge $isActive={rule.isActive}>
-                      {rule.isActive ? "✅ Активно" : "⭕ Отключено"}
+                      {rule.isActive ? "Активно" : "Отключено"}
                     </StatusBadge>
                   </CardTitleRow>
                   <CardActions>
@@ -406,20 +524,20 @@ const BotManagementPage: React.FC = () => {
                       onClick={() => handleToggleRule(rule)}
                       title={rule.isActive ? "Отключить" : "Активировать"}
                     >
-                      {rule.isActive ? "🔇" : "▶️"}
+                      {rule.isActive ? "Откл." : "Вкл."}
                     </ActionButton>
                     <ActionButton
                       onClick={() => handleEditRule(rule)}
                       title="Редактировать название"
                     >
-                      ✏️
+                      Изменить
                     </ActionButton>
                     {!isEventsBot && (
                       <ActionButton
                         onClick={() => handleOpenKeywords(rule)}
                         title="Ключевые слова"
                       >
-                        🔑
+                        Ключ. слова
                       </ActionButton>
                     )}
                     {isEventsBot && (
@@ -427,22 +545,22 @@ const BotManagementPage: React.FC = () => {
                         onClick={() => handleOpenEvent(rule)}
                         title="Событие"
                       >
-                        ⚡
+                        Событие
                       </ActionButton>
                     )}
                     <ActionButtonDelete
                       onClick={() => handleDeleteRule(rule)}
                       title="Удалить"
                     >
-                      🗑️
+                      Удалить
                     </ActionButtonDelete>
                   </CardActions>
                 </CardHeader>
 
                 <ResponseBlock onClick={() => handleEditResponse(rule)}>
                   <ResponseLabel>
-                    💬 Ответ бота:
-                    <EditHint>✏️ нажмите для редактирования</EditHint>
+                    Ответ бота:
+                    <EditHint>нажмите для редактирования</EditHint>
                   </ResponseLabel>
                   <ResponseText>
                     {rule.botResponse || "— Нажмите чтобы добавить ответ —"}
@@ -454,8 +572,8 @@ const BotManagementPage: React.FC = () => {
                     onClick={() => handleEditNoClientResponse(rule)}
                   >
                     <ResponseLabel>
-                      🙈 Ответ если клиента нет в базе:
-                      <EditHint>✏️ нажмите для редактирования</EditHint>
+                      Ответ если клиента нет в базе:
+                      <EditHint>нажмите для редактирования</EditHint>
                     </ResponseLabel>
                     <ResponseText>
                       {rule.botNoClientResponse ||
@@ -467,8 +585,8 @@ const BotManagementPage: React.FC = () => {
                 {isEventsBot ? (
                   <EventBlock onClick={() => handleOpenEvent(rule)}>
                     <ResponseLabel>
-                      ⚡ Событие для рассылки:
-                      <EditHint>✏️ нажмите для редактирования</EditHint>
+                      Событие для рассылки:
+                      <EditHint>нажмите для редактирования</EditHint>
                     </ResponseLabel>
                     <ResponseText>
                       {rule.event
@@ -486,25 +604,25 @@ const BotManagementPage: React.FC = () => {
                           $color={getMatchTypeColor(kw.matchType)}
                           title={getMatchTypeLabel(kw.matchType)}
                         >
-                          <KeywordValue>“{kw.keyword}”</KeywordValue>
+                          <KeywordValue>"{kw.keyword}"</KeywordValue>
                           <RemoveChip
                             onClick={() => handleDeleteKeyword(kw.id, rule.id)}
                           >
-                            ✖
+                            ✕
                           </RemoveChip>
                         </KeywordChip>
                       ))}
-                      <AddKeywordIcon
+                      <AddKeywordButton
                         onClick={() => handleOpenKeywords(rule)}
                         title="Добавить ключевое слово"
                       >
-                        ➕
-                      </AddKeywordIcon>
+                        + Добавить
+                      </AddKeywordButton>
                     </KeywordsList>
                   </KeywordsBlock>
                 ) : (
                   <EmptyKeywords onClick={() => handleOpenKeywords(rule)}>
-                    🔑 Нет ключевых слов — нажмите чтобы добавить
+                    Нет ключевых слов — нажмите чтобы добавить
                   </EmptyKeywords>
                 )}
               </RuleCard>
@@ -513,32 +631,24 @@ const BotManagementPage: React.FC = () => {
         </RulesGrid>
       )}
 
+      {/* Modal: создание/редактирование правила */}
       {ruleModal.isOpen && (
-        <ModalOverlay
-          onClick={() =>
+        <BaseModal
+          title={
+            ruleModal.editingRule ? "Редактировать правило" : "Новое правило"
+          }
+          onClose={() =>
             !ruleModal.saving &&
             setRuleModal((prev) => ({ ...prev, isOpen: false }))
           }
+          onCancel={() => setRuleModal((prev) => ({ ...prev, isOpen: false }))}
+          onSave={handleSaveRule}
+          isSubmitting={ruleModal.saving}
+          width="550px"
         >
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>
-                {ruleModal.editingRule
-                  ? "Редактировать название правила"
-                  : "➕ Новое правило"}
-              </ModalTitle>
-              <CloseBtn
-                onClick={() =>
-                  !ruleModal.saving &&
-                  setRuleModal((prev) => ({ ...prev, isOpen: false }))
-                }
-              >
-                ✖
-              </CloseBtn>
-            </ModalHeader>
-
-            <FormField>
-              <Label>Название правила</Label>
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Название правила</ModalLabel>
               <CustomInput
                 value={ruleModal.name}
                 onChange={(e) =>
@@ -547,11 +657,11 @@ const BotManagementPage: React.FC = () => {
                 placeholder="Например: Приветствие"
                 disabled={ruleModal.saving}
               />
-            </FormField>
+            </ModalField>
 
             {!ruleModal.editingRule && (
-              <FormField>
-                <Label>Тип правила</Label>
+              <ModalField>
+                <ModalLabel>Тип правила</ModalLabel>
                 <TypeOptions>
                   <TypeOption
                     type="button"
@@ -561,7 +671,7 @@ const BotManagementPage: React.FC = () => {
                     }
                     disabled={ruleModal.saving}
                   >
-                    <TypeOptionTitle>🔑 По ключевым словам</TypeOptionTitle>
+                    <TypeOptionTitle>По ключевым словам</TypeOptionTitle>
                     <TypeOptionHint>
                       Бот отвечает на сообщения, содержащие заданные слова
                     </TypeOptionHint>
@@ -574,66 +684,46 @@ const BotManagementPage: React.FC = () => {
                     }
                     disabled={ruleModal.saving}
                   >
-                    <TypeOptionTitle>⚡ По событию</TypeOptionTitle>
+                    <TypeOptionTitle>По событию</TypeOptionTitle>
                     <TypeOptionHint>
                       Бот делает рассылку при наступлении события
                     </TypeOptionHint>
                   </TypeOption>
                 </TypeOptions>
-              </FormField>
+              </ModalField>
             )}
-
-            <ModalActions>
-              <GrayButton
-                onClick={() =>
-                  setRuleModal((prev) => ({ ...prev, isOpen: false }))
-                }
-                disabled={ruleModal.saving}
-              >
-                Отмена
-              </GrayButton>
-              <DarkCyanButton
-                onClick={handleSaveRule}
-                disabled={ruleModal.saving}
-              >
-                {ruleModal.saving ? "💾 Сохранение..." : "Сохранить"}
-              </DarkCyanButton>
-            </ModalActions>
-          </ModalContent>
-        </ModalOverlay>
+          </ModalForm>
+        </BaseModal>
       )}
 
+      {/* Modal: конструктор ответа */}
       {responseModal.isOpen && responseModal.rule && (
-        <ModalOverlay
-          onClick={() =>
+        <BaseModal
+          title={
+            responseModal.kind === "noClient"
+              ? `Ответ если клиента нет — ${responseModal.rule.name}`
+              : `Конструктор ответа — ${responseModal.rule.name}`
+          }
+          onClose={() =>
             !responseModal.saving &&
             setResponseModal((prev) => ({ ...prev, isOpen: false }))
           }
+          onCancel={() =>
+            setResponseModal((prev) => ({ ...prev, isOpen: false }))
+          }
+          onSave={handleSaveResponse}
+          isSubmitting={responseModal.saving}
+          saveButtonText="Сохранить ответ"
+          width="1100px"
+          maxHeight="92vh"
         >
-          <WideModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>
-                {responseModal.kind === "noClient"
-                  ? `Ответ если клиента нет — ${responseModal.rule.name}`
-                  : `Конструктор ответа — ${responseModal.rule.name}`}
-              </ModalTitle>
-              <CloseBtn
-                onClick={() =>
-                  !responseModal.saving &&
-                  setResponseModal((prev) => ({ ...prev, isOpen: false }))
-                }
-              >
-                ✖
-              </CloseBtn>
-            </ModalHeader>
-
+          <ModalForm>
             {responseModal.kind === "noClient" && (
               <NoClientHint>
-                ℹ️ В этом ответе доступны только переменные группы «Глобальные —
+                В этом ответе доступны только переменные группы «Глобальные —
                 Компания»
               </NoClientHint>
             )}
-
             <BotResponseConstructor
               value={responseModal.response}
               onChange={(next) =>
@@ -649,50 +739,29 @@ const BotManagementPage: React.FC = () => {
                   : null
               }
             />
-
-            <ModalActions>
-              <GrayButton
-                onClick={() =>
-                  setResponseModal((prev) => ({ ...prev, isOpen: false }))
-                }
-                disabled={responseModal.saving}
-              >
-                Отмена
-              </GrayButton>
-              <DarkCyanButton
-                onClick={handleSaveResponse}
-                disabled={responseModal.saving}
-              >
-                {responseModal.saving ? "💾 Сохранение..." : "Сохранить ответ"}
-              </DarkCyanButton>
-            </ModalActions>
-          </WideModalContent>
-        </ModalOverlay>
+          </ModalForm>
+        </BaseModal>
       )}
 
+      {/* Modal: ключевые слова */}
       {keywordModal.isOpen && keywordModal.rule && (
-        <ModalOverlay
-          onClick={() =>
+        <BaseModal
+          title={`Ключевые слова — ${keywordModal.rule.name}`}
+          onClose={() =>
             !keywordModal.adding &&
             setKeywordModal((prev) => ({ ...prev, isOpen: false }))
           }
+          onCancel={() =>
+            setKeywordModal((prev) => ({ ...prev, isOpen: false }))
+          }
+          hideSaveButton
+          cancelButtonText="Закрыть"
+          width="550px"
         >
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>Ключевые слова — {keywordModal.rule.name}</ModalTitle>
-              <CloseBtn
-                onClick={() =>
-                  !keywordModal.adding &&
-                  setKeywordModal((prev) => ({ ...prev, isOpen: false }))
-                }
-              >
-                ✖
-              </CloseBtn>
-            </ModalHeader>
-
-            <FormField>
-              <Label>Тип совпадения</Label>
-              <Select
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Тип совпадения</ModalLabel>
+              <CustomSelect
                 value={keywordModal.matchType}
                 onChange={(e) =>
                   setKeywordModal((prev) => ({
@@ -703,22 +772,26 @@ const BotManagementPage: React.FC = () => {
                       | "StartsWith",
                   }))
                 }
+                options={[
+                  {
+                    value: "Contains",
+                    label: "Содержит — слово есть где-то в сообщении",
+                  },
+                  {
+                    value: "StartsWith",
+                    label: "Начинается с — сообщение начинается со слова",
+                  },
+                  {
+                    value: "Exact",
+                    label: "Точно совпадает — сообщение полностью равно слову",
+                  },
+                ]}
                 disabled={keywordModal.adding}
-              >
-                <option value="Contains">
-                  Содержит — слово есть где-то в сообщении
-                </option>
-                <option value="StartsWith">
-                  Начинается с — сообщение начинается со слова
-                </option>
-                <option value="Exact">
-                  Точно совпадает — сообщение полностью равно слову
-                </option>
-              </Select>
-            </FormField>
+              />
+            </ModalField>
 
-            <FormField>
-              <Label>Ключевое слово</Label>
+            <ModalField>
+              <ModalLabel>Ключевое слово</ModalLabel>
               <AddKeywordRow>
                 <CustomInput
                   value={keywordModal.keyword}
@@ -736,71 +809,56 @@ const BotManagementPage: React.FC = () => {
                   onClick={handleAddKeyword}
                   disabled={keywordModal.adding || !keywordModal.keyword.trim()}
                 >
-                  {keywordModal.adding ? "⏳" : "➕ Добавить"}
+                  {keywordModal.adding ? "Добавление..." : "+ Добавить"}
                 </DarkCyanButton>
               </AddKeywordRow>
-            </FormField>
+            </ModalField>
 
-            {keywordModal.rule.keywords &&
-              keywordModal.rule.keywords.length > 0 && (
-                <KeywordsSection>
-                  <Label>Список ключевых слов:</Label>
-                  <KeywordsListVertical>
-                    {keywordModal.rule.keywords.map((kw) => (
-                      <KeywordRow key={kw.id}>
-                        <KeywordText>“{kw.keyword}”</KeywordText>
-                        <DeleteKeyword
-                          onClick={() =>
-                            handleDeleteKeyword(kw.id, keywordModal.rule!.id)
-                          }
-                        >
-                          🗑️ Удалить
-                        </DeleteKeyword>
-                      </KeywordRow>
-                    ))}
-                  </KeywordsListVertical>
-                </KeywordsSection>
-              )}
-
-            <ModalActions>
-              <GrayButton
-                onClick={() =>
-                  setKeywordModal((prev) => ({ ...prev, isOpen: false }))
-                }
-                disabled={keywordModal.adding}
-              >
-                Закрыть
-              </GrayButton>
-            </ModalActions>
-          </ModalContent>
-        </ModalOverlay>
+            {keywordRule?.keywords && keywordRule.keywords.length > 0 && (
+              <KeywordsSection>
+                <ModalLabel>Список ключевых слов:</ModalLabel>
+                <KeywordsListVertical>
+                  {keywordRule.keywords.map((kw) => (
+                    <KeywordRow key={kw.id}>
+                      <KeywordMatchBadge
+                        $color={getMatchTypeColor(kw.matchType)}
+                      >
+                        {getMatchTypeLabel(kw.matchType)}
+                      </KeywordMatchBadge>
+                      <KeywordText>"{kw.keyword}"</KeywordText>
+                      <DeleteKeyword
+                        onClick={() =>
+                          handleDeleteKeyword(kw.id, keywordModal.rule!.id)
+                        }
+                      >
+                        Удалить
+                      </DeleteKeyword>
+                    </KeywordRow>
+                  ))}
+                </KeywordsListVertical>
+              </KeywordsSection>
+            )}
+          </ModalForm>
+        </BaseModal>
       )}
 
+      {/* Modal: событие */}
       {eventModal.isOpen && eventModal.rule && (
-        <ModalOverlay
-          onClick={() =>
+        <BaseModal
+          title={`Событие для рассылки — ${eventModal.rule.name}`}
+          onClose={() =>
             !eventModal.saving &&
             setEventModal((prev) => ({ ...prev, isOpen: false }))
           }
+          onCancel={() => setEventModal((prev) => ({ ...prev, isOpen: false }))}
+          onSave={handleSaveEvent}
+          isSubmitting={eventModal.saving}
+          width="550px"
         >
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>
-                Событие для рассылки — {eventModal.rule.name}
-              </ModalTitle>
-              <CloseBtn
-                onClick={() =>
-                  !eventModal.saving &&
-                  setEventModal((prev) => ({ ...prev, isOpen: false }))
-                }
-              >
-                ✖
-              </CloseBtn>
-            </ModalHeader>
-
-            <FormField>
-              <Label>Событие</Label>
-              <Select
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Событие</ModalLabel>
+              <CustomSelect
                 value={eventModal.eventType}
                 onChange={(e) =>
                   setEventModal((prev) => ({
@@ -808,77 +866,53 @@ const BotManagementPage: React.FC = () => {
                     eventType: e.target.value as BotEventType,
                   }))
                 }
+                options={EVENT_OPTIONS.map((opt) => ({
+                  value: opt,
+                  label: EVENT_LABEL[opt],
+                }))}
                 disabled={eventModal.saving}
-              >
-                {EVENT_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {EVENT_LABEL[opt]}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            <ModalActions>
-              <GrayButton
-                onClick={() =>
-                  setEventModal((prev) => ({ ...prev, isOpen: false }))
-                }
-                disabled={eventModal.saving}
-              >
-                Отмена
-              </GrayButton>
-              <DarkCyanButton
-                onClick={handleSaveEvent}
-                disabled={eventModal.saving}
-              >
-                {eventModal.saving ? "💾 Сохранение..." : "Сохранить"}
-              </DarkCyanButton>
-            </ModalActions>
-          </ModalContent>
-        </ModalOverlay>
+              />
+            </ModalField>
+          </ModalForm>
+        </BaseModal>
       )}
-    </Container>
+
+      {/* Modal: подтверждение */}
+      {confirmState.isOpen && (
+        <BaseModal
+          title="Подтверждение"
+          onClose={closeConfirm}
+          onCancel={closeConfirm}
+          onSave={(e) => {
+            e.preventDefault();
+            handleConfirm();
+          }}
+          isSubmitting={confirmState.isSubmitting}
+          saveButtonText="Подтвердить"
+          width="440px"
+        >
+          <ConfirmText>{confirmState.message}</ConfirmText>
+        </BaseModal>
+      )}
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
+    </PageLayout>
   );
 };
 
-const Container = styled.div`
-  padding: 24px;
-  background: #f5f5f5;
-  min-height: 100vh;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-const BackButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  color: #007d88;
-  padding: 8px 12px;
-  border-radius: 6px;
-
-  &:hover {
-    background: #e8e8e8;
-  }
-`;
-
-const Title = styled(CustomTitle)`
-  margin: 0;
-  flex: 1;
-`;
+// ─── Styled components ────────────────────────────────────────────────────────
 
 const LoadingText = styled.div`
   text-align: center;
   padding: 60px;
-  color: #999;
+  color: #9ca3af;
 `;
 
 const EmptyState = styled.div`
@@ -886,16 +920,17 @@ const EmptyState = styled.div`
   padding: 80px 20px;
   background: white;
   border-radius: 12px;
+  margin: 24px 16px;
 `;
 
 const EmptyTitle = styled.h3`
   font-size: 20px;
-  color: #333;
+  color: #374151;
   margin-bottom: 8px;
 `;
 
 const EmptyText = styled.p`
-  color: #999;
+  color: #9ca3af;
   font-size: 14px;
 `;
 
@@ -903,18 +938,20 @@ const RulesGrid = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 8px 16px 24px;
 `;
 
 const RuleCard = styled.div<{ $isActive: boolean }>`
   background: white;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  opacity: ${(props) => (props.$isActive ? 1 : 0.6)};
-  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  opacity: ${(p) => (p.$isActive ? 1 : 0.6)};
+  transition: box-shadow 0.2s;
+  border: 1px solid #e5e7eb;
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
 `;
 
@@ -930,30 +967,37 @@ const CardHeader = styled.div`
 const CardTitleRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 `;
 
 const RuleName = styled.h4`
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   margin: 0;
-  color: #333;
+  color: #111827;
 `;
 
 const StatusBadge = styled.span<{ $isActive: boolean }>`
-  background: ${(props) => (props.$isActive ? "#52c41a" : "#8c8c8c")};
-  color: white;
-  padding: 4px 12px;
+  background: ${(p) => (p.$isActive ? "#d1fae5" : "#f3f4f6")};
+  color: ${(p) => (p.$isActive ? "#065f46" : "#6b7280")};
+  border: 1px solid ${(p) => (p.$isActive ? "#a7f3d0" : "#d1d5db")};
+  padding: 3px 10px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
 `;
 
 const TypeBadge = styled.span<{ $kind: BotType }>`
-  background: ${(props) => (props.$kind === "Events" ? "#7c3aed" : "#007d88")};
-  color: white;
-  padding: 4px 12px;
+  background: ${(p) =>
+    p.$kind === "Events"
+      ? "rgba(124, 58, 237, 0.1)"
+      : "rgba(0, 125, 136, 0.1)"};
+  color: ${(p) => (p.$kind === "Events" ? "#7c3aed" : "#007d88")};
+  border: 1px solid
+    ${(p) =>
+      p.$kind === "Events" ? "rgba(124,58,237,0.3)" : "rgba(0,125,136,0.3)"};
+  padding: 3px 10px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
@@ -964,62 +1008,63 @@ const CardActions = styled.div`
   gap: 6px;
   flex-shrink: 0;
   align-items: center;
+  flex-wrap: wrap;
 `;
 
 const ActionButton = styled.button`
-  background: none;
-  border: 1px solid #d9d9d9;
-  width: 32px;
+  background: white;
+  border: 1px solid #d1d5db;
   height: 32px;
-  border-radius: 8px;
+  padding: 0 10px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.15s;
+  white-space: nowrap;
 
   &:hover {
     border-color: #007d88;
-    transform: scale(1.05);
+    color: #007d88;
+    background: rgba(0, 125, 136, 0.04);
   }
 `;
 
 const ActionButtonDelete = styled(ActionButton)`
   &:hover {
-    border-color: #ff4d4f;
-    background: #fff1f0;
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #fef2f2;
   }
 `;
 
 const ResponseBlock = styled.div`
-  background: #f9f9f9;
-  padding: 16px;
+  background: #f9fafb;
+  padding: 14px 16px;
   border-radius: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   border: 1px solid transparent;
 
   &:hover {
-    background: #f0f0f0;
-    border-color: #007d88;
-    transform: translateX(4px);
+    background: #f0fdf9;
+    border-color: rgba(0, 125, 136, 0.3);
   }
 `;
 
 const EventBlock = styled(ResponseBlock)`
   &:hover {
-    border-color: #7c3aed;
+    background: rgba(124, 58, 237, 0.04);
+    border-color: rgba(124, 58, 237, 0.3);
   }
 `;
 
 const ResponseLabel = styled.div`
   font-size: 12px;
-  color: #666;
-  margin-bottom: 8px;
+  color: #6b7280;
+  margin-bottom: 6px;
   font-weight: 500;
   display: flex;
   justify-content: space-between;
@@ -1034,7 +1079,7 @@ const EditHint = styled.span`
 
 const ResponseText = styled.div`
   font-size: 14px;
-  color: #333;
+  color: #374151;
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.5;
@@ -1047,244 +1092,118 @@ const KeywordsBlock = styled.div`
 const KeywordsLabel = styled.div`
   font-size: 13px;
   font-weight: 500;
-  color: #666;
+  color: #6b7280;
   margin-bottom: 10px;
-  text-align: left;
 `;
 
 const KeywordsList = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
 `;
 
-const AddKeywordIcon = styled.button`
+const AddKeywordButton = styled.button`
   background: none;
-  border: none;
+  border: 1px dashed #d1d5db;
   cursor: pointer;
-  font-size: 18px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
   color: #007d88;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  transition: all 0.15s;
 
   &:hover {
-    background: #f0f9ff;
-    transform: scale(1.05);
+    border-color: #007d88;
+    background: rgba(0, 125, 136, 0.06);
   }
 `;
 
 const KeywordChip = styled.div<{ $color: string }>`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: #f5f5f5;
-  border-radius: 24px;
+  gap: 0;
+  background: #f9fafb;
+  border-radius: 20px;
   overflow: hidden;
   font-size: 13px;
-  padding-left: 15px;
-  border-left: 4px solid ${(p) => p.$color};
+  border-left: 3px solid ${(p) => p.$color};
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid ${(p) => p.$color};
 `;
 
 const KeywordValue = styled.span`
-  padding: 6px 0;
-  color: #333;
+  padding: 4px 8px 4px 10px;
+  color: #374151;
   font-weight: 500;
 `;
 
 const RemoveChip = styled.button`
   background: none;
   border: none;
+  border-left: 1px solid #e5e7eb;
   cursor: pointer;
-  font-size: 16px;
-  color: #999;
-  padding: 0 12px;
+  font-size: 12px;
+  color: #9ca3af;
+  padding: 4px 8px;
   height: 100%;
+  transition: all 0.15s;
 
   &:hover {
-    color: #ff4d4f;
-    background: rgba(255, 77, 79, 0.1);
+    color: #ef4444;
+    background: #fef2f2;
   }
 `;
 
 const EmptyKeywords = styled.div`
   text-align: center;
-  padding: 12px;
-  background: #fafafa;
+  padding: 10px;
+  background: #f9fafb;
   border-radius: 8px;
-  color: #999;
+  color: #9ca3af;
   font-size: 13px;
   cursor: pointer;
-  border: 1px dashed #d9d9d9;
-  transition: all 0.2s;
+  border: 1px dashed #d1d5db;
+  transition: all 0.15s;
+  margin-top: 12px;
 
   &:hover {
     border-color: #007d88;
     color: #007d88;
-    background: #f0f9ff;
+    background: rgba(0, 125, 136, 0.04);
   }
 `;
 
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
-  background: white;
-  border-radius: 12px;
-  width: 550px;
-  max-width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 28px;
-`;
-
-const WideModalContent = styled(ModalContent)`
-  width: 1100px;
-  max-width: 95vw;
-  max-height: 92vh;
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const ModalTitle = styled.h3`
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  color: #333;
-`;
-
-const CloseBtn = styled.button`
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
-  padding: 4px 8px;
-
-  &:hover {
-    color: #333;
-  }
-`;
-
-const FormField = styled.div`
-  margin-bottom: 24px;
-`;
-
-const Label = styled.label`
-  display: block;
-  margin-bottom: 10px;
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-  text-align: left;
-`;
-
-const FieldHint = styled.div`
-  margin-top: 6px;
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.4;
-`;
-
-const ModalActions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 28px;
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d9d9d9;
+const NoClientHint = styled.div`
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 3px solid #f59e0b;
   border-radius: 8px;
-  font-size: 14px;
-  background: white;
-  cursor: pointer;
-
-  &:focus {
-    outline: none;
-    border-color: #007d88;
-  }
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
 `;
 
-const AddKeywordRow = styled.div`
-  display: flex;
-  gap: 12px;
-
-  > div {
-    flex: 1;
-  }
-`;
-
-const KeywordsSection = styled.div`
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
-`;
-
-const KeywordsListVertical = styled.div`
+const ModalForm = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
-  max-height: 300px;
-  overflow-y: auto;
+  gap: 16px;
+  padding: 8px 30px 4px;
 `;
 
-const KeywordRow = styled.div`
+const ModalField = styled.div`
   display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #f9f9f9;
-  padding: 10px 14px;
-  border-radius: 8px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #f0f0f0;
-  }
+  flex-direction: column;
+  gap: 6px;
 `;
 
-const KeywordText = styled.span`
-  font-size: 14px;
-  color: #333;
-  flex: 1;
-  font-family: monospace;
-`;
-
-const DeleteKeyword = styled.button`
-  background: none;
-  border: none;
-  color: #ff4d4f;
-  cursor: pointer;
+const ModalLabel = styled.label`
   font-size: 13px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #fff1f0;
-    text-decoration: none;
-  }
+  font-weight: 600;
+  color: #374151;
 `;
 
 const TypeOptions = styled.div`
@@ -1298,7 +1217,7 @@ const TypeOptions = styled.div`
 `;
 
 const TypeOption = styled.button<{ $selected: boolean; disabled?: boolean }>`
-  background: ${(p) => (p.$selected ? "#f0f9ff" : "white")};
+  background: ${(p) => (p.$selected ? "rgba(0, 125, 136, 0.06)" : "white")};
   border: 2px solid ${(p) => (p.$selected ? "#007d88" : "#e5e7eb")};
   border-radius: 10px;
   padding: 14px 16px;
@@ -1312,32 +1231,90 @@ const TypeOption = styled.button<{ $selected: boolean; disabled?: boolean }>`
 
   &:hover:not(:disabled) {
     border-color: #007d88;
-    transform: translateY(-1px);
   }
 `;
 
 const TypeOptionTitle = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: #111827;
 `;
 
 const TypeOptionHint = styled.span`
   font-size: 12px;
-  color: #64748b;
+  color: #6b7280;
   line-height: 1.4;
 `;
 
-const NoClientHint = styled.div`
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-left: 3px solid #f59e0b;
+const AddKeywordRow = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+
+  > div {
+    flex: 1;
+  }
+`;
+
+const KeywordsSection = styled.div`
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+`;
+
+const KeywordsListVertical = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+`;
+
+const KeywordRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f9fafb;
+  padding: 8px 12px;
   border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+`;
+
+const KeywordMatchBadge = styled.span<{ $color: string }>`
+  font-size: 11px;
+  font-weight: 600;
+  color: ${(p) => p.$color};
+  background: ${(p) => p.$color}18;
+  border: 1px solid ${(p) => p.$color}44;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+`;
+
+const KeywordText = styled.span`
   font-size: 13px;
-  color: #92400e;
-  line-height: 1.5;
+  color: #374151;
+  flex: 1;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+`;
+
+const DeleteKeyword = styled.button`
+  background: none;
+  border: 1px solid #fecaca;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 6px;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #fef2f2;
+  }
 `;
 
 export default BotManagementPage;

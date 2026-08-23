@@ -1,4 +1,10 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import styled from "styled-components";
 import CalculatorIcon from "../../../assets/ui/TopBar/calculator.svg";
 import ChatIcon from "../../../assets/ui/TopBar/chat.svg";
@@ -16,6 +22,8 @@ import useTask from "../../../api/hooks/useTask";
 import { useTaskCount } from "../../../сontext/TaskCountContext";
 import useChat from "../../../api/hooks/useChat";
 import NotificationContextMenu from "../../ui/contextMenus/NotificationContextMenu";
+import { useEmployee } from "../../../api/hooks/useEmployee";
+import { useTopMenuActions } from "../../../сontext/TopMenuActionsContext";
 
 interface MenuItem {
   id: string;
@@ -55,7 +63,49 @@ const TopMenu = () => {
     setSelectedTopMenuItem,
     setSelectedSideMenuItem,
   } = useContext(SideMenuContext);
-  const { hasPermission, forbiddenRole, hasRole } = useAuth();
+  const {
+    hasPermission,
+    forbiddenRole,
+    hasRole,
+    isSuperAdminCompany,
+    refresh,
+  } = useAuth();
+  const { rightAction } = useTopMenuActions();
+  const { setSelfCompany } = useEmployee();
+  const [isExiting, setIsExiting] = useState(false);
+  const [exitDone, setExitDone] = useState(false);
+  const storedCompanyName = localStorage.getItem("enteredCompanyName");
+  const isInOtherCompany =
+    !exitDone &&
+    !!storedCompanyName &&
+    hasRole("суперадмин") &&
+    !isSuperAdminCompany();
+  const enteredCompanyName = isInOtherCompany ? storedCompanyName : null;
+
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty(
+      "--header-height",
+      isInOtherCompany ? "92px" : "56px"
+    );
+  }, [isInOtherCompany]);
+
+  const handleExitCompany = async () => {
+    if (isExiting) return;
+    setIsExiting(true);
+    setExitDone(true);
+    try {
+      const originalCompanyId = Number(
+        localStorage.getItem("originalCompanyId") ?? 1
+      );
+      await setSelfCompany(originalCompanyId);
+      await refresh();
+      localStorage.removeItem("enteredCompanyName");
+      localStorage.removeItem("originalCompanyId");
+    } finally {
+      setIsExiting(false);
+      setExitDone(false);
+    }
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const [showCalculator, setShowCalculator] = useState(false);
@@ -178,7 +228,22 @@ const TopMenu = () => {
 
   return (
     <>
-      <TopMenuContainer $collapsed={collapsed}>
+      {isInOtherCompany && (
+        <CompanyBanner $collapsed={collapsed}>
+          <CompanyBannerDot />
+          <CompanyBannerText>
+            Вы находитесь в компании <strong>{enteredCompanyName}</strong>
+          </CompanyBannerText>
+          <CompanyBannerExit
+            onClick={handleExitCompany}
+            disabled={isExiting}
+            title={`Выйти из компании ${enteredCompanyName}`}
+          >
+            {isExiting ? <Spinner /> : "✕ Выйти"}
+          </CompanyBannerExit>
+        </CompanyBanner>
+      )}
+      <TopMenuContainer $collapsed={collapsed} $hasBanner={isInOtherCompany}>
         <MenuItemsWrapper>
           {menuItems.map((item) => (
             <MenuItem
@@ -206,6 +271,8 @@ const TopMenu = () => {
           ))}
         </MenuItemsWrapper>
 
+        {rightAction && <RightActionSlot>{rightAction}</RightActionSlot>}
+
         <BellButton ref={bellButtonRef} onClick={handleBellClick}>
           <SettingsIconImg src={BellIcon} alt="Уведомления" />
         </BellButton>
@@ -232,6 +299,7 @@ const TopMenu = () => {
 
 type TopMenuContainerProps = {
   $collapsed: boolean;
+  $hasBanner?: boolean;
 };
 
 type MenuItemProps = {
@@ -262,7 +330,7 @@ const TopMenuContainer = styled.div<TopMenuContainerProps>`
   height: 56px;
   position: fixed;
   left: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
-  top: 0;
+  top: ${({ $hasBanner }) => ($hasBanner ? "36px" : "0")};
   /* Справа резервируем место под кластер кнопок (фильтр/колокол/настройки),
      которые позиционируются абсолютно у правого края, — чтобы пункты меню
      (в т.ч. Todo) к ним не прилипали ни на широких, ни на узких экранах. */
@@ -402,6 +470,97 @@ const SettingsButton = styled.button`
 const BellButton = styled(SettingsButton)`
   top: 10px;
   right: 56px;
+`;
+
+const RightActionSlot = styled.div`
+  position: absolute;
+  right: 102px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+`;
+
+const CompanyBanner = styled.div<{ $collapsed: boolean }>`
+  position: fixed;
+  top: 0;
+  left: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
+  width: calc(100% - ${({ $collapsed }) => ($collapsed ? "70px" : "315px")});
+  height: 36px;
+  background: #007d88;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 91;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  @media (max-width: 1280px) {
+    left: 70px;
+    width: calc(100% - 70px);
+  }
+`;
+
+const CompanyBannerDot = styled.span`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+`;
+
+const CompanyBannerText = styled.span`
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  strong {
+    font-weight: 700;
+    color: #fff;
+  }
+`;
+
+const CompanyBannerExit = styled.button`
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const Spinner = styled.span`
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 const SettingsIconImg = styled.img`

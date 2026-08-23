@@ -1,15 +1,156 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import styled from "styled-components";
 import type { CreditApplicationUsersResponse } from "../api/types/applicationUser";
 import useAdminPanel from "../api/hooks/useAdminPanel";
 import { formatPhoneHref } from "../utils/phoneUtils";
 import PhoneLink from "./ui/links/PhoneLink";
-import DarkCyanButton from "./ui/Buttons/DarkCyanButton";
 import CustomTable from "./ui/tables/CustomTable";
 import BaseModal from "./modal/BASE/modalCRUBase";
 import CustomInput from "./ui/fields/CustomInput";
 import CustomPhoneInput from "./ui/fields/PhoneInput";
 
-const CreditApplicationCompaniesManager = () => {
+const ModalForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 30px;
+`;
+
+const ModalField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ModalLabel = styled.label`
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+`;
+
+const ModalError = styled.div`
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+`;
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 300px;
+  max-width: 400px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+interface DeleteModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  name: string;
+  isSubmitting: boolean;
+}
+
+const DeleteConfirmModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  name,
+  isSubmitting,
+}: DeleteModalProps) => {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input !== name) {
+      setError("Название не совпадает");
+      return;
+    }
+    onConfirm();
+  };
+
+  const handleClose = () => {
+    setInput("");
+    setError(null);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <BaseModal
+      title="Удаление заявкополучателя"
+      onClose={handleClose}
+      onCancel={handleClose}
+      onSave={handleSubmit}
+      isSubmitting={isSubmitting}
+    >
+      <ModalForm>
+        <ModalField>
+          <ModalLabel>
+            Для подтверждения введите название: <strong>{name}</strong>
+          </ModalLabel>
+          <CustomInput
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setError(null);
+            }}
+            placeholder="Название"
+          />
+        </ModalField>
+        {error && <ModalError>{error}</ModalError>}
+      </ModalForm>
+    </BaseModal>
+  );
+};
+
+interface Props {
+  isCreateModalOpen: boolean;
+  setIsCreateModalOpen: (v: boolean) => void;
+}
+
+const CreditApplicationCompaniesManager = ({
+  isCreateModalOpen,
+  setIsCreateModalOpen,
+}: Props) => {
   const {
     creditApplicationCompanies,
     isLoading,
@@ -17,15 +158,31 @@ const CreditApplicationCompaniesManager = () => {
     fetchCreditApplicationCompanies,
     createCreditApplicationCompany,
     updateCreditApplicationCompany,
-    deleteCreditApplicationCompany
+    deleteCreditApplicationCompany,
   } = useAdminPanel();
-
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<CreditApplicationUsersResponse | null>(null);
-  const [companyName, setCompanyName] = useState('');
-  const [companyPhone, setCompanyPhone] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] =
+    useState<CreditApplicationUsersResponse | null>(null);
+  const [companyName, setCompanyName] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", message: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
 
   useEffect(() => {
     fetchCreditApplicationCompanies();
@@ -34,24 +191,26 @@ const CreditApplicationCompaniesManager = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName.trim() || !companyPhone.trim()) {
-      alert('Заполните все поля');
+      addToast("warning", "Заполните все поля");
       return;
     }
-
     setIsSaving(true);
     try {
-      const success = await createCreditApplicationCompany(companyName, companyPhone);
+      const success = await createCreditApplicationCompany(
+        companyName,
+        companyPhone
+      );
       if (success) {
         setIsCreateModalOpen(false);
-        setCompanyName('');
-        setCompanyPhone('');
-        alert('Заявкополучатель успешно добавлен');
+        setCompanyName("");
+        setCompanyPhone("");
+        addToast("success", "Заявкополучатель успешно добавлен");
       } else {
-        alert('Ошибка при добавлении');
+        addToast("error", "Ошибка при добавлении");
       }
     } catch (err) {
-      console.error('Ошибка:', err);
-      alert('Произошла ошибка');
+      console.error("Ошибка:", err);
+      addToast("error", "Произошла ошибка");
     } finally {
       setIsSaving(false);
     }
@@ -60,7 +219,6 @@ const CreditApplicationCompaniesManager = () => {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCompany) return;
-
     setIsSaving(true);
     try {
       const success = await updateCreditApplicationCompany(
@@ -71,30 +229,37 @@ const CreditApplicationCompaniesManager = () => {
       if (success) {
         setIsEditModalOpen(false);
         setSelectedCompany(null);
-        setCompanyName('');
-        setCompanyPhone('');
-        alert('Заявкополучатель успешно обновлен');
+        setCompanyName("");
+        setCompanyPhone("");
+        addToast("success", "Заявкополучатель успешно обновлён");
       } else {
-        alert('Ошибка при обновлении');
+        addToast("error", "Ошибка при обновлении");
       }
     } catch (err) {
-      console.error('Ошибка:', err);
-      alert('Произошла ошибка');
+      console.error("Ошибка:", err);
+      addToast("error", "Произошла ошибка");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Вы уверены, что хотите удалить "${name}"?`)) {
-      return;
-    }
-
-    const success = await deleteCreditApplicationCompany(id);
-    if (success) {
-      alert('Заявкополучатель успешно удален');
-    } else {
-      alert('Ошибка при удалении');
+  const handleDeleteConfirm = async () => {
+    if (!selectedCompany) return;
+    setIsSaving(true);
+    try {
+      const success = await deleteCreditApplicationCompany(selectedCompany.id);
+      if (success) {
+        setIsDeleteModalOpen(false);
+        setSelectedCompany(null);
+        addToast("success", "Заявкополучатель успешно удалён");
+      } else {
+        addToast("error", "Ошибка при удалении");
+      }
+    } catch (err) {
+      console.error("Ошибка:", err);
+      addToast("error", "Произошла ошибка");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -105,32 +270,47 @@ const CreditApplicationCompaniesManager = () => {
     setIsEditModalOpen(true);
   };
 
+  const openDeleteModal = (company: CreditApplicationUsersResponse) => {
+    setSelectedCompany(company);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Первая колонка — скрытый id, нужен для поиска записи в обработчиках
   const columns = [
-    { name: "Название", align: "left" },
-    { name: "Телефон", align: "left" }
+    { name: "id", isHidden: true },
+    { name: "Название", align: "left" as const },
+    { name: "Телефон", align: "left" as const },
   ];
 
-  const tableData = creditApplicationCompanies.map(company => [
+  const tableData = creditApplicationCompanies.map((company) => [
+    company.id,
     company.name,
     <PhoneLink href={formatPhoneHref(company.phone)}>
       {company.phone}
-    </PhoneLink>
+    </PhoneLink>,
   ]);
 
   const rowActions = [
     {
-      label: 'Редактировать',
+      label: "Редактировать",
       action: (rowData: any[]) => {
-        const company = creditApplicationCompanies.find(c => c.id === rowData[0]);
+        const company = creditApplicationCompanies.find(
+          (c) => c.id === rowData[0]
+        );
         if (company) openEditModal(company);
       },
-      color: '#3B82F6'
+      color: "#3B82F6",
     },
     {
-      label: 'Удалить',
-      action: (rowData: any[]) => handleDelete(rowData[0], rowData[1]),
-      color: '#EF4444'
-    }
+      label: "Удалить",
+      action: (rowData: any[]) => {
+        const company = creditApplicationCompanies.find(
+          (c) => c.id === rowData[0]
+        );
+        if (company) openDeleteModal(company);
+      },
+      color: "#EF4444",
+    },
   ];
 
   if (isLoading && creditApplicationCompanies.length === 0) {
@@ -138,27 +318,17 @@ const CreditApplicationCompaniesManager = () => {
   }
 
   if (error) {
-    return <div style={{ color: 'red' }}>Ошибка: {error}</div>;
+    return <div style={{ color: "red" }}>Ошибка: {error}</div>;
   }
 
   return (
     <>
-      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-        <DarkCyanButton 
-          style={{ width: "200px" }}
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          + Добавить заявкополучателя
-        </DarkCyanButton>
-      </div>
-
-      <CustomTable 
-        columns={columns} 
+      <CustomTable
+        columns={columns}
         data={tableData}
         contextMenuActions={rowActions}
       />
 
-      {/* Модальное окно создания */}
       {isCreateModalOpen && (
         <BaseModal
           title="Добавление заявкополучателя"
@@ -167,29 +337,24 @@ const CreditApplicationCompaniesManager = () => {
           onSave={handleCreate}
           isSubmitting={isSaving}
         >
-          <div style={{ padding: '20px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
-                Название:
-              </label>
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Название</ModalLabel>
               <CustomInput
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Введите название"
               />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
-                Телефон:
-              </label>
+            </ModalField>
+            <ModalField>
+              <ModalLabel>Телефон</ModalLabel>
               <CustomPhoneInput
                 value={companyPhone}
                 onChange={(e) => setCompanyPhone(e)}
                 placeholder="Введите телефон"
               />
-            </div>
-          </div>
+            </ModalField>
+          </ModalForm>
         </BaseModal>
       )}
 
@@ -199,43 +364,58 @@ const CreditApplicationCompaniesManager = () => {
           onClose={() => {
             setIsEditModalOpen(false);
             setSelectedCompany(null);
-            setCompanyName('');
-            setCompanyPhone('');
+            setCompanyName("");
+            setCompanyPhone("");
           }}
           onCancel={() => {
             setIsEditModalOpen(false);
             setSelectedCompany(null);
-            setCompanyName('');
-            setCompanyPhone('');
+            setCompanyName("");
+            setCompanyPhone("");
           }}
           onSave={handleUpdate}
           isSubmitting={isSaving}
         >
-          <div style={{ padding: '20px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
-                Название:
-              </label>
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Название</ModalLabel>
               <CustomInput
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Введите название"
               />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
-                Телефон:
-              </label>
+            </ModalField>
+            <ModalField>
+              <ModalLabel>Телефон</ModalLabel>
               <CustomPhoneInput
                 value={companyPhone}
                 onChange={(e) => setCompanyPhone(e)}
                 placeholder="Введите телефон"
               />
-            </div>
-          </div>
+            </ModalField>
+          </ModalForm>
         </BaseModal>
       )}
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedCompany(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        name={selectedCompany?.name ?? ""}
+        isSubmitting={isSaving}
+      />
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
     </>
   );
 };

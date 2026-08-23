@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Pagination } from "react-bootstrap";
 import styled from "styled-components";
 import useAdminPanel from "../../api/hooks/useAdminPanel";
 import type {
@@ -9,69 +8,110 @@ import type {
 } from "../../api/services/adminPanelService";
 import BaseModal from "../modal/BASE/modalCRUBase";
 import DarkCyanButton from "../ui/Buttons/DarkCyanButton";
+import Checkbox from "../ui/CheckBoxes/Checkbox";
 import CustomInput from "../ui/fields/CustomInput";
+import CustomTextArea from "../ui/fields/CustomTextArea";
+import CustomPagination from "../ui/fields/CustomPagination";
 import PaginationLayout from "../ui/Layouts/PaginationLayout";
 import CountInfoTitle from "../ui/Text/CountInfoTitle";
+import Tabs from "../ui/fields/Tabs";
+import ToggleSwitch from "../ui/Toggles/ToggleSwitch";
 import useWhatsApp from "../../api/hooks/useWhatsApp";
 
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 300px;
+  max-width: 400px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+// ─── Confirm modal ─────────────────────────────────────────────────────────────
+
+const ConfirmText = styled.p`
+  padding: 16px 30px;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.5;
+`;
+
+interface ConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  message: string;
+  isSubmitting?: boolean;
+}
+
+const ConfirmModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  message,
+  isSubmitting = false,
+}: ConfirmModalProps) => {
+  if (!isOpen) return null;
+  return (
+    <BaseModal
+      title="Подтверждение"
+      onClose={onClose}
+      onCancel={onClose}
+      onSave={(e) => {
+        e.preventDefault();
+        onConfirm();
+      }}
+      isSubmitting={isSubmitting}
+      saveButtonText="Подтвердить"
+      width="400px"
+    >
+      <ConfirmText>{message}</ConfirmText>
+    </BaseModal>
+  );
+};
+
+// ─── Styled components ─────────────────────────────────────────────────────────
+
 const Container = styled.div`
-  padding: 20px;
-  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex-shrink: 0;
-`;
-
-const TabsContainer = styled.div`
-  display: flex;
-  border-bottom: 2px solid #e5e7eb;
-  margin-bottom: 24px;
-  gap: 0;
-  flex-shrink: 0;
-`;
-
-const Tab = styled.button<{ active: boolean }>`
-  padding: 12px 24px;
-  background: none;
-  border: none;
-  border-bottom: 3px solid
-    ${(props) => (props.active ? "#007D88" : "transparent")};
-  color: ${(props) => (props.active ? "#007D88" : "#6B7280")};
-  font-weight: ${(props) => (props.active ? "600" : "400")};
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #007d88;
-    background: #f0f9fa;
-  }
-`;
-
-const TabContent = styled.div`
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-const CampaignsContentWrapper = styled.div`
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 `;
 
 const CampaignGrid = styled.div`
@@ -79,36 +119,32 @@ const CampaignGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
-  flex: 1;
   overflow-y: auto;
   align-content: start;
   padding-right: 4px;
-  max-height: calc(100vh - 350px);
+  max-height: calc(100vh - 380px);
 
   &::-webkit-scrollbar {
     width: 6px;
   }
-
   &::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 3px;
   }
-
   &::-webkit-scrollbar-thumb {
     background: #007d88;
     border-radius: 3px;
   }
-
   &::-webkit-scrollbar-thumb:hover {
     background: #005f66;
   }
 `;
 
 const CampaignCard = styled.div<{ status: string; isTest?: boolean }>`
-  background: white;
+  background: ${(p) => (p.isTest ? "#F8F5FF" : "white")};
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid ${(p) => (p.isTest ? "#C4B5FD" : "#e5e7eb")};
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
   position: relative;
@@ -119,9 +155,9 @@ const CampaignCard = styled.div<{ status: string; isTest?: boolean }>`
   }
 
   border-left: 4px solid
-    ${(props) => {
-      if (props.isTest) return "#8B5CF6";
-      switch (props.status) {
+    ${(p) => {
+      if (p.isTest) return "#8B5CF6";
+      switch (p.status) {
         case "Pending":
           return "#F59E0B";
         case "InProgress":
@@ -136,13 +172,6 @@ const CampaignCard = styled.div<{ status: string; isTest?: boolean }>`
           return "#6B7280";
       }
     }};
-
-  ${(props) =>
-    props.isTest &&
-    `
-    background: #F8F5FF;
-    border-color: #C4B5FD;
-  `}
 `;
 
 const TestBadge = styled.span`
@@ -164,7 +193,6 @@ const CampaignHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 12px;
-  padding-right: ${(props) => (props.theme?.hasTestBadge ? "60px" : "0")};
 `;
 
 const CampaignTitle = styled.h3`
@@ -179,8 +207,8 @@ const StatusBadge = styled.span<{ status: string }>`
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  background: ${(props) => {
-    switch (props.status) {
+  background: ${(p) => {
+    switch (p.status) {
       case "Pending":
         return "#FEF3C7";
       case "InProgress":
@@ -189,14 +217,12 @@ const StatusBadge = styled.span<{ status: string }>`
         return "#D1FAE5";
       case "Failed":
         return "#FEE2E2";
-      case "Cancelled":
-        return "#F3F4F6";
       default:
         return "#F3F4F6";
     }
   }};
-  color: ${(props) => {
-    switch (props.status) {
+  color: ${(p) => {
+    switch (p.status) {
       case "Pending":
         return "#92400E";
       case "InProgress":
@@ -205,8 +231,6 @@ const StatusBadge = styled.span<{ status: string }>`
         return "#065F46";
       case "Failed":
         return "#991B1B";
-      case "Cancelled":
-        return "#374151";
       default:
         return "#374151";
     }
@@ -224,17 +248,18 @@ const InfoItem = styled.div`
   display: flex;
   flex-direction: column;
 `;
-
 const InfoLabel = styled.span`
   font-size: 11px;
   color: #6b7280;
   font-weight: 500;
 `;
-
 const InfoValue = styled.span`
   font-size: 14px;
   color: #111827;
   font-weight: 600;
+`;
+const InfoValueDanger = styled(InfoValue)`
+  color: #ef4444;
 `;
 
 const CampaignContent = styled.div`
@@ -244,20 +269,13 @@ const CampaignContent = styled.div`
   line-height: 1.5;
   max-height: 60px;
   overflow: hidden;
-  text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  cursor: pointer;
-  position: relative;
-
-  &:hover {
-    color: #007d88;
-  }
 `;
 
-const CampaignActions = styled.div`
-  display: flex;
+const CampaignActions = styled.div<{ $hasButtons: boolean }>`
+  display: ${(p) => (p.$hasButtons ? "flex" : "none")};
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
@@ -265,9 +283,7 @@ const CampaignActions = styled.div`
   flex-wrap: wrap;
 `;
 
-const ActionButton = styled.button<{
-  variant?: "primary" | "danger" | "warning";
-}>`
+const ActionButton = styled.button<{ variant?: "primary" | "danger" }>`
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
@@ -275,31 +291,12 @@ const ActionButton = styled.button<{
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
+  background: ${(p) => (p.variant === "danger" ? "#EF4444" : "#007D88")};
+  color: white;
 
-  ${(props) => {
-    switch (props.variant) {
-      case "danger":
-        return `
-          background: #EF4444;
-          color: white;
-          &:hover { background: #DC2626; }
-        `;
-      case "warning":
-        return `
-          background: #F59E0B;
-          color: white;
-          &:hover { background: #D97706; }
-        `;
-      case "primary":
-      default:
-        return `
-          background: #007D88;
-          color: white;
-          &:hover { background: #005f66; }
-        `;
-    }
-  }}
-
+  &:hover {
+    background: ${(p) => (p.variant === "danger" ? "#DC2626" : "#005f66")};
+  }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -312,40 +309,53 @@ const EmptyState = styled.div`
   color: #6b7280;
 `;
 
-const CreateCampaignButton = styled(DarkCyanButton)`
-  width: 200px;
+const ProgressBar = styled.div<{ progress: number }>`
+  width: 100%;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+
+  div {
+    height: 100%;
+    width: ${(p) => Math.min(p.progress, 100)}%;
+    background: #007d88;
+    transition: width 0.3s ease;
+  }
 `;
 
-const ModalContent = styled.div`
-  padding: 20px;
-`;
-
-const FormGroup = styled.div`
+const ErrorBanner = styled.div`
+  color: #ef4444;
   margin-bottom: 20px;
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 4px;
+`;
+
+const PaginationWrapper = styled.div`
+  flex-shrink: 0;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: auto;
+  background: white;
+`;
+
+// ─── Modal form ──────────────────────────────────────────────────────────────
+
+const ModalForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 30px;
 `;
 
 const FormLabel = styled.label`
-  display: block;
-  margin-bottom: 8px;
+  font-size: 13px;
   font-weight: 600;
-  color: #111827;
-`;
-
-const TextArea = styled.textarea`
-  width: 100%;
-  min-height: 120px;
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  color: #111827;
-  background: white;
-  resize: vertical;
-  font-family: inherit;
-
-  &:focus {
-    outline: none;
-    border-color: #007d88;
-  }
+  color: #374151;
+  display: block;
+  margin-bottom: 6px;
 `;
 
 const FileInput = styled.input`
@@ -353,11 +363,10 @@ const FileInput = styled.input`
   margin-top: 8px;
 `;
 
-const CheckboxGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
+const FileInfo = styled.div`
   margin-top: 8px;
+  font-size: 14px;
+  color: #6b7280;
 `;
 
 const CheckboxLabel = styled.label`
@@ -376,63 +385,102 @@ const CheckboxLabel = styled.label`
   }
 `;
 
-const ProgressBar = styled.div<{ progress: number }>`
-  width: 100%;
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-top: 8px;
+const HintText = styled.div`
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+`;
 
-  div {
-    height: 100%;
-    width: ${(props) => Math.min(props.progress, 100)}%;
-    background: #007d88;
-    transition: width 0.3s ease;
+const ModalField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const RequiredMark = styled.span`
+  color: #ef4444;
+  margin-left: 2px;
+`;
+
+const FileInputWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
+const FileButton = styled.label`
+  padding: 5px 14px;
+  border: 1px solid rgba(209, 213, 219, 1);
+  border-radius: 5px;
+  font-size: 14px;
+  color: #374151;
+  background: white;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    border-color: rgba(0, 125, 136, 1);
+    color: rgba(0, 125, 136, 1);
   }
 `;
 
+const FileName = styled.span`
+  font-size: 14px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const CharCount = styled.div`
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+`;
+
+const InProgressWarning = styled.div`
+  padding: 12px;
+  background: #fef3c7;
+  border-radius: 4px;
+  color: #92400e;
+  font-size: 13px;
+  margin-top: 4px;
+`;
+
+const ReadonlyField = styled.div`
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  color: #374151;
+  font-size: 14px;
+`;
+
+// ─── Channels tab ─────────────────────────────────────────────────────────────
+
 const ChannelsManagementSection = styled.div`
-  padding: 20px;
   background: white;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  height: 100%;
   display: flex;
   flex-direction: column;
-`;
-
-const ChannelsManagementTitle = styled.h3`
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  color: #111827;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex-shrink: 0;
 `;
 
 const ChannelsList = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
-  flex: 1;
-  align-content: start;
+  padding: 16px;
   overflow-y: auto;
-  padding-right: 4px;
 
   &::-webkit-scrollbar {
     width: 6px;
   }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-  }
-
   &::-webkit-scrollbar-thumb {
     background: #007d88;
     border-radius: 3px;
@@ -444,28 +492,25 @@ const ChannelCard = styled.div<{ isActive: boolean }>`
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border: 1px solid ${(props) => (props.isActive ? "#007D88" : "#E5E7EB")};
+  border: 1px solid ${(p) => (p.isActive ? "#007D88" : "#E5E7EB")};
   border-radius: 8px;
-  background: ${(props) => (props.isActive ? "#F0F9FA" : "white")};
+  background: ${(p) => (p.isActive ? "#F0F9FA" : "white")};
   transition: all 0.2s ease;
 
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
   }
 `;
 
 const ChannelInfo = styled.div`
   flex: 1;
 `;
-
 const ChannelName = styled.div`
   font-size: 16px;
   font-weight: 600;
   color: #111827;
   margin-bottom: 4px;
 `;
-
 const ChannelDetails = styled.div`
   font-size: 13px;
   color: #6b7280;
@@ -480,26 +525,8 @@ const ChannelStatusBadge = styled.span<{ status: string }>`
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
-  background: ${(props) => {
-    switch (props.status) {
-      case "Connected":
-        return "#D1FAE5";
-      case "Disconnected":
-        return "#FEE2E2";
-      default:
-        return "#F3F4F6";
-    }
-  }};
-  color: ${(props) => {
-    switch (props.status) {
-      case "Connected":
-        return "#065F46";
-      case "Disconnected":
-        return "#991B1B";
-      default:
-        return "#374151";
-    }
-  }};
+  background: ${(p) => (p.status === "Connected" ? "#D1FAE5" : "#FEE2E2")};
+  color: ${(p) => (p.status === "Connected" ? "#065F46" : "#991B1B")};
 `;
 
 const ToggleContainer = styled.div`
@@ -507,40 +534,11 @@ const ToggleContainer = styled.div`
   align-items: center;
   gap: 12px;
 `;
-
-const ToggleSwitch = styled.div<{ isActive: boolean; disabled?: boolean }>`
-  width: 48px;
-  height: 26px;
-  background: ${(props) => (props.isActive ? "#007D88" : "#D1D5DB")};
-  border-radius: 13px;
-  position: relative;
-  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
-  transition: all 0.3s ease;
-  opacity: ${(props) => (props.disabled ? 0.5 : 1)};
-
-  &::after {
-    content: "";
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    background: white;
-    border-radius: 50%;
-    top: 2px;
-    left: ${(props) => (props.isActive ? "24px" : "2px")};
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  &:hover {
-    opacity: ${(props) => (props.disabled ? 0.5 : 0.85)};
-  }
-`;
-
 const ToggleLabel = styled.span<{ isActive: boolean }>`
   font-size: 13px;
   font-weight: 500;
-  color: ${(props) => (props.isActive ? "#007D88" : "#6B7280")};
-  min-width: 45px;
+  color: ${(p) => (p.isActive ? "#007D88" : "#6B7280")};
+  min-width: 35px;
 `;
 
 const LoadingSpinner = styled.div`
@@ -553,10 +551,7 @@ const LoadingSpinner = styled.div`
   animation: spin 1s linear infinite;
 
   @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
+    to {
       transform: rotate(360deg);
     }
   }
@@ -569,41 +564,27 @@ const NoChannelsMessage = styled.div`
   font-size: 14px;
 `;
 
-const PaginationWrapper = styled.div`
-  flex-shrink: 0;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
-  margin-top: auto;
-  background: white;
-`;
-
-const EditMessageModal = styled(BaseModal)``;
-
-const EditMessageContent = styled.div`
-  padding: 20px;
-`;
+// ─── Chats tab ────────────────────────────────────────────────────────────────
 
 const ChatsSection = styled.div`
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
+  gap: 12px;
 `;
-
 const ChatsFilterRow = styled.div`
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
-  flex-shrink: 0;
 `;
 
 const ChatsFilterButton = styled.button<{ active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 14px;
   border-radius: 16px;
-  border: 1px solid ${(props) => (props.active ? "#007D88" : "#d1d5db")};
-  background: ${(props) => (props.active ? "#007D88" : "#ffffff")};
-  color: ${(props) => (props.active ? "#ffffff" : "#6B7280")};
+  border: 1px solid ${(p) => (p.active ? "#007D88" : "#d1d5db")};
+  background: ${(p) => (p.active ? "#007D88" : "#ffffff")};
+  color: ${(p) => (p.active ? "#ffffff" : "#6B7280")};
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -611,6 +592,21 @@ const ChatsFilterButton = styled.button<{ active: boolean }>`
   &:hover {
     border-color: #007d88;
   }
+`;
+
+const UnreadBadge = styled.span<{ active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  background: ${(p) => (p.active ? "rgba(255,255,255,0.3)" : "#007D88")};
+  color: ${(p) => (p.active ? "#fff" : "#fff")};
 `;
 
 const ChatsList = styled.div`
@@ -626,7 +622,7 @@ const ChatCard = styled.div<{ unread: boolean }>`
   padding: 12px 14px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  background: ${(props) => (props.unread ? "#f0f9fa" : "#ffffff")};
+  background: ${(p) => (p.unread ? "#f0f9fa" : "#ffffff")};
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease;
 
@@ -640,20 +636,17 @@ const ChatBody = styled.div`
   flex: 1;
   min-width: 0;
 `;
-
 const ChatTop = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 `;
-
 const ChatPhone = styled.span`
   font-weight: 600;
   color: #111827;
   font-size: 14px;
 `;
-
 const ChatTime = styled.span`
   color: #9ca3af;
   font-size: 12px;
@@ -661,8 +654,8 @@ const ChatTime = styled.span`
 `;
 
 const ChatLastMessage = styled.div<{ unread: boolean }>`
-  color: ${(props) => (props.unread ? "#374151" : "#6B7280")};
-  font-weight: ${(props) => (props.unread ? 500 : 400)};
+  color: ${(p) => (p.unread ? "#374151" : "#6B7280")};
+  font-weight: ${(p) => (p.unread ? 500 : 400)};
   font-size: 13px;
   margin-top: 2px;
   white-space: nowrap;
@@ -677,7 +670,6 @@ const UnreadDot = styled.span`
   background: #007d88;
   flex-shrink: 0;
 `;
-
 const ChatsEmpty = styled.div`
   text-align: center;
   padding: 40px;
@@ -685,30 +677,46 @@ const ChatsEmpty = styled.div`
   font-size: 14px;
 `;
 
-const LoadMoreChatsButton = styled.button`
+const LoadMoreButton = styled.button`
   align-self: center;
-  margin: 16px 0;
-  padding: 8px 20px;
-  border-radius: 6px;
-  border: 1px solid #007d88;
+  margin: 8px 0;
+  padding: 8px 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 125, 136, 1);
   background: #ffffff;
-  color: #007d88;
+  color: rgba(0, 125, 136, 1);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: #007d88;
+    background: rgba(0, 125, 136, 1);
     color: #ffffff;
   }
-
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.5;
   }
 `;
 
-const BroadcastCampaignsManager: React.FC = () => {
+// ─── Component ────────────────────────────────────────────────────────────────
+
+interface Props {
+  activeTab: "campaigns" | "channels" | "chats";
+  onTabChange: (tab: "campaigns" | "channels" | "chats") => void;
+  isCreateModalOpen: boolean;
+  setIsCreateModalOpen: (v: boolean) => void;
+  refreshChannelsTick: number;
+}
+
+const BroadcastCampaignsManager: React.FC<Props> = ({
+  activeTab,
+  onTabChange,
+  isCreateModalOpen,
+  setIsCreateModalOpen,
+  refreshChannelsTick,
+}) => {
   const navigate = useNavigate();
   const {
     broadcastCampaigns,
@@ -726,17 +734,13 @@ const BroadcastCampaignsManager: React.FC = () => {
 
   const { getChannels } = useWhatsApp();
 
-  const [activeTab, setActiveTab] = useState<
-    "campaigns" | "channels" | "chats"
-  >("campaigns");
-
   const [chats, setChats] = useState<BroadcastCampaignChat[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [chatsNextCursor, setChatsNextCursor] = useState<string | null>(null);
   const [chatsHasMore, setChatsHasMore] = useState(false);
   const [chatsUnreadOnly, setChatsUnreadOnly] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editModalReadOnly, setEditModalReadOnly] = useState(false);
   const [editingCampaign, setEditingCampaign] =
     useState<BroadcastCampaign | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -752,30 +756,50 @@ const BroadcastCampaignsManager: React.FC = () => {
     null
   );
 
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
+
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", message: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
+
   useEffect(() => {
     fetchBroadcastCampaigns(1, 10);
     loadChannels();
   }, []);
 
+  useEffect(() => {
+    if (refreshChannelsTick > 0) loadChannels();
+  }, [refreshChannelsTick]);
+
   const loadChannels = async () => {
     setIsLoadingChannels(true);
     try {
       const result = await getChannels();
-      if (result && result.length > 0) {
-        setChannels(result);
-      } else {
-        setChannels([]);
-      }
-    } catch (error) {
-      console.error("Error loading channels:", error);
+      setChannels(result?.length ? result : []);
+    } catch {
       setChannels([]);
     } finally {
       setIsLoadingChannels(false);
     }
   };
 
-  // Загрузка чатов с ответами. reset=true — заново (смена фильтра/вкладки),
-  // иначе — догрузка следующей порции по курсору.
   const loadChats = async (reset = false) => {
     setIsLoadingChats(true);
     try {
@@ -789,23 +813,18 @@ const BroadcastCampaignsManager: React.FC = () => {
         setChatsNextCursor(result.nextCursor);
         setChatsHasMore(result.hasMore);
       }
-    } catch (error) {
-      console.error("Error loading chats:", error);
+    } catch {
+      // silent
     } finally {
       setIsLoadingChats(false);
     }
   };
 
-  // При переходе на вкладку «Ответы» и смене фильтра — загружаем заново.
   useEffect(() => {
-    if (activeTab === "chats") {
-      loadChats(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (activeTab === "chats") loadChats(true);
   }, [activeTab, chatsUnreadOnly]);
 
   const handleChatClick = async (chat: BroadcastCampaignChat) => {
-    // Открываем WhatsApp-чат внутри WayPay по номеру и каналу из сущности чата.
     const phone = (chat.phone || "").replace(/\D/g, "");
     if (phone) {
       const query = chat.channelId
@@ -813,44 +832,61 @@ const BroadcastCampaignsManager: React.FC = () => {
         : "";
       navigate(`/admin/whatsapp/${phone}${query}`);
     }
-
-    // Помечаем чат прочитанным (оптимистично обновляем локально).
     if (!chat.isRead) {
       setChats((prev) =>
         prev.map((c) => (c.id === chat.id ? { ...c, isRead: true } : c))
       );
       const ok = await markBroadcastCampaignChatRead(chat.id);
-      if (!ok) {
-        // откат при ошибке
+      if (!ok)
         setChats((prev) =>
           prev.map((c) => (c.id === chat.id ? { ...c, isRead: false } : c))
         );
-      }
     }
   };
 
-  const formatChatTime = (iso: string) => {
+  const formatChatTime = (iso: string): string => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
+
+    const now = new Date();
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+    const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const timeStr = d.toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
     });
+
+    if (msgDay.getTime() === todayStart.getTime()) return timeStr;
+    if (msgDay.getTime() === yesterdayStart.getTime())
+      return `Вчера, ${timeStr}`;
+    if (d.getFullYear() === now.getFullYear())
+      return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+    return d.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    });
   };
 
-  // ✅ ФИКС: Добавляем e.preventDefault() и e.stopPropagation()
-  const handleCreateCampaign = async (e: React.FormEvent) => {
-    e.preventDefault(); // Останавливаем перезагрузку страницы
-    e.stopPropagation(); // Останавливаем всплытие события
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setTitle("");
+    setContent("");
+    setFile(null);
+    setIsTest(false);
+  };
 
+  const handleCreateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!title.trim() || !content.trim()) {
-      alert("Заполните название и содержание кампании");
+      addToast("warning", "Заполните название и содержание кампании");
       return;
     }
-
     setIsSubmitting(true);
     try {
       const success = await createBroadcastCampaign({
@@ -866,27 +902,24 @@ const BroadcastCampaignsManager: React.FC = () => {
         setIsTest(false);
         setIsCreateModalOpen(false);
         await fetchBroadcastCampaigns(1, 10);
+        addToast("success", "Кампания успешно создана");
+      } else {
+        addToast("error", "Ошибка при создании кампании");
       }
-    } catch (err) {
-      console.error("Error creating campaign:", err);
-      alert("Ошибка при создании кампании");
+    } catch {
+      addToast("error", "Ошибка при создании кампании");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ✅ ФИКС: Добавляем e.preventDefault() и e.stopPropagation()
   const handleSaveEditMessage = async (e: React.FormEvent) => {
-    e.preventDefault(); // Останавливаем перезагрузку страницы
-    e.stopPropagation(); // Останавливаем всплытие события
-
+    e.preventDefault();
     if (!editingCampaign) return;
-
     if (!editContent.trim()) {
-      alert("Содержание сообщения не может быть пустым");
+      addToast("warning", "Содержание сообщения не может быть пустым");
       return;
     }
-
     setIsSubmitting(true);
     try {
       const success = await updateBroadcastCampaignMessage(
@@ -901,94 +934,93 @@ const BroadcastCampaignsManager: React.FC = () => {
           broadcastPagination.page,
           broadcastPagination.pageSize
         );
+        addToast("success", "Сообщение обновлено");
+      } else {
+        addToast("error", "Ошибка при обновлении сообщения");
       }
-    } catch (err) {
-      console.error("Error updating campaign message:", err);
-      alert("Ошибка при обновлении сообщения");
+    } catch {
+      addToast("error", "Ошибка при обновлении сообщения");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ✅ ФИКС: Добавляем stopPropagation для кликов по карточке
-  const handleEditClick = (
-    e: React.MouseEvent,
-    campaign: BroadcastCampaign
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleEditMessage(campaign);
-  };
-
   const handleEditMessage = (campaign: BroadcastCampaign) => {
+    const readOnly =
+      campaign.status !== "Pending" && campaign.status !== "InProgress";
     setEditingCampaign(campaign);
     setEditContent(campaign.message.content);
+    setEditModalReadOnly(readOnly);
     setIsEditModalOpen(true);
   };
 
-  // ✅ ФИКС: Добавляем stopPropagation для отмены кампании
-  const handleCancelClick = (e: React.MouseEvent, id: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleCancelCampaign(id);
+  const handleCancelCampaign = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      message: "Вы уверены, что хотите отменить эту рассылку?",
+      isSubmitting: false,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isSubmitting: true }));
+        try {
+          await cancelBroadcastCampaign(id);
+          await fetchBroadcastCampaigns(
+            broadcastPagination.page,
+            broadcastPagination.pageSize
+          );
+          addToast("success", "Рассылка отменена");
+        } catch {
+          addToast("error", "Ошибка при отмене кампании");
+        } finally {
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            isSubmitting: false,
+          }));
+        }
+      },
+    });
   };
 
-  const handleCancelCampaign = async (id: number) => {
-    if (!window.confirm("Вы уверены, что хотите отменить эту рассылку?")) {
-      return;
-    }
-    try {
-      await cancelBroadcastCampaign(id);
-      await fetchBroadcastCampaigns(
-        broadcastPagination.page,
-        broadcastPagination.pageSize
-      );
-    } catch (err) {
-      console.error("Error cancelling campaign:", err);
-      alert("Ошибка при отмене кампании");
-    }
-  };
-
-  const handlePageChange = (newPage: number) => {
-    fetchBroadcastCampaigns(newPage, broadcastPagination.pageSize);
-  };
-
-  const handleToggleChannel = async (
-    channelId: string,
-    currentStatus: boolean
-  ) => {
+  const handleToggleChannel = (channelId: string, currentStatus: boolean) => {
     if (togglingChannelId === channelId) return;
-
     const channel = channels.find((ch) => ch.id === channelId);
     if (!channel) return;
-
     const actionText = currentStatus ? "отключить" : "включить";
-    if (
-      !window.confirm(
-        `Вы уверены, что хотите ${actionText} канал "${channel.name}"?`
-      )
-    ) {
-      return;
-    }
-
-    setTogglingChannelId(channelId);
-    try {
-      await toggleWhatsAppChannel(channelId);
-      setChannels((prev) =>
-        prev.map((ch) =>
-          ch.id === channelId ? { ...ch, adminBroadCast: !currentStatus } : ch
-        )
-      );
-      alert(`Канал успешно ${currentStatus ? "отключен" : "включен"}`);
-    } catch (error) {
-      console.error("Error toggling channel:", error);
-      alert("Произошла ошибка при изменении статуса канала");
-    } finally {
-      setTogglingChannelId(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      message: `Вы уверены, что хотите ${actionText} канал "${channel.name}"?`,
+      isSubmitting: false,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isSubmitting: true }));
+        setTogglingChannelId(channelId);
+        try {
+          await toggleWhatsAppChannel(channelId);
+          setChannels((prev) =>
+            prev.map((ch) =>
+              ch.id === channelId
+                ? { ...ch, adminBroadCast: !currentStatus }
+                : ch
+            )
+          );
+          addToast(
+            "success",
+            `Канал ${currentStatus ? "отключён" : "включён"}`
+          );
+        } catch {
+          addToast("error", "Ошибка при изменении статуса канала");
+        } finally {
+          setTogglingChannelId(null);
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            isSubmitting: false,
+          }));
+        }
+      },
+    });
   };
 
-  const getStatusText = (status: string): string => {
+  const getStatusText = (status: string) => {
     switch (status) {
       case "Pending":
         return "Ожидает";
@@ -1005,59 +1037,38 @@ const BroadcastCampaignsManager: React.FC = () => {
     }
   };
 
-  const getProgress = (campaign: BroadcastCampaign): number => {
-    if (campaign.totalRecipients === 0) return 0;
-    return (campaign.sentCount / campaign.totalRecipients) * 100;
-  };
+  const getProgress = (c: BroadcastCampaign) =>
+    c.totalRecipients === 0 ? 0 : (c.sentCount / c.totalRecipients) * 100;
 
-  // ✅ ФИКС: Добавляем обработчик клика по контенту с предотвращением всплытия
-  const handleContentClick = (
-    e: React.MouseEvent,
-    campaign: BroadcastCampaign
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleEditMessage(campaign);
-  };
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-  const renderCampaignsTab = () => (
-    <CampaignsContentWrapper>
-      <Header>
-        <h2>Рекламные кампании</h2>
-        <CreateCampaignButton onClick={() => setIsCreateModalOpen(true)}>
-          + Создать кампанию
-        </CreateCampaignButton>
-      </Header>
+  // ─── Tab contents ──────────────────────────────────────────────────────────
 
-      {error && (
-        <div
-          style={{
-            color: "#EF4444",
-            marginBottom: "20px",
-            padding: "12px",
-            background: "#FEE2E2",
-            borderRadius: "4px",
-          }}
-        >
-          Ошибка: {error}
-        </div>
-      )}
+  const campaignsContent = (
+    <>
+      {error && <ErrorBanner>Ошибка: {error}</ErrorBanner>}
 
-      {(broadcastCampaigns === undefined || broadcastCampaigns.length === 0) &&
-      !isLoading ? (
+      {!isLoading &&
+      (!broadcastCampaigns || broadcastCampaigns.length === 0) ? (
         <EmptyState>
           <p>Нет созданных рекламных кампаний</p>
           <p style={{ fontSize: "14px", marginTop: "8px" }}>
-            Нажмите кнопку "Создать кампанию", чтобы начать
+            Нажмите «+ Создать кампанию», чтобы начать
           </p>
         </EmptyState>
       ) : (
         <>
           <CampaignGrid>
-            {broadcastCampaigns.map((campaign) => {
+            {broadcastCampaigns?.map((campaign) => {
               const isTestCampaign =
                 (campaign as any).isTest || (campaign as any).test || false;
-
               return (
                 <CampaignCard
                   key={campaign.id}
@@ -1073,33 +1084,28 @@ const BroadcastCampaignsManager: React.FC = () => {
                     </StatusBadge>
                   </CampaignHeader>
 
-                  <CampaignContent
-                    onClick={(e) => handleContentClick(e, campaign)}
-                    title="Нажмите для редактирования сообщения"
-                  >
-                    {campaign.message.content}
-                  </CampaignContent>
+                  <CampaignContent>{campaign.message.content}</CampaignContent>
 
                   <CampaignInfo>
                     <InfoItem>
                       <InfoLabel>Создана</InfoLabel>
-                      <InfoValue>
-                        {new Date(campaign.createdAt).toLocaleString("ru-RU")}
-                      </InfoValue>
+                      <InfoValue>{formatDate(campaign.createdAt)}</InfoValue>
                     </InfoItem>
-                    <InfoItem>
-                      <InfoLabel>Завершена</InfoLabel>
-                      <InfoValue>
-                        {campaign.completedAt
-                          ? new Date(campaign.completedAt).toLocaleString(
-                              "ru-RU"
-                            )
-                          : "—"}
-                      </InfoValue>
-                    </InfoItem>
+                    {campaign.completedAt && (
+                      <InfoItem>
+                        <InfoLabel>Завершена</InfoLabel>
+                        <InfoValue>
+                          {formatDate(campaign.completedAt)}
+                        </InfoValue>
+                      </InfoItem>
+                    )}
                     <InfoItem>
                       <InfoLabel>Получатели</InfoLabel>
-                      <InfoValue>{campaign.totalRecipients}</InfoValue>
+                      <InfoValue>
+                        {campaign.totalRecipients > 0
+                          ? campaign.totalRecipients
+                          : "—"}
+                      </InfoValue>
                     </InfoItem>
                     <InfoItem>
                       <InfoLabel>Отправлено</InfoLabel>
@@ -1108,9 +1114,9 @@ const BroadcastCampaignsManager: React.FC = () => {
                     {campaign.failedCount > 0 && (
                       <InfoItem>
                         <InfoLabel>Ошибок</InfoLabel>
-                        <InfoValue style={{ color: "#EF4444" }}>
+                        <InfoValueDanger>
                           {campaign.failedCount}
-                        </InfoValue>
+                        </InfoValueDanger>
                       </InfoItem>
                     )}
                   </CampaignInfo>
@@ -1121,26 +1127,43 @@ const BroadcastCampaignsManager: React.FC = () => {
                     </ProgressBar>
                   )}
 
-                  <CampaignActions>
-                    {(campaign.status === "Pending" ||
-                      campaign.status === "InProgress") && (
-                      <ActionButton
-                        variant="primary"
-                        onClick={(e) => handleEditClick(e, campaign)}
+                  {(() => {
+                    const canEdit =
+                      campaign.status === "Pending" ||
+                      campaign.status === "InProgress";
+                    const canCancel = campaign.status === "Pending";
+                    const canView = !canEdit;
+                    return (
+                      <CampaignActions
+                        $hasButtons={canEdit || canCancel || canView}
                       >
-                        ✏️ Редактировать
-                      </ActionButton>
-                    )}
-
-                    {campaign.status === "Pending" && (
-                      <ActionButton
-                        variant="danger"
-                        onClick={(e) => handleCancelClick(e, campaign.id)}
-                      >
-                        Отменить
-                      </ActionButton>
-                    )}
-                  </CampaignActions>
+                        {canEdit && (
+                          <ActionButton
+                            variant="primary"
+                            onClick={() => handleEditMessage(campaign)}
+                          >
+                            Редактировать
+                          </ActionButton>
+                        )}
+                        {canView && (
+                          <ActionButton
+                            variant="primary"
+                            onClick={() => handleEditMessage(campaign)}
+                          >
+                            Просмотр
+                          </ActionButton>
+                        )}
+                        {canCancel && (
+                          <ActionButton
+                            variant="danger"
+                            onClick={() => handleCancelCampaign(campaign.id)}
+                          >
+                            Отменить
+                          </ActionButton>
+                        )}
+                      </CampaignActions>
+                    );
+                  })()}
                 </CampaignCard>
               );
             })}
@@ -1149,32 +1172,23 @@ const BroadcastCampaignsManager: React.FC = () => {
           <PaginationWrapper>
             <PaginationLayout>
               <CountInfoTitle total={broadcastPagination.totalCount} />
-              <Pagination
+              <CustomPagination
                 total={broadcastPagination.totalCount}
                 current={broadcastPagination.page}
-                onChange={handlePageChange}
+                onChange={(p) =>
+                  fetchBroadcastCampaigns(p, broadcastPagination.pageSize)
+                }
                 itemsPerPage={broadcastPagination.pageSize}
               />
             </PaginationLayout>
           </PaginationWrapper>
         </>
       )}
-    </CampaignsContentWrapper>
+    </>
   );
 
-  const renderChannelsTab = () => (
+  const channelsContent = (
     <ChannelsManagementSection>
-      <ChannelsManagementTitle>
-        <span>Управление каналами</span>
-        <DarkCyanButton
-          onClick={loadChannels}
-          disabled={isLoadingChannels}
-          style={{ width: "auto", padding: "6px 16px", fontSize: "13px" }}
-        >
-          {isLoadingChannels ? "Обновление..." : "Обновить"}
-        </DarkCyanButton>
-      </ChannelsManagementTitle>
-
       {isLoadingChannels && channels.length === 0 ? (
         <NoChannelsMessage>Загрузка каналов...</NoChannelsMessage>
       ) : channels.length === 0 ? (
@@ -1190,7 +1204,6 @@ const BroadcastCampaignsManager: React.FC = () => {
           {channels.map((channel) => {
             const isActive = channel.adminBroadCast !== false;
             const isToggling = togglingChannelId === channel.id;
-
             return (
               <ChannelCard key={channel.id} isActive={isActive}>
                 <ChannelInfo>
@@ -1204,18 +1217,25 @@ const BroadcastCampaignsManager: React.FC = () => {
                     </ChannelStatusBadge>
                   </ChannelDetails>
                 </ChannelInfo>
-
-                <ToggleContainer>
-                  <ToggleLabel isActive={isActive}>
+                <ToggleContainer
+                  title={
+                    channel.status !== "Connected"
+                      ? "Канал не подключён к WhatsApp — рассылки недоступны"
+                      : undefined
+                  }
+                >
+                  <ToggleLabel
+                    isActive={isActive && channel.status === "Connected"}
+                  >
                     {isActive ? "Вкл" : "Выкл"}
                   </ToggleLabel>
                   {isToggling ? (
                     <LoadingSpinner />
                   ) : (
                     <ToggleSwitch
-                      isActive={isActive}
-                      onClick={() => handleToggleChannel(channel.id, isActive)}
-                      title={isActive ? "Отключить канал" : "Включить канал"}
+                      checked={isActive}
+                      onChange={() => handleToggleChannel(channel.id, isActive)}
+                      disabled={channel.status !== "Connected"}
                     />
                   )}
                 </ToggleContainer>
@@ -1227,7 +1247,11 @@ const BroadcastCampaignsManager: React.FC = () => {
     </ChannelsManagementSection>
   );
 
-  const renderChatsTab = () => (
+  const unreadCount = !chatsUnreadOnly
+    ? chats.filter((c) => !c.isRead).length
+    : chats.length;
+
+  const chatsContent = (
     <ChatsSection>
       <ChatsFilterRow>
         <ChatsFilterButton
@@ -1241,13 +1265,18 @@ const BroadcastCampaignsManager: React.FC = () => {
           onClick={() => setChatsUnreadOnly(true)}
         >
           Непрочитанные
+          {unreadCount > 0 && (
+            <UnreadBadge active={chatsUnreadOnly}>{unreadCount}</UnreadBadge>
+          )}
         </ChatsFilterButton>
       </ChatsFilterRow>
 
       {isLoadingChats && chats.length === 0 ? (
         <ChatsEmpty>Загрузка...</ChatsEmpty>
       ) : chats.length === 0 ? (
-        <ChatsEmpty>Чатов пока нет</ChatsEmpty>
+        <ChatsEmpty>
+          {chatsUnreadOnly ? "Нет непрочитанных ответов" : "Ответов пока нет"}
+        </ChatsEmpty>
       ) : (
         <>
           <ChatsList>
@@ -1272,136 +1301,107 @@ const BroadcastCampaignsManager: React.FC = () => {
             ))}
           </ChatsList>
           {chatsHasMore && (
-            <LoadMoreChatsButton
+            <LoadMoreButton
               onClick={() => loadChats(false)}
               disabled={isLoadingChats}
             >
               {isLoadingChats ? "Загрузка..." : "Показать ещё"}
-            </LoadMoreChatsButton>
+            </LoadMoreButton>
           )}
         </>
       )}
     </ChatsSection>
   );
 
-  if (
-    isLoading &&
-    (!broadcastCampaigns || broadcastCampaigns.length === 0) &&
-    isLoadingChannels
-  ) {
-    return <Container>Загрузка...</Container>;
-  }
+  const tabs = [
+    { id: "campaigns", label: "Рекламные кампании", content: campaignsContent },
+    { id: "channels", label: "WhatsApp каналы", content: channelsContent },
+    { id: "chats", label: "Ответы", content: chatsContent },
+  ];
 
   return (
     <Container>
-      <TabsContainer>
-        <Tab
-          active={activeTab === "campaigns"}
-          onClick={() => setActiveTab("campaigns")}
-        >
-          Рекламные кампании
-        </Tab>
-        <Tab
-          active={activeTab === "channels"}
-          onClick={() => setActiveTab("channels")}
-        >
-          WhatsApp каналы
-        </Tab>
-        <Tab
-          active={activeTab === "chats"}
-          onClick={() => setActiveTab("chats")}
-        >
-          Ответы
-        </Tab>
-      </TabsContainer>
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={(id) => onTabChange(id as typeof activeTab)}
+      />
 
-      <TabContent>
-        {activeTab === "campaigns"
-          ? renderCampaignsTab()
-          : activeTab === "channels"
-          ? renderChannelsTab()
-          : renderChatsTab()}
-      </TabContent>
-
+      {/* Создание кампании */}
       <BaseModal
         title="Создание рекламной кампании"
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCancel={() => setIsCreateModalOpen(false)}
+        onClose={closeCreateModal}
+        onCancel={closeCreateModal}
         onSave={handleCreateCampaign}
         isSubmitting={isSubmitting}
         width="600px"
       >
-        <ModalContent>
-          <form onSubmit={handleCreateCampaign}>
-            <FormGroup>
-              <FormLabel>Название кампании *</FormLabel>
-              <CustomInput
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Введите название кампании"
-                required
-              />
-            </FormGroup>
+        <ModalForm>
+          <ModalField>
+            <FormLabel>
+              Название кампании <RequiredMark>*</RequiredMark>
+            </FormLabel>
+            <CustomInput
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Введите название кампании"
+            />
+          </ModalField>
 
-            <FormGroup>
-              <FormLabel>Содержание *</FormLabel>
-              <TextArea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Введите текст сообщения для рассылки"
-                required
-              />
-            </FormGroup>
+          <ModalField>
+            <FormLabel>
+              Содержание <RequiredMark>*</RequiredMark>
+            </FormLabel>
+            <CustomTextArea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Введите текст сообщения для рассылки"
+              rows={5}
+            />
+          </ModalField>
 
-            <FormGroup>
-              <FormLabel>Файл (опционально)</FormLabel>
-              <FileInput
+          <ModalField>
+            <FormLabel>Файл</FormLabel>
+            <FileInputWrapper>
+              <HiddenFileInput
+                id="campaign-file-input"
                 type="file"
                 onChange={(e) => {
-                  const selectedFile = e.target.files?.[0];
-                  if (selectedFile) {
-                    setFile(selectedFile);
-                  }
+                  const f = e.target.files?.[0];
+                  if (f) setFile(f);
                 }}
               />
-              {file && (
-                <div
-                  style={{
-                    marginTop: "8px",
-                    fontSize: "14px",
-                    color: "#6B7280",
-                  }}
-                >
-                  Выбран файл: {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                </div>
-              )}
-            </FormGroup>
+              <FileButton htmlFor="campaign-file-input">
+                Выбрать файл
+              </FileButton>
+              <FileName>
+                {file
+                  ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)`
+                  : "Файл не выбран"}
+              </FileName>
+            </FileInputWrapper>
+          </ModalField>
 
-            <FormGroup>
-              <CheckboxGroup>
-                <CheckboxLabel>
-                  <input
-                    type="checkbox"
-                    checked={isTest}
-                    onChange={(e) => setIsTest(e.target.checked)}
-                  />
-                  <span>Тестовая рассылка (только для проверки)</span>
-                </CheckboxLabel>
-              </CheckboxGroup>
-              <div
-                style={{ marginTop: "4px", fontSize: "12px", color: "#6B7280" }}
-              >
-                Тестовые кампании будут отправлены только на тестовые номера и
-                не затронут реальных пользователей
-              </div>
-            </FormGroup>
-          </form>
-        </ModalContent>
+          <ModalField>
+            <Checkbox
+              checked={isTest}
+              onChange={setIsTest}
+              label="Тестовая рассылка (только для проверки)"
+            />
+            <HintText>
+              Тестовые кампании будут отправлены только на тестовые номера и не
+              затронут реальных пользователей
+            </HintText>
+          </ModalField>
+        </ModalForm>
       </BaseModal>
 
-      <EditMessageModal
-        title="Редактирование сообщения"
+      {/* Редактирование сообщения */}
+      <BaseModal
+        title={
+          editModalReadOnly ? "Просмотр сообщения" : "Редактирование сообщения"
+        }
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);
@@ -1413,80 +1413,73 @@ const BroadcastCampaignsManager: React.FC = () => {
           setEditingCampaign(null);
           setEditContent("");
         }}
-        onSave={handleSaveEditMessage}
+        onSave={editModalReadOnly ? undefined : handleSaveEditMessage}
+        mode={editModalReadOnly ? "view" : "edit"}
+        hideCanselButton={editModalReadOnly}
         isSubmitting={isSubmitting}
         width="600px"
       >
-        <EditMessageContent>
-          {editingCampaign && (
-            <form onSubmit={handleSaveEditMessage}>
-              <FormGroup>
-                <FormLabel>Кампания</FormLabel>
-                <div
-                  style={{
-                    padding: "8px 12px",
-                    background: "#F3F4F6",
-                    borderRadius: "4px",
-                    color: "#374151",
-                  }}
-                >
-                  {editingCampaign.title}
-                </div>
-              </FormGroup>
+        {editingCampaign && (
+          <ModalForm>
+            <div>
+              <FormLabel>Кампания</FormLabel>
+              <ReadonlyField>{editingCampaign.title}</ReadonlyField>
+            </div>
 
-              <FormGroup>
-                <FormLabel>Текущий статус</FormLabel>
-                <div
-                  style={{
-                    padding: "8px 12px",
-                    background: "#F3F4F6",
-                    borderRadius: "4px",
-                    color: "#374151",
-                  }}
-                >
-                  {getStatusText(editingCampaign.status)}
-                </div>
-              </FormGroup>
+            <div>
+              <FormLabel>Статус</FormLabel>
+              <ReadonlyField>
+                {getStatusText(editingCampaign.status)}
+              </ReadonlyField>
+            </div>
 
-              <FormGroup>
-                <FormLabel>Редактировать сообщение *</FormLabel>
-                <TextArea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  placeholder="Введите новое содержание сообщения"
-                  required
-                  style={{ minHeight: "150px" }}
-                />
-                <div
-                  style={{
-                    marginTop: "4px",
-                    fontSize: "12px",
-                    color: "#6B7280",
-                  }}
+            <div>
+              <FormLabel>Сообщение</FormLabel>
+              {editModalReadOnly ? (
+                <ReadonlyField
+                  style={{ whiteSpace: "pre-wrap", minHeight: "80px" }}
                 >
-                  {editContent.length} символов
-                </div>
-              </FormGroup>
-
-              {editingCampaign.status === "InProgress" && (
-                <div
-                  style={{
-                    padding: "12px",
-                    background: "#FEF3C7",
-                    borderRadius: "4px",
-                    color: "#92400E",
-                    fontSize: "13px",
-                    marginTop: "12px",
-                  }}
-                >
-                  ⚠️ Внимание: Кампания уже в процессе отправки. Изменение
-                  сообщения может повлиять на текущую рассылку.
-                </div>
+                  {editContent}
+                </ReadonlyField>
+              ) : (
+                <>
+                  <CustomTextArea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    placeholder="Введите новое содержание сообщения"
+                    rows={6}
+                  />
+                  <CharCount>{editContent.length} символов</CharCount>
+                </>
               )}
-            </form>
-          )}
-        </EditMessageContent>
-      </EditMessageModal>
+            </div>
+
+            {editingCampaign.status === "InProgress" && (
+              <InProgressWarning>
+                Внимание: кампания уже в процессе отправки. Изменение сообщения
+                может повлиять на текущую рассылку.
+              </InProgressWarning>
+            )}
+          </ModalForm>
+        )}
+      </BaseModal>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        message={confirmModal.message}
+        isSubmitting={confirmModal.isSubmitting}
+      />
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
     </Container>
   );
 };

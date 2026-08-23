@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import styled from "styled-components";
 import { formatPhoneHref } from "../../utils/phoneUtils";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../../components/ui/fields/CustomInput";
+import CustomSelect from "../../components/ui/fields/CustomSelect";
 import Pagination from "../../components/ui/fields/CustomPagination";
 import CustomTable, {
   type RowStyle,
@@ -13,26 +15,194 @@ import TitleField from "../../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import EmployeeModal from "../../components/modal/CrudInherited/EmployeeModal";
+import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import { useEmployee } from "../../api/hooks/useEmployee";
 import { usePermission } from "../../api/hooks/usePermission";
 import type { Employee, EmployeeFilterRequest } from "../../api/types/employee";
-import CustomSelect from "../../components/ui/fields/CustomSelect";
 import Avatar from "../../components/Profile/Avatar";
 import { FILE_BASE_URL } from "../../api/client";
 import { useAuth } from "../../сontext/AuthContext";
-import BaseModal from "../../components/modal/BASE/modalCRUBase";
-import { EditOutlined } from "@ant-design/icons";
-import { message } from "antd";
 import PhoneLink from "../../components/ui/links/PhoneLink";
 import Checkbox from "../../components/ui/CheckBoxes/Checkbox";
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 300px;
+  max-width: 420px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+// ─── Confirm modal ─────────────────────────────────────────────────────────────
+
+const ConfirmText = styled.p`
+  padding: 16px 30px;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.5;
+  white-space: pre-line;
+`;
+
+// ─── Styled components ─────────────────────────────────────────────────────────
+
+const SearchBar = styled.div`
+  flex: 1;
+  max-width: 480px;
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 11px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+`;
+
+const ClearButton = styled.button`
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #374151;
+  }
+`;
+
+const AvatarCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const InlineCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const CenteredCell = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const MutedText = styled.span`
+  color: #9ca3af;
+  font-size: 12px;
+`;
+
+const EditBtn = styled.button`
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: #007d88;
+  }
+`;
+
+const ModalForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 30px;
+`;
+
+const ModalField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ModalLabel = styled.label`
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+`;
+
+// ─── Icons ─────────────────────────────────────────────────────────────────────
+
+const PencilIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <path
+      d="M9.5 2L12 4.5L4.5 12H2v-2.5L9.5 2z"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface EmployeePageProps {
   onViewEmployee: (id: number) => void;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   const [nameFilter, setNameFilter] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
+  const [roleFilter, setRoleFilter] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
@@ -67,8 +237,56 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     number | null
   >(null);
   const [isSavingRole, setIsSavingRole] = useState(false);
-  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
-  const [employeeToBlock, setEmployeeToBlock] = useState<Employee | null>(null);
+
+  // Toast
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", msg: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message: msg }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
+
+  // Confirm modal
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
+
+  const openConfirm = (msg: string, onConfirm: () => void) => {
+    setConfirmState({
+      isOpen: true,
+      message: msg,
+      onConfirm,
+      isSubmitting: false,
+    });
+  };
+
+  const closeConfirm = () =>
+    setConfirmState((prev) => ({
+      ...prev,
+      isOpen: false,
+      isSubmitting: false,
+    }));
+
+  const handleConfirm = async () => {
+    setConfirmState((prev) => ({ ...prev, isSubmitting: true }));
+    try {
+      await confirmState.onConfirm();
+    } finally {
+      closeConfirm();
+    }
+  };
 
   const columnToApiSortMap: Record<number, string> = {
     0: "id",
@@ -107,9 +325,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   const { customRoles, fetchCustomRoles } = usePermission();
 
   useEffect(() => {
-    fetchCustomRoles().catch(() => {
-      /* список кастомных ролей не критичен для страницы */
-    });
+    fetchCustomRoles().catch(() => {});
   }, [fetchCustomRoles]);
 
   const loadEmployees = useCallback(async () => {
@@ -117,7 +333,10 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       page: currentPage,
       pageSize,
       fullName: nameFilter || undefined,
-      role: roleFilter as any,
+      role:
+        roleFilter && roleFilter.startsWith("role:")
+          ? (roleFilter.slice("role:".length) as any)
+          : undefined,
     };
 
     if (sortConfig.key !== null) {
@@ -136,21 +355,29 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     loadEmployees();
   }, [currentPage, nameFilter, roleFilter, sortConfig, loadEmployees]);
 
-  const filteredEmployees = useMemo(() => {
-    return localEmployees.filter(
-      (emp) => !isSuperAdminIdUser(emp.id) && emp.role !== "суперадмин"
-    );
-  }, [localEmployees, isSuperAdminIdUser]);
+  const filteredEmployees = useMemo(
+    () =>
+      localEmployees.filter(
+        (emp) => !isSuperAdminIdUser(emp.id) && emp.role !== "суперадмин"
+      ),
+    [localEmployees, isSuperAdminIdUser]
+  );
   const filteredOutCount = localEmployees.length - filteredEmployees.length;
 
-  const handleFilterChange = (value: string) => {
-    setNameFilter(value);
-    setCurrentPage(1);
-  };
-
-  // Значение селекта роли кодируется как "role:<база>" или "custom:<id>",
-  // чтобы в одном выпадающем списке выбирать и базовую, и кастомную роль.
   const roleSelectOptions = useMemo(
+    () => [
+      { value: "", label: "Все роли" },
+      { value: "role:сотрудник", label: "Сотрудник" },
+      { value: "role:админ", label: "Администратор" },
+      ...customRoles.map((r) => ({
+        value: `custom:${r.id}`,
+        label: `${r.name} (кастомная)`,
+      })),
+    ],
+    [customRoles]
+  );
+
+  const editRoleOptions = useMemo(
     () => [
       { value: "role:сотрудник", label: "Сотрудник" },
       { value: "role:админ", label: "Администратор" },
@@ -163,7 +390,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   );
 
   const handleOpenRoleModal = (employee: Employee, e: React.MouseEvent) => {
-    e.preventDefault();
+    e.stopPropagation();
     setRoleValue(
       employee.customRole
         ? `custom:${employee.customRole.id}`
@@ -186,173 +413,156 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       await updateEmployeeRole(currentRoleEmployeeId, payload);
       await loadEmployees();
       setIsRoleModalOpen(false);
-      message.success("Роль успешно обновлена");
-    } catch (error) {
-      console.error("Ошибка при сохранении роли:", error);
-      message.error("Не удалось обновить роль");
+      addToast("success", "Роль успешно обновлена");
+    } catch {
+      addToast("error", "Не удалось обновить роль");
     } finally {
       setIsSavingRole(false);
     }
   };
 
-  const handleToggleAccounting = useCallback(async (employee: Employee) => {
-    if (!employee.id) return;
-
-    if (!canEditAccounting(employee)) {
-      message.error("У вас нет прав для изменения права на бухгалтерию");
-      return;
-    }
-
-    const hasPermission = hasAccountingPermission(employee);
-    const action = hasPermission ? "снять" : "назначить";
-    
-    const isCurrentUser = employee.id === authInfo?.employee?.id;
-    if (isCurrentUser && action === "снять") {
-      message.error("Вы не можете лишить себя права на бухгалтерию");
-      return;
-    }
-
-    const confirmMessage = hasPermission
-      ? `Вы уверены, что хотите снять право на бухгалтерию с ${employee.fullName}?`
-      : `Вы уверены, что хотите назначить право на бухгалтерию ${employee.fullName}?${getCurrentAccountant() && getCurrentAccountant()?.id !== employee.id ? `\n\nУ текущего бухгалтера (${getCurrentAccountant()?.fullName}) право будет автоматически снято.` : ''}`;
-
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-
-    const isGranting = !hasPermission;
-
-    try {
-      if (isGranting) {
-        const currentAccountant = localEmployees.find(e => 
-          e.permissions?.some(p => p.code === "MANAGE_ACCOUNTING")
-        );
-
-        setLocalEmployees(prev => 
-          prev.map(e => {
-            if (e.id === employee.id) {
-              const currentPerms = e.permissions || [];
-              if (!currentPerms.some(p => p.code === "MANAGE_ACCOUNTING")) {
-                const accountingPermission = {
-                  id: 10,
-                  code: "MANAGE_ACCOUNTING",
-                  description: "разрешение вести бухгалтерский учёт"
-                };
-                return { ...e, permissions: [...currentPerms, accountingPermission] };
-              }
-              return e;
-            }
-            if (currentAccountant && e.id === currentAccountant.id) {
-              return { 
-                ...e, 
-                permissions: e.permissions?.filter(p => p.code !== "MANAGE_ACCOUNTING") || null 
-              };
-            }
-            return e;
-          })
-        );
-      } else {
-        setLocalEmployees(prev => 
-          prev.map(e => {
-            if (e.id === employee.id) {
-              return { 
-                ...e, 
-                permissions: e.permissions?.filter(p => p.code !== "MANAGE_ACCOUNTING") || null 
-              };
-            }
-            return e;
-          })
-        );
-      }
-
-      await togglePermission(employee.id, "MANAGE_ACCOUNTING");
-      
-      if (isGranting) {
-        message.success(`Право на бухгалтерию назначено ${employee.fullName}`);
-      } else {
-        message.success(`Право на бухгалтерию снято с ${employee.fullName}`);
-      }
-
-      await loadEmployees();
-
-    } catch (error) {
-      console.error("Ошибка при изменении права на бухгалтерию:", error);
-      message.error("Не удалось изменить право на бухгалтерию");
-      await loadEmployees();
-    }
-  }, [togglePermission, localEmployees, authInfo, loadEmployees]);
-
-  const hasAccountingPermission = (employee: Employee): boolean => {
-    return employee.permissions?.some(p => p.code === "MANAGE_ACCOUNTING") || false;
-  };
+  const hasAccountingPermission = (employee: Employee): boolean =>
+    employee.permissions?.some((p) => p.code === "MANAGE_ACCOUNTING") || false;
 
   const canEditAccounting = (employee: Employee): boolean => {
-    if (!authInfo) return false;
-    
-    if (employee.role === "суперадмин") return false;
-    
-    if (hasRole("суперадмин") || hasRole("директор")) {
-      return true;
-    }
-    
-    return false;
+    if (!authInfo || employee.role === "суперадмин") return false;
+    return hasRole("суперадмин") || hasRole("директор");
   };
 
-  const getCurrentAccountant = useCallback(() => {
-    return localEmployees.find(e => 
-      e.permissions?.some(p => p.code === "MANAGE_ACCOUNTING")
-    );
-  }, [localEmployees]);
+  const getCurrentAccountant = useCallback(
+    () =>
+      localEmployees.find((e) =>
+        e.permissions?.some((p) => p.code === "MANAGE_ACCOUNTING")
+      ),
+    [localEmployees]
+  );
+
+  const handleToggleAccounting = useCallback(
+    async (employee: Employee) => {
+      if (!employee.id) return;
+
+      if (!canEditAccounting(employee)) {
+        addToast("error", "У вас нет прав для изменения права на бухгалтерию");
+        return;
+      }
+
+      const hasPermission = hasAccountingPermission(employee);
+
+      if (employee.id === authInfo?.employee?.id && hasPermission) {
+        addToast("error", "Вы не можете лишить себя права на бухгалтерию");
+        return;
+      }
+
+      const currentAccountant = getCurrentAccountant();
+      const confirmMsg = hasPermission
+        ? `Снять право на бухгалтерию с ${employee.fullName}?`
+        : `Назначить право на бухгалтерию ${employee.fullName}?${
+            currentAccountant && currentAccountant.id !== employee.id
+              ? `\n\nУ текущего бухгалтера (${currentAccountant.fullName}) право будет автоматически снято.`
+              : ""
+          }`;
+
+      openConfirm(confirmMsg, async () => {
+        const isGranting = !hasPermission;
+        try {
+          if (isGranting) {
+            setLocalEmployees((prev) =>
+              prev.map((e) => {
+                if (e.id === employee.id) {
+                  const perms = e.permissions || [];
+                  if (!perms.some((p) => p.code === "MANAGE_ACCOUNTING")) {
+                    return {
+                      ...e,
+                      permissions: [
+                        ...perms,
+                        {
+                          id: 10,
+                          code: "MANAGE_ACCOUNTING",
+                          description: "разрешение вести бухгалтерский учёт",
+                        },
+                      ],
+                    };
+                  }
+                  return e;
+                }
+                if (currentAccountant && e.id === currentAccountant.id) {
+                  return {
+                    ...e,
+                    permissions:
+                      e.permissions?.filter(
+                        (p) => p.code !== "MANAGE_ACCOUNTING"
+                      ) || null,
+                  };
+                }
+                return e;
+              })
+            );
+          } else {
+            setLocalEmployees((prev) =>
+              prev.map((e) =>
+                e.id === employee.id
+                  ? {
+                      ...e,
+                      permissions:
+                        e.permissions?.filter(
+                          (p) => p.code !== "MANAGE_ACCOUNTING"
+                        ) || null,
+                    }
+                  : e
+              )
+            );
+          }
+
+          await togglePermission(employee.id, "MANAGE_ACCOUNTING");
+          addToast(
+            "success",
+            isGranting
+              ? `Право на бухгалтерию назначено ${employee.fullName}`
+              : `Право на бухгалтерию снято с ${employee.fullName}`
+          );
+          await loadEmployees();
+        } catch {
+          addToast("error", "Не удалось изменить право на бухгалтерию");
+          await loadEmployees();
+        }
+      });
+    },
+    [
+      togglePermission,
+      localEmployees,
+      authInfo,
+      loadEmployees,
+      getCurrentAccountant,
+    ]
+  );
 
   const canEditEmployee = (employee: Employee): boolean => {
-    if (!authInfo) return false;
-    if (employee.id === authInfo.employee.id) return false;
-
-    if (hasRole("суперадмин") || hasRole("директор")) {
-      return true;
-    }
-
-    if (hasRole("админ")) {
-      return employee.role === "сотрудник";
-    }
-
+    if (!authInfo || employee.id === authInfo.employee.id) return false;
+    if (hasRole("суперадмин") || hasRole("директор")) return true;
+    if (hasRole("админ")) return employee.role === "сотрудник";
     return false;
   };
 
   const canDeleteEmployee = (employee: Employee): boolean => {
-    if (!authInfo) return false;
-    if (employee.id === authInfo.employee.id) return false;
-
-    if (hasRole("суперадмин") || hasRole("директор")) {
-      return true;
-    }
-
-    if (hasRole("админ")) {
-      return employee.role === "сотрудник";
-    }
-
+    if (!authInfo || employee.id === authInfo.employee.id) return false;
+    if (hasRole("суперадмин") || hasRole("директор")) return true;
+    if (hasRole("админ")) return employee.role === "сотрудник";
     return false;
   };
 
-  const isEmployeeBlocked = (employee: Employee): boolean => {
-    return employee.isBlocked === true;
-  };
+  const isEmployeeBlocked = (employee: Employee): boolean =>
+    employee.isBlocked === true;
 
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
-
-    setSortConfig((prev) => {
-      if (prev.key === columnIndex) {
-        return {
-          key: columnIndex,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
-      }
-      return {
-        key: columnIndex,
-        direction: "asc",
-      };
-    });
+    setSortConfig((prev) =>
+      prev.key === columnIndex
+        ? {
+            key: columnIndex,
+            direction: prev.direction === "asc" ? "desc" : "asc",
+          }
+        : { key: columnIndex, direction: "asc" }
+    );
   };
 
   const handleCreateEmployee = () => {
@@ -361,112 +571,92 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteEmployee = async (rowData: any[]) => {
-    const [id] = rowData;
-    const employeeId = Number(id);
+  const handleDeleteEmployee = (rowData: any[]) => {
+    const employeeId = Number(rowData[0]);
     const employee = localEmployees.find((e) => e.id === employeeId);
-
     if (!employee) return;
 
     if (!canDeleteEmployee(employee)) {
-      if (employee.id === authInfo?.employee.id) {
-        message.error("Нельзя удалить самого себя");
-      } else {
-        message.error("Недостаточно прав для удаления этого сотрудника");
-      }
+      addToast(
+        "error",
+        employee.id === authInfo?.employee.id
+          ? "Нельзя удалить самого себя"
+          : "Недостаточно прав для удаления этого сотрудника"
+      );
       return;
     }
 
-    if (window.confirm("Вы уверены, что хотите удалить этого сотрудника?")) {
-      try {
-        setLocalEmployees((prev) => prev.filter((e) => e.id !== employeeId));
-        setTotalCount((prev) => prev - 1);
-
-        await deleteEmployee(employeeId);
-        message.success("Сотрудник успешно удален");
-
-        await loadEmployees();
-      } catch (err: any) {
-        console.error("Ошибка при удалении сотрудника:", err);
-        loadEmployees();
-
-        window.alert(
-          "Нельзя удалить сотрудника создавшего договор(ы). Вы можете заблокировать сотрудника чтобы ограничить доступ к программе."
-        );
+    openConfirm(
+      "Вы уверены, что хотите удалить этого сотрудника?",
+      async () => {
+        try {
+          setLocalEmployees((prev) => prev.filter((e) => e.id !== employeeId));
+          setTotalCount((prev) => prev - 1);
+          await deleteEmployee(employeeId);
+          addToast("success", "Сотрудник успешно удалён");
+          await loadEmployees();
+        } catch {
+          loadEmployees();
+          addToast(
+            "error",
+            "Нельзя удалить сотрудника с договорами. Вы можете заблокировать его доступ."
+          );
+        }
       }
-    }
+    );
   };
 
-  const handleBlockEmployee = async (rowData: any[]) => {
-    const [id] = rowData;
-    const employeeId = Number(id);
+  const handleBlockEmployee = (rowData: any[]) => {
+    const employeeId = Number(rowData[0]);
     const employee = localEmployees.find((e) => e.id === employeeId);
-
     if (!employee) return;
 
     if (!canDeleteEmployee(employee)) {
-      if (employee.id === authInfo?.employee.id) {
-        message.error("Нельзя заблокировать самого себя");
-      } else {
-        message.error("Недостаточно прав для блокирования этого сотрудника");
-      }
+      addToast(
+        "error",
+        employee.id === authInfo?.employee.id
+          ? "Нельзя заблокировать самого себя"
+          : "Недостаточно прав для блокировки этого сотрудника"
+      );
       return;
     }
 
-    if (
-      window.confirm("Вы уверены, что хотите заблокировать этого сотрудника?")
-    ) {
-      try {
-        await toggleEmployeeBlock(employeeId);
-        message.success("Сотрудник успешно заблокирован");
-        await loadEmployees();
-      } catch (err: any) {
-        console.error("Ошибка при блокировке сотрудника:", err);
-        message.error("Не удалось заблокировать сотрудника");
+    openConfirm(
+      "Вы уверены, что хотите заблокировать этого сотрудника?",
+      async () => {
+        try {
+          await toggleEmployeeBlock(employeeId);
+          addToast("success", "Сотрудник заблокирован");
+          await loadEmployees();
+        } catch {
+          addToast("error", "Не удалось заблокировать сотрудника");
+        }
       }
-    }
+    );
   };
 
-  const handleBlockEmployeeFromModal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!employeeToBlock) return;
-
-    try {
-      await toggleEmployeeBlock(employeeToBlock.id);
-      message.success("Сотрудник успешно заблокирован");
-      setIsBlockModalOpen(false);
-      setEmployeeToBlock(null);
-      await loadEmployees();
-    } catch (err: any) {
-      console.error("Ошибка при блокировке сотрудника:", err);
-      message.error("Не удалось заблокировать сотрудника");
-    }
-  };
-
-  const handleUnblockEmployee = async (rowData: any[]) => {
-    const [id] = rowData;
-    const employeeId = Number(id);
+  const handleUnblockEmployee = (rowData: any[]) => {
+    const employeeId = Number(rowData[0]);
     const employee = localEmployees.find((e) => e.id === employeeId);
-
     if (!employee) return;
 
     if (!canDeleteEmployee(employee)) {
-      message.error("Недостаточно прав для разблокирования этого сотрудника");
+      addToast("error", "Недостаточно прав для разблокировки этого сотрудника");
       return;
     }
 
-    if (
-      window.confirm("Вы уверены, что хотите разблокировать этого сотрудника?")
-    ) {
-      try {
-        await toggleEmployeeBlock(employeeId);
-        message.success("Сотрудник успешно разблокирован");
-        await loadEmployees();
-      } catch (err: any) {
-        console.error("Ошибка при разблокировке сотрудника:", err);
-        message.error("Не удалось разблокировать сотрудника");
+    openConfirm(
+      "Вы уверены, что хотите разблокировать этого сотрудника?",
+      async () => {
+        try {
+          await toggleEmployeeBlock(employeeId);
+          addToast("success", "Сотрудник разблокирован");
+          await loadEmployees();
+        } catch {
+          addToast("error", "Не удалось разблокировать сотрудника");
+        }
       }
-    }
+    );
   };
 
   const handleSubmitEmployee = async (employeeData: Partial<Employee>) => {
@@ -478,11 +668,10 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           id: Math.max(0, ...localEmployees.map((e) => e.id)) + 1,
           photoPath: "",
         };
-
         setLocalEmployees((prev) => [...prev, newEmployee]);
         setTotalCount((prev) => prev + 1);
 
-        const createdEmployee = await createEmployee({
+        const created = await createEmployee({
           fullName: employeeData.fullName || "",
           phone: employeeData.phone || "",
           address: employeeData.address,
@@ -493,61 +682,46 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
               : employeeData.role || "сотрудник",
           customRoleId: employeeData.customRoleId ?? null,
         });
-
         setLocalEmployees((prev) =>
-          prev.map((e) => (e.id === newEmployee.id ? createdEmployee : e))
+          prev.map((e) => (e.id === newEmployee.id ? created : e))
         );
-        message.success("Сотрудник успешно создан");
+        addToast("success", "Сотрудник успешно создан");
       } else if (modalMode === "edit" && selectedEmployee?.id) {
         setLocalEmployees((prev) =>
           prev.map((e) =>
             e.id === selectedEmployee.id ? { ...e, ...employeeData } : e
           )
         );
-
         await updateEmployee({
           id: selectedEmployee.id,
           fullName: employeeData.fullName || "",
           address: employeeData.address,
           phone: employeeData.phone || "",
         });
-        message.success("Данные сотрудника обновлены");
+        addToast("success", "Данные сотрудника обновлены");
       }
-
       setIsModalOpen(false);
-    } catch (err) {
-      console.error("Ошибка при сохранении сотрудника:", err);
-      message.error("Не удалось сохранить данные сотрудника");
+    } catch {
+      addToast("error", "Не удалось сохранить данные сотрудника");
       loadEmployees();
-      throw err;
+      throw new Error("save failed");
     }
   };
 
   const canEditSurcharge = (employee: Employee): boolean => {
     if (!authInfo) return false;
-
-    if (employee.id === authInfo.employee.id) {
+    if (employee.id === authInfo.employee.id)
       return hasRole("суперадмин") || hasRole("директор") || hasRole("админ");
-    }
-
-    if (hasRole("суперадмин") || hasRole("директор")) {
-      return true;
-    }
-
-    if (hasRole("админ")) {
-      return employee.role === "сотрудник";
-    }
-
+    if (hasRole("суперадмин") || hasRole("директор")) return true;
+    if (hasRole("админ")) return employee.role === "сотрудник";
     return false;
   };
 
-  const handleRowDoubleClick = (rowData: any[]) => {
-    const employeeId = Number(rowData[0]);
-    onViewEmployee(employeeId);
-  };
+  const handleRowDoubleClick = (rowData: any[]) =>
+    onViewEmployee(Number(rowData[0]));
 
   const handleOpenPhoneModal = (employee: Employee, e: React.MouseEvent) => {
-    e.preventDefault();
+    e.stopPropagation();
     setPhoneValue(employee.phone);
     setCurrentPhoneEmployeeId(employee.id);
     setIsPhoneModalOpen(true);
@@ -557,7 +731,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     employee: Employee,
     e: React.MouseEvent
   ) => {
-    e.preventDefault();
+    e.stopPropagation();
     setSurchargeValue(employee.minSurcharge);
     setCurrentSurchargeEmployeeId(employee.id);
     setIsSurchargeModalOpen(true);
@@ -566,16 +740,14 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   const handleSavePhone = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPhoneEmployeeId || !phoneValue) return;
-
     setIsSavingPhone(true);
     try {
       await updateEmployeePhone(currentPhoneEmployeeId, phoneValue);
       await loadEmployees();
       setIsPhoneModalOpen(false);
-      message.success("Телефон успешно обновлен");
-    } catch (error) {
-      console.error("Ошибка при сохранении телефона:", error);
-      message.error("Не удалось обновить телефон");
+      addToast("success", "Телефон успешно обновлён");
+    } catch {
+      addToast("error", "Не удалось обновить телефон");
     } finally {
       setIsSavingPhone(false);
     }
@@ -584,7 +756,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   const handleSaveSurcharge = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSurchargeEmployeeId) return;
-
     setIsSavingSurcharge(true);
     try {
       await updateEmployeeMinSurcharge(
@@ -593,55 +764,46 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       );
       await loadEmployees();
       setIsSurchargeModalOpen(false);
-      message.success("Надбавка успешно обновлена");
-    } catch (error) {
-      console.error("Ошибка при сохранении надбавки:", error);
-      message.error("Не удалось обновить надбавку");
+      addToast("success", "Надбавка успешно обновлена");
+    } catch {
+      addToast("error", "Не удалось обновить надбавку");
     } finally {
       setIsSavingSurcharge(false);
     }
   };
 
   const getTableActions = (rowData: any[]) => {
-    const [id] = rowData;
-    const employeeId = Number(id);
-    const employee = localEmployees.find((e) => e.id === employeeId);
-
+    const employee = localEmployees.find((e) => e.id === Number(rowData[0]));
     if (!employee) return [];
-
     const actions = [];
-
-    if (canDeleteEmployee(employee)) {
-      actions.push({
-        label: "Удалить",
-        action: handleDeleteEmployee,
-        color: "#EF4444",
-      });
-    }
-
     if (canDeleteEmployee(employee)) {
       actions.push({
         label: employee.isBlocked ? "Разблокировать" : "Заблокировать",
         action: employee.isBlocked
           ? handleUnblockEmployee
           : handleBlockEmployee,
-        color: employee.isBlocked ? "#10B981" : "#EF4444",
+        color: employee.isBlocked ? "#10B981" : "#F59E0B",
+      });
+      actions.push({
+        label: "Удалить",
+        action: handleDeleteEmployee,
+        color: "#EF4444",
+        dividerBefore: true,
       });
     }
-
     return actions;
   };
 
-  const tableData = filteredEmployees.map((employee, index) => [
+  const tableData = filteredEmployees.map((employee) => [
     employee.id.toString(),
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    <AvatarCell>
       <Avatar
         src={employee.photoPath ? FILE_BASE_URL + employee.photoPath : null}
         name={employee.fullName}
       />
       {employee.fullName}
-    </div>,
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    </AvatarCell>,
+    <InlineCell>
       {employee.customRole ? (
         <span title={`Кастомная роль (база: ${employee.role})`}>
           {employee.customRole.name}
@@ -650,42 +812,26 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         employee.role
       )}
       {canEditEmployee(employee) && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenRoleModal(employee, e);
-          }}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#1890ff",
-            cursor: "pointer",
-          }}
+        <EditBtn
+          onClick={(e) => handleOpenRoleModal(employee, e)}
+          title="Изменить роль"
         >
-          <EditOutlined />
-        </button>
+          <PencilIcon />
+        </EditBtn>
       )}
-    </div>,
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    </InlineCell>,
+    <InlineCell>
       {employee.minSurcharge}
       {canEditSurcharge(employee) && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenSurchargeModal(employee, e);
-          }}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#1890ff",
-            cursor: "pointer",
-          }}
+        <EditBtn
+          onClick={(e) => handleOpenSurchargeModal(employee, e)}
+          title="Изменить надбавку"
         >
-          <EditOutlined />
-        </button>
+          <PencilIcon />
+        </EditBtn>
       )}
-    </div>,
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    </InlineCell>,
+    <InlineCell>
       {employee.phone ? (
         <PhoneLink
           href={formatPhoneHref(employee.phone)}
@@ -694,55 +840,36 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           {employee.phone}
         </PhoneLink>
       ) : (
-        "-"
+        "—"
       )}
       {canEditEmployee(employee) && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenPhoneModal(employee, e);
-          }}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#1890ff",
-            cursor: "pointer",
-          }}
+        <EditBtn
+          onClick={(e) => handleOpenPhoneModal(employee, e)}
+          title="Изменить телефон"
         >
-          <EditOutlined />
-        </button>
+          <PencilIcon />
+        </EditBtn>
       )}
-    </div>,
-    employee.address || "-",
-    <div 
-      style={{ 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center"
-      }}
-    >
+    </InlineCell>,
+    employee.address || "—",
+    <CenteredCell>
       {employee.role !== "суперадмин" && canEditAccounting(employee) ? (
         <Checkbox
           checked={hasAccountingPermission(employee)}
           onChange={() => handleToggleAccounting(employee)}
-          disabled={false}
         />
       ) : employee.role === "суперадмин" ? (
-        <span style={{ color: "#999", fontSize: "12px" }}>—</span>
+        <MutedText>—</MutedText>
       ) : (
-        <span style={{ color: "#999", fontSize: "12px" }}>
-          {hasAccountingPermission(employee) ? "✓" : "—"}
-        </span>
+        <MutedText>{hasAccountingPermission(employee) ? "✓" : "—"}</MutedText>
       )}
-    </div>,
+    </CenteredCell>,
   ]);
 
   const rowStyles: { [rowIndex: number]: RowStyle } = {};
   filteredEmployees.forEach((employee, index) => {
     if (isEmployeeBlocked(employee)) {
-      rowStyles[index] = {
-        backgroundColor: "rgba(254, 202, 202, 0.3)",
-      };
+      rowStyles[index] = { backgroundColor: "rgba(254, 202, 202, 0.3)" };
     }
   });
 
@@ -753,22 +880,60 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       </TitleField>
 
       <FilterField>
-        <div
-          style={{
-            display: "flex",
-            gap: "16px",
-            width: "50%",
-            alignItems: "center",
-          }}
-        >
-          <CustomInput
-            inputType="text"
-            placeholder="ФИО сотрудника"
-            value={nameFilter}
-            onChange={(e) => handleFilterChange(e.target.value)}
-            style={{ flex: 1 }}
+        <SearchBar>
+          <SearchWrapper>
+            <SearchIcon>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle
+                  cx="6.5"
+                  cy="6.5"
+                  r="5"
+                  stroke="#9CA3AF"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M10.5 10.5L14 14"
+                  stroke="#9CA3AF"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </SearchIcon>
+            <CustomInput
+              inputType="text"
+              placeholder="Поиск по ФИО"
+              value={nameFilter}
+              onChange={(e) => {
+                setNameFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{ paddingLeft: "36px" }}
+            />
+            {nameFilter && (
+              <ClearButton
+                onClick={() => {
+                  setNameFilter("");
+                  setCurrentPage(1);
+                }}
+              >
+                ✕
+              </ClearButton>
+            )}
+          </SearchWrapper>
+        </SearchBar>
+
+        <div style={{ width: "200px" }}>
+          <CustomSelect
+            value={roleFilter}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            options={roleSelectOptions}
+            dropdownInPortal
           />
         </div>
+
         <DarkCyanButton
           style={{ width: "15vw", marginLeft: "auto" }}
           onClick={handleCreateEmployee}
@@ -788,9 +953,9 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
               { name: "ФИО", isSortable: true, align: "left" },
               { name: "Роль", isSortable: true, align: "left" },
               { name: "Мин. надбавка", align: "left" },
-              { name: "Телефон", isSortable: false, align: "left" },
-              { name: "Адрес", isSortable: false, align: "left" },
-              { name: "Бухгалтерия", isSortable: false, align: "center" },
+              { name: "Телефон", align: "left" },
+              { name: "Адрес", align: "left" },
+              { name: "Бухгалтерия", align: "center" },
             ]}
             data={tableData}
             onRowDoubleClick={handleRowDoubleClick}
@@ -802,7 +967,6 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
 
           <PaginationLayout>
             <CountInfoTitle total={totalCount - filteredOutCount} />
-
             <Pagination
               total={totalCount - filteredOutCount}
               current={currentPage}
@@ -830,12 +994,17 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           onSave={handleSavePhone}
           isSubmitting={isSavingPhone}
         >
-          <CustomInput
-            inputType="text"
-            value={phoneValue}
-            onChange={(e) => setPhoneValue(e.target.value)}
-            placeholder="Введите новый телефон"
-          />
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Номер телефона</ModalLabel>
+              <CustomInput
+                inputType="text"
+                value={phoneValue}
+                onChange={(e) => setPhoneValue(e.target.value)}
+                placeholder="Введите новый телефон"
+              />
+            </ModalField>
+          </ModalForm>
         </BaseModal>
       )}
 
@@ -847,13 +1016,18 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           onSave={handleSaveSurcharge}
           isSubmitting={isSavingSurcharge}
         >
-          <CustomInput
-            inputType="number"
-            value={surchargeValue.toString()}
-            onChange={(e) => setSurchargeValue(Number(e.target.value))}
-            placeholder="Введите новую надбавку"
-            min={0}
-          />
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Минимальная надбавка</ModalLabel>
+              <CustomInput
+                inputType="number"
+                value={surchargeValue.toString()}
+                onChange={(e) => setSurchargeValue(Number(e.target.value))}
+                placeholder="Введите новую надбавку"
+                min={0}
+              />
+            </ModalField>
+          </ModalForm>
         </BaseModal>
       )}
 
@@ -865,36 +1039,47 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           onSave={handleSaveRole}
           isSubmitting={isSavingRole}
         >
-          <div style={{ padding: "0 25px" }}>
-            <CustomSelect
-              value={roleValue}
-              onChange={(e) => setRoleValue(e.target.value)}
-              options={roleSelectOptions}
-              placeholder="Выберите роль"
-              dropdownInPortal
-            />
-          </div>
+          <ModalForm>
+            <ModalField>
+              <ModalLabel>Роль</ModalLabel>
+              <CustomSelect
+                value={roleValue}
+                onChange={(e) => setRoleValue(e.target.value)}
+                options={editRoleOptions}
+                placeholder="Выберите роль"
+                dropdownInPortal
+              />
+            </ModalField>
+          </ModalForm>
         </BaseModal>
       )}
 
-      {isBlockModalOpen && employeeToBlock && (
+      {/* Confirm modal */}
+      {confirmState.isOpen && (
         <BaseModal
-          title="Нельзя удалить сотрудника"
-          onClose={() => setIsBlockModalOpen(false)}
-          onCancel={() => setIsBlockModalOpen(false)}
-          onSave={handleBlockEmployeeFromModal}
-          isSubmitting={false}
+          title="Подтверждение"
+          onClose={closeConfirm}
+          onCancel={closeConfirm}
+          onSave={(e) => {
+            e.preventDefault();
+            handleConfirm();
+          }}
+          isSubmitting={confirmState.isSubmitting}
+          saveButtonText="Подтвердить"
+          width="400px"
         >
-          <div style={{ padding: "16px" }}>
-            <p>Нельзя удалить сотрудника, у которого есть активные договоры.</p>
-            <p>Вместо удаления предлагаем заблокировать доступ сотрудника.</p>
-            <p>
-              Заблокировать сотрудника{" "}
-              <strong>{employeeToBlock.fullName}</strong>?
-            </p>
-          </div>
+          <ConfirmText>{confirmState.message}</ConfirmText>
         </BaseModal>
       )}
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
     </PageLayout>
   );
 };

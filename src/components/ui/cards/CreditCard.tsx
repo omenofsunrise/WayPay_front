@@ -81,25 +81,25 @@ const STATUS_PALETTE: Record<
   },
   active: {
     bg: "#E0F2F1",
-    border: "#80CBC4",
+    border: "#009688",
     color: "#00695C",
     label: "Активный",
   },
   overdue: {
     bg: "#FFEBEE",
-    border: "#EF9A9A",
+    border: "#E53935",
     color: "#B71C1C",
     label: "Просрочка",
   },
   closed: {
     bg: "#ECEFF1",
-    border: "#CFD8DC",
+    border: "#78909C",
     color: "#455A64",
     label: "Закрыт",
   },
   terminated: {
     bg: "#F3E8FF",
-    border: "#D8B4FE",
+    border: "#7C3AED",
     color: "#6B21A8",
     label: "Расторгнут",
   },
@@ -272,6 +272,7 @@ const Card = styled.div<{
   cursor: pointer;
   transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
   position: relative;
+  overflow: hidden;
 
   &::before {
     content: "";

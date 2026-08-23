@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled from "styled-components";
 
 interface BackButtonProps {
   children: React.ReactNode;
@@ -21,13 +21,35 @@ const BackButton = styled.button<BackButtonProps>`
   &:hover {
     opacity: 0.8;
   }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(0, 125, 136, 1);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
 `;
 
-const BackButtonComponent: React.FC<BackButtonProps> = ({ children, onClick }) => {
+const BackButtonComponent: React.FC<BackButtonProps> = ({
+  children,
+  onClick,
+}) => {
   return (
     <BackButton onClick={onClick}>
-      <svg width="21" height="13" viewBox="0 0 21 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M6.17798 0.978109L0.65625 6.4998L6.17798 12.0215L7.10604 11.0934L3.16862 7.156L20.3124 7.156V5.84351L3.16874 5.84351L7.10604 1.90621L6.17798 0.978109Z" fill="#50555C"/>
+      <svg
+        width="21"
+        height="13"
+        viewBox="0 0 21 13"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M6.17798 0.978109L0.65625 6.4998L6.17798 12.0215L7.10604 11.0934L3.16862 7.156L20.3124 7.156V5.84351L3.16874 5.84351L7.10604 1.90621L6.17798 0.978109Z"
+          fill="#50555C"
+        />
       </svg>
       {children}
     </BackButton>

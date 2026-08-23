@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
@@ -8,572 +8,553 @@ import GrayButton from "../../components/ui/Buttons/GrayButton";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import useCompany from "../../api/hooks/useCompany";
 import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
-import { FiCamera, FiTrash2, FiEdit2 } from "react-icons/fi";
-import BankCardSelect from "../../components/ui/fields/BankCardSelect";
-import useBankCards from "../../api/hooks/useBankCard";
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 280px;
+  max-width: 400px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+const CameraIconSvg = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+      stroke="#999"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="12" cy="13" r="4" stroke="#999" strokeWidth="1.5" />
+  </svg>
+);
+
+const EditIconSvg = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path
+      d="M13 3l4 4L6 18H2v-4L13 3z"
+      stroke="#fff"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const TrashIconSvg = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const CompanyPage = () => {
-    const { 
-        company, 
-        isLoading, 
-        error, 
-        getCompany, 
-        updateCompany,
-        updateCompanyPhoto,
-        deleteCompanyPhoto,
-        getCompanyPhotoUrl
-    } = useCompany();
-    
-    const [formData, setFormData] = useState({
-        name: "",
-        chief: "",
-        city: "",
-        officeAddress: "",
-        bank: "",
-        phone: "",
-        inn: "",
-        email: "",
-        supportPhone: "",
-        currentBankCardId: null
+  const {
+    company,
+    isLoading,
+    error,
+    getCompany,
+    updateCompany,
+    updateCompanyPhoto,
+    deleteCompanyPhoto,
+    getCompanyPhotoUrl,
+  } = useCompany();
+
+  const [formData, setFormData] = useState({
+    name: "",
+    chief: "",
+    city: "",
+    officeAddress: "",
+    bank: "",
+    phone: "",
+    inn: "",
+    email: "",
+    supportPhone: "",
+    currentBankCardId: null as number | null,
+  });
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = useCallback(
+    (type: "success" | "error" | "warning", msg: string) => {
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, type, message: msg }]);
+      setTimeout(
+        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+        4000
+      );
+    },
+    []
+  );
+
+  useEffect(() => {
+    getCompany();
+  }, [getCompany]);
+
+  useEffect(() => {
+    if (!company) return;
+    setFormData({
+      name: company.name || "",
+      chief: company.chief || "",
+      city: company.city || "",
+      officeAddress: company.officeAddress || "",
+      bank: company.bank || "",
+      phone: company.phone || "",
+      inn: company.inn || "",
+      email: company.email || "",
+      supportPhone: company.supportPhone || "",
+      currentBankCardId: company.currentBankCardId || null,
     });
-    
-    const [currentBankCardId, setCurrentBankCardId] = useState<number | undefined>(undefined);
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [showContextMenu, setShowContextMenu] = useState(false);
-    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-    const [displayBankCard, setDisplayBankCard] = useState("");
-    const { bankCards, getAll: getBankCards } = useBankCards();
-    
-    useEffect(() => {
-        getCompany();
-        getBankCards({ pageSize: 50 });
-    }, [getCompany, getBankCards]);
-
-    useEffect(() => {
-        getCompany();
-    }, [getCompany]);
-
-    useEffect(() => {
-        if (company && bankCards) {
-            setFormData({
-                name: company.name || "",
-                chief: company.chief || "",
-                city: company.city || "",
-                officeAddress: company.officeAddress || "",
-                bank: company.bank || "",
-                phone: company.phone || "",
-                inn: company.inn || "",
-                email: company.email || "",
-                supportPhone: company.supportPhone || "",
-                currentBankCardId: company.currentBankCardId || null
-            });
-            
-            setCurrentBankCardId(company.currentBankCardId || undefined);
-            
-            if (company.currentBankCardId) {
-                const selectedCard = bankCards.find(card => card.id === company.currentBankCardId);
-                if (selectedCard) {
-                    setDisplayBankCard(selectedCard.details);
-                }
-            }
-
-            if (company.photoPath) {
-                setPreviewUrl(getCompanyPhotoUrl(company.photoPath));
-            } else {
-                setPreviewUrl(null);
-            }
-        }
-    }, [company, getCompanyPhotoUrl, bankCards]);
-
-    useEffect(() => {
-        if (currentBankCardId && bankCards && bankCards.length > 0) {
-            const selectedCard = bankCards.find(card => card.id === currentBankCardId);
-            if (selectedCard) {
-                setDisplayBankCard(selectedCard.details);
-                setFormData(prev => ({
-                    ...prev,
-                    currentBankCardId: currentBankCardId
-                }));
-            }
-        } else if (!currentBankCardId) {
-            setDisplayBankCard("");
-        }
-    }, [bankCards, currentBankCardId]);
-
-    useEffect(() => {
-        if (!selectedFile) return;
-        
-        const objectUrl = URL.createObjectURL(selectedFile);
-        setPreviewUrl(objectUrl);
-        
-        return () => URL.revokeObjectURL(objectUrl);
-    }, [selectedFile]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    const handleBankCardChange = (value: string) => {
-        console.log("Bank card details changed:", value);
-    };
-
-    const handleBankCardSelect = (bankCard: { id: number; details: string }) => {
-        setCurrentBankCardId(bankCard.id);
-        setFormData(prev => ({
-            ...prev,
-            currentBankCardId: bankCard.id
-        }));
-        setDisplayBankCard(bankCard.details);
-    };
-
-    const handleReset = () => {
-        if (company) {
-            setFormData({
-                name: company.name || "",
-                chief: company.chief || "",
-                city: company.city || "",
-                officeAddress: company.officeAddress || "",
-                bank: company.bank || "",
-                phone: company.phone || "",
-                inn: company.inn || "",
-                email: company.email || "",
-                supportPhone: company.supportPhone || "",
-                currentBankCardId: company.currentBankCardId || null
-            });
-            setCurrentBankCardId(company.currentBankCardId || undefined);
-            
-            if (company.currentBankCardId && bankCards) {
-                const selectedCard = bankCards.find(card => card.id === company.currentBankCardId);
-                setDisplayBankCard(selectedCard ? selectedCard.details : "");
-            } else {
-                setDisplayBankCard("");
-            }
-            
-            setSelectedFile(null);
-        }
-    };
-
-    const handleSave = async () => {
-        try {
-            const updateData = {
-                ...formData,
-                currentBankCardId: currentBankCardId === 0 ? null : currentBankCardId
-            };
-            
-            await updateCompany(updateData);
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            await uploadLogo(file);
-        }
-    };
-
-    const uploadLogo = async (file: File) => {
-        setSelectedFile(file);
-        setIsUploading(true);
-        
-        try {
-            await updateCompanyPhoto(file);
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
-            await getCompany();
-        } catch (err) {
-            console.error(err);
-            setSelectedFile(null);
-            setPreviewUrl(company?.photoPath ? getCompanyPhotoUrl(company.photoPath) : null);
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const handleRemoveLogo = async () => {
-        try {
-            await deleteCompanyPhoto();
-            setPreviewUrl(null);
-            setSelectedFile(null);
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
-            await getCompany();
-            setShowContextMenu(false);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleLogoClick = (e: React.MouseEvent) => {
-        if (e.type === 'contextmenu') {
-            e.preventDefault();
-            setMenuPosition({ x: e.clientX, y: e.clientY });
-            setShowContextMenu(true);
-            return;
-        }
-
-        if (e.button === 0) {
-            document.getElementById('logo-upload')?.click();
-        }
-    };
-
-    const closeContextMenu = () => {
-        setShowContextMenu(false);
-    };
-
-    if (isLoading && !company) {
-        return <PageLayout>Loading...</PageLayout>;
-    }
-
-    if (error) {
-        return <PageLayout>Error: {error}</PageLayout>;
-    }
-
-    return (
-        <PageLayout>
-            <HeaderWrapper>
-                <TitleWrapper>
-                    <CustomTitle style={{ marginTop: 0 }}>Данные о компании</CustomTitle>
-                    <ModalInfoTitle>Сведения о компании</ModalInfoTitle>
-                </TitleWrapper>
-                
-                <LogoContainer>
-                    <LogoUploadWrapper>
-                        <LogoPreview 
-                            $hasLogo={!!previewUrl}
-                            onClick={handleLogoClick}
-                            onContextMenu={handleLogoClick}
-                        >
-                            {previewUrl ? (
-                                <>
-                                    <LogoImage src={previewUrl} alt="Company logo" />
-                                    <EditOverlay>
-                                        <FiEdit2 size={24} color="#fff" />
-                                    </EditOverlay>
-                                </>
-                            ) : (
-                                <CameraIcon />
-                            )}
-                        </LogoPreview>
-                        
-                        <input 
-                            type="file" 
-                            onChange={handleFileChange} 
-                            accept="image/*" 
-                            style={{ display: 'none' }} 
-                            id="logo-upload"
-                            disabled={isUploading}
-                        />
-                    </LogoUploadWrapper>
-                </LogoContainer>
-            </HeaderWrapper>
-            
-            <ContentGrid>
-                <FormSection>
-                    <InputContainer>
-                        <InputGroup>
-                            <Label>Название организации</Label>
-                            <StyledInput 
-                                name="name"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
-                        <InputGroup>
-                            <Label>Учредитель</Label>
-                            <StyledInput 
-                                name="chief"
-                                inputType="fullname"
-                                value={formData.chief}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
-                    </InputContainer>
-                    
-                    <InputContainer>
-                        <InputGroup>
-                            <Label>Населённый пункт</Label>
-                            <StyledInput 
-                                name="city"
-                                value={formData.city}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
-                        <InputGroup>
-                            <Label>Адрес офиса</Label>
-                            <StyledInput 
-                                name="officeAddress"
-                                value={formData.officeAddress}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
-                    </InputContainer>
-                    
-                    <InputContainer>
-                        <InputGroup style={{width: "100%"}}>
-                            <Label>Email</Label>
-                            <StyledInput 
-                                name="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
-                        <InputGroup style={{width: "100%", maxWidth: "100%" }}>
-                            <Label>Телефон</Label>
-                            <PhoneModalInput 
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleInputChange}
-                            />
-                        </InputGroup>
-                    </InputContainer>
-                    <InputGroup style={{width: "100%"}}>
-                            <Label>Телефон поддержки</Label>
-                            <PhoneModalInput 
-                                name="supportPhone"
-                                value={formData.supportPhone}
-                                onChange={handleInputChange}
-                            />
-                    </InputGroup>
-
-                    <ButtonsContainer>
-                        <GrayButton 
-                            children={"Сбросить"}
-                            width={"120px"}
-                            onClick={handleReset}
-                        />
-                        <DarkCyanButton 
-                            onClick={handleSave}
-                            disabled={isLoading}
-                        />
-                    </ButtonsContainer>
-                </FormSection>
-            </ContentGrid>
-            
-            <FooterContainer>
-                <Disclaimer>
-                    *Все данные компании используются только для автоматического оформления договора займа и не передаются третьим лицам.
-                </Disclaimer>
-            </FooterContainer>
-
-            <Toast show={showSuccess}>
-                Данные компании успешно сохранены!
-            </Toast>
-
-            {showContextMenu && (
-                <>
-                    <ContextMenuBackdrop onClick={closeContextMenu} />
-                    <ContextMenu style={{ left: menuPosition.x - 200, top: menuPosition.y }}>
-                        <ContextMenuItem onClick={() => {
-                            document.getElementById('logo-upload')?.click();
-                            closeContextMenu();
-                        }}>
-                            <FiEdit2 /> Изменить логотип
-                        </ContextMenuItem>
-                        <ContextMenuItem 
-                            onClick={handleRemoveLogo}
-                            $danger
-                        >
-                            <FiTrash2 /> Удалить логотип
-                        </ContextMenuItem>
-                    </ContextMenu>
-                </>
-            )}
-        </PageLayout>
+    setPreviewUrl(
+      company.photoPath ? getCompanyPhotoUrl(company.photoPath) : null
     );
+  }, [company, getCompanyPhotoUrl]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleReset = () => {
+    if (!company) return;
+    setFormData({
+      name: company.name || "",
+      chief: company.chief || "",
+      city: company.city || "",
+      officeAddress: company.officeAddress || "",
+      bank: company.bank || "",
+      phone: company.phone || "",
+      inn: company.inn || "",
+      email: company.email || "",
+      supportPhone: company.supportPhone || "",
+      currentBankCardId: company.currentBankCardId || null,
+    });
+    setPreviewUrl(
+      company.photoPath ? getCompanyPhotoUrl(company.photoPath) : null
+    );
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateCompany(formData);
+      addToast("success", "Данные компании успешно сохранены");
+    } catch (err) {
+      console.error(err);
+      addToast("error", "Не удалось сохранить данные компании");
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    try {
+      await updateCompanyPhoto(file);
+      addToast("success", "Логотип успешно обновлён");
+      await getCompany();
+    } catch (err) {
+      console.error(err);
+      addToast("error", "Не удалось загрузить логотип");
+      setPreviewUrl(
+        company?.photoPath ? getCompanyPhotoUrl(company.photoPath) : null
+      );
+    } finally {
+      setIsUploading(false);
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    try {
+      await deleteCompanyPhoto();
+      setPreviewUrl(null);
+      setShowContextMenu(false);
+      addToast("success", "Логотип удалён");
+      await getCompany();
+    } catch (err) {
+      console.error(err);
+      addToast("error", "Не удалось удалить логотип");
+    }
+  };
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (e.type === "contextmenu") {
+      e.preventDefault();
+      setMenuPosition({ x: e.clientX, y: e.clientY });
+      setShowContextMenu(true);
+      return;
+    }
+    if (e.button === 0) {
+      document.getElementById("logo-upload")?.click();
+    }
+  };
+
+  if (isLoading && !company) {
+    return <PageLayout>Загрузка...</PageLayout>;
+  }
+
+  if (error) {
+    return <PageLayout>Ошибка: {error}</PageLayout>;
+  }
+
+  return (
+    <PageLayout>
+      <HeaderWrapper>
+        <TitleWrapper>
+          <CustomTitle style={{ marginTop: 0 }}>Данные о компании</CustomTitle>
+          <ModalInfoTitle>Сведения о компании</ModalInfoTitle>
+        </TitleWrapper>
+
+        <LogoContainer>
+          <LogoPreview
+            $hasLogo={!!previewUrl}
+            onClick={handleLogoClick}
+            onContextMenu={handleLogoClick}
+            title={
+              previewUrl
+                ? "Нажмите для замены логотипа"
+                : "Нажмите для загрузки логотипа"
+            }
+          >
+            {previewUrl ? (
+              <>
+                <LogoImage src={previewUrl} alt="Логотип компании" />
+                <EditOverlay>
+                  <EditIconSvg />
+                </EditOverlay>
+              </>
+            ) : (
+              <CameraIconSvg />
+            )}
+          </LogoPreview>
+
+          <input
+            type="file"
+            onChange={handleFileChange}
+            accept="image/*"
+            style={{ display: "none" }}
+            id="logo-upload"
+            disabled={isUploading}
+          />
+        </LogoContainer>
+      </HeaderWrapper>
+
+      <ContentGrid>
+        <FormSection>
+          <InputContainer>
+            <InputGroup>
+              <Label>Название организации</Label>
+              <CustomInput
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+            <InputGroup>
+              <Label>Учредитель</Label>
+              <CustomInput
+                name="chief"
+                inputType="fullname"
+                value={formData.chief}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+          </InputContainer>
+
+          <InputContainer>
+            <InputGroup>
+              <Label>Населённый пункт</Label>
+              <CustomInput
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+            <InputGroup>
+              <Label>Адрес офиса</Label>
+              <CustomInput
+                name="officeAddress"
+                value={formData.officeAddress}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+          </InputContainer>
+
+          <InputContainer>
+            <InputGroup>
+              <Label>Email</Label>
+              <CustomInput
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+            <InputGroup>
+              <Label>Телефон</Label>
+              <PhoneModalInput
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+          </InputContainer>
+
+          <InputGroup>
+            <Label>Телефон поддержки</Label>
+            <PhoneModalInput
+              name="supportPhone"
+              value={formData.supportPhone}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+
+          <ButtonsContainer>
+            <GrayButton width="120px" onClick={handleReset}>
+              Сбросить
+            </GrayButton>
+            <DarkCyanButton onClick={handleSave} disabled={isLoading}>
+              Сохранить
+            </DarkCyanButton>
+          </ButtonsContainer>
+        </FormSection>
+      </ContentGrid>
+
+      <FooterContainer>
+        <Disclaimer>
+          *Все данные компании используются только для автоматического
+          оформления договора займа и не передаются третьим лицам.
+        </Disclaimer>
+      </FooterContainer>
+
+      {showContextMenu && (
+        <>
+          <ContextMenuBackdrop onClick={() => setShowContextMenu(false)} />
+          <ContextMenu
+            style={{ left: menuPosition.x - 200, top: menuPosition.y }}
+          >
+            <ContextMenuItem
+              onClick={() => {
+                document.getElementById("logo-upload")?.click();
+                setShowContextMenu(false);
+              }}
+            >
+              <EditIconSvg /> Изменить логотип
+            </ContextMenuItem>
+            <ContextMenuItem $danger onClick={handleRemoveLogo}>
+              <TrashIconSvg /> Удалить логотип
+            </ContextMenuItem>
+          </ContextMenu>
+        </>
+      )}
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
+    </PageLayout>
+  );
 };
 
+// ─── Styled components ─────────────────────────────────────────────────────────
+
 const HeaderWrapper = styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    width: 100%;
-    margin-bottom: 24px;
-    position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 24px;
+  gap: 24px;
 `;
 
 const TitleWrapper = styled.div`
-    flex: 1;
+  flex: 1;
+  min-width: 0;
 `;
 
 const LogoContainer = styled.div`
-    position: absolute;
-    right: 0;
-    top: 0;
-`;
-
-const LogoUploadWrapper = styled.div`
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
+  flex-shrink: 0;
 `;
 
 const LogoPreview = styled.div<{ $hasLogo: boolean }>`
-    width: 120px;
-    height: 120px;
-    border-radius: 8px;
-    background-color: ${props => props.$hasLogo ? 'transparent' : '#f5f5f5'};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border: 1px dashed ${props => props.$hasLogo ? 'transparent' : '#ccc'};
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s ease;
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  background-color: ${(p) => (p.$hasLogo ? "transparent" : "#f5f5f5")};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px dashed ${(p) => (p.$hasLogo ? "transparent" : "#ccc")};
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
-    &:hover {
-        border-color: #007d88;
-        
-        ${props => props.$hasLogo && `
-            & > div:last-child {
-                opacity: 1;
-            }
-        `}
-    }
+  &:hover {
+    border-color: #007d88;
+  }
+
+  &:hover > div:last-child {
+    opacity: 1;
+  }
 `;
 
 const LogoImage = styled.img`
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-`;
-
-const CameraIcon = styled(FiCamera)`
-    font-size: 24px;
-    color: #999;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `;
 
 const EditOverlay = styled.div`
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 `;
 
 const ContentGrid = styled.div`
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
-    width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  width: 100%;
 `;
 
 const FormSection = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-`;
-
-const Toast = styled.div<{ show: boolean }>`
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 125, 136, 1);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  opacity: ${props => props.show ? 1 : 0};
-  transition: opacity 0.3s ease-in-out;
-  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 `;
 
 const InputContainer = styled.div`
-    display: flex;
-    gap: 16px;
-    width: 100%;
+  display: flex;
+  gap: 16px;
+  width: 100%;
 `;
 
 const InputGroup = styled.div`
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    gap: 8px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 6px;
 `;
 
-const Label = styled.span`
-    font-size: 14px;
-    color: #333;
-    text-align: left;
-    margin-top: 10px;
-`;
-
-const StyledInput = styled(CustomInput)`
-    max-width: 100%;
+const Label = styled.label`
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
 `;
 
 const ButtonsContainer = styled.div`
-    display: flex;
-    gap: 32px;
-    margin-top: 32px;
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
 `;
 
 const FooterContainer = styled.div`
-    margin-top: 24px;
-    margin-right: auto;
+  margin-top: 24px;
 `;
 
-const Disclaimer = styled.span`
-    font-size: 16px;
-    color: black;
-    max-width: 300px;
-    text-align: left;
+const Disclaimer = styled.p`
+  font-size: 13px;
+  color: #6b7280;
+  max-width: 560px;
+  line-height: 1.5;
+  margin: 0;
 `;
 
 const ContextMenuBackdrop = styled.div`
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
 `;
 
 const ContextMenu = styled.div`
-    position: fixed;
-    background-color: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 1001;
-    min-width: 160px;
-    padding: 4px 0;
+  position: fixed;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  min-width: 180px;
+  padding: 4px 0;
+  border: 1px solid #e5e7eb;
 `;
 
 const ContextMenuItem = styled.div<{ $danger?: boolean }>`
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    color: ${props => props.$danger ? '#ff4d4f' : '#333'};
-    
-    &:hover {
-        background-color: #f5f5f5;
-    }
-    
-    svg {
-        font-size: 16px;
-    }
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: ${(p) => (p.$danger ? "#ef4444" : "#374151")};
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f9fafb;
+  }
 `;
 
 export default CompanyPage;

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { BellRing, CalendarCheck, AlertTriangle } from "lucide-react";
-import DarkCyanButton from "../ui/Buttons/DarkCyanButton";
-import GrayButton from "../ui/Buttons/GrayButton";
+import BaseModal from "./BASE/modalCRUBase";
+import CustomInput from "../ui/fields/CustomInput";
 import type {
   CreateSenderSetting,
   SenderSettingResponse,
@@ -12,6 +11,78 @@ import {
   isDuplicateSetting,
 } from "../../api/utils/senderSchedule";
 import type { ScheduleType } from "../../api/utils/senderSchedule";
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+const BellIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M13.73 21a2 2 0 0 1-3.46 0"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect
+      x="3"
+      y="4"
+      width="18"
+      height="18"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M16 2v4M8 2v4M3 10h18"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M9 16l2 2 4-4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const AlertIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12 9v4M12 17h.01"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface TypeOption {
   type: ScheduleType;
@@ -27,7 +98,7 @@ const TYPE_OPTIONS: TypeOption[] = [
     type: "upcoming",
     title: "Предстоящий",
     subtitle: "Напомнить заранее",
-    icon: <BellRing size={24} />,
+    icon: <BellIcon />,
     needsDays: true,
     daysLabel: "За сколько дней до платежа отправить напоминание?",
   },
@@ -35,7 +106,7 @@ const TYPE_OPTIONS: TypeOption[] = [
     type: "onDay",
     title: "В день платежа",
     subtitle: "В день оплаты",
-    icon: <CalendarCheck size={24} />,
+    icon: <CalendarIcon />,
     needsDays: false,
     daysLabel: "",
   },
@@ -43,7 +114,7 @@ const TYPE_OPTIONS: TypeOption[] = [
     type: "overdue",
     title: "Просрочка",
     subtitle: "После пропуска",
-    icon: <AlertTriangle size={24} />,
+    icon: <AlertIcon />,
     needsDays: true,
     daysLabel: "Через сколько дней после платежа сообщить о просрочке?",
   },
@@ -74,8 +145,6 @@ const AddSenderScheduleModal: React.FC<AddSenderScheduleModalProps> = ({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const option = TYPE_OPTIONS.find((o) => o.type === selectedType) ?? null;
   const setting = selectedType ? buildSenderSetting(selectedType, days) : null;
   const duplicate = setting ? isDuplicateSetting(existing, setting) : false;
@@ -83,11 +152,8 @@ const AddSenderScheduleModal: React.FC<AddSenderScheduleModalProps> = ({
     !!option?.needsDays && (!Number.isFinite(days) || days < 1);
   const canConfirm = !!selectedType && !daysInvalid && !duplicate && !isSaving;
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  const handleConfirm = async () => {
+  const handleConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!canConfirm || !setting) return;
     setIsSaving(true);
     try {
@@ -98,101 +164,79 @@ const AddSenderScheduleModal: React.FC<AddSenderScheduleModalProps> = ({
   };
 
   return (
-    <ModalOverlay onClick={handleOverlayClick}>
-      <ModalContainer onClick={(e) => e.stopPropagation()}>
-        <ModalHeader>Добавить рассылку</ModalHeader>
-        <ModalBody>
-          <SectionLabel>Когда отправлять сообщение?</SectionLabel>
-          <CardGrid>
-            {TYPE_OPTIONS.map((opt) => (
-              <TypeCard
-                key={opt.type}
-                type="button"
-                $active={selectedType === opt.type}
-                onClick={() => setSelectedType(opt.type)}
-              >
-                <CardIcon $active={selectedType === opt.type}>
-                  {opt.icon}
-                </CardIcon>
-                <CardTitle>{opt.title}</CardTitle>
-                <CardSubtitle>{opt.subtitle}</CardSubtitle>
-              </TypeCard>
-            ))}
-          </CardGrid>
+    <BaseModal
+      title="Добавить рассылку"
+      isOpen={isOpen}
+      onClose={onClose}
+      onCancel={onClose}
+      onSave={handleConfirm}
+      isSaveDisabled={!canConfirm}
+      isSubmitting={isSaving}
+      saveButtonText="Добавить"
+      width="480px"
+    >
+      <ModalBody>
+        <SectionLabel>Когда отправлять сообщение?</SectionLabel>
+        <CardGrid>
+          {TYPE_OPTIONS.map((opt) => (
+            <TypeCard
+              key={opt.type}
+              type="button"
+              $active={selectedType === opt.type}
+              onClick={() => setSelectedType(opt.type)}
+            >
+              <CardIcon $active={selectedType === opt.type}>
+                {opt.icon}
+              </CardIcon>
+              <CardTitle>{opt.title}</CardTitle>
+              <CardSubtitle>{opt.subtitle}</CardSubtitle>
+            </TypeCard>
+          ))}
+        </CardGrid>
 
-          {option?.needsDays && (
-            <DaysSection>
-              <SectionLabel>{option.daysLabel}</SectionLabel>
-              <DaysRow>
-                <DaysInput
+        {option?.needsDays && (
+          <DaysSection>
+            <SectionLabel>{option.daysLabel}</SectionLabel>
+            <DaysRow>
+              <DaysInputWrapper>
+                <CustomInput
                   type="number"
-                  min={1}
-                  value={Number.isFinite(days) ? days : ""}
+                  inputType="number"
+                  value={Number.isFinite(days) ? days.toString() : ""}
                   onChange={(e) => setDays(parseInt(e.target.value, 10))}
+                  min={1}
                 />
-                <DaysSuffix>дн.</DaysSuffix>
-              </DaysRow>
-            </DaysSection>
-          )}
+              </DaysInputWrapper>
+              <DaysSuffix>дн.</DaysSuffix>
+            </DaysRow>
+          </DaysSection>
+        )}
 
-          {selectedType === "onDay" && (
-            <HintBox>
-              Сообщение придёт клиенту в день, когда нужно внести платёж.
-            </HintBox>
-          )}
+        {selectedType === "onDay" && (
+          <HintBox>
+            Сообщение придёт клиенту в день, когда нужно внести платёж.
+          </HintBox>
+        )}
 
-          {duplicate && <ErrorBox>Такая рассылка уже добавлена.</ErrorBox>}
-        </ModalBody>
-        <ModalFooter>
-          <GrayButton onClick={onClose} disabled={isSaving}>
-            Отмена
-          </GrayButton>
-          <DarkCyanButton onClick={handleConfirm} disabled={!canConfirm}>
-            {isSaving ? "Добавление..." : "Добавить"}
-          </DarkCyanButton>
-        </ModalFooter>
-      </ModalContainer>
-    </ModalOverlay>
+        {duplicate && <ErrorBox>Такая рассылка уже добавлена.</ErrorBox>}
+      </ModalBody>
+    </BaseModal>
   );
 };
 
-const ModalOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1100;
-`;
-
-const ModalContainer = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  width: 460px;
-  max-width: 90%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-`;
-
-const ModalHeader = styled.div`
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e5e5;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-`;
+// ─── Styled components ─────────────────────────────────────────────────────────
 
 const ModalBody = styled.div`
-  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  padding: 4px 24px 8px;
 `;
 
 const SectionLabel = styled.div`
-  font-size: 14px;
-  color: #50555c;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
 `;
 
 const CardGrid = styled.div`
@@ -208,20 +252,25 @@ const TypeCard = styled.button<{ $active: boolean }>`
   gap: 6px;
   padding: 16px 8px;
   border-radius: 10px;
-  border: 2px solid
-    ${(props) => (props.$active ? "rgba(0, 125, 136, 1)" : "#e5e7eb")};
-  background-color: ${(props) =>
-    props.$active ? "rgba(0, 125, 136, 0.06)" : "white"};
+  border: 2px solid ${(p) => (p.$active ? "rgba(0, 125, 136, 1)" : "#e5e7eb")};
+  background: ${(p) => (p.$active ? "rgba(0, 125, 136, 0.06)" : "white")};
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
     border-color: rgba(0, 125, 136, 0.6);
   }
+  &:focus {
+    outline: none;
+  }
+  &:focus-visible {
+    outline: 2px solid rgba(0, 125, 136, 1);
+    outline-offset: 2px;
+  }
 `;
 
 const CardIcon = styled.div<{ $active: boolean }>`
-  color: ${(props) => (props.$active ? "rgba(0, 125, 136, 1)" : "#6b7280")};
+  color: ${(p) => (p.$active ? "rgba(0, 125, 136, 1)" : "#6b7280")};
   display: flex;
 `;
 
@@ -250,18 +299,11 @@ const DaysRow = styled.div`
   gap: 10px;
 `;
 
-const DaysInput = styled.input`
-  width: 90px;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 15px;
-  color: #1f2937;
+const DaysInputWrapper = styled.div`
+  width: 100px;
 
-  &:focus {
-    outline: none;
-    border-color: #007d88;
-    box-shadow: 0 0 0 3px rgba(0, 125, 136, 0.1);
+  input {
+    max-width: none !important;
   }
 `;
 
@@ -273,25 +315,18 @@ const DaysSuffix = styled.span`
 const HintBox = styled.div`
   font-size: 13px;
   color: #50555c;
-  background-color: #f3f4f6;
+  background: #f3f4f6;
   border-radius: 8px;
   padding: 10px 12px;
 `;
 
 const ErrorBox = styled.div`
   font-size: 13px;
-  color: #b91c1c;
-  background-color: #fef2f2;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 10px 12px;
-`;
-
-const ModalFooter = styled.div`
-  padding: 16px 24px;
-  border-top: 1px solid #e5e5e5;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 `;
 
 export default AddSenderScheduleModal;

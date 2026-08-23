@@ -1478,14 +1478,25 @@ const InvestorsPoolPage = () => {
   );
 
   const investorCreditsTableData = (() => {
+    let totalExpectedIncome = 0;
+
     const rows =
       investorCreditsData?.items.map((credit: Credit, index: number) => {
+        // Используем долю, зафиксированную на дату оформления договора.
+        // Если бэкенд вернул историческое значение — берём его,
+        // иначе fallback на текущую долю инвестора.
+        const pieInPoolForCredit =
+          credit.investorPieInPool !== undefined &&
+          credit.investorPieInPool !== null
+            ? credit.investorPieInPool
+            : selectedInvestorForCredits?.pieInPool || 0;
+
         const expectedIncome =
-          (((credit.defferedIncome *
-            (selectedInvestorForCredits?.pieInPool || 0)) /
-            100) *
+          (((credit.defferedIncome * pieInPoolForCredit) / 100) *
             (selectedInvestorForCredits?.investorPie || 0)) /
           100;
+
+        totalExpectedIncome += expectedIncome;
 
         const row: ReactNode[] = [
           credit.id,
@@ -1512,21 +1523,13 @@ const InvestorsPoolPage = () => {
       }) || [];
 
     if (rows.length > 0) {
-      // Добавляем строку "Итого"
+      // Итого считается как сумма по историческим долям каждого договора
       const totalRow: ReactNode[] = [
         "",
         "",
         "",
         "Итого:",
-        formatMoney(
-          (
-            (((investorCreditsData.totalDefferedIncome *
-              (selectedInvestorForCredits?.pieInPool || 0)) /
-              100) *
-              (selectedInvestorForCredits?.investorPie || 0)) /
-            100
-          ).toString()
-        ),
+        formatMoney(totalExpectedIncome.toString()),
       ];
 
       if (showOwnCashExpectedIncome) {

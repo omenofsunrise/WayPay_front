@@ -58,6 +58,7 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
 import { useUiSettings } from "../utils/uiSettings";
 import useSender from "../api/hooks/useSender";
+import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 
 // Иконка для кнопки сворачивания
 // Интерфейс для модалки "Поделиться"
@@ -161,6 +162,7 @@ const CreditPage = () => {
 
   const uiSettings = useUiSettings();
   const isListMode = uiSettings.creditsDisplayMode === "list";
+  const { setRightAction } = useTopMenuActions();
   const [accumulatedItems, setAccumulatedItems] = useState<Credit[]>([]);
   const accumulatedItemsRef = useRef<Credit[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -1069,6 +1071,29 @@ const CreditPage = () => {
     sortConfig,
   ]);
 
+  useEffect(() => {
+    setRightAction(
+      <FilterIconButton
+        type="button"
+        onClick={() => setIsFilterModalOpen((v) => !v)}
+        $hasActiveFilters={hasActiveFilters}
+        aria-label="Фильтр"
+        title="Фильтр"
+      >
+        <ListFilter
+          aria-hidden="true"
+          size={20}
+          strokeWidth={2.2}
+          color={hasActiveFilters ? "#007D88" : "#50555C"}
+        />
+        {hasActiveFilters && getActiveFiltersCount > 0 && (
+          <FilterBadge>{getActiveFiltersCount}</FilterBadge>
+        )}
+      </FilterIconButton>
+    );
+    return () => setRightAction(null);
+  }, [hasActiveFilters, getActiveFiltersCount, setRightAction]);
+
   // Бесконечная прокрутка: подгружаем следующую страницу при достижении сентинела
   useEffect(() => {
     if (!isListMode) return;
@@ -1428,11 +1453,10 @@ const CreditPage = () => {
     {
       label: "Подтвердить договор",
       action: handleAccept,
-      color: "#007d88",
+      color: "#007D88",
       shouldShow: (rowData: any[]) => {
         const [_, id] = rowData;
         const credit = displayedCredits.find((c) => c.id === Number(id));
-
         return (
           hasPermission("MANAGE_ACCOUNTING", true) &&
           credit &&
@@ -1443,27 +1467,27 @@ const CreditPage = () => {
     {
       label: "Добавить платёж",
       action: handleOpenPaymentModal,
-      color: "#008b8b",
+      color: "#10B981",
     },
     {
       label: "Поделиться",
       action: handleRowShare,
-      color: "#007d88",
+      color: "#3B82F6",
     },
     {
       label: "Ссылка для клиента",
       action: handleRowClientLink,
-      color: "#007d88",
+      color: "#3B82F6",
     },
     {
       label: "Печать",
       action: handleRowPrint,
-      color: "#007d88",
+      color: "#3B82F6",
     },
     {
       label: "Выбрать источник финансирования",
       action: handleSelectFundingSource,
-      color: "#007d88",
+      color: "#6B7280",
       shouldShow: (rowData: any[]) =>
         activeTab === "inDebt" &&
         (hasRole("директор") || hasRole("суперадмин")) &&
@@ -1474,7 +1498,7 @@ const CreditPage = () => {
       action: (rowData: any[]) => {
         console.log("Перенос в категорию для:", rowData);
       },
-      color: "#007d88",
+      color: "#6B7280",
       getSubmenu: (rowData: any[]) => {
         const [_, id] = rowData;
         const creditId = Number(id);
@@ -1492,7 +1516,7 @@ const CreditPage = () => {
       action: (rowData: any[]) => {
         console.log("Перенос в папку для:", rowData);
       },
-      color: "#007d88",
+      color: "#6B7280",
       getSubmenu: (rowData: any[]) => {
         const [_, id] = rowData;
         const creditId = Number(id);
@@ -1508,8 +1532,34 @@ const CreditPage = () => {
     {
       label: "Редактировать",
       action: handleEditCredit,
-      color: "#007d88",
+      color: "#6366F1",
       shouldShow: (rowData: any[]) => hasPermission("EDIT_CREDITS", true),
+    },
+    {
+      label: "Восстановить из расторгнутых",
+      action: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find((c) => c.id === Number(id));
+        if (!credit) return;
+        if (
+          !window.confirm(
+            "Договор будет возвращён в актуальные. " +
+              "Сумма снова спишется с кассы пула или инвестора. Продолжить?"
+          )
+        )
+          return;
+        toggleTerminated(credit.id).then((ok) => {
+          if (ok) loadCredits();
+        });
+      },
+      color: "#10B981",
+      shouldShow: (rowData: any[]) => {
+        const [_, id] = rowData;
+        const credit = displayedCredits.find((c) => c.id === Number(id));
+        return (
+          !!credit && credit.terminated && hasPermission("EDIT_CREDITS", true)
+        );
+      },
     },
     {
       label: "Расторгнуть",
@@ -1529,7 +1579,8 @@ const CreditPage = () => {
           if (ok) loadCredits();
         });
       },
-      color: "#EF4444",
+      color: "#F59E0B",
+      dividerBefore: true,
       shouldShow: (rowData: any[]) => {
         const [_, id] = rowData;
         const credit = displayedCredits.find((c) => c.id === Number(id));
@@ -1539,35 +1590,10 @@ const CreditPage = () => {
       },
     },
     {
-      label: "Восстановить из расторгнутых",
-      action: (rowData: any[]) => {
-        const [_, id] = rowData;
-        const credit = displayedCredits.find((c) => c.id === Number(id));
-        if (!credit) return;
-        if (
-          !window.confirm(
-            "Договор будет возвращён в актуальные. " +
-              "Сумма снова спишется с кассы пула или инвестора. Продолжить?"
-          )
-        )
-          return;
-        toggleTerminated(credit.id).then((ok) => {
-          if (ok) loadCredits();
-        });
-      },
-      color: "#007d88",
-      shouldShow: (rowData: any[]) => {
-        const [_, id] = rowData;
-        const credit = displayedCredits.find((c) => c.id === Number(id));
-        return (
-          !!credit && credit.terminated && hasPermission("EDIT_CREDITS", true)
-        );
-      },
-    },
-    {
       label: "Удалить",
       action: handleDeleteCredit,
       color: "#EF4444",
+      dividerBefore: true,
       shouldShow: (rowData: any[]) =>
         hasPermission("DELETE_CREDITS") &&
         denyPermission("MANAGE_ACCOUNTING", true),
@@ -1762,29 +1788,10 @@ const CreditPage = () => {
 
   return (
     <FilterAwarePageLayout ref={containerRef} $filterOpen={isFilterModalOpen}>
-      {/* На узких экранах фильтр выезжает поверх контента — затемняем фон,
-          клик по нему закрывает фильтр. */}
       <FilterBackdrop
         $visible={isFilterModalOpen}
         onClick={() => setIsFilterModalOpen(false)}
       />
-      <FilterIconButton
-        type="button"
-        onClick={() => setIsFilterModalOpen((v) => !v)}
-        $hasActiveFilters={hasActiveFilters}
-        aria-label="Фильтр"
-        title="Фильтр"
-      >
-        <ListFilter
-          aria-hidden="true"
-          size={20}
-          strokeWidth={2.2}
-          color={hasActiveFilters ? "#007D88" : "#50555C"}
-        />
-        {hasActiveFilters && getActiveFiltersCount > 0 && (
-          <FilterBadge>{getActiveFiltersCount}</FilterBadge>
-        )}
-      </FilterIconButton>
 
       <FilterPanel $open={isFilterModalOpen}>
         <FilterPanelInner
@@ -2189,9 +2196,7 @@ const CreditPage = () => {
 // Кнопки 36px с шагом 46px дают одинаковый зазор 10px:
 // настройки right:10 → колокол right:56 → фильтр right:102.
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
-  position: fixed;
-  top: 10px;
-  right: 102px;
+  position: relative;
   z-index: 101;
   width: 36px;
   height: 36px;
@@ -2264,7 +2269,7 @@ const FilterAwarePageLayout = styled(PageLayout)<{ $filterOpen: boolean }>`
   padding-right: ${({ $filterOpen }) =>
     $filterOpen ? FILTER_PANEL_WIDTH : 0}px;
   transition: padding-right 0.3s ease;
-  height: calc(100vh - 56px);
+  height: calc(100vh - var(--header-height, 56px));
   overflow: hidden;
 
   @media (max-width: 1280px) {
@@ -2272,27 +2277,23 @@ const FilterAwarePageLayout = styled(PageLayout)<{ $filterOpen: boolean }>`
   }
 `;
 
-// Затемнение под выехавшим фильтром — только на узких экранах.
 const FilterBackdrop = styled.div<{ $visible: boolean }>`
   display: none;
 
   @media (max-width: 1280px) {
     display: ${({ $visible }) => ($visible ? "block" : "none")};
     position: fixed;
-    inset: 56px 0 0 0;
+    inset: var(--header-height, 56px) 0 0 0;
     background: rgba(0, 0, 0, 0.35);
     z-index: 99;
   }
 `;
 
-// Правая панель фильтров — поведение как у бокового меню (SideMenu): position: fixed
-// у правого края, плавно выезжает за 0.3s, контент отодвигается через padding-right.
-// top: 56px — чтобы не перекрывать верхнее меню (TopMenu с уведомлениями).
 const FilterPanel = styled.div<{ $open: boolean }>`
   position: fixed;
-  top: 56px;
+  top: var(--header-height, 56px);
   right: 0;
-  height: calc(100vh - 56px);
+  height: calc(100vh - var(--header-height, 56px));
   width: ${FILTER_PANEL_WIDTH}px;
   background: #ffffff;
   box-shadow: -1px 0 7px rgba(0, 0, 0, 0.08);
@@ -2359,6 +2360,8 @@ const ScrollArea = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding-top: 2px;
+  padding-right: 4px;
 
   &::-webkit-scrollbar {
     width: 8px;

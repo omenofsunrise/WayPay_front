@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { message } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import styled from "styled-components";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import CustomTable from "../../components/ui/tables/CustomTable";
 import FilterField from "../../components/ui/Layouts/FilterField";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import TitleField from "../../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
+import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import CustomRoleModal from "../../components/modal/CrudInherited/CustomRoleModal";
 import { usePermission } from "../../api/hooks/usePermission";
 import type { CustomRole, CustomRolePayload } from "../../api/types/employee";
@@ -14,6 +14,67 @@ import { CUSTOM_ROLE_BASE_OPTIONS } from "../../api/constants/permissions";
 
 const baseRoleLabel = (value: string): string =>
   CUSTOM_ROLE_BASE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+const ToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 280px;
+  max-width: 400px;
+  background: ${(p) =>
+    p.$type === "success"
+      ? "#10b981"
+      : p.$type === "error"
+      ? "#ef4444"
+      : "#f59e0b"};
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const ConfirmText = styled.p`
+  padding: 16px 30px;
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.5;
+`;
+
+// ─── Styled components ─────────────────────────────────────────────────────────
+
+const NameCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+// ─── Component ─────────────────────────────────────────────────────────────────
 
 const CustomRolesPage = () => {
   const {
@@ -31,9 +92,53 @@ const CustomRolesPage = () => {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedRole, setSelectedRole] = useState<CustomRole | null>(null);
 
+  const [toasts, setToasts] = useState<
+    { id: number; type: "success" | "error" | "warning"; message: string }[]
+  >([]);
+
+  const addToast = (type: "success" | "error" | "warning", msg: string) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, type, message: msg }]);
+    setTimeout(
+      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+      4000
+    );
+  };
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
+
+  const openConfirm = (msg: string, onConfirm: () => void) =>
+    setConfirmState({
+      isOpen: true,
+      message: msg,
+      onConfirm,
+      isSubmitting: false,
+    });
+
+  const closeConfirm = () =>
+    setConfirmState((prev) => ({
+      ...prev,
+      isOpen: false,
+      isSubmitting: false,
+    }));
+
+  const handleConfirm = async () => {
+    setConfirmState((prev) => ({ ...prev, isSubmitting: true }));
+    try {
+      await confirmState.onConfirm();
+    } finally {
+      closeConfirm();
+    }
+  };
+
   const loadRoles = useCallback(async () => {
     try {
-      await fetchCustomRoles(true); // с правами: нужны для счётчика и предзаполнения чекбоксов
+      await fetchCustomRoles(true);
     } catch {
       // ошибка показывается через error
     }
@@ -59,65 +164,56 @@ const CustomRolesPage = () => {
     try {
       if (modalMode === "create") {
         await createCustomRole(payload);
-        message.success("Роль создана");
+        addToast("success", "Роль успешно создана");
       } else if (selectedRole) {
         await updateCustomRole(selectedRole.id, payload);
-        message.success("Роль обновлена");
+        addToast("success", "Роль успешно обновлена");
       }
       setIsModalOpen(false);
-    } catch (err) {
-      console.error("Ошибка при сохранении роли:", err);
-      message.error("Не удалось сохранить роль");
+    } catch {
+      addToast("error", "Не удалось сохранить роль");
     }
   };
 
-  const handleDelete = async (rowData: any[]) => {
+  const handleDelete = (rowData: any[]) => {
     const id = Number(rowData[0]);
     const role = customRoles.find((r) => r.id === id);
     if (!role) return;
 
-    if (window.confirm(`Удалить роль «${role.name}»?`)) {
+    openConfirm(`Удалить роль «${role.name}»?`, async () => {
       try {
         await deleteCustomRole(id);
-        message.success("Роль удалена");
-      } catch (err) {
-        console.error("Ошибка при удалении роли:", err);
-        message.error("Не удалось удалить роль");
+        addToast("success", "Роль удалена");
+      } catch {
+        addToast("error", "Не удалось удалить роль");
       }
-    }
+    });
   };
 
   const tableData = customRoles.map((role) => [
     role.id.toString(),
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      {role.name}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleEdit(role);
-        }}
-        style={{
-          background: "none",
-          border: "none",
-          color: "#1890ff",
-          cursor: "pointer",
-        }}
-      >
-        <EditOutlined />
-      </button>
-    </div>,
-    role.description || "-",
+    <NameCell>{role.name}</NameCell>,
+    role.description || "—",
     baseRoleLabel(role.role),
     (role.permissions?.length ?? 0).toString(),
   ]);
 
-  const getActions = (rowData: any[]) => [
-    {
-      label: "Удалить",
-      action: handleDelete,
-      color: "#EF4444",
-    },
-  ];
+  const getActions = (rowData: any[]) => {
+    const role = customRoles.find((r) => r.id === Number(rowData[0]));
+    return [
+      {
+        label: "Редактировать",
+        action: () => role && handleEdit(role),
+        color: "#007D88",
+      },
+      {
+        label: "Удалить",
+        action: handleDelete,
+        color: "#EF4444",
+        dividerBefore: true,
+      },
+    ];
+  };
 
   return (
     <PageLayout>
@@ -140,7 +236,7 @@ const CustomRolesPage = () => {
       {!loading && !error && (
         <CustomTable
           columns={[
-            { name: "ID", align: "center" },
+            { name: "ID", isHidden: true },
             { name: "Название", align: "left" },
             { name: "Описание", align: "left" },
             { name: "Базовая роль", align: "left" },
@@ -148,7 +244,7 @@ const CustomRolesPage = () => {
           ]}
           data={tableData}
           contextMenuActions={getActions}
-          onRowDoubleClick={(rowData: any[]) => {
+          onRowDoubleClick={(rowData) => {
             const role = customRoles.find((r) => r.id === Number(rowData[0]));
             if (role) handleEdit(role);
           }}
@@ -163,6 +259,32 @@ const CustomRolesPage = () => {
         initialData={selectedRole}
         isSubmitting={saving}
       />
+
+      {confirmState.isOpen && (
+        <BaseModal
+          title="Подтверждение"
+          onClose={closeConfirm}
+          onCancel={closeConfirm}
+          onSave={(e) => {
+            e.preventDefault();
+            handleConfirm();
+          }}
+          isSubmitting={confirmState.isSubmitting}
+          saveButtonText="Удалить"
+          width="400px"
+        >
+          <ConfirmText>{confirmState.message}</ConfirmText>
+        </BaseModal>
+      )}
+
+      <ToastContainer>
+        {toasts.map((t) => (
+          <Toast key={t.id} $type={t.type}>
+            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
+            {t.message}
+          </Toast>
+        ))}
+      </ToastContainer>
     </PageLayout>
   );
 };

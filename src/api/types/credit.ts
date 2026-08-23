@@ -51,6 +51,7 @@ export interface Credit {
   employeeName: string;
   debtDays?: number;
   defferedIncome?: number;
+  investorPieInPool?: number;
   clientContacts?: ClientContact[];
   terminated: boolean;
   hasCounterApproved?: boolean;
