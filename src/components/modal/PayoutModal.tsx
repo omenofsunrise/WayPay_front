@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import CustomInput from '../ui/fields/CustomInput';
-import BaseModal from './BASE/modalCRUBase';
-import { formatMoney } from '../../utils/formatPrice';
-import type { PayoutSource } from '../../api/types/investorPayout';
+import { useState, useEffect } from "react";
+import styled from "styled-components";
+import CustomInput from "../ui/fields/CustomInput";
+import BaseModal from "./BASE/modalCRUBase";
+import { formatMoney } from "../../utils/formatPrice";
+import type { PayoutSource } from "../../api/types/investorPayout";
 
 interface PayoutModalProps {
   isOpen: boolean;
@@ -15,8 +15,10 @@ interface PayoutModalProps {
   balance?: number | null;
   isLoading: boolean;
   currentIncome?: number | null;
-  poolSelfIncome?: number | null; 
+  poolSelfIncome?: number | null;
   expectedIncome?: number | null;
+  investorIncome?: number | null;
+  selfIncome?: number | null;
   payoutSource: PayoutSource;
   onPayoutSourceChange?: (source: PayoutSource) => void;
   investment?: number | null;
@@ -36,19 +38,23 @@ const PayoutModal = ({
   currentIncome,
   poolSelfIncome,
   expectedIncome,
+  investorIncome,
+  selfIncome,
   investment,
   firstContribution,
   payoutSource,
   onPayoutSourceChange,
-  isCompany
+  isCompany,
 }: PayoutModalProps) => {
-  const [error, setError] = useState('');
-  const [warning, setWarning] = useState('');
+  const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const [actualMaxAmount, setActualMaxAmount] = useState(0);
 
   // Определяем, какой доход использовать для отображения и расчетов
-  const displayIncome = poolSelfIncome !== null ? poolSelfIncome : currentIncome;
-  const effectiveIncome = poolSelfIncome !== null ? poolSelfIncome : currentIncome;
+  const displayIncome =
+    poolSelfIncome !== null ? poolSelfIncome : currentIncome;
+  const effectiveIncome =
+    poolSelfIncome !== null ? poolSelfIncome : currentIncome;
 
   useEffect(() => {
     if (balance != null) {
@@ -58,48 +64,60 @@ const PayoutModal = ({
       setActualMaxAmount(maxAmount);
     }
 
-    setWarning('');
-    
-    if (investment != null && currentIncome == null && expectedIncome == null && onPayoutSourceChange != null) {
-      onPayoutSourceChange('investment');
+    setWarning("");
+
+    if (
+      investment != null &&
+      currentIncome == null &&
+      expectedIncome == null &&
+      onPayoutSourceChange != null
+    ) {
+      onPayoutSourceChange("investment");
     } else {
-      onPayoutSourceChange('income');
+      onPayoutSourceChange("income");
     }
-  }, [maxAmount, balance, investment, currentIncome, expectedIncome, poolSelfIncome]);
+  }, [
+    maxAmount,
+    balance,
+    investment,
+    currentIncome,
+    expectedIncome,
+    poolSelfIncome,
+  ]);
 
   const formatNumber = (num: string): string => {
-    if (!num) return '';
-    const cleanNum = num.replace(/[^\d]/g, '');
-    return cleanNum.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    if (!num) return "";
+    const cleanNum = num.replace(/[^\d]/g, "");
+    return cleanNum.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   };
 
   const parseFormattedNumber = (formatted: string): string => {
-    return formatted.replace(/\s/g, '');
+    return formatted.replace(/\s/g, "");
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
+
     const cleanValue = parseFormattedNumber(value);
-    
+
     onAmountChange(cleanValue);
-    setError('');
-    setWarning('');
+    setError("");
+    setWarning("");
   };
 
   const handleSourceChange = (source: PayoutSource) => {
     onPayoutSourceChange(source);
-    setError('');
-    setWarning('');
+    setError("");
+    setWarning("");
   };
 
   const getMaxAmountForSource = (): number => {
     switch (payoutSource) {
-      case 'income':
+      case "income":
         if (effectiveIncome != null) return effectiveIncome;
         if (expectedIncome != null) return expectedIncome;
         return maxAmount;
-      case 'investment':
+      case "investment":
         return investment || 0;
       default:
         return 0;
@@ -108,69 +126,89 @@ const PayoutModal = ({
 
   const getSourceName = (): string => {
     switch (payoutSource) {
-      case 'income':
-        return 'доход';
-      case 'investment':
-        return 'инвестиция';
+      case "income":
+        return "доход";
+      case "investment":
+        return "инвестиция";
       default:
-        return '';
+        return "";
     }
-  };
-
-  const getIncomeLabel = (): string => {
-    return poolSelfIncome !== null ? 'Собственный доход:' : 'Текущий доход:';
   };
 
   const validateAmount = (numericAmount: number) => {
-    setError('');
-    setWarning('');
+    setError("");
+    setWarning("");
 
     if (!numericAmount) {
-      setError('Введите сумму выплаты');
+      setError("Введите сумму выплаты");
       return false;
     }
-    
+
     if (numericAmount <= 0) {
-      setError('Сумма должна быть больше нуля');
+      setError("Сумма должна быть больше нуля");
       return false;
     }
 
     // Проверка баланса (общая для всех источников)
     if (balance != null && numericAmount > balance) {
-      setError(`Сумма не может превышать баланс ${formatMoney(balance.toString())}`);
+      setError(
+        `Сумма не может превышать баланс ${formatMoney(balance.toString())}`
+      );
       return false;
     }
 
     // Валидация в зависимости от выбранного источника
-    if (payoutSource === 'income') {
+    if (payoutSource === "income") {
       const maxIncomeAmount = getMaxAmountForSource();
-      
+
       if (expectedIncome != null && effectiveIncome != null) {
         if (numericAmount > effectiveIncome) {
           if (numericAmount > expectedIncome) {
-            setError(`Сумма превышает ожидаемый доход ${formatMoney(expectedIncome.toString())}`);
+            setError(
+              `Сумма превышает ожидаемый доход ${formatMoney(
+                expectedIncome.toString()
+              )}`
+            );
             return false;
           } else {
             setWarning(
-              `Внимание: Выплата (${formatMoney(numericAmount.toString())}) превышает ${poolSelfIncome !== null ? 'собственный доход' : 'текущий доход'} ` +
-              `(${formatMoney(effectiveIncome.toString())}). Выплачивается часть ожидаемого дохода.`
+              `Внимание: Выплата (${formatMoney(
+                numericAmount.toString()
+              )}) превышает ${
+                poolSelfIncome !== null ? "собственный доход" : "текущий доход"
+              } ` +
+                `(${formatMoney(
+                  effectiveIncome.toString()
+                )}). Выплачивается часть ожидаемого дохода.`
             );
           }
         }
       } else if (effectiveIncome != null) {
         if (numericAmount > effectiveIncome) {
-          setError(`Сумма превышает ${poolSelfIncome !== null ? 'собственный доход' : 'текущий доход'} ${formatMoney(effectiveIncome.toString())}`);
+          setError(
+            `Сумма превышает ${
+              poolSelfIncome !== null ? "собственный доход" : "текущий доход"
+            } ${formatMoney(effectiveIncome.toString())}`
+          );
           return false;
         }
       } else if (numericAmount > maxIncomeAmount) {
-        setError(`Сумма превышает доступный доход ${formatMoney(maxIncomeAmount.toString())}`);
+        setError(
+          `Сумма превышает доступный доход ${formatMoney(
+            maxIncomeAmount.toString()
+          )}`
+        );
         return false;
       }
-    } else if (payoutSource === 'investment') {
+    } else if (payoutSource === "investment") {
       const maxInvestmentAmount = investment || 0;
-      
+
       if (numericAmount > maxInvestmentAmount) {
-        setError(`Сумма превышает инвестицию ${formatMoney(maxInvestmentAmount.toString())}`);
+        setError(
+          `Сумма превышает инвестицию ${formatMoney(
+            maxInvestmentAmount.toString()
+          )}`
+        );
         return false;
       }
     }
@@ -181,15 +219,15 @@ const PayoutModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numericAmount = Number(amount);
-    
+
     if (!validateAmount(numericAmount)) {
       return;
     }
-    
+
     onSubmit();
   };
 
-  const formattedAmount = amount ? formatNumber(amount) : '';
+  const formattedAmount = amount ? formatNumber(amount) : "";
   const maxSourceAmount = getMaxAmountForSource();
 
   if (!isOpen) return null;
@@ -208,10 +246,12 @@ const PayoutModal = ({
         <SourceSelector>
           <SourceLabel>Источник выплаты:</SourceLabel>
           <SourceButtons>
-            {(effectiveIncome != null || expectedIncome != null || maxAmount > 0) && (
+            {(effectiveIncome != null ||
+              expectedIncome != null ||
+              maxAmount > 0) && (
               <SourceButton
-                $active={payoutSource === 'income'}
-                onClick={() => handleSourceChange('income')}
+                $active={payoutSource === "income"}
+                onClick={() => handleSourceChange("income")}
                 type="button"
               >
                 Из дохода
@@ -219,8 +259,8 @@ const PayoutModal = ({
             )}
             {investment != null && investment > 0 && (
               <SourceButton
-                $active={payoutSource === 'investment'}
-                onClick={() => handleSourceChange('investment')}
+                $active={payoutSource === "investment"}
+                onClick={() => handleSourceChange("investment")}
                 type="button"
               >
                 Из инвестиции
@@ -230,36 +270,65 @@ const PayoutModal = ({
         </SourceSelector>
 
         <IncomeInfo>
-            <>
-              {firstContribution != null && (
-                <IncomeItem>
-                  <IncomeLabel>Первоначальная инвестиция:</IncomeLabel>
-                  <IncomeValue>{formatMoney(firstContribution.toString())}</IncomeValue>
-                </IncomeItem>
-              )}
+          <>
+            {firstContribution != null && (
+              <IncomeItem>
+                <IncomeLabel>Первоначальная инвестиция:</IncomeLabel>
+                <IncomeValue>
+                  {formatMoney(firstContribution.toString())}
+                </IncomeValue>
+              </IncomeItem>
+            )}
 
-              {investment != null && (
+            {investment != null && (
+              <IncomeItem>
+                <IncomeLabel>Инвестиция:</IncomeLabel>
+                <IncomeValue>{formatMoney(investment.toString())}</IncomeValue>
+              </IncomeItem>
+            )}
+            {investorIncome != null ? (
+              <>
                 <IncomeItem>
-                  <IncomeLabel>Инвестиция:</IncomeLabel>
-                  <IncomeValue>{formatMoney(investment.toString())}</IncomeValue>
-                </IncomeItem>
-              )}
-              {(effectiveIncome != null || maxAmount != null) && (
-                <IncomeItem>
-                  <IncomeLabel>{getIncomeLabel()}</IncomeLabel>
+                  <IncomeLabel>Собственный доход:</IncomeLabel>
                   <IncomeValue>
-                    {formatMoney((effectiveIncome ?? maxAmount)?.toString() || '0')}
+                    {formatMoney((selfIncome ?? 0).toString())}
                   </IncomeValue>
                 </IncomeItem>
-              )}
-              {expectedIncome != null && (
                 <IncomeItem>
-                  <IncomeLabel>Ожидаемый доход:</IncomeLabel>
-                  <IncomeValue>{formatMoney(expectedIncome.toLocaleString())}</IncomeValue>
+                  <IncomeLabel>Доход инвестора:</IncomeLabel>
+                  <IncomeValue>
+                    {formatMoney((investorIncome ?? 0).toString())}
+                  </IncomeValue>
                 </IncomeItem>
-              )}
-            </>
-          
+              </>
+            ) : (
+              <>
+                {(effectiveIncome != null || maxAmount != null) && (
+                  <IncomeItem>
+                    <IncomeLabel>
+                      {poolSelfIncome != null
+                        ? "Собственный доход:"
+                        : "Текущий доход:"}
+                    </IncomeLabel>
+                    <IncomeValue>
+                      {formatMoney(
+                        (effectiveIncome ?? maxAmount)?.toString() || "0"
+                      )}
+                    </IncomeValue>
+                  </IncomeItem>
+                )}
+                {expectedIncome != null && (
+                  <IncomeItem>
+                    <IncomeLabel>Ожидаемый доход:</IncomeLabel>
+                    <IncomeValue>
+                      {formatMoney(expectedIncome.toLocaleString())}
+                    </IncomeValue>
+                  </IncomeItem>
+                )}
+              </>
+            )}
+          </>
+
           {balance != null && (
             <IncomeItem>
               <IncomeLabel>Касса:</IncomeLabel>
@@ -279,7 +348,7 @@ const PayoutModal = ({
             Максимально доступно: {formatMoney(maxSourceAmount.toString())}
           </AmountHint>
         </InputContainer>
-        
+
         {error && <ErrorMessage>{error}</ErrorMessage>}
         {warning && <WarningMessage>{warning}</WarningMessage>}
       </ModalContent>
@@ -311,8 +380,9 @@ const SourceButtons = styled.div`
 
 const SourceButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  background-color: ${props => props.$active ? 'rgba(0, 125, 136, 1)' : 'transparent'};
-  color: ${props => props.$active ? '#fff' : '#495057'};
+  background-color: ${(props) =>
+    props.$active ? "rgba(0, 125, 136, 1)" : "transparent"};
+  color: ${(props) => (props.$active ? "#fff" : "#495057")};
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
@@ -331,7 +401,7 @@ const IncomeItem = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
-  
+
   &:last-child {
     margin-bottom: 0;
   }

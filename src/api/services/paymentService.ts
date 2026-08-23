@@ -62,9 +62,16 @@ class PaymentService {
   async deletePayment(id: number): Promise<void> {
     try {
       await apiClient.delete(`/Payment/${id}`);
-    } catch (err) {
-      console.error("Ошибка при удалении платежа:", err);
-      alert("Нельзя удалить платёж после реинвестиции");
+    } catch (err: any) {
+      // Пробрасываем реальную причину отказа, а не «молча успех».
+      // Иначе интерфейс считает платёж удалённым, хотя он остался в базе,
+      // что приводит к задвоению платежей и занижению остатка.
+      const backendMessage =
+        err?.response?.data?.message ??
+        (typeof err?.response?.data === "string" ? err.response.data : null);
+      throw new Error(
+        backendMessage || "Не удалось удалить платёж. Попробуйте ещё раз."
+      );
     }
   }
 }
