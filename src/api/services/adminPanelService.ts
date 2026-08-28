@@ -119,6 +119,8 @@ export interface CreateBroadcastCampaignRequest {
   content: string;
   file?: File | null;
   test?: boolean;
+  campaignType?: "regular" | "upcoming" | "onDay" | "overdue";
+  days?: number;
 }
 
 export interface BroadcastCampaignMessage {

@@ -443,6 +443,71 @@ const CharCount = styled.div`
   color: #6b7280;
 `;
 
+const TypeCardGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+`;
+
+const TypeCard = styled.button<{ $active: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 10px;
+  border: 2px solid ${(p) => (p.$active ? "rgba(0, 125, 136, 1)" : "#e5e7eb")};
+  background: ${(p) => (p.$active ? "rgba(0, 125, 136, 0.06)" : "white")};
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+
+  &:hover {
+    border-color: rgba(0, 125, 136, 0.6);
+  }
+  &:focus {
+    outline: none;
+  }
+`;
+
+const TypeCardIcon = styled.div<{ $active: boolean }>`
+  color: ${(p) => (p.$active ? "rgba(0, 125, 136, 1)" : "#6b7280")};
+  display: flex;
+`;
+
+const TypeCardTitle = styled.div`
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+`;
+
+const TypeCardSubtitle = styled.div`
+  font-size: 10px;
+  color: #9ca3af;
+  text-align: center;
+`;
+
+const DaysRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+`;
+
+const DaysInputWrapper = styled.div`
+  width: 100px;
+
+  input {
+    max-width: none !important;
+  }
+`;
+
+const DaysSuffix = styled.span`
+  font-size: 14px;
+  color: #6b7280;
+`;
+
 const InProgressWarning = styled.div`
   padding: 12px;
   background: #fef3c7;
@@ -748,6 +813,10 @@ const BroadcastCampaignsManager: React.FC<Props> = ({
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isTest, setIsTest] = useState(false);
+  const [campaignType, setCampaignType] = useState<
+    "regular" | "upcoming" | "onDay" | "overdue"
+  >("regular");
+  const [campaignDays, setCampaignDays] = useState<number>(3);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [channels, setChannels] = useState<any[]>([]);
@@ -879,6 +948,8 @@ const BroadcastCampaignsManager: React.FC<Props> = ({
     setContent("");
     setFile(null);
     setIsTest(false);
+    setCampaignType("regular");
+    setCampaignDays(3);
   };
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -894,6 +965,11 @@ const BroadcastCampaignsManager: React.FC<Props> = ({
         content,
         file: file || null,
         test: isTest,
+        campaignType,
+        days:
+          campaignType === "upcoming" || campaignType === "overdue"
+            ? campaignDays
+            : undefined,
       });
       if (success) {
         setTitle("");
@@ -1335,9 +1411,176 @@ const BroadcastCampaignsManager: React.FC<Props> = ({
         onCancel={closeCreateModal}
         onSave={handleCreateCampaign}
         isSubmitting={isSubmitting}
-        width="600px"
+        width="800px"
       >
         <ModalForm>
+          <ModalField>
+            <FormLabel>Тип рассылки</FormLabel>
+            <TypeCardGrid>
+              {(
+                [
+                  {
+                    type: "regular",
+                    title: "Обычная",
+                    subtitle: "Ручная рассылка",
+                    icon: (
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.42 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.84a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.03z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                  },
+                  {
+                    type: "upcoming",
+                    title: "Приближающийся платёж",
+                    subtitle: "До даты платежа",
+                    icon: (
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M13.73 21a2 2 0 0 1-3.46 0"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                  },
+                  {
+                    type: "onDay",
+                    title: "В день платежа",
+                    subtitle: "День оплаты",
+                    icon: (
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <rect
+                          x="3"
+                          y="4"
+                          width="18"
+                          height="18"
+                          rx="2"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M16 2v4M8 2v4M3 10h18"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M9 16l2 2 4-4"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                  },
+                  {
+                    type: "overdue",
+                    title: "Просрочка",
+                    subtitle: "После пропуска",
+                    icon: (
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M12 9v4M12 17h.01"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                  },
+                ] as const
+              ).map((opt) => (
+                <TypeCard
+                  key={opt.type}
+                  type="button"
+                  $active={campaignType === opt.type}
+                  onClick={() =>
+                    setCampaignType(
+                      opt.type as "regular" | "upcoming" | "onDay" | "overdue"
+                    )
+                  }
+                >
+                  <TypeCardIcon $active={campaignType === opt.type}>
+                    {opt.icon}
+                  </TypeCardIcon>
+                  <TypeCardTitle>{opt.title}</TypeCardTitle>
+                  <TypeCardSubtitle>{opt.subtitle}</TypeCardSubtitle>
+                </TypeCard>
+              ))}
+            </TypeCardGrid>
+
+            {(campaignType === "upcoming" || campaignType === "overdue") && (
+              <div style={{ marginTop: "12px" }}>
+                <FormLabel style={{ marginBottom: "8px" }}>
+                  {campaignType === "upcoming"
+                    ? "За сколько дней до платежа?"
+                    : "Через сколько дней после платежа?"}
+                </FormLabel>
+                <DaysRow>
+                  <DaysInputWrapper>
+                    <CustomInput
+                      type="number"
+                      inputType="number"
+                      value={campaignDays.toString()}
+                      onChange={(e) =>
+                        setCampaignDays(parseInt(e.target.value, 10) || 1)
+                      }
+                      min={1}
+                    />
+                  </DaysInputWrapper>
+                  <DaysSuffix>дн.</DaysSuffix>
+                </DaysRow>
+              </div>
+            )}
+          </ModalField>
+
           <ModalField>
             <FormLabel>
               Название кампании <RequiredMark>*</RequiredMark>
