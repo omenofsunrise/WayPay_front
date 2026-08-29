@@ -867,10 +867,19 @@ const ModalContainer = styled.div`
   background-color: white;
   border-radius: 8px;
   width: auto;
-  max-width: 90%;
-  min-width: 800px;
+  max-width: 90vw;
+  min-width: min(800px, calc(100vw - 32px));
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 30px;
+  max-height: 95vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  @media (max-width: 600px) {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
   &.modal-container-for-export {
     padding: 30px;
     background: #ffffff;

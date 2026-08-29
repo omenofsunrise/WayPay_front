@@ -203,6 +203,7 @@ const ModalBackdrop = styled.div`
 
 const ModalContainer = styled.div<{ width: string; maxHeight: string }>`
   width: ${(props) => props.width};
+  max-width: calc(100vw - 32px);
   max-height: ${(props) => props.maxHeight};
   background-color: rgba(249, 250, 250, 1);
   border: 1px solid rgba(173, 179, 188, 1);
@@ -216,6 +217,12 @@ const ModalContainer = styled.div<{ width: string; maxHeight: string }>`
   overflow: hidden;
 
   @media (max-height: 768px) {
+    max-height: 95vh;
+  }
+
+  @media (max-width: 600px) {
+    padding: 16px;
+    border-radius: 8px;
     max-height: 95vh;
   }
 `;

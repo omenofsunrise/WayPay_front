@@ -2323,6 +2323,11 @@ const TwoColumnLayout = styled.div`
   gap: 24px;
   height: 100%;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    height: auto;
+  }
 `;
 
 const LeftColumn = styled.div`
@@ -2330,6 +2335,11 @@ const LeftColumn = styled.div`
   min-width: 0;
   overflow-y: auto;
   padding-right: 12px;
+
+  @media (max-width: 768px) {
+    padding-right: 0;
+    overflow-y: visible;
+  }
 
   /* Стилизация скроллбара для левой колонки */
   &::-webkit-scrollbar {
@@ -2359,6 +2369,14 @@ const RightColumn = styled.div`
     height: 100%;
     width: 100%;
     max-width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    min-height: 300px;
+    overflow: visible;
+    & > div {
+      height: 300px;
+    }
   }
 `;
 
@@ -2544,14 +2562,18 @@ const ModalContent = styled.div`
   background: white;
   padding: 24px;
   border-radius: 8px;
-  width: auto;
   width: 90vw;
   height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;
-
-  /* Для плавного скролла на мобильных */
   -webkit-overflow-scrolling: touch;
+
+  @media (max-width: 768px) {
+    width: calc(100vw - 16px);
+    height: 95vh;
+    padding: 12px;
+    border-radius: 8px;
+  }
 `;
 
 const AddButton = styled.img`
