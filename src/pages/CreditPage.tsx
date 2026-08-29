@@ -36,6 +36,7 @@ import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import ObjectTypeSelect from "../components/ui/fields/ObjectTypeSelect";
 import PaymentConfirmationGenerator from "../utils/doxcUtils/paymentConfirmationGenerator";
 import paymentService from "../api/services/paymentService";
+import { extractErrorMessage } from "../api/utils/errorMessage";
 import type { PaymentTab } from "../api/types/payment";
 import InvestorSelectModal from "../components/modal/CrudInherited/InvestorSelectModal";
 import AddButton from "../components/ui/Buttons/AddButton";
@@ -60,8 +61,6 @@ import { useUiSettings } from "../utils/uiSettings";
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 
-// Иконка для кнопки сворачивания
-// Интерфейс для модалки "Поделиться"
 type ShareOption = "contractData" | "paymentHistory" | "paymentSchedule";
 
 interface ShareOptionModalProps {
@@ -129,6 +128,21 @@ const ShareOptionModal = ({
 interface EmptyStarIconProps {
   isSelected?: boolean;
 }
+
+// Ключи должны совпадать с кейсами CreditSortingExtensions.ApplySorting на
+// бэке — сортировка серверная, произвольную строку он молча проигнорирует и
+// отдаст порядок по умолчанию (id по убыванию).
+const SORT_OPTIONS: { key: string | null; label: string }[] = [
+  { key: null, label: "По умолчанию" },
+  { key: "debt", label: "Сумма просрочки" },
+  { key: "overdue_days", label: "Дни просрочки" },
+  { key: "upcoming", label: "Приближающийся платёж" },
+  { key: "amount", label: "Сумма договора" },
+  { key: "rest", label: "Остаток" },
+  { key: "payed", label: "Уплачено" },
+  { key: "date", label: "Дата договора" },
+  { key: "client", label: "ФИО клиента" },
+];
 
 const CreditPage = () => {
   const colors = {
@@ -205,7 +219,7 @@ const CreditPage = () => {
       : null
   );
   const [sortConfig, setSortConfig] = useState<{
-    key: number | null;
+    key: string | null;
     direction: "asc" | "desc";
   }>({ key: null, direction: "desc" });
   const [filters, setFilters] = useState<{
@@ -246,15 +260,6 @@ const CreditPage = () => {
   const itemsPerPage = isListMode
     ? Math.max(responsivePageSize, 20)
     : responsivePageSize;
-  const columnToApiSortMap: Record<number, string> = {
-    1: "id",
-    2: "date",
-    3: "client",
-    5: "accured",
-    6: "payed",
-    7: "rest",
-    8: "debt",
-  };
   const { hasPermission, hasRole, denyPermission, forbiddenRole } = useAuth();
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
@@ -292,8 +297,9 @@ const CreditPage = () => {
     useState<Credit | null>(null);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] =
     useState(false);
-  const [selectedCreditForFunding, setSelectedCreditForFunding] =
-    useState<Credit | null>(null);
+  // Пачка договоров, для которых сейчас выбирается источник финансирования.
+  // Одиночный перенос — частный случай со списком из одного элемента.
+  const [creditsForFunding, setCreditsForFunding] = useState<Credit[]>([]);
   const {
     isLoading: isObjectTypesLoading,
     objectTypes,
@@ -618,11 +624,23 @@ const CreditPage = () => {
     setViewingCreditId(null);
   };
 
+  // Как и остальные массовые действия на странице: отмечено больше одного
+  // договора — работаем по всем отмеченным, иначе по строке, откуда позвали.
   const handleSelectFundingSource = (rowData: any[]) => {
+    if (selectedRows.length > 1) {
+      const batch = selectedRows
+        .map((index) => displayedCredits[index])
+        .filter((credit): credit is Credit => Boolean(credit));
+      if (batch.length === 0) return;
+      setCreditsForFunding(batch);
+      setIsInvestorSelectModalOpen(true);
+      return;
+    }
+
     const [_, id] = rowData;
     const credit = displayedCredits.find((c) => c.id === Number(id));
     if (credit) {
-      setSelectedCreditForFunding(credit);
+      setCreditsForFunding([credit]);
       setIsInvestorSelectModalOpen(true);
     }
   };
@@ -834,29 +852,82 @@ const CreditPage = () => {
   const handleFundingSourceSubmit = async (entity: {
     id: number;
     type: "investor" | "pool";
+    balance?: number;
   }) => {
-    if (!selectedCreditForFunding) return;
+    // Модалка закрывает себя сама сразу после onSubmit, поэтому список берём
+    // из замыкания — сброс состояния ниже на него уже не влияет.
+    const batch = creditsForFunding;
+    if (batch.length === 0) return;
 
-    try {
-      const sourceRequest: SetInvestmentSourceRequest = {
-        sourceType:
-          entity.type === "investor"
-            ? InvestmentSourceType.Investor
-            : InvestmentSourceType.InvestorPool,
-        entityId: entity.id,
-      };
+    const sourceRequest: SetInvestmentSourceRequest = {
+      sourceType:
+        entity.type === "investor"
+          ? InvestmentSourceType.Investor
+          : InvestmentSourceType.InvestorPool,
+      entityId: entity.id,
+    };
 
-      await setInvestmentSource(selectedCreditForFunding.id, sourceRequest);
-
-      await loadCredits();
-      setIsInvestorSelectModalOpen(false);
-      setSelectedCreditForFunding(null);
-
-      alert("Источник финансирования успешно установлен");
-    } catch (error) {
-      console.error("Ошибка при установке источника финансирования:", error);
-      alert("Произошла ошибка при установке источника финансирования");
+    // Бэк умеет только по одному договору за запрос и коммитит каждый отдельно,
+    // общей транзакции на пачку нет. Поэтому сначала прикидываем, хватит ли
+    // кассы на всё сразу: иначе на середине пачки прилетит «Недостаточно
+    // средств», а предыдущие договоры уже перенесены и касса списана без
+    // отката. Проверка предварительная — решающее слово всё равно за бэком,
+    // он считает остаток заново на каждом договоре.
+    const required = batch.reduce(
+      (sum, credit) => sum + (credit.totalClean - credit.firstPayment),
+      0
+    );
+    if (typeof entity.balance === "number" && required > entity.balance) {
+      alert(
+        "Недостаточно средств в кассе.\n" +
+          `Нужно: ${formatMoney(required.toString())}\n` +
+          `Доступно: ${formatMoney(entity.balance.toString())}`
+      );
+      return;
     }
+
+    const failures: string[] = [];
+    let transferred = 0;
+
+    // Строго последовательно: параллельные запросы гонялись бы за одну и ту же
+    // кассу, и проверка остатка на бэке перестала бы быть достоверной.
+    for (const credit of batch) {
+      try {
+        await setInvestmentSource(credit.id, sourceRequest);
+        transferred += 1;
+      } catch (err) {
+        console.error(
+          `Ошибка при установке источника финансирования (договор ${credit.id}):`,
+          err
+        );
+        failures.push(
+          `№${credit.id} ${credit.clientFullName ?? ""}: ${extractErrorMessage(
+            err,
+            "не удалось перенести"
+          )}`
+        );
+      }
+    }
+
+    await loadCredits();
+    setCreditsForFunding([]);
+    setSelectedRows([]);
+
+    if (failures.length === 0) {
+      alert(
+        batch.length === 1
+          ? "Источник финансирования успешно установлен"
+          : `Перенесено договоров: ${transferred}`
+      );
+      return;
+    }
+
+    // Отката нет: успешные договоры уже закоммичены на бэке. Перечисляем, что
+    // именно не прошло, чтобы это можно было доделать руками.
+    alert(
+      `Перенесено ${transferred} из ${batch.length}.\n\n` +
+        `Не удалось:\n${failures.join("\n")}`
+    );
   };
 
   const getPaymentTab = useCallback(
@@ -992,10 +1063,7 @@ const CreditPage = () => {
       CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
       CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
       creditTypeId: creditTypeId || undefined,
-      sortBy:
-        sortConfig.key !== null
-          ? columnToApiSortMap[sortConfig.key]
-          : undefined,
+      sortBy: sortConfig.key ?? undefined,
       sortDirection: sortConfig.direction,
       ...filters,
     };
@@ -1118,20 +1186,19 @@ const CreditPage = () => {
     return () => observer.disconnect();
   }, [isListMode, hasMore, isLoading, isLoadingMore, accumulatedItems.length]);
 
-  const handleSort = (columnIndex: number) => {
-    if (!columnToApiSortMap[columnIndex]) return;
-
+  // Повторный клик по активному пункту переключает направление, поэтому одна
+  // и та же кнопка даёт и убывание, и возрастание.
+  // Первый клик — по убыванию: на «Просрочке» в первую очередь нужны самые
+  // крупные долги, а не нулевые.
+  const handleSortChange = (key: string | null) => {
+    setCurrentPage(1);
+    setSelectedRows([]);
     setSortConfig((prev) => {
-      if (prev.key === columnIndex) {
-        return {
-          key: columnIndex,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
+      if (key === null) return { key: null, direction: "desc" };
+      if (prev.key === key) {
+        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
       }
-      return {
-        key: columnIndex,
-        direction: "asc",
-      };
+      return { key, direction: "desc" };
     });
   };
 
@@ -1303,10 +1370,7 @@ const CreditPage = () => {
             dateFrom: fromDate ? new Date(fromDate) : undefined,
             dateTo: toDate ? new Date(toDate) : undefined,
             creditTypeId: creditTypeId || undefined,
-            sortBy:
-              sortConfig.key !== null
-                ? columnToApiSortMap[sortConfig.key]
-                : undefined,
+            sortBy: sortConfig.key ?? undefined,
             sortDirection: sortConfig.direction,
             ...filters,
           };
@@ -1485,7 +1549,10 @@ const CreditPage = () => {
       color: "#3B82F6",
     },
     {
-      label: "Выбрать источник финансирования",
+      label:
+        selectedRows.length > 1
+          ? `Перенести в активные (${selectedRows.length})`
+          : "Выбрать источник финансирования",
       action: handleSelectFundingSource,
       color: "#6B7280",
       shouldShow: (rowData: any[]) =>
@@ -1866,6 +1933,37 @@ const CreditPage = () => {
                 hideClearButton={false}
               />
             </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Сортировка</FilterSlotLabel>
+              <SortChipRow>
+                {SORT_OPTIONS.map((option) => {
+                  const isActive = sortConfig.key === option.key;
+                  return (
+                    <SortChip
+                      key={option.key ?? "default"}
+                      type="button"
+                      $active={isActive}
+                      onClick={() => handleSortChange(option.key)}
+                      title={
+                        option.key === null
+                          ? "Порядок по умолчанию"
+                          : isActive
+                          ? "Нажмите ещё раз, чтобы изменить направление"
+                          : "Сортировать по убыванию"
+                      }
+                    >
+                      {option.label}
+                      {isActive && option.key !== null && (
+                        <SortArrow>
+                          {sortConfig.direction === "asc" ? "↑" : "↓"}
+                        </SortArrow>
+                      )}
+                    </SortChip>
+                  );
+                })}
+              </SortChipRow>
+            </FilterSlot>
           </FilterGrid>
 
           <FilterGroupRow>
@@ -2135,6 +2233,7 @@ const CreditPage = () => {
         id={viewingCreditId || 0}
         isOpen={isViewModalOpen}
         onClose={handleCloseViewModal}
+        onOpenCredit={(newId) => setViewingCreditId(newId)}
       />
 
       <PrintOptionModal
@@ -2163,7 +2262,7 @@ const CreditPage = () => {
         isOpen={isInvestorSelectModalOpen}
         onClose={() => {
           setIsInvestorSelectModalOpen(false);
-          setSelectedCreditForFunding(null);
+          setCreditsForFunding([]);
         }}
         onSubmit={handleFundingSourceSubmit}
         includePools={true}
@@ -2698,6 +2797,39 @@ const FilterSlotLabel = styled.span`
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+`;
+
+const SortChipRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+const SortChip = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid
+    ${({ $active }) => ($active ? "#007d88" : "rgba(209, 213, 219, 1)")};
+  background: ${({ $active }) => ($active ? "#e6f4f5" : "#ffffff")};
+  color: ${({ $active }) => ($active ? "#00666f" : "#4b5563")};
+  font-size: 12px;
+  font-weight: ${({ $active }) => ($active ? 600 : 500)};
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: #007d88;
+    color: #00666f;
+  }
+`;
+
+const SortArrow = styled.span`
+  font-size: 11px;
+  line-height: 1;
 `;
 
 const SummaryStrip = styled.div`

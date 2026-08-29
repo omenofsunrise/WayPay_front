@@ -68,6 +68,7 @@ interface ViewCreditModalProps {
   id: number;
   isOpen: boolean;
   onClose: () => void;
+  onOpenCredit?: (id: number) => void;
 }
 
 type CreditTab = "client" | "payments" | "products" | "guarantor" | "notes";
@@ -267,6 +268,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   id,
   isOpen,
   onClose,
+  onOpenCredit,
 }) => {
   const {
     notes: initialNotes,
@@ -1852,6 +1854,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                                 <RelatedCreditCard
                                   key={`c-${c.id}`}
                                   $status={c.status}
+                                  $clickable={!!onOpenCredit}
+                                  onClick={() => onOpenCredit?.(c.id)}
                                 >
                                   <RelatedCardLeft>
                                     <RelatedCardIcon>
@@ -3010,7 +3014,7 @@ const getRelatedStatusColors = (status: string) => {
   return { bg: "#E0F2F1", border: "#80CBC4", color: "#00695C" };
 };
 
-const RelatedCreditCard = styled.div<{ $status: string }>`
+const RelatedCreditCard = styled.div<{ $status: string; $clickable?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3020,6 +3024,7 @@ const RelatedCreditCard = styled.div<{ $status: string }>`
   border: 1px solid #e2e8f0;
   background-color: #ffffff;
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
 
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);

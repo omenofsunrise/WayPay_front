@@ -28,12 +28,14 @@ const EVENT_LABEL: Record<BotEventType, string> = {
   CreatedCredit: "Создание рассрочки",
   CreatedPayment: "Создание платежа",
   ClientBirthdate: "День рождения клиента",
+  ComingPayment: "Приближающийся платёж",
 };
 
 const EVENT_OPTIONS: BotEventType[] = [
   "CreatedCredit",
   "CreatedPayment",
   "ClientBirthdate",
+  "ComingPayment",
 ];
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
