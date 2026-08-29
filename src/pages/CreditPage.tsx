@@ -132,12 +132,11 @@ interface EmptyStarIconProps {
 // Ключи должны совпадать с кейсами CreditSortingExtensions.ApplySorting на
 // бэке — сортировка серверная, произвольную строку он молча проигнорирует и
 // отдаст порядок по умолчанию (id по убыванию).
-// Сортировки по дням просрочки здесь нет: такого кейса на бэке пока не
-// существует, а отсортировать на клиенте нельзя — пагинация серверная, и
-// переставились бы только строки текущей страницы.
 const SORT_OPTIONS: { key: string | null; label: string }[] = [
   { key: null, label: "По умолчанию" },
   { key: "debt", label: "Сумма просрочки" },
+  { key: "overdue_days", label: "Дни просрочки" },
+  { key: "upcoming", label: "Приближающийся платёж" },
   { key: "amount", label: "Сумма договора" },
   { key: "rest", label: "Остаток" },
   { key: "payed", label: "Уплачено" },
@@ -1073,8 +1072,14 @@ const CreditPage = () => {
 
     if (isListMode && result && !signal.aborted) {
       const items = result.items || [];
+      const existingIds = new Set(accumulatedItemsRef.current.map((c) => c.id));
       const next =
-        currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
+        currentPage === 1
+          ? items
+          : [
+              ...accumulatedItemsRef.current,
+              ...items.filter((c) => !existingIds.has(c.id)),
+            ];
       accumulatedItemsRef.current = next;
       setAccumulatedItems(next);
       setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
@@ -2234,6 +2239,7 @@ const CreditPage = () => {
         id={viewingCreditId || 0}
         isOpen={isViewModalOpen}
         onClose={handleCloseViewModal}
+        onOpenCredit={(newId) => setViewingCreditId(newId)}
       />
 
       <PrintOptionModal
