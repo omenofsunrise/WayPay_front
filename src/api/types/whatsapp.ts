@@ -367,6 +367,7 @@ export interface AddBotResponseRequest {
 export interface SetBotEventRequest {
   botId: number;
   eventType: BotEventType;
+  eventDays?: number | null;
 }
 
 export interface AddBotKeywordRequest {
