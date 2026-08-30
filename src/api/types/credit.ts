@@ -111,6 +111,7 @@ export interface CreditParams extends PaginationParams {
   clientId?: number;
   includeAllStates?: boolean;
   Terminated?: boolean;
+  clientAddress?: string;
 }
 
 export interface CreditDocs {

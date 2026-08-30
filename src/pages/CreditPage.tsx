@@ -218,6 +218,9 @@ const CreditPage = () => {
       ? savedFilters.creditTypeId
       : null
   );
+  const [clientAddress, setClientAddress] = useState<string>(
+    () => savedFilters?.clientAddress ?? ""
+  );
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
     direction: "asc" | "desc";
@@ -657,6 +660,7 @@ const CreditPage = () => {
       toCreationDate,
       objectType,
       creditTypeId,
+      clientAddress,
       activeTab,
       filters,
     };
@@ -673,6 +677,7 @@ const CreditPage = () => {
     toCreationDate,
     objectType,
     creditTypeId,
+    clientAddress,
     activeTab,
     filters,
   ]);
@@ -688,6 +693,7 @@ const CreditPage = () => {
     if (fromCreationDate) count++;
     if (toCreationDate) count++;
     if (objectType) count++;
+    if (clientAddress) count++;
 
     // Исключаем фильтры от вкладок из подсчета
     const filterKeys = Object.keys(filters);
@@ -722,6 +728,7 @@ const CreditPage = () => {
     toCreationDate,
     objectType,
     creditTypeId,
+    clientAddress,
     filters,
     activeTab,
   ]);
@@ -739,6 +746,7 @@ const CreditPage = () => {
           fromCreationDate ||
           toCreationDate ||
           objectType ||
+          clientAddress ||
           (creditTypeId !== null && creditTypeId !== undefined)
       ) ||
       (Object.keys(filters).length > 0 &&
@@ -767,6 +775,7 @@ const CreditPage = () => {
     toCreationDate,
     objectType,
     creditTypeId,
+    clientAddress,
     filters,
   ]);
 
@@ -781,6 +790,7 @@ const CreditPage = () => {
     setToCreationDate("");
     setObjectType("");
     setCreditTypeId(null);
+    setClientAddress("");
 
     // Сохраняем только фильтры от текущей вкладки
     let newFilters = {};
@@ -1063,6 +1073,7 @@ const CreditPage = () => {
       CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
       CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
       creditTypeId: creditTypeId || undefined,
+      clientAddress: clientAddress || undefined,
       sortBy: sortConfig.key ?? undefined,
       sortDirection: sortConfig.direction,
       ...filters,
@@ -1092,6 +1103,7 @@ const CreditPage = () => {
     toCreationDate,
     fromCreationDate,
     creditTypeId,
+    clientAddress,
     sortConfig,
     filters,
     contractNumber,
@@ -1931,6 +1943,19 @@ const CreditPage = () => {
                 placeholder="Любая"
                 customPlaceholder="Папка"
                 hideClearButton={false}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Адрес / Район</FilterSlotLabel>
+              <CustomInput
+                inputType="text"
+                placeholder="Поиск по адресу"
+                value={clientAddress}
+                onChange={(e) => {
+                  setClientAddress(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </FilterSlot>
 
