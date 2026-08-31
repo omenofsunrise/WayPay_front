@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import styled from "styled-components";
-import CustomTable, { type RowStyle } from "../../components/ui/tables/CustomTable";
+import CustomTable, {
+  type RowStyle,
+} from "../../components/ui/tables/CustomTable";
 import Pagination from "../../components/ui/fields/CustomPagination";
 import PaginationLayout from "../../components/ui/Layouts/PaginationLayout";
 import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
@@ -26,10 +28,13 @@ import {
   sendCustomWhatsAppMessage,
 } from "../../utils/sendWhatsAppMessage";
 import useSender from "../../api/hooks/useSender";
+import scheduleService from "../../api/services/scheduleService";
+import type { VisitMode } from "../../api/types/schedule";
 
 interface ScheduleTableProps {
   isListMode: boolean;
   pageSize: number;
+  shouldBeVisited?: boolean;
 }
 
 interface SelectedEntity {
@@ -77,39 +82,52 @@ const columnToApiSortMap: Record<number, string> = {
   3: "date",
 };
 
-const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
-  const { getList, updateSchedule, isLoading, error, scheduleData } = useSchedule();
+const ScheduleTable = ({
+  isListMode,
+  pageSize,
+  shouldBeVisited,
+}: ScheduleTableProps) => {
+  const { getList, updateSchedule, isLoading, error, scheduleData } =
+    useSchedule();
   const { createPayment } = usePayment();
   const { GetFilledGuarantorSchedule } = useSender();
 
   const [clientNameFilter, setClientNameFilter] = useState("");
   const [investorFilter, setInvestorFilter] = useState("");
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(
+    null
+  );
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
   const [tableObjectTypeName, setTableObjectTypeName] = useState("");
-  const [selectedTableObjectType, setSelectedTableObjectType] = useState<SelectedObjectType | null>(null);
-  
+  const [selectedTableObjectType, setSelectedTableObjectType] =
+    useState<SelectedObjectType | null>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
     key: number | null;
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
-  
+
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
-  const [accumulatedItems, setAccumulatedItems] = useState<ScheduleDetails[]>([]);
+  const [accumulatedItems, setAccumulatedItems] = useState<ScheduleDetails[]>(
+    []
+  );
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const accumulatedItemsRef = useRef<ScheduleDetails[]>([]);
-  
+
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [selectedScheduleForPayment, setSelectedScheduleForPayment] = useState<ScheduleDetails | null>(null);
+  const [selectedScheduleForPayment, setSelectedScheduleForPayment] =
+    useState<ScheduleDetails | null>(null);
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
-  const [selectedCalendarSchedule, setSelectedCalendarSchedule] = useState<ScheduleDetails | null>(null);
+  const [visitError, setVisitError] = useState<string | null>(null);
+  const [selectedCalendarSchedule, setSelectedCalendarSchedule] =
+    useState<ScheduleDetails | null>(null);
   const [scheduleComment, setScheduleComment] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [isSavingScheduleComment, setIsSavingScheduleComment] = useState(false);
@@ -125,7 +143,9 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
     }
   }, [isListMode]);
 
-  const displayedSchedules = isListMode ? accumulatedItems : scheduleData?.items ?? [];
+  const displayedSchedules = isListMode
+    ? accumulatedItems
+    : scheduleData?.items ?? [];
 
   const loadSchedules = useCallback(async () => {
     const params: ScheduleParams = {
@@ -135,6 +155,7 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
       dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
       dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
       creditTypeId: selectedTableObjectType?.id || undefined,
+      schouldBeVisited: shouldBeVisited || undefined,
     };
 
     if (selectedEntity && selectedEntity.id != 0) {
@@ -154,7 +175,8 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
 
     if (isListMode && result) {
       const items = result.items || [];
-      const merged = currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
+      const merged =
+        currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
       const seen = new Set<number>();
       const next = merged.filter((it) => {
         if (seen.has(it.id)) return false;
@@ -177,72 +199,124 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
     getList,
     pageSize,
     isListMode,
+    shouldBeVisited,
   ]);
 
-  const handleClientNameChange = useCallback((value: string) => {
-    setClientNameFilter(value);
-    resetPage();
-  }, [resetPage]);
+  const handleClientNameChange = useCallback(
+    (value: string) => {
+      setClientNameFilter(value);
+      resetPage();
+    },
+    [resetPage]
+  );
 
-  const handleInvestorChange = useCallback((value: string) => {
-    setInvestorFilter(value);
-    resetPage();
-  }, [resetPage]);
+  const handleSetVisited = useCallback(
+    async (schedule: ScheduleDetails, mode: VisitMode, schouldBe: boolean) => {
+      setVisitError(null);
+      try {
+        await scheduleService.setVisited({
+          currentId: schedule.id,
+          creditId: schedule.creditId,
+          mode,
+          nearestCount: mode === 2 ? 3 : null,
+          schouldBe,
+        });
+        loadSchedules();
+      } catch {
+        setVisitError("Не удалось отметить как выездной");
+      }
+    },
+    [loadSchedules]
+  );
 
-  const handleEntitySelect = useCallback((investor: {
-    id: number;
-    nickname: string;
-    fullName: string;
-    phoneNumber: string;
-    investorPie: number;
-    investmentAmount: number;
-    balance: number;
-    type?: "investor" | "pool";
-  }) => {
-    setInvestorFilter(investor.nickname || investor.fullName);
-    setSelectedEntity({
-      id: investor.id,
-      name: investor.nickname || investor.fullName,
-      type: investor.type || "investor",
-    });
-    resetPage();
-  }, [resetPage]);
+  const handleInvestorChange = useCallback(
+    (value: string) => {
+      setInvestorFilter(value);
+      resetPage();
+    },
+    [resetPage]
+  );
 
-  const handleDateFromChange = useCallback((value: string) => {
-    setDateFromFilter(value);
-    resetPage();
-  }, [resetPage]);
+  const handleEntitySelect = useCallback(
+    (investor: {
+      id: number;
+      nickname: string;
+      fullName: string;
+      phoneNumber: string;
+      investorPie: number;
+      investmentAmount: number;
+      balance: number;
+      type?: "investor" | "pool";
+    }) => {
+      setInvestorFilter(investor.nickname || investor.fullName);
+      setSelectedEntity({
+        id: investor.id,
+        name: investor.nickname || investor.fullName,
+        type: investor.type || "investor",
+      });
+      resetPage();
+    },
+    [resetPage]
+  );
 
-  const handleDateToChange = useCallback((value: string) => {
-    setDateToFilter(value);
-    resetPage();
-  }, [resetPage]);
+  const handleDateFromChange = useCallback(
+    (value: string) => {
+      setDateFromFilter(value);
+      resetPage();
+    },
+    [resetPage]
+  );
 
-  const handleObjectTypeNameChange = useCallback((value: string) => {
-    setTableObjectTypeName(value);
-    if (!value) setSelectedTableObjectType(null);
-    resetPage();
-  }, [resetPage]);
+  const handleDateToChange = useCallback(
+    (value: string) => {
+      setDateToFilter(value);
+      resetPage();
+    },
+    [resetPage]
+  );
 
-  const handleObjectTypeSelect = useCallback((type: SelectedObjectType) => {
-    setSelectedTableObjectType(type);
-    setTableObjectTypeName(type.name);
-    resetPage();
-  }, [resetPage]);
+  const handleObjectTypeNameChange = useCallback(
+    (value: string) => {
+      setTableObjectTypeName(value);
+      if (!value) setSelectedTableObjectType(null);
+      resetPage();
+    },
+    [resetPage]
+  );
 
-  const handleSort = useCallback((columnIndex: number) => {
-    if (!columnToApiSortMap[columnIndex]) return;
-    setSortConfig((prev) => ({
-      key: columnIndex,
-      direction: prev.key === columnIndex && prev.direction === "asc" ? "desc" : "asc",
-    }));
-    resetPage();
-  }, [resetPage]);
+  const handleObjectTypeSelect = useCallback(
+    (type: SelectedObjectType) => {
+      setSelectedTableObjectType(type);
+      setTableObjectTypeName(type.name);
+      resetPage();
+    },
+    [resetPage]
+  );
+
+  const handleSort = useCallback(
+    (columnIndex: number) => {
+      if (!columnToApiSortMap[columnIndex]) return;
+      setSortConfig((prev) => ({
+        key: columnIndex,
+        direction:
+          prev.key === columnIndex && prev.direction === "asc" ? "desc" : "asc",
+      }));
+      resetPage();
+    },
+    [resetPage]
+  );
 
   useEffect(() => {
     if (!isListMode) return;
     const sentinel = loadMoreSentinelRef.current;
-    if (!sentinel || !hasMore || isLoading || isLoadingMore || accumulatedItems.length === 0) return;
+    if (
+      !sentinel ||
+      !hasMore ||
+      isLoading ||
+      isLoadingMore ||
+      accumulatedItems.length === 0
+    )
+      return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -280,7 +354,7 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
           entityType: selectedEntity?.type,
           sortKey: sortConfig.key,
           sortDirection: sortConfig.direction,
-        }
+        },
       });
       window.dispatchEvent(exportEvent);
     };
@@ -294,60 +368,73 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
     dateToFilter,
     selectedTableObjectType,
     selectedEntity,
-    sortConfig
+    sortConfig,
   ]);
 
-  const handleRowClick = useCallback((_rowData: any[], rowIndex: number) => {
-    setSelectedRow(rowIndex === selectedRow ? null : rowIndex);
-  }, [selectedRow]);
+  const handleRowClick = useCallback(
+    (_rowData: any[], rowIndex: number) => {
+      setSelectedRow(rowIndex === selectedRow ? null : rowIndex);
+    },
+    [selectedRow]
+  );
 
-  const handleRowDoubleClick = useCallback((rowData: any[]) => {
-    const schedule = displayedSchedules.find(
-      (s) => s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
-    );
-    if (schedule) {
-      setViewingCreditId(schedule.creditId);
-      setIsViewModalOpen(true);
-    }
-  }, [displayedSchedules]);
+  const handleRowDoubleClick = useCallback(
+    (rowData: any[]) => {
+      const schedule = displayedSchedules.find(
+        (s) =>
+          s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
+      );
+      if (schedule) {
+        setViewingCreditId(schedule.creditId);
+        setIsViewModalOpen(true);
+      }
+    },
+    [displayedSchedules]
+  );
 
-  const handleOpenPaymentModal = useCallback(async (schedule: ScheduleDetails) => {
-    try {
-      const credit = await creditService.getCreditById(schedule.creditId);
-      setSelectedCredit(credit);
-      setSelectedScheduleForPayment(schedule);
-      setIsPaymentModalOpen(true);
-    } catch (error) {
-      console.error("Ошибка при загрузке данных кредита:", error);
-      alert("Не удалось загрузить данные кредита");
-    }
-  }, []);
+  const handleOpenPaymentModal = useCallback(
+    async (schedule: ScheduleDetails) => {
+      try {
+        const credit = await creditService.getCreditById(schedule.creditId);
+        setSelectedCredit(credit);
+        setSelectedScheduleForPayment(schedule);
+        setIsPaymentModalOpen(true);
+      } catch (error) {
+        console.error("Ошибка при загрузке данных кредита:", error);
+        alert("Не удалось загрузить данные кредита");
+      }
+    },
+    []
+  );
 
-  const handleSavePayment = useCallback(async (paymentData: {
-    paymentDate: string;
-    principalAmount: number;
-    paymentMethod: "cash" | "card";
-    bankCardId?: number;
-  }) => {
-    try {
-      if (!selectedScheduleForPayment) return;
-      const paymentRequest = {
-        creditId: selectedScheduleForPayment.creditId,
-        paymentAmount: paymentData.principalAmount,
-        datePayment: paymentData.paymentDate,
-        type: paymentData.paymentMethod,
-        bankCardId: paymentData.bankCardId,
-      };
-      await createPayment(paymentRequest);
-      await loadSchedules();
-      setIsPaymentModalOpen(false);
-      setSelectedScheduleForPayment(null);
-      setSelectedCredit(null);
-    } catch (error) {
-      console.error("Ошибка при сохранении платежа:", error);
-      throw error;
-    }
-  }, [selectedScheduleForPayment, createPayment, loadSchedules]);
+  const handleSavePayment = useCallback(
+    async (paymentData: {
+      paymentDate: string;
+      principalAmount: number;
+      paymentMethod: "cash" | "card";
+      bankCardId?: number;
+    }) => {
+      try {
+        if (!selectedScheduleForPayment) return;
+        const paymentRequest = {
+          creditId: selectedScheduleForPayment.creditId,
+          paymentAmount: paymentData.principalAmount,
+          datePayment: paymentData.paymentDate,
+          type: paymentData.paymentMethod,
+          bankCardId: paymentData.bankCardId,
+        };
+        await createPayment(paymentRequest);
+        await loadSchedules();
+        setIsPaymentModalOpen(false);
+        setSelectedScheduleForPayment(null);
+        setSelectedCredit(null);
+      } catch (error) {
+        console.error("Ошибка при сохранении платежа:", error);
+        throw error;
+      }
+    },
+    [selectedScheduleForPayment, createPayment, loadSchedules]
+  );
 
   const openScheduleCommentModal = useCallback((schedule: ScheduleDetails) => {
     setIsViewModalOpen(false);
@@ -358,140 +445,238 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
     setIsCommentModalOpen(true);
   }, []);
 
-  const handleSaveScheduleComment = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCalendarSchedule || !scheduleDate) return;
-    setIsSavingScheduleComment(true);
-    const success = await updateSchedule({
-      id: selectedCalendarSchedule.id,
-      date: new Date(scheduleDate).toISOString(),
-      userComment: scheduleComment.trim() || null,
-    });
-    setIsSavingScheduleComment(false);
-    if (!success) {
-      alert("Не удалось сохранить комментарий");
-      return;
-    }
-    setIsCommentModalOpen(false);
-    setSelectedCalendarSchedule(null);
-    await loadSchedules();
-  }, [selectedCalendarSchedule, scheduleDate, scheduleComment, updateSchedule, loadSchedules]);
+  const handleSaveScheduleComment = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedCalendarSchedule || !scheduleDate) return;
+      setIsSavingScheduleComment(true);
+      const success = await updateSchedule({
+        id: selectedCalendarSchedule.id,
+        date: new Date(scheduleDate).toISOString(),
+        userComment: scheduleComment.trim() || null,
+      });
+      setIsSavingScheduleComment(false);
+      if (!success) {
+        alert("Не удалось сохранить комментарий");
+        return;
+      }
+      setIsCommentModalOpen(false);
+      setSelectedCalendarSchedule(null);
+      await loadSchedules();
+    },
+    [
+      selectedCalendarSchedule,
+      scheduleDate,
+      scheduleComment,
+      updateSchedule,
+      loadSchedules,
+    ]
+  );
 
-  const handleWhatsAppClick = useCallback(async (schedule: ScheduleDetails) => {
-    const success = await sendWhatsAppMessage(schedule.id, schedule.clientPhone);
-    if (success) await loadSchedules();
-  }, [loadSchedules]);
+  const handleWhatsAppClick = useCallback(
+    async (schedule: ScheduleDetails) => {
+      const success = await sendWhatsAppMessage(
+        schedule.id,
+        schedule.clientPhone
+      );
+      if (success) await loadSchedules();
+    },
+    [loadSchedules]
+  );
 
-  const handleGuarantorWhatsAppClick = useCallback(async (schedule: ScheduleDetails) => {
-    if (!schedule.guarantorPhone) return;
-    const message = await GetFilledGuarantorSchedule(schedule.id);
-    if (!message) {
-      alert("Не удалось получить сообщение для поручителя");
-      return;
-    }
-    await sendCustomWhatsAppMessage(schedule.guarantorPhone, message);
-  }, [GetFilledGuarantorSchedule]);
+  const handleGuarantorWhatsAppClick = useCallback(
+    async (schedule: ScheduleDetails) => {
+      if (!schedule.guarantorPhone) return;
+      const message = await GetFilledGuarantorSchedule(schedule.id);
+      if (!message) {
+        alert("Не удалось получить сообщение для поручителя");
+        return;
+      }
+      await sendCustomWhatsAppMessage(schedule.guarantorPhone, message);
+    },
+    [GetFilledGuarantorSchedule]
+  );
 
-  const getPaymentTab = useCallback(async (paymentId: number): Promise<PaymentTab | null> => {
-    try {
-      return await paymentService.getPaymentTab(paymentId);
-    } catch (err) {
-      console.error("Ошибка при получении данных для документа:", err);
-      return null;
-    }
-  }, []);
+  const getPaymentTab = useCallback(
+    async (paymentId: number): Promise<PaymentTab | null> => {
+      try {
+        return await paymentService.getPaymentTab(paymentId);
+      } catch (err) {
+        console.error("Ошибка при получении данных для документа:", err);
+        return null;
+      }
+    },
+    []
+  );
 
-  const paymentConfirmationGenerator = useMemo(() => 
-    new PaymentConfirmationGenerator(getPaymentTab),
+  const paymentConfirmationGenerator = useMemo(
+    () => new PaymentConfirmationGenerator(getPaymentTab),
     [getPaymentTab]
   );
 
-  const handlePrintReceipt = useCallback(async (paymentId: number) => {
-    try {
-      await paymentConfirmationGenerator.generatePaymentConfirmation(paymentId);
-      console.log("Чек успешно сгенерирован");
-    } catch (error) {
-      console.error("Ошибка при печати чека:", error);
-      alert("Платёж создан, но произошла ошибка при печати чека");
-    }
-  }, [paymentConfirmationGenerator]);
+  const handlePrintReceipt = useCallback(
+    async (paymentId: number) => {
+      try {
+        await paymentConfirmationGenerator.generatePaymentConfirmation(
+          paymentId
+        );
+        console.log("Чек успешно сгенерирован");
+      } catch (error) {
+        console.error("Ошибка при печати чека:", error);
+        alert("Платёж создан, но произошла ошибка при печати чека");
+      }
+    },
+    [paymentConfirmationGenerator]
+  );
 
   const handleCloseViewModal = useCallback(() => {
     setIsViewModalOpen(false);
     setViewingCreditId(null);
   }, []);
 
-  const tableData = useMemo(() => 
-    displayedSchedules.map((schedule) => {
-      const formattedAmount = formatMoney(String(schedule.paymentAmount ?? 0));
-      const formattedDate = formatDate(schedule.paymentDate);
+  const tableData = useMemo(
+    () =>
+      displayedSchedules.map((schedule) => {
+        const formattedAmount = formatMoney(
+          String(schedule.paymentAmount ?? 0)
+        );
+        const formattedDate = formatDate(schedule.paymentDate);
 
-      return [
-        schedule.creditId.toString(),
-        schedule.clientName,
-        formattedAmount,
-        formattedDate,
-        schedule.userComment || "—",
-        <NotifyCell>
-          <IconButton onClick={() => handleWhatsAppClick(schedule)} title={schedule.notified ? "Отправить повторно" : "Отправить уведомление"}>
-            {schedule.notified ? <CheckIcon /> : <WhatsAppIcon />}
-          </IconButton>
-          {schedule.guarantorPhone && (
-            <IconButton onClick={() => handleGuarantorWhatsAppClick(schedule)} title="Отправить данные договора поручителю">
-              <GuarantorWhatsAppIcon />
+        return [
+          schedule.creditId.toString(),
+          schedule.clientName,
+          formattedAmount,
+          formattedDate,
+          schedule.userComment || "—",
+          <NotifyCell>
+            <IconButton
+              onClick={() => handleWhatsAppClick(schedule)}
+              title={
+                schedule.notified
+                  ? "Отправить повторно"
+                  : "Отправить уведомление"
+              }
+            >
+              {schedule.notified ? <CheckIcon /> : <WhatsAppIcon />}
             </IconButton>
-          )}
-        </NotifyCell>,
-      ];
-    }),
+            {schedule.guarantorPhone && (
+              <IconButton
+                onClick={() => handleGuarantorWhatsAppClick(schedule)}
+                title="Отправить данные договора поручителю"
+              >
+                <GuarantorWhatsAppIcon />
+              </IconButton>
+            )}
+          </NotifyCell>,
+        ];
+      }),
     [displayedSchedules, handleWhatsAppClick, handleGuarantorWhatsAppClick]
   );
 
-  const rowStyles = useMemo(() => 
-    getRowStyles(displayedSchedules, selectedRow),
+  const rowStyles = useMemo(
+    () => getRowStyles(displayedSchedules, selectedRow),
     [displayedSchedules, selectedRow]
   );
 
-  const tableActions = useMemo(() => [
-    {
-      label: "Договор",
-      action: (rowData: any[]) => {
-        const schedule = displayedSchedules.find(
-          (s) => s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
-        );
-        if (schedule) {
-          setViewingCreditId(schedule.creditId);
-          setIsViewModalOpen(true);
-        }
-      },
-      color: "#007D88",
+  const findSchedule = useCallback(
+    (rowData: any[]) =>
+      displayedSchedules.find(
+        (s) =>
+          s.creditId.toString() === rowData[0] &&
+          s.clientName === rowData[1] &&
+          formatDate(s.paymentDate) === rowData[3]
+      ),
+    [displayedSchedules]
+  );
+
+  const tableActions = useCallback(
+    (rowData: any[]) => {
+      const schedule = findSchedule(rowData);
+      const byIndex = displayedSchedules.find(
+        (s) =>
+          s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
+      );
+
+      const visitActions = schedule?.shouldBeVisited
+        ? [
+            {
+              label: "Убрать из выездных",
+              action: () => handleSetVisited(schedule!, 0, false),
+              color: "#EF4444",
+              dividerBefore: true,
+            },
+          ]
+        : [
+            {
+              label: "Выездной (текущий)",
+              action: () => schedule && handleSetVisited(schedule, 0, true),
+              color: "#F59E0B",
+              dividerBefore: true,
+            },
+            {
+              label: "Выездной (все по договору)",
+              action: () => schedule && handleSetVisited(schedule, 3, true),
+              color: "#F59E0B",
+            },
+            {
+              label: "Выездной (ближайшие 3)",
+              action: () => schedule && handleSetVisited(schedule, 2, true),
+              color: "#F59E0B",
+            },
+            {
+              label: "Выездной (все клиента)",
+              action: () => schedule && handleSetVisited(schedule, 1, true),
+              color: "#F59E0B",
+            },
+          ];
+
+      return [
+        {
+          label: "Договор",
+          action: () => {
+            if (byIndex) {
+              setViewingCreditId(byIndex.creditId);
+              setIsViewModalOpen(true);
+            }
+          },
+          color: "#007D88",
+        },
+        {
+          label: "Добавить платёж",
+          action: () => {
+            if (byIndex) handleOpenPaymentModal(byIndex);
+          },
+          color: "#008b8b",
+        },
+        {
+          label: "Дата/комментарий",
+          action: (_rd: any[], rowIndex: number) => {
+            const s = displayedSchedules[rowIndex];
+            if (s) openScheduleCommentModal(s);
+          },
+          color: "#3B82F6",
+        },
+        ...visitActions,
+      ];
     },
-    {
-      label: "Добавить платёж",
-      action: (rowData: any[]) => {
-        const schedule = displayedSchedules.find(
-          (s) => s.creditId.toString() === rowData[0] && s.clientName === rowData[1]
-        );
-        if (schedule) handleOpenPaymentModal(schedule);
-      },
-      color: "#008b8b",
-    },
-    {
-      label: "Дата/комментарий",
-      action: (_rowData: any[], rowIndex: number) => {
-        const schedule = displayedSchedules[rowIndex];
-        if (schedule) openScheduleCommentModal(schedule);
-      },
-      color: "#3B82F6",
-    },
-  ], [displayedSchedules, handleOpenPaymentModal, openScheduleCommentModal]);
+    [
+      displayedSchedules,
+      findSchedule,
+      handleOpenPaymentModal,
+      openScheduleCommentModal,
+      handleSetVisited,
+    ]
+  );
 
   const totalAmount = useMemo(() => {
-    return displayedSchedules.reduce((sum, item) => sum + (item.paymentAmount || 0), 0);
+    return displayedSchedules.reduce(
+      (sum, item) => sum + (item.paymentAmount || 0),
+      0
+    );
   }, [displayedSchedules]);
 
-  const totalCount = isListMode 
-    ? accumulatedItems.length 
+  const totalCount = isListMode
+    ? accumulatedItems.length
     : scheduleData?.totalCount || 0;
 
   return (
@@ -526,10 +711,18 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
               />
             </InputWrapper>
             <DateInputWrapper>
-              <CustomCalendar prefix="От" value={dateFromFilter} onChange={handleDateFromChange} />
+              <CustomCalendar
+                prefix="От"
+                value={dateFromFilter}
+                onChange={handleDateFromChange}
+              />
             </DateInputWrapper>
             <DateInputWrapper>
-              <CustomCalendar prefix="До" value={dateToFilter} onChange={handleDateToChange} />
+              <CustomCalendar
+                prefix="До"
+                value={dateToFilter}
+                onChange={handleDateToChange}
+              />
             </DateInputWrapper>
           </FilterFieldItem>
         </FilterField>
@@ -542,57 +735,70 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
             Ожидается: <b>{totalCount}</b>
           </SummaryItem>
           <SummaryItem>
-            Сумма ожидаемых платежей: <b>{formatMoney(totalAmount.toString())}</b>
+            Сумма ожидаемых платежей:{" "}
+            <b>{formatMoney(totalAmount.toString())}</b>
           </SummaryItem>
         </SummaryBlock>
       )}
 
-      {isLoading && (!isListMode || displayedSchedules.length === 0) && <div>Загрузка...</div>}
-      {error && <div>Ошибка: {error}</div>}
-
-      {!error && (!isLoading || (isListMode && displayedSchedules.length > 0)) && (
-        <>
-          <CustomTable
-            columns={[
-              { name: "Договор №", isSortable: true },
-              { name: "ФИО", isSortable: true, align: "left" },
-              { name: "Платёж", isSortable: true, align: "right" },
-              { name: "Дата платежа", isSortable: true, align: "right" },
-              { name: "Комментарий", align: "left" },
-              { name: "Уведомлён", align: "center" },
-            ]}
-            data={tableData}
-            onSort={handleSort}
-            onRowClick={handleRowClick}
-            onRowDoubleClick={handleRowDoubleClick}
-            sortConfig={sortConfig}
-            rowStyles={rowStyles}
-            selectedRow={selectedRow}
-            contextMenuActions={tableActions}
-          />
-
-          {isListMode ? (
-            <>
-              {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
-              {isLoadingMore ? (
-                <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
-              ) : (
-                <ListBottomSpacer />
-              )}
-            </>
-          ) : (
-            <PaginationLayout>
-              <CountInfoTitle total={scheduleData?.totalCount || 0} />
-              <Pagination
-                total={scheduleData?.totalCount || 0}
-                current={currentPage}
-                onChange={setCurrentPage}
-                itemsPerPage={pageSize}
-              />
-            </PaginationLayout>
-          )}
-        </>
+      {isLoading && (!isListMode || displayedSchedules.length === 0) && (
+        <div>Загрузка...</div>
       )}
+      {!isLoading &&
+        !error &&
+        displayedSchedules.length === 0 &&
+        shouldBeVisited && <EmptyVisited>Нет выездных клиентов</EmptyVisited>}
+      {error && <div>Ошибка: {error}</div>}
+      {visitError && (
+        <VisitErrorMessage onClick={() => setVisitError(null)}>
+          {visitError}
+        </VisitErrorMessage>
+      )}
+
+      {!error &&
+        (!isLoading || (isListMode && displayedSchedules.length > 0)) && (
+          <>
+            <CustomTable
+              columns={[
+                { name: "Договор №", isSortable: true },
+                { name: "ФИО", isSortable: true, align: "left" },
+                { name: "Платёж", isSortable: true, align: "right" },
+                { name: "Дата платежа", isSortable: true, align: "right" },
+                { name: "Комментарий", align: "left" },
+                { name: "Уведомлён", align: "center" },
+              ]}
+              data={tableData}
+              onSort={handleSort}
+              onRowClick={handleRowClick}
+              onRowDoubleClick={handleRowDoubleClick}
+              sortConfig={sortConfig}
+              rowStyles={rowStyles}
+              selectedRow={selectedRow}
+              contextMenuActions={tableActions}
+            />
+
+            {isListMode ? (
+              <>
+                {hasMore && <LoadMoreSentinel ref={loadMoreSentinelRef} />}
+                {isLoadingMore ? (
+                  <ListLoadingIndicator>Загрузка…</ListLoadingIndicator>
+                ) : (
+                  <ListBottomSpacer />
+                )}
+              </>
+            ) : (
+              <PaginationLayout>
+                <CountInfoTitle total={scheduleData?.totalCount || 0} />
+                <Pagination
+                  total={scheduleData?.totalCount || 0}
+                  current={currentPage}
+                  onChange={setCurrentPage}
+                  itemsPerPage={pageSize}
+                />
+              </PaginationLayout>
+            )}
+          </>
+        )}
 
       <NewPaymentModal
         isOpen={isPaymentModalOpen}
@@ -630,7 +836,11 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
           <CommentForm>
             <ModalField>
               <InputLabel>Дата платежа</InputLabel>
-              <CustomCalendar prefix="" value={scheduleDate} onChange={setScheduleDate} />
+              <CustomCalendar
+                prefix=""
+                value={scheduleDate}
+                onChange={setScheduleDate}
+              />
             </ModalField>
             <ModalField>
               <InputLabel>Комментарий</InputLabel>
@@ -648,7 +858,10 @@ const ScheduleTable = ({ isListMode, pageSize }: ScheduleTableProps) => {
   );
 };
 
-const getRowStyles = (schedules: ScheduleDetails[], selectedRow: number | null): Record<number, RowStyle> => {
+const getRowStyles = (
+  schedules: ScheduleDetails[],
+  selectedRow: number | null
+): Record<number, RowStyle> => {
   const styles: Record<number, RowStyle> = {};
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -658,11 +871,23 @@ const getRowStyles = (schedules: ScheduleDetails[], selectedRow: number | null):
     paymentDate.setHours(0, 0, 0, 0);
 
     if (index === selectedRow) {
-      styles[index] = { backgroundColor: "#007D88", color: "white", fontWeight: "normal" };
+      styles[index] = {
+        backgroundColor: "#007D88",
+        color: "white",
+        fontWeight: "normal",
+      };
     } else if (paymentDate < today) {
-      styles[index] = { backgroundColor: "#FFEBEE", color: "black", fontWeight: "normal" };
+      styles[index] = {
+        backgroundColor: "#FFEBEE",
+        color: "black",
+        fontWeight: "normal",
+      };
     } else {
-      styles[index] = { backgroundColor: "white", color: "black", fontWeight: "normal" };
+      styles[index] = {
+        backgroundColor: "white",
+        color: "black",
+        fontWeight: "normal",
+      };
     }
   });
 
@@ -786,6 +1011,24 @@ const SummaryItem = styled.span`
   b {
     color: #000;
   }
+`;
+
+const EmptyVisited = styled.div`
+  padding: 48px 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 15px;
+`;
+
+const VisitErrorMessage = styled.div`
+  background-color: #fee2e2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+  font-size: 14px;
 `;
 
 export default ScheduleTable;

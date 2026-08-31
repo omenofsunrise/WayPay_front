@@ -15,7 +15,7 @@ import ScheduleTable from "./ScheduleTable";
 import ScheduleCharts from "./ScheduleCharts";
 import ScheduleCalendar from "./ScheduleCalendar";
 
-type TabType = "calendar" | "schedule" | "table";
+type TabType = "calendar" | "schedule" | "table" | "visited";
 
 interface SchedulePageProps {
   initialTab?: TabType;
@@ -50,7 +50,8 @@ const SchedulePage = ({
     return savedTab &&
       (savedTab === "calendar" ||
         savedTab === "schedule" ||
-        savedTab === "table") &&
+        savedTab === "table" ||
+        savedTab === "visited") &&
       !hiddenTabs.includes(savedTab)
       ? savedTab
       : initialTab;
@@ -216,6 +217,7 @@ const SchedulePage = ({
             label: "Таблица",
             content: (
               <ScheduleTable
+                key="table"
                 isListMode={isListMode}
                 pageSize={responsivePageSize}
               />
@@ -223,6 +225,18 @@ const SchedulePage = ({
           },
         ]
       : []),
+    {
+      id: "visited",
+      label: "Выездные клиенты",
+      content: (
+        <ScheduleTable
+          key="visited"
+          isListMode={isListMode}
+          pageSize={responsivePageSize}
+          shouldBeVisited={true}
+        />
+      ),
+    },
   ];
 
   const exportButton =
