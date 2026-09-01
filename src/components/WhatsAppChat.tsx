@@ -355,7 +355,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   };
 
   const getConnectionStatusText = () => {
-    if (!foundChat) return "WhatsApp • Подключение...";
+    if (!channelStatus) return "WhatsApp • Подключение...";
     const detail = channelStatus.name || channelStatus.phoneNumber;
     if (detail) return `WhatsApp • ${detail}`;
     return channelStatus.connected
