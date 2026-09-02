@@ -46,7 +46,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   } = useWhatsApp();
 
   const [newMessage, setNewMessage] = useState("");
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -362,7 +362,7 @@ const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
     }
     const detail = channelStatus.name || channelStatus.phoneNumber;
     if (detail) return `WhatsApp • ${detail}`;
-    return channelStatus.connected
+    return channelStatus?.connected
       ? "WhatsApp • В сети"
       : "WhatsApp • Не подключён";
   };
