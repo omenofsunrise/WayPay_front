@@ -1083,8 +1083,14 @@ const CreditPage = () => {
 
     if (isListMode && result && !signal.aborted) {
       const items = result.items || [];
+      const existingIds = new Set(accumulatedItemsRef.current.map((c) => c.id));
       const next =
-        currentPage === 1 ? items : [...accumulatedItemsRef.current, ...items];
+        currentPage === 1
+          ? items
+          : [
+              ...accumulatedItemsRef.current,
+              ...items.filter((c) => !existingIds.has(c.id)),
+            ];
       accumulatedItemsRef.current = next;
       setAccumulatedItems(next);
       setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
