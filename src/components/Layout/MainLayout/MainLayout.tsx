@@ -123,7 +123,8 @@ const ContentContainer = styled.div<{ $collapsed: boolean }>`
   margin-top: var(--header-height, 56px);
   box-sizing: border-box;
   transition: margin-left 0.3s ease;
-  min-height: calc(100vh - var(--header-height, 56px));
+  height: calc(100vh - var(--header-height, 56px));
+  overflow-y: auto;
 
   @media (max-width: 1280px) {
     margin-left: 70px;
