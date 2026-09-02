@@ -28,12 +28,14 @@ const EVENT_LABEL: Record<BotEventType, string> = {
   CreatedCredit: "Создание рассрочки",
   CreatedPayment: "Создание платежа",
   ClientBirthdate: "День рождения клиента",
+  UpcomingPayment: "На приближающийся платёж",
 };
 
 const EVENT_OPTIONS: BotEventType[] = [
   "CreatedCredit",
   "CreatedPayment",
   "ClientBirthdate",
+  "UpcomingPayment",
 ];
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -871,6 +873,7 @@ const BotManagementPage: React.FC = () => {
                   label: EVENT_LABEL[opt],
                 }))}
                 disabled={eventModal.saving}
+                dropdownInPortal
               />
             </ModalField>
           </ModalForm>
