@@ -190,6 +190,7 @@ const mergeListComputedFields = (
     ...credit,
     guarantorFullname: credit.guarantorFullname || listCredit.guarantorFullname,
     guarantorPhone: credit.guarantorPhone || listCredit.guarantorPhone,
+    guarantorAddress: credit.guarantorAddress || listCredit.guarantorAddress,
     guarantorClientId: credit.guarantorClientId ?? listCredit.guarantorClientId,
     guarantorId: credit.guarantorId ?? listCredit.guarantorId,
     debt: preferNumber(credit.debt, listCredit.debt),
@@ -2059,6 +2060,16 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                                           {new Date(
                                             `${creditData.guarantorBirthdate}`
                                           ).toLocaleDateString("ru-RU")}
+                                        </InfoText>
+                                      </InfoRow>
+                                    )}
+                                    {creditData.guarantorAddress && (
+                                      <InfoRow>
+                                        <InfoIcon>
+                                          <HomeOutlinedIcon fontSize="small" />
+                                        </InfoIcon>
+                                        <InfoText>
+                                          {creditData.guarantorAddress}
                                         </InfoText>
                                       </InfoRow>
                                     )}
