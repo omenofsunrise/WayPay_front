@@ -159,11 +159,13 @@ const BotManagementPage: React.FC = () => {
     isOpen: boolean;
     rule: BotResponse | null;
     eventType: BotEventType;
+    eventDays: string;
     saving: boolean;
   }>({
     isOpen: false,
     rule: null,
     eventType: "CreatedCredit",
+    eventDays: "",
     saving: false,
   });
 
@@ -432,6 +434,7 @@ const BotManagementPage: React.FC = () => {
       isOpen: true,
       rule,
       eventType: rule.event ?? "CreatedCredit",
+      eventDays: rule.eventDays != null ? String(rule.eventDays) : "",
       saving: false,
     });
   };
@@ -442,7 +445,11 @@ const BotManagementPage: React.FC = () => {
 
     setEventModal((prev) => ({ ...prev, saving: true }));
     try {
-      await setBotEvent(eventModal.rule.id, eventModal.eventType);
+      const days =
+        eventModal.eventType === "UpcomingPayment"
+          ? Number(eventModal.eventDays) || null
+          : null;
+      await setBotEvent(eventModal.rule.id, eventModal.eventType, days);
       await loadRules();
       addToast("success", "Событие установлено");
       setEventModal((prev) => ({ ...prev, isOpen: false }));
@@ -866,6 +873,7 @@ const BotManagementPage: React.FC = () => {
                   setEventModal((prev) => ({
                     ...prev,
                     eventType: e.target.value as BotEventType,
+                    eventDays: "",
                   }))
                 }
                 options={EVENT_OPTIONS.map((opt) => ({
@@ -876,6 +884,32 @@ const BotManagementPage: React.FC = () => {
                 dropdownInPortal
               />
             </ModalField>
+            {eventModal.eventType === "UpcomingPayment" && (
+              <ModalField>
+                <ModalLabel>За сколько дней до платежа</ModalLabel>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  placeholder="Например: 3 или 7"
+                  value={eventModal.eventDays}
+                  onChange={(e) =>
+                    setEventModal((prev) => ({
+                      ...prev,
+                      eventDays: e.target.value,
+                    }))
+                  }
+                  disabled={eventModal.saving}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                  }}
+                />
+              </ModalField>
+            )}
           </ModalForm>
         </BaseModal>
       )}
