@@ -106,12 +106,7 @@ const SideMenu = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    hasRole,
-    hasPermission,
-    denyPermission,
-    authInfo,
-  } = useAuth();
+  const { hasRole, hasPermission, denyPermission, authInfo } = useAuth();
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -808,17 +803,19 @@ const SideMenu = () => {
                   >
                     Инвесторы
                   </SubMenuItem>
-                  <SubMenuItem
-                    onClick={() =>
-                      handleSubMenuItemClick(
-                        "investors-report",
-                        "/investors-report"
-                      )
-                    }
-                    $selected={selectedSideMenuItem === "investors-report"}
-                  >
-                    Отчёт для инвесторов
-                  </SubMenuItem>
+                  {!employee?.poolV2 && (
+                    <SubMenuItem
+                      onClick={() =>
+                        handleSubMenuItemClick(
+                          "investors-report",
+                          "/investors-report"
+                        )
+                      }
+                      $selected={selectedSideMenuItem === "investors-report"}
+                    >
+                      Отчёт для инвесторов
+                    </SubMenuItem>
+                  )}
                   <SubMenuItem
                     onClick={() =>
                       handleSubMenuItemClick(

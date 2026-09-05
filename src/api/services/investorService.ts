@@ -1,11 +1,23 @@
-import apiClient from '../client';
-import type { AutoSelectInvestorResponse, Investor, InvestorAgreementResponse, InvestorParams, InvestorReport } from '../types/investor';
-import type { PaginatedResponse } from '../types/common';
-import type { DeletedInvestorInfo } from '../types/deletedInvestor';
+import apiClient from "../client";
+import type {
+  AutoSelectInvestorResponse,
+  Investor,
+  InvestorAgreementResponse,
+  InvestorParams,
+  InvestorReport,
+  InvestorReportV2Response,
+} from "../types/investor";
+import type { PaginatedResponse } from "../types/common";
+import type { DeletedInvestorInfo } from "../types/deletedInvestor";
 
 class ProductService {
-  async getInvestors(params?: InvestorParams): Promise<PaginatedResponse<Investor>> {
-    const response = await apiClient.get<PaginatedResponse<Investor>>('/Investor', { params });
+  async getInvestors(
+    params?: InvestorParams
+  ): Promise<PaginatedResponse<Investor>> {
+    const response = await apiClient.get<PaginatedResponse<Investor>>(
+      "/Investor",
+      { params }
+    );
     return response.data;
   }
 
@@ -14,12 +26,15 @@ class ProductService {
     return response.data;
   }
 
-  async createInvestor(investor: Omit<Investor, 'id'>): Promise<Investor> {
-    const response = await apiClient.post<Investor>('/Investor', investor);
+  async createInvestor(investor: Omit<Investor, "id">): Promise<Investor> {
+    const response = await apiClient.post<Investor>("/Investor", investor);
     return response.data;
   }
 
-  async updateInvestor(id: number, investor: Partial<Investor>): Promise<Investor> {
+  async updateInvestor(
+    id: number,
+    investor: Partial<Investor>
+  ): Promise<Investor> {
     const response = await apiClient.put<Investor>(`/Investor/${id}`, investor);
     return response.data;
   }
@@ -28,19 +43,32 @@ class ProductService {
     await apiClient.delete(`/Investor/${id}`);
   }
 
-  async addInvestment(id: number, amount: number, date: Date): Promise<Investor> {
-    const response = await apiClient.put<Investor>(`Investor/${id}/add-investment`, { amount, date });
+  async addInvestment(
+    id: number,
+    amount: number,
+    date: Date
+  ): Promise<Investor> {
+    const response = await apiClient.put<Investor>(
+      `Investor/${id}/add-investment`,
+      { amount, date }
+    );
     return response.data;
   }
 
   async updateInvestment(id: number, amount: number, date: Date) {
-    const response = await apiClient.put(`InvestmentContribution/${id}`, { amount, date });
+    const response = await apiClient.put(`InvestmentContribution/${id}`, {
+      amount,
+      date,
+    });
     return response.data;
   }
 
-  async autoSelectInvestor(totalProductAmount: number, lastPaymentDay: Date): Promise<AutoSelectInvestorResponse> {
+  async autoSelectInvestor(
+    totalProductAmount: number,
+    lastPaymentDay: Date
+  ): Promise<AutoSelectInvestorResponse> {
     const response = await apiClient.post<AutoSelectInvestorResponse>(
-      '/Investor/auto-select',
+      "/Investor/auto-select",
       { totalProductAmount, lastPaymentDay }
     );
     return response.data;
@@ -70,7 +98,16 @@ class ProductService {
   }
 
   async getDeletedInfo(): Promise<DeletedInvestorInfo> {
-    const response = await apiClient.get<DeletedInvestorInfo>('/Investor/deleted/info');
+    const response = await apiClient.get<DeletedInvestorInfo>(
+      "/Investor/deleted/info"
+    );
+    return response.data;
+  }
+
+  async getInvestorPoolReportV2(id: number): Promise<InvestorReportV2Response> {
+    const response = await apiClient.get<InvestorReportV2Response>(
+      `/v2/InvestorPool/report/${id}`
+    );
     return response.data;
   }
 }

@@ -17,6 +17,7 @@ import SchedulePage from "./pages/Schedule/SchedulePage";
 import CreditControlPage from "./pages/CreditControlPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import InvestorReportPage from "./pages/InvestorReportPage";
+import InvestorReportV2Page from "./pages/InvestorReportV2Page";
 import BudgetPage from "./pages/FinancePage/BudgetPage";
 import { AuthProvider } from "./сontext/AuthContext";
 import AdminPanelPage from "./pages/AdminPanelPage";
@@ -496,7 +497,11 @@ function App() {
                   path="investors"
                   element={
                     <MainLayout>
-                      <InvestorPage />
+                      {authInfo?.employee?.poolV2 ? (
+                        <InvestorReportV2Page />
+                      ) : (
+                        <InvestorPage />
+                      )}
                     </MainLayout>
                   }
                 />
@@ -572,14 +577,16 @@ function App() {
                   }
                 />
 
-                <Route
-                  path="investors-report"
-                  element={
-                    <MainLayout>
-                      <InvestorReportPage />
-                    </MainLayout>
-                  }
-                />
+                {!authInfo?.employee?.poolV2 && (
+                  <Route
+                    path="investors-report"
+                    element={
+                      <MainLayout>
+                        <InvestorReportPage />
+                      </MainLayout>
+                    }
+                  />
+                )}
 
                 <Route
                   path="/whatsapp/channel/:channelId/bots"

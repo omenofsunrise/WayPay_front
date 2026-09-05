@@ -1,4 +1,4 @@
-import type { PaginationParams } from './common';
+import type { PaginationParams } from "./common";
 
 export interface Investor {
   currentIncome: any;
@@ -21,7 +21,7 @@ export interface InvestorParams extends PaginationParams {
   name?: string;
   poolId?: number;
   sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
+  sortDirection?: "asc" | "desc";
 }
 
 export interface AutoSelectInvestorRequest {
@@ -48,6 +48,14 @@ export interface InvestorReport {
   isCompany: boolean;
   delinquencyAmount: number;
   allSelfIncome: number;
+  paymentIncome: number;
+  investorPaymentIncome: number;
+  selfPaymentIncome: number;
+}
+
+export interface InvestorReportV2Response {
+  investment: number;
+  balance: number | null;
   paymentIncome: number;
   investorPaymentIncome: number;
   selfPaymentIncome: number;
