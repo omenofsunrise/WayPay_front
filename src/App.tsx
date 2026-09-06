@@ -610,7 +610,11 @@ function App() {
                   path="investors-pool"
                   element={
                     <MainLayout>
-                      <InvestorsPoolPage />
+                      {authInfo?.employee?.poolV2 ? (
+                        <Navigate to="/investors" replace />
+                      ) : (
+                        <InvestorsPoolPage />
+                      )}
                     </MainLayout>
                   }
                 />

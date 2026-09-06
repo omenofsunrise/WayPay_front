@@ -7,14 +7,10 @@ import type { Investor, InvestorReport } from "../api/types/investor";
 import useInvestor from "../api/hooks/useInvestor";
 import { formatDate } from "../utils/dateFormatter";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
-import ModalInfoTitle from "../components/ui/Text/ModalInfoTitle";
 import investmentSvg from "../assets/ui/InvestorReport/investment.svg";
 import paymentIncomeSvg from "../assets/ui/InvestorReport/PaymentIncome.svg";
 import investorIncomeScg from "../assets/ui/InvestorReport/investorIncome.svg";
-import selfIncomeSvg from "../assets/ui/InvestorReport/selfIncome.svg";
 import commonIncomeSvg from "../assets/ui/InvestorReport/commonIncome.svg";
-import shareSvg from "../assets/ui/InvestorReport/share.svg";
-import allSelfIncomeSvg from "../assets/ui/InvestorReport/AllSelfIncome.svg";
 import balanceSvg from "../assets/ui/InvestorReport/balance.svg";
 import CustomTable from "../components/ui/tables/CustomTable";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
@@ -72,7 +68,9 @@ const InvestorReportV2Page = () => {
   const [payoutAmount, setPayoutAmount] = useState<string>("");
   const [payoutSource, setPayoutSource] = useState<PayoutSource>("income");
 
-  const [dataTab, setDataTab] = useState<"general" | "current">("general");
+  const [activeTab, setActiveTab] = useState<
+    "investors" | "payouts" | "investments"
+  >("investors");
 
   const [contributionsPage, setContributionsPage] = useState(1);
   const [payoutsPage, setPayoutsPage] = useState(1);
@@ -124,6 +122,14 @@ const InvestorReportV2Page = () => {
     fetchPayouts(id);
     getContributions(id, undefined, { page: 1, pageSize });
   };
+
+  useEffect(() => {
+    if (!selectedInvestorId) return;
+    getContributions(Number(selectedInvestorId), undefined, {
+      page: contributionsPage,
+      pageSize,
+    });
+  }, [selectedInvestorId, contributionsPage, getContributions]);
 
   const handleEditInvestment = (c: InvestorContribution) => {
     const dateStr = new Date(c.date).toISOString().split("T")[0];
@@ -203,7 +209,7 @@ const InvestorReportV2Page = () => {
 
   // ── Cards ─────────────────────────────────────────────────────────────────
 
-  const renderGeneralCards = () =>
+  const renderPoolSummaryCards = () =>
     report && (
       <>
         <ReportCard>
@@ -213,15 +219,6 @@ const InvestorReportV2Page = () => {
           <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
           <ReportLabel>Инвестиция</ReportLabel>
         </ReportCard>
-        {!report.isCompany && (
-          <ReportCard>
-            <IconContainer>
-              <Icon src={shareSvg} alt="" />
-            </IconContainer>
-            <ReportValue>—</ReportValue>
-            <ReportLabel>Доля инвестора</ReportLabel>
-          </ReportCard>
-        )}
         <ReportCard>
           <IconContainer>
             <Icon src={balanceSvg} alt="" />
@@ -229,64 +226,31 @@ const InvestorReportV2Page = () => {
           <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
           <ReportLabel>Касса</ReportLabel>
         </ReportCard>
-      </>
-    );
-
-  const renderCurrentIncomeCards = () =>
-    report && (
-      <>
-        {report.isCompany ? (
-          <>
-            <ReportCard>
-              <IconContainer>
-                <Icon src={paymentIncomeSvg} alt="" />
-              </IconContainer>
-              <ReportValue>
-                {formatMoney(report.paymentIncome.toString())}
-              </ReportValue>
-              <ReportLabel>Текущий доход</ReportLabel>
-            </ReportCard>
-            <ReportCard>
-              <IconContainer>
-                <Icon src={allSelfIncomeSvg} alt="" />
-              </IconContainer>
-              <ReportValue>
-                {formatMoney(report.investorPaymentIncome.toString())}
-              </ReportValue>
-              <ReportLabel>Доход от инвесторов</ReportLabel>
-            </ReportCard>
-          </>
-        ) : (
-          <>
-            <ReportCard>
-              <IconContainer>
-                <Icon src={investorIncomeScg} alt="" />
-              </IconContainer>
-              <ReportValue>
-                {formatMoney(report.investorPaymentIncome.toString())}
-              </ReportValue>
-              <ReportLabel>Текущий доход инвестора</ReportLabel>
-            </ReportCard>
-            <ReportCard>
-              <IconContainer>
-                <Icon src={commonIncomeSvg} alt="" />
-              </IconContainer>
-              <ReportValue>
-                {formatMoney(report.selfPaymentIncome.toString())}
-              </ReportValue>
-              <ReportLabel>Текущий собственный доход</ReportLabel>
-            </ReportCard>
-            <ReportCard>
-              <IconContainer>
-                <Icon src={selfIncomeSvg} alt="" />
-              </IconContainer>
-              <ReportValue>
-                {formatMoney(report.paymentIncome.toString())}
-              </ReportValue>
-              <ReportLabel>Текущий общий доход</ReportLabel>
-            </ReportCard>
-          </>
-        )}
+        <ReportCard>
+          <IconContainer>
+            <Icon src={paymentIncomeSvg} alt="" />
+          </IconContainer>
+          <ReportValue>{formatMoney(report.paymentIncome.toString())}</ReportValue>
+          <ReportLabel>Текущий доход</ReportLabel>
+        </ReportCard>
+        <ReportCard>
+          <IconContainer>
+            <Icon src={investorIncomeScg} alt="" />
+          </IconContainer>
+          <ReportValue>
+            {formatMoney(report.investorPaymentIncome.toString())}
+          </ReportValue>
+          <ReportLabel>Доход инвесторов</ReportLabel>
+        </ReportCard>
+        <ReportCard>
+          <IconContainer>
+            <Icon src={commonIncomeSvg} alt="" />
+          </IconContainer>
+          <ReportValue>
+            {formatMoney(report.selfPaymentIncome.toString())}
+          </ReportValue>
+          <ReportLabel>Собственный доход</ReportLabel>
+        </ReportCard>
       </>
     );
 
@@ -336,7 +300,12 @@ const InvestorReportV2Page = () => {
       </ContributionActions>,
     ]) ?? [];
 
-  const payoutTableData = (payouts ?? []).map((p: InvestorPayout) => [
+  const displayedPayouts = (payouts ?? []).slice(
+    (payoutsPage - 1) * pageSize,
+    payoutsPage * pageSize
+  );
+
+  const payoutTableData = displayedPayouts.map((p: InvestorPayout) => [
     formatDate(p.payoutDate),
     p.employeeFullName,
     `${formatMoney(p.amount.toString())} ₽`,
@@ -368,114 +337,125 @@ const InvestorReportV2Page = () => {
   return (
     <PageLayout>
       <TitleField>
-        <CustomTitle>Инвесторы V2</CustomTitle>
+        <CustomTitle>Инвесторы</CustomTitle>
       </TitleField>
 
       <ContentContainer>
-        {/* Сводная таблица всех инвесторов */}
-        <ModalInfoTitle>Инвесторы</ModalInfoTitle>
-        <CustomTable
-          columns={[
-            { name: "ФИО", align: "left" },
-            { name: "Телефон", align: "left" },
-            { name: "Инвестиция", align: "left" },
-            { name: "Касса", align: "left" },
-            { name: "Доля", align: "left" },
-            { name: "Текущий доход", align: "left" },
-          ]}
-          data={investorsTableData}
-          isLoading={isLoading}
-        />
+        <PoolSummarySection>
+          <SectionTitle>Общие данные по пулу инвесторов</SectionTitle>
+          {report && (
+            <ReportDataContainer>{renderPoolSummaryCards()}</ReportDataContainer>
+          )}
+        </PoolSummarySection>
 
-        {/* Отчёт */}
         <TabsContainer>
-          <Tabs<"general" | "current">
+          <Tabs<"investors" | "payouts" | "investments">
             tabs={[
-              { id: "general", label: "Общие данные" },
-              { id: "current", label: "Текущий доход" },
+              { id: "investors", label: "Инвесторы" },
+              { id: "payouts", label: "Выплаты" },
+              { id: "investments", label: "Инвестиции" },
             ]}
-            activeTab={dataTab}
-            onChange={(tabId) => setDataTab(tabId)}
+            activeTab={activeTab}
+            onChange={(tabId) => setActiveTab(tabId)}
           />
         </TabsContainer>
 
-        {report && (
-          <ReportDataContainer>
-            {dataTab === "general" && renderGeneralCards()}
-            {dataTab === "current" && renderCurrentIncomeCards()}
-          </ReportDataContainer>
+        {activeTab === "investors" && (
+          <OperationSection>
+            <CustomTable
+              columns={[
+                { name: "ФИО", align: "left" },
+                { name: "Телефон", align: "left" },
+                { name: "Инвестиция", align: "left" },
+                { name: "Касса", align: "left" },
+                { name: "Доля", align: "left" },
+                { name: "Текущий доход", align: "left" },
+              ]}
+              data={investorsTableData}
+              isLoading={isLoading}
+            />
+          </OperationSection>
         )}
 
-        {/* Операции по конкретному инвестору */}
-        <InvestorInfoContainer>
-          <SelectWrapper>
-            <CustomSelect
-              value={selectedInvestorId}
-              onChange={handleInvestorChange}
-              options={investorOptions}
-              placeholder="Выберите инвестора"
-              disabled={isLoading}
-            />
-          </SelectWrapper>
-          {isSuperUser && (
-            <DarkCyanButton onClick={() => setIsPayoutModalOpen(true)}>
-              Выплатить инвестору
-            </DarkCyanButton>
-          )}
-        </InvestorInfoContainer>
+        {activeTab === "payouts" && (
+          <OperationSection>
+            <InvestorInfoContainer>
+              <SelectWrapper>
+                <CustomSelect
+                  value={selectedInvestorId}
+                  onChange={handleInvestorChange}
+                  options={investorOptions}
+                  placeholder="Выберите инвестора"
+                  disabled={isLoading}
+                />
+              </SelectWrapper>
+              {isSuperUser && (
+                <DarkCyanButton onClick={() => setIsPayoutModalOpen(true)}>
+                  Выплатить инвестору
+                </DarkCyanButton>
+              )}
+            </InvestorInfoContainer>
 
-        <ModalInfoTitle>История операций</ModalInfoTitle>
-
-        {/* Инвестиции */}
-        <OperationSection>
-          <SectionTitle>Инвестиции</SectionTitle>
-          <CustomTable
-            columns={[
-              { name: "Дата", isSortable: true },
-              {
-                name: "Сумма инвестиции, руб",
-                isSortable: true,
-                align: "left",
-              },
-              { name: "Действия", align: "center" },
-            ]}
-            data={contributionsTableData}
-            isLoading={isContributionsLoading}
-          />
-          <PaginationLayout>
-            <CountInfoTitle total={contributionsData?.totalCount || 0} />
-            <Pagination
-              total={contributionsData?.totalCount || 0}
-              current={contributionsPage}
-              onChange={setContributionsPage}
-              itemsPerPage={pageSize}
+            <CustomTable
+              columns={[
+                { name: "Дата выплаты", isSortable: true },
+                { name: "Выплатил", align: "left" },
+                { name: "Выплата, руб", isSortable: true, align: "left" },
+                { name: "Действия", align: "center" },
+              ]}
+              data={payoutTableData}
+              isLoading={isPayoutsLoading}
             />
-          </PaginationLayout>
-        </OperationSection>
+            <PaginationLayout>
+              <CountInfoTitle total={payouts?.length || 0} />
+              <Pagination
+                total={payouts?.length || 0}
+                current={payoutsPage}
+                onChange={setPayoutsPage}
+                itemsPerPage={pageSize}
+              />
+            </PaginationLayout>
+          </OperationSection>
+        )}
 
-        {/* Выплаты */}
-        <OperationSection>
-          <SectionTitle>Выплаты</SectionTitle>
-          <CustomTable
-            columns={[
-              { name: "Дата выплаты", isSortable: true },
-              { name: "Выплатил", align: "left" },
-              { name: "Выплата, руб", isSortable: true, align: "left" },
-              { name: "Действия", align: "center" },
-            ]}
-            data={payoutTableData}
-            isLoading={isPayoutsLoading}
-          />
-          <PaginationLayout>
-            <CountInfoTitle total={payouts?.length || 0} />
-            <Pagination
-              total={payouts?.length || 0}
-              current={payoutsPage}
-              onChange={setPayoutsPage}
-              itemsPerPage={pageSize}
+        {activeTab === "investments" && (
+          <OperationSection>
+            <InvestorInfoContainer>
+              <SelectWrapper>
+                <CustomSelect
+                  value={selectedInvestorId}
+                  onChange={handleInvestorChange}
+                  options={investorOptions}
+                  placeholder="Выберите инвестора"
+                  disabled={isLoading}
+                />
+              </SelectWrapper>
+            </InvestorInfoContainer>
+
+            <CustomTable
+              columns={[
+                { name: "Дата", isSortable: true },
+                {
+                  name: "Сумма инвестиции, руб",
+                  isSortable: true,
+                  align: "left",
+                },
+                { name: "Действия", align: "center" },
+              ]}
+              data={contributionsTableData}
+              isLoading={isContributionsLoading}
             />
-          </PaginationLayout>
-        </OperationSection>
+            <PaginationLayout>
+              <CountInfoTitle total={contributionsData?.totalCount || 0} />
+              <Pagination
+                total={contributionsData?.totalCount || 0}
+                current={contributionsPage}
+                onChange={setContributionsPage}
+                itemsPerPage={pageSize}
+              />
+            </PaginationLayout>
+          </OperationSection>
+        )}
 
         <PayoutModal
           isOpen={isPayoutModalOpen}
@@ -553,11 +533,14 @@ const InvestorReportV2Page = () => {
 
 const ContentContainer = styled.div``;
 
+const PoolSummarySection = styled.section`
+  margin-bottom: 24px;
+`;
+
 const InvestorInfoContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 32px;
   margin-bottom: 16px;
   flex-wrap: wrap;
 `;
@@ -568,7 +551,7 @@ const SelectWrapper = styled.div`
 `;
 
 const TabsContainer = styled.div`
-  margin: 30px 0 20px;
+  margin: 0 0 20px;
 `;
 
 const ReportDataContainer = styled.div`
@@ -576,7 +559,6 @@ const ReportDataContainer = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   width: 100%;
-  margin-bottom: 32px;
 `;
 
 const ReportCard = styled.div`

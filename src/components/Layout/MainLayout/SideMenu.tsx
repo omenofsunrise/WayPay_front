@@ -816,17 +816,19 @@ const SideMenu = () => {
                       Отчёт для инвесторов
                     </SubMenuItem>
                   )}
-                  <SubMenuItem
-                    onClick={() =>
-                      handleSubMenuItemClick(
-                        "investors-pool",
-                        "/investors-pool"
-                      )
-                    }
-                    $selected={selectedSideMenuItem === "investors-pool"}
-                  >
-                    Пулы инвесторов
-                  </SubMenuItem>
+                  {!employee?.poolV2 && (
+                    <SubMenuItem
+                      onClick={() =>
+                        handleSubMenuItemClick(
+                          "investors-pool",
+                          "/investors-pool"
+                        )
+                      }
+                      $selected={selectedSideMenuItem === "investors-pool"}
+                    >
+                      Пулы инвесторов
+                    </SubMenuItem>
+                  )}
                 </SubMenu>
               )}
             </DraggableRow>
