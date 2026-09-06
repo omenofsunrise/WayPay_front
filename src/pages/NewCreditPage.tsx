@@ -1277,7 +1277,7 @@ const NewCreditPage = () => {
                 </DateInputWrapper>
               </FieldGroup>
 
-              {!inDebt && isPoolV2 ? (
+              {!inDebt && !isPoolV2 ? (
                 <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
                   <Label>Инвестор / Пул</Label>
                   <EntitySelectWrapper>
