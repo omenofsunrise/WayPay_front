@@ -40,7 +40,7 @@ import CustomSelect from "../components/ui/fields/CustomSelect";
 const pageSize = 5;
 
 const InvestorReportV2Page = () => {
-  const { getInvestors, updateInvestment } = useInvestor();
+  const { getInvestors, updateInvestment, addInvestment } = useInvestor();
 
   const {
     payouts,
@@ -67,10 +67,15 @@ const InvestorReportV2Page = () => {
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState<string>("");
   const [payoutSource, setPayoutSource] = useState<PayoutSource>("income");
+  const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
+  const [investmentAmount, setInvestmentAmount] = useState("");
+  const [investmentDate, setInvestmentDate] = useState(
+    () => new Date().toISOString().split("T")[0]
+  );
 
-  const [activeTab, setActiveTab] = useState<
-    "investors" | "payouts" | "investments"
-  >("investors");
+  const [activeTab, setActiveTab] = useState<"payouts" | "investments">(
+    "payouts"
+  );
 
   const [contributionsPage, setContributionsPage] = useState(1);
   const [payoutsPage, setPayoutsPage] = useState(1);
@@ -88,6 +93,22 @@ const InvestorReportV2Page = () => {
   );
 
   const isSuperUser = hasRole("директор") || hasRole("суперадмин");
+
+  const selectedInvestor =
+    investors.find((inv) => inv.id.toString() === selectedInvestorId) ?? null;
+  const selectedInvestorLabel =
+    selectedInvestor?.nickname || selectedInvestor?.fullName || "";
+
+  const refreshInvestorsAndReport = async () => {
+    const [investorsResult, reportResult] = await Promise.all([
+      getInvestors(),
+      investorService.getInvestorPoolReportV2(),
+    ]);
+    if (investorsResult?.items) {
+      setInvestors(investorsResult.items);
+    }
+    setReport(reportResult);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -121,6 +142,30 @@ const InvestorReportV2Page = () => {
     setPayoutsPage(1);
     fetchPayouts(id);
     getContributions(id, undefined, { page: 1, pageSize });
+  };
+
+  const selectInvestorForAction = (investor: Investor) => {
+    setSelectedInvestorId(investor.id.toString());
+    setContributionsPage(1);
+    setPayoutsPage(1);
+    fetchPayouts(investor.id);
+    getContributions(investor.id, undefined, { page: 1, pageSize });
+  };
+
+  const openPayoutModalForInvestor = (investor: Investor) => {
+    selectInvestorForAction(investor);
+    setPayoutAmount("");
+    setPayoutSource("income");
+    setActiveTab("payouts");
+    setIsPayoutModalOpen(true);
+  };
+
+  const openInvestmentModalForInvestor = (investor: Investor) => {
+    selectInvestorForAction(investor);
+    setInvestmentAmount("");
+    setInvestmentDate(new Date().toISOString().split("T")[0]);
+    setActiveTab("investments");
+    setIsInvestmentModalOpen(true);
   };
 
   useEffect(() => {
@@ -180,9 +225,55 @@ const InvestorReportV2Page = () => {
       });
       setIsPayoutModalOpen(false);
       setPayoutAmount("");
-      fetchPayouts(Number(selectedInvestorId));
+      await Promise.all([
+        fetchPayouts(Number(selectedInvestorId)),
+        refreshInvestorsAndReport(),
+      ]);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSubmitInvestment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvestorId) return;
+
+    try {
+      const amount = parseMoney(investmentAmount);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Пожалуйста, введите корректную сумму инвестиции");
+        return;
+      }
+
+      const dateObj = new Date(investmentDate);
+      const today = new Date();
+
+      if (dateObj.toDateString() === today.toDateString()) {
+        dateObj.setHours(
+          today.getHours(),
+          today.getMinutes(),
+          today.getSeconds(),
+          today.getMilliseconds()
+        );
+      } else {
+        dateObj.setHours(12, 0, 0, 0);
+      }
+
+      await addInvestment(Number(selectedInvestorId), amount, dateObj);
+
+      setIsInvestmentModalOpen(false);
+      setInvestmentAmount("");
+      setInvestmentDate(today.toISOString().split("T")[0]);
+      await Promise.all([
+        refreshInvestorsAndReport(),
+        getContributions(Number(selectedInvestorId), undefined, {
+          page: contributionsPage,
+          pageSize,
+        }),
+      ]);
+    } catch (err) {
+      console.error("Ошибка при добавлении инвестиции:", err);
+      alert("Произошла ошибка при добавлении инвестиции");
     }
   };
 
@@ -257,20 +348,22 @@ const InvestorReportV2Page = () => {
   // ── Tables ────────────────────────────────────────────────────────────────
 
   const investorsTableData = investors.map((inv) => [
+    inv.id,
+    inv.nickname || "—",
     inv.fullName,
     inv.phoneNumber,
-    `${formatMoney(inv.investmentAmount.toString())} ₽`,
-    `${formatMoney(inv.balance.toString())} ₽`,
+    formatMoney(inv.investmentAmount.toString()),
+    formatMoney(inv.balance.toString()),
     `${inv.investorPie}%`,
     inv.currentIncome != null
-      ? `${formatMoney(String(inv.currentIncome))} ₽`
+      ? formatMoney(String(inv.currentIncome))
       : "—",
   ]);
 
   const contributionsTableData =
     contributionsData?.items.map((c: InvestorContribution) => [
       formatDate(c.date.toString()),
-      `${formatMoney(c.amount.toString())} ₽`,
+      formatMoney(c.amount.toString()),
       <ContributionActions>
         {!c.confirmed && (
           <DarkCyanButton
@@ -308,7 +401,7 @@ const InvestorReportV2Page = () => {
   const payoutTableData = displayedPayouts.map((p: InvestorPayout) => [
     formatDate(p.payoutDate),
     p.employeeFullName,
-    `${formatMoney(p.amount.toString())} ₽`,
+    formatMoney(p.amount.toString()),
     p.confirmed ? (
       <ConfirmedBadge />
     ) : (
@@ -334,6 +427,26 @@ const InvestorReportV2Page = () => {
     label: inv.nickname || inv.fullName,
   }));
 
+  const investorTableActions = (rowData: any[]) => {
+    const investorId = Number(rowData[0]);
+    const investor = investors.find((inv) => inv.id === investorId);
+    if (!investor) return [];
+
+    return [
+      {
+        label: "Выплатить",
+        action: () => openPayoutModalForInvestor(investor),
+        color: "#3B82F6",
+        disabled: !isSuperUser,
+      },
+      {
+        label: "Добавить инвестицию",
+        action: () => openInvestmentModalForInvestor(investor),
+        color: "#007D88",
+      },
+    ];
+  };
+
   return (
     <PageLayout>
       <TitleField>
@@ -348,10 +461,28 @@ const InvestorReportV2Page = () => {
           )}
         </PoolSummarySection>
 
+        <InvestorsSection>
+          <SectionTitle>Инвесторы</SectionTitle>
+          <CustomTable
+            columns={[
+              { name: "ID", isHidden: true },
+              { name: "Никнейм", align: "left" },
+              { name: "ФИО", align: "left" },
+              { name: "Телефон", align: "left" },
+              { name: "Инвестиция", align: "left" },
+              { name: "Касса", align: "left" },
+              { name: "Доля", align: "left" },
+              { name: "Текущий доход", align: "left" },
+            ]}
+            data={investorsTableData}
+            isLoading={isLoading}
+            contextMenuActions={investorTableActions}
+          />
+        </InvestorsSection>
+
         <TabsContainer>
-          <Tabs<"investors" | "payouts" | "investments">
+          <Tabs<"payouts" | "investments">
             tabs={[
-              { id: "investors", label: "Инвесторы" },
               { id: "payouts", label: "Выплаты" },
               { id: "investments", label: "Инвестиции" },
             ]}
@@ -359,23 +490,6 @@ const InvestorReportV2Page = () => {
             onChange={(tabId) => setActiveTab(tabId)}
           />
         </TabsContainer>
-
-        {activeTab === "investors" && (
-          <OperationSection>
-            <CustomTable
-              columns={[
-                { name: "ФИО", align: "left" },
-                { name: "Телефон", align: "left" },
-                { name: "Инвестиция", align: "left" },
-                { name: "Касса", align: "left" },
-                { name: "Доля", align: "left" },
-                { name: "Текущий доход", align: "left" },
-              ]}
-              data={investorsTableData}
-              isLoading={isLoading}
-            />
-          </OperationSection>
-        )}
 
         {activeTab === "payouts" && (
           <OperationSection>
@@ -390,8 +504,15 @@ const InvestorReportV2Page = () => {
                 />
               </SelectWrapper>
               {isSuperUser && (
-                <DarkCyanButton onClick={() => setIsPayoutModalOpen(true)}>
-                  Выплатить инвестору
+                <DarkCyanButton
+                  onClick={() =>
+                    selectedInvestor && openPayoutModalForInvestor(selectedInvestor)
+                  }
+                  disabled={!selectedInvestor}
+                >
+                  {selectedInvestorLabel
+                    ? `Выплатить: ${selectedInvestorLabel}`
+                    : "Выплатить инвестору"}
                 </DarkCyanButton>
               )}
             </InvestorInfoContainer>
@@ -485,6 +606,48 @@ const InvestorReportV2Page = () => {
           isCompany={report?.isCompany || false}
         />
 
+        {isInvestmentModalOpen && (
+          <BaseModal
+            title={
+              selectedInvestorLabel
+                ? `Добавить инвестицию: ${selectedInvestorLabel}`
+                : "Добавить инвестицию"
+            }
+            onClose={() => setIsInvestmentModalOpen(false)}
+            onCancel={() => setIsInvestmentModalOpen(false)}
+            onSave={handleSubmitInvestment}
+            isSaveDisabled={
+              !investmentAmount || parseMoney(investmentAmount) <= 0
+            }
+            mode="create"
+          >
+            <form onSubmit={handleSubmitInvestment} style={{ padding: "20px" }}>
+              <InputRow>
+                <InputLabel>Сумма инвестиции:</InputLabel>
+                <InputContainer>
+                  <CustomInput
+                    name="investmentAmount"
+                    inputType="rubles"
+                    placeholder="Сумма"
+                    value={investmentAmount}
+                    onChange={(e) => setInvestmentAmount(e.target.value)}
+                  />
+                </InputContainer>
+              </InputRow>
+              <InputRow>
+                <InputLabel>Дата инвестиции</InputLabel>
+                <InputContainer>
+                  <CustomCalendar
+                    placeholder="Дата инвестиции"
+                    value={investmentDate}
+                    onChange={(dateString) => setInvestmentDate(dateString)}
+                  />
+                </InputContainer>
+              </InputRow>
+            </form>
+          </BaseModal>
+        )}
+
         {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
           <BaseModal
             title="Редактирование инвестиции"
@@ -534,6 +697,10 @@ const InvestorReportV2Page = () => {
 const ContentContainer = styled.div``;
 
 const PoolSummarySection = styled.section`
+  margin-bottom: 24px;
+`;
+
+const InvestorsSection = styled.section`
   margin-bottom: 24px;
 `;
 
