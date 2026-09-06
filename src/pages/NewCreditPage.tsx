@@ -1292,7 +1292,7 @@ const NewCreditPage = () => {
                     />
                   </EntitySelectWrapper>
                 </FieldGroup>
-              ) : (
+              ) : inDebt ? (
                 <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
                   <Label>Комментарий к долгу</Label>
                   <EntitySelectWrapper>
@@ -1303,7 +1303,7 @@ const NewCreditPage = () => {
                     />
                   </EntitySelectWrapper>
                 </FieldGroup>
-              )}
+              ) : null}
 
               <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
                 <Label>Имя договора (необязательно)</Label>
