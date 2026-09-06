@@ -617,6 +617,8 @@ const NewCreditPage = () => {
     }
   }, []);
 
+  const requiresInvestmentSource = !inDebt && !isPoolV2;
+
   const validateInvestorActivePeriod = useCallback((): boolean => {
     if (inDebt) {
       setValidationError(null);
@@ -627,7 +629,7 @@ const NewCreditPage = () => {
       !contractDate ||
       !months ||
       parseInt(months) <= 0 ||
-      (!investor && !selectedPool)
+      (requiresInvestmentSource && !investor && !selectedPool)
     ) {
       setValidationError(null);
       return true;
@@ -699,7 +701,15 @@ const NewCreditPage = () => {
       setValidationError(null);
       return true;
     }
-  }, [contractDate, months, paymentDue, investor, selectedPool, inDebt]);
+  }, [
+    contractDate,
+    months,
+    paymentDue,
+    investor,
+    selectedPool,
+    inDebt,
+    requiresInvestmentSource,
+  ]);
 
   useEffect(() => {
     validateInvestorActivePeriod();
@@ -714,7 +724,11 @@ const NewCreditPage = () => {
   ]);
 
   const handleCreateOrUpdateCredit = useCallback(async () => {
-    if (!client || !contractDate || (!inDebt && !investor && !selectedPool)) {
+    if (
+      !client ||
+      !contractDate ||
+      (requiresInvestmentSource && !investor && !selectedPool)
+    ) {
       return;
     }
 
@@ -770,7 +784,7 @@ const NewCreditPage = () => {
       };
     }
 
-    if (!inDebt) {
+    if (!inDebt && !isPoolV2) {
       if (selectedPool) {
         creditData.poolId = selectedPool.poolId || selectedPool.id;
       }
@@ -837,6 +851,8 @@ const NewCreditPage = () => {
     isEditMode,
     id,
     inDebt,
+    isPoolV2,
+    requiresInvestmentSource,
   ]);
 
   const generateSchedulePreview = useCallback(async () => {
@@ -996,7 +1012,7 @@ const NewCreditPage = () => {
     client &&
     contractDate &&
     startPaymentDate &&
-    (inDebt || investor || selectedPool) &&
+    (!requiresInvestmentSource || investor || selectedPool) &&
     !validationError &&
     !hasEmptyProductNames &&
     products.length > 0 &&
