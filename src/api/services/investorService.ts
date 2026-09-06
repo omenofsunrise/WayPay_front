@@ -104,9 +104,9 @@ class ProductService {
     return response.data;
   }
 
-  async getInvestorPoolReportV2(id: number): Promise<InvestorReportV2Response> {
-    const response = await apiClient.get<InvestorReportV2Response>(
-      `/v2/InvestorPool/report/${id}`
+  async getInvestorPoolReportV2(): Promise<InvestorReport> {
+    const response = await apiClient.get<InvestorReport>(
+      "/InvestorPool/report/v2"
     );
     return response.data;
   }

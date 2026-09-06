@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from "../api/types/investor";
 import useInvestor from "../api/hooks/useInvestor";
-import CustomSelect from "../components/ui/fields/CustomSelect";
 import { formatDate } from "../utils/dateFormatter";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
 import ModalInfoTitle from "../components/ui/Text/ModalInfoTitle";
@@ -16,6 +15,7 @@ import selfIncomeSvg from "../assets/ui/InvestorReport/selfIncome.svg";
 import commonIncomeSvg from "../assets/ui/InvestorReport/commonIncome.svg";
 import shareSvg from "../assets/ui/InvestorReport/share.svg";
 import allSelfIncomeSvg from "../assets/ui/InvestorReport/AllSelfIncome.svg";
+import balanceSvg from "../assets/ui/InvestorReport/balance.svg";
 import CustomTable from "../components/ui/tables/CustomTable";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import GrayButton from "../components/ui/Buttons/GrayButton";
@@ -29,8 +29,6 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import Pagination from "../components/ui/fields/CustomPagination";
 import Tabs from "../components/ui/fields/Tabs";
-import useInvestorPool from "../api/hooks/useInvestorPool";
-import type { Reinvestment } from "../api/types/investorPool";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import {
   InputContainer,
@@ -40,17 +38,13 @@ import {
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { FaLock, FaUnlock } from "react-icons/fa";
+import investorService from "../api/services/investorService";
+import CustomSelect from "../components/ui/fields/CustomSelect";
 
 const pageSize = 5;
 
 const InvestorReportV2Page = () => {
-  const {
-    getInvestors,
-    currentInvestor,
-    getInvestorById,
-    getInvestorReport,
-    updateInvestment,
-  } = useInvestor();
+  const { getInvestors, updateInvestment } = useInvestor();
 
   const {
     payouts,
@@ -68,7 +62,6 @@ const InvestorReportV2Page = () => {
     makeAction: makeContributionAction,
   } = useInvestorContribution();
 
-  const { reinvestInvestorPool, getReinvestments } = useInvestorPool();
   const { hasRole } = useAuth();
 
   const [investors, setInvestors] = useState<Investor[]>([]);
@@ -80,18 +73,9 @@ const InvestorReportV2Page = () => {
   const [payoutSource, setPayoutSource] = useState<PayoutSource>("income");
 
   const [dataTab, setDataTab] = useState<"general" | "current">("general");
-  const [operationsTab, setOperationsTab] = useState<
-    "contributions" | "reinvestments"
-  >("contributions");
 
   const [contributionsPage, setContributionsPage] = useState(1);
   const [payoutsPage, setPayoutsPage] = useState(1);
-  const [reinvestmentsPage, setReinvestmentsPage] = useState(1);
-  const [reinvestmentsData, setReinvestmentsData] = useState<{
-    items: Reinvestment[];
-    totalCount: number;
-    totalPages: number;
-  } | null>(null);
 
   const [isEditInvestmentModalOpen, setIsEditInvestmentModalOpen] =
     useState(false);
@@ -111,74 +95,34 @@ const InvestorReportV2Page = () => {
     const load = async () => {
       setIsLoading(true);
       try {
-        const result = await getInvestors();
-        if (result?.items) {
-          setInvestors(result.items);
-          const first = result.items[0];
-          if (first) setSelectedInvestorId(first.id.toString());
+        const [investorsResult, reportResult] = await Promise.all([
+          getInvestors(),
+          investorService.getInvestorPoolReportV2(),
+        ]);
+        if (investorsResult?.items) {
+          setInvestors(investorsResult.items);
+          const first = investorsResult.items[0];
+          if (first) {
+            setSelectedInvestorId(first.id.toString());
+            fetchPayouts(first.id);
+            getContributions(first.id, undefined, { page: 1, pageSize });
+          }
         }
+        setReport(reportResult);
       } finally {
         setIsLoading(false);
       }
     };
     load();
-  }, [getInvestors]);
-
-  const fetchReinvestments = useCallback(
-    async (investorId: number, page: number) => {
-      const inv = investors.find((i) => i.id === investorId);
-      if (!inv?.poolId) return;
-      const data = await getReinvestments(
-        inv.poolId,
-        { page, pageSize },
-        investorId
-      );
-      if (data) setReinvestmentsData(data as any);
-    },
-    [investors, getReinvestments]
-  );
-
-  useEffect(() => {
-    if (!selectedInvestorId) return;
-    const id = Number(selectedInvestorId);
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        await getInvestorById(id);
-        const rep = await getInvestorReport(id);
-        setReport(rep);
-        fetchPayouts(id);
-        getContributions(id, undefined, { page: contributionsPage, pageSize });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, [selectedInvestorId]);
-
-  useEffect(() => {
-    if (operationsTab === "reinvestments" && selectedInvestorId) {
-      fetchReinvestments(Number(selectedInvestorId), reinvestmentsPage);
-    }
-  }, [
-    operationsTab,
-    reinvestmentsPage,
-    selectedInvestorId,
-    fetchReinvestments,
-  ]);
+  }, []);
 
   const handleInvestorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
     setSelectedInvestorId(e.target.value);
     setContributionsPage(1);
     setPayoutsPage(1);
-    setReinvestmentsPage(1);
-  };
-
-  const handleReinvest = async () => {
-    const inv = investors.find((i) => i.id === Number(selectedInvestorId));
-    if (!inv?.poolId) return;
-    await reinvestInvestorPool(inv.poolId);
-    fetchReinvestments(Number(selectedInvestorId), reinvestmentsPage);
+    fetchPayouts(id);
+    getContributions(id, undefined, { page: 1, pageSize });
   };
 
   const handleEditInvestment = (c: InvestorContribution) => {
@@ -213,8 +157,6 @@ const InvestorReportV2Page = () => {
           page: contributionsPage,
           pageSize,
         });
-        const rep = await getInvestorReport(Number(selectedInvestorId));
-        setReport(rep);
       }
     } catch (err) {
       console.error(err);
@@ -224,13 +166,6 @@ const InvestorReportV2Page = () => {
   const handlePayoutSubmit = async () => {
     if (!selectedInvestorId || !payoutAmount || !report) return;
     const numericAmount = Number(payoutAmount.replace(/\D/g, ""));
-    const maxAllowed = report.balance;
-    if (numericAmount > maxAllowed) {
-      alert(
-        `Нельзя выплатить больше чем ${formatMoney(maxAllowed.toString())}`
-      );
-      return;
-    }
     try {
       await addPayout({
         investorId: Number(selectedInvestorId),
@@ -239,18 +174,9 @@ const InvestorReportV2Page = () => {
       });
       setIsPayoutModalOpen(false);
       setPayoutAmount("");
-      const rep = await getInvestorReport(Number(selectedInvestorId));
-      setReport(rep);
+      fetchPayouts(Number(selectedInvestorId));
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const handleDeletePayout = async (id: number) => {
-    await removePayout(id);
-    if (selectedInvestorId) {
-      const rep = await getInvestorReport(Number(selectedInvestorId));
-      setReport(rep);
     }
   };
 
@@ -275,7 +201,7 @@ const InvestorReportV2Page = () => {
     if (selectedInvestorId) fetchPayouts(Number(selectedInvestorId));
   };
 
-  // ── Render cards ──────────────────────────────────────────────────────────
+  // ── Cards ─────────────────────────────────────────────────────────────────
 
   const renderGeneralCards = () =>
     report && (
@@ -287,16 +213,22 @@ const InvestorReportV2Page = () => {
           <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
           <ReportLabel>Инвестиция</ReportLabel>
         </ReportCard>
-
         {!report.isCompany && (
           <ReportCard>
             <IconContainer>
               <Icon src={shareSvg} alt="" />
             </IconContainer>
-            <ReportValue>{currentInvestor?.investorPie}%</ReportValue>
+            <ReportValue>—</ReportValue>
             <ReportLabel>Доля инвестора</ReportLabel>
           </ReportCard>
         )}
+        <ReportCard>
+          <IconContainer>
+            <Icon src={balanceSvg} alt="" />
+          </IconContainer>
+          <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+          <ReportLabel>Касса</ReportLabel>
+        </ReportCard>
       </>
     );
 
@@ -358,21 +290,23 @@ const InvestorReportV2Page = () => {
       </>
     );
 
-  // ── Table data ────────────────────────────────────────────────────────────
+  // ── Tables ────────────────────────────────────────────────────────────────
 
   const investorsTableData = investors.map((inv) => [
     inv.fullName,
     inv.phoneNumber,
-    formatMoney(inv.investmentAmount.toString()),
-    formatMoney(inv.balance.toString()),
+    `${formatMoney(inv.investmentAmount.toString())} ₽`,
+    `${formatMoney(inv.balance.toString())} ₽`,
     `${inv.investorPie}%`,
-    inv.currentIncome != null ? formatMoney(String(inv.currentIncome)) : "—",
+    inv.currentIncome != null
+      ? `${formatMoney(String(inv.currentIncome))} ₽`
+      : "—",
   ]);
 
   const contributionsTableData =
     contributionsData?.items.map((c: InvestorContribution) => [
       formatDate(c.date.toString()),
-      formatMoney(c.amount.toString()),
+      `${formatMoney(c.amount.toString())} ₽`,
       <ContributionActions>
         {!c.confirmed && (
           <DarkCyanButton
@@ -405,7 +339,7 @@ const InvestorReportV2Page = () => {
   const payoutTableData = (payouts ?? []).map((p: InvestorPayout) => [
     formatDate(p.payoutDate),
     p.employeeFullName,
-    formatMoney(p.amount.toString()),
+    `${formatMoney(p.amount.toString())} ₽`,
     p.confirmed ? (
       <ConfirmedBadge />
     ) : (
@@ -426,23 +360,10 @@ const InvestorReportV2Page = () => {
     ),
   ]);
 
-  const reinvestmentsTableData = (reinvestmentsData?.items ?? []).map(
-    (r: Reinvestment) => [
-      formatDate(r.date.toString()),
-      r.investorNickname,
-      formatMoney(r.amount.toString()),
-    ]
-  );
-
   const investorOptions = investors.map((inv) => ({
     value: inv.id.toString(),
     label: inv.nickname || inv.fullName,
   }));
-
-  const selectedInv = investors.find(
-    (i) => i.id === Number(selectedInvestorId)
-  );
-  const hasPool = !!selectedInv?.poolId;
 
   return (
     <PageLayout>
@@ -451,14 +372,8 @@ const InvestorReportV2Page = () => {
       </TitleField>
 
       <ContentContainer>
-        {report && (
-          <CreationDate>
-            Инвестор создан {formatDate(report.createdAt)}
-          </CreationDate>
-        )}
-
-        {/* Summary table */}
-        <ModalInfoTitle>Все инвесторы</ModalInfoTitle>
+        {/* Сводная таблица всех инвесторов */}
+        <ModalInfoTitle>Инвесторы</ModalInfoTitle>
         <CustomTable
           columns={[
             { name: "ФИО", align: "left" },
@@ -472,24 +387,7 @@ const InvestorReportV2Page = () => {
           isLoading={isLoading}
         />
 
-        <InvestorInfoContainer>
-          <SelectWrapper>
-            <CustomSelect
-              value={selectedInvestorId}
-              onChange={handleInvestorChange}
-              options={investorOptions}
-              placeholder="Выберите инвестора"
-              disabled={isLoading}
-            />
-          </SelectWrapper>
-          <DarkCyanButton
-            onClick={() => setIsPayoutModalOpen(true)}
-            style={{ marginLeft: "auto" }}
-          >
-            Выплатить инвестору
-          </DarkCyanButton>
-        </InvestorInfoContainer>
-
+        {/* Отчёт */}
         <TabsContainer>
           <Tabs<"general" | "current">
             tabs={[
@@ -508,75 +406,77 @@ const InvestorReportV2Page = () => {
           </ReportDataContainer>
         )}
 
+        {/* Операции по конкретному инвестору */}
+        <InvestorInfoContainer>
+          <SelectWrapper>
+            <CustomSelect
+              value={selectedInvestorId}
+              onChange={handleInvestorChange}
+              options={investorOptions}
+              placeholder="Выберите инвестора"
+              disabled={isLoading}
+            />
+          </SelectWrapper>
+          {isSuperUser && (
+            <DarkCyanButton onClick={() => setIsPayoutModalOpen(true)}>
+              Выплатить инвестору
+            </DarkCyanButton>
+          )}
+        </InvestorInfoContainer>
+
         <ModalInfoTitle>История операций</ModalInfoTitle>
 
-        <TabsContainer>
-          <Tabs<"contributions" | "reinvestments">
-            tabs={[
-              { id: "contributions", label: "Инвестиции" },
-              { id: "reinvestments", label: "Реинвестиции" },
+        {/* Инвестиции */}
+        <OperationSection>
+          <SectionTitle>Инвестиции</SectionTitle>
+          <CustomTable
+            columns={[
+              { name: "Дата", isSortable: true },
+              {
+                name: "Сумма инвестиции, руб",
+                isSortable: true,
+                align: "left",
+              },
+              { name: "Действия", align: "center" },
             ]}
-            activeTab={operationsTab}
-            onChange={(tabId) => setOperationsTab(tabId)}
+            data={contributionsTableData}
+            isLoading={isContributionsLoading}
           />
-        </TabsContainer>
-
-        {operationsTab === "contributions" ? (
-          <>
-            <CustomTable
-              columns={[
-                { name: "Дата", isSortable: true },
-                {
-                  name: "Сумма инвестиции, руб",
-                  isSortable: true,
-                  align: "left",
-                },
-                { name: "Действия", align: "center" },
-              ]}
-              data={contributionsTableData}
-              isLoading={isContributionsLoading}
+          <PaginationLayout>
+            <CountInfoTitle total={contributionsData?.totalCount || 0} />
+            <Pagination
+              total={contributionsData?.totalCount || 0}
+              current={contributionsPage}
+              onChange={setContributionsPage}
+              itemsPerPage={pageSize}
             />
-            <PaginationLayout>
-              <CountInfoTitle total={contributionsData?.totalCount || 0} />
-              <Pagination
-                total={contributionsData?.totalCount || 0}
-                current={contributionsPage}
-                onChange={setContributionsPage}
-                itemsPerPage={pageSize}
-              />
-            </PaginationLayout>
-          </>
-        ) : (
-          <>
-            {hasPool && isSuperUser && (
-              <ReinvestRow>
-                <DarkCyanButton onClick={handleReinvest}>
-                  Реинвестировать
-                </DarkCyanButton>
-              </ReinvestRow>
-            )}
-            <CustomTable
-              columns={[
-                { name: "Дата", isSortable: true },
-                { name: "Инвестор", align: "left" },
-                { name: "Сумма, руб", align: "left" },
-              ]}
-              data={reinvestmentsTableData}
-              isLoading={false}
-            />
-            <PaginationLayout>
-              <CountInfoTitle total={reinvestmentsData?.totalCount || 0} />
-              <Pagination
-                total={reinvestmentsData?.totalCount || 0}
-                current={reinvestmentsPage}
-                onChange={setReinvestmentsPage}
-                itemsPerPage={pageSize}
-              />
-            </PaginationLayout>
-          </>
-        )}
+          </PaginationLayout>
+        </OperationSection>
 
-        {/* Payout modal */}
+        {/* Выплаты */}
+        <OperationSection>
+          <SectionTitle>Выплаты</SectionTitle>
+          <CustomTable
+            columns={[
+              { name: "Дата выплаты", isSortable: true },
+              { name: "Выплатил", align: "left" },
+              { name: "Выплата, руб", isSortable: true, align: "left" },
+              { name: "Действия", align: "center" },
+            ]}
+            data={payoutTableData}
+            isLoading={isPayoutsLoading}
+          />
+          <PaginationLayout>
+            <CountInfoTitle total={payouts?.length || 0} />
+            <Pagination
+              total={payouts?.length || 0}
+              current={payoutsPage}
+              onChange={setPayoutsPage}
+              itemsPerPage={pageSize}
+            />
+          </PaginationLayout>
+        </OperationSection>
+
         <PayoutModal
           isOpen={isPayoutModalOpen}
           onClose={() => setIsPayoutModalOpen(false)}
@@ -586,7 +486,7 @@ const InvestorReportV2Page = () => {
           investment={report?.investment || 0}
           payoutSource={payoutSource}
           onPayoutSourceChange={setPayoutSource}
-          firstContribution={currentInvestor?.firstContribution || null}
+          firstContribution={null}
           maxAmount={report?.balance || 0}
           balance={report?.balance || 0}
           isLoading={isPayoutsLoading}
@@ -605,7 +505,6 @@ const InvestorReportV2Page = () => {
           isCompany={report?.isCompany || false}
         />
 
-        {/* Edit investment modal */}
         {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
           <BaseModal
             title="Редактирование инвестиции"
@@ -654,19 +553,12 @@ const InvestorReportV2Page = () => {
 
 const ContentContainer = styled.div``;
 
-const CreationDate = styled.div`
-  font-size: 14px;
-  color: black;
-  font-weight: 400;
-  margin-bottom: 24px;
-`;
-
 const InvestorInfoContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
   margin-top: 32px;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 `;
 
@@ -712,7 +604,7 @@ const Icon = styled.img`
 const ReportLabel = styled.span`
   font-size: 15px;
   color: black;
-  margin: 7px 0px 0px;
+  margin: 7px 0 0;
   padding-left: 25px;
 `;
 
@@ -724,8 +616,15 @@ const ReportValue = styled.span`
   padding-left: 25px;
 `;
 
-const ReinvestRow = styled.div`
-  margin-bottom: 16px;
+const OperationSection = styled.div`
+  margin-bottom: 32px;
+`;
+
+const SectionTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px;
 `;
 
 const ActionButtons = styled.div`
