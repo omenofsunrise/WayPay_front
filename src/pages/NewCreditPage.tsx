@@ -1098,7 +1098,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </SectionTopRow>
 
             <FormRow>
-              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
+              <FieldGroup $width="248px">
                 <Label>Дата договора</Label>
                 <DateInputWrapper>
                   <CustomCalendar
@@ -1111,7 +1111,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               </FieldGroup>
 
               {!inDebt ? (
-                <FieldGroup style={{ maxWidth: '365px', width: '100%' }}>
+                <FieldGroup $width="365px">
                   <Label>Инвестор / Пул</Label>
                   <EntitySelectWrapper>
                     <EntitySelectContainer
@@ -1126,7 +1126,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                   </EntitySelectWrapper>
                 </FieldGroup>
               ) : (
-                <FieldGroup style={{ maxWidth: '365px', width: '100%' }}>
+                <FieldGroup $width="365px">
                   <Label>Комментарий к долгу</Label>
                   <EntitySelectWrapper>
                     <CustomInput
@@ -1138,7 +1138,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                 </FieldGroup>
               )}
 
-              <FieldGroup style={{ maxWidth: '248px', width: '100%' }}>
+              <FieldGroup $width="248px">
                 <Label>Имя договора (необязательно)</Label>
                 <DateInputWrapper>
                   <CustomInput
@@ -1150,7 +1150,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                 </DateInputWrapper>
               </FieldGroup>
 
-              <FieldGroup style={{ maxWidth: '265px', width: '100%' }}>
+              <FieldGroup $width="265px">
                 <Label>Папка (необязательно)</Label>
                 <ObjectTypeSelect
                   value={objectTypeName}
@@ -1417,9 +1417,6 @@ const PageHeader = styled.div`
 `;
 
 const StickySummaryBar = styled.div`
-  position: sticky;
-  top: 56px;
-  z-index: 40;
   display: flex;
   align-items: stretch;
   gap: 12px;
@@ -1427,12 +1424,17 @@ const StickySummaryBar = styled.div`
   margin: 0 0 16px;
   background-color: rgba(249, 250, 250, 1);
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+
+  @media (max-width: 991px) {
+    flex-direction: column;
+  }
 `;
 
 const HeaderActions = styled.div`
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
+  margin-left: auto;
 
   & > button {
     margin: 0;
@@ -1442,7 +1444,7 @@ const HeaderActions = styled.div`
 const SummaryGrid = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
   min-width: 0;
 `;
@@ -1517,6 +1519,7 @@ const ContentStack = styled.div`
   flex-direction: column;
   gap: 16px;
   margin-bottom: 20px;
+  min-width: 0;
 `;
 
 const accentBarPalette: Record<'teal' | 'orange' | 'gray', string> = {
@@ -1677,14 +1680,19 @@ const MarkupPill = styled.button<{ $active: boolean }>`
 
 const ProductsTableWrapper = styled.div`
   overflow-x: auto;
+  min-width: 0;
 `;
 
 const EntitySelectWrapper = styled.div`
   width: 100%;
-  max-width: 465px;
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+
+  & > * {
+    min-width: 0;
+  }
 `;
 
 const ValidationError = styled.div`
@@ -1784,27 +1792,35 @@ const SubmitErrorClose = styled.button`
 
 const DateInputWrapper = styled.div`
   width: 100%;
-  max-width: 248px;
+  min-width: 0;
 `;
 
 const FormRow = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  flex-wrap: wrap;
   padding-top: 4px;
+  align-items: stretch;
 
   @media (min-width: 768px) {
     flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
     row-gap: 20px;
     column-gap: 28px;
   }
 `;
 
-const FieldGroup = styled.div`
+const FieldGroup = styled.div<{ $width?: string }>`
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: ${({ $width }) => $width || '100%'};
   min-width: 0;
+
+  @media (min-width: 768px) {
+    flex: 0 1 ${({ $width }) => $width || '100%'};
+  }
 `;
 
 const Label = styled.label`
