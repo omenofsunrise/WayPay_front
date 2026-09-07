@@ -11,13 +11,12 @@ import { authStorage } from "./api/utils/auth-storage";
 import QueuePage from "./pages/QueuePage";
 import ClientPage from "./pages/ClientPage";
 import BlacklistPage from "./pages/BlacklistPage";
-import InvestorPage from "./pages/InvestorPage";
 import NewCreditPage from "./pages/NewCreditPage";
 import SchedulePage from "./pages/Schedule/SchedulePage";
 import CreditControlPage from "./pages/CreditControlPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import InvestorReportPage from "./pages/InvestorReportPage";
-import InvestorReportV2Page from "./pages/InvestorReportV2Page";
+import InvestorsV2Page from "./pages/InvestorsV2Page";
 import BudgetPage from "./pages/FinancePage/BudgetPage";
 import { AuthProvider } from "./сontext/AuthContext";
 import AdminPanelPage from "./pages/AdminPanelPage";
@@ -497,11 +496,16 @@ function App() {
                   path="investors"
                   element={
                     <MainLayout>
-                      {authInfo?.employee?.poolV2 ? (
-                        <InvestorReportV2Page />
-                      ) : (
-                        <InvestorPage />
-                      )}
+                      <InvestorsV2Page />
+                    </MainLayout>
+                  }
+                />
+
+                <Route
+                  path="investors-v2"
+                  element={
+                    <MainLayout>
+                      <InvestorsV2Page />
                     </MainLayout>
                   }
                 />
