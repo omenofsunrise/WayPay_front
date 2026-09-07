@@ -11,6 +11,7 @@ import { authStorage } from "./api/utils/auth-storage";
 import QueuePage from "./pages/QueuePage";
 import ClientPage from "./pages/ClientPage";
 import BlacklistPage from "./pages/BlacklistPage";
+import InvestorPage from "./pages/InvestorPage";
 import NewCreditPage from "./pages/NewCreditPage";
 import SchedulePage from "./pages/Schedule/SchedulePage";
 import CreditControlPage from "./pages/CreditControlPage";
@@ -18,7 +19,7 @@ import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import InvestorReportPage from "./pages/InvestorReportPage";
 import InvestorsV2Page from "./pages/InvestorsV2Page";
 import BudgetPage from "./pages/FinancePage/BudgetPage";
-import { AuthProvider } from "./сontext/AuthContext";
+import { AuthProvider, useAuth } from "./сontext/AuthContext";
 import AdminPanelPage from "./pages/AdminPanelPage";
 import AdminWhatsAppChatPage from "./pages/AdminWhatsAppChatPage";
 import ToDoListPage from "./pages/ToDoListPage";
@@ -64,6 +65,45 @@ const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
 type PinResolver = {
   resolve: (pin: string) => void;
   reject: (error: Error) => void;
+};
+
+const AppLoader = () => (
+  <div className="app-loading">
+    <div className="spinner"></div>
+  </div>
+);
+
+const InvestorsRoute = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <Navigate to="/investors-v2" replace />
+  ) : (
+    <InvestorPage />
+  );
+};
+
+const InvestorsV2Route = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <InvestorsV2Page />
+  ) : (
+    <Navigate to="/investors" replace />
+  );
+};
+
+const InvestorsPoolRoute = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <Navigate to="/investors-v2" replace />
+  ) : (
+    <InvestorsPoolPage />
+  );
 };
 
 const isMobileDevice = (): boolean => {
@@ -496,7 +536,7 @@ function App() {
                   path="investors"
                   element={
                     <MainLayout>
-                      <InvestorsV2Page />
+                      <InvestorsRoute />
                     </MainLayout>
                   }
                 />
@@ -505,7 +545,7 @@ function App() {
                   path="investors-v2"
                   element={
                     <MainLayout>
-                      <InvestorsV2Page />
+                      <InvestorsV2Route />
                     </MainLayout>
                   }
                 />
@@ -614,11 +654,7 @@ function App() {
                   path="investors-pool"
                   element={
                     <MainLayout>
-                      {authInfo?.employee?.poolV2 ? (
-                        <Navigate to="/investors" replace />
-                      ) : (
-                        <InvestorsPoolPage />
-                      )}
+                      <InvestorsPoolRoute />
                     </MainLayout>
                   }
                 />
