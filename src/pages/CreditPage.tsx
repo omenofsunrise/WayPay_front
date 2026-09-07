@@ -445,9 +445,9 @@ const CreditPage = () => {
     onDone: () => void,
     targets: ObjectType[],
     emptyHint: string,
-    setTarget: (creditId: number, objectTypeId: number) => Promise<void>
+    setTarget: (creditId: number, objectTypeId: number | null) => Promise<void>
   ): ContextMenuItem[] => {
-    const handleSet = async (objectTypeId: number) => {
+    const handleSet = async (objectTypeId: number | null) => {
       try {
         await setTarget(creditId, objectTypeId);
         onDone();
@@ -462,6 +462,7 @@ const CreditPage = () => {
     }
 
     return [
+      { label: "Убрать", action: () => handleSet(null), color: "#666" },
       ...targets.map((t) => ({
         label: t.name,
         action: () => handleSet(t.id),

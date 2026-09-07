@@ -207,7 +207,7 @@ const useCredit = () => {
     }
   }, []);
   
-  const setCreditType = useCallback(async (creditId: number, typeId: number) => {
+  const setCreditType = useCallback(async (creditId: number, typeId?: number | null) => {
     try {
       await creditService.setCreditType(creditId, typeId);
     } catch (err) {
@@ -215,7 +215,7 @@ const useCredit = () => {
     }
   }, []);
 
-  const setCategory = useCallback(async (creditId: number, typeId: number) => {
+  const setCategory = useCallback(async (creditId: number, typeId?: number | null) => {
     try {
       await creditService.setCategory(creditId, typeId);
     } catch (err) {
