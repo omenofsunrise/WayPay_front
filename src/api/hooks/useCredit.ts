@@ -207,11 +207,19 @@ const useCredit = () => {
     }
   }, []);
   
-  const setCreditType = useCallback(async (creditId: number, typeId?: number) => {
+  const setCreditType = useCallback(async (creditId: number, typeId: number) => {
     try {
       await creditService.setCreditType(creditId, typeId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to set');
+    }
+  }, []);
+
+  const setCategory = useCallback(async (creditId: number, typeId: number) => {
+    try {
+      await creditService.setCategory(creditId, typeId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to set category');
     }
   }, []);
 
@@ -289,6 +297,7 @@ const useCredit = () => {
     setInvestmentSource,
     getCreditListByClient,
     getCreditById,
+    setCategory,
     setCreditType,
     acceptCredit,
     acceptCredits

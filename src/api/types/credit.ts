@@ -180,11 +180,12 @@ export interface CreditResponse extends PaginatedResponse<Credit> {
   totalFirstPayment: number;
 }
 
-export type InvestmentSourceType = 1 | 2;
+export type InvestmentSourceType = 1 | 2 | 3;
 
 export const InvestmentSourceType = {
   Investor: 1 as InvestmentSourceType,
   InvestorPool: 2 as InvestmentSourceType,
+  InDebt: 3 as InvestmentSourceType,
 } as const;
 
 export interface SetInvestmentSourceRequest {
