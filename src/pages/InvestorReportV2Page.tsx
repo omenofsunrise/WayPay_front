@@ -36,11 +36,13 @@ import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { FaLock, FaUnlock } from "react-icons/fa";
 import investorService from "../api/services/investorService";
 import CustomSelect from "../components/ui/fields/CustomSelect";
+import InvestorModal from "../components/modal/CrudInherited/InvestorModal";
 
 const pageSize = 5;
 
 const InvestorReportV2Page = () => {
-  const { getInvestors, updateInvestment, addInvestment } = useInvestor();
+  const { getInvestors, createInvestor, updateInvestment, addInvestment } =
+    useInvestor();
 
   const {
     payouts,
@@ -68,6 +70,7 @@ const InvestorReportV2Page = () => {
   const [payoutAmount, setPayoutAmount] = useState<string>("");
   const [payoutSource, setPayoutSource] = useState<PayoutSource>("income");
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
+  const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [investmentDate, setInvestmentDate] = useState(
     () => new Date().toISOString().split("T")[0]
@@ -277,6 +280,20 @@ const InvestorReportV2Page = () => {
     }
   };
 
+  const handleSubmitInvestor = async (investorData: Omit<Investor, "id">) => {
+    try {
+      const createdInvestor = await createInvestor(investorData);
+      await refreshInvestorsAndReport();
+      if (createdInvestor) {
+        selectInvestorForAction(createdInvestor);
+      }
+      return true;
+    } catch (err) {
+      console.error("Ошибка при создании инвестора:", err);
+      return false;
+    }
+  };
+
   const handleContributionAction = async (
     id: number,
     action: "confirm" | "reject"
@@ -451,6 +468,11 @@ const InvestorReportV2Page = () => {
     <PageLayout>
       <TitleField>
         <CustomTitle>Инвесторы</CustomTitle>
+        {isSuperUser && (
+          <DarkCyanButton onClick={() => setIsInvestorModalOpen(true)}>
+            + Новый инвестор
+          </DarkCyanButton>
+        )}
       </TitleField>
 
       <ContentContainer>
@@ -604,6 +626,13 @@ const InvestorReportV2Page = () => {
           investorIncome={report?.investorPaymentIncome || 0}
           selfIncome={report?.selfPaymentIncome || 0}
           isCompany={report?.isCompany || false}
+        />
+
+        <InvestorModal
+          mode="create"
+          isOpen={isInvestorModalOpen}
+          onClose={() => setIsInvestorModalOpen(false)}
+          onSubmit={handleSubmitInvestor}
         />
 
         {isInvestmentModalOpen && (
