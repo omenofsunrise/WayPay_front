@@ -76,6 +76,10 @@ const menuItemsMap: Record<
     mainItem: "investors",
     subItems: { "/investors-pool": "investors-pool" },
   },
+  "/investors-report": {
+    mainItem: "investors",
+    subItems: { "/investors-report": "investors-report" },
+  },
   "/black-catalog": { mainItem: "black-catalog" },
   "/mobile-apps": {
     mainItem: "references",
@@ -170,6 +174,9 @@ const SideMenu = () => {
     investors: () =>
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
     "investors-pool": () =>
+      !isPoolV2 &&
+      (hasRole("админ") || hasRole("директор") || hasRole("суперадмин")),
+    "investors-report": () =>
       !isPoolV2 &&
       (hasRole("админ") || hasRole("директор") || hasRole("суперадмин")),
     "black-catalog": () => true,
@@ -319,6 +326,7 @@ const SideMenu = () => {
       "reception-payments": "Платежи с приёмки",
       investors: "Инвесторы",
       "investors-pool": "Пулы инвесторов",
+      "investors-report": "Отчёт для инвестора",
       "mobile-apps": "Мобильные приложения",
     };
 
@@ -780,7 +788,8 @@ const SideMenu = () => {
                     $collapsed={collapsed}
                     $selected={
                       selectedSideMenuItem === "investors" ||
-                      selectedSideMenuItem === "investors-pool"
+                      selectedSideMenuItem === "investors-pool" ||
+                      selectedSideMenuItem === "investors-report"
                     }
                   >
                     <Icon
@@ -788,7 +797,8 @@ const SideMenu = () => {
                       $collapsed={collapsed}
                       $selected={
                         selectedSideMenuItem === "investors" ||
-                        selectedSideMenuItem === "investors-pool"
+                        selectedSideMenuItem === "investors-pool" ||
+                        selectedSideMenuItem === "investors-report"
                       }
                     />
                     {!collapsed && (
@@ -821,6 +831,17 @@ const SideMenu = () => {
                         $selected={selectedSideMenuItem === "investors"}
                       >
                         Инвесторы
+                      </SubMenuItem>
+                      <SubMenuItem
+                        onClick={() =>
+                          handleSubMenuItemClick(
+                            "investors-report",
+                            "/investors-report"
+                          )
+                        }
+                        $selected={selectedSideMenuItem === "investors-report"}
+                      >
+                        Отчёт для инвестора
                       </SubMenuItem>
                       <SubMenuItem
                         onClick={() =>
