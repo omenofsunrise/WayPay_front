@@ -1558,6 +1558,13 @@ const CreditPage = () => {
     if (credit) exportCredits([credit]);
   };
 
+  let fundingSourceActionLabel = "Выбрать источник финансирования";
+  if (isPoolV2) {
+    fundingSourceActionLabel = "Убрать из В долг";
+  } else if (selectedRows.length > 1) {
+    fundingSourceActionLabel = `Перенести в активные (${selectedRows.length})`;
+  }
+
   const tableActions = [
     {
       label: "Подтвердить договор",
@@ -1594,10 +1601,7 @@ const CreditPage = () => {
       color: "#3B82F6",
     },
     {
-      label:
-        selectedRows.length > 1
-          ? `Перенести в активные (${selectedRows.length})`
-          : "Выбрать источник финансирования",
+      label: fundingSourceActionLabel,
       action: handleSelectFundingSource,
       color: "#6B7280",
       shouldShow: (rowData: any[]) =>
