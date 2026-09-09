@@ -630,26 +630,26 @@ const InvestorReportV2Page = () => {
           amount={payoutAmount}
           onAmountChange={setPayoutAmount}
           onSubmit={handlePayoutSubmit}
-          investment={report?.investment || 0}
+          investorName={selectedInvestorLabel}
+          investment={selectedInvestor?.investmentAmount || 0}
           payoutSource={payoutSource}
           onPayoutSourceChange={setPayoutSource}
           firstContribution={null}
-          maxAmount={report?.balance || 0}
-          balance={report?.balance || 0}
+          maxAmount={selectedInvestor?.currentIncome || 0}
+          balance={selectedInvestor?.balance || 0}
           isLoading={isPayoutsLoading}
-          currentIncome={
-            report?.isCompany
-              ? report?.paymentIncome || 0
-              : report?.investorPaymentIncome || 0
+          currentIncome={selectedInvestor?.currentIncome || 0}
+          investorIncome={
+            selectedInvestor?.isCompany
+              ? null
+              : selectedInvestor?.currentIncome || 0
           }
-          expectedIncome={
-            report?.isCompany
-              ? report?.allSelfIncome || 0
-              : report?.investorIncome || 0
+          selfIncome={
+            selectedInvestor?.isCompany
+              ? selectedInvestor?.currentIncome || 0
+              : null
           }
-          investorIncome={report?.investorPaymentIncome || 0}
-          selfIncome={report?.selfPaymentIncome || 0}
-          isCompany={report?.isCompany || false}
+          isCompany={selectedInvestor?.isCompany || false}
         />
 
         <InvestorModal
