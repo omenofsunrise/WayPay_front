@@ -41,15 +41,17 @@ import InvestorModal from "../components/modal/CrudInherited/InvestorModal";
 const pageSize = 5;
 
 const InvestorReportV2Page = () => {
-  const { getInvestors, createInvestor, updateInvestment, addInvestment } =
-    useInvestor();
+  const {
+    getInvestors,
+    updateInvestment,
+    addInvestment,
+  } = useInvestor();
 
   const {
     payouts,
     isLoading: isPayoutsLoading,
     fetchPayouts,
     addPayout,
-    removePayout,
     makePayoutAction,
   } = useInvestorPayout();
 
@@ -71,6 +73,10 @@ const InvestorReportV2Page = () => {
   const [payoutSource, setPayoutSource] = useState<PayoutSource>("income");
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
+  const [investorModalMode, setInvestorModalMode] = useState<
+    "create" | "edit"
+  >("create");
+  const [investorForEdit, setInvestorForEdit] = useState<Investor | null>(null);
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [investmentDate, setInvestmentDate] = useState(
     () => new Date().toISOString().split("T")[0]
@@ -169,6 +175,19 @@ const InvestorReportV2Page = () => {
     setInvestmentDate(new Date().toISOString().split("T")[0]);
     setActiveTab("investments");
     setIsInvestmentModalOpen(true);
+  };
+
+  const openCreateInvestorModal = () => {
+    setInvestorModalMode("create");
+    setInvestorForEdit(null);
+    setIsInvestorModalOpen(true);
+  };
+
+  const openEditInvestorModal = (investor: Investor) => {
+    selectInvestorForAction(investor);
+    setInvestorModalMode("edit");
+    setInvestorForEdit(investor);
+    setIsInvestorModalOpen(true);
   };
 
   useEffect(() => {
@@ -281,17 +300,16 @@ const InvestorReportV2Page = () => {
   };
 
   const handleSubmitInvestor = async (investorData: Omit<Investor, "id">) => {
-    try {
-      const createdInvestor = await createInvestor(investorData);
-      await refreshInvestorsAndReport();
-      if (createdInvestor) {
-        selectInvestorForAction(createdInvestor);
-      }
-      return true;
-    } catch (err) {
-      console.error("Ошибка при создании инвестора:", err);
-      return false;
+    const savedInvestor =
+      investorModalMode === "edit" && investorForEdit
+        ? await investorService.updateInvestor(investorForEdit.id, investorData)
+        : await investorService.createInvestor(investorData);
+
+    await refreshInvestorsAndReport();
+    if (savedInvestor) {
+      selectInvestorForAction(savedInvestor);
     }
+    return true;
   };
 
   const handleContributionAction = async (
@@ -444,7 +462,7 @@ const InvestorReportV2Page = () => {
     label: inv.nickname || inv.fullName,
   }));
 
-  const investorTableActions = (rowData: any[]) => {
+  const investorTableActions = (rowData: unknown[]) => {
     const investorId = Number(rowData[0]);
     const investor = investors.find((inv) => inv.id === investorId);
     if (!investor) return [];
@@ -454,6 +472,12 @@ const InvestorReportV2Page = () => {
         label: "Выплатить",
         action: () => openPayoutModalForInvestor(investor),
         color: "#3B82F6",
+        disabled: !isSuperUser,
+      },
+      {
+        label: "Редактировать",
+        action: () => openEditInvestorModal(investor),
+        color: "#F59E0B",
         disabled: !isSuperUser,
       },
       {
@@ -469,7 +493,7 @@ const InvestorReportV2Page = () => {
       <TitleField>
         <CustomTitle>Инвесторы</CustomTitle>
         {isSuperUser && (
-          <DarkCyanButton onClick={() => setIsInvestorModalOpen(true)}>
+          <DarkCyanButton onClick={openCreateInvestorModal}>
             + Новый инвестор
           </DarkCyanButton>
         )}
@@ -629,10 +653,25 @@ const InvestorReportV2Page = () => {
         />
 
         <InvestorModal
-          mode="create"
+          mode={investorModalMode}
           isOpen={isInvestorModalOpen}
           onClose={() => setIsInvestorModalOpen(false)}
           onSubmit={handleSubmitInvestor}
+          initialData={
+            investorForEdit || {
+              id: 0,
+              nickname: "",
+              fullName: "",
+              phoneNumber: "",
+              investorPie: 0,
+              investmentAmount: 0,
+              balance: 0,
+              isCompany: false,
+              isBlocked: false,
+              activeUntil: new Date().toISOString().split("T")[0],
+              currentIncome: 0,
+            }
+          }
         />
 
         {isInvestmentModalOpen && (
