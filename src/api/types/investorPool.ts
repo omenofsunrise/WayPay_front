@@ -1,4 +1,3 @@
-import { number } from 'framer-motion';
 import type { PaginationParams } from './common';
 
 export interface InvestorPool {
@@ -8,6 +7,7 @@ export interface InvestorPool {
   balance: number;
   selfIncome?: number;
   activeUntil?: Date;
+  isCompanyPool?: boolean;
 }
 
 export interface InvestorPoolRequest {

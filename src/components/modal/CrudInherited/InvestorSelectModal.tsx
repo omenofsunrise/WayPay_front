@@ -56,6 +56,7 @@ const InvestorSelectModal = ({
     investmentAmount?: number;
     balance?: number;
     isCompany: boolean;
+    isCompanyPool?: boolean;
     activeUntil?: string;
     type: 'investor' | 'pool';
   } | null>(null);
@@ -84,6 +85,7 @@ const InvestorSelectModal = ({
   
   const isLoading = isLoadingInvestors || (includePools && isLoadingPools);
   const error = investorsError || (includePools && poolsError);
+  const isOwnCashName = (name?: string | null) => name === 'Invest_group';
   
   const loadEntities = useCallback(async () => {
     const params: any = {
@@ -156,6 +158,7 @@ const InvestorSelectModal = ({
           pie: pool.pie,
           balance: pool.balance || 0,
           activeUntil: pool.activeUntil,
+          isCompanyPool: pool.isCompanyPool,
           type: 'pool'
         });
       }
@@ -194,7 +197,9 @@ const InvestorSelectModal = ({
     investor.investorPie.toString() + "%",
     investor.isBlocked?.toString() || 'false',
     formatMoney(investor.balance.toString()),
-    investor.isCompany ? '-' : formatDate(investor.activeUntil ?? new Date()),
+    investor.isCompany || investor.isCompanyPool || isOwnCashName(investor.nickname)
+      ? '-'
+      : formatDate(investor.activeUntil ?? new Date()),
   ]) || [];
 
   const poolsTableData = includePools 
@@ -205,7 +210,9 @@ const InvestorSelectModal = ({
         "",
         '—', 
         formatMoney(pool.balance.toString()),
-        formatDate(pool.activeUntil ?? new Date())
+        pool.isCompanyPool || isOwnCashName(pool.name)
+          ? '-'
+          : formatDate(pool.activeUntil ?? new Date())
       ]) || []
     : [];
 
