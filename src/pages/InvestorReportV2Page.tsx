@@ -184,6 +184,8 @@ const InvestorReportV2Page = () => {
   };
 
   const openEditInvestorModal = (investor: Investor) => {
+    if (investor.isCompany) return;
+
     selectInvestorForAction(investor);
     setInvestorModalMode("edit");
     setInvestorForEdit(investor);
@@ -467,25 +469,33 @@ const InvestorReportV2Page = () => {
     const investor = investors.find((inv) => inv.id === investorId);
     if (!investor) return [];
 
-    return [
+    const actions = [
       {
         label: "Выплатить",
         action: () => openPayoutModalForInvestor(investor),
         color: "#3B82F6",
         disabled: !isSuperUser,
       },
-      {
+    ];
+
+    if (!investor.isCompany) {
+      actions.push({
         label: "Редактировать",
         action: () => openEditInvestorModal(investor),
         color: "#F59E0B",
         disabled: !isSuperUser,
-      },
+      });
+    }
+
+    actions.push(
       {
         label: "Добавить инвестицию",
         action: () => openInvestmentModalForInvestor(investor),
         color: "#007D88",
-      },
-    ];
+      }
+    );
+
+    return actions;
   };
 
   return (
