@@ -72,13 +72,13 @@ const menuItemsMap: Record<
   "/investors-v2": {
     mainItem: "investors",
   },
-  "/investors-pool": {
-    mainItem: "investors",
-    subItems: { "/investors-pool": "investors-pool" },
-  },
   "/investors-report": {
     mainItem: "investors",
     subItems: { "/investors-report": "investors-report" },
+  },
+  "/investors-pool": {
+    mainItem: "investors",
+    subItems: { "/investors-pool": "investors-pool" },
   },
   "/black-catalog": { mainItem: "black-catalog" },
   "/mobile-apps": {
