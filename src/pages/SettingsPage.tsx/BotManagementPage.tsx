@@ -613,6 +613,9 @@ const BotManagementPage: React.FC = () => {
                           $color={getMatchTypeColor(kw.matchType)}
                           title={getMatchTypeLabel(kw.matchType)}
                         >
+                          <KeywordChipMatchBadge>
+                            {getMatchTypeLabel(kw.matchType)}
+                          </KeywordChipMatchBadge>
                           <KeywordValue>"{kw.keyword}"</KeywordValue>
                           <RemoveChip
                             onClick={() => handleDeleteKeyword(kw.id, rule.id)}
@@ -1165,9 +1168,21 @@ const KeywordChip = styled.div<{ $color: string }>`
   border-radius: 20px;
   overflow: hidden;
   font-size: 13px;
-  border-left: 3px solid ${(p) => p.$color};
   border: 1px solid #e5e7eb;
   border-left: 3px solid ${(p) => p.$color};
+`;
+
+const KeywordChipMatchBadge = styled.span`
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 `;
 
 const KeywordValue = styled.span`

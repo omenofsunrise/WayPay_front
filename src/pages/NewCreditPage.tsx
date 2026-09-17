@@ -32,6 +32,7 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import { isOwnCashInvestorName } from '../utils/investorUtils';
 
 const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
 const TURN_OF_ROUNDING_KEY = 'turn_of_rounding';
@@ -540,7 +541,10 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
 
   const selectedInvestor = investor || selectedPool;
 
-  if (selectedPool || (investor && investor.isCompany)) {
+  if (
+    selectedPool ||
+    (investor && (investor.isCompany || isOwnCashInvestorName(investor.nickname)))
+  ) {
     setValidationError(null);
     return true;
   }
@@ -583,7 +587,11 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       return true;
     }
 
-    if (!selectedInvestor.isCompany && investorActiveUntil < tempDate) {
+    if (
+      !selectedInvestor.isCompany &&
+      !isOwnCashInvestorName(selectedInvestor.nickname) &&
+      investorActiveUntil < tempDate
+    ) {
       const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
       setValidationError(errorMessage);
       return false;
@@ -872,6 +880,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     pie?: number;
     investmentAmount?: number;
     balance?: number;
+    isCompany?: boolean;
     type: 'investor' | 'pool';
     activeUntil?: string;
   }) => {

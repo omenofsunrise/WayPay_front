@@ -10,6 +10,7 @@ import { formatMoney } from '../../../utils/formatPrice';
 import { formatDate } from '../../../utils/dateFormatter';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../../ui/links/PhoneLink';
+import { isOwnCashInvestorName } from '../../../utils/investorUtils';
 
 interface InvestorSelectModalProps {
   isOpen: boolean;
@@ -85,8 +86,6 @@ const InvestorSelectModal = ({
   
   const isLoading = isLoadingInvestors || (includePools && isLoadingPools);
   const error = investorsError || (includePools && poolsError);
-  const isOwnCashName = (name?: string | null) => name === 'Invest_group';
-  
   const loadEntities = useCallback(async () => {
     const params: any = {
       page: currentPage,
@@ -197,7 +196,7 @@ const InvestorSelectModal = ({
     investor.investorPie.toString() + "%",
     investor.isBlocked?.toString() || 'false',
     formatMoney(investor.balance.toString()),
-    investor.isCompany || investor.isCompanyPool || isOwnCashName(investor.nickname)
+    investor.isCompany || investor.isCompanyPool || isOwnCashInvestorName(investor.nickname)
       ? '-'
       : formatDate(investor.activeUntil ?? new Date()),
   ]) || [];
@@ -210,7 +209,7 @@ const InvestorSelectModal = ({
         "",
         '—', 
         formatMoney(pool.balance.toString()),
-        pool.isCompanyPool || isOwnCashName(pool.name)
+        pool.isCompanyPool || isOwnCashInvestorName(pool.name)
           ? '-'
           : formatDate(pool.activeUntil ?? new Date())
       ]) || []
