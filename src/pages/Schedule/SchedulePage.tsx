@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import TitleField from "../../components/ui/Layouts/TitleLayout";
 import Tabs from "../../components/ui/fields/Tabs";
@@ -11,7 +11,10 @@ import type { ScheduleDetails, ScheduleParams } from "../../api/types/schedule";
 import scheduleService from "../../api/services/scheduleService";
 import { parseDateInput, formatDate } from "../../utils/dateFormatter";
 import { formatMoney } from "../../utils/formatPrice";
-import ScheduleTable from "./ScheduleTable";
+import ScheduleTable, {
+  type ScheduleTableHandle,
+  type ScheduleFilters,
+} from "./ScheduleTable";
 import ScheduleCharts from "./ScheduleCharts";
 import ScheduleCalendar from "./ScheduleCalendar";
 
@@ -45,6 +48,9 @@ const SchedulePage = ({
   const { exportData, isExporting, exportProgress } =
     useExport<ScheduleDetails>();
 
+  // Ref на таблицу для получения актуальных фильтров
+  const scheduleTableRef = useRef<ScheduleTableHandle>(null);
+
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
     return savedTab &&
@@ -55,8 +61,6 @@ const SchedulePage = ({
       ? savedTab
       : initialTab;
   });
-
-  const [currentFilters, setCurrentFilters] = useState<any>({});
 
   const isTabHidden = useCallback(
     (tab: TabType) => hiddenTabs.includes(tab),
@@ -98,7 +102,7 @@ const SchedulePage = ({
   );
 
   const handleExport = useCallback(
-    async (filters: any) => {
+    async (filters: ScheduleFilters) => {
       try {
         const columnToApiSortMap: Record<number, string> = {
           0: "creditid",
@@ -128,7 +132,7 @@ const SchedulePage = ({
               sortDirection: filters.sortDirection,
             };
 
-            if (filters.entityId && filters.entityId != 0) {
+            if (filters.entityId && filters.entityId !== 0) {
               if (filters.entityType === "investor") {
                 params.investorId = filters.entityId;
               } else if (filters.entityType === "pool") {
@@ -162,33 +166,11 @@ const SchedulePage = ({
     [exportData]
   );
 
-  useEffect(() => {
-    const handleExportData = (event: CustomEvent) => {
-      setCurrentFilters(event.detail);
-    };
-
-    window.addEventListener(
-      "schedule-export-data",
-      handleExportData as EventListener
-    );
-    return () =>
-      window.removeEventListener(
-        "schedule-export-data",
-        handleExportData as EventListener
-      );
-  }, []);
-
   const handleExportClick = useCallback(() => {
-    if (activeTab === "table") {
-      if (Object.keys(currentFilters).length > 0) {
-        handleExport(currentFilters);
-      } else {
-        handleExport({});
-      }
-    } else {
-      handleExport({});
-    }
-  }, [activeTab, currentFilters, handleExport]);
+    // Синхронно забираем актуальные фильтры из таблицы
+    const filters = scheduleTableRef.current?.getFilters() ?? ({} as ScheduleFilters);
+    handleExport(filters);
+  }, [handleExport]);
 
   const tabs = [
     ...(shouldShowScheduleTab && !isTabHidden("calendar")
@@ -216,6 +198,7 @@ const SchedulePage = ({
             label: "Таблица",
             content: (
               <ScheduleTable
+                ref={scheduleTableRef}
                 isListMode={isListMode}
                 pageSize={responsivePageSize}
               />
@@ -238,7 +221,6 @@ const SchedulePage = ({
   return (
     <PageLayout ref={containerRef}>
       {tabs.length > 1 ? (
-        // Вкладки («График», «Таблица») и кнопка «Экспорт» в одном ряду.
         <Tabs
           tabs={tabs}
           activeTab={activeTab}
