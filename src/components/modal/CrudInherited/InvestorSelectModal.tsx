@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
 import CustomTable, { type RowStyle } from '../../ui/tables/CustomTable';
@@ -11,6 +11,7 @@ import { formatDate } from '../../../utils/dateFormatter';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../../ui/links/PhoneLink';
 import { isOwnCashInvestorName } from '../../../utils/investorUtils';
+import type { InvestorParams } from '../../../api/types/investor';
 
 interface InvestorSelectModalProps {
   isOpen: boolean;
@@ -63,12 +64,16 @@ const InvestorSelectModal = ({
   } | null>(null);
   
   const pageSize = 4;
+  const shouldHideCash = Boolean(poolId);
   
-  const columnToApiSortMap: Record<number, string> = {
-    0: 'id',
-    3: includePools ? 'pie' : 'investor_pie',
-    4: 'balance'
-  };
+  const columnToApiSortMap = useMemo<Record<number, string>>(
+    () => ({
+      0: 'id',
+      3: includePools ? 'pie' : 'investor_pie',
+      5: 'balance'
+    }),
+    [includePools]
+  );
   
   const { 
     isLoading: isLoadingInvestors, 
@@ -87,7 +92,7 @@ const InvestorSelectModal = ({
   const isLoading = isLoadingInvestors || (includePools && isLoadingPools);
   const error = investorsError || (includePools && poolsError);
   const loadEntities = useCallback(async () => {
-    const params: any = {
+    const params: InvestorParams & { search?: string } = {
       page: currentPage,
       pageSize,
       search: nameFilter || undefined
@@ -111,7 +116,7 @@ const InvestorSelectModal = ({
     } else {
       await getInvestors(params);
     }
-  }, [currentPage, nameFilter, sortConfig, getInvestors, getInvestorPools, includePools, poolId]); // Добавлен poolId
+  }, [columnToApiSortMap, currentPage, nameFilter, sortConfig, getInvestors, getInvestorPools, includePools, poolId]);
   
   useEffect(() => {
     if (isOpen) {
@@ -142,7 +147,7 @@ const InvestorSelectModal = ({
     });
   };
 
-  const handleRowClick = (rowData: any[], rowIndex: number) => {
+  const handleRowClick = (_rowData: unknown[], rowIndex: number) => {
     const isPool = includePools && rowIndex >= (investorsData?.items?.length || 0);
     
     if (isPool) {
@@ -189,33 +194,52 @@ const InvestorSelectModal = ({
     }
   };
 
-  const investorsTableData = investorsData?.items?.map(investor => [
-    investor.id.toString(),
-    (investor.nickname && investor.nickname.trim() !== '') ? investor.nickname : investor.fullName,
-    investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : '',
-    investor.investorPie.toString() + "%",
-    investor.isBlocked?.toString() || 'false',
-    formatMoney(investor.balance.toString()),
-    investor.isCompany || investor.isCompanyPool || isOwnCashInvestorName(investor.nickname)
-      ? '-'
-      : formatDate(investor.activeUntil ?? new Date()),
-  ]) || [];
+  const investorsTableData = investorsData?.items?.map(investor => {
+    const row = [
+      investor.id.toString(),
+      (investor.nickname && investor.nickname.trim() !== '') ? investor.nickname : investor.fullName,
+      investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : '',
+      investor.investorPie.toString() + "%",
+      investor.isBlocked?.toString() || 'false',
+      formatMoney(investor.balance.toString()),
+      investor.isCompany || investor.isCompanyPool || isOwnCashInvestorName(investor.nickname)
+        ? '-'
+        : formatDate(investor.activeUntil ?? new Date()),
+    ];
+
+    return shouldHideCash ? row.filter((_, index) => index !== 5) : row;
+  }) || [];
 
   const poolsTableData = includePools 
-    ? poolsData?.items?.map(pool => [
-        pool.id.toString(),
-        pool.name,
-        '—', 
-        "",
-        '—', 
-        formatMoney(pool.balance.toString()),
-        pool.isCompanyPool || isOwnCashInvestorName(pool.name)
-          ? '-'
-          : formatDate(pool.activeUntil ?? new Date())
-      ]) || []
+    ? poolsData?.items?.map(pool => {
+        const row = [
+          pool.id.toString(),
+          pool.name,
+          '—',
+          "",
+          '—',
+          formatMoney(pool.balance.toString()),
+          pool.isCompanyPool || isOwnCashInvestorName(pool.name)
+            ? '-'
+            : formatDate(pool.activeUntil ?? new Date())
+        ];
+
+        return shouldHideCash ? row.filter((_, index) => index !== 5) : row;
+      }) || []
     : [];
 
   const tableData = [...investorsTableData, ...poolsTableData];
+  const tableColumns = [
+    { name: "ID", isSortable: true, align: "left" as const, isHidden: true },
+    { name: includePools ? "Никнейм/Название" : "Никнейм", align: "left" as const },
+    { name: "Телефон", align: "left" as const, isHidden: true },
+    { name: "Доля", align: "left" as const, isSortable: true, isHidden: true },
+    { name: "заблокирован", isHidden: true },
+    ...(!shouldHideCash
+      ? [{ name: "Касса", isSortable: true, align: "right" as const }]
+      : []),
+    { name: "Дата окончания инвестора/пула", align: "left" as const },
+  ];
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {
     const isBlockedIndex = 4;
@@ -279,15 +303,7 @@ const InvestorSelectModal = ({
           <>
             <TableContainer>
               <CustomTable 
-                columns={[
-                  { name: "ID", isSortable: true, align: "left", isHidden: true },
-                  { name: includePools ? "Никнейм/Название" : "Никнейм", align: "left" },
-                  { name: "Телефон", align: "left", isHidden: true },
-                  { name: "Доля", align: "left", isSortable: true, isHidden: true },
-                  { name: "заблокирован", isHidden: true },
-                  { name: "Касса", isSortable: true, align: "right" },
-                  { name: "Дата окончания инвестора/пула", align: "left" },
-                ]} 
+                columns={tableColumns}
                 data={tableData}
                 onRowClick={handleRowClick}
                 onSort={handleSort}

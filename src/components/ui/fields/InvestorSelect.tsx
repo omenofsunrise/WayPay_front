@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import useInvestor from '../../../api/hooks/useInvestor';
@@ -6,6 +6,7 @@ import useInvestorPool from '../../../api/hooks/useInvestorPool';
 import Portal from '../../../utils/Portal';
 import InvestorSelectModal from '../../modal/CrudInherited/InvestorSelectModal';
 import { FaTimes } from 'react-icons/fa';
+import type { InvestorParams } from '../../../api/types/investor';
 
 interface InvestorSelectProps {
   value: string;
@@ -50,7 +51,7 @@ const InvestorSelect = ({
   const [showInvestorModal, setShowInvestorModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0, maxHeight: 300 });
 
   // Блокировка скролла страницы при открытом dropdown
   useEffect(() => {
@@ -107,7 +108,7 @@ const InvestorSelect = ({
     const fetchInvestors = async () => {
       setIsLoading(true);
       try {
-        const params: any = {
+        const params: InvestorParams = {
           pageSize: 20,
           name: value
         };
@@ -160,16 +161,48 @@ const InvestorSelect = ({
     }
   }, [isDropdownOpen]);
 
-  const updateMenuPosition = () => {
+  const updateMenuPosition = useCallback(() => {
     if (inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
+      const margin = 8;
+      const maxDropdownHeight = 300;
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+      const spaceAbove = rect.top - margin;
+      const shouldOpenUp = spaceBelow < 180 && spaceAbove > spaceBelow;
+      const maxHeight = Math.max(
+        120,
+        Math.min(maxDropdownHeight, shouldOpenUp ? spaceAbove : spaceBelow)
+      );
+      const top = shouldOpenUp
+        ? Math.max(margin, rect.top - maxHeight)
+        : Math.min(rect.bottom, window.innerHeight - margin);
+      const width = Math.min(rect.width, window.innerWidth - margin * 2);
+      const left = Math.min(
+        Math.max(margin, rect.left),
+        window.innerWidth - width - margin
+      );
+
       setMenuPosition({
-        top: rect.bottom, // Используем абсолютные координаты (без scrollY)
-        left: rect.left,
-        width: rect.width
+        top,
+        left,
+        width,
+        maxHeight
       });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [isDropdownOpen, updateMenuPosition]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -287,7 +320,7 @@ const InvestorSelect = ({
                   top: `${menuPosition.top}px`,
                   left: `${menuPosition.left}px`,
                   width: `${menuPosition.width}px`,
-                  maxHeight: '300px',
+                  maxHeight: `${menuPosition.maxHeight}px`,
                   zIndex: 1000
                 }}
               >
@@ -441,7 +474,6 @@ const DropdownMenu = styled(motion.div)`
   border-radius: 4px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  max-height: 300px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -450,7 +482,7 @@ const DropdownMenu = styled(motion.div)`
 const DropdownContent = styled.div`
   overflow-y: auto;
   flex-grow: 1;
-  max-height: 240px; // Ограничиваем высоту контента
+  min-height: 0;
   
   /* Кастомный скроллбар */
   &::-webkit-scrollbar {
