@@ -22,6 +22,7 @@ import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
 import { formatMoney } from '../utils/formatPrice';
 import DateModalInput from '../components/ui/fields/DateModalInput';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
+import useInvestor from '../api/hooks/useInvestor';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
@@ -67,6 +68,14 @@ interface SelectedObjectType {
   entityType: EntityType;
 }
 
+type CreditEditRequest = CreateCreditRequest & {
+  clientFullname?: string;
+  investorNickname?: string;
+  investorActiveUntil?: string;
+  creditTypeName?: string;
+  guarantorFullname?: string;
+};
+
 const NewCreditPage = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -83,7 +92,6 @@ const NewCreditPage = () => {
   const [isGuarantorClientModalOpen, setIsGuarantorClientModalOpen] = useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  let isMounted = true;
   const [totalSum, setTotalSum] = useState(0);
   const [initialPaymentPercent, setInitialPaymentPercent] = useState<string>('');
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
@@ -99,6 +107,7 @@ const NewCreditPage = () => {
   const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
   const { createCredit, updateCredit, getCreateCreditRequest, isLoading: isCreditLoading } = useCredit();
+  const { getInvestorById } = useInvestor();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [objectTypeName, setObjectTypeName] = useState<string>('');
@@ -166,11 +175,13 @@ const NewCreditPage = () => {
   }, [isDraftLoaded]);
 
 useEffect(() => {
+  let isMounted = true;
+
   const loadCreditData = async () => {
     if (!isEditMode || !id) return;
 
     try {
-      const creditData = await getCreateCreditRequest(parseInt(id));
+      const creditData = await getCreateCreditRequest(parseInt(id)) as CreditEditRequest | null;
       if (!isMounted) return;
 
       if (creditData) {
@@ -228,15 +239,20 @@ useEffect(() => {
         
         if (!creditData.inDebt) {
           if (creditData.investorId) {
+            const loadedInvestor = await getInvestorById(creditData.investorId);
+            if (!isMounted) return;
+
             setInvestor({
               id: creditData.investorId,
-              nickname: creditData.investorNickname || '',
-              fullName: creditData.investorId.toString() || '',
-              phoneNumber: creditData.investorId.toString() || '',
-              investorPie: creditData.investorId || 0,
-              investmentAmount: creditData.investorId || 0,
-              balance: creditData.investorId || 0,
-              activeUntil: creditData.investorActiveUntil,
+              nickname: loadedInvestor?.nickname || creditData.investorNickname || '',
+              fullName: loadedInvestor?.fullName || creditData.investorId.toString() || '',
+              phoneNumber: loadedInvestor?.phoneNumber || creditData.investorId.toString() || '',
+              investorPie: loadedInvestor?.investorPie || creditData.investorId || 0,
+              investmentAmount: loadedInvestor?.investmentAmount || creditData.investorId || 0,
+              balance: loadedInvestor?.balance || creditData.investorId || 0,
+              activeUntil: loadedInvestor?.activeUntil || creditData.investorActiveUntil,
+              isCompany: loadedInvestor?.isCompany || false,
+              isCompanyPool: loadedInvestor?.isCompanyPool,
               isPool: false
             });
           } else if (creditData.poolId) {
@@ -344,7 +360,11 @@ useEffect(() => {
   };
 
   loadCreditData();
-}, [id]);
+
+  return () => {
+    isMounted = false;
+  };
+}, [id, isEditMode, getCreateCreditRequest, getInvestorById]);
 
   useEffect(() => {
     if (creditApplicationData) {
