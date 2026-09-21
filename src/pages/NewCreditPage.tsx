@@ -1,5 +1,4 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../сontext/AuthContext";
 import styled from "styled-components";
 import {
   useEffect,
@@ -80,8 +79,6 @@ interface SelectedObjectType {
 
 const NewCreditPage = () => {
   const navigate = useNavigate();
-  const { authInfo } = useAuth();
-  const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
   const location = useLocation();
@@ -617,7 +614,7 @@ const NewCreditPage = () => {
     }
   }, []);
 
-  const requiresInvestmentSource = !inDebt && !isPoolV2;
+  const requiresInvestmentSource = !inDebt;
 
   const validateInvestorActivePeriod = useCallback((): boolean => {
     if (inDebt) {
@@ -784,7 +781,7 @@ const NewCreditPage = () => {
       };
     }
 
-    if (!inDebt && !isPoolV2) {
+    if (!inDebt) {
       if (selectedPool) {
         creditData.poolId = selectedPool.poolId || selectedPool.id;
       }
@@ -851,7 +848,6 @@ const NewCreditPage = () => {
     isEditMode,
     id,
     inDebt,
-    isPoolV2,
     requiresInvestmentSource,
   ]);
 
@@ -1293,7 +1289,7 @@ const NewCreditPage = () => {
                 </DateInputWrapper>
               </FieldGroup>
 
-              {!inDebt && !isPoolV2 ? (
+              {!inDebt ? (
                 <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
                   <Label>Инвестор / Пул</Label>
                   <EntitySelectWrapper>
