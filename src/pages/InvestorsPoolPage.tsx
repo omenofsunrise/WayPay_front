@@ -56,7 +56,13 @@ import type { InvestorContribution } from "../api/types/investorContribution";
 import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 
-const InvestorsPoolPage = () => {
+type InvestorsPoolPageProps = {
+  enableReinvestments?: boolean;
+};
+
+const InvestorsPoolPage = ({
+  enableReinvestments = true,
+}: InvestorsPoolPageProps) => {
   const {
     getInvestors,
     getInvestorById,
@@ -241,7 +247,11 @@ const InvestorsPoolPage = () => {
   ]);
 
   useEffect(() => {
-    if (selectedPoolId && activeTab === "reinvestments") {
+    if (
+      enableReinvestments &&
+      selectedPoolId &&
+      activeTab === "reinvestments"
+    ) {
       const loadReinvestments = async () => {
         setIsReinvestmentsLoading(true);
         try {
@@ -271,7 +281,13 @@ const InvestorsPoolPage = () => {
 
       loadReinvestments();
     }
-  }, [selectedPoolId, reinvestmentsPage, activeTab, selectedInvestorForFilter]);
+  }, [
+    enableReinvestments,
+    selectedPoolId,
+    reinvestmentsPage,
+    activeTab,
+    selectedInvestorForFilter,
+  ]);
 
   useEffect(() => {
     if (
@@ -824,7 +840,7 @@ const InvestorsPoolPage = () => {
           });
         }
 
-        if (activeTab === "reinvestments") {
+        if (enableReinvestments && activeTab === "reinvestments") {
           const reinvestments = await getReinvestments(
             Number(selectedPoolId),
             {
@@ -1376,7 +1392,9 @@ const InvestorsPoolPage = () => {
     { id: "payouts", label: "История выплат" },
     { id: "credits", label: "Договоры" },
     { id: "contributions", label: "Инвестиции" },
-    { id: "reinvestments", label: "Реинвестиции" },
+    ...(enableReinvestments
+      ? [{ id: "reinvestments", label: "Реинвестиции" }]
+      : []),
   ];
 
   const dataTabs = [
@@ -1760,10 +1778,12 @@ const InvestorsPoolPage = () => {
               addButton={
                 activeTab === "investors" && pools.length > 0 ? (
                   <div style={{ display: "flex", gap: "20px" }}>
-                    <DarkCyanButton
-                      children="Реинвестировать"
-                      onClick={handleReinvest}
-                    />
+                    {enableReinvestments && (
+                      <DarkCyanButton
+                        children="Реинвестировать"
+                        onClick={handleReinvest}
+                      />
+                    )}
                     <AddButton
                       onClick={handleAddInvestor}
                       tooltip="Добавить инвестора"
@@ -1835,7 +1855,7 @@ const InvestorsPoolPage = () => {
           </>
         )}
 
-        {activeTab === "reinvestments" && (
+        {enableReinvestments && activeTab === "reinvestments" && (
           <>
             <CustomTable
               columns={[
@@ -2191,21 +2211,22 @@ const InvestorsPoolPage = () => {
             mode="edit"
           >
             <form onSubmit={handleSubmitInvestment} style={{ padding: "20px" }}>
-              {/* Предупредительная надпись */}
-              <div
-                style={{
-                  backgroundColor: "#fff3cd",
-                  color: "#856404",
-                  padding: "12px 16px",
-                  borderRadius: "4px",
-                  marginBottom: "20px",
-                  border: "1px solid #ffeeba",
-                  fontSize: "14px",
-                }}
-              >
-                ⚠️ Рекомендуется сначала сделать реинвестицию, а затем добавлять
-                новую инвестицию
-              </div>
+              {enableReinvestments && (
+                <div
+                  style={{
+                    backgroundColor: "#fff3cd",
+                    color: "#856404",
+                    padding: "12px 16px",
+                    borderRadius: "4px",
+                    marginBottom: "20px",
+                    border: "1px solid #ffeeba",
+                    fontSize: "14px",
+                  }}
+                >
+                  ⚠️ Рекомендуется сначала сделать реинвестицию, а затем
+                  добавлять новую инвестицию
+                </div>
+              )}
 
               <InputRow>
                 <InputLabel>Сумма инвестиции:</InputLabel>

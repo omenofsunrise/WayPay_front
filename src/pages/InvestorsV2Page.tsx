@@ -29,7 +29,7 @@ const InvestorsV2Page = () => {
         <InvestorReportPage />
       </TabPanel>
       <TabPanel $isActive={activeTab === "pools"}>
-        <InvestorsPoolPage />
+        <InvestorsPoolPage enableReinvestments={false} />
       </TabPanel>
     </InvestorsV2Container>
   );

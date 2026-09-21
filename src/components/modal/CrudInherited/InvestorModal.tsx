@@ -73,7 +73,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     investmentAmount: false,
     balance: false
   });
-  const { hasRole } = useAuth();
+  const { authInfo, hasRole } = useAuth();
 
   const formatDateToString = (date: string | number | Date): string => {
     if (typeof date === 'number') {
@@ -412,7 +412,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           )}
           
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
-            {(mode == 'create-pool') && (
+            {mode === 'create-pool' && !authInfo?.employee?.poolV2 && (
                 <div style={{ 
                   backgroundColor: "#fff3cd", 
                   color: "#856404",
