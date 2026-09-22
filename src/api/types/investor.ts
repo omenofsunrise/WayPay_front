@@ -13,6 +13,7 @@ export interface Investor {
   activeUntil: string;
   isCompany: boolean;
   isBlocked: boolean;
+  isRemoved?: boolean;
   poolId?: number;
   isCompanyPool?: boolean;
 }

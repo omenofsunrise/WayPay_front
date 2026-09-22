@@ -398,18 +398,19 @@ const InvestorPage = () => {
         ];
     }) ?? [];
 
-    const rowStyles = tableData.reduce((styles, rowData, index) => {
-        const isBlockedIndex = canEdit ? 8 : 4;
-        const isBlocked = rowData[isBlockedIndex] === 'true';
-        
+    const rowStyles = (investorsData?.items || []).reduce((styles, investor, index) => {
         if (index === selectedRowIndex) {
             styles[index] = {
                 backgroundColor: 'rgba(0, 125, 136, 1)',
                 color: 'white',
             };
-        } 
-        // Иначе применяем обычные цвета по статусу
-        else if (isBlocked) {
+        } else if (isPoolV2 && investor.isRemoved) {
+            styles[index] = {
+                backgroundColor: '#E5E7EB',
+                color: '#374151',
+                fontWeight: 'normal'
+            };
+        } else if (investor.isBlocked) {
             styles[index] = {
                 backgroundColor: '#FFEBEE',
                 color: 'black',

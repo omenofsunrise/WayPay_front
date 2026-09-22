@@ -56,6 +56,7 @@ import useInvestorContribution from "../api/hooks/useInvestorContribution";
 import type { InvestorContribution } from "../api/types/investorContribution";
 import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
+import { useAuth } from "../сontext/AuthContext";
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
@@ -64,6 +65,8 @@ type InvestorsPoolPageProps = {
 const InvestorsPoolPage = ({
   enableReinvestments = true,
 }: InvestorsPoolPageProps) => {
+  const { authInfo } = useAuth();
+  const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
   const {
     getInvestors,
     getInvestorById,
@@ -1374,7 +1377,13 @@ const InvestorsPoolPage = ({
 
   const investorsRowStyles = investors.reduce(
     (styles, investor, index) => {
-      if (investor.isBlocked) {
+      if (isPoolV2 && investor.isRemoved) {
+        styles[index] = {
+          backgroundColor: "#E5E7EB",
+          color: "#374151",
+          fontWeight: "normal",
+        };
+      } else if (investor.isBlocked) {
         styles[index] = {
           backgroundColor: "#FFEBEE",
           color: "black",
