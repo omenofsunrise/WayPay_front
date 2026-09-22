@@ -358,7 +358,7 @@ const InvestorsPoolPage = ({
       },
     ];
 
-    if (isPoolV2) {
+    if (isPoolV2 && !isOwnCash) {
       actions.push({
         label: "Управление кассой",
         action: () => {

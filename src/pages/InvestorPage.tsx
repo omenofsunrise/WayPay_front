@@ -448,7 +448,7 @@ const InvestorPage = () => {
             }
         ];
 
-        if (isPoolV2) {
+        if (isPoolV2 && !investor?.isCompany && !investor?.isCompanyPool) {
             actions.push({
                 label: 'Управление кассой',
                 action: () => {

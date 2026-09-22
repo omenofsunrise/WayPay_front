@@ -87,7 +87,7 @@ const InvestorCashPositionModal = ({
   const [modalError, setModalError] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
-    if (!investor) return;
+    if (!investor || isProtectedInvestor) return;
 
     setIsHistoryLoading(true);
     setModalError(null);
@@ -108,10 +108,10 @@ const InvestorCashPositionModal = ({
     } finally {
       setIsHistoryLoading(false);
     }
-  }, [historyPage, investor]);
+  }, [historyPage, investor, isProtectedInvestor]);
 
   useEffect(() => {
-    if (!isOpen || !investor) return;
+    if (!isOpen || !investor || isProtectedInvestor) return;
 
     setPositionType("Single");
     setPoolId("");
@@ -146,13 +146,13 @@ const InvestorCashPositionModal = ({
     };
 
     loadPools();
-  }, [isOpen, investor, canManagePosition]);
+  }, [isOpen, investor, isProtectedInvestor, canManagePosition]);
 
   useEffect(() => {
-    if (isOpen && investor) {
+    if (isOpen && investor && !isProtectedInvestor) {
       loadHistory();
     }
-  }, [isOpen, investor, loadHistory]);
+  }, [isOpen, investor, isProtectedInvestor, loadHistory]);
 
   const poolOptions = useMemo(
     () => pools.map((pool) => ({ value: String(pool.id), label: pool.name })),
@@ -235,7 +235,7 @@ const InvestorCashPositionModal = ({
     }
   };
 
-  if (!isOpen || !investor) return null;
+  if (!isOpen || !investor || isProtectedInvestor) return null;
 
   const historyData = (history?.items || []).map((position) => [
     position.id.toString(),
@@ -283,13 +283,6 @@ const InvestorCashPositionModal = ({
               : "История перемещений отсутствует"}
           </CurrentPositionValue>
         </CurrentPosition>
-
-        {isProtectedInvestor && (
-          <ProtectedInvestorNotice>
-            Кассу собственной компании нельзя перемещать. Доступен только
-            просмотр истории.
-          </ProtectedInvestorNotice>
-        )}
 
         {canManagePosition && (
           <MoveSection>
@@ -458,15 +451,6 @@ const ErrorMessage = styled.div`
   border-radius: 6px;
   background: #fef2f2;
   color: #b91c1c;
-  font-size: 14px;
-`;
-
-const ProtectedInvestorNotice = styled.div`
-  padding: 10px 12px;
-  border: 1px solid #fde68a;
-  border-radius: 6px;
-  background: #fffbeb;
-  color: #92400e;
   font-size: 14px;
 `;
 
