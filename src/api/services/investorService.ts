@@ -3,9 +3,11 @@ import type {
   AutoSelectInvestorResponse,
   Investor,
   InvestorAgreementResponse,
+  InvestorCashPosition,
+  InvestorCashPositionOperationResponse,
   InvestorParams,
   InvestorReport,
-  InvestorReportV2Response,
+  MoveInvestorCashPositionRequest,
 } from "../types/investor";
 import type { PaginatedResponse } from "../types/common";
 import type { DeletedInvestorInfo } from "../types/deletedInvestor";
@@ -108,6 +110,74 @@ class ProductService {
     const response = await apiClient.get<InvestorReport>(
       "/InvestorPool/report/v2"
     );
+    return response.data;
+  }
+
+  async getCashPositionHistory(
+    investorId: number,
+    page = 1
+  ): Promise<PaginatedResponse<InvestorCashPosition>> {
+    const response = await apiClient.get<
+      | PaginatedResponse<InvestorCashPosition>
+      | InvestorCashPosition[]
+      | InvestorCashPosition
+      | null
+    >(`/Investor/${investorId}/cash/positions/history`, {
+      params: { page },
+    });
+    const data = response.data;
+
+    if (!data) {
+      return {
+        page,
+        pageSize: 10,
+        totalCount: 0,
+        totalPages: 0,
+        items: [],
+      };
+    }
+
+    if (Array.isArray(data)) {
+      return {
+        page,
+        pageSize: data.length || 10,
+        totalCount: data.length,
+        totalPages: 1,
+        items: data,
+      };
+    }
+
+    if ("items" in data) {
+      return data;
+    }
+
+    return {
+      page,
+      pageSize: 1,
+      totalCount: 1,
+      totalPages: 1,
+      items: [data],
+    };
+  }
+
+  async moveCashPosition(
+    request: MoveInvestorCashPositionRequest
+  ): Promise<InvestorCashPositionOperationResponse> {
+    const response =
+      await apiClient.post<InvestorCashPositionOperationResponse>(
+        "/Investor/cash/positions/history",
+        request
+      );
+    return response.data;
+  }
+
+  async deleteCashPositionHistory(
+    id: number
+  ): Promise<InvestorCashPositionOperationResponse> {
+    const response =
+      await apiClient.delete<InvestorCashPositionOperationResponse>(
+        `/Investor/cash/position/history/${id}`
+      );
     return response.data;
   }
 }

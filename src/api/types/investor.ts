@@ -71,3 +71,28 @@ export interface InvestorAgreementResponse {
   investorMonths: string;
   directorName: string;
 }
+
+export type InvestorCashPositionType = "Single" | "Pool";
+
+export interface InvestorCashPosition {
+  id: number;
+  investorId: number;
+  poolId: number | null;
+  position: InvestorCashPositionType | string;
+  date: string;
+  createdAt: string;
+  investorNickname: string;
+  poolName: string | null;
+}
+
+export interface MoveInvestorCashPositionRequest {
+  investorId: number;
+  newPositionType: InvestorCashPositionType;
+  poolId: number | null;
+  date: string;
+}
+
+export interface InvestorCashPositionOperationResponse {
+  statusCode: number;
+  location?: string;
+}
