@@ -350,6 +350,8 @@ const InvestorsPoolPage = ({
     const isBlocked = investor.isBlocked || false;
     const isOwnCash = investor.isCompanyPool || investor.isCompany || false;
 
+    if (isPoolV2 && investor.isRemoved) return [];
+
     const actions: TableAction[] = [
       {
         label: "Редактировать",
@@ -448,6 +450,8 @@ const InvestorsPoolPage = ({
   };
 
   const handleBlockInvestor = async (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     if (window.confirm('Вы уверены, что хотите заблокировать этого инвестора?')) {
       try {
         await blockInvestor(investor.id);
@@ -460,6 +464,8 @@ const InvestorsPoolPage = ({
   };
 
   const handleUnblockInvestor = async (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     if (window.confirm('Вы уверены, что хотите разблокировать этого инвестора?')) {
       try {
         await blockInvestor(investor.id);
@@ -744,6 +750,7 @@ const InvestorsPoolPage = ({
   };
 
   const investorsTableData = investors.map((investor: Investor) => {
+    const canManageInvestor = !(isPoolV2 && investor.isRemoved);
     const createDoubleClickCell = (content: React.ReactNode) => (
       <DoubleClickCell
         onDoubleClick={() => handleInvestorDoubleClick(investor)}
@@ -782,16 +789,20 @@ const InvestorsPoolPage = ({
           ? formatMoney(investor.currentIncome.toString())
           : "-"
       ),
-      <EditButton onClick={() => handleEditInvestor(investor)} />,
-      <DeleteButton onClick={() => handleDeleteInvestor(investor)} />,
-      <DarkCyanButton
-        onClick={() => handleAddInvestment([investor.id.toString()])}
-      >
-        Новая инвестиция
-      </DarkCyanButton>,
-      <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
-        Выплатить
-      </DarkCyanButton>,
+      canManageInvestor ? <EditButton onClick={() => handleEditInvestor(investor)} /> : null,
+      canManageInvestor ? <DeleteButton onClick={() => handleDeleteInvestor(investor)} /> : null,
+      canManageInvestor ? (
+        <DarkCyanButton
+          onClick={() => handleAddInvestment([investor.id.toString()])}
+        >
+          Новая инвестиция
+        </DarkCyanButton>
+      ) : null,
+      canManageInvestor ? (
+        <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
+          Выплатить
+        </DarkCyanButton>
+      ) : null,
     ];
   });
 
@@ -799,7 +810,7 @@ const InvestorsPoolPage = ({
     const investorId = Number(rowData[0]);
     const investor = investors.find((i) => i.id === investorId);
 
-    if (investor) {
+    if (investor && !(isPoolV2 && investor.isRemoved)) {
       setSelectedInvestorForInvestment(investor);
       setIsInvestmentModalOpen(true);
     }
@@ -807,7 +818,10 @@ const InvestorsPoolPage = ({
 
   const handleSubmitInvestment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvestorForInvestment) return;
+    if (
+      !selectedInvestorForInvestment ||
+      (isPoolV2 && selectedInvestorForInvestment.isRemoved)
+    ) return;
 
     try {
       const amount = parseMoney(investmentAmount);
@@ -849,6 +863,8 @@ const InvestorsPoolPage = ({
   };
 
   const handlePayoutClick = (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     setSelectedInvestorForPayout(investor);
     setPayoutAmount("");
     setPayoutSource("income");
@@ -874,11 +890,15 @@ const InvestorsPoolPage = ({
   };
 
   const handleEditInvestor = (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     setCurrentInvestor(investor);
     setIsInvestorModalOpen(true);
   };
 
   const handleDeleteInvestor = async (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     if (investor.isCompanyPool) {
       window.alert("Нельзя удалить свою компанию как инвестора");
       return;
@@ -894,6 +914,8 @@ const InvestorsPoolPage = ({
   };
 
   const handleInvestorSubmit = async (investorData: Partial<Investor>) => {
+    if (isPoolV2 && currentInvestor?.isRemoved) return;
+
     try {
       if (currentInvestor) {
         const updatedInvestor = await updateInvestor(
@@ -1482,7 +1504,12 @@ const InvestorsPoolPage = ({
   };
 
   const handlePayoutSubmit = async () => {
-    if (!selectedInvestorForPayout || !payoutAmount || !report) return;
+    if (
+      !selectedInvestorForPayout ||
+      !payoutAmount ||
+      !report ||
+      (isPoolV2 && selectedInvestorForPayout.isRemoved)
+    ) return;
 
     const numericAmount = Number(payoutAmount.replace(/\D/g, ""));
 

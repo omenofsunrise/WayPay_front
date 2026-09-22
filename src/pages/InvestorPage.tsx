@@ -107,13 +107,16 @@ const InvestorPage = () => {
         if (!canEdit) return;
         
         const [id] = rowData;
-        setSelectedInvestor(investorsData?.items.find(i => i.id === Number(id)) || null);
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        if (isPoolV2 && investor?.isRemoved) return;
+
+        setSelectedInvestor(investor || null);
         setIsInvestmentModalOpen(true);
     };
 
     const handleSubmitInvestment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedInvestor) return;
+        if (!selectedInvestor || (isPoolV2 && selectedInvestor.isRemoved)) return;
 
         try {
             const amount = parseMoney(investmentAmount);
@@ -255,7 +258,7 @@ const InvestorPage = () => {
     };
 
     const handleEditInvestor = (investor: Investor) => {
-        if (!canEdit) return;
+        if (!canEdit || (isPoolV2 && investor.isRemoved)) return;
         
         setModalMode('edit');
         setSelectedInvestor(investor);
@@ -284,6 +287,8 @@ const InvestorPage = () => {
             console.error('Инвестор не найден');
             return;
         }
+
+        if (isPoolV2 && investorToDelete.isRemoved) return;
         
         if (investorToDelete.isCompany) {
             alert('Нельзя удалить свою компанию из инвесторов');
@@ -307,6 +312,10 @@ const InvestorPage = () => {
     };
 
     const handleSubmitInvestor = async (investorData: Partial<Investor>) => {
+        if (modalMode === 'edit' && isPoolV2 && selectedInvestor?.isRemoved) {
+            return false;
+        }
+
         try {
             if (modalMode === 'create') {
                 await createInvestor(investorData as Omit<Investor, 'id'>);
@@ -324,7 +333,7 @@ const InvestorPage = () => {
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
         const investor = investorsData?.items.find(i => i.id === Number(rowData[0]));
         if (investor) {
-            if (canEdit) {
+            if (canEdit && !(isPoolV2 && investor.isRemoved)) {
                 handleEditInvestor(investor);
             } else {
                 handleViewInvestor(investor);
@@ -432,6 +441,7 @@ const InvestorPage = () => {
         const investor = investorsData?.items.find(i => i.id === Number(id));
         const isBlocked = investor?.isBlocked || false;
         const isOwnCash = investor?.isCompany || false;
+        const isRemoved = isPoolV2 && investor?.isRemoved;
 
         const actions: TableAction[] = [
             {
@@ -447,6 +457,8 @@ const InvestorPage = () => {
                 color: '#3B82F6'
             }
         ];
+
+        if (isRemoved) return actions;
 
         if (isPoolV2 && !investor?.isCompany && !investor?.isCompanyPool) {
             actions.push({
@@ -509,6 +521,8 @@ const InvestorPage = () => {
         if (!canEdit) return;
         
         const [id] = rowData;
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        if (isPoolV2 && investor?.isRemoved) return;
         
         if (isNaN(Number(id))) {
             console.error('Неверный ID инвестора');
@@ -529,6 +543,8 @@ const InvestorPage = () => {
         if (!canEdit) return;
         
         const [id] = rowData;
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        if (isPoolV2 && investor?.isRemoved) return;
         
         if (isNaN(Number(id))) {
             console.error('Неверный ID инвестора');

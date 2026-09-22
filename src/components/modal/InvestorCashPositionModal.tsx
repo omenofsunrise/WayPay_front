@@ -67,7 +67,7 @@ const InvestorCashPositionModal = ({
   onChanged,
 }: InvestorCashPositionModalProps) => {
   const isProtectedInvestor = Boolean(
-    investor?.isCompany || investor?.isCompanyPool
+    investor?.isCompany || investor?.isCompanyPool || investor?.isRemoved
   );
   const canManagePosition = canEdit && !isProtectedInvestor;
   const [positionType, setPositionType] =

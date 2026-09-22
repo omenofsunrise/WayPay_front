@@ -107,6 +107,7 @@ const InvestorReportV2Page = () => {
     investors.find((inv) => inv.id.toString() === selectedInvestorId) ?? null;
   const selectedInvestorLabel =
     selectedInvestor?.nickname || selectedInvestor?.fullName || "";
+  const canManageSelectedInvestor = !selectedInvestor?.isRemoved;
 
   const refreshInvestorsAndReport = async () => {
     const [investorsResult, reportResult] = await Promise.all([
@@ -162,6 +163,8 @@ const InvestorReportV2Page = () => {
   };
 
   const openPayoutModalForInvestor = (investor: Investor) => {
+    if (investor.isRemoved) return;
+
     selectInvestorForAction(investor);
     setPayoutAmount("");
     setPayoutSource("income");
@@ -170,6 +173,8 @@ const InvestorReportV2Page = () => {
   };
 
   const openInvestmentModalForInvestor = (investor: Investor) => {
+    if (investor.isRemoved) return;
+
     selectInvestorForAction(investor);
     setInvestmentAmount("");
     setInvestmentDate(new Date().toISOString().split("T")[0]);
@@ -184,7 +189,7 @@ const InvestorReportV2Page = () => {
   };
 
   const openEditInvestorModal = (investor: Investor) => {
-    if (investor.isCompany) return;
+    if (investor.isCompany || investor.isRemoved) return;
 
     selectInvestorForAction(investor);
     setInvestorModalMode("edit");
@@ -201,6 +206,8 @@ const InvestorReportV2Page = () => {
   }, [selectedInvestorId, contributionsPage, getContributions]);
 
   const handleEditInvestment = (c: InvestorContribution) => {
+    if (!canManageSelectedInvestor) return;
+
     const dateStr = new Date(c.date).toISOString().split("T")[0];
     setSelectedInvestmentForEdit({ id: c.id, amount: c.amount, date: dateStr });
     setEditInvestmentAmount(c.amount.toString());
@@ -210,7 +217,7 @@ const InvestorReportV2Page = () => {
 
   const handleUpdateInvestment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvestmentForEdit) return;
+    if (!selectedInvestmentForEdit || !canManageSelectedInvestor) return;
     try {
       const amount = parseMoney(editInvestmentAmount);
       if (isNaN(amount) || amount <= 0) return;
@@ -239,7 +246,7 @@ const InvestorReportV2Page = () => {
   };
 
   const handlePayoutSubmit = async () => {
-    if (!selectedInvestorId || !payoutAmount || !report) return;
+    if (!selectedInvestorId || !payoutAmount || !report || selectedInvestor?.isRemoved) return;
     const numericAmount = Number(payoutAmount.replace(/\D/g, ""));
     try {
       await addPayout({
@@ -260,7 +267,7 @@ const InvestorReportV2Page = () => {
 
   const handleSubmitInvestment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvestorId) return;
+    if (!selectedInvestorId || selectedInvestor?.isRemoved) return;
 
     try {
       const amount = parseMoney(investmentAmount);
@@ -302,6 +309,8 @@ const InvestorReportV2Page = () => {
   };
 
   const handleSubmitInvestor = async (investorData: Omit<Investor, "id">) => {
+    if (investorModalMode === "edit" && investorForEdit?.isRemoved) return false;
+
     const savedInvestor =
       investorModalMode === "edit" && investorForEdit
         ? await investorService.updateInvestor(investorForEdit.id, investorData)
@@ -318,6 +327,8 @@ const InvestorReportV2Page = () => {
     id: number,
     action: "confirm" | "reject"
   ) => {
+    if (!canManageSelectedInvestor) return;
+
     await makeContributionAction(id, action);
     if (selectedInvestorId) {
       getContributions(Number(selectedInvestorId), undefined, {
@@ -331,6 +342,8 @@ const InvestorReportV2Page = () => {
     id: number,
     action: "confirm" | "reject"
   ) => {
+    if (!canManageSelectedInvestor) return;
+
     await makePayoutAction(id, action);
     if (selectedInvestorId) fetchPayouts(Number(selectedInvestorId));
   };
@@ -401,7 +414,7 @@ const InvestorReportV2Page = () => {
     contributionsData?.items.map((c: InvestorContribution) => [
       formatDate(c.date.toString()),
       formatMoney(c.amount.toString()),
-      <ContributionActions>
+      canManageSelectedInvestor ? <ContributionActions>
         {!c.confirmed && (
           <DarkCyanButton
             onClick={() => handleEditInvestment(c)}
@@ -427,7 +440,7 @@ const InvestorReportV2Page = () => {
         >
           {c.confirmed ? <FaLock /> : <FaUnlock />}
         </LockToggleButton>
-      </ContributionActions>,
+      </ContributionActions> : "—",
     ]) ?? [];
 
   const displayedPayouts = (payouts ?? []).slice(
@@ -441,7 +454,7 @@ const InvestorReportV2Page = () => {
     formatMoney(p.amount.toString()),
     p.confirmed ? (
       <ConfirmedBadge />
-    ) : (
+    ) : canManageSelectedInvestor ? (
       <ActionButtons>
         <DarkCyanButton
           onClick={() => handlePayoutAction(p.id, "confirm")}
@@ -456,7 +469,7 @@ const InvestorReportV2Page = () => {
           Удалить
         </GrayButton>
       </ActionButtons>
-    ),
+    ) : "—",
   ]);
 
   const investorOptions = investors.map((inv) => ({
@@ -468,6 +481,8 @@ const InvestorReportV2Page = () => {
     const investorId = Number(rowData[0]);
     const investor = investors.find((inv) => inv.id === investorId);
     if (!investor) return [];
+
+    if (investor.isRemoved) return [];
 
     const actions = [
       {
@@ -564,7 +579,7 @@ const InvestorReportV2Page = () => {
                   onClick={() =>
                     selectedInvestor && openPayoutModalForInvestor(selectedInvestor)
                   }
-                  disabled={!selectedInvestor}
+                  disabled={!selectedInvestor || selectedInvestor.isRemoved}
                 >
                   {selectedInvestorLabel
                     ? `Выплатить: ${selectedInvestorLabel}`
