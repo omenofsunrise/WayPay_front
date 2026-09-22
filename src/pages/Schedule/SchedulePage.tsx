@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import TitleField from "../../components/ui/Layouts/TitleLayout";
 import Tabs from "../../components/ui/fields/Tabs";
@@ -11,7 +11,10 @@ import type { ScheduleDetails, ScheduleParams } from "../../api/types/schedule";
 import scheduleService from "../../api/services/scheduleService";
 import { parseDateInput, formatDate } from "../../utils/dateFormatter";
 import { formatMoney } from "../../utils/formatPrice";
-import ScheduleTable from "./ScheduleTable";
+import ScheduleTable, {
+  type ScheduleFilters,
+  type ScheduleTableHandle,
+} from "./ScheduleTable";
 import ScheduleCharts from "./ScheduleCharts";
 import ScheduleCalendar from "./ScheduleCalendar";
 
@@ -44,6 +47,8 @@ const SchedulePage = ({
 
   const { exportData, isExporting, exportProgress } =
     useExport<ScheduleDetails>();
+  const scheduleTableRef = useRef<ScheduleTableHandle>(null);
+  const visitedTableRef = useRef<ScheduleTableHandle>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
@@ -56,8 +61,6 @@ const SchedulePage = ({
       ? savedTab
       : initialTab;
   });
-
-  const [currentFilters, setCurrentFilters] = useState<any>({});
 
   const isTabHidden = useCallback(
     (tab: TabType) => hiddenTabs.includes(tab),
@@ -99,7 +102,7 @@ const SchedulePage = ({
   );
 
   const handleExport = useCallback(
-    async (filters: any) => {
+    async (filters: ScheduleFilters) => {
       try {
         const columnToApiSortMap: Record<number, string> = {
           0: "creditid",
@@ -122,6 +125,7 @@ const SchedulePage = ({
                 ? parseDateInput(filters.dateTo)
                 : undefined,
               creditTypeId: filters.objectTypeId || undefined,
+              schouldBeVisited: filters.shouldBeVisited || undefined,
               sortBy:
                 filters.sortKey !== null && filters.sortKey !== undefined
                   ? columnToApiSortMap[filters.sortKey]
@@ -129,7 +133,7 @@ const SchedulePage = ({
               sortDirection: filters.sortDirection,
             };
 
-            if (filters.entityId && filters.entityId != 0) {
+            if (filters.entityId && filters.entityId !== 0) {
               if (filters.entityType === "investor") {
                 params.investorId = filters.entityId;
               } else if (filters.entityType === "pool") {
@@ -163,33 +167,11 @@ const SchedulePage = ({
     [exportData]
   );
 
-  useEffect(() => {
-    const handleExportData = (event: CustomEvent) => {
-      setCurrentFilters(event.detail);
-    };
-
-    window.addEventListener(
-      "schedule-export-data",
-      handleExportData as EventListener
-    );
-    return () =>
-      window.removeEventListener(
-        "schedule-export-data",
-        handleExportData as EventListener
-      );
-  }, []);
-
   const handleExportClick = useCallback(() => {
-    if (activeTab === "table") {
-      if (Object.keys(currentFilters).length > 0) {
-        handleExport(currentFilters);
-      } else {
-        handleExport({});
-      }
-    } else {
-      handleExport({});
-    }
-  }, [activeTab, currentFilters, handleExport]);
+    const tableRef =
+      activeTab === "visited" ? visitedTableRef : scheduleTableRef;
+    handleExport(tableRef.current?.getFilters() ?? {});
+  }, [activeTab, handleExport]);
 
   const tabs = [
     ...(shouldShowScheduleTab && !isTabHidden("calendar")
@@ -218,6 +200,7 @@ const SchedulePage = ({
             content: (
               <ScheduleTable
                 key="table"
+                ref={scheduleTableRef}
                 isListMode={isListMode}
                 pageSize={responsivePageSize}
               />
@@ -231,6 +214,7 @@ const SchedulePage = ({
       content: (
         <ScheduleTable
           key="visited"
+          ref={visitedTableRef}
           isListMode={isListMode}
           pageSize={responsivePageSize}
           shouldBeVisited={true}

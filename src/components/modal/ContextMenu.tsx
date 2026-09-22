@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { motion, type HTMLMotionProps } from "framer-motion";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export interface ContextMenuItem {
   label: string | React.ReactNode;
@@ -27,6 +27,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<number | null>(null);
+  const [adjustedPosition, setAdjustedPosition] = useState({ x, y });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -41,31 +42,43 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [onClose]);
 
-  const getAdjustedPosition = () => {
-    if (!menuRef.current) return { x, y };
+  useLayoutEffect(() => {
+    const updatePosition = () => {
+      if (!menuRef.current) {
+        setAdjustedPosition({ x, y });
+        return;
+      }
 
-    const menuWidth = menuRef.current.offsetWidth;
-    const menuHeight = menuRef.current.offsetHeight;
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
+      const menuWidth = menuRef.current.offsetWidth;
+      const menuHeight = menuRef.current.offsetHeight;
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const margin = 8;
 
-    const scrollY = window.scrollY || window.pageYOffset;
+      let adjustedX = x;
+      let adjustedY = y;
 
-    let adjustedX = x;
-    let adjustedY = y;
+      if (adjustedX + menuWidth > windowWidth - margin) {
+        adjustedX = x - menuWidth;
+      }
 
-    if (adjustedX + menuWidth > windowWidth) {
-      adjustedX = x - menuWidth;
-    }
+      if (adjustedY + menuHeight > windowHeight - margin) {
+        adjustedY = y - menuHeight;
+      }
 
-    if (adjustedY + menuHeight > windowHeight) {
-      adjustedY = y - menuHeight;
-    }
+      setAdjustedPosition({
+        x: Math.max(margin, adjustedX),
+        y: Math.max(margin, adjustedY),
+      });
+    };
 
-    return { x: adjustedX, y: adjustedY };
-  };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
 
-  const position = getAdjustedPosition();
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [x, y, items]);
 
   // Если справа от меню не помещается подменю — раскрываем его влево.
   const submenuOpensLeft = (() => {
@@ -106,8 +119,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       transition={{ duration: 0.15 }}
       style={{
         position: "absolute",
-        top: position.y,
-        left: position.x,
+        top: adjustedPosition.y,
+        left: adjustedPosition.x,
       }}
       onClick={(e) => e.stopPropagation()}
       onMouseLeave={handleMouseLeave}

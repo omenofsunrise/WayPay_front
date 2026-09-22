@@ -345,6 +345,9 @@ const CompanyPage = () => {
                 onChange={handleInputChange}
               />
             </InputGroup>
+          </InputContainer>
+
+          <InputContainer>
             <InputGroup>
               <Label>Телефон</Label>
               <PhoneModalInput
@@ -353,16 +356,15 @@ const CompanyPage = () => {
                 onChange={handleInputChange}
               />
             </InputGroup>
+            <InputGroup>
+              <Label>Телефон поддержки</Label>
+              <PhoneModalInput
+                name="supportPhone"
+                value={formData.supportPhone}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
           </InputContainer>
-
-          <InputGroup>
-            <Label>Телефон поддержки</Label>
-            <PhoneModalInput
-              name="supportPhone"
-              value={formData.supportPhone}
-              onChange={handleInputChange}
-            />
-          </InputGroup>
 
           <ButtonsContainer>
             <GrayButton width="120px" onClick={handleReset}>

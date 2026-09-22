@@ -1,4 +1,12 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import styled from "styled-components";
 import CustomTable, {
   type RowStyle,
@@ -35,6 +43,23 @@ interface ScheduleTableProps {
   isListMode: boolean;
   pageSize: number;
   shouldBeVisited?: boolean;
+}
+
+export interface ScheduleFilters {
+  clientName?: string;
+  investorName?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  objectTypeId?: number;
+  entityId?: number;
+  entityType?: "investor" | "pool";
+  sortKey?: number | null;
+  sortDirection?: "asc" | "desc";
+  shouldBeVisited?: boolean;
+}
+
+export interface ScheduleTableHandle {
+  getFilters: () => ScheduleFilters;
 }
 
 interface SelectedEntity {
@@ -82,11 +107,8 @@ const columnToApiSortMap: Record<number, string> = {
   3: "date",
 };
 
-const ScheduleTable = ({
-  isListMode,
-  pageSize,
-  shouldBeVisited,
-}: ScheduleTableProps) => {
+const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
+  ({ isListMode, pageSize, shouldBeVisited }, ref) => {
   const { getList, updateSchedule, isLoading, error, scheduleData } =
     useSchedule();
   const { createPayment } = usePayment();
@@ -341,35 +363,33 @@ const ScheduleTable = ({
     loadSchedules();
   }, [loadSchedules]);
 
-  useEffect(() => {
-    const handleExport = () => {
-      const exportEvent = new CustomEvent("schedule-export-data", {
-        detail: {
-          clientName: clientNameFilter,
-          investorName: investorFilter,
-          dateFrom: dateFromFilter,
-          dateTo: dateToFilter,
-          objectTypeId: selectedTableObjectType?.id,
-          entityId: selectedEntity?.id,
-          entityType: selectedEntity?.type,
-          sortKey: sortConfig.key,
-          sortDirection: sortConfig.direction,
-        },
-      });
-      window.dispatchEvent(exportEvent);
-    };
-
-    window.addEventListener("schedule-export", handleExport);
-    return () => window.removeEventListener("schedule-export", handleExport);
-  }, [
-    clientNameFilter,
-    investorFilter,
-    dateFromFilter,
-    dateToFilter,
-    selectedTableObjectType,
-    selectedEntity,
-    sortConfig,
-  ]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      getFilters: () => ({
+        clientName: clientNameFilter || undefined,
+        investorName: investorFilter || undefined,
+        dateFrom: dateFromFilter || undefined,
+        dateTo: dateToFilter || undefined,
+        objectTypeId: selectedTableObjectType?.id,
+        entityId: selectedEntity?.id,
+        entityType: selectedEntity?.type,
+        sortKey: sortConfig.key,
+        sortDirection: sortConfig.direction,
+        shouldBeVisited,
+      }),
+    }),
+    [
+      clientNameFilter,
+      investorFilter,
+      dateFromFilter,
+      dateToFilter,
+      selectedTableObjectType,
+      selectedEntity,
+      sortConfig,
+      shouldBeVisited,
+    ]
+  );
 
   const handleRowClick = useCallback(
     (_rowData: any[], rowIndex: number) => {
@@ -856,7 +876,10 @@ const ScheduleTable = ({
       )}
     </>
   );
-};
+  }
+);
+
+ScheduleTable.displayName = "ScheduleTable";
 
 const getRowStyles = (
   schedules: ScheduleDetails[],

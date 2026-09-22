@@ -23,6 +23,7 @@ import balanceSvg from "../assets/ui/InvestorReport/balance.svg";
 import allSelfIncomeSvg from "../assets/ui/InvestorReport/AllSelfIncome.svg";
 import CustomTable, {
   type RowStyle,
+  type TableAction,
 } from "../components/ui/tables/CustomTable";
 import { useInvestorPayout } from "../api/hooks/useInvestorPayout";
 import type { InvestorPayout, PayoutSource } from "../api/types/investorPayout";
@@ -71,6 +72,7 @@ const InvestorsPoolPage = ({
     updateInvestor,
     addInvestment,
     updateInvestment,
+    blockInvestor
   } = useInvestor();
 
   const {
@@ -331,6 +333,69 @@ const InvestorsPoolPage = ({
     getContributions,
   ]);
 
+  const investorActions = (rowData: any[]): TableAction[] => {
+    const [id] = rowData;
+    const investor = investors.find((i) => i.id === Number(id));
+    if (!investor) return [];
+
+    const isBlocked = investor.isBlocked || false;
+    const isOwnCash = investor.isCompanyPool || investor.isCompany || false;
+
+    const actions: TableAction[] = [
+      {
+        label: "Редактировать",
+        action: () => handleEditInvestor(investor),
+        color: "#3B82F6",
+      },
+    ];
+
+    if (isBlocked) {
+      actions.push(
+        {
+          label: "Разблокировать инвестора",
+          action: () => handleUnblockInvestor(investor),
+          color: "#10B981",
+        }
+      );
+
+      if (!isOwnCash) {
+        actions.push({
+          label: "Удалить",
+          action: () => handleDeleteInvestor(investor),
+          color: "#EF4444",
+        });
+      }
+    } else {
+      actions.push(
+        {
+          label: "Новая инвестиция",
+          action: () => handleAddInvestment([investor.id.toString()]),
+          color: "#10B981",
+        },
+        {
+          label: "Выплатить",
+          action: () => handlePayoutClick(investor),
+          color: "#007D88",
+        },
+        {
+          label: "Заблокировать инвестора",
+          action: () => handleBlockInvestor(investor),
+          color: "#F59E0B",
+        }
+      );
+
+      if (!isOwnCash) {
+        actions.push({
+          label: "Удалить",
+          action: () => handleDeleteInvestor(investor),
+          color: "#EF4444",
+        });
+      }
+    }
+
+    return actions;
+  };
+
   const handleContributionAction = async (
     id: number,
     action: "confirm" | "reject"
@@ -359,6 +424,30 @@ const InvestorsPoolPage = ({
       }
     } catch (error) {
       console.error("Contribution action error:", error);
+    }
+  };
+
+  const handleBlockInvestor = async (investor: Investor) => {
+    if (window.confirm('Вы уверены, что хотите заблокировать этого инвестора?')) {
+      try {
+        await blockInvestor(investor.id);
+        await reloadData();
+      } catch (error) {
+        console.error('Error blocking investor:', error);
+        alert('Произошла ошибка при блокировке инвестора');
+      }
+    }
+  };
+
+  const handleUnblockInvestor = async (investor: Investor) => {
+    if (window.confirm('Вы уверены, что хотите разблокировать этого инвестора?')) {
+      try {
+        await blockInvestor(investor.id);
+        await reloadData();
+      } catch (error) {
+        console.error('Error unblocking investor:', error);
+        alert('Произошла ошибка при разблокировке инвестора');
+      }
     }
   };
 
@@ -1283,6 +1372,20 @@ const InvestorsPoolPage = ({
     }
   };
 
+  const investorsRowStyles = investors.reduce(
+    (styles, investor, index) => {
+      if (investor.isBlocked) {
+        styles[index] = {
+          backgroundColor: "#FFEBEE",
+          color: "black",
+          fontWeight: "normal",
+        };
+      }
+      return styles;
+    },
+    {} as Record<number, RowStyle>
+  );
+
   const handleShareClick = async () => {
     if (!report || !selectedPoolId) return;
 
@@ -1938,6 +2041,8 @@ const InvestorsPoolPage = ({
                 { name: "", align: "center" },
               ]}
               data={investorsTableData}
+              contextMenuActions={investorActions}
+              rowStyles={investorsRowStyles}
               isLoading={isLoading}
             />
             <PaginationLayout>

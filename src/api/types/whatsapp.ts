@@ -331,13 +331,13 @@ export type BotEventType =
   | "CreatedCredit"
   | "CreatedPayment"
   | "ClientBirthdate"
-  | "ComingPayment";
+  | "UpcomingPayment";
 
 export const BotEventType = {
   CreatedCredit: "CreatedCredit",
   CreatedPayment: "CreatedPayment",
   ClientBirthdate: "ClientBirthdate",
-  ComingPayment: "ComingPayment",
+  UpcomingPayment: "UpcomingPayment",
 } as const;
 
 export type BotResponseTextType = "WhatsAppBotNoClientResponse";

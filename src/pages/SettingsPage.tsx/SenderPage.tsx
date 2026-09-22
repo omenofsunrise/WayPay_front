@@ -666,22 +666,12 @@ const PageContainer = styled.div`
 const MessageColumn = styled.div`
   display: flex;
   flex-direction: column;
-  min-height: 0;
-
-  > div {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 600px;
-  }
 `;
 
 const ContentWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  gap: 16px;
 `;
 
 const MessageHeader = styled.div`
@@ -751,7 +741,6 @@ const PreviewSection = styled.div`
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 `;
 
 const MessagePreview = styled.div`

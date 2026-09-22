@@ -33,6 +33,8 @@ import ObjectTypeSelect from "../components/ui/fields/ObjectTypeSelect";
 import { formatMoney } from "../utils/formatPrice";
 import DateModalInput from "../components/ui/fields/DateModalInput";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
+import useInvestor from "../api/hooks/useInvestor";
+import { isOwnCashInvestorName } from "../utils/investorUtils";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -98,7 +100,6 @@ const NewCreditPage = () => {
     useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  let isMounted = true;
   const [totalSum, setTotalSum] = useState(0);
   const [initialPaymentPercent, setInitialPaymentPercent] =
     useState<string>("");
@@ -126,6 +127,7 @@ const NewCreditPage = () => {
     getCreateCreditRequest,
     isLoading: isCreditLoading,
   } = useCredit();
+  const { getInvestorById } = useInvestor();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [objectTypeName, setObjectTypeName] = useState<string>("");
@@ -201,6 +203,8 @@ const NewCreditPage = () => {
   }, [isDraftLoaded]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadCreditData = async () => {
       if (!isEditMode || !id) return;
 
@@ -288,15 +292,31 @@ const NewCreditPage = () => {
 
           if (!creditData.inDebt) {
             if (creditData.investorId) {
+              const loadedInvestor = await getInvestorById(
+                creditData.investorId
+              );
+              if (!isMounted) return;
+
               setInvestor({
                 id: creditData.investorId,
-                nickname: creditData.investorNickname || "",
-                fullName: creditData.investorId.toString() || "",
-                phoneNumber: creditData.investorId.toString() || "",
-                investorPie: creditData.investorId || 0,
-                investmentAmount: creditData.investorId || 0,
-                balance: creditData.investorId || 0,
-                activeUntil: creditData.investorActiveUntil,
+                nickname:
+                  loadedInvestor?.nickname || creditData.investorNickname || "",
+                fullName:
+                  loadedInvestor?.fullName || creditData.investorId.toString(),
+                phoneNumber:
+                  loadedInvestor?.phoneNumber ||
+                  creditData.investorId.toString(),
+                investorPie:
+                  loadedInvestor?.investorPie || creditData.investorId || 0,
+                investmentAmount:
+                  loadedInvestor?.investmentAmount ||
+                  creditData.investorId ||
+                  0,
+                balance: loadedInvestor?.balance || creditData.investorId || 0,
+                activeUntil:
+                  loadedInvestor?.activeUntil || creditData.investorActiveUntil,
+                isCompany: loadedInvestor?.isCompany || false,
+                isCompanyPool: loadedInvestor?.isCompanyPool,
                 isPool: false,
               });
             } else if (creditData.poolId) {
@@ -413,7 +433,11 @@ const NewCreditPage = () => {
     };
 
     loadCreditData();
-  }, [id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isEditMode, getCreateCreditRequest, getInvestorById]);
 
   useEffect(() => {
     if (creditApplicationData) {
@@ -634,7 +658,11 @@ const NewCreditPage = () => {
 
     const selectedInvestor = investor || selectedPool;
 
-    if (selectedPool || (investor && investor.isCompany)) {
+    if (
+      selectedPool ||
+      (investor &&
+        (investor.isCompany || isOwnCashInvestorName(investor.nickname)))
+    ) {
       setValidationError(null);
       return true;
     }
@@ -681,7 +709,11 @@ const NewCreditPage = () => {
         return true;
       }
 
-      if (!selectedInvestor.isCompany && investorActiveUntil < tempDate) {
+      if (
+        !selectedInvestor.isCompany &&
+        !isOwnCashInvestorName(selectedInvestor.nickname) &&
+        investorActiveUntil < tempDate
+      ) {
         const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString(
           "ru-RU"
         )}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString(
@@ -1024,6 +1056,7 @@ const NewCreditPage = () => {
     pie?: number;
     investmentAmount?: number;
     balance?: number;
+    isCompany?: boolean;
     type: "investor" | "pool";
     activeUntil?: string;
   }) => {
@@ -1277,7 +1310,7 @@ const NewCreditPage = () => {
             </SectionTopRow>
 
             <FormRow>
-              <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
+              <FieldGroup $width="248px">
                 <Label>Дата договора</Label>
                 <DateInputWrapper>
                   <CustomCalendar
@@ -1290,7 +1323,7 @@ const NewCreditPage = () => {
               </FieldGroup>
 
               {!inDebt ? (
-                <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
+                <FieldGroup $width="365px">
                   <Label>Инвестор / Пул</Label>
                   <EntitySelectWrapper>
                     <EntitySelectContainer
@@ -1305,7 +1338,7 @@ const NewCreditPage = () => {
                   </EntitySelectWrapper>
                 </FieldGroup>
               ) : inDebt ? (
-                <FieldGroup style={{ maxWidth: "365px", width: "100%" }}>
+                <FieldGroup $width="365px">
                   <Label>Комментарий к долгу</Label>
                   <EntitySelectWrapper>
                     <CustomInput
@@ -1317,7 +1350,7 @@ const NewCreditPage = () => {
                 </FieldGroup>
               ) : null}
 
-              <FieldGroup style={{ maxWidth: "248px", width: "100%" }}>
+              <FieldGroup $width="248px">
                 <Label>Имя договора (необязательно)</Label>
                 <DateInputWrapper>
                   <CustomInput
@@ -1329,7 +1362,7 @@ const NewCreditPage = () => {
                 </DateInputWrapper>
               </FieldGroup>
 
-              <FieldGroup style={{ maxWidth: "265px", width: "100%" }}>
+              <FieldGroup $width="265px">
                 <Label>Папка (необязательно)</Label>
                 <ObjectTypeSelect
                   value={objectTypeName}
@@ -2003,27 +2036,35 @@ const SubmitErrorClose = styled.button`
 
 const DateInputWrapper = styled.div`
   width: 100%;
-  max-width: 248px;
+  min-width: 0;
 `;
 
 const FormRow = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  flex-wrap: wrap;
   padding-top: 4px;
+  align-items: stretch;
 
   @media (min-width: 768px) {
     flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
     row-gap: 20px;
     column-gap: 28px;
   }
 `;
 
-const FieldGroup = styled.div`
+const FieldGroup = styled.div<{ $width?: string }>`
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: ${({ $width }) => $width || "100%"};
   min-width: 0;
+
+  @media (min-width: 768px) {
+    flex: 0 1 ${({ $width }) => $width || "100%"};
+  }
 `;
 
 const Label = styled.label`

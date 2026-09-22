@@ -443,21 +443,22 @@ const CreditPage = () => {
     [generateShareMessage, selectedCreditForPrint]
   );
 
-  // Универсальное подменю переноса: один список назначений (вкладки ИЛИ папки).
-  // Перенос и туда, и туда идёт через одно поле категории договора (set-category).
+  // Универсальное подменю переноса: категории используют set-category,
+  // папки используют set-credit-type.
   const getMoveMenuItems = (
     creditId: number,
     onDone: () => void,
     targets: ObjectType[],
-    emptyHint: string
+    emptyHint: string,
+    setTarget: (creditId: number, objectTypeId: number | null) => Promise<void>
   ): ContextMenuItem[] => {
     const handleSet = async (objectTypeId: number | null) => {
       try {
-        await creditService.setCreditType(creditId, objectTypeId);
+        await setTarget(creditId, objectTypeId);
         onDone();
       } catch (error) {
         console.error("Ошибка при переносе договора:", error);
-        alert("Произошла ошибка при переносе договора");
+        alert(extractErrorMessage(error, "Произошла ошибка при переносе договора"));
       }
     };
 
@@ -490,7 +491,11 @@ const CreditPage = () => {
       pageSize: 100,
     });
     if (result) {
-      setCreditFolders(result.items);
+      setCreditFolders(
+        result.items.filter(
+          (item) => item.name.trim().toLocaleLowerCase("ru-RU") !== "в долг"
+        )
+      );
     }
   }, [getAllObjectTypes]);
 
@@ -965,6 +970,27 @@ const CreditPage = () => {
     };
 
     await setFundingSourceForBatch(batch, sourceRequest, entity.balance);
+  };
+
+  const handleMoveToDebt = async (rowData: any[]) => {
+    const [_, id] = rowData;
+    const creditId = Number(id);
+
+    if (!Number.isFinite(creditId)) {
+      alert("Не удалось определить договор");
+      return;
+    }
+
+    try {
+      await setInvestmentSource(creditId, {
+        sourceType: InvestmentSourceType.InDebt,
+        entityId: 0,
+      });
+      await loadCredits();
+    } catch (error) {
+      console.error("Ошибка при переносе договора в долг:", error);
+      alert(extractErrorMessage(error, "Произошла ошибка при переносе договора в долг"));
+    }
   };
 
   const getPaymentTab = useCallback(
@@ -1610,6 +1636,15 @@ const CreditPage = () => {
         denyPermission("MANAGE_ACCOUNTING", true),
     },
     {
+      label: "Перенести в долг",
+      action: handleMoveToDebt,
+      color: "#6B7280",
+      shouldShow: () =>
+        activeTab !== "inDebt" &&
+        (hasRole("директор") || hasRole("суперадмин")) &&
+        denyPermission("MANAGE_ACCOUNTING", true),
+    },
+    {
       label: "Перенести в категорию",
       action: (rowData: any[]) => {
         console.log("Перенос в категорию для:", rowData);
@@ -1622,7 +1657,8 @@ const CreditPage = () => {
           creditId,
           loadCredits,
           customTabs,
-          "Сначала создайте категорию (вкладку сверху)"
+          "Сначала создайте категорию (вкладку сверху)",
+          creditService.setCategory.bind(creditService)
         );
       },
       showOnHover: true,
@@ -1640,7 +1676,8 @@ const CreditPage = () => {
           creditId,
           loadCredits,
           creditFolders,
-          "Папок пока нет"
+          "Папок пока нет",
+          creditService.setCreditType.bind(creditService)
         );
       },
       showOnHover: true,

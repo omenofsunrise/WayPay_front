@@ -28,14 +28,14 @@ const EVENT_LABEL: Record<BotEventType, string> = {
   CreatedCredit: "Создание рассрочки",
   CreatedPayment: "Создание платежа",
   ClientBirthdate: "День рождения клиента",
-  ComingPayment: "Приближающийся платёж",
+  UpcomingPayment: "На приближающийся платёж",
 };
 
 const EVENT_OPTIONS: BotEventType[] = [
   "CreatedCredit",
   "CreatedPayment",
   "ClientBirthdate",
-  "ComingPayment",
+  "UpcomingPayment",
 ];
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -444,7 +444,7 @@ const BotManagementPage: React.FC = () => {
     if (!eventModal.rule) return;
 
     let eventDays: number | null = null;
-    if (eventModal.eventType === "ComingPayment") {
+    if (eventModal.eventType === "UpcomingPayment") {
       const parsed = Number(eventModal.eventDays);
       if (
         !eventModal.eventDays.trim() ||
@@ -628,6 +628,9 @@ const BotManagementPage: React.FC = () => {
                           $color={getMatchTypeColor(kw.matchType)}
                           title={getMatchTypeLabel(kw.matchType)}
                         >
+                          <KeywordChipMatchBadge>
+                            {getMatchTypeLabel(kw.matchType)}
+                          </KeywordChipMatchBadge>
                           <KeywordValue>"{kw.keyword}"</KeywordValue>
                           <RemoveChip
                             onClick={() => handleDeleteKeyword(kw.id, rule.id)}
@@ -888,6 +891,7 @@ const BotManagementPage: React.FC = () => {
                   setEventModal((prev) => ({
                     ...prev,
                     eventType: e.target.value as BotEventType,
+                    eventDays: "",
                   }))
                 }
                 options={EVENT_OPTIONS.map((opt) => ({
@@ -895,10 +899,10 @@ const BotManagementPage: React.FC = () => {
                   label: EVENT_LABEL[opt],
                 }))}
                 disabled={eventModal.saving}
+                dropdownInPortal
               />
             </ModalField>
-
-            {eventModal.eventType === "ComingPayment" && (
+            {eventModal.eventType === "UpcomingPayment" && (
               <ModalField>
                 <ModalLabel>За сколько дней до платежа рассылать</ModalLabel>
                 <CustomInput
@@ -1174,9 +1178,21 @@ const KeywordChip = styled.div<{ $color: string }>`
   border-radius: 20px;
   overflow: hidden;
   font-size: 13px;
-  border-left: 3px solid ${(p) => p.$color};
   border: 1px solid #e5e7eb;
   border-left: 3px solid ${(p) => p.$color};
+`;
+
+const KeywordChipMatchBadge = styled.span`
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 `;
 
 const KeywordValue = styled.span`

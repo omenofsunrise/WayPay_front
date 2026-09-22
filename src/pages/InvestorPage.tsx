@@ -387,7 +387,9 @@ const InvestorPage = () => {
             ...(canEdit? [investor.investorPie || ''] : []),
             ...(canEdit? [formatMoney((investor.investmentAmount || 0).toString()) || ''] : []),
             formatMoney((investor.balance || 0).toString()),
-            investor.isCompany ? '-' : formatDate(investor.activeUntil),
+            investor.isCompany || investor.isCompanyPool || investor.nickname === 'Invest_group'
+                ? '-'
+                : formatDate(investor.activeUntil),
             investor.isBlocked?.toString() || 'false',
         ];
     }) ?? [];

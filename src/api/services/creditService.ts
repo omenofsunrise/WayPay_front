@@ -74,11 +74,18 @@ class CreditService {
     return;
   }
 
-  async setCreditType(creditId: number, typeId?: number | null) {
+  async setCategory(creditId: number, typeId?: number | null) {
     if (typeId === null)
       await apiClient.patch(`/Credit/set-category/${creditId}/`);
     else
       await apiClient.patch(`/Credit/set-category/${creditId}/${typeId}`);
+  }
+
+  async setCreditType(creditId: number, typeId?: number | null) {
+    if (typeId === null)
+      await apiClient.patch(`/Credit/set-credit-type/${creditId}/`);
+    else
+      await apiClient.patch(`/Credit/set-credit-type/${creditId}/${typeId}`);
   }
 
   async deleteCredit(id: number): Promise<void> {
