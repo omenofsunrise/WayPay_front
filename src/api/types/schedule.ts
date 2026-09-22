@@ -26,6 +26,7 @@ export interface ScheduleParams extends PaginationParams {
   investorId?: number;
   poolId?: number;
   creditTypeId?: number;
+  schouldBeVisited?: boolean;
 }
 
 export interface ScheduleCalendarParams {
@@ -72,4 +73,14 @@ export interface ScheduleDetails {
   payed?: boolean;
   userComment?: string | null;
   status?: "Payed" | "Overdue" | "Pending";
+}
+
+export type VisitMode = 0 | 1 | 2 | 3;
+
+export interface SetShouldBeVisitedDto {
+  currentId: number;
+  creditId?: number | null;
+  mode: VisitMode;
+  nearestCount?: number | null;
+  schouldBe: boolean;
 }

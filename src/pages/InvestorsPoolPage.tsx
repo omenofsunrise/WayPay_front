@@ -56,8 +56,20 @@ import useInvestorContribution from "../api/hooks/useInvestorContribution";
 import type { InvestorContribution } from "../api/types/investorContribution";
 import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
+import { useAuth } from "../сontext/AuthContext";
+import InvestorCashPositionModal from "../components/modal/InvestorCashPositionModal";
 
-const InvestorsPoolPage = () => {
+type InvestorsPoolPageProps = {
+  enableReinvestments?: boolean;
+};
+
+const InvestorsPoolPage = ({
+  enableReinvestments = true,
+}: InvestorsPoolPageProps) => {
+  const { authInfo, hasRole } = useAuth();
+  const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
+  const canManageCashPosition =
+    hasRole("директор") || hasRole("суперадмин");
   const {
     getInvestors,
     getInvestorById,
@@ -122,6 +134,9 @@ const InvestorsPoolPage = () => {
 
   const [filteredPayouts, setFilteredPayouts] = useState<InvestorPayout[]>([]);
   const [investors, setInvestors] = useState<Investor[]>([]);
+  const [cashPositionInvestor, setCashPositionInvestor] =
+    useState<Investor | null>(null);
+  const [isCashPositionModalOpen, setIsCashPositionModalOpen] = useState(false);
   const [investorsData, setInvestorsData] = useState<any>(null);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [currentInvestor, setCurrentInvestor] = useState<Investor | null>(null);
@@ -243,7 +258,11 @@ const InvestorsPoolPage = () => {
   ]);
 
   useEffect(() => {
-    if (selectedPoolId && activeTab === "reinvestments") {
+    if (
+      enableReinvestments &&
+      selectedPoolId &&
+      activeTab === "reinvestments"
+    ) {
       const loadReinvestments = async () => {
         setIsReinvestmentsLoading(true);
         try {
@@ -273,7 +292,13 @@ const InvestorsPoolPage = () => {
 
       loadReinvestments();
     }
-  }, [selectedPoolId, reinvestmentsPage, activeTab, selectedInvestorForFilter]);
+  }, [
+    enableReinvestments,
+    selectedPoolId,
+    reinvestmentsPage,
+    activeTab,
+    selectedInvestorForFilter,
+  ]);
 
   useEffect(() => {
     if (
@@ -325,6 +350,8 @@ const InvestorsPoolPage = () => {
     const isBlocked = investor.isBlocked || false;
     const isOwnCash = investor.isCompanyPool || investor.isCompany || false;
 
+    if (isPoolV2 && investor.isRemoved) return [];
+
     const actions: TableAction[] = [
       {
         label: "Редактировать",
@@ -332,6 +359,17 @@ const InvestorsPoolPage = () => {
         color: "#3B82F6",
       },
     ];
+
+    if (isPoolV2 && !isOwnCash) {
+      actions.push({
+        label: "Управление кассой",
+        action: () => {
+          setCashPositionInvestor(investor);
+          setIsCashPositionModalOpen(true);
+        },
+        color: "#007D88",
+      });
+    }
 
     if (isBlocked) {
       actions.push(
@@ -412,6 +450,8 @@ const InvestorsPoolPage = () => {
   };
 
   const handleBlockInvestor = async (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     if (window.confirm('Вы уверены, что хотите заблокировать этого инвестора?')) {
       try {
         await blockInvestor(investor.id);
@@ -424,6 +464,8 @@ const InvestorsPoolPage = () => {
   };
 
   const handleUnblockInvestor = async (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     if (window.confirm('Вы уверены, что хотите разблокировать этого инвестора?')) {
       try {
         await blockInvestor(investor.id);
@@ -708,6 +750,7 @@ const InvestorsPoolPage = () => {
   };
 
   const investorsTableData = investors.map((investor: Investor) => {
+    const canManageInvestor = !(isPoolV2 && investor.isRemoved);
     const createDoubleClickCell = (content: React.ReactNode) => (
       <DoubleClickCell
         onDoubleClick={() => handleInvestorDoubleClick(investor)}
@@ -746,16 +789,20 @@ const InvestorsPoolPage = () => {
           ? formatMoney(investor.currentIncome.toString())
           : "-"
       ),
-      <EditButton onClick={() => handleEditInvestor(investor)} />,
-      <DeleteButton onClick={() => handleDeleteInvestor(investor)} />,
-      <DarkCyanButton
-        onClick={() => handleAddInvestment([investor.id.toString()])}
-      >
-        Новая инвестиция
-      </DarkCyanButton>,
-      <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
-        Выплатить
-      </DarkCyanButton>,
+      canManageInvestor ? <EditButton onClick={() => handleEditInvestor(investor)} /> : null,
+      canManageInvestor ? <DeleteButton onClick={() => handleDeleteInvestor(investor)} /> : null,
+      canManageInvestor ? (
+        <DarkCyanButton
+          onClick={() => handleAddInvestment([investor.id.toString()])}
+        >
+          Новая инвестиция
+        </DarkCyanButton>
+      ) : null,
+      canManageInvestor ? (
+        <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
+          Выплатить
+        </DarkCyanButton>
+      ) : null,
     ];
   });
 
@@ -763,7 +810,7 @@ const InvestorsPoolPage = () => {
     const investorId = Number(rowData[0]);
     const investor = investors.find((i) => i.id === investorId);
 
-    if (investor) {
+    if (investor && !(isPoolV2 && investor.isRemoved)) {
       setSelectedInvestorForInvestment(investor);
       setIsInvestmentModalOpen(true);
     }
@@ -771,7 +818,10 @@ const InvestorsPoolPage = () => {
 
   const handleSubmitInvestment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvestorForInvestment) return;
+    if (
+      !selectedInvestorForInvestment ||
+      (isPoolV2 && selectedInvestorForInvestment.isRemoved)
+    ) return;
 
     try {
       const amount = parseMoney(investmentAmount);
@@ -813,6 +863,8 @@ const InvestorsPoolPage = () => {
   };
 
   const handlePayoutClick = (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     setSelectedInvestorForPayout(investor);
     setPayoutAmount("");
     setPayoutSource("income");
@@ -838,11 +890,15 @@ const InvestorsPoolPage = () => {
   };
 
   const handleEditInvestor = (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     setCurrentInvestor(investor);
     setIsInvestorModalOpen(true);
   };
 
   const handleDeleteInvestor = async (investor: Investor) => {
+    if (isPoolV2 && investor.isRemoved) return;
+
     if (investor.isCompanyPool) {
       window.alert("Нельзя удалить свою компанию как инвестора");
       return;
@@ -858,6 +914,8 @@ const InvestorsPoolPage = () => {
   };
 
   const handleInvestorSubmit = async (investorData: Partial<Investor>) => {
+    if (isPoolV2 && currentInvestor?.isRemoved) return;
+
     try {
       if (currentInvestor) {
         const updatedInvestor = await updateInvestor(
@@ -913,7 +971,7 @@ const InvestorsPoolPage = () => {
           });
         }
 
-        if (activeTab === "reinvestments") {
+        if (enableReinvestments && activeTab === "reinvestments") {
           const reinvestments = await getReinvestments(
             Number(selectedPoolId),
             {
@@ -1358,7 +1416,13 @@ const InvestorsPoolPage = () => {
 
   const investorsRowStyles = investors.reduce(
     (styles, investor, index) => {
-      if (investor.isBlocked) {
+      if (isPoolV2 && investor.isRemoved) {
+        styles[index] = {
+          backgroundColor: "#E5E7EB",
+          color: "#374151",
+          fontWeight: "normal",
+        };
+      } else if (investor.isBlocked) {
         styles[index] = {
           backgroundColor: "#FFEBEE",
           color: "black",
@@ -1440,7 +1504,12 @@ const InvestorsPoolPage = () => {
   };
 
   const handlePayoutSubmit = async () => {
-    if (!selectedInvestorForPayout || !payoutAmount || !report) return;
+    if (
+      !selectedInvestorForPayout ||
+      !payoutAmount ||
+      !report ||
+      (isPoolV2 && selectedInvestorForPayout.isRemoved)
+    ) return;
 
     const numericAmount = Number(payoutAmount.replace(/\D/g, ""));
 
@@ -1479,7 +1548,9 @@ const InvestorsPoolPage = () => {
     { id: "payouts", label: "История выплат" },
     { id: "credits", label: "Договоры" },
     { id: "contributions", label: "Инвестиции" },
-    { id: "reinvestments", label: "Реинвестиции" },
+    ...(enableReinvestments
+      ? [{ id: "reinvestments", label: "Реинвестиции" }]
+      : []),
   ];
 
   const dataTabs = [
@@ -1863,10 +1934,12 @@ const InvestorsPoolPage = () => {
               addButton={
                 activeTab === "investors" && pools.length > 0 ? (
                   <div style={{ display: "flex", gap: "20px" }}>
-                    <DarkCyanButton
-                      children="Реинвестировать"
-                      onClick={handleReinvest}
-                    />
+                    {enableReinvestments && (
+                      <DarkCyanButton
+                        children="Реинвестировать"
+                        onClick={handleReinvest}
+                      />
+                    )}
                     <AddButton
                       onClick={handleAddInvestor}
                       tooltip="Добавить инвестора"
@@ -1938,7 +2011,7 @@ const InvestorsPoolPage = () => {
           </>
         )}
 
-        {activeTab === "reinvestments" && (
+        {enableReinvestments && activeTab === "reinvestments" && (
           <>
             <CustomTable
               columns={[
@@ -2253,6 +2326,17 @@ const InvestorsPoolPage = () => {
           }
         />
 
+        <InvestorCashPositionModal
+          isOpen={isCashPositionModalOpen}
+          investor={cashPositionInvestor}
+          canEdit={canManageCashPosition}
+          onClose={() => {
+            setIsCashPositionModalOpen(false);
+            setCashPositionInvestor(null);
+          }}
+          onChanged={reloadData}
+        />
+
         <CreatePoolModal
           isOpen={isCreatePoolModalOpen}
           onClose={() => setIsCreatePoolModalOpen(false)}
@@ -2296,21 +2380,22 @@ const InvestorsPoolPage = () => {
             mode="edit"
           >
             <form onSubmit={handleSubmitInvestment} style={{ padding: "20px" }}>
-              {/* Предупредительная надпись */}
-              <div
-                style={{
-                  backgroundColor: "#fff3cd",
-                  color: "#856404",
-                  padding: "12px 16px",
-                  borderRadius: "4px",
-                  marginBottom: "20px",
-                  border: "1px solid #ffeeba",
-                  fontSize: "14px",
-                }}
-              >
-                ⚠️ Рекомендуется сначала сделать реинвестицию, а затем добавлять
-                новую инвестицию
-              </div>
+              {enableReinvestments && (
+                <div
+                  style={{
+                    backgroundColor: "#fff3cd",
+                    color: "#856404",
+                    padding: "12px 16px",
+                    borderRadius: "4px",
+                    marginBottom: "20px",
+                    border: "1px solid #ffeeba",
+                    fontSize: "14px",
+                  }}
+                >
+                  ⚠️ Рекомендуется сначала сделать реинвестицию, а затем
+                  добавлять новую инвестицию
+                </div>
+              )}
 
               <InputRow>
                 <InputLabel>Сумма инвестиции:</InputLabel>

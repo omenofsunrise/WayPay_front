@@ -12,6 +12,7 @@ import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../../ui/links/PhoneLink';
 import { isOwnCashInvestorName } from '../../../utils/investorUtils';
 import type { InvestorParams } from '../../../api/types/investor';
+import { useAuth } from '../../../сontext/AuthContext';
 
 interface InvestorSelectModalProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ const InvestorSelectModal = ({
   includePools = false,
   poolId // Добавлено
 }: InvestorSelectModalProps) => {
+  const { authInfo } = useAuth();
+  const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
   const [nameFilter, setNameFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
@@ -253,8 +256,17 @@ const InvestorSelectModal = ({
         color: 'white',
         fontWeight: 'normal'
       };
-    } 
-    else if (isBlocked) {
+    } else if (
+      isPoolV2 &&
+      index < (investorsData?.items?.length || 0) &&
+      investorsData?.items?.[index]?.isRemoved
+    ) {
+      styles[index] = {
+        backgroundColor: '#E5E7EB',
+        color: '#374151',
+        fontWeight: 'normal'
+      };
+    } else if (isBlocked) {
       styles[index] = {
         backgroundColor: '#FFEBEE',
         color: 'black',

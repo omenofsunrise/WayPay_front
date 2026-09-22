@@ -1,4 +1,4 @@
-import type { PaginationParams } from './common';
+import type { PaginationParams } from "./common";
 
 export interface Investor {
   currentIncome: any;
@@ -13,6 +13,7 @@ export interface Investor {
   activeUntil: string;
   isCompany: boolean;
   isBlocked: boolean;
+  isRemoved?: boolean;
   poolId?: number;
   isCompanyPool?: boolean;
 }
@@ -21,7 +22,7 @@ export interface InvestorParams extends PaginationParams {
   name?: string;
   poolId?: number;
   sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
+  sortDirection?: "asc" | "desc";
 }
 
 export interface AutoSelectInvestorRequest {
@@ -53,6 +54,14 @@ export interface InvestorReport {
   selfPaymentIncome: number;
 }
 
+export interface InvestorReportV2Response {
+  investment: number;
+  balance: number | null;
+  paymentIncome: number;
+  investorPaymentIncome: number;
+  selfPaymentIncome: number;
+}
+
 export interface InvestorAgreementResponse {
   city: string;
   investorDate: string;
@@ -62,4 +71,29 @@ export interface InvestorAgreementResponse {
   companyPie: string;
   investorMonths: string;
   directorName: string;
+}
+
+export type InvestorCashPositionType = "Single" | "Pool";
+
+export interface InvestorCashPosition {
+  id: number;
+  investorId: number;
+  poolId: number | null;
+  position: InvestorCashPositionType | string;
+  date: string;
+  createdAt: string;
+  investorNickname: string;
+  poolName: string | null;
+}
+
+export interface MoveInvestorCashPositionRequest {
+  investorId: number;
+  newPositionType: InvestorCashPositionType;
+  poolId: number | null;
+  date: string;
+}
+
+export interface InvestorCashPositionOperationResponse {
+  statusCode: number;
+  location?: string;
 }

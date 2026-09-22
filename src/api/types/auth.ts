@@ -11,11 +11,7 @@ export type Permission =
   | "FORBID_CREDIT_APPLICATIONS"
   | "MANAGE_ACCOUNTING";
 
-export type Role =
-  | "админ"
-  | "сотрудник"
-  | "директор"
-  | "суперадмин";
+export type Role = "админ" | "сотрудник" | "директор" | "суперадмин";
 
 export type UserType = "employee" | "payment_place";
 
@@ -45,6 +41,7 @@ export interface AuthInfo {
     paymentUrl?: string;
     status?: string;
     transactionStatus?: string;
+    poolV2?: boolean;
   };
 }
 

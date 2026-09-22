@@ -111,6 +111,7 @@ export interface CreditParams extends PaginationParams {
   clientId?: number;
   includeAllStates?: boolean;
   Terminated?: boolean;
+  clientAddress?: string;
 }
 
 export interface CreditDocs {
@@ -180,17 +181,18 @@ export interface CreditResponse extends PaginatedResponse<Credit> {
   totalFirstPayment: number;
 }
 
-export type InvestmentSourceType = 1 | 2 | 3;
+export type InvestmentSourceType = 1 | 2 | 3 | 4;
 
 export const InvestmentSourceType = {
   Investor: 1 as InvestmentSourceType,
   InvestorPool: 2 as InvestmentSourceType,
   InDebt: 3 as InvestmentSourceType,
+  None: 4 as InvestmentSourceType,
 } as const;
 
 export interface SetInvestmentSourceRequest {
   sourceType: InvestmentSourceType;
-  entityId: number;
+  entityId?: number | null;
 }
 
 export interface CreditListResponse {

@@ -242,6 +242,10 @@ const SectionLabel = styled.div`
 const CardGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
   gap: 12px;
 `;
 

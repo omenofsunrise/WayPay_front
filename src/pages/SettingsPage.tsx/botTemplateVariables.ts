@@ -130,6 +130,19 @@ export const BOT_TEMPLATES: BotTemplate[] = [
       "{/foreachPayment}",
   },
   {
+    id: "coming-payment",
+    title: "Приближающийся платёж",
+    description: "Напоминание о предстоящем платеже по графику",
+    body:
+      "Здравствуйте, {client_fullname}!\n\n" +
+      "Напоминаем, что скоро наступает дата платежа по вашей рассрочке в {company}.\n\n" +
+      "{foreachSchedule}\n" +
+      "• {schedule_date} — {scheduled_amount} (рассрочка {schedule_schedule_name}, остаток {rest})\n" +
+      "{/foreachSchedule}\n\n" +
+      "Оплатить можно по реквизитам: {company_card}.\n" +
+      "По вопросам: {support_phone}.",
+  },
+  {
     id: "birthday",
     title: "Поздравление с днём рождения",
     description: "Использует имя клиента и название компании",

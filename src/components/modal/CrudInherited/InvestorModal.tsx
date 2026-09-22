@@ -10,6 +10,7 @@ import { useAuth } from '../../../сontext/AuthContext';
 import CustomCalendar from '../../ui/fields/CustomCalendar';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../../ui/links/PhoneLink';
+import { extractErrorMessage } from '../../../api/utils/errorMessage';
 
 type InvestorModalProps = {
   mode: ModalMode;
@@ -72,7 +73,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     investmentAmount: false,
     balance: false
   });
-  const { hasRole } = useAuth();
+  const { authInfo, hasRole } = useAuth();
 
   const formatDateToString = (date: string | number | Date): string => {
     if (typeof date === 'number') {
@@ -108,10 +109,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     
     if (phone.trim().length === 0) {
       return 'Поле обязательно для заполнения';
-    }
-
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length === 11) {
     }
 
     return '';
@@ -337,9 +334,9 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       } else {
         setIsSubmitting(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Ошибка при сохранении инвестора:', error);
-      setApiError(error.message || 'Произошла ошибка при сохранении инвестора');
+      setApiError(extractErrorMessage(error, 'Произошла ошибка при сохранении инвестора'));
       setIsSubmitting(false);
     }
   };
@@ -415,7 +412,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           )}
           
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
-            {(mode == 'create-pool') && (
+            {mode === 'create-pool' && !authInfo?.employee?.poolV2 && (
                 <div style={{ 
                   backgroundColor: "#fff3cd", 
                   color: "#856404",

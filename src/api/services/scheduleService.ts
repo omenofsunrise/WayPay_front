@@ -8,6 +8,7 @@ import type {
   CalendarResult,
   UpdateScheduleRequest,
 } from "../types/schedule";
+import type { SetShouldBeVisitedDto } from "../types/schedule";
 import type { PaginatedResponse } from "../types/common";
 
 type CalendarResponse =
@@ -140,6 +141,8 @@ const normalizeScheduleDetails = (
     payed: getValue<boolean>(item, "payed", "Payed"),
     userComment:
       getValue<string | null>(item, "userComment", "UserComment") ?? null,
+    shouldBeVisited:
+      getValue<boolean>(item, "shouldBeVisited", "ShouldBeVisited") ?? false,
     status: getValue<ScheduleDetails["status"]>(item, "status", "Status"),
   };
 };
@@ -347,6 +350,10 @@ class ScheduleService {
       params
     );
     return response.data;
+  }
+
+  async setVisited(dto: SetShouldBeVisitedDto): Promise<void> {
+    await apiClient.put("/Schedule/visited", dto);
   }
 }
 

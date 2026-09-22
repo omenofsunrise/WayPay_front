@@ -68,6 +68,7 @@ interface ViewCreditModalProps {
   id: number;
   isOpen: boolean;
   onClose: () => void;
+  onOpenCredit?: (id: number) => void;
 }
 
 type CreditTab = "client" | "payments" | "products" | "guarantor" | "notes";
@@ -268,6 +269,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   id,
   isOpen,
   onClose,
+  onOpenCredit,
 }) => {
   const {
     notes: initialNotes,
@@ -1853,6 +1855,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                                 <RelatedCreditCard
                                   key={`c-${c.id}`}
                                   $status={c.status}
+                                  $clickable={!!onOpenCredit}
+                                  onClick={() => onOpenCredit?.(c.id)}
                                 >
                                   <RelatedCardLeft>
                                     <RelatedCardIcon>
@@ -2330,6 +2334,11 @@ const TwoColumnLayout = styled.div`
   gap: 24px;
   height: 100%;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    height: auto;
+  }
 `;
 
 const LeftColumn = styled.div`
@@ -2337,6 +2346,11 @@ const LeftColumn = styled.div`
   min-width: 0;
   overflow-y: auto;
   padding-right: 12px;
+
+  @media (max-width: 768px) {
+    padding-right: 0;
+    overflow-y: visible;
+  }
 
   /* Стилизация скроллбара для левой колонки */
   &::-webkit-scrollbar {
@@ -2366,6 +2380,14 @@ const RightColumn = styled.div`
     height: 100%;
     width: 100%;
     max-width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    min-height: 300px;
+    overflow: visible;
+    & > div {
+      height: 300px;
+    }
   }
 `;
 
@@ -2551,14 +2573,18 @@ const ModalContent = styled.div`
   background: white;
   padding: 24px;
   border-radius: 8px;
-  width: auto;
   width: 90vw;
   height: 90vh;
   overflow-y: auto;
   overflow-x: hidden;
-
-  /* Для плавного скролла на мобильных */
   -webkit-overflow-scrolling: touch;
+
+  @media (max-width: 768px) {
+    width: calc(100vw - 16px);
+    height: 95vh;
+    padding: 12px;
+    border-radius: 8px;
+  }
 `;
 
 const AddButton = styled.img`
@@ -3021,7 +3047,7 @@ const getRelatedStatusColors = (status: string) => {
   return { bg: "#E0F2F1", border: "#80CBC4", color: "#00695C" };
 };
 
-const RelatedCreditCard = styled.div<{ $status: string }>`
+const RelatedCreditCard = styled.div<{ $status: string; $clickable?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3031,6 +3057,7 @@ const RelatedCreditCard = styled.div<{ $status: string }>`
   border: 1px solid #e2e8f0;
   background-color: #ffffff;
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
 
   &:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);

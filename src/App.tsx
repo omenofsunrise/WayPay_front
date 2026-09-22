@@ -17,8 +17,9 @@ import SchedulePage from "./pages/Schedule/SchedulePage";
 import CreditControlPage from "./pages/CreditControlPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import InvestorReportPage from "./pages/InvestorReportPage";
+import InvestorsV2Page from "./pages/InvestorsV2Page";
 import BudgetPage from "./pages/FinancePage/BudgetPage";
-import { AuthProvider } from "./сontext/AuthContext";
+import { AuthProvider, useAuth } from "./сontext/AuthContext";
 import AdminPanelPage from "./pages/AdminPanelPage";
 import AdminWhatsAppChatPage from "./pages/AdminWhatsAppChatPage";
 import ToDoListPage from "./pages/ToDoListPage";
@@ -64,6 +65,45 @@ const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
 type PinResolver = {
   resolve: (pin: string) => void;
   reject: (error: Error) => void;
+};
+
+const AppLoader = () => (
+  <div className="app-loading">
+    <div className="spinner"></div>
+  </div>
+);
+
+const InvestorsRoute = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <Navigate to="/investors-v2" replace />
+  ) : (
+    <InvestorPage />
+  );
+};
+
+const InvestorsV2Route = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <InvestorsV2Page />
+  ) : (
+    <Navigate to="/investors" replace />
+  );
+};
+
+const InvestorsPoolRoute = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <Navigate to="/investors-v2" replace />
+  ) : (
+    <InvestorsPoolPage />
+  );
 };
 
 const isMobileDevice = (): boolean => {
@@ -496,7 +536,16 @@ function App() {
                   path="investors"
                   element={
                     <MainLayout>
-                      <InvestorPage />
+                      <InvestorsRoute />
+                    </MainLayout>
+                  }
+                />
+
+                <Route
+                  path="investors-v2"
+                  element={
+                    <MainLayout>
+                      <InvestorsV2Route />
                     </MainLayout>
                   }
                 />
@@ -572,14 +621,16 @@ function App() {
                   }
                 />
 
-                <Route
-                  path="investors-report"
-                  element={
-                    <MainLayout>
-                      <InvestorReportPage />
-                    </MainLayout>
-                  }
-                />
+                {!authInfo?.employee?.poolV2 && (
+                  <Route
+                    path="investors-report"
+                    element={
+                      <MainLayout>
+                        <InvestorReportPage />
+                      </MainLayout>
+                    }
+                  />
+                )}
 
                 <Route
                   path="/whatsapp/channel/:channelId/bots"
@@ -603,7 +654,7 @@ function App() {
                   path="investors-pool"
                   element={
                     <MainLayout>
-                      <InvestorsPoolPage />
+                      <InvestorsPoolRoute />
                     </MainLayout>
                   }
                 />

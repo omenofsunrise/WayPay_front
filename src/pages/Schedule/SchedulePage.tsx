@@ -12,13 +12,13 @@ import scheduleService from "../../api/services/scheduleService";
 import { parseDateInput, formatDate } from "../../utils/dateFormatter";
 import { formatMoney } from "../../utils/formatPrice";
 import ScheduleTable, {
-  type ScheduleTableHandle,
   type ScheduleFilters,
+  type ScheduleTableHandle,
 } from "./ScheduleTable";
 import ScheduleCharts from "./ScheduleCharts";
 import ScheduleCalendar from "./ScheduleCalendar";
 
-type TabType = "calendar" | "schedule" | "table";
+type TabType = "calendar" | "schedule" | "table" | "visited";
 
 interface SchedulePageProps {
   initialTab?: TabType;
@@ -47,16 +47,16 @@ const SchedulePage = ({
 
   const { exportData, isExporting, exportProgress } =
     useExport<ScheduleDetails>();
-
-  // Ref на таблицу для получения актуальных фильтров
   const scheduleTableRef = useRef<ScheduleTableHandle>(null);
+  const visitedTableRef = useRef<ScheduleTableHandle>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as TabType;
     return savedTab &&
       (savedTab === "calendar" ||
         savedTab === "schedule" ||
-        savedTab === "table") &&
+        savedTab === "table" ||
+        savedTab === "visited") &&
       !hiddenTabs.includes(savedTab)
       ? savedTab
       : initialTab;
@@ -125,6 +125,7 @@ const SchedulePage = ({
                 ? parseDateInput(filters.dateTo)
                 : undefined,
               creditTypeId: filters.objectTypeId || undefined,
+              schouldBeVisited: filters.shouldBeVisited || undefined,
               sortBy:
                 filters.sortKey !== null && filters.sortKey !== undefined
                   ? columnToApiSortMap[filters.sortKey]
@@ -167,10 +168,10 @@ const SchedulePage = ({
   );
 
   const handleExportClick = useCallback(() => {
-    // Синхронно забираем актуальные фильтры из таблицы
-    const filters = scheduleTableRef.current?.getFilters() ?? ({} as ScheduleFilters);
-    handleExport(filters);
-  }, [handleExport]);
+    const tableRef =
+      activeTab === "visited" ? visitedTableRef : scheduleTableRef;
+    handleExport(tableRef.current?.getFilters() ?? {});
+  }, [activeTab, handleExport]);
 
   const tabs = [
     ...(shouldShowScheduleTab && !isTabHidden("calendar")
@@ -198,6 +199,7 @@ const SchedulePage = ({
             label: "Таблица",
             content: (
               <ScheduleTable
+                key="table"
                 ref={scheduleTableRef}
                 isListMode={isListMode}
                 pageSize={responsivePageSize}
@@ -206,6 +208,19 @@ const SchedulePage = ({
           },
         ]
       : []),
+    {
+      id: "visited",
+      label: "Выездные клиенты",
+      content: (
+        <ScheduleTable
+          key="visited"
+          ref={visitedTableRef}
+          isListMode={isListMode}
+          pageSize={responsivePageSize}
+          shouldBeVisited={true}
+        />
+      ),
+    },
   ];
 
   const exportButton =
@@ -221,6 +236,7 @@ const SchedulePage = ({
   return (
     <PageLayout ref={containerRef}>
       {tabs.length > 1 ? (
+        // Вкладки («График», «Таблица») и кнопка «Экспорт» в одном ряду.
         <Tabs
           tabs={tabs}
           activeTab={activeTab}

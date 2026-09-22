@@ -27,6 +27,7 @@ import PrintIcon from '../assets/ui/print.svg?react';
 import InvestorDocxGenerator from '../utils/doxcUtils/investorDocxGenerator';
 import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useResponsivePageSize } from '../utils/useResponsivePageSize';
+import InvestorCashPositionModal from '../components/modal/InvestorCashPositionModal';
 
 const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
@@ -36,7 +37,8 @@ const InvestorPage = () => {
         direction: 'asc' | 'desc';
     }>({ key: null, direction: 'asc' });
     const [isPageSizeReady, setIsPageSizeReady] = useState(false);
-    const { hasRole } = useAuth();
+    const { authInfo, hasRole } = useAuth();
+    const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
@@ -44,6 +46,8 @@ const InvestorPage = () => {
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [investorForPrint, setInvestorForPrint] = useState<Investor | null>(null);
     const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(null);
+    const [cashPositionInvestor, setCashPositionInvestor] = useState<Investor | null>(null);
+    const [isCashPositionModalOpen, setIsCashPositionModalOpen] = useState(false);
     
     // Используем хук для адаптивного размера страницы
     const { pageSize: responsivePageSize, containerRef } = useResponsivePageSize({
@@ -103,13 +107,16 @@ const InvestorPage = () => {
         if (!canEdit) return;
         
         const [id] = rowData;
-        setSelectedInvestor(investorsData?.items.find(i => i.id === Number(id)) || null);
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        if (isPoolV2 && investor?.isRemoved) return;
+
+        setSelectedInvestor(investor || null);
         setIsInvestmentModalOpen(true);
     };
 
     const handleSubmitInvestment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedInvestor) return;
+        if (!selectedInvestor || (isPoolV2 && selectedInvestor.isRemoved)) return;
 
         try {
             const amount = parseMoney(investmentAmount);
@@ -251,7 +258,7 @@ const InvestorPage = () => {
     };
 
     const handleEditInvestor = (investor: Investor) => {
-        if (!canEdit) return;
+        if (!canEdit || (isPoolV2 && investor.isRemoved)) return;
         
         setModalMode('edit');
         setSelectedInvestor(investor);
@@ -280,6 +287,8 @@ const InvestorPage = () => {
             console.error('Инвестор не найден');
             return;
         }
+
+        if (isPoolV2 && investorToDelete.isRemoved) return;
         
         if (investorToDelete.isCompany) {
             alert('Нельзя удалить свою компанию из инвесторов');
@@ -303,6 +312,10 @@ const InvestorPage = () => {
     };
 
     const handleSubmitInvestor = async (investorData: Partial<Investor>) => {
+        if (modalMode === 'edit' && isPoolV2 && selectedInvestor?.isRemoved) {
+            return false;
+        }
+
         try {
             if (modalMode === 'create') {
                 await createInvestor(investorData as Omit<Investor, 'id'>);
@@ -320,7 +333,7 @@ const InvestorPage = () => {
     const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
         const investor = investorsData?.items.find(i => i.id === Number(rowData[0]));
         if (investor) {
-            if (canEdit) {
+            if (canEdit && !(isPoolV2 && investor.isRemoved)) {
                 handleEditInvestor(investor);
             } else {
                 handleViewInvestor(investor);
@@ -394,18 +407,19 @@ const InvestorPage = () => {
         ];
     }) ?? [];
 
-    const rowStyles = tableData.reduce((styles, rowData, index) => {
-        const isBlockedIndex = canEdit ? 8 : 4;
-        const isBlocked = rowData[isBlockedIndex] === 'true';
-        
+    const rowStyles = (investorsData?.items || []).reduce((styles, investor, index) => {
         if (index === selectedRowIndex) {
             styles[index] = {
                 backgroundColor: 'rgba(0, 125, 136, 1)',
                 color: 'white',
             };
-        } 
-        // Иначе применяем обычные цвета по статусу
-        else if (isBlocked) {
+        } else if (isPoolV2 && investor.isRemoved) {
+            styles[index] = {
+                backgroundColor: '#E5E7EB',
+                color: '#374151',
+                fontWeight: 'normal'
+            };
+        } else if (investor.isBlocked) {
             styles[index] = {
                 backgroundColor: '#FFEBEE',
                 color: 'black',
@@ -427,6 +441,7 @@ const InvestorPage = () => {
         const investor = investorsData?.items.find(i => i.id === Number(id));
         const isBlocked = investor?.isBlocked || false;
         const isOwnCash = investor?.isCompany || false;
+        const isRemoved = isPoolV2 && investor?.isRemoved;
 
         const actions: TableAction[] = [
             {
@@ -442,6 +457,20 @@ const InvestorPage = () => {
                 color: '#3B82F6'
             }
         ];
+
+        if (isRemoved) return actions;
+
+        if (isPoolV2 && !investor?.isCompany && !investor?.isCompanyPool) {
+            actions.push({
+                label: 'Управление кассой',
+                action: () => {
+                    if (!investor) return;
+                    setCashPositionInvestor(investor);
+                    setIsCashPositionModalOpen(true);
+                },
+                color: '#007D88'
+            });
+        }
 
         if (canEdit) {
             if (isBlocked) {
@@ -492,6 +521,8 @@ const InvestorPage = () => {
         if (!canEdit) return;
         
         const [id] = rowData;
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        if (isPoolV2 && investor?.isRemoved) return;
         
         if (isNaN(Number(id))) {
             console.error('Неверный ID инвестора');
@@ -512,6 +543,8 @@ const InvestorPage = () => {
         if (!canEdit) return;
         
         const [id] = rowData;
+        const investor = investorsData?.items.find(i => i.id === Number(id));
+        if (isPoolV2 && investor?.isRemoved) return;
         
         if (isNaN(Number(id))) {
             console.error('Неверный ID инвестора');
@@ -682,6 +715,17 @@ const InvestorPage = () => {
                     { key: 'investorContract', label: 'Договор с инвестором', enabled: true }
                 ]}
                 modalTitle="Выберите тип договора для печати"
+            />
+
+            <InvestorCashPositionModal
+                isOpen={isCashPositionModalOpen}
+                investor={cashPositionInvestor}
+                canEdit={canEdit}
+                onClose={() => {
+                    setIsCashPositionModalOpen(false);
+                    setCashPositionInvestor(null);
+                }}
+                onChanged={loadInvestors}
             />
         </PageLayout>
     );

@@ -218,6 +218,9 @@ const CreditPage = () => {
       ? savedFilters.creditTypeId
       : null
   );
+  const [clientAddress, setClientAddress] = useState<string>(
+    () => savedFilters?.clientAddress ?? ""
+  );
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
     direction: "asc" | "desc";
@@ -260,7 +263,9 @@ const CreditPage = () => {
   const itemsPerPage = isListMode
     ? Math.max(responsivePageSize, 20)
     : responsivePageSize;
-  const { hasPermission, hasRole, denyPermission, forbiddenRole } = useAuth();
+  const { authInfo, hasPermission, hasRole, denyPermission, forbiddenRole } =
+    useAuth();
+  const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -629,25 +634,110 @@ const CreditPage = () => {
     setViewingCreditId(null);
   };
 
+  const setFundingSourceForBatch = async (
+    batch: Credit[],
+    sourceRequest: SetInvestmentSourceRequest,
+    availableBalance?: number
+  ) => {
+    if (batch.length === 0) return;
+
+    // Бэк умеет только по одному договору за запрос и коммитит каждый отдельно,
+    // общей транзакции на пачку нет. Поэтому сначала прикидываем, хватит ли
+    // кассы на всё сразу: иначе на середине пачки прилетит «Недостаточно
+    // средств», а предыдущие договоры уже перенесены и касса списана без
+    // отката. Проверка предварительная — решающее слово всё равно за бэком,
+    // он считает остаток заново на каждом договоре.
+    const required = batch.reduce(
+      (sum, credit) => sum + (credit.totalClean - credit.firstPayment),
+      0
+    );
+    if (typeof availableBalance === "number" && required > availableBalance) {
+      alert(
+        "Недостаточно средств в кассе.\n" +
+          `Нужно: ${formatMoney(required.toString())}\n` +
+          `Доступно: ${formatMoney(availableBalance.toString())}`
+      );
+      return;
+    }
+
+    const failures: string[] = [];
+    let transferred = 0;
+
+    // Строго последовательно: параллельные запросы гонялись бы за одну и ту же
+    // кассу, и проверка остатка на бэке перестала бы быть достоверной.
+    for (const credit of batch) {
+      try {
+        await setInvestmentSource(credit.id, sourceRequest);
+        transferred += 1;
+      } catch (err) {
+        console.error(
+          `Ошибка при установке источника финансирования (договор ${credit.id}):`,
+          err
+        );
+        failures.push(
+          `№${credit.id} ${credit.clientFullName ?? ""}: ${extractErrorMessage(
+            err,
+            "не удалось перенести"
+          )}`
+        );
+      }
+    }
+
+    await loadCredits();
+    setCreditsForFunding([]);
+    setSelectedRows([]);
+
+    if (failures.length === 0) {
+      alert(
+        batch.length === 1
+          ? "Источник финансирования успешно установлен"
+          : `Перенесено договоров: ${transferred}`
+      );
+      return;
+    }
+
+    // Отката нет: успешные договоры уже закоммичены на бэке. Перечисляем, что
+    // именно не прошло, чтобы это можно было доделать руками.
+    alert(
+      `Перенесено ${transferred} из ${batch.length}.\n\n` +
+        `Не удалось:\n${failures.join("\n")}`
+    );
+  };
+
   // Как и остальные массовые действия на странице: отмечено больше одного
   // договора — работаем по всем отмеченным, иначе по строке, откуда позвали.
-  const handleSelectFundingSource = (rowData: any[]) => {
+  const handleSelectFundingSource = async (rowData: any[]) => {
+    const getSelectedFundingCredits = () => {
+      if (selectedRows.length > 1) {
+        return selectedRows
+          .map((index) => displayedCredits[index])
+          .filter((credit): credit is Credit => Boolean(credit));
+      }
+
+      const [_, id] = rowData;
+      const credit = displayedCredits.find((c) => c.id === Number(id));
+      return credit ? [credit] : [];
+    };
+
+    const batch = getSelectedFundingCredits();
+    if (batch.length === 0) return;
+
+    if (isPoolV2) {
+      await setFundingSourceForBatch(batch, {
+        sourceType: InvestmentSourceType.None,
+        entityId: null,
+      });
+      return;
+    }
+
     if (selectedRows.length > 1) {
-      const batch = selectedRows
-        .map((index) => displayedCredits[index])
-        .filter((credit): credit is Credit => Boolean(credit));
-      if (batch.length === 0) return;
       setCreditsForFunding(batch);
       setIsInvestorSelectModalOpen(true);
       return;
     }
 
-    const [_, id] = rowData;
-    const credit = displayedCredits.find((c) => c.id === Number(id));
-    if (credit) {
-      setCreditsForFunding([credit]);
-      setIsInvestorSelectModalOpen(true);
-    }
+    setCreditsForFunding(batch);
+    setIsInvestorSelectModalOpen(true);
   };
 
   useEffect(() => {
@@ -662,6 +752,7 @@ const CreditPage = () => {
       toCreationDate,
       objectType,
       creditTypeId,
+      clientAddress,
       activeTab,
       filters,
     };
@@ -678,6 +769,7 @@ const CreditPage = () => {
     toCreationDate,
     objectType,
     creditTypeId,
+    clientAddress,
     activeTab,
     filters,
   ]);
@@ -693,6 +785,7 @@ const CreditPage = () => {
     if (fromCreationDate) count++;
     if (toCreationDate) count++;
     if (objectType) count++;
+    if (clientAddress) count++;
 
     // Исключаем фильтры от вкладок из подсчета
     const filterKeys = Object.keys(filters);
@@ -727,6 +820,7 @@ const CreditPage = () => {
     toCreationDate,
     objectType,
     creditTypeId,
+    clientAddress,
     filters,
     activeTab,
   ]);
@@ -744,6 +838,7 @@ const CreditPage = () => {
           fromCreationDate ||
           toCreationDate ||
           objectType ||
+          clientAddress ||
           (creditTypeId !== null && creditTypeId !== undefined)
       ) ||
       (Object.keys(filters).length > 0 &&
@@ -772,6 +867,7 @@ const CreditPage = () => {
     toCreationDate,
     objectType,
     creditTypeId,
+    clientAddress,
     filters,
   ]);
 
@@ -786,6 +882,7 @@ const CreditPage = () => {
     setToCreationDate("");
     setObjectType("");
     setCreditTypeId(null);
+    setClientAddress("");
 
     // Сохраняем только фильтры от текущей вкладки
     let newFilters = {};
@@ -872,67 +969,7 @@ const CreditPage = () => {
       entityId: entity.id,
     };
 
-    // Бэк умеет только по одному договору за запрос и коммитит каждый отдельно,
-    // общей транзакции на пачку нет. Поэтому сначала прикидываем, хватит ли
-    // кассы на всё сразу: иначе на середине пачки прилетит «Недостаточно
-    // средств», а предыдущие договоры уже перенесены и касса списана без
-    // отката. Проверка предварительная — решающее слово всё равно за бэком,
-    // он считает остаток заново на каждом договоре.
-    const required = batch.reduce(
-      (sum, credit) => sum + (credit.totalClean - credit.firstPayment),
-      0
-    );
-    if (typeof entity.balance === "number" && required > entity.balance) {
-      alert(
-        "Недостаточно средств в кассе.\n" +
-          `Нужно: ${formatMoney(required.toString())}\n` +
-          `Доступно: ${formatMoney(entity.balance.toString())}`
-      );
-      return;
-    }
-
-    const failures: string[] = [];
-    let transferred = 0;
-
-    // Строго последовательно: параллельные запросы гонялись бы за одну и ту же
-    // кассу, и проверка остатка на бэке перестала бы быть достоверной.
-    for (const credit of batch) {
-      try {
-        await setInvestmentSource(credit.id, sourceRequest);
-        transferred += 1;
-      } catch (err) {
-        console.error(
-          `Ошибка при установке источника финансирования (договор ${credit.id}):`,
-          err
-        );
-        failures.push(
-          `№${credit.id} ${credit.clientFullName ?? ""}: ${extractErrorMessage(
-            err,
-            "не удалось перенести"
-          )}`
-        );
-      }
-    }
-
-    await loadCredits();
-    setCreditsForFunding([]);
-    setSelectedRows([]);
-
-    if (failures.length === 0) {
-      alert(
-        batch.length === 1
-          ? "Источник финансирования успешно установлен"
-          : `Перенесено договоров: ${transferred}`
-      );
-      return;
-    }
-
-    // Отката нет: успешные договоры уже закоммичены на бэке. Перечисляем, что
-    // именно не прошло, чтобы это можно было доделать руками.
-    alert(
-      `Перенесено ${transferred} из ${batch.length}.\n\n` +
-        `Не удалось:\n${failures.join("\n")}`
-    );
+    await setFundingSourceForBatch(batch, sourceRequest, entity.balance);
   };
 
   const handleMoveToDebt = async (rowData: any[]) => {
@@ -1089,6 +1126,7 @@ const CreditPage = () => {
       CreatedAt: fromCreationDate ? new Date(fromCreationDate) : undefined,
       CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
       creditTypeId: creditTypeId || undefined,
+      clientAddress: clientAddress || undefined,
       sortBy: sortConfig.key ?? undefined,
       sortDirection: sortConfig.direction,
       ...filters,
@@ -1124,6 +1162,7 @@ const CreditPage = () => {
     toCreationDate,
     fromCreationDate,
     creditTypeId,
+    clientAddress,
     sortConfig,
     filters,
     contractNumber,
@@ -1545,6 +1584,13 @@ const CreditPage = () => {
     if (credit) exportCredits([credit]);
   };
 
+  let fundingSourceActionLabel = "Выбрать источник финансирования";
+  if (isPoolV2) {
+    fundingSourceActionLabel = "Убрать из В долг";
+  } else if (selectedRows.length > 1) {
+    fundingSourceActionLabel = `Перенести в активные (${selectedRows.length})`;
+  }
+
   const tableActions = [
     {
       label: "Подтвердить договор",
@@ -1581,10 +1627,7 @@ const CreditPage = () => {
       color: "#3B82F6",
     },
     {
-      label:
-        selectedRows.length > 1
-          ? `Перенести в активные (${selectedRows.length})`
-          : "Выбрать источник финансирования",
+      label: fundingSourceActionLabel,
       action: handleSelectFundingSource,
       color: "#6B7280",
       shouldShow: (rowData: any[]) =>
@@ -1974,6 +2017,19 @@ const CreditPage = () => {
                 placeholder="Любая"
                 customPlaceholder="Папка"
                 hideClearButton={false}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Адрес / Район</FilterSlotLabel>
+              <CustomInput
+                inputType="text"
+                placeholder="Поиск по адресу"
+                value={clientAddress}
+                onChange={(e) => {
+                  setClientAddress(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </FilterSlot>
 

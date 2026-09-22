@@ -1,45 +1,56 @@
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
-import { useEffect, useState, type ChangeEvent, useCallback, useMemo } from 'react';
-import CustomTitle from '../components/ui/Text/CustomTitle';
-import PageLayout from '../components/ui/Layouts/PageLayout';
-import DarkCyanButton from '../components/ui/Buttons/DarkCyanButton';
-import GrayButton from '../components/ui/Buttons/GrayButton';
-import EntitySelectContainer from '../components/ui/Layouts/EntitySelectContainer';
-import ClientSelectModal from '../components/modal/CrudInherited/ClientSelectModal';
-import InvestorSelectModal from '../components/modal/CrudInherited/InvestorSelectModal';
-import ProductsTable from '../components/ui/tables/ProductTable';
-import PaymentScheduleTable, { type PaymentScheduleItem } from '../components/ui/tables/PaymentScheduleTable';
-import CustomInput from '../components/ui/fields/CustomInput';
-import useSchedule from '../api/hooks/useSchedule';
-import useCredit from '../api/hooks/useCredit';
-import type { CreateCreditRequest, UpdateCreditRequest } from '../api/types/credit';
-import type { Investor } from '../api/types/investor';
-import { type Guarantor } from '../components/modal/CrudInherited/GuarantorModal';
-import Checkbox from '../components/ui/CheckBoxes/Checkbox';
-import type { EntityType } from '../api/types/objectType';
-import ObjectTypeSelect from '../components/ui/fields/ObjectTypeSelect';
-import { formatMoney } from '../utils/formatPrice';
-import DateModalInput from '../components/ui/fields/DateModalInput';
-import CustomCalendar from '../components/ui/fields/CustomCalendar';
-import useInvestor from '../api/hooks/useInvestor';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
-import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
-import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
-import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
-import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
-import { isOwnCashInvestorName } from '../utils/investorUtils';
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import styled from "styled-components";
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  useCallback,
+  useMemo,
+} from "react";
+import CustomTitle from "../components/ui/Text/CustomTitle";
+import PageLayout from "../components/ui/Layouts/PageLayout";
+import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
+import GrayButton from "../components/ui/Buttons/GrayButton";
+import EntitySelectContainer from "../components/ui/Layouts/EntitySelectContainer";
+import ClientSelectModal from "../components/modal/CrudInherited/ClientSelectModal";
+import InvestorSelectModal from "../components/modal/CrudInherited/InvestorSelectModal";
+import ProductsTable from "../components/ui/tables/ProductTable";
+import PaymentScheduleTable, {
+  type PaymentScheduleItem,
+} from "../components/ui/tables/PaymentScheduleTable";
+import CustomInput from "../components/ui/fields/CustomInput";
+import useSchedule from "../api/hooks/useSchedule";
+import useCredit from "../api/hooks/useCredit";
+import type {
+  CreateCreditRequest,
+  UpdateCreditRequest,
+} from "../api/types/credit";
+import type { Investor } from "../api/types/investor";
+import { type Guarantor } from "../components/modal/CrudInherited/GuarantorModal";
+import Checkbox from "../components/ui/CheckBoxes/Checkbox";
+import type { EntityType } from "../api/types/objectType";
+import ObjectTypeSelect from "../components/ui/fields/ObjectTypeSelect";
+import { formatMoney } from "../utils/formatPrice";
+import DateModalInput from "../components/ui/fields/DateModalInput";
+import CustomCalendar from "../components/ui/fields/CustomCalendar";
+import useInvestor from "../api/hooks/useInvestor";
+import { isOwnCashInvestorName } from "../utils/investorUtils";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
+import AttachMoneyOutlinedIcon from "@mui/icons-material/AttachMoneyOutlined";
+import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWalletOutlined";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
+import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 
-const MARKUP_TYPE_STORAGE_KEY = 'credit_product_markup_type';
-const TURN_OF_ROUNDING_KEY = 'turn_of_rounding';
-const NEXT_MONTH_START_STORAGE_KEY = 'credit_next_month_start';
-const IN_DEBT_STORAGE_KEY = 'credit_in_debt';
-const CREDIT_DRAFT_STORAGE_KEY = 'credit_draft';
+const MARKUP_TYPE_STORAGE_KEY = "credit_product_markup_type";
+const TURN_OF_ROUNDING_KEY = "turn_of_rounding";
+const NEXT_MONTH_START_STORAGE_KEY = "credit_next_month_start";
+const IN_DEBT_STORAGE_KEY = "credit_in_debt";
+const CREDIT_DRAFT_STORAGE_KEY = "credit_draft";
 
 interface Client {
   id: number;
@@ -48,7 +59,7 @@ interface Client {
   doc?: string;
   birthdate?: string | Date;
   docIssueDate?: string | Date;
-  docIssueYear?: number; 
+  docIssueYear?: number;
   registrationAddress?: string;
   secondPhone?: string;
 }
@@ -68,66 +79,81 @@ interface SelectedObjectType {
   entityType: EntityType;
 }
 
-type CreditEditRequest = CreateCreditRequest & {
-  clientFullname?: string;
-  investorNickname?: string;
-  investorActiveUntil?: string;
-  creditTypeName?: string;
-  guarantorFullname?: string;
-};
-
 const NewCreditPage = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
   const location = useLocation();
-  const [contractDate, setContractDate] = useState<string | null>(new Date().toISOString().split('T')[0]);
+  const [contractDate, setContractDate] = useState<string | null>(
+    new Date().toISOString().split("T")[0]
+  );
   const [client, setClient] = useState<Client | null>(null);
   const [guarantor, setGuarantor] = useState<Guarantor | null>(null);
   const [guarantorClient, setGuarantorClient] = useState<Client | null>(null);
   const [investor, setInvestor] = useState<Investor | null>(null);
   const [selectedPool, setSelectedPool] = useState<Investor | null>(null);
-  const [modalType, setModalType] = useState<'client' | 'guarantorClient' | 'investor' | null>(null);
+  const [modalType, setModalType] = useState<
+    "client" | "guarantorClient" | "investor" | null
+  >(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  const [isGuarantorClientModalOpen, setIsGuarantorClientModalOpen] = useState(false);
+  const [isGuarantorClientModalOpen, setIsGuarantorClientModalOpen] =
+    useState(false);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [totalSum, setTotalSum] = useState(0);
-  const [initialPaymentPercent, setInitialPaymentPercent] = useState<string>('');
-  const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>('');
-  const [months, setMonths] = useState<string>('');
-  const [creditName, setCreditName] = useState<string>('');
+  const [initialPaymentPercent, setInitialPaymentPercent] =
+    useState<string>("");
+  const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>("");
+  const [months, setMonths] = useState<string>("");
+  const [creditName, setCreditName] = useState<string>("");
   const [turnOfRounding, setTurnOfRounding] = useState<boolean>(() => {
     const savedturnOfRounding = localStorage.getItem(TURN_OF_ROUNDING_KEY);
-    return savedturnOfRounding === 'true';
+    return savedturnOfRounding === "true";
   });
-  const [debtComment, setDebtComment] = useState<string>('');
-  const [paymentDue, setPaymentDue] = useState<string>('1');
+  const [debtComment, setDebtComment] = useState<string>("");
+  const [paymentDue, setPaymentDue] = useState<string>("1");
   const [startPaymentDate, setStartPaymentDate] = useState<string | null>(null);
-  const { getPreview, previewData, isLoading: isScheduleLoading } = useSchedule();
-  const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>([]);
-  const { createCredit, updateCredit, getCreateCreditRequest, isLoading: isCreditLoading } = useCredit();
+  const {
+    getPreview,
+    previewData,
+    isLoading: isScheduleLoading,
+  } = useSchedule();
+  const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>(
+    []
+  );
+  const {
+    createCredit,
+    updateCredit,
+    getCreateCreditRequest,
+    isLoading: isCreditLoading,
+  } = useCredit();
   const { getInvestorById } = useInvestor();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [objectTypeName, setObjectTypeName] = useState<string>('');
-  const [tabTypeName, setTabTypeName] = useState<string>('');
-  const [selectedObjectType, setSelectedObjectType] = useState<SelectedObjectType | null>(null);
-  const [selectedTabType, setSelectedTabType] = useState<SelectedObjectType | null>(null);
-  const [editMarkupType, setEditMarkupType] = useState<'percent' | 'fixed'>('percent');
-  const [markupType, setMarkupType] = useState<'percent' | 'fixed'>(() => {
+  const [objectTypeName, setObjectTypeName] = useState<string>("");
+  const [tabTypeName, setTabTypeName] = useState<string>("");
+  const [selectedObjectType, setSelectedObjectType] =
+    useState<SelectedObjectType | null>(null);
+  const [selectedTabType, setSelectedTabType] =
+    useState<SelectedObjectType | null>(null);
+  const [editMarkupType, setEditMarkupType] = useState<"percent" | "fixed">(
+    "percent"
+  );
+  const [markupType, setMarkupType] = useState<"percent" | "fixed">(() => {
     const savedMarkupType = localStorage.getItem(MARKUP_TYPE_STORAGE_KEY);
-    return (savedMarkupType === 'percent' || savedMarkupType === 'fixed') 
-      ? savedMarkupType 
-      : 'percent';
+    return savedMarkupType === "percent" || savedMarkupType === "fixed"
+      ? savedMarkupType
+      : "percent";
   });
   const [nextMonthStart, setNextMonthStart] = useState<boolean>(() => {
-    const savedNextMonthStart = localStorage.getItem(NEXT_MONTH_START_STORAGE_KEY);
-    return savedNextMonthStart === 'true';
+    const savedNextMonthStart = localStorage.getItem(
+      NEXT_MONTH_START_STORAGE_KEY
+    );
+    return savedNextMonthStart === "true";
   });
   const [inDebt, setInDebt] = useState<boolean>(() => {
     const savedInDebt = localStorage.getItem(IN_DEBT_STORAGE_KEY);
-    return savedInDebt === 'true';
+    return savedInDebt === "true";
   });
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -141,7 +167,9 @@ const NewCreditPage = () => {
     if (draftRaw) {
       try {
         const draft = JSON.parse(draftRaw);
-        setContractDate(draft.contractDate ?? new Date().toISOString().split('T')[0]);
+        setContractDate(
+          draft.contractDate ?? new Date().toISOString().split("T")[0]
+        );
         setClient(draft.client ?? null);
         setGuarantor(draft.guarantor ?? null);
         setGuarantorClient(draft.guarantorClient ?? null);
@@ -149,24 +177,24 @@ const NewCreditPage = () => {
         setSelectedPool(draft.selectedPool ?? null);
         setProducts(draft.products ?? []);
         setTotalSum(draft.totalSum ?? 0);
-        setInitialPaymentPercent(draft.initialPaymentPercent ?? '');
-        setInitialPaymentAmount(draft.initialPaymentAmount ?? '');
-        setMonths(draft.months ?? '');
-        setCreditName(draft.creditName ?? '');
+        setInitialPaymentPercent(draft.initialPaymentPercent ?? "");
+        setInitialPaymentAmount(draft.initialPaymentAmount ?? "");
+        setMonths(draft.months ?? "");
+        setCreditName(draft.creditName ?? "");
         setStartPaymentDate(draft.startPaymentDate ?? null);
-        setDebtComment(draft.debtComment ?? '');
-        setPaymentDue(draft.paymentDue ?? '1');
+        setDebtComment(draft.debtComment ?? "");
+        setPaymentDue(draft.paymentDue ?? "1");
         setNextMonthStart(draft.nextMonthStart ?? false);
         setInDebt(draft.inDebt ?? false);
-        setObjectTypeName(draft.objectTypeName ?? '');
-        setTabTypeName(draft.tabTypeName ?? '');
+        setObjectTypeName(draft.objectTypeName ?? "");
+        setTabTypeName(draft.tabTypeName ?? "");
         setSelectedObjectType(draft.selectedObjectType ?? null);
         setSelectedTabType(draft.selectedTabType ?? null);
         setPaymentSchedule(draft.paymentSchedule ?? []);
         setHasDraft(true);
         setIsDraftLoaded(true);
       } catch (e) {
-        console.error('Failed to load draft', e);
+        console.error("Failed to load draft", e);
         setIsDraftLoaded(true);
       }
     } else {
@@ -174,197 +202,242 @@ const NewCreditPage = () => {
     }
   }, [isDraftLoaded]);
 
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  const loadCreditData = async () => {
-    if (!isEditMode || !id) return;
+    const loadCreditData = async () => {
+      if (!isEditMode || !id) return;
 
-    try {
-      const creditData = await getCreateCreditRequest(parseInt(id)) as CreditEditRequest | null;
-      if (!isMounted) return;
+      try {
+        const creditData = await getCreateCreditRequest(parseInt(id));
+        if (!isMounted) return;
 
-      if (creditData) {
-        // Логируем полученные данные
-        console.log('Received credit data:', creditData);
-        console.log('Products:', creditData.products);
-        
-        // Проверяем первый продукт
-        if (creditData.products && creditData.products[0]) {
-          const firstProduct = creditData.products[0];
-          console.log('First product:', {
-            surcharge: firstProduct.surcharge,
-            surchargeAmount: firstProduct.surchargeAmount,
-            price: firstProduct.price
-          });
-        }
-        
-        setCreditName(creditData.name || '');
-        setContractDate(creditData.creditDate ? new Date(creditData.creditDate).toISOString().split('T')[0] : null);
-        setTurnOfRounding(creditData.turnOfRounding);
-        
-        setStartPaymentDate(creditData.startPaymentDay ? new Date(creditData.startPaymentDay).toISOString().split('T')[0] : null);
-        
-        if (creditData.startPaymentDay && creditData.startPaymentDay.toString() === '0001-01-01T00:00:00') {
-          console.log("alert)");
-          window.alert('Внимание: Начало выплат у старых договоров нужно ввести заново для редактирования!');
-        }
-        
-        setInDebt(creditData.inDebt || false);
-        setDebtComment(creditData.debtComment);
+        if (creditData) {
+          // Логируем полученные данные
+          console.log("Received credit data:", creditData);
+          console.log("Products:", creditData.products);
 
-        // Determine markup type from the first product
-        const firstProduct = creditData.products && creditData.products[0];
-        let determinedMarkupType: 'percent' | 'fixed' = 'percent';
-        
-        if (firstProduct) {
-          if (firstProduct.surchargeAmount !== undefined && firstProduct.surchargeAmount !== null) {
-            determinedMarkupType = 'fixed';
-            console.log('Markup type determined as FIXED, surchargeAmount:', firstProduct.surchargeAmount);
-          } else if (firstProduct.surcharge !== undefined && firstProduct.surcharge !== null) {
-            determinedMarkupType = 'percent';
-            console.log('Markup type determined as PERCENT, surcharge:', firstProduct.surcharge);
-          }
-        }
-        
-        // Set markup type states
-        setMarkupType(determinedMarkupType);
-        setEditMarkupType(determinedMarkupType);
-        
-        setClient({
-          id: creditData.clientId,
-          fullName: creditData.clientFullname,
-          phone: creditData.clientId.toString() || ''
-        });
-        
-        if (!creditData.inDebt) {
-          if (creditData.investorId) {
-            const loadedInvestor = await getInvestorById(creditData.investorId);
-            if (!isMounted) return;
-
-            setInvestor({
-              id: creditData.investorId,
-              nickname: loadedInvestor?.nickname || creditData.investorNickname || '',
-              fullName: loadedInvestor?.fullName || creditData.investorId.toString() || '',
-              phoneNumber: loadedInvestor?.phoneNumber || creditData.investorId.toString() || '',
-              investorPie: loadedInvestor?.investorPie || creditData.investorId || 0,
-              investmentAmount: loadedInvestor?.investmentAmount || creditData.investorId || 0,
-              balance: loadedInvestor?.balance || creditData.investorId || 0,
-              activeUntil: loadedInvestor?.activeUntil || creditData.investorActiveUntil,
-              isCompany: loadedInvestor?.isCompany || false,
-              isCompanyPool: loadedInvestor?.isCompanyPool,
-              isPool: false
-            });
-          } else if (creditData.poolId) {
-            setSelectedPool({
-              id: creditData.poolId,
-              nickname: creditData.investorNickname || '',
-              fullName: creditData.poolId.toString() || '',
-              phoneNumber: creditData.poolId.toString() || '',
-              investorPie: creditData.poolId || 0,
-              investmentAmount: creditData.poolId || 0,
-              balance: creditData.poolId.toString() || 0,
-              activeUntil: creditData.investorActiveUntil,
-              isPool: true
+          // Проверяем первый продукт
+          if (creditData.products && creditData.products[0]) {
+            const firstProduct = creditData.products[0];
+            console.log("First product:", {
+              surcharge: firstProduct.surcharge,
+              surchargeAmount: firstProduct.surchargeAmount,
+              price: firstProduct.price,
             });
           }
-        }
-        
-        if (creditData.guarantorClientId) {
-          setGuarantorClient({
-            id: creditData.guarantorClientId,
-            fullName: creditData.guarantorFullname,
-          });
-        } else if (creditData.guarantor) {
-          setGuarantor({
-            id: null,
-            fullName: creditData.guarantor.fullName,
-            phone: creditData.guarantor.phone || '',
-            doc: creditData.guarantor.doc || '',
-            birthdate: creditData.guarantor.birthdate,
-            address: creditData.guarantor.address || ''
-          });
-        }
-        
-        if (creditData.creditTypeId) {
-          setSelectedObjectType({
-            id: creditData.creditTypeId,
-            name: creditData.creditTypeName,
-            entityType: 'credit'
-          });
-          setObjectTypeName(creditData.creditTypeName);
-        }
-        
-        // Format products using the determined markup type
-        const formattedProducts = creditData.products.map((product, index) => {
-          let markup = 0;
-          let totalPrice = product.price;
-          
-          console.log(`Processing product ${index}:`, {
-            name: product.name,
-            price: product.price,
-            surcharge: product.surcharge,
-            surchargeAmount: product.surchargeAmount,
-            determinedMarkupType
-          });
-          
-          if (determinedMarkupType === 'percent') {
-            // For percent markup
-            markup = product.surcharge || 0;
-            totalPrice = product.price * (1 + (product.surcharge || 0) / 100);
-            console.log(`Percent markup: ${markup}% = ${totalPrice} total`);
-          } else {
-            // For fixed amount markup
-            markup = product.surchargeAmount || 0;
-            totalPrice = product.price + (product.surchargeAmount || 0);
-            console.log(`Fixed markup: ${markup} ₽ = ${totalPrice} total`);
+
+          setCreditName(creditData.name || "");
+          setContractDate(
+            creditData.creditDate
+              ? new Date(creditData.creditDate).toISOString().split("T")[0]
+              : null
+          );
+          setTurnOfRounding(creditData.turnOfRounding);
+
+          setStartPaymentDate(
+            creditData.startPaymentDay
+              ? new Date(creditData.startPaymentDay).toISOString().split("T")[0]
+              : null
+          );
+
+          if (
+            creditData.startPaymentDay &&
+            creditData.startPaymentDay.toString() === "0001-01-01T00:00:00"
+          ) {
+            console.log("alert)");
+            window.alert(
+              "Внимание: Начало выплат у старых договоров нужно ввести заново для редактирования!"
+            );
           }
-          
-          return {
-            id: index + 1,
-            name: product.name,
-            price: product.price,
-            quantity: 1,
-            markup: markup,
-            totalPrice: totalPrice
-          };
-        });
-        
-        console.log('Formatted products:', formattedProducts);
-        setProducts(formattedProducts);
-        
-        const newTotalSum = formattedProducts.reduce((sum, product) => sum + product.totalPrice, 0);
-        setTotalSum(newTotalSum);
-        
-        if (creditData.firstPayment !== undefined && creditData.firstPayment !== null) {
-          const firstPayment = Number(creditData.firstPayment);
-          if (!isNaN(firstPayment)) {
-            const formattedAmount = formatMoney(firstPayment.toString());
-            setInitialPaymentAmount(formattedAmount);
-            
-            if (newTotalSum > 0) {
-              const percent = Math.round((firstPayment / newTotalSum) * 100);
-              setInitialPaymentPercent(percent.toString());
+
+          setInDebt(creditData.inDebt || false);
+          setDebtComment(creditData.debtComment);
+
+          // Determine markup type from the first product
+          const firstProduct = creditData.products && creditData.products[0];
+          let determinedMarkupType: "percent" | "fixed" = "percent";
+
+          if (firstProduct) {
+            if (
+              firstProduct.surchargeAmount !== undefined &&
+              firstProduct.surchargeAmount !== null
+            ) {
+              determinedMarkupType = "fixed";
+              console.log(
+                "Markup type determined as FIXED, surchargeAmount:",
+                firstProduct.surchargeAmount
+              );
+            } else if (
+              firstProduct.surcharge !== undefined &&
+              firstProduct.surcharge !== null
+            ) {
+              determinedMarkupType = "percent";
+              console.log(
+                "Markup type determined as PERCENT, surcharge:",
+                firstProduct.surcharge
+              );
             }
           }
+
+          // Set markup type states
+          setMarkupType(determinedMarkupType);
+          setEditMarkupType(determinedMarkupType);
+
+          setClient({
+            id: creditData.clientId,
+            fullName: creditData.clientFullname,
+            phone: creditData.clientId.toString() || "",
+          });
+
+          if (!creditData.inDebt) {
+            if (creditData.investorId) {
+              const loadedInvestor = await getInvestorById(
+                creditData.investorId
+              );
+              if (!isMounted) return;
+
+              setInvestor({
+                id: creditData.investorId,
+                nickname:
+                  loadedInvestor?.nickname || creditData.investorNickname || "",
+                fullName:
+                  loadedInvestor?.fullName || creditData.investorId.toString(),
+                phoneNumber:
+                  loadedInvestor?.phoneNumber ||
+                  creditData.investorId.toString(),
+                investorPie:
+                  loadedInvestor?.investorPie || creditData.investorId || 0,
+                investmentAmount:
+                  loadedInvestor?.investmentAmount ||
+                  creditData.investorId ||
+                  0,
+                balance: loadedInvestor?.balance || creditData.investorId || 0,
+                activeUntil:
+                  loadedInvestor?.activeUntil || creditData.investorActiveUntil,
+                isCompany: loadedInvestor?.isCompany || false,
+                isCompanyPool: loadedInvestor?.isCompanyPool,
+                isPool: false,
+              });
+            } else if (creditData.poolId) {
+              setSelectedPool({
+                id: creditData.poolId,
+                nickname: creditData.investorNickname || "",
+                fullName: creditData.poolId.toString() || "",
+                phoneNumber: creditData.poolId.toString() || "",
+                investorPie: creditData.poolId || 0,
+                investmentAmount: creditData.poolId || 0,
+                balance: creditData.poolId.toString() || 0,
+                activeUntil: creditData.investorActiveUntil,
+                isPool: true,
+              });
+            }
+          }
+
+          if (creditData.guarantorClientId) {
+            setGuarantorClient({
+              id: creditData.guarantorClientId,
+              fullName: creditData.guarantorFullname,
+            });
+          } else if (creditData.guarantor) {
+            setGuarantor({
+              id: null,
+              fullName: creditData.guarantor.fullName,
+              phone: creditData.guarantor.phone || "",
+              doc: creditData.guarantor.doc || "",
+              birthdate: creditData.guarantor.birthdate,
+              address: creditData.guarantor.address || "",
+            });
+          }
+
+          if (creditData.creditTypeId) {
+            setSelectedObjectType({
+              id: creditData.creditTypeId,
+              name: creditData.creditTypeName,
+              entityType: "credit",
+            });
+            setObjectTypeName(creditData.creditTypeName);
+          }
+
+          // Format products using the determined markup type
+          const formattedProducts = creditData.products.map(
+            (product, index) => {
+              let markup = 0;
+              let totalPrice = product.price;
+
+              console.log(`Processing product ${index}:`, {
+                name: product.name,
+                price: product.price,
+                surcharge: product.surcharge,
+                surchargeAmount: product.surchargeAmount,
+                determinedMarkupType,
+              });
+
+              if (determinedMarkupType === "percent") {
+                // For percent markup
+                markup = product.surcharge || 0;
+                totalPrice =
+                  product.price * (1 + (product.surcharge || 0) / 100);
+                console.log(`Percent markup: ${markup}% = ${totalPrice} total`);
+              } else {
+                // For fixed amount markup
+                markup = product.surchargeAmount || 0;
+                totalPrice = product.price + (product.surchargeAmount || 0);
+                console.log(`Fixed markup: ${markup} ₽ = ${totalPrice} total`);
+              }
+
+              return {
+                id: index + 1,
+                name: product.name,
+                price: product.price,
+                quantity: 1,
+                markup: markup,
+                totalPrice: totalPrice,
+              };
+            }
+          );
+
+          console.log("Formatted products:", formattedProducts);
+          setProducts(formattedProducts);
+
+          const newTotalSum = formattedProducts.reduce(
+            (sum, product) => sum + product.totalPrice,
+            0
+          );
+          setTotalSum(newTotalSum);
+
+          if (
+            creditData.firstPayment !== undefined &&
+            creditData.firstPayment !== null
+          ) {
+            const firstPayment = Number(creditData.firstPayment);
+            if (!isNaN(firstPayment)) {
+              const formattedAmount = formatMoney(firstPayment.toString());
+              setInitialPaymentAmount(formattedAmount);
+
+              if (newTotalSum > 0) {
+                const percent = Math.round((firstPayment / newTotalSum) * 100);
+                setInitialPaymentPercent(percent.toString());
+              }
+            }
+          }
+
+          if (creditData.termMonths) {
+            setMonths(creditData.termMonths.toString());
+          }
         }
-        
-        if (creditData.termMonths) {
-          setMonths(creditData.termMonths.toString());
-        }
+      } catch (error) {
+        console.error("Ошибка при загрузке данных кредита:", error);
+        window.alert("Не удалось загрузить данные кредита");
       }
-    } catch (error) {
-      console.error('Ошибка при загрузке данных кредита:', error);
-      window.alert('Не удалось загрузить данные кредита');
-    }
-  };
+    };
 
-  loadCreditData();
+    loadCreditData();
 
-  return () => {
-    isMounted = false;
-  };
-}, [id, isEditMode, getCreateCreditRequest, getInvestorById]);
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isEditMode, getCreateCreditRequest, getInvestorById]);
 
   useEffect(() => {
     if (creditApplicationData) {
@@ -372,43 +445,55 @@ useEffect(() => {
         setClient({
           id: creditApplicationData.clientId,
           fullName: creditApplicationData.clientName,
-          phone: creditApplicationData.clientPhone || ''
+          phone: creditApplicationData.clientPhone || "",
         });
       }
 
-    const today = new Date().toISOString().split('T')[0];
-    setContractDate(today);
+      const today = new Date().toISOString().split("T")[0];
+      setContractDate(today);
 
-      if (creditApplicationData.productName && creditApplicationData.productPrice) {
-        setProducts([{
-          id: Date.now(),
-          name: creditApplicationData.productName,
-          price: creditApplicationData.productPrice,
-          quantity: 1,
-          markup: creditApplicationData.percent * 100,
-          totalPrice: creditApplicationData.productPrice * (1 + creditApplicationData.percent)
-        }]);
-        setTotalSum(creditApplicationData.productPrice * (1 + creditApplicationData.percent));
+      if (
+        creditApplicationData.productName &&
+        creditApplicationData.productPrice
+      ) {
+        setProducts([
+          {
+            id: Date.now(),
+            name: creditApplicationData.productName,
+            price: creditApplicationData.productPrice,
+            quantity: 1,
+            markup: creditApplicationData.percent * 100,
+            totalPrice:
+              creditApplicationData.productPrice *
+              (1 + creditApplicationData.percent),
+          },
+        ]);
+        setTotalSum(
+          creditApplicationData.productPrice *
+            (1 + creditApplicationData.percent)
+        );
       }
 
       if (creditApplicationData.termMonths) {
         setMonths(creditApplicationData.termMonths.toString());
       }
 
-      if (creditApplicationData.firstPayment !== undefined && creditApplicationData.firstPayment !== null) {
+      if (
+        creditApplicationData.firstPayment !== undefined &&
+        creditApplicationData.firstPayment !== null
+      ) {
         const firstPayment = Number(creditApplicationData.firstPayment);
         if (!isNaN(firstPayment)) {
           const formattedAmount = formatMoney(firstPayment.toString());
           setInitialPaymentAmount(formattedAmount);
           handleAmountChange(null, formattedAmount);
-          
+
           if (totalSum > 0) {
             const percent = Math.round((firstPayment / totalSum) * 100);
             setInitialPaymentPercent(percent.toString());
           }
         }
       }
-
     }
   }, [creditApplicationData]);
 
@@ -442,13 +527,13 @@ useEffect(() => {
       selectedTabType,
       paymentSchedule,
       turnOfRounding,
-      startPaymentDate
+      startPaymentDate,
     };
     try {
       localStorage.setItem(CREDIT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
       setHasDraft(true);
     } catch (e) {
-      console.error('Failed to save draft', e);
+      console.error("Failed to save draft", e);
     }
   }, [
     isDraftLoaded,
@@ -475,10 +560,10 @@ useEffect(() => {
     tabTypeName,
     selectedObjectType,
     selectedTabType,
-    paymentSchedule
+    paymentSchedule,
   ]);
 
-  const handleMarkupTypeChange = useCallback((type: 'percent' | 'fixed') => {
+  const handleMarkupTypeChange = useCallback((type: "percent" | "fixed") => {
     setMarkupType(type);
     localStorage.setItem(MARKUP_TYPE_STORAGE_KEY, type);
   }, []);
@@ -489,46 +574,51 @@ useEffect(() => {
   }, []);
 
   const parseAmount = useCallback((formatted: string): number => {
-    return parseInt(formatted.replace(/[^\d]/g, '')) || 0;
+    return parseInt(formatted.replace(/[^\d]/g, "")) || 0;
   }, []);
 
   const resetDraft = useCallback(() => {
     localStorage.removeItem(CREDIT_DRAFT_STORAGE_KEY);
     setHasDraft(false);
-    setContractDate(new Date().toISOString().split('T')[0]);
+    setContractDate(new Date().toISOString().split("T")[0]);
     setClient(null);
     setGuarantor(null);
     setGuarantorClient(null);
     setInvestor(null);
     setSelectedPool(null);
-    setProducts([{
-      id: Date.now(),
-      name: ``,
-      price: 0,
-      quantity: 1,
-      markup: 0,
-      totalPrice: 0
-    }]);
+    setProducts([
+      {
+        id: Date.now(),
+        name: ``,
+        price: 0,
+        quantity: 1,
+        markup: 0,
+        totalPrice: 0,
+      },
+    ]);
     setTotalSum(0);
-    setInitialPaymentPercent('');
-    setInitialPaymentAmount('');
-    setMonths('');
-    setCreditName('');
-    setDebtComment('');
-    setPaymentDue('1');
+    setInitialPaymentPercent("");
+    setInitialPaymentAmount("");
+    setMonths("");
+    setCreditName("");
+    setDebtComment("");
+    setPaymentDue("1");
     setInDebt(false);
-    setObjectTypeName('');
-    setTabTypeName('');
+    setObjectTypeName("");
+    setTabTypeName("");
     setSelectedObjectType(null);
     setSelectedTabType(null);
     setPaymentSchedule([]);
     setStartPaymentDate(null);
   }, []);
 
-  const handleObjectTypeSelect = useCallback((objectType: SelectedObjectType) => {
-    setSelectedObjectType(objectType);
-    setObjectTypeName(objectType.name);
-  }, []);
+  const handleObjectTypeSelect = useCallback(
+    (objectType: SelectedObjectType) => {
+      setSelectedObjectType(objectType);
+      setObjectTypeName(objectType.name);
+    },
+    []
+  );
 
   const handleObjectTypeNameChange = useCallback((value: string) => {
     setObjectTypeName(value);
@@ -540,7 +630,7 @@ useEffect(() => {
   const handleInDebtChange = useCallback((checked: boolean) => {
     setInDebt(checked);
     localStorage.setItem(IN_DEBT_STORAGE_KEY, checked.toString());
-    
+
     if (checked) {
       setInvestor(null);
       setSelectedPool(null);
@@ -548,94 +638,129 @@ useEffect(() => {
     }
   }, []);
 
-const validateInvestorActivePeriod = useCallback((): boolean => {
-  if (inDebt) {
-    setValidationError(null);
-    return true;
-  }
+  const requiresInvestmentSource = !inDebt;
 
-  if (!contractDate || !months || parseInt(months) <= 0 || (!investor && !selectedPool)) {
-    setValidationError(null);
-    return true;
-  }
-
-  const selectedInvestor = investor || selectedPool;
-
-  if (
-    selectedPool ||
-    (investor && (investor.isCompany || isOwnCashInvestorName(investor.nickname)))
-  ) {
-    setValidationError(null);
-    return true;
-  }
-
-  if (!selectedInvestor?.activeUntil) {
-    setValidationError(null);
-    return true;
-  }
-
-  try {
-    const contractDateObj = new Date(contractDate);
-    
-    if (isNaN(contractDateObj.getTime())) {
-      setValidationError(null);
-      return true;
-    }
-
-    const monthsValue = parseInt(months);
-    
-    if (isNaN(monthsValue) || monthsValue <= 0) {
-      setValidationError(null);
-      return true;
-    }
-
-    const lastPaymentDate = new Date(contractDateObj);
-    lastPaymentDate.setMonth(lastPaymentDate.getMonth() + monthsValue);
-    
-    const paymentDay = parseInt(paymentDue);
-    
-    const tempDate = new Date(lastPaymentDate.getFullYear(), lastPaymentDate.getMonth(), paymentDay);
-    
-    if (tempDate.getMonth() !== lastPaymentDate.getMonth()) {
-      tempDate.setDate(0);
-    }
-    
-    const investorActiveUntil = new Date(selectedInvestor.activeUntil);
-    
-    if (isNaN(investorActiveUntil.getTime())) {
+  const validateInvestorActivePeriod = useCallback((): boolean => {
+    if (inDebt) {
       setValidationError(null);
       return true;
     }
 
     if (
-      !selectedInvestor.isCompany &&
-      !isOwnCashInvestorName(selectedInvestor.nickname) &&
-      investorActiveUntil < tempDate
+      !contractDate ||
+      !months ||
+      parseInt(months) <= 0 ||
+      (requiresInvestmentSource && !investor && !selectedPool)
     ) {
-      const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString('ru-RU')}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString('ru-RU')}).`;
-      setValidationError(errorMessage);
-      return false;
+      setValidationError(null);
+      return true;
     }
 
-    setValidationError(null);
-    return true;
-  } catch (error) {
-    console.error('Ошибка при проверке дат:', error);
-    setValidationError(null);
-    return true;
-  }
-}, [contractDate, months, paymentDue, investor, selectedPool, inDebt]);
+    const selectedInvestor = investor || selectedPool;
+
+    if (
+      selectedPool ||
+      (investor &&
+        (investor.isCompany || isOwnCashInvestorName(investor.nickname)))
+    ) {
+      setValidationError(null);
+      return true;
+    }
+
+    if (!selectedInvestor?.activeUntil) {
+      setValidationError(null);
+      return true;
+    }
+
+    try {
+      const contractDateObj = new Date(contractDate);
+
+      if (isNaN(contractDateObj.getTime())) {
+        setValidationError(null);
+        return true;
+      }
+
+      const monthsValue = parseInt(months);
+
+      if (isNaN(monthsValue) || monthsValue <= 0) {
+        setValidationError(null);
+        return true;
+      }
+
+      const lastPaymentDate = new Date(contractDateObj);
+      lastPaymentDate.setMonth(lastPaymentDate.getMonth() + monthsValue);
+
+      const paymentDay = parseInt(paymentDue);
+
+      const tempDate = new Date(
+        lastPaymentDate.getFullYear(),
+        lastPaymentDate.getMonth(),
+        paymentDay
+      );
+
+      if (tempDate.getMonth() !== lastPaymentDate.getMonth()) {
+        tempDate.setDate(0);
+      }
+
+      const investorActiveUntil = new Date(selectedInvestor.activeUntil);
+
+      if (isNaN(investorActiveUntil.getTime())) {
+        setValidationError(null);
+        return true;
+      }
+
+      if (
+        !selectedInvestor.isCompany &&
+        !isOwnCashInvestorName(selectedInvestor.nickname) &&
+        investorActiveUntil < tempDate
+      ) {
+        const errorMessage = `Договор с инвестором заканчивается (${investorActiveUntil.toLocaleDateString(
+          "ru-RU"
+        )}) \nраньше даты последнего платежа (${tempDate.toLocaleDateString(
+          "ru-RU"
+        )}).`;
+        setValidationError(errorMessage);
+        return false;
+      }
+
+      setValidationError(null);
+      return true;
+    } catch (error) {
+      console.error("Ошибка при проверке дат:", error);
+      setValidationError(null);
+      return true;
+    }
+  }, [
+    contractDate,
+    months,
+    paymentDue,
+    investor,
+    selectedPool,
+    inDebt,
+    requiresInvestmentSource,
+  ]);
 
   useEffect(() => {
     validateInvestorActivePeriod();
-  }, [contractDate, months, paymentDue, investor, selectedPool, validateInvestorActivePeriod, inDebt]);
+  }, [
+    contractDate,
+    months,
+    paymentDue,
+    investor,
+    selectedPool,
+    validateInvestorActivePeriod,
+    inDebt,
+  ]);
 
-
-  const handleCreateOrUpdateCredit = useCallback(async () => {   
-    if (!client || !contractDate || (!inDebt && !investor && !selectedPool)) {
+  const handleCreateOrUpdateCredit = useCallback(async () => {
+    if (
+      !client ||
+      !contractDate ||
+      (requiresInvestmentSource && !investor && !selectedPool)
+    ) {
       return;
     }
-    
+
     if (!validateInvestorActivePeriod()) {
       return;
     }
@@ -650,25 +775,26 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       name: creditName,
       debtComment: debtComment,
       creditDate: new Date(contractDate),
-      firstPayment: initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0,
+      firstPayment: initialPaymentAmount
+        ? parseAmount(initialPaymentAmount)
+        : 0,
       termMonths: parseInt(months),
       startPaymentDay: new Date(startPaymentDate),
       turnOfRounding: turnOfRounding,
       inDebt: inDebt,
       products: products
-        .filter(product => product.name.trim() !== '' && product.price > 0)
-        .map(product => ({
+        .filter((product) => product.name.trim() !== "" && product.price > 0)
+        .map((product) => ({
           name: product.name,
           price: product.price,
-          ...(markupType === 'percent'
+          ...(markupType === "percent"
             ? { surcharge: product.markup }
-            : { surchargeAmount: product.markup }
-          )
+            : { surchargeAmount: product.markup }),
         })),
       creditTypeId: null,
-      GuarantorClientId: null
+      GuarantorClientId: null,
     };
-    
+
     if (selectedObjectType && selectedObjectType.id) {
       creditData.creditTypeId = selectedObjectType.id;
     }
@@ -679,12 +805,14 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       creditData.guarantor = {
         fullName: guarantor.fullName,
         phone: guarantor.phone,
-        birthdate: guarantor.birthdate ? new Date(guarantor.birthdate) : undefined,
+        birthdate: guarantor.birthdate
+          ? new Date(guarantor.birthdate)
+          : undefined,
         address: guarantor.address,
-        doc: guarantor.doc
+        doc: guarantor.doc,
       };
     }
-    
+
     if (!inDebt) {
       if (selectedPool) {
         creditData.poolId = selectedPool.poolId || selectedPool.id;
@@ -703,7 +831,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       if (isEditMode && id) {
         const updateData = {
           ...creditData,
-          id: parseInt(id)
+          id: parseInt(id),
         } as UpdateCreditRequest;
 
         createdCredit = await updateCredit(updateData);
@@ -714,14 +842,17 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       if (createdCredit) {
         localStorage.removeItem(CREDIT_DRAFT_STORAGE_KEY);
         setHasDraft(false);
-        navigate('/credits');
+        navigate("/credits");
       }
     } catch (err) {
       const responseData = (err as any)?.response?.data;
       const errorMessage =
-        typeof responseData === 'string' ? responseData :
-        responseData?.message ? responseData.message :
-        (err as any)?.message || 'Не удалось сохранить договор. Попробуйте ещё раз.';
+        typeof responseData === "string"
+          ? responseData
+          : responseData?.message
+          ? responseData.message
+          : (err as any)?.message ||
+            "Не удалось сохранить договор. Попробуйте ещё раз.";
       setSubmitError(errorMessage);
     }
   }, [
@@ -748,65 +879,79 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     creditName,
     isEditMode,
     id,
-    inDebt
+    inDebt,
+    requiresInvestmentSource,
   ]);
-
 
   const generateSchedulePreview = useCallback(async () => {
     if (!contractDate || !months || !paymentDue || totalSum <= 0) return;
 
     try {
-      const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
+      const initialPayment = initialPaymentAmount
+        ? parseAmount(initialPaymentAmount)
+        : 0;
       const creditAmount = totalSum - initialPayment;
 
       const previewParams = {
         termMonths: parseInt(months),
         totalAmount: creditAmount,
         turnOfRounding: turnOfRounding,
-        startDate: new Date(startPaymentDate)
+        startDate: new Date(startPaymentDate),
       };
 
       await getPreview(previewParams);
     } catch (error) {
-      console.error('[PaymentSchedule] ❌ Ошибка при генерации превью:', error);
+      console.error("[PaymentSchedule] ❌ Ошибка при генерации превью:", error);
     }
-  }, [contractDate, months, startPaymentDate, paymentDue, totalSum, initialPaymentAmount, parseAmount, getPreview, turnOfRounding]);
+  }, [
+    contractDate,
+    months,
+    startPaymentDate,
+    paymentDue,
+    totalSum,
+    initialPaymentAmount,
+    parseAmount,
+    getPreview,
+    turnOfRounding,
+  ]);
 
   useEffect(() => {
     if (previewData) {
-      const initialPayment = initialPaymentAmount ? parseAmount(initialPaymentAmount) : 0;
+      const initialPayment = initialPaymentAmount
+        ? parseAmount(initialPaymentAmount)
+        : 0;
       const creditAmount = totalSum - initialPayment;
-      
+
       const formattedSchedule = previewData.map((item, index) => {
         const previousPayments = previewData
           .slice(0, index)
           .reduce((sum, payment) => sum + payment.paymentAmount, 0);
         const remainingAmount = creditAmount - previousPayments;
-        
+
         return {
           id: index + 1,
-          date: new Date(item.paymentDate).toLocaleDateString('ru-RU'),
+          date: new Date(item.paymentDate).toLocaleDateString("ru-RU"),
           remainingAmount: Math.max(0, remainingAmount),
           requiredPayment: item.paymentAmount,
-          comment: item.comment
+          comment: item.comment,
         };
       });
-      
+
       if (initialPayment > 0) {
         formattedSchedule.unshift({
           id: 0,
-          date: new Date(contractDate!).toLocaleDateString('ru-RU'),
+          date: new Date(contractDate!).toLocaleDateString("ru-RU"),
           remainingAmount: totalSum,
           requiredPayment: initialPayment,
-          comment: 'Первоначальный взнос'
+          comment: "Первоначальный взнос",
         });
       }
-      
+
       setPaymentSchedule(formattedSchedule);
     }
   }, [previewData, totalSum, initialPaymentAmount, contractDate, parseAmount]);
 
-  useEffect(() => {  
+  useEffect(() => {
     if (contractDate && months && paymentDue && totalSum > 0) {
       generateSchedulePreview();
     } else {
@@ -814,61 +959,72 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
         setPaymentSchedule([]);
       }
     }
-  }, [contractDate, months, paymentDue, totalSum, nextMonthStart, turnOfRounding, generateSchedulePreview]);
+  }, [
+    contractDate,
+    months,
+    paymentDue,
+    totalSum,
+    nextMonthStart,
+    turnOfRounding,
+    generateSchedulePreview,
+  ]);
 
-  const handlePercentChange = useCallback((e?: ChangeEvent<HTMLInputElement>, value?: string) => {
-    if (e != null)
-      value = e.target.value;
-    
-    if (value === '' || /^\d*$/.test(value)) {
-      setInitialPaymentPercent(value);
-      
-      if (value === '') {
-        setInitialPaymentAmount('');
-      } else if (totalSum > 0) {
-        const percent = parseInt(value);
-        if (!isNaN(percent)) {
-          const amount = Math.round(totalSum * percent / 100);
-          setInitialPaymentAmount(formatMoney(amount.toString()));
+  const handlePercentChange = useCallback(
+    (e?: ChangeEvent<HTMLInputElement>, value?: string) => {
+      if (e != null) value = e.target.value;
+
+      if (value === "" || /^\d*$/.test(value)) {
+        setInitialPaymentPercent(value);
+
+        if (value === "") {
+          setInitialPaymentAmount("");
+        } else if (totalSum > 0) {
+          const percent = parseInt(value);
+          if (!isNaN(percent)) {
+            const amount = Math.round((totalSum * percent) / 100);
+            setInitialPaymentAmount(formatMoney(amount.toString()));
+          }
         }
       }
-    }
-  }, [totalSum, formatMoney]);
+    },
+    [totalSum, formatMoney]
+  );
 
   const openInvestorModal = () => {
-    setModalType('investor');
+    setModalType("investor");
     setIsInvestorModalOpen(true);
   };
 
-  const handleAmountChange = useCallback((e?: ChangeEvent<HTMLInputElement>, inputValue?: string) => {
-    if (e != null)
-      inputValue = e.target.value;
-    
-    if (inputValue === '₽' || inputValue === '') {
-      
-      setInitialPaymentAmount('');
-      setInitialPaymentPercent('');
-      return;
-    }
-    
-    const numericValue = parseAmount(inputValue);
-    
-    const formattedValue = formatMoney(numericValue.toString());
-    
-    setInitialPaymentAmount(formattedValue);
-    
-    if (totalSum > 0 && numericValue > 0) {
-      const percent = Math.round((numericValue / totalSum) * 100);
-      setInitialPaymentPercent(percent.toString());
-    } else {
-      setInitialPaymentPercent('');
-    }
-  }, [totalSum, parseAmount, formatMoney]);
+  const handleAmountChange = useCallback(
+    (e?: ChangeEvent<HTMLInputElement>, inputValue?: string) => {
+      if (e != null) inputValue = e.target.value;
+
+      if (inputValue === "₽" || inputValue === "") {
+        setInitialPaymentAmount("");
+        setInitialPaymentPercent("");
+        return;
+      }
+
+      const numericValue = parseAmount(inputValue);
+
+      const formattedValue = formatMoney(numericValue.toString());
+
+      setInitialPaymentAmount(formattedValue);
+
+      if (totalSum > 0 && numericValue > 0) {
+        const percent = Math.round((numericValue / totalSum) * 100);
+        setInitialPaymentPercent(percent.toString());
+      } else {
+        setInitialPaymentPercent("");
+      }
+    },
+    [totalSum, parseAmount, formatMoney]
+  );
 
   const handleSelectClient = (client: Client) => {
-    if (modalType === 'client') {
+    if (modalType === "client") {
       setClient(client);
-    } else if (modalType === 'guarantorClient') {
+    } else if (modalType === "guarantorClient") {
       setGuarantorClient(client);
       setGuarantor(null);
     }
@@ -876,60 +1032,59 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     setIsGuarantorClientModalOpen(false);
   };
 
-  const hasEmptyProductNames = products.every(product => 
-    product.name.trim() === ''
+  const hasEmptyProductNames = products.every(
+    (product) => product.name.trim() === ""
   );
 
-  const isFormValid = 
-    client && 
-    contractDate && 
+  const isFormValid =
+    client &&
+    contractDate &&
     startPaymentDate &&
-    (inDebt || investor || selectedPool) && 
+    (!requiresInvestmentSource || investor || selectedPool) &&
     !validationError &&
     !hasEmptyProductNames &&
     products.length > 0 &&
-    products.some(product => product.name.trim() !== '' && product.price > 0);
+    products.some((product) => product.name.trim() !== "" && product.price > 0);
 
-  const handleSelectInvestor = (selectedEntity: { 
-    id: number; 
-    nickname?: string; 
+  const handleSelectInvestor = (selectedEntity: {
+    id: number;
+    nickname?: string;
     name?: string;
-    fullName?: string; 
+    fullName?: string;
     phoneNumber?: string;
     investorPie?: number;
     pie?: number;
     investmentAmount?: number;
     balance?: number;
     isCompany?: boolean;
-    type: 'investor' | 'pool';
+    type: "investor" | "pool";
     activeUntil?: string;
   }) => {
-    if (selectedEntity.type === 'pool') {
+    if (selectedEntity.type === "pool") {
       setSelectedPool({
         id: selectedEntity.id,
-        nickname: selectedEntity.name || selectedEntity.nickname || '',
-        fullName: selectedEntity.fullName || selectedEntity.name || '',
-        phoneNumber: selectedEntity.phoneNumber || '',
+        nickname: selectedEntity.name || selectedEntity.nickname || "",
+        fullName: selectedEntity.fullName || selectedEntity.name || "",
+        phoneNumber: selectedEntity.phoneNumber || "",
         investorPie: selectedEntity.pie || 0,
         investmentAmount: selectedEntity.investmentAmount || 0,
         balance: selectedEntity.balance || 0,
         activeUntil: selectedEntity.activeUntil,
-        isPool: true
+        isPool: true,
       });
       setInvestor(null);
-    
     } else {
       setInvestor({
         id: selectedEntity.id,
-        nickname: selectedEntity.nickname || '',
-        fullName: selectedEntity.fullName || '',
-        phoneNumber: selectedEntity.phoneNumber || '',
+        nickname: selectedEntity.nickname || "",
+        fullName: selectedEntity.fullName || "",
+        phoneNumber: selectedEntity.phoneNumber || "",
         investorPie: selectedEntity.investorPie || 0,
         investmentAmount: selectedEntity.investmentAmount || 0,
         balance: selectedEntity.balance || 0,
         activeUntil: selectedEntity.activeUntil,
         isCompany: selectedEntity.isCompany,
-        isPool: false
+        isPool: false,
       });
       setSelectedPool(null);
     }
@@ -937,9 +1092,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
     setValidationError(null);
   };
 
-  const openClientModal = (type: 'client' | 'guarantorClient') => {
+  const openClientModal = (type: "client" | "guarantorClient") => {
     setModalType(type);
-    if (type === 'client') {
+    if (type === "client") {
       setIsClientModalOpen(true);
     } else {
       setIsGuarantorClientModalOpen(true);
@@ -949,11 +1104,11 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
   const handleMonthsBlur = (value: string) => {
     const numericValue = Number(value) || 0;
     if (numericValue > 180) {
-      setMonths('180');
+      setMonths("180");
     } else if (numericValue < 1) {
-      setMonths('1');
+      setMonths("1");
     }
-    
+
     setTimeout(() => {
       validateInvestorActivePeriod();
     }, 0);
@@ -962,13 +1117,13 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
   const getSelectedEntityDisplayName = () => {
     if (investor) return investor.nickname;
     if (selectedPool) return selectedPool.nickname;
-    return '';
+    return "";
   };
 
   const getSelectedEntityPhone = () => {
     if (investor) return investor.phoneNumber;
     if (selectedPool) return selectedPool.phoneNumber;
-    return '';
+    return "";
   };
 
   const clearSelectedEntity = () => {
@@ -982,19 +1137,19 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
       return {
         primaryValue: guarantorClient.fullName,
         secondaryValue: guarantorClient.phone,
-        type: 'client'
+        type: "client",
       };
     } else if (guarantor) {
       return {
         primaryValue: guarantor.fullName,
         secondaryValue: guarantor.phone,
-        type: 'custom'
+        type: "custom",
       };
     }
     return {
-      primaryValue: '',
-      secondaryValue: '',
-      type: null
+      primaryValue: "",
+      secondaryValue: "",
+      type: null,
     };
   };
 
@@ -1006,8 +1161,19 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
   const guarantorInfo = getGuarantorDisplayInfo();
 
   const plusIcon = (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001" stroke="rgba(80, 85, 92, 1)" strokeWidth="1.5" strokeLinecap="round"/>
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 22 22"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M11 1.66675V20.3334M20.3333 11.0001L1.66663 11.0001"
+        stroke="rgba(80, 85, 92, 1)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 
@@ -1018,14 +1184,17 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
 
   const monthlyPayment = useMemo(() => {
     if (!previewData || previewData.length === 0) return 0;
-    const scheduledOnly = previewData.filter(p => p.paymentAmount > 0);
+    const scheduledOnly = previewData.filter((p) => p.paymentAmount > 0);
     if (scheduledOnly.length === 0) return 0;
     const total = scheduledOnly.reduce((sum, p) => sum + p.paymentAmount, 0);
     return Math.round(total / scheduledOnly.length);
   }, [previewData]);
 
   const totalRepayment = useMemo(() => {
-    const scheduled = (previewData ?? []).reduce((sum, p) => sum + p.paymentAmount, 0);
+    const scheduled = (previewData ?? []).reduce(
+      (sum, p) => sum + p.paymentAmount,
+      0
+    );
     return scheduled + initialPaymentNumeric;
   }, [previewData, initialPaymentNumeric]);
 
@@ -1050,7 +1219,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </SummaryIcon>
             <SummaryItemBody>
               <SummaryLabel>Сумма товаров</SummaryLabel>
-              <SummaryValue>{totalSum > 0 ? formatMoney(totalSum.toString()) : '—'}</SummaryValue>
+              <SummaryValue>
+                {totalSum > 0 ? formatMoney(totalSum.toString()) : "—"}
+              </SummaryValue>
             </SummaryItemBody>
           </SummaryCard>
 
@@ -1062,8 +1233,12 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               <SummaryLabel>Первый взнос</SummaryLabel>
               <SummaryValue>
                 {initialPaymentNumeric > 0
-                  ? `${formatMoney(initialPaymentNumeric.toString())}${initialPaymentPercent ? ` · ${initialPaymentPercent}%` : ''}`
-                  : '—'}
+                  ? `${formatMoney(initialPaymentNumeric.toString())}${
+                      initialPaymentPercent
+                        ? ` · ${initialPaymentPercent}%`
+                        : ""
+                    }`
+                  : "—"}
               </SummaryValue>
             </SummaryItemBody>
           </SummaryCard>
@@ -1074,7 +1249,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </SummaryIcon>
             <SummaryItemBody>
               <SummaryLabel>Срок</SummaryLabel>
-              <SummaryValue>{months ? `${months} мес.` : '—'}</SummaryValue>
+              <SummaryValue>{months ? `${months} мес.` : "—"}</SummaryValue>
             </SummaryItemBody>
           </SummaryCard>
 
@@ -1084,7 +1259,11 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             </SummaryIcon>
             <SummaryItemBody>
               <SummaryLabel>Ежемесячный платёж</SummaryLabel>
-              <SummaryValue>{monthlyPayment > 0 ? formatMoney(monthlyPayment.toString()) : '—'}</SummaryValue>
+              <SummaryValue>
+                {monthlyPayment > 0
+                  ? formatMoney(monthlyPayment.toString())
+                  : "—"}
+              </SummaryValue>
             </SummaryItemBody>
           </SummaryCard>
 
@@ -1095,7 +1274,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
               </SummaryIcon>
               <SummaryItemBody>
                 <SummaryLabel>Переплата</SummaryLabel>
-                <SummaryValue>{formatMoney(overpayment.toString())}</SummaryValue>
+                <SummaryValue>
+                  {formatMoney(overpayment.toString())}
+                </SummaryValue>
               </SummaryItemBody>
             </SummaryCard>
           )}
@@ -1114,7 +1295,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
           <SectionBody>
             <SectionTopRow>
               <SectionHeader>
-                <SectionIcon><DescriptionOutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionIcon>
+                  <DescriptionOutlinedIcon fontSize="small" />
+                </SectionIcon>
                 <SectionTitle>Основная информация</SectionTitle>
               </SectionHeader>
               <SettingsCard>
@@ -1132,7 +1315,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                 <DateInputWrapper>
                   <CustomCalendar
                     prefix=""
-                    value={contractDate || ''}
+                    value={contractDate || ""}
                     onChange={(date) => setContractDate(date || null)}
                     onReset={() => setContractDate(null)}
                   />
@@ -1154,7 +1337,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                     />
                   </EntitySelectWrapper>
                 </FieldGroup>
-              ) : (
+              ) : inDebt ? (
                 <FieldGroup $width="365px">
                   <Label>Комментарий к долгу</Label>
                   <EntitySelectWrapper>
@@ -1165,7 +1348,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                     />
                   </EntitySelectWrapper>
                 </FieldGroup>
-              )}
+              ) : null}
 
               <FieldGroup $width="248px">
                 <Label>Имя договора (необязательно)</Label>
@@ -1202,16 +1385,18 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <SectionAccentBar $accent="teal" />
             <SectionBody>
               <SectionHeader>
-                <SectionIcon><PersonOutlineIcon fontSize="small" /></SectionIcon>
+                <SectionIcon>
+                  <PersonOutlineIcon fontSize="small" />
+                </SectionIcon>
                 <SectionTitle>Покупатель</SectionTitle>
               </SectionHeader>
               <EntitySelectWrapper>
                 <EntitySelectContainer
                   mode="create"
-                  primaryValue={client?.fullName || ''}
+                  primaryValue={client?.fullName || ""}
                   secondaryValue={client?.phone}
                   placeholder="Выберите покупателя"
-                  onSelect={() => openClientModal('client')}
+                  onSelect={() => openClientModal("client")}
                   onClear={() => setClient(null)}
                   customIcon={plusIcon}
                 />
@@ -1223,8 +1408,12 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <SectionAccentBar $accent="orange" />
             <SectionBody>
               <SectionHeader>
-                <SectionIcon $accent="orange"><ShieldOutlinedIcon fontSize="small" /></SectionIcon>
-                <SectionTitle>Поручитель <SectionOptional>(не обязательно)</SectionOptional></SectionTitle>
+                <SectionIcon $accent="orange">
+                  <ShieldOutlinedIcon fontSize="small" />
+                </SectionIcon>
+                <SectionTitle>
+                  Поручитель <SectionOptional>(не обязательно)</SectionOptional>
+                </SectionTitle>
               </SectionHeader>
               <EntitySelectWrapper>
                 <EntitySelectContainer
@@ -1232,7 +1421,7 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                   primaryValue={guarantorInfo.primaryValue}
                   secondaryValue={guarantorInfo.secondaryValue}
                   placeholder="Выберите поручителя"
-                  onSelect={() => openClientModal('guarantorClient')}
+                  onSelect={() => openClientModal("guarantorClient")}
                   onClear={clearGuarantor}
                   customIcon={plusIcon}
                 />
@@ -1246,23 +1435,25 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
           <SectionBody>
             <SectionTopRow>
               <SectionHeader>
-                <SectionIcon><Inventory2OutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionIcon>
+                  <Inventory2OutlinedIcon fontSize="small" />
+                </SectionIcon>
                 <SectionTitle>Список товаров</SectionTitle>
               </SectionHeader>
               <MarkupPillContainer role="group" aria-label="Тип наценки">
                 <MarkupPill
                   type="button"
-                  $active={markupType === 'percent'}
-                  onClick={() => handleMarkupTypeChange('percent')}
-                  aria-pressed={markupType === 'percent'}
+                  $active={markupType === "percent"}
+                  onClick={() => handleMarkupTypeChange("percent")}
+                  aria-pressed={markupType === "percent"}
                 >
                   %
                 </MarkupPill>
                 <MarkupPill
                   type="button"
-                  $active={markupType === 'fixed'}
-                  onClick={() => handleMarkupTypeChange('fixed')}
-                  aria-pressed={markupType === 'fixed'}
+                  $active={markupType === "fixed"}
+                  onClick={() => handleMarkupTypeChange("fixed")}
+                  aria-pressed={markupType === "fixed"}
                 >
                   ₽
                 </MarkupPill>
@@ -1282,7 +1473,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <TotalSumRow>
               <TotalSumGroup>
                 <TotalSumLabel>Итого товаров на сумму</TotalSumLabel>
-                <TotalSumValue>{formatMoney(totalSum.toString())}</TotalSumValue>
+                <TotalSumValue>
+                  {formatMoney(totalSum.toString())}
+                </TotalSumValue>
               </TotalSumGroup>
               <SettingsCard>
                 <Checkbox
@@ -1300,14 +1493,18 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <SectionAccentBar $accent="teal" />
             <SectionBody>
               <SectionHeader>
-                <SectionIcon><PaymentsOutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionIcon>
+                  <PaymentsOutlinedIcon fontSize="small" />
+                </SectionIcon>
                 <SectionTitle>Параметры выплат</SectionTitle>
               </SectionHeader>
 
               <PaymentScheduleInputs>
                 <InputGroup>
                   <InputRow>
-                    <InputLabel style={{ flex: 1 }}>Первоначальный взнос, %</InputLabel>
+                    <InputLabel style={{ flex: 1 }}>
+                      Первоначальный взнос, %
+                    </InputLabel>
                     <InputLabel style={{ flex: 1 }}>Сумма</InputLabel>
                   </InputRow>
                   <InputRow>
@@ -1337,7 +1534,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                       inputType="number"
                       placeholder="Месяцев"
                       value={months}
-                      onChange={(e) => setMonths(e.target.value.replace(/[^0-9]/g, ''))}
+                      onChange={(e) =>
+                        setMonths(e.target.value.replace(/[^0-9]/g, ""))
+                      }
                       onBlur={(e) => handleMonthsBlur(e.target.value)}
                       style={{ flex: 1 }}
                       min="1"
@@ -1353,13 +1552,24 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                 {submitError && (
                   <SubmitErrorBanner role="alert" aria-live="assertive">
                     <SubmitErrorIcon aria-hidden="true">
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10 1.667a8.333 8.333 0 1 0 0 16.666 8.333 8.333 0 0 0 0-16.666Zm0 4.166a.833.833 0 0 1 .833.834v3.333a.833.833 0 1 1-1.666 0V6.667A.833.833 0 0 1 10 5.833Zm0 8.334a1.042 1.042 0 1 1 0-2.084 1.042 1.042 0 0 1 0 2.084Z" fill="currentColor"/>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M10 1.667a8.333 8.333 0 1 0 0 16.666 8.333 8.333 0 0 0 0-16.666Zm0 4.166a.833.833 0 0 1 .833.834v3.333a.833.833 0 1 1-1.666 0V6.667A.833.833 0 0 1 10 5.833Zm0 8.334a1.042 1.042 0 1 1 0-2.084 1.042 1.042 0 0 1 0 2.084Z"
+                          fill="currentColor"
+                        />
                       </svg>
                     </SubmitErrorIcon>
                     <SubmitErrorContent>
                       <SubmitErrorTitle>
-                        {isEditMode ? 'Не удалось сохранить изменения' : 'Не удалось создать договор'}
+                        {isEditMode
+                          ? "Не удалось сохранить изменения"
+                          : "Не удалось создать договор"}
                       </SubmitErrorTitle>
                       <SubmitErrorMessage>{submitError}</SubmitErrorMessage>
                     </SubmitErrorContent>
@@ -1374,19 +1584,19 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
                 )}
 
                 <ButtonWrapper>
-                  <GrayButton onClick={() => navigate(-1)}>
-                    Отменить
-                  </GrayButton>
+                  <GrayButton onClick={() => navigate(-1)}>Отменить</GrayButton>
                   <DarkCyanButton
-                    style={{ marginRight: 'auto' }}
-                    disabled={!isFormValid || isScheduleLoading || isCreditLoading}
+                    style={{ marginRight: "auto" }}
+                    disabled={
+                      !isFormValid || isScheduleLoading || isCreditLoading
+                    }
                     onClick={handleCreateOrUpdateCredit}
                   >
                     {isScheduleLoading || isCreditLoading
-                      ? 'Загрузка...'
+                      ? "Загрузка..."
                       : isEditMode
-                        ? 'Сохранить изменения'
-                        : 'Создать договор'}
+                      ? "Сохранить изменения"
+                      : "Создать договор"}
                   </DarkCyanButton>
                 </ButtonWrapper>
               </PaymentScheduleInputs>
@@ -1397,7 +1607,9 @@ const validateInvestorActivePeriod = useCallback((): boolean => {
             <SectionAccentBar $accent="teal" />
             <SectionBody>
               <SectionHeader>
-                <SectionIcon><CalendarMonthOutlinedIcon fontSize="small" /></SectionIcon>
+                <SectionIcon>
+                  <CalendarMonthOutlinedIcon fontSize="small" />
+                </SectionIcon>
                 <SectionTitle>График выплат</SectionTitle>
               </SectionHeader>
               <PaymentScheduleTableWrapper>
@@ -1446,6 +1658,9 @@ const PageHeader = styled.div`
 `;
 
 const StickySummaryBar = styled.div`
+  position: sticky;
+  top: 56px;
+  z-index: 40;
   display: flex;
   align-items: stretch;
   gap: 12px;
@@ -1453,17 +1668,12 @@ const StickySummaryBar = styled.div`
   margin: 0 0 16px;
   background-color: rgba(249, 250, 250, 1);
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-
-  @media (max-width: 991px) {
-    flex-direction: column;
-  }
 `;
 
 const HeaderActions = styled.div`
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  margin-left: auto;
 
   & > button {
     margin: 0;
@@ -1473,32 +1683,38 @@ const HeaderActions = styled.div`
 const SummaryGrid = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 10px;
   min-width: 0;
 `;
 
-type SummaryVariant = 'default' | 'danger';
-type SummaryAccent = 'default' | 'info' | 'danger';
+type SummaryVariant = "default" | "danger";
+type SummaryAccent = "default" | "info" | "danger";
 
-const summaryCardPalette: Record<SummaryVariant, { bg: string; border: string }> = {
-  default: { bg: '#FFFFFF', border: '#E2E8F0' },
-  danger: { bg: '#FFF5F5', border: '#FECACA' },
+const summaryCardPalette: Record<
+  SummaryVariant,
+  { bg: string; border: string }
+> = {
+  default: { bg: "#FFFFFF", border: "#E2E8F0" },
+  danger: { bg: "#FFF5F5", border: "#FECACA" },
 };
 
-const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> = {
-  default: { bg: 'rgba(0, 125, 136, 0.1)', color: '#007D88' },
-  info: { bg: 'rgba(59, 130, 246, 0.1)', color: '#2563EB' },
-  danger: { bg: 'rgba(239, 68, 68, 0.1)', color: '#B71C1C' },
-};
+const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> =
+  {
+    default: { bg: "rgba(0, 125, 136, 0.1)", color: "#007D88" },
+    info: { bg: "rgba(59, 130, 246, 0.1)", color: "#2563EB" },
+    danger: { bg: "rgba(239, 68, 68, 0.1)", color: "#B71C1C" },
+  };
 
 const SummaryCard = styled.div<{ $variant?: SummaryVariant }>`
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background-color: ${({ $variant = 'default' }) => summaryCardPalette[$variant].bg};
-  border: 1px solid ${({ $variant = 'default' }) => summaryCardPalette[$variant].border};
+  background-color: ${({ $variant = "default" }) =>
+    summaryCardPalette[$variant].bg};
+  border: 1px solid
+    ${({ $variant = "default" }) => summaryCardPalette[$variant].border};
   border-radius: 10px;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 
@@ -1516,8 +1732,9 @@ const SummaryIcon = styled.div<{ $accent?: SummaryAccent }>`
   height: 32px;
   border-radius: 8px;
   flex-shrink: 0;
-  background-color: ${({ $accent = 'default' }) => summaryIconPalette[$accent].bg};
-  color: ${({ $accent = 'default' }) => summaryIconPalette[$accent].color};
+  background-color: ${({ $accent = "default" }) =>
+    summaryIconPalette[$accent].bg};
+  color: ${({ $accent = "default" }) => summaryIconPalette[$accent].color};
 `;
 
 const SummaryItemBody = styled.div`
@@ -1548,33 +1765,32 @@ const ContentStack = styled.div`
   flex-direction: column;
   gap: 16px;
   margin-bottom: 20px;
-  min-width: 0;
 `;
 
-const accentBarPalette: Record<'teal' | 'orange' | 'gray', string> = {
-  teal: '#007D88',
-  orange: '#F5A623',
-  gray: '#CBD5E1',
+const accentBarPalette: Record<"teal" | "orange" | "gray", string> = {
+  teal: "#007D88",
+  orange: "#F5A623",
+  gray: "#CBD5E1",
 };
 
-const SectionCard = styled.section<{ $accent?: 'teal' | 'orange' | 'gray' }>`
+const SectionCard = styled.section<{ $accent?: "teal" | "orange" | "gray" }>`
   display: flex;
   gap: 16px;
   padding: 20px;
-  background-color: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   align-items: stretch;
   min-width: 0;
   flex: 1;
 `;
 
-const SectionAccentBar = styled.div<{ $accent?: 'teal' | 'orange' | 'gray' }>`
+const SectionAccentBar = styled.div<{ $accent?: "teal" | "orange" | "gray" }>`
   width: 4px;
   align-self: stretch;
   flex-shrink: 0;
   border-radius: 2px;
-  background-color: ${({ $accent = 'teal' }) => accentBarPalette[$accent]};
+  background-color: ${({ $accent = "teal" }) => accentBarPalette[$accent]};
 `;
 
 const SectionBody = styled.div`
@@ -1599,21 +1815,24 @@ const SectionHeader = styled.div`
   gap: 8px;
 `;
 
-const sectionIconPalette: Record<'teal' | 'orange' | 'gray', { bg: string; color: string }> = {
-  teal: { bg: 'rgba(0, 125, 136, 0.1)', color: '#007D88' },
-  orange: { bg: 'rgba(245, 166, 35, 0.12)', color: '#B45309' },
-  gray: { bg: '#F1F5F9', color: '#475569' },
+const sectionIconPalette: Record<
+  "teal" | "orange" | "gray",
+  { bg: string; color: string }
+> = {
+  teal: { bg: "rgba(0, 125, 136, 0.1)", color: "#007D88" },
+  orange: { bg: "rgba(245, 166, 35, 0.12)", color: "#B45309" },
+  gray: { bg: "#F1F5F9", color: "#475569" },
 };
 
-const SectionIcon = styled.span<{ $accent?: 'teal' | 'orange' | 'gray' }>`
+const SectionIcon = styled.span<{ $accent?: "teal" | "orange" | "gray" }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background-color: ${({ $accent = 'teal' }) => sectionIconPalette[$accent].bg};
-  color: ${({ $accent = 'teal' }) => sectionIconPalette[$accent].color};
+  background-color: ${({ $accent = "teal" }) => sectionIconPalette[$accent].bg};
+  color: ${({ $accent = "teal" }) => sectionIconPalette[$accent].color};
 `;
 
 const SectionTitle = styled.div`
@@ -1644,8 +1863,8 @@ const SettingsCard = styled.div`
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background-color: #F8FAFC;
-  border: 1px solid #E2E8F0;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
 `;
 
@@ -1678,8 +1897,8 @@ const TotalSumValue = styled.span`
 const MarkupPillContainer = styled.div`
   display: inline-flex;
   padding: 3px;
-  background-color: #F1F5F9;
-  border: 1px solid #E2E8F0;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 999px;
   gap: 2px;
 `;
@@ -1689,39 +1908,35 @@ const MarkupPill = styled.button<{ $active: boolean }>`
   padding: 4px 12px;
   border: none;
   border-radius: 999px;
-  background: ${({ $active }) => ($active ? '#007D88' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#FFFFFF' : '#475569')};
+  background: ${({ $active }) => ($active ? "#007D88" : "transparent")};
+  color: ${({ $active }) => ($active ? "#FFFFFF" : "#475569")};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 
   &:hover {
-    background: ${({ $active }) => ($active ? '#007D88' : 'rgba(0, 125, 136, 0.08)')};
-    color: ${({ $active }) => ($active ? '#FFFFFF' : '#007D88')};
+    background: ${({ $active }) =>
+      $active ? "#007D88" : "rgba(0, 125, 136, 0.08)"};
+    color: ${({ $active }) => ($active ? "#FFFFFF" : "#007D88")};
   }
 
   &:focus-visible {
-    outline: 2px solid #007D88;
+    outline: 2px solid #007d88;
     outline-offset: 2px;
   }
 `;
 
 const ProductsTableWrapper = styled.div`
   overflow-x: auto;
-  min-width: 0;
 `;
 
 const EntitySelectWrapper = styled.div`
   width: 100%;
+  max-width: 465px;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
-
-  & > * {
-    min-width: 0;
-  }
 `;
 
 const ValidationError = styled.div`
@@ -1844,11 +2059,11 @@ const FieldGroup = styled.div<{ $width?: string }>`
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: ${({ $width }) => $width || '100%'};
+  max-width: ${({ $width }) => $width || "100%"};
   min-width: 0;
 
   @media (min-width: 768px) {
-    flex: 0 1 ${({ $width }) => $width || '100%'};
+    flex: 0 1 ${({ $width }) => $width || "100%"};
   }
 `;
 

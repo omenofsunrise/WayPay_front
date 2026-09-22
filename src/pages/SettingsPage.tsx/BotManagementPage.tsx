@@ -443,13 +443,24 @@ const BotManagementPage: React.FC = () => {
     e.preventDefault();
     if (!eventModal.rule) return;
 
+    let eventDays: number | null = null;
+    if (eventModal.eventType === "UpcomingPayment") {
+      const parsed = Number(eventModal.eventDays);
+      if (
+        !eventModal.eventDays.trim() ||
+        !Number.isFinite(parsed) ||
+        !Number.isInteger(parsed) ||
+        parsed < 0
+      ) {
+        alert("Укажите целое неотрицательное число дней до платежа");
+        return;
+      }
+      eventDays = parsed;
+    }
+
     setEventModal((prev) => ({ ...prev, saving: true }));
     try {
-      const days =
-        eventModal.eventType === "UpcomingPayment"
-          ? Number(eventModal.eventDays) || null
-          : null;
-      await setBotEvent(eventModal.rule.id, eventModal.eventType, days);
+      await setBotEvent(eventModal.rule.id, eventModal.eventType, eventDays);
       await loadRules();
       addToast("success", "Событие установлено");
       setEventModal((prev) => ({ ...prev, isOpen: false }));
@@ -601,6 +612,10 @@ const BotManagementPage: React.FC = () => {
                       {rule.event
                         ? EVENT_LABEL[rule.event]
                         : "— Нажмите чтобы выбрать событие —"}
+                      {rule.event === "ComingPayment" &&
+                        rule.eventDays != null && (
+                          <> · за {rule.eventDays} дн. до платежа</>
+                        )}
                     </ResponseText>
                   </EventBlock>
                 ) : rule.keywords && rule.keywords.length > 0 ? (
@@ -889,12 +904,9 @@ const BotManagementPage: React.FC = () => {
             </ModalField>
             {eventModal.eventType === "UpcomingPayment" && (
               <ModalField>
-                <ModalLabel>За сколько дней до платежа</ModalLabel>
-                <input
-                  type="number"
-                  min={1}
-                  max={365}
-                  placeholder="Например: 3 или 7"
+                <ModalLabel>За сколько дней до платежа рассылать</ModalLabel>
+                <CustomInput
+                  inputType="number"
                   value={eventModal.eventDays}
                   onChange={(e) =>
                     setEventModal((prev) => ({
@@ -902,15 +914,13 @@ const BotManagementPage: React.FC = () => {
                       eventDays: e.target.value,
                     }))
                   }
+                  placeholder="Например: 3"
                   disabled={eventModal.saving}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                  }}
                 />
+                <FieldHint>
+                  Рассылка уйдёт за указанное число дней до даты платежа по
+                  графику. 0 — в день платежа.
+                </FieldHint>
               </ModalField>
             )}
           </ModalForm>
@@ -1256,6 +1266,13 @@ const ModalLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
   color: #374151;
+`;
+
+const FieldHint = styled.div`
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
 `;
 
 const TypeOptions = styled.div`
