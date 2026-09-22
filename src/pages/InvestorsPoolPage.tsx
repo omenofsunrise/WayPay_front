@@ -57,6 +57,7 @@ import type { InvestorContribution } from "../api/types/investorContribution";
 import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { useAuth } from "../сontext/AuthContext";
+import InvestorCashPositionModal from "../components/modal/InvestorCashPositionModal";
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
@@ -65,8 +66,10 @@ type InvestorsPoolPageProps = {
 const InvestorsPoolPage = ({
   enableReinvestments = true,
 }: InvestorsPoolPageProps) => {
-  const { authInfo } = useAuth();
+  const { authInfo, hasRole } = useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
+  const canManageCashPosition =
+    hasRole("директор") || hasRole("суперадмин");
   const {
     getInvestors,
     getInvestorById,
@@ -131,6 +134,9 @@ const InvestorsPoolPage = ({
 
   const [filteredPayouts, setFilteredPayouts] = useState<InvestorPayout[]>([]);
   const [investors, setInvestors] = useState<Investor[]>([]);
+  const [cashPositionInvestor, setCashPositionInvestor] =
+    useState<Investor | null>(null);
+  const [isCashPositionModalOpen, setIsCashPositionModalOpen] = useState(false);
   const [investorsData, setInvestorsData] = useState<any>(null);
   const [isInvestorModalOpen, setIsInvestorModalOpen] = useState(false);
   const [currentInvestor, setCurrentInvestor] = useState<Investor | null>(null);
@@ -351,6 +357,17 @@ const InvestorsPoolPage = ({
         color: "#3B82F6",
       },
     ];
+
+    if (isPoolV2) {
+      actions.push({
+        label: "Управление кассой",
+        action: () => {
+          setCashPositionInvestor(investor);
+          setIsCashPositionModalOpen(true);
+        },
+        color: "#007D88",
+      });
+    }
 
     if (isBlocked) {
       actions.push(
@@ -2280,6 +2297,17 @@ const InvestorsPoolPage = ({
                 }
               : undefined
           }
+        />
+
+        <InvestorCashPositionModal
+          isOpen={isCashPositionModalOpen}
+          investor={cashPositionInvestor}
+          canEdit={canManageCashPosition}
+          onClose={() => {
+            setIsCashPositionModalOpen(false);
+            setCashPositionInvestor(null);
+          }}
+          onChanged={reloadData}
         />
 
         <CreatePoolModal

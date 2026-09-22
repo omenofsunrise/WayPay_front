@@ -66,6 +66,10 @@ const InvestorCashPositionModal = ({
   onClose,
   onChanged,
 }: InvestorCashPositionModalProps) => {
+  const isProtectedInvestor = Boolean(
+    investor?.isCompany || investor?.isCompanyPool
+  );
+  const canManagePosition = canEdit && !isProtectedInvestor;
   const [positionType, setPositionType] =
     useState<InvestorCashPositionType>("Single");
   const [poolId, setPoolId] = useState("");
@@ -117,6 +121,12 @@ const InvestorCashPositionModal = ({
     setLatestPosition(null);
     setModalError(null);
 
+    if (!canManagePosition) {
+      setPools([]);
+      setIsPoolsLoading(false);
+      return;
+    }
+
     const loadPools = async () => {
       setIsPoolsLoading(true);
       try {
@@ -136,7 +146,7 @@ const InvestorCashPositionModal = ({
     };
 
     loadPools();
-  }, [isOpen, investor]);
+  }, [isOpen, investor, canManagePosition]);
 
   useEffect(() => {
     if (isOpen && investor) {
@@ -148,13 +158,25 @@ const InvestorCashPositionModal = ({
     () => pools.map((pool) => ({ value: String(pool.id), label: pool.name })),
     [pools]
   );
+  const isSamePosition = Boolean(
+    latestPosition &&
+      (positionType === "Single"
+        ? latestPosition.position.toLowerCase() === "single"
+        : latestPosition.position.toLowerCase() !== "single" &&
+          Number(poolId) === latestPosition.poolId)
+  );
 
   const handleMove = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!investor || !canEdit) return;
+    if (!investor || !canManagePosition) return;
 
     if (positionType === "Pool" && !poolId) {
       setModalError("Выберите пул для перемещения кассы");
+      return;
+    }
+
+    if (isSamePosition) {
+      setModalError("Касса уже находится в выбранном положении");
       return;
     }
 
@@ -188,7 +210,7 @@ const InvestorCashPositionModal = ({
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!canEdit || deletingId !== null) return;
+    if (!canManagePosition || deletingId !== null) return;
 
     if (!window.confirm("Удалить эту запись из истории перемещений кассы?")) {
       return;
@@ -220,7 +242,7 @@ const InvestorCashPositionModal = ({
     formatExactDate(new Date(position.date || position.createdAt)),
     getPositionLabel(position),
     position.poolName || "—",
-    canEdit ? (
+    canManagePosition ? (
       <DeleteButton
         onClick={(event) => handleDelete(event, position)}
         tooltip="Удалить запись"
@@ -237,12 +259,14 @@ const InvestorCashPositionModal = ({
       onClose={onClose}
       onCancel={onClose}
       onSave={handleMove}
-      mode={canEdit ? "edit" : "view"}
+      mode={canManagePosition ? "edit" : "view"}
       saveButtonText="Переместить"
       isSubmitting={isSubmitting}
       isSaveDisabled={
         !operationDate ||
         isPoolsLoading ||
+        isHistoryLoading ||
+        isSamePosition ||
         (positionType === "Pool" && !poolId)
       }
       width="900px"
@@ -260,7 +284,14 @@ const InvestorCashPositionModal = ({
           </CurrentPositionValue>
         </CurrentPosition>
 
-        {canEdit && (
+        {isProtectedInvestor && (
+          <ProtectedInvestorNotice>
+            Кассу собственной компании нельзя перемещать. Доступен только
+            просмотр истории.
+          </ProtectedInvestorNotice>
+        )}
+
+        {canManagePosition && (
           <MoveSection>
             <SectionTitle>Переместить кассу</SectionTitle>
             <FieldsRow>
@@ -305,6 +336,12 @@ const InvestorCashPositionModal = ({
                 />
               </Field>
             </FieldsRow>
+            {isSamePosition && (
+              <SamePositionNotice>
+                Касса уже находится в выбранном положении. Выберите другое
+                положение или другой пул.
+              </SamePositionNotice>
+            )}
           </MoveSection>
         )}
 
@@ -422,6 +459,20 @@ const ErrorMessage = styled.div`
   background: #fef2f2;
   color: #b91c1c;
   font-size: 14px;
+`;
+
+const ProtectedInvestorNotice = styled.div`
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 14px;
+`;
+
+const SamePositionNotice = styled.div`
+  color: #92400e;
+  font-size: 13px;
 `;
 
 const EmptyHistory = styled.div`
