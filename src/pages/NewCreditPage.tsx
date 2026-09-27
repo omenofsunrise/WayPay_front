@@ -1659,7 +1659,7 @@ const PageHeader = styled.div`
 
 const StickySummaryBar = styled.div`
   position: sticky;
-  top: 56px;
+  top: 0;
   z-index: 40;
   display: flex;
   align-items: stretch;
