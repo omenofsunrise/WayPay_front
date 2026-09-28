@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import usePersistedState from "../hooks/usePersistedState";
 import styled from "styled-components";
 
 import PageLayout from "../components/ui/Layouts/PageLayout";
@@ -25,7 +26,11 @@ const PaymentPendingPage = () => {
   } = usePaymentPending();
 
   const [page, setPage] = useState(1);
-  const [includeTransferred, setIncludeTransferred] = useState(false);
+  // Переживает переключение разделов, как и остальные фильтры платежей.
+  const [includeTransferred, setIncludeTransferred] = usePersistedState(
+    "paymentsPending.includeTransferred",
+    false
+  );
 
   const load = useCallback(() => {
     getPaymentPendings({ page, pageSize: PAGE_SIZE, includeTransferred });
