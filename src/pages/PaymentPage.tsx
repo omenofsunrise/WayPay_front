@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import usePersistedState from "../hooks/usePersistedState";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
@@ -45,20 +46,44 @@ const formatPaymentType = (payment: Payment): string => {
 };
 
 const PaymentPage = () => {
-  const [fullnameFilter, setFullnameFilter] = useState("");
+  // Фильтры переживают уход со страницы: при переключении разделов
+  // набранное больше не сбрасывается. Номер страницы намеренно не
+  // сохраняется — возвращаться на 7-ю страницу выдачи никто не ждёт.
+  const [fullnameFilter, setFullnameFilter] = usePersistedState(
+    "paymentsJournal.fullname",
+    ""
+  );
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState<{
+  const [sortConfig, setSortConfig] = usePersistedState<{
     key: number | null;
     direction: "asc" | "desc";
-  }>({ key: null, direction: "asc" });
+  }>("paymentsJournal.sort", { key: null, direction: "asc" });
   const { authInfo, denyPermission, refresh } = useAuth();
-  const [investorName, setInvestorName] = useState("");
-  const [investorId, setInvestorId] = useState<number | null>(null);
-  const [isPool, setIsPool] = useState(false);
-  const [employeeFullname, setEmployeeFullname] = useState("");
-  const [confirmedFilter, setConfirmedFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [bankCardId, setBankCardId] = useState<number>(0);
+  const [investorName, setInvestorName] = usePersistedState(
+    "paymentsJournal.investorName",
+    ""
+  );
+  const [investorId, setInvestorId] = usePersistedState<number | null>(
+    "paymentsJournal.investorId",
+    null
+  );
+  const [isPool, setIsPool] = usePersistedState("paymentsJournal.isPool", false);
+  const [employeeFullname, setEmployeeFullname] = usePersistedState(
+    "paymentsJournal.employee",
+    ""
+  );
+  const [confirmedFilter, setConfirmedFilter] = usePersistedState<string>(
+    "paymentsJournal.confirmed",
+    "all"
+  );
+  const [typeFilter, setTypeFilter] = usePersistedState<string>(
+    "paymentsJournal.type",
+    "all"
+  );
+  const [bankCardId, setBankCardId] = usePersistedState<number>(
+    "paymentsJournal.bankCard",
+    0
+  );
   const [employees, setEmployees] = useState<EmployeeFullnames[]>([]);
   const [isPageSizeReady, setIsPageSizeReady] = useState(false);
   const columnToApiSortMap: Record<number, string> = {
@@ -67,8 +92,14 @@ const PaymentPage = () => {
     2: "paymentAmount",
     3: "paymentDate",
   };
-  const [dateFromFilter, setDateFromFilter] = useState("");
-  const [dateToFilter, setDateToFilter] = useState("");
+  const [dateFromFilter, setDateFromFilter] = usePersistedState(
+    "paymentsJournal.dateFrom",
+    ""
+  );
+  const [dateToFilter, setDateToFilter] = usePersistedState(
+    "paymentsJournal.dateTo",
+    ""
+  );
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedPaymentForPrint, setSelectedPaymentForPrint] =
     useState<Payment | null>(null);

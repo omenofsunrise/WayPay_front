@@ -38,6 +38,7 @@ import {
 import useSender from "../../api/hooks/useSender";
 import scheduleService from "../../api/services/scheduleService";
 import type { VisitMode } from "../../api/types/schedule";
+import usePersistedState from "../../hooks/usePersistedState";
 
 interface ScheduleTableProps {
   isListMode: boolean;
@@ -114,22 +115,41 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
   const { createPayment } = usePayment();
   const { GetFilledGuarantorSchedule } = useSender();
 
-  const [clientNameFilter, setClientNameFilter] = useState("");
-  const [investorFilter, setInvestorFilter] = useState("");
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(
-    null
+  // Фильтры переживают уход со страницы: при переключении разделов
+  // набранное больше не сбрасывается. Ключи разведены по вкладке, потому что
+  // «Ожидаемые» и «Посещённые» — это один компонент с разными наборами.
+  const store = `schedule.${shouldBeVisited ? "visited" : "expected"}`;
+
+  const [clientNameFilter, setClientNameFilter] = usePersistedState(
+    `${store}.clientName`,
+    ""
   );
-  const [dateFromFilter, setDateFromFilter] = useState("");
-  const [dateToFilter, setDateToFilter] = useState("");
-  const [tableObjectTypeName, setTableObjectTypeName] = useState("");
+  const [investorFilter, setInvestorFilter] = usePersistedState(
+    `${store}.investor`,
+    ""
+  );
+  const [selectedEntity, setSelectedEntity] =
+    usePersistedState<SelectedEntity | null>(`${store}.entity`, null);
+  const [dateFromFilter, setDateFromFilter] = usePersistedState(
+    `${store}.dateFrom`,
+    ""
+  );
+  const [dateToFilter, setDateToFilter] = usePersistedState(
+    `${store}.dateTo`,
+    ""
+  );
+  const [tableObjectTypeName, setTableObjectTypeName] = usePersistedState(
+    `${store}.objectTypeName`,
+    ""
+  );
   const [selectedTableObjectType, setSelectedTableObjectType] =
-    useState<SelectedObjectType | null>(null);
+    usePersistedState<SelectedObjectType | null>(`${store}.objectType`, null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState<{
+  const [sortConfig, setSortConfig] = usePersistedState<{
     key: number | null;
     direction: "asc" | "desc";
-  }>({ key: null, direction: "asc" });
+  }>(`${store}.sort`, { key: null, direction: "asc" });
 
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [accumulatedItems, setAccumulatedItems] = useState<ScheduleDetails[]>(
