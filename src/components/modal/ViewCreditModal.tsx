@@ -62,6 +62,11 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import AttachMoneyOutlinedIcon from "@mui/icons-material/AttachMoneyOutlined";
 import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import PhoneAndroidOutlinedIcon from "@mui/icons-material/PhoneAndroidOutlined";
+import clientService from "../../api/services/clientService";
+import guarantorService from "../../api/services/guarantorService";
 import ContactsEditor from "../ui/ContactsEditor";
 
 interface ViewCreditModalProps {
@@ -365,10 +370,153 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     return typeof raw === "number" && raw > 0 ? raw : undefined;
   };
 
+  /**
+   * Поля, которые заполняют при заведении человека, но в договор они не едут.
+   * Клиент даёт их целиком, самостоятельный поручитель — частично.
+   */
+  type PersonExtra = {
+    doc?: string;
+    docIssueDate?: Date | null | string;
+    registrationAddress?: string;
+    actualAddress?: string;
+    secondPhone?: string;
+  };
+
+  /**
+   * Адрес, уже выведенный выше в карточке. В типе Credit такого поля нет —
+   * читаем тем же безопасным аксессором, что и остальные поля этого файла,
+   * чтобы не плодить обращения к необъявленным свойствам.
+   */
+  const clientAddressShown = getObjectValue<string>(
+    creditData as unknown as Record<string, unknown>,
+    "address",
+    "Address",
+    "clientAddress",
+    "ClientAddress"
+  );
+
+  const [clientDetails, setClientDetails] = useState<PersonExtra | null>(null);
+  const [guarantorDetails, setGuarantorDetails] = useState<PersonExtra | null>(
+    null
+  );
+
+  /**
+   * Строки карточки, которых нет в договоре: паспорт, адреса, второй телефон.
+   * Показываются только заполненные. Адрес, уже выведенный выше, не дублируем —
+   * в договоре обычно лежит адрес регистрации.
+   */
+  const renderPersonExtraRows = (
+    person: PersonExtra | null,
+    addressAlreadyShown?: string
+  ) => {
+    if (!person) return null;
+
+    const shown = addressAlreadyShown?.trim().toLowerCase();
+    const isNew = (value?: string) => {
+      const text = value?.trim();
+      return text && text.toLowerCase() !== shown ? text : null;
+    };
+
+    const passport = [
+      person.doc?.trim(),
+      person.docIssueDate
+        ? `от ${new Date(`${person.docIssueDate}`).toLocaleDateString("ru-RU")}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const registration = isNew(person.registrationAddress);
+    const actual = isNew(person.actualAddress);
+    const secondPhone = person.secondPhone?.trim();
+
+    return (
+      <>
+        {passport && (
+          <InfoRow>
+            <InfoIcon>
+              <BadgeOutlinedIcon fontSize="small" />
+            </InfoIcon>
+            <InfoText>Паспорт {passport}</InfoText>
+          </InfoRow>
+        )}
+        {registration && (
+          <InfoRow>
+            <InfoIcon>
+              <HomeOutlinedIcon fontSize="small" />
+            </InfoIcon>
+            <InfoText>Регистрация: {registration}</InfoText>
+          </InfoRow>
+        )}
+        {actual && (
+          <InfoRow>
+            <InfoIcon>
+              <PlaceOutlinedIcon fontSize="small" />
+            </InfoIcon>
+            <InfoText>Фактический: {actual}</InfoText>
+          </InfoRow>
+        )}
+        {secondPhone && (
+          <InfoRow>
+            <InfoIcon>
+              <PhoneAndroidOutlinedIcon fontSize="small" />
+            </InfoIcon>
+            <InfoText>
+              <PhoneLink href={formatPhoneHref(secondPhone)}>
+                {secondPhone}
+              </PhoneLink>
+            </InfoText>
+          </InfoRow>
+        )}
+      </>
+    );
+  };
+
+  /** Разводит поручителя-клиента и самостоятельного поручителя по их таблицам. */
+  const loadGuarantorExtra = async (
+    credit: Credit
+  ): Promise<PersonExtra | null> => {
+    const asClientId = credit.guarantorClientId;
+    if (credit.guarantorType === "Client" && asClientId) {
+      return clientService.getClientById(asClientId).catch(() => null);
+    }
+
+    const ownId = credit.guarantorId;
+    if (!ownId) return null;
+
+    const guarantor = await guarantorService
+      .getGuarantorById(ownId)
+      .catch(() => null);
+    if (!guarantor) return null;
+
+    // У самостоятельного поручителя адрес один — показываем его как адрес
+    // регистрации, отдельного фактического у него просто нет.
+    return {
+      doc: guarantor.doc,
+      registrationAddress: guarantor.address,
+    };
+  };
+
   const loadRelatedCredits = useCallback(async () => {
     if (!creditData) return;
     setIsLoadingRelated(true);
     try {
+      // Полные карточки нужны ради данных, которых нет в договоре: паспорт,
+      // адрес регистрации, фактический адрес, второй телефон. Ошибку глотаем —
+      // без этих полей окно просто покажет то, что было раньше.
+      setClientDetails(
+        creditData.clientId
+          ? await clientService
+              .getClientById(creditData.clientId)
+              .catch(() => null)
+          : null
+      );
+
+      // Поручитель бывает двух видов, и таблицы у них разные. Брать клиента
+      // по guarantorId нельзя: это идентификатор чужой таблицы, и по нему
+      // пришёл бы посторонний человек с чужим паспортом.
+      setGuarantorDetails(await loadGuarantorExtra(creditData));
+
       if (creditData.clientId) {
         const clientRes = await getCreditListByClient(
           creditData.clientId
@@ -416,6 +564,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   useEffect(() => {
     setClientCredits(null);
     setGuarantorCredits(null);
+    // Карточки людей тоже обнуляем: без этого при переходе к другому договору
+    // на новой карточке успевает мелькнуть паспорт и адрес предыдущего клиента.
+    setClientDetails(null);
+    setGuarantorDetails(null);
   }, [id, isOpen]);
   const [notes, setNotes] = useState<NoteWithFile[]>([]);
   const [newNoteContent, setNewNoteContent] = useState("");
@@ -1822,6 +1974,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                                     </InfoText>
                                   </InfoRow>
                                 )}
+                                {renderPersonExtraRows(
+                                  clientDetails,
+                                  clientAddressShown
+                                )}
                               </InfoRows>
                             </PersonInfo>
                           </PersonCard>
@@ -2076,6 +2232,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                                           {creditData.guarantorAddress}
                                         </InfoText>
                                       </InfoRow>
+                                    )}
+                                    {renderPersonExtraRows(
+                                      guarantorDetails,
+                                      creditData.guarantorAddress
                                     )}
                                   </InfoRows>
                                 </PersonInfo>
