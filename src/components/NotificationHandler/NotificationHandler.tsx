@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { useWebSocket } from "../../api/hooks/useWebSocket";
 import { formatRelativeTime } from "../../utils/dateFormatter";
 import useNotification from "../../api/hooks/useNotification";
+import { FILE_BASE_URL } from "../../api/client";
 import {
   getShowContractCreationNotificationSetting,
   getDisableWhatsAppNotificationsSetting,
@@ -192,7 +193,10 @@ const CampaignBadge = styled.span`
   border-radius: 999px;
 `;
 
-const PLACEHOLDER_IMAGE = "https://lets-digit.ru/Resourses/Logos/WayPay.svg";
+// Логотип из public, а не ссылка на сторонний домен: прежний адрес на
+// lets-digit.ru не отвечает, поэтому картинка оставалась пустой и когда
+// аватара нет, и когда он не загрузился.
+const PLACEHOLDER_IMAGE = "/WayPay.png";
 
 interface Notification {
   id: number;
@@ -384,7 +388,15 @@ const NotificationHandler: React.FC = () => {
   };
 
   const getNotificationImage = (notification: Notification): string => {
-    return notification.image || PLACEHOLDER_IMAGE;
+    const path = notification.image?.trim();
+    if (!path) return PLACEHOLDER_IMAGE;
+    // Бэкенд отдаёт путь в хранилище, а не готовую ссылку. Без базового
+    // адреса браузер ищет файл на своём домене и получает пустоту.
+    if (/^(https?:)?\/\//.test(path) || path.startsWith("data:")) return path;
+    const base = FILE_BASE_URL?.endsWith("/")
+      ? FILE_BASE_URL
+      : `${FILE_BASE_URL ?? ""}/`;
+    return `${base}${path.replace(/^\/+/, "")}`;
   };
 
   const unreadNotifications = notifications.filter((notification) => {
