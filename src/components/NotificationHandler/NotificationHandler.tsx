@@ -4,6 +4,7 @@ import { useWebSocket } from "../../api/hooks/useWebSocket";
 import { formatRelativeTime } from "../../utils/dateFormatter";
 import useNotification from "../../api/hooks/useNotification";
 import { FILE_BASE_URL } from "../../api/client";
+import { generateAvatar, getInitials } from "../../utils/avatarUtils";
 import {
   getShowContractCreationNotificationSetting,
   getDisableWhatsAppNotificationsSetting,
@@ -193,10 +194,11 @@ const CampaignBadge = styled.span`
   border-radius: 999px;
 `;
 
-// Логотип из public, а не ссылка на сторонний домен: прежний адрес на
-// lets-digit.ru не отвечает, поэтому картинка оставалась пустой и когда
-// аватара нет, и когда он не загрузился.
-const PLACEHOLDER_IMAGE = "/WayPay.png";
+// Запасная картинка рисуется из инициалов, как в меню колокольчика. Раньше
+// здесь стояла ссылка на сторонний домен lets-digit.ru, который не отвечает,
+// поэтому место под картинку оставалось пустым.
+const fallbackAvatar = (title?: string | null): string =>
+  generateAvatar(getInitials(title), 100);
 
 interface Notification {
   id: number;
@@ -378,9 +380,12 @@ const NotificationHandler: React.FC = () => {
     removeNotification(notification.id);
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.warn("❌ Ошибка загрузки изображения, используем placeholder");
-    e.currentTarget.src = PLACEHOLDER_IMAGE;
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>,
+    notification: Notification
+  ) => {
+    console.warn("❌ Ошибка загрузки изображения, рисуем инициалы");
+    e.currentTarget.src = fallbackAvatar(notification.title);
   };
 
   const handleImageLoad = (notification: Notification) => {
@@ -389,7 +394,7 @@ const NotificationHandler: React.FC = () => {
 
   const getNotificationImage = (notification: Notification): string => {
     const path = notification.image?.trim();
-    if (!path) return PLACEHOLDER_IMAGE;
+    if (!path) return fallbackAvatar(notification.title);
     // Бэкенд отдаёт путь в хранилище, а не готовую ссылку. Без базового
     // адреса браузер ищет файл на своём домене и получает пустоту.
     if (/^(https?:)?\/\//.test(path) || path.startsWith("data:")) return path;
@@ -464,7 +469,7 @@ const NotificationHandler: React.FC = () => {
                 <img
                   src={getNotificationImage(notification)}
                   alt="Notification"
-                  onError={handleImageError}
+                  onError={(e) => handleImageError(e, notification)}
                   onLoad={() => handleImageLoad(notification)}
                 />
               </NotificationImage>
