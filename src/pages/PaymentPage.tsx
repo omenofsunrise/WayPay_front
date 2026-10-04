@@ -359,6 +359,62 @@ const PaymentPage = () => {
     setCurrentPage(1);
   };
 
+  // Сортировка фильтром не считается: сбрасывать порядок столбцов вместе с
+  // отбором никто не ждёт. Вкладок на этой странице нет, поэтому сохранять
+  // нечего — в отличие от журнала договоров.
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        fullnameFilter ||
+          investorName ||
+          investorId !== null ||
+          isPool ||
+          employeeFullname ||
+          dateFromFilter ||
+          dateToFilter
+      ) ||
+      confirmedFilter !== "all" ||
+      typeFilter !== "all" ||
+      bankCardId !== 0,
+    [
+      fullnameFilter,
+      investorName,
+      investorId,
+      isPool,
+      employeeFullname,
+      dateFromFilter,
+      dateToFilter,
+      confirmedFilter,
+      typeFilter,
+      bankCardId,
+    ]
+  );
+
+  const resetFilters = useCallback(() => {
+    setFullnameFilter("");
+    setInvestorName("");
+    setInvestorId(null);
+    setIsPool(false);
+    setEmployeeFullname("");
+    setConfirmedFilter("all");
+    setTypeFilter("all");
+    setBankCardId(0);
+    setDateFromFilter("");
+    setDateToFilter("");
+    setCurrentPage(1);
+  }, [
+    setFullnameFilter,
+    setInvestorName,
+    setInvestorId,
+    setIsPool,
+    setEmployeeFullname,
+    setConfirmedFilter,
+    setTypeFilter,
+    setBankCardId,
+    setDateFromFilter,
+    setDateToFilter,
+  ]);
+
   const handleSort = (columnIndex: number) => {
     if (!columnToApiSortMap[columnIndex]) return;
 
@@ -785,6 +841,19 @@ const PaymentPage = () => {
               marginLeft: "auto",
             }}
           >
+            <DarkCyanButton
+              type="button"
+              style={{
+                margin: 0,
+                height: 32,
+                fontSize: 14,
+                padding: "4px 10px",
+              }}
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+            >
+              Сброс по фильтрам
+            </DarkCyanButton>
             <ExportButton
               icon={<PrintIcon style={{ fontSize: 16 }} />}
               style={{
