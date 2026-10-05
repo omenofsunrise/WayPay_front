@@ -10,7 +10,6 @@ export interface Investor {
   pieInPool?: number;
   investmentAmount: number;
   balance: number;
-  activeUntil: string;
   isCompany: boolean;
   isBlocked: boolean;
   isRemoved?: boolean;
@@ -34,7 +33,6 @@ export interface AutoSelectInvestorResponse {
   id: number;
   nickname: string;
   balance: number;
-  activeUntil: string;
 }
 
 export interface InvestorReport {

@@ -693,7 +693,6 @@ const InvestorReportV2Page = () => {
               balance: 0,
               isCompany: false,
               isBlocked: false,
-              activeUntil: new Date().toISOString().split("T")[0],
               currentIncome: 0,
             }
           }

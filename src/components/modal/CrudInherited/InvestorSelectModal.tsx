@@ -7,7 +7,6 @@ import useInvestorPool from '../../../api/hooks/useInvestorPool';
 import Pagination from '../../ui/fields/CustomPagination';
 import styled from 'styled-components';
 import { formatMoney } from '../../../utils/formatPrice';
-import { formatDate } from '../../../utils/dateFormatter';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../../ui/links/PhoneLink';
 import { isOwnCashInvestorName } from '../../../utils/investorUtils';
@@ -62,7 +61,6 @@ const InvestorSelectModal = ({
     balance?: number;
     isCompany: boolean;
     isCompanyPool?: boolean;
-    activeUntil?: string;
     type: 'investor' | 'pool';
   } | null>(null);
   
@@ -164,7 +162,6 @@ const InvestorSelectModal = ({
           fullName: pool.name,
           pie: pool.pie,
           balance: pool.balance || 0,
-          activeUntil: pool.activeUntil,
           isCompanyPool: pool.isCompanyPool,
           type: 'pool'
         });
@@ -180,7 +177,6 @@ const InvestorSelectModal = ({
           investorPie: investor.investorPie,
           investmentAmount: investor.investmentAmount,
           balance: investor.balance,
-          activeUntil: investor.activeUntil,
           isCompany: investor.isCompany,
           type: 'investor'
         });
@@ -205,9 +201,6 @@ const InvestorSelectModal = ({
       investor.investorPie.toString() + "%",
       investor.isBlocked?.toString() || 'false',
       formatMoney(investor.balance.toString()),
-      investor.isCompany || investor.isCompanyPool || isOwnCashInvestorName(investor.nickname)
-        ? '-'
-        : formatDate(investor.activeUntil ?? new Date()),
     ];
 
     return shouldHideCash ? row.filter((_, index) => index !== 5) : row;
@@ -221,10 +214,7 @@ const InvestorSelectModal = ({
           '—',
           "",
           '—',
-          formatMoney(pool.balance.toString()),
-          pool.isCompanyPool || isOwnCashInvestorName(pool.name)
-            ? '-'
-            : formatDate(pool.activeUntil ?? new Date())
+          formatMoney(pool.balance.toString())
         ];
 
         return shouldHideCash ? row.filter((_, index) => index !== 5) : row;
@@ -241,7 +231,6 @@ const InvestorSelectModal = ({
     ...(!shouldHideCash
       ? [{ name: "Касса", isSortable: true, align: "right" as const }]
       : []),
-    { name: "Дата окончания инвестора/пула", align: "left" as const },
   ];
 
   const rowStyles = tableData.reduce((styles, rowData, index) => {

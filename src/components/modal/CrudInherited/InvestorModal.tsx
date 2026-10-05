@@ -7,7 +7,6 @@ import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComp
 import type { Investor } from '../../../api/types/investor';
 import { formatMoney, parseMoney } from '../../../utils/formatPrice';
 import { useAuth } from '../../../сontext/AuthContext';
-import CustomCalendar from '../../ui/fields/CustomCalendar';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import PhoneLink from '../../ui/links/PhoneLink';
 import { extractErrorMessage } from '../../../api/utils/errorMessage';
@@ -29,7 +28,6 @@ const emptyInvestor: Omit<Investor, 'id'> = {
   balance: 0,
   isCompany: false,
   isBlocked: false,
-  activeUntil: new Date().toISOString().split('T')[0],
   currentIncome: 0
 };
 
@@ -47,8 +45,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     investmentAmount: 0,
     balance: 0,
     isCompany: false,
-    isBlocked: false,
-    activeUntil: new Date().toISOString().split('T')[0]
+    isBlocked: false
   },
 }) => {
   const [formData, setFormData] = useState<Omit<Investor, 'id'>>(
@@ -61,7 +58,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       balance: initialData?.balance || 0,
       isCompany: initialData?.isCompany || false,
       isBlocked: initialData?.isBlocked || false,
-      activeUntil: initialData?.activeUntil || new Date().toISOString().split('T')[0],
       currentIncome: 0
     }
   );
@@ -74,31 +70,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     balance: false
   });
   const { authInfo, hasRole } = useAuth();
-
-  const formatDateToString = (date: string | number | Date): string => {
-    if (typeof date === 'number') {
-      return new Date(date).toISOString().split('T')[0];
-    }
-    if (date instanceof Date) {
-      return date.toISOString().split('T')[0];
-    }
-    return date;
-  };
-
-  const [displayActiveUntil, setDisplayActiveUntil] = useState<string>(
-    formatDateToString(initialData.activeUntil)
-  );
-
-  const handleDateChange = (dateString: string) => {
-    if (!dateString) return;
-    
-    setFormData(prev => ({
-      ...prev,
-      activeUntil: dateString
-    }));
-    
-    setDisplayActiveUntil(dateString);
-  };
 
   const validatePhone = async (phone: string) => {
     const phoneRegex = /^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/;
@@ -150,8 +121,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const initialActiveUntil = formatDateToString(initialData.activeUntil);
-      
       setFormData(
         mode === 'create' || mode === 'create-pool' ? emptyInvestor : {
           nickname: initialData?.nickname || '',
@@ -162,11 +131,9 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           balance: initialData?.balance || 0,
           isCompany: initialData?.isCompany || false,
           isBlocked: initialData?.isBlocked || false,
-          activeUntil: initialActiveUntil,
           currentIncome: 0
         }
       );
-      setDisplayActiveUntil(initialActiveUntil);
       setValidationErrors({
         nickname: false,
         fullName: false,
@@ -276,13 +243,10 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     if (hasErrors) return true;
 
     if (mode === 'edit' || mode === 'edit-pool') {
-      const initialActiveUntil = formatDateToString(initialData.activeUntil);
-      
       const isChanged = (
         formData.fullName !== initialData.fullName ||
         formData.phoneNumber !== initialData.phoneNumber ||
         formData.isCompany !== initialData.isCompany ||
-        formData.activeUntil !== initialActiveUntil ||
         formData.investorPie !== initialData.investorPie ||
         (mode === 'edit' && formData.nickname !== initialData.nickname)
       );
@@ -463,18 +427,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
                 />
               </InputContainer>
             </InputRow>
-          )}
-
-          {(mode !== 'create-pool' && mode !== 'edit-pool') && !formData.isCompany && (
-          <InputRow>
-            <InputLabel>Дата окончания договора:</InputLabel>
-            <InputContainer>
-              <CustomCalendar
-                value={displayActiveUntil}
-                onChange={handleDateChange}
-              />
-            </InputContainer>
-          </InputRow>
           )}
 
           <InputRow>

@@ -2125,7 +2125,6 @@ const InvestorsPoolPage = ({
                       isCompany: currentInvestor.isCompany,
                       isBlocked: currentInvestor.isBlocked,
                       poolId: currentInvestor.poolId,
-                      activeUntil: currentInvestor.activeUntil,
                     }
                   : undefined
               }

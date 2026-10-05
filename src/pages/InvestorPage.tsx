@@ -251,8 +251,7 @@ const InvestorPage = () => {
             investmentAmount: 0,
             balance: 0,
             isCompany: false,
-            isBlocked: false,
-            activeUntil: new Date().toISOString().split('T')[0]
+            isBlocked: false
         });
         setIsModalOpen(true);
     };
@@ -400,9 +399,6 @@ const InvestorPage = () => {
             ...(canEdit? [investor.investorPie || ''] : []),
             ...(canEdit? [formatMoney((investor.investmentAmount || 0).toString()) || ''] : []),
             formatMoney((investor.balance || 0).toString()),
-            investor.isCompany || investor.isCompanyPool || investor.nickname === 'Invest_group'
-                ? '-'
-                : formatDate(investor.activeUntil),
             investor.isBlocked?.toString() || 'false',
         ];
     }) ?? [];
@@ -577,7 +573,6 @@ const InvestorPage = () => {
             ? [{ name: "Инвестиция", isSortable: true, align: "right" } as Column]
             : [],
         { name: "Касса", isSortable: true, align: "right" },
-        { name: "Дата окончания договора" },
         { name: "isBlocked", isHidden: true },
     ];
 
@@ -664,8 +659,7 @@ const InvestorPage = () => {
                     investmentAmount: 0,
                     balance: 0,
                     isCompany: false,
-                    isBlocked: false,
-                    activeUntil: new Date().toISOString().split('T')[0]
+                    isBlocked: false
                 }}
             />
 

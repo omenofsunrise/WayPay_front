@@ -6,7 +6,6 @@ export interface InvestorPool {
   createdAt: Date;
   balance: number;
   selfIncome?: number;
-  activeUntil?: Date;
   isCompanyPool?: boolean;
 }
 
