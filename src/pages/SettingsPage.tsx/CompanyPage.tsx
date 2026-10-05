@@ -296,7 +296,7 @@ const CompanyPage = () => {
 
       <ContentGrid>
         <FormSection>
-          <InputContainer>
+          <FieldsGrid>
             <InputGroup>
               <Label>Название организации</Label>
               <CustomInput
@@ -314,9 +314,6 @@ const CompanyPage = () => {
                 onChange={handleInputChange}
               />
             </InputGroup>
-          </InputContainer>
-
-          <InputContainer>
             <InputGroup>
               <Label>Населённый пункт</Label>
               <CustomInput
@@ -333,9 +330,6 @@ const CompanyPage = () => {
                 onChange={handleInputChange}
               />
             </InputGroup>
-          </InputContainer>
-
-          <InputContainer>
             <InputGroup>
               <Label>Email</Label>
               <CustomInput
@@ -345,9 +339,6 @@ const CompanyPage = () => {
                 onChange={handleInputChange}
               />
             </InputGroup>
-          </InputContainer>
-
-          <InputContainer>
             <InputGroup>
               <Label>Телефон</Label>
               <PhoneModalInput
@@ -364,7 +355,7 @@ const CompanyPage = () => {
                 onChange={handleInputChange}
               />
             </InputGroup>
-          </InputContainer>
+          </FieldsGrid>
 
           <ButtonsContainer>
             <GrayButton width="120px" onClick={handleReset}>
@@ -490,10 +481,18 @@ const FormSection = styled.div`
   gap: 16px;
 `;
 
-const InputContainer = styled.div`
-  display: flex;
+// Поля шли строками по два, и Email, оставшийся в строке один, растягивался
+// на всю ширину — среди половинных он выглядел выломанным. Сетка держит
+// одинаковую ширину независимо от того, чётное число полей или нет.
+const FieldsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 const InputGroup = styled.div`
