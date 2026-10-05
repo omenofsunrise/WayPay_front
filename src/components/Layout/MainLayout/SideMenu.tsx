@@ -1,6 +1,9 @@
 import styled from "styled-components";
 import arrow from "../../../assets/ui/arrow.svg";
 import logo from "../../../assets/logos/vectorLogo.svg";
+import newCreditIcon from "../../../assets/ui/TopBar/newCredit.svg";
+import calculatorIcon from "../../../assets/ui/TopBar/calculator.svg";
+import chatIcon from "../../../assets/ui/TopBar/chat.svg";
 import analyticsIcon from "../../../assets/ui/MenuItems/analitic.svg";
 import contractsIcon from "../../../assets/ui/MenuItems/credits.svg";
 import clientsIcon from "../../../assets/ui/MenuItems/clients.svg";
@@ -9,7 +12,6 @@ import investorsIcon from "../../../assets/ui/MenuItems/investors.svg";
 import referencesIcon from "../../../assets/ui/MenuItems/catalogs.svg";
 import financeIcon from "../../../assets/ui/MenuItems/finance.svg";
 import profileIcon from "../../../assets/ui/MenuItems/profile.svg";
-import blackCatalogIcon from "../../../assets/ui/MenuItems/oldclients.svg";
 import { useState, useContext, useEffect } from "react";
 import { SideMenuContext } from "./SideMenuContext";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -22,6 +24,7 @@ import useCompany from "../../../api/hooks/useCompany";
 import React from "react";
 import type { CommonInfo } from "../../../api/types/company";
 import { formatDate, getLicenseDateColor } from "../../../utils/dateFormatter";
+import CalculatorModal from "../../modal/CalculatorModal";
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -94,6 +97,7 @@ const SideMenu = () => {
     setSelectedSideMenuItem,
   } = useContext(SideMenuContext);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [showCalculator, setShowCalculator] = useState(false);
   const { getCommonInfo } = useCompany();
   const [commonInfo, setCommonInfo] = React.useState<CommonInfo | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -105,7 +109,7 @@ const SideMenu = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole, hasPermission, denyPermission, authInfo } = useAuth();
+  const { hasRole, hasPermission, authInfo } = useAuth();
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -114,7 +118,6 @@ const SideMenu = () => {
         setCommonInfo(data);
       } catch (err) {
         console.error(err);
-      } finally {
       }
     };
 
@@ -140,8 +143,6 @@ const SideMenu = () => {
   const currentDate = formatDate(licenceDate);
   const daysUntilExpiry = getDaysUntilExpiry(licenceDate);
   const licenseDateColor = getLicenseDateColor(daysUntilExpiry);
-
-  const firstName = employee?.fullName ? employee.fullName.split(" ")[0] : "";
 
   const avatarSrc = employee?.photoPath
     ? `${FILE_BASE_URL}${employee.photoPath}`
@@ -292,7 +293,7 @@ const SideMenu = () => {
   ): { key: string; label: string; path: string }[] => {
     const subItems: { key: string; label: string; path: string }[] = [];
 
-    Object.entries(menuItemsMap).forEach(([path, item]) => {
+    Object.entries(menuItemsMap).forEach(([, item]) => {
       if (item.mainItem === mainItem && item.subItems) {
         Object.entries(item.subItems).forEach(([subPath, subKey]) => {
           if (checkMenuItemPermission(subKey)) {
@@ -389,7 +390,6 @@ const SideMenu = () => {
     "investors",
     "references",
     "finance",
-    "black-catalog",
     "settings",
     "admin",
   ];
@@ -472,15 +472,46 @@ const SideMenu = () => {
 
   return (
     <SideMenuContainer $collapsed={collapsed}>
-      <ArrowIcon
-        src={arrow}
-        alt="arrow"
-        onClick={toggleMenu}
-        $collapsed={collapsed}
-      />
-      {!collapsed && <Logo src={logo} alt="logo" />}
+      <MenuHeader $collapsed={collapsed}>
+        {!collapsed && <Logo src={logo} alt="WayPay" $collapsed={collapsed} />}
+        <ArrowButton type="button" onClick={toggleMenu} title={collapsed ? "Развернуть меню" : "Свернуть меню"}>
+          <ArrowIcon src={arrow} alt="" $collapsed={collapsed} />
+        </ArrowButton>
+      </MenuHeader>
+
+      <PrimarySection>
+        {!collapsed && <SectionLabel>ОСНОВНОЕ</SectionLabel>}
+        <MenuItem
+          onClick={() => handleMenuItemClick("new-credit", "/new-credit")}
+          $collapsed={collapsed}
+          $selected={location.pathname.startsWith("/new-credit")}
+          title="Новый договор"
+        >
+          <Icon src={newCreditIcon} $collapsed={collapsed} $selected={location.pathname.startsWith("/new-credit")} />
+          {!collapsed && <MenuItemText>Новый договор</MenuItemText>}
+        </MenuItem>
+        <MenuItem
+          onClick={() => setShowCalculator(true)}
+          $collapsed={collapsed}
+          $selected={showCalculator}
+          title="Калькулятор"
+        >
+          <Icon src={calculatorIcon} $collapsed={collapsed} $selected={showCalculator} />
+          {!collapsed && <MenuItemText>Калькулятор</MenuItemText>}
+        </MenuItem>
+        <MenuItem
+          onClick={() => handleMenuItemClick("chat", "/chat")}
+          $collapsed={collapsed}
+          $selected={location.pathname.startsWith("/chat")}
+          title="Чат"
+        >
+          <Icon src={chatIcon} $collapsed={collapsed} $selected={location.pathname.startsWith("/chat")} />
+          {!collapsed && <MenuItemText>Чат</MenuItemText>}
+        </MenuItem>
+      </PrimarySection>
 
       <MenuList $collapsed={collapsed}>
+        {!collapsed && <SectionLabel>РАЗДЕЛЫ</SectionLabel>}
         <ScrollableMenuContent>
           {(hasPermission("VIEW_ANALYTIC", true) ||
             hasRole("директор") ||
@@ -919,27 +950,6 @@ const SideMenu = () => {
             </DraggableRow>
           )}
 
-          <DraggableRow {...dragProps("black-catalog")}>
-            <MenuItem
-              onClick={(e) => {
-                if (collapsed) {
-                  handleCollapsedMenuClick(e, "black-catalog", false);
-                } else {
-                  handleMenuItemClick("black-catalog", "/black-catalog");
-                }
-              }}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "black-catalog"}
-            >
-              <Icon
-                src={blackCatalogIcon || analyticsIcon}
-                $collapsed={collapsed}
-                $selected={selectedSideMenuItem === "black-catalog"}
-              />
-              {!collapsed && <MenuItemText>ЧС+</MenuItemText>}
-            </MenuItem>
-          </DraggableRow>
-
           {/* Пункт "Настройки" ведет на /settings */}
           <DraggableRow {...dragProps("settings")}>
             <MenuItem
@@ -987,16 +997,8 @@ const SideMenu = () => {
         </ScrollableMenuContent>
       </MenuList>
 
-      {/* Блок с профилем - теперь всегда в самом низу */}
-      {employee &&
-        (collapsed ? (
-          <CollapsedUserProfileBlock
-            onClick={handleProfileClick}
-            $selected={selectedSideMenuItem === "profile"}
-          >
-            <CollapsedUserAvatar src={avatarSrc} alt={employee.fullName} />
-          </CollapsedUserProfileBlock>
-        ) : (
+      {employee && !collapsed && (
+        <ProfileFooter>
           <UserProfileBlock
             onClick={handleProfileClick}
             $selected={selectedSideMenuItem === "profile"}
@@ -1022,7 +1024,8 @@ const SideMenu = () => {
               </svg>
             </LogoutButton>
           </UserProfileBlock>
-        ))}
+        </ProfileFooter>
+      )}
 
       {contextMenu.visible && (
         <ContextMenu
@@ -1044,6 +1047,7 @@ const SideMenu = () => {
       )}
 
       <RightBorder $collapsed={collapsed} />
+      {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} />}
     </SideMenuContainer>
   );
 };
@@ -1051,11 +1055,12 @@ const SideMenu = () => {
 const UserProfileBlock = styled.div<{ $selected?: boolean }>`
   display: flex;
   align-items: center;
-  padding: 1px 17px;
-  margin: 8px 0;
+  min-height: 64px;
+  padding: 9px 8px;
+  margin: 10px 0 0;
   background-color: ${({ $selected }) =>
-    $selected ? "rgba(209, 213, 219, 1)" : "#F3F4F6"};
-  border-radius: 8px;
+    $selected ? "#e5f7f6" : "transparent"};
+  border-radius: 10px;
   width: 100%;
   box-sizing: border-box;
   gap: 12px;
@@ -1064,43 +1069,19 @@ const UserProfileBlock = styled.div<{ $selected?: boolean }>`
 
   &:hover {
     background-color: ${({ $selected }) =>
-      $selected ? "rgba(209, 213, 219, 1)" : "#E5E7EB"};
+      $selected ? "#e5f7f6" : "#f2f7f8"};
   }
 `;
 
-const CollapsedUserProfileBlock = styled.div<{ $selected?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin: 8px 0;
-  border-radius: 8px;
+const ProfileFooter = styled.div`
   width: 100%;
-  height: 40px;
-  box-sizing: border-box;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: ${({ $selected }) =>
-    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
-  padding: ${({ $selected }) => ($selected ? "8px 0" : "8px 0")};
-
-  &:hover {
-    background-color: ${({ $selected }) =>
-      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
-  }
-`;
-
-const CollapsedUserAvatar = styled.img`
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
+  border-top: 1px solid #e7edf1;
+  padding-top: 4px;
 `;
 
 const UserAvatar = styled.img`
-  width: 40px;
-  height: 40px;
+  width: 43px;
+  height: 43px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -1115,7 +1096,7 @@ const UserInfo = styled.div`
 
 const UserFullName = styled.div`
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #1f2937;
   white-space: nowrap;
   overflow: hidden;
@@ -1133,9 +1114,9 @@ const UserRole = styled.div`
 `;
 
 const UserDate = styled.div<{ $color?: string }>`
-  font-size: 12px;
-  color: ${({ $color }) => $color || "#9CA3AF"};
   margin-top: 2px;
+  color: ${({ $color }) => $color || "#8b98aa"};
+  font-size: 11px;
   text-align: left;
 `;
 
@@ -1232,25 +1213,25 @@ const DraggableRow = styled.div<{
 const MenuItem = styled.div<MenuItemProps>`
   display: flex;
   align-items: center;
-  padding: ${({ $collapsed }) => ($collapsed ? "15px 0" : "15px 17px")};
-  margin-bottom: 3px;
+  padding: ${({ $collapsed }) => ($collapsed ? "0" : "0 14px")};
+  margin-bottom: 4px;
   cursor: pointer;
-  border-radius: 8px;
-  width: ${({ $collapsed }) => ($collapsed ? "45px" : "100%")};
-  height: 35px;
+  border-radius: 9px;
+  width: ${({ $collapsed }) => ($collapsed ? "48px" : "100%")};
+  height: 43px;
   max-width: 100%;
   box-sizing: border-box;
   transition: all 0.2s ease;
-  color: ${({ $selected }) => ($selected ? "#000" : "#50555c")};
+  color: ${({ $selected }) => ($selected ? "#008b91" : "#34445b")};
   background-color: ${({ $selected }) =>
-    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
+    $selected ? "#e1f7f6" : "transparent"};
   justify-content: ${({ $collapsed }) =>
     $collapsed ? "center" : "flex-start"};
 
   &:hover {
     background-color: ${({ $selected }) =>
-      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
-    color: #000;
+      $selected ? "#e1f7f6" : "#f0f5f7"};
+    color: ${({ $selected }) => ($selected ? "#008b91" : "#15243b")};
 
     img {
       filter: ${({ $selected }) =>
@@ -1281,9 +1262,9 @@ const SubMenuItem = styled.div<{ $selected?: boolean }>`
 `;
 
 const Icon = styled.img<CollapsibleProps & { $selected?: boolean }>`
-  width: 21px;
-  height: 21px;
-  margin-right: ${({ $collapsed }) => ($collapsed ? "0" : "17px")};
+  width: 20px;
+  height: 20px;
+  margin-right: ${({ $collapsed }) => ($collapsed ? "0" : "16px")};
   transition: all 0.2s ease;
   filter: ${({ $selected }) =>
     $selected ? "brightness(0)" : "brightness(0.7)"};
@@ -1295,27 +1276,27 @@ const RightBorder = styled.div<CollapsibleProps>`
   top: 0;
   height: 100%;
   width: 1px;
-  background-color: rgba(209, 213, 219, 1);
+  background-color: #e6edf2;
   transition: all 0.3s ease;
-  opacity: ${({ $collapsed }) => ($collapsed ? 0 : 1)};
+  opacity: 1;
 `;
 
 const SideMenuContainer = styled.div<CollapsibleProps>`
-  width: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
+  width: ${({ $collapsed }) => ($collapsed ? "72px" : "272px")};
   height: 100vh;
-  background-color: rgba(249, 250, 250, 1);
-  color: rgba(80, 85, 92, 1);
+  background-color: rgba(255, 255, 255, 0.98);
+  color: #34445b;
   position: fixed;
   left: 0;
   top: 0;
-  padding: 22px 17px;
+  padding: 0 12px;
   box-sizing: border-box;
   z-index: 100;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  transition: all 0.3s ease;
-  box-shadow: 1px 0 7px rgba(0, 0, 0, 0.05);
+  transition: width 0.25s ease;
+  box-shadow: 3px 0 22px rgba(34, 61, 85, 0.035);
   overflow: hidden;
 `;
 
@@ -1327,28 +1308,70 @@ const MenuList = styled.div<CollapsibleProps>`
   align-items: flex-start;
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 0;
+`;
+
+const MenuHeader = styled.div<CollapsibleProps>`
+  width: 100%;
+  height: 82px;
+  flex: 0 0 82px;
+  display: flex;
+  align-items: center;
+  justify-content: ${({ $collapsed }) => ($collapsed ? "center" : "space-between")};
+  gap: 12px;
+`;
+
+const ArrowButton = styled.button`
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    background: #f0f5f7;
+  }
 `;
 
 const ArrowIcon = styled.img<CollapsibleProps>`
-  width: 22px;
-  height: 22px;
-  margin-bottom: 28px;
-  cursor: pointer;
+  width: 18px;
+  height: 18px;
   transform: ${({ $collapsed }) =>
     $collapsed ? "rotate(180deg)" : "rotate(0)"};
   transition: transform 0.3s ease;
 `;
 
-const Logo = styled.img`
-  width: 85%;
-  max-width: 196px;
-  align-self: center;
-  margin-bottom: 22px;
+const Logo = styled.img<CollapsibleProps>`
+  width: ${({ $collapsed }) => ($collapsed ? "42px" : "132px")};
+  height: ${({ $collapsed }) => ($collapsed ? "42px" : "auto")};
+  object-fit: contain;
+`;
+
+const PrimarySection = styled.div`
+  width: 100%;
+  flex: 0 0 auto;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #e8eef2;
+`;
+
+const SectionLabel = styled.div`
+  padding: 5px 14px 10px;
+  color: #7d8ba0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-align: left;
 `;
 
 const MenuItemText = styled.span`
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
+  white-space: nowrap;
 `;
 
 const SubMenu = styled.div`

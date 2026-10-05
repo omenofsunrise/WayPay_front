@@ -146,7 +146,7 @@ const SettingsShell = styled.div`
 const TabsBar = styled.nav`
   min-height: 53px;
   box-sizing: border-box;
-  padding: 0 clamp(24px, 5vw, 88px);
+  padding: 0 24px;
   display: flex;
   align-items: stretch;
   gap: clamp(22px, 3vw, 44px);

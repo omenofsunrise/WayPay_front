@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
+import SideMenu from "./SideMenu";
 import TopMenu, { pathToMenuItemMap } from "./TopMenu";
 import { SideMenuContext } from "./SideMenuContext";
 import { useLocation } from "react-router-dom";
@@ -24,7 +25,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 };
 
 const FullLayout = ({ children }: MainLayoutProps) => {
-  const [collapsed, setCollapsed] = useState<boolean>(true);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    const saved = localStorage.getItem(SIDE_MENU_COLLAPSED_KEY);
+    return saved ? JSON.parse(saved) : false;
+  });
 
   const [selectedSideMenuItem, setSelectedSideMenuItem] = useState<
     string | null
@@ -67,8 +71,10 @@ const FullLayout = ({ children }: MainLayoutProps) => {
         }}
         >
         <LayoutContainer>
+          <SideMenu />
+          <SideMenuBackdrop $visible={!collapsed} onClick={toggleCollapsed} />
           <TopMenu />
-          <ContentContainer>{children}</ContentContainer>
+          <ContentContainer $collapsed={collapsed}>{children}</ContentContainer>
           <LicenseExpiryNotice />
         </LayoutContainer>
       </SideMenuContext.Provider>
@@ -89,13 +95,31 @@ const LayoutContainer = styled.div`
   background-color: rgba(249, 250, 250, 1);
 `;
 
-const ContentContainer = styled.div`
+const ContentContainer = styled.div<{ $collapsed: boolean }>`
   flex: 1;
   min-width: 0;
+  margin-left: ${({ $collapsed }) => ($collapsed ? "72px" : "272px")};
   margin-top: var(--header-height, 70px);
   box-sizing: border-box;
   height: calc(100vh - var(--header-height, 70px));
   overflow-y: auto;
+  transition: margin-left 0.25s ease;
+
+  @media (max-width: 1180px) {
+    margin-left: 72px;
+  }
+`;
+
+const SideMenuBackdrop = styled.div<{ $visible: boolean }>`
+  display: none;
+
+  @media (max-width: 1180px) {
+    display: ${({ $visible }) => ($visible ? "block" : "none")};
+    position: fixed;
+    inset: 0;
+    z-index: 94;
+    background: rgba(16, 32, 52, 0.25);
+  }
 `;
 
 export default MainLayout;

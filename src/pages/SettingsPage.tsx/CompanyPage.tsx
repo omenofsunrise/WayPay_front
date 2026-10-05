@@ -280,7 +280,7 @@ const Field = ({ label, icon, ...inputProps }: FieldProps) => (
 
 const Page = styled.main`
   width: auto;
-  margin: 0 clamp(32px, 10vw, 166px);
+  margin: 0 24px;
   padding: 31px 0 46px;
   text-align: left;
 
