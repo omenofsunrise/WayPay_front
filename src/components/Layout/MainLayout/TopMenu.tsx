@@ -15,6 +15,7 @@ import { useEmployee } from "../../../api/hooks/useEmployee";
 import { useTopMenuActions } from "../../../сontext/TopMenuActionsContext";
 import { SideMenuContext } from "./SideMenuContext";
 import CalculatorModal from "../../modal/CalculatorModal";
+import SettingsModal from "../../modal/SettingsModal";
 import useChat from "../../../api/hooks/useChat";
 
 export const pathToMenuItemMap: Record<string, string> = {
@@ -37,6 +38,7 @@ const TopMenu = () => {
   const bellButtonRef = useRef<HTMLButtonElement>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const [exitDone, setExitDone] = useState(false);
@@ -160,9 +162,9 @@ const TopMenu = () => {
           </IconButton>
           <IconButton
             type="button"
-            onClick={() => navigate("/settings")}
-            title="Настройки"
-            $active={location.pathname === "/settings"}
+            onClick={() => setShowSettings(true)}
+            title="Персональные настройки"
+            $active={showSettings}
           >
             <ActionIcon src={SettingsIcon} alt="" />
           </IconButton>
@@ -176,6 +178,9 @@ const TopMenu = () => {
       />
       {showCalculator && (
         <CalculatorModal onClose={() => setShowCalculator(false)} />
+      )}
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
       )}
     </>
   );
