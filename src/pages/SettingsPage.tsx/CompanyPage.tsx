@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
-import CustomTitle from "../../components/ui/Text/CustomTitle";
-import ModalInfoTitle from "../../components/ui/Text/ModalInfoTitle";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import GrayButton from "../../components/ui/Buttons/GrayButton";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
@@ -254,126 +252,161 @@ const CompanyPage = () => {
 
   return (
     <PageLayout>
-      <HeaderWrapper>
-        <TitleWrapper>
-          <CustomTitle style={{ marginTop: 0 }}>Данные о компании</CustomTitle>
-          <ModalInfoTitle>Сведения о компании</ModalInfoTitle>
-        </TitleWrapper>
+      <PageHeader>
+        <PageTitle>Данные о компании</PageTitle>
+        <PageSubtitle>Здесь указаны основные сведения о вашей компании.</PageSubtitle>
+      </PageHeader>
 
-        <LogoContainer>
-          <LogoPreview
-            $hasLogo={!!previewUrl}
-            onClick={handleLogoClick}
-            onContextMenu={handleLogoClick}
-            title={
-              previewUrl
-                ? "Нажмите для замены логотипа"
-                : "Нажмите для загрузки логотипа"
-            }
-          >
-            {previewUrl ? (
-              <>
-                <LogoImage src={previewUrl} alt="Логотип компании" />
-                <EditOverlay>
-                  <EditIconSvg />
-                </EditOverlay>
-              </>
-            ) : (
-              <CameraIconSvg />
-            )}
-          </LogoPreview>
+      <Card>
+        <CardHeader>
+          <CardHeading>
+            <CardTitle>Основная информация</CardTitle>
+            <CardSubtitle>
+              Эти данные будут использоваться для автоматического оформления
+              договора займа.
+            </CardSubtitle>
+          </CardHeading>
 
-          <input
-            type="file"
-            onChange={handleFileChange}
-            accept="image/*"
-            style={{ display: "none" }}
-            id="logo-upload"
-            disabled={isUploading}
-          />
-        </LogoContainer>
-      </HeaderWrapper>
+          <LogoContainer>
+            <LogoPreview
+              $hasLogo={!!previewUrl}
+              onClick={handleLogoClick}
+              onContextMenu={handleLogoClick}
+              title={
+                previewUrl
+                  ? "Нажмите для замены логотипа"
+                  : "Нажмите для загрузки логотипа"
+              }
+            >
+              {previewUrl ? (
+                <>
+                  <LogoImage src={previewUrl} alt="Логотип компании" />
+                  <EditOverlay>
+                    <EditIconSvg />
+                  </EditOverlay>
+                </>
+              ) : (
+                <CameraIconSvg />
+              )}
+            </LogoPreview>
 
-      <ContentGrid>
-        <FormSection>
-          <FieldsGrid>
-            <InputGroup>
-              <Label>Название организации</Label>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              accept="image/*"
+              style={{ display: "none" }}
+              id="logo-upload"
+              disabled={isUploading}
+            />
+          </LogoContainer>
+        </CardHeader>
+
+        <FieldsGrid>
+          <InputGroup>
+            <Label>Название организации</Label>
+            <FieldShell>
+              <FieldIcon><BuildingIconSvg /></FieldIcon>
               <CustomInput
-                name="name"
+                  name="name"
+                  placeholder="Введите название"
                 value={formData.name}
                 onChange={handleInputChange}
               />
-            </InputGroup>
-            <InputGroup>
-              <Label>Учредитель</Label>
+            </FieldShell>
+          </InputGroup>
+          <InputGroup>
+            <Label>Учредитель</Label>
+            <FieldShell>
+              <FieldIcon><PersonIconSvg /></FieldIcon>
               <CustomInput
-                name="chief"
-                inputType="fullname"
+                  name="chief"
+                  inputType="fullname"
+                  placeholder="Введите ФИО учредителя"
                 value={formData.chief}
                 onChange={handleInputChange}
               />
-            </InputGroup>
-            <InputGroup>
-              <Label>Населённый пункт</Label>
+            </FieldShell>
+          </InputGroup>
+          <InputGroup>
+            <Label>Населённый пункт</Label>
+            <FieldShell>
+              <FieldIcon><PinIconSvg /></FieldIcon>
               <CustomInput
-                name="city"
+                  name="city"
+                  placeholder="Введите населённый пункт"
                 value={formData.city}
                 onChange={handleInputChange}
               />
-            </InputGroup>
-            <InputGroup>
-              <Label>Адрес офиса</Label>
+            </FieldShell>
+          </InputGroup>
+          <InputGroup>
+            <Label>Адрес офиса</Label>
+            <FieldShell>
+              <FieldIcon><PinIconSvg /></FieldIcon>
               <CustomInput
-                name="officeAddress"
+                  name="officeAddress"
+                  placeholder="Введите адрес офиса"
                 value={formData.officeAddress}
                 onChange={handleInputChange}
               />
-            </InputGroup>
-            <InputGroup>
-              <Label>Email</Label>
+            </FieldShell>
+          </InputGroup>
+          <InputGroup>
+            <Label>Email</Label>
+            <FieldShell>
+              <FieldIcon><MailIconSvg /></FieldIcon>
               <CustomInput
-                name="email"
-                type="email"
+                  name="email"
+                  type="email"
+                  placeholder="Введите email"
                 value={formData.email}
                 onChange={handleInputChange}
               />
-            </InputGroup>
-            <InputGroup>
-              <Label>Телефон</Label>
+            </FieldShell>
+          </InputGroup>
+          <InputGroup>
+            <Label>Телефон</Label>
+            <FieldShell>
+              <FieldIcon><PhoneIconSvg /></FieldIcon>
               <PhoneModalInput
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
               />
-            </InputGroup>
-            <InputGroup>
-              <Label>Телефон поддержки</Label>
+            </FieldShell>
+          </InputGroup>
+          <InputGroup>
+            <Label>Телефон поддержки</Label>
+            <FieldShell>
+              <FieldIcon><PhoneIconSvg /></FieldIcon>
               <PhoneModalInput
                 name="supportPhone"
                 value={formData.supportPhone}
                 onChange={handleInputChange}
               />
-            </InputGroup>
-          </FieldsGrid>
+            </FieldShell>
+          </InputGroup>
+        </FieldsGrid>
+
+        <CardFooter>
+          <DisclaimerRow>
+            <InfoIconSvg />
+            <Disclaimer>
+              Все данные компании используются только для автоматического
+              оформления договора займа и не передаются третьим лицам.
+            </Disclaimer>
+          </DisclaimerRow>
 
           <ButtonsContainer>
             <GrayButton width="120px" onClick={handleReset}>
               Сбросить
             </GrayButton>
             <DarkCyanButton onClick={handleSave} disabled={isLoading}>
-              Сохранить
+              Сохранить изменения
             </DarkCyanButton>
           </ButtonsContainer>
-        </FormSection>
-      </ContentGrid>
-
-      <FooterContainer>
-        <Disclaimer>
-          *Все данные компании используются только для автоматического
-          оформления договора займа и не передаются третьим лицам.
-        </Disclaimer>
-      </FooterContainer>
+        </CardFooter>
+      </Card>
 
       {showContextMenu && (
         <>
@@ -410,18 +443,110 @@ const CompanyPage = () => {
 
 // ─── Styled components ─────────────────────────────────────────────────────────
 
-const HeaderWrapper = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
+const iconProps = {
+  width: 18,
+  height: 18,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.7,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+const BuildingIconSvg = () => (
+  <svg {...iconProps}>
+    <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M16 21V9h3a2 2 0 0 1 2 2v10" />
+    <path d="M9 7h2M9 11h2M9 15h2" />
+  </svg>
+);
+
+const PersonIconSvg = () => (
+  <svg {...iconProps}>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const PinIconSvg = () => (
+  <svg {...iconProps}>
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const MailIconSvg = () => (
+  <svg {...iconProps}>
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="m22 7-10 6L2 7" />
+  </svg>
+);
+
+const PhoneIconSvg = () => (
+  <svg {...iconProps}>
+    <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
+  </svg>
+);
+
+const InfoIconSvg = () => (
+  <svg {...iconProps} width={16} height={16}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4M12 8h.01" />
+  </svg>
+);
+
+const PageHeader = styled.div`
   margin-bottom: 24px;
-  gap: 24px;
 `;
 
-const TitleWrapper = styled.div`
-  flex: 1;
+const PageTitle = styled.h1`
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+`;
+
+const PageSubtitle = styled.p`
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: #6b7280;
+`;
+
+const Card = styled.section`
+  background: #ffffff;
+  border: 1px solid #eef1f4;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 24px rgba(16, 24, 40, 0.04);
+  padding: 32px;
+  width: 100%;
+`;
+
+const CardHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+`;
+
+const CardHeading = styled.div`
   min-width: 0;
+`;
+
+const CardTitle = styled.h2`
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+`;
+
+const CardSubtitle = styled.p`
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #6b7280;
+  max-width: 640px;
 `;
 
 const LogoContainer = styled.div`
@@ -429,18 +554,18 @@ const LogoContainer = styled.div`
 `;
 
 const LogoPreview = styled.div<{ $hasLogo: boolean }>`
-  width: 120px;
-  height: 120px;
-  border-radius: 8px;
-  background-color: ${(p) => (p.$hasLogo ? "transparent" : "#f5f5f5")};
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  background-color: ${(p) => (p.$hasLogo ? "transparent" : "#f3f5f7")};
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px dashed ${(p) => (p.$hasLogo ? "transparent" : "#ccc")};
+  border: 1px dashed ${(p) => (p.$hasLogo ? "transparent" : "#d4d9df")};
   position: relative;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease;
 
   &:hover {
     border-color: #007d88;
@@ -468,26 +593,12 @@ const EditOverlay = styled.div`
   transition: opacity 0.2s ease;
 `;
 
-const ContentGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  width: 100%;
-`;
-
-const FormSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-// Поля шли строками по два, и Email, оставшийся в строке один, растягивался
-// на всю ширину — среди половинных он выглядел выломанным. Сетка держит
-// одинаковую ширину независимо от того, чётное число полей или нет.
+// Полей семь, на пары не делится. Сетка держит одинаковую ширину независимо
+// от чётности: последнее поле занимает свою колонку и не расползается.
 const FieldsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px 24px;
   width: 100%;
 
   @media (max-width: 768px) {
@@ -498,24 +609,61 @@ const FieldsGrid = styled.div`
 const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
-  flex: 1;
-  gap: 6px;
+  min-width: 0;
+  gap: 8px;
 `;
 
 const Label = styled.label`
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: #475569;
 `;
 
-const ButtonsContainer = styled.div`
+// Поле ввода своих значков не умеет, поэтому значок кладётся поверх, а полю
+// добавляется отступ слева.
+const FieldShell = styled.div`
+  position: relative;
+  width: 100%;
+
+  input {
+    width: 100%;
+    padding-left: 44px;
+  }
+`;
+
+const FieldIcon = styled.span`
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  align-items: center;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 1;
 `;
 
-const FooterContainer = styled.div`
-  margin-top: 24px;
+const CardFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #eef1f4;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const DisclaimerRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #94a3b8;
+  min-width: 0;
 `;
 
 const Disclaimer = styled.p`
@@ -524,6 +672,12 @@ const Disclaimer = styled.p`
   max-width: 560px;
   line-height: 1.5;
   margin: 0;
+`;
+
+const ButtonsContainer = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
 `;
 
 const ContextMenuBackdrop = styled.div`
