@@ -146,10 +146,14 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     usePersistedState<SelectedObjectType | null>(`${store}.objectType`, null);
 
   const [currentPage, setCurrentPage] = useState(1);
+  // По умолчанию сортируем по дате платежа, от ближайшей: в графике это
+  // первое, что ищут глазами. Ключ хранения сменён намеренно — у тех, кто
+  // уже открывал страницу, лежит старое значение без сортировки, и без
+  // смены ключа новый порядок к ним бы не применился.
   const [sortConfig, setSortConfig] = usePersistedState<{
     key: number | null;
     direction: "asc" | "desc";
-  }>(`${store}.sort`, { key: null, direction: "asc" });
+  }>(`${store}.sort.v2`, { key: 3, direction: "asc" });
 
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [accumulatedItems, setAccumulatedItems] = useState<ScheduleDetails[]>(
