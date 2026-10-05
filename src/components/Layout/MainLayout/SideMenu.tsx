@@ -1320,6 +1320,7 @@ const Logo = styled.img<CollapsibleProps>`
   width: ${({ $collapsed }) => ($collapsed ? "42px" : "132px")};
   height: ${({ $collapsed }) => ($collapsed ? "42px" : "auto")};
   object-fit: contain;
+  transform: translateX(-10px);
 `;
 
 const SectionLabel = styled.div`
