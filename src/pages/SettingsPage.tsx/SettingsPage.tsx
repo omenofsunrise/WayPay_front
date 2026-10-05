@@ -148,7 +148,7 @@ const TabsBar = styled.nav`
   box-sizing: border-box;
   padding: 0 24px;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: clamp(22px, 3vw, 44px);
   overflow-x: auto;
   background: rgba(255, 255, 255, 0.82);
@@ -162,22 +162,26 @@ const TabsBar = styled.nav`
 
 const TabButton = styled.button<{ $active: boolean }>`
   position: relative;
-  padding: 0 1px;
+  height: 38px;
+  padding: 0 10px;
   border: 0;
-  background: transparent;
+  border-radius: 8px;
+  background: ${({ $active }) =>
+    $active ? "rgba(0, 139, 136, 0.055)" : "transparent"};
   color: ${({ $active }) => ($active ? "#007f7c" : "#53657f")};
   font: inherit;
   font-size: 15px;
   font-weight: ${({ $active }) => ($active ? 700 : 500)};
   white-space: nowrap;
   cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease;
 
   &::after {
     content: "";
     position: absolute;
-    right: -8px;
-    bottom: -1px;
-    left: -8px;
+    right: 8px;
+    bottom: -8px;
+    left: 8px;
     height: 3px;
     border-radius: 3px 3px 0 0;
     background: #008b88;
@@ -186,6 +190,14 @@ const TabButton = styled.button<{ $active: boolean }>`
 
   &:hover {
     color: #007f7c;
+    background: rgba(0, 139, 136, 0.075);
+    border-color: transparent;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 139, 136, 0.16);
   }
 `;
 
