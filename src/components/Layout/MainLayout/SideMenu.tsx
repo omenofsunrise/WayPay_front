@@ -1,9 +1,6 @@
 import styled from "styled-components";
 import arrow from "../../../assets/ui/arrow.svg";
 import logo from "../../../assets/logos/vectorLogo.svg";
-import newCreditIcon from "../../../assets/ui/TopBar/newCredit.svg";
-import calculatorIcon from "../../../assets/ui/TopBar/calculator.svg";
-import chatIcon from "../../../assets/ui/TopBar/chat.svg";
 import analyticsIcon from "../../../assets/ui/MenuItems/analitic.svg";
 import contractsIcon from "../../../assets/ui/MenuItems/credits.svg";
 import clientsIcon from "../../../assets/ui/MenuItems/clients.svg";
@@ -24,7 +21,6 @@ import useCompany from "../../../api/hooks/useCompany";
 import React from "react";
 import type { CommonInfo } from "../../../api/types/company";
 import { formatDate, getLicenseDateColor } from "../../../utils/dateFormatter";
-import CalculatorModal from "../../modal/CalculatorModal";
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -97,7 +93,6 @@ const SideMenu = () => {
     setSelectedSideMenuItem,
   } = useContext(SideMenuContext);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [showCalculator, setShowCalculator] = useState(false);
   const { getCommonInfo } = useCompany();
   const [commonInfo, setCommonInfo] = React.useState<CommonInfo | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -478,37 +473,6 @@ const SideMenu = () => {
           <ArrowIcon src={arrow} alt="" $collapsed={collapsed} />
         </ArrowButton>
       </MenuHeader>
-
-      <PrimarySection>
-        {!collapsed && <SectionLabel>ОСНОВНОЕ</SectionLabel>}
-        <MenuItem
-          onClick={() => handleMenuItemClick("new-credit", "/new-credit")}
-          $collapsed={collapsed}
-          $selected={location.pathname.startsWith("/new-credit")}
-          title="Новый договор"
-        >
-          <Icon src={newCreditIcon} $collapsed={collapsed} $selected={location.pathname.startsWith("/new-credit")} />
-          {!collapsed && <MenuItemText>Новый договор</MenuItemText>}
-        </MenuItem>
-        <MenuItem
-          onClick={() => setShowCalculator(true)}
-          $collapsed={collapsed}
-          $selected={showCalculator}
-          title="Калькулятор"
-        >
-          <Icon src={calculatorIcon} $collapsed={collapsed} $selected={showCalculator} />
-          {!collapsed && <MenuItemText>Калькулятор</MenuItemText>}
-        </MenuItem>
-        <MenuItem
-          onClick={() => handleMenuItemClick("chat", "/chat")}
-          $collapsed={collapsed}
-          $selected={location.pathname.startsWith("/chat")}
-          title="Чат"
-        >
-          <Icon src={chatIcon} $collapsed={collapsed} $selected={location.pathname.startsWith("/chat")} />
-          {!collapsed && <MenuItemText>Чат</MenuItemText>}
-        </MenuItem>
-      </PrimarySection>
 
       <MenuList $collapsed={collapsed}>
         {!collapsed && <SectionLabel>РАЗДЕЛЫ</SectionLabel>}
@@ -1047,7 +1011,6 @@ const SideMenu = () => {
       )}
 
       <RightBorder $collapsed={collapsed} />
-      {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} />}
     </SideMenuContainer>
   );
 };
@@ -1313,8 +1276,8 @@ const MenuList = styled.div<CollapsibleProps>`
 
 const MenuHeader = styled.div<CollapsibleProps>`
   width: 100%;
-  height: 82px;
-  flex: 0 0 82px;
+  height: 70px;
+  flex: 0 0 70px;
   display: flex;
   align-items: center;
   justify-content: ${({ $collapsed }) => ($collapsed ? "center" : "space-between")};
@@ -1349,14 +1312,6 @@ const Logo = styled.img<CollapsibleProps>`
   width: ${({ $collapsed }) => ($collapsed ? "42px" : "132px")};
   height: ${({ $collapsed }) => ($collapsed ? "42px" : "auto")};
   object-fit: contain;
-`;
-
-const PrimarySection = styled.div`
-  width: 100%;
-  flex: 0 0 auto;
-  padding-bottom: 12px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid #e8eef2;
 `;
 
 const SectionLabel = styled.div`

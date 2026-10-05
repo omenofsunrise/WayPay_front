@@ -1,5 +1,8 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import styled from "styled-components";
+import NewCreditIcon from "../../../assets/ui/TopBar/newCredit.svg";
+import CalculatorIcon from "../../../assets/ui/TopBar/calculator.svg";
+import ChatIcon from "../../../assets/ui/TopBar/chat.svg";
 import TodoIcon from "../../../assets/ui/TopBar/to_do.svg";
 import SettingsIcon from "../../../assets/ui/TopBar/settings.svg";
 import BellIcon from "../../../assets/ui/TopBar/bell.svg";
@@ -11,6 +14,8 @@ import NotificationContextMenu from "../../ui/contextMenus/NotificationContextMe
 import { useEmployee } from "../../../api/hooks/useEmployee";
 import { useTopMenuActions } from "../../../сontext/TopMenuActionsContext";
 import { SideMenuContext } from "./SideMenuContext";
+import CalculatorModal from "../../modal/CalculatorModal";
+import useChat from "../../../api/hooks/useChat";
 
 export const pathToMenuItemMap: Record<string, string> = {
   "/new-credit": "newCredit",
@@ -21,15 +26,18 @@ export const pathToMenuItemMap: Record<string, string> = {
 
 const TopMenu = () => {
   const { collapsed } = useContext(SideMenuContext);
-  const { hasRole, isSuperAdminCompany, refresh } = useAuth();
+  const { hasRole, hasPermission, isSuperAdminCompany, refresh } = useAuth();
   const { setSelfCompany } = useEmployee();
   const { rightAction } = useTopMenuActions();
   const { activeTasksCount, setActiveTasksCount } = useTaskCount();
   const { getActiveTasksCount } = useTask();
+  const { getUnreadChatsCount } = useChat();
   const navigate = useNavigate();
   const location = useLocation();
   const bellButtonRef = useRef<HTMLButtonElement>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const [exitDone, setExitDone] = useState(false);
 
@@ -52,6 +60,22 @@ const TopMenu = () => {
       if (count !== null) setActiveTasksCount(count);
     });
   }, [getActiveTasksCount, setActiveTasksCount]);
+
+  useEffect(() => {
+    const fetchCount = () =>
+      getUnreadChatsCount().then((count) => {
+        if (count !== null) setUnreadChatsCount(count);
+      });
+    fetchCount();
+    const interval = window.setInterval(fetchCount, 30000);
+    return () => window.clearInterval(interval);
+  }, [getUnreadChatsCount]);
+
+  const canCreateCredit =
+    hasRole("директор") ||
+    hasRole("суперадмин") ||
+    hasRole("админ") ||
+    !hasPermission("FORBID_CREATING_CREDITS");
 
   const handleExitCompany = async () => {
     if (isExiting) return;
@@ -86,7 +110,35 @@ const TopMenu = () => {
       )}
 
       <Header $collapsed={collapsed} $hasBanner={isInOtherCompany}>
-        <HeaderSpacer />
+        <QuickNavigation>
+          {canCreateCredit && (
+            <QuickButton
+              type="button"
+              onClick={() => navigate("/new-credit")}
+              $active={location.pathname.startsWith("/new-credit")}
+            >
+              <ActionIcon src={NewCreditIcon} alt="" />
+              <span>Новый договор</span>
+            </QuickButton>
+          )}
+          <QuickButton
+            type="button"
+            onClick={() => setShowCalculator(true)}
+            $active={showCalculator}
+          >
+            <ActionIcon src={CalculatorIcon} alt="" />
+            <span>Калькулятор</span>
+          </QuickButton>
+          <QuickButton
+            type="button"
+            onClick={() => navigate("/chat")}
+            $active={location.pathname.startsWith("/chat")}
+          >
+            <ActionIcon src={ChatIcon} alt="" />
+            <span>Чат</span>
+            {unreadChatsCount > 0 && <CountBadge>{unreadChatsCount}</CountBadge>}
+          </QuickButton>
+        </QuickNavigation>
         <HeaderActions>
           {rightAction && <RightActionSlot>{rightAction}</RightActionSlot>}
           <TodoButton
@@ -122,6 +174,9 @@ const TopMenu = () => {
         onClose={() => setShowNotifications(false)}
         anchorElement={bellButtonRef.current}
       />
+      {showCalculator && (
+        <CalculatorModal onClose={() => setShowCalculator(false)} />
+      )}
     </>
   );
 };
@@ -148,8 +203,19 @@ const Header = styled.header<{ $collapsed: boolean; $hasBanner: boolean }>`
   }
 `;
 
-const HeaderSpacer = styled.div`
-  flex: 1;
+const QuickNavigation = styled.nav`
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 52px);
+
+  @media (max-width: 900px) {
+    gap: 5px;
+
+    span {
+      display: none;
+    }
+  }
 `;
 
 const HeaderActions = styled.div`
@@ -172,6 +238,17 @@ const IconButton = styled.button<{ $active?: boolean }>`
   &:hover {
     background: #f0f5f7;
   }
+`;
+
+const QuickButton = styled(IconButton)<{ $active?: boolean }>`
+  width: auto;
+  padding: 0 10px;
+  display: flex;
+  gap: 9px;
+  color: ${({ $active }) => ($active ? "#007f82" : "#46576e")};
+  font: inherit;
+  font-size: 15px;
+  white-space: nowrap;
 `;
 
 const TodoButton = styled(IconButton)<{ $active?: boolean }>`
