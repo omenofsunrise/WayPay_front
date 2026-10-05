@@ -9,6 +9,7 @@ import investorsIcon from "../../../assets/ui/MenuItems/investors.svg";
 import referencesIcon from "../../../assets/ui/MenuItems/catalogs.svg";
 import financeIcon from "../../../assets/ui/MenuItems/finance.svg";
 import profileIcon from "../../../assets/ui/MenuItems/profile.svg";
+import blackCatalogIcon from "../../../assets/ui/MenuItems/oldclients.svg";
 import { useState, useContext, useEffect } from "react";
 import { SideMenuContext } from "./SideMenuContext";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -104,7 +105,7 @@ const SideMenu = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole, hasPermission, authInfo } = useAuth();
+  const { hasRole, hasPermission, denyPermission, authInfo } = useAuth();
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -113,6 +114,7 @@ const SideMenu = () => {
         setCommonInfo(data);
       } catch (err) {
         console.error(err);
+      } finally {
       }
     };
 
@@ -138,6 +140,8 @@ const SideMenu = () => {
   const currentDate = formatDate(licenceDate);
   const daysUntilExpiry = getDaysUntilExpiry(licenceDate);
   const licenseDateColor = getLicenseDateColor(daysUntilExpiry);
+
+  const firstName = employee?.fullName ? employee.fullName.split(" ")[0] : "";
 
   const avatarSrc = employee?.photoPath
     ? `${FILE_BASE_URL}${employee.photoPath}`
@@ -288,7 +292,7 @@ const SideMenu = () => {
   ): { key: string; label: string; path: string }[] => {
     const subItems: { key: string; label: string; path: string }[] = [];
 
-    Object.entries(menuItemsMap).forEach(([, item]) => {
+    Object.entries(menuItemsMap).forEach(([path, item]) => {
       if (item.mainItem === mainItem && item.subItems) {
         Object.entries(item.subItems).forEach(([subPath, subKey]) => {
           if (checkMenuItemPermission(subKey)) {
@@ -385,6 +389,7 @@ const SideMenu = () => {
     "investors",
     "references",
     "finance",
+    "black-catalog",
     "settings",
     "admin",
   ];
@@ -467,20 +472,15 @@ const SideMenu = () => {
 
   return (
     <SideMenuContainer $collapsed={collapsed}>
-      <MenuHeader $collapsed={collapsed}>
-        {!collapsed && <Logo src={logo} alt="WayPay" $collapsed={collapsed} />}
-        <ArrowButton
-          type="button"
-          onClick={toggleMenu}
-          title={collapsed ? "Развернуть меню" : "Свернуть меню"}
-          $collapsed={collapsed}
-        >
-          <ArrowIcon src={arrow} alt="" $collapsed={collapsed} />
-        </ArrowButton>
-      </MenuHeader>
+      <ArrowIcon
+        src={arrow}
+        alt="arrow"
+        onClick={toggleMenu}
+        $collapsed={collapsed}
+      />
+      {!collapsed && <Logo src={logo} alt="logo" />}
 
       <MenuList $collapsed={collapsed}>
-        {!collapsed && <SectionLabel>РАЗДЕЛЫ</SectionLabel>}
         <ScrollableMenuContent>
           {(hasPermission("VIEW_ANALYTIC", true) ||
             hasRole("директор") ||
@@ -919,6 +919,27 @@ const SideMenu = () => {
             </DraggableRow>
           )}
 
+          <DraggableRow {...dragProps("black-catalog")}>
+            <MenuItem
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, "black-catalog", false);
+                } else {
+                  handleMenuItemClick("black-catalog", "/black-catalog");
+                }
+              }}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === "black-catalog"}
+            >
+              <Icon
+                src={blackCatalogIcon || analyticsIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "black-catalog"}
+              />
+              {!collapsed && <MenuItemText>ЧС+</MenuItemText>}
+            </MenuItem>
+          </DraggableRow>
+
           {/* Пункт "Настройки" ведет на /settings */}
           <DraggableRow {...dragProps("settings")}>
             <MenuItem
@@ -966,8 +987,16 @@ const SideMenu = () => {
         </ScrollableMenuContent>
       </MenuList>
 
-      {employee && !collapsed && (
-        <ProfileFooter>
+      {/* Блок с профилем - теперь всегда в самом низу */}
+      {employee &&
+        (collapsed ? (
+          <CollapsedUserProfileBlock
+            onClick={handleProfileClick}
+            $selected={selectedSideMenuItem === "profile"}
+          >
+            <CollapsedUserAvatar src={avatarSrc} alt={employee.fullName} />
+          </CollapsedUserProfileBlock>
+        ) : (
           <UserProfileBlock
             onClick={handleProfileClick}
             $selected={selectedSideMenuItem === "profile"}
@@ -993,8 +1022,7 @@ const SideMenu = () => {
               </svg>
             </LogoutButton>
           </UserProfileBlock>
-        </ProfileFooter>
-      )}
+        ))}
 
       {contextMenu.visible && (
         <ContextMenu
@@ -1023,12 +1051,11 @@ const SideMenu = () => {
 const UserProfileBlock = styled.div<{ $selected?: boolean }>`
   display: flex;
   align-items: center;
-  min-height: 64px;
-  padding: 9px 8px;
-  margin: 10px 0 0;
+  padding: 1px 17px;
+  margin: 8px 0;
   background-color: ${({ $selected }) =>
-    $selected ? "#e5f7f6" : "transparent"};
-  border-radius: 10px;
+    $selected ? "rgba(209, 213, 219, 1)" : "#F3F4F6"};
+  border-radius: 8px;
   width: 100%;
   box-sizing: border-box;
   gap: 12px;
@@ -1037,20 +1064,43 @@ const UserProfileBlock = styled.div<{ $selected?: boolean }>`
 
   &:hover {
     background-color: ${({ $selected }) =>
-      $selected ? "#e5f7f6" : "#f2f7f8"};
+      $selected ? "rgba(209, 213, 219, 1)" : "#E5E7EB"};
   }
 `;
 
-const ProfileFooter = styled.div`
+const CollapsedUserProfileBlock = styled.div<{ $selected?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0;
+  border-radius: 8px;
   width: 100%;
-  border-top: 1px solid #e7edf1;
-  padding-top: 4px;
-  margin-bottom: 18px;
+  height: 40px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: ${({ $selected }) =>
+    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
+  padding: ${({ $selected }) => ($selected ? "8px 0" : "8px 0")};
+
+  &:hover {
+    background-color: ${({ $selected }) =>
+      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
+  }
+`;
+
+const CollapsedUserAvatar = styled.img`
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
 `;
 
 const UserAvatar = styled.img`
-  width: 43px;
-  height: 43px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -1065,7 +1115,7 @@ const UserInfo = styled.div`
 
 const UserFullName = styled.div`
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #1f2937;
   white-space: nowrap;
   overflow: hidden;
@@ -1083,9 +1133,9 @@ const UserRole = styled.div`
 `;
 
 const UserDate = styled.div<{ $color?: string }>`
+  font-size: 12px;
+  color: ${({ $color }) => $color || "#9CA3AF"};
   margin-top: 2px;
-  color: ${({ $color }) => $color || "#8b98aa"};
-  font-size: 11px;
   text-align: left;
 `;
 
@@ -1182,25 +1232,25 @@ const DraggableRow = styled.div<{
 const MenuItem = styled.div<MenuItemProps>`
   display: flex;
   align-items: center;
-  padding: ${({ $collapsed }) => ($collapsed ? "0" : "0 14px")};
-  margin-bottom: 4px;
+  padding: ${({ $collapsed }) => ($collapsed ? "15px 0" : "15px 17px")};
+  margin-bottom: 3px;
   cursor: pointer;
-  border-radius: 9px;
-  width: ${({ $collapsed }) => ($collapsed ? "48px" : "100%")};
-  height: 43px;
+  border-radius: 8px;
+  width: ${({ $collapsed }) => ($collapsed ? "45px" : "100%")};
+  height: 35px;
   max-width: 100%;
   box-sizing: border-box;
   transition: all 0.2s ease;
-  color: ${({ $selected }) => ($selected ? "#008b91" : "#34445b")};
+  color: ${({ $selected }) => ($selected ? "#000" : "#50555c")};
   background-color: ${({ $selected }) =>
-    $selected ? "#e1f7f6" : "transparent"};
+    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
   justify-content: ${({ $collapsed }) =>
     $collapsed ? "center" : "flex-start"};
 
   &:hover {
     background-color: ${({ $selected }) =>
-      $selected ? "#e1f7f6" : "#f0f5f7"};
-    color: ${({ $selected }) => ($selected ? "#008b91" : "#15243b")};
+      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
+    color: #000;
 
     img {
       filter: ${({ $selected }) =>
@@ -1231,9 +1281,9 @@ const SubMenuItem = styled.div<{ $selected?: boolean }>`
 `;
 
 const Icon = styled.img<CollapsibleProps & { $selected?: boolean }>`
-  width: 20px;
-  height: 20px;
-  margin-right: ${({ $collapsed }) => ($collapsed ? "0" : "16px")};
+  width: 21px;
+  height: 21px;
+  margin-right: ${({ $collapsed }) => ($collapsed ? "0" : "17px")};
   transition: all 0.2s ease;
   filter: ${({ $selected }) =>
     $selected ? "brightness(0)" : "brightness(0.7)"};
@@ -1245,27 +1295,27 @@ const RightBorder = styled.div<CollapsibleProps>`
   top: 0;
   height: 100%;
   width: 1px;
-  background-color: #e6edf2;
+  background-color: rgba(209, 213, 219, 1);
   transition: all 0.3s ease;
-  opacity: 1;
+  opacity: ${({ $collapsed }) => ($collapsed ? 0 : 1)};
 `;
 
 const SideMenuContainer = styled.div<CollapsibleProps>`
-  width: ${({ $collapsed }) => ($collapsed ? "72px" : "272px")};
+  width: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
   height: 100vh;
-  background-color: rgba(255, 255, 255, 0.98);
-  color: #34445b;
+  background-color: rgba(249, 250, 250, 1);
+  color: rgba(80, 85, 92, 1);
   position: fixed;
   left: 0;
   top: 0;
-  padding: 0 12px;
+  padding: 22px 17px;
   box-sizing: border-box;
   z-index: 100;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  transition: width 0.25s ease;
-  box-shadow: 3px 0 22px rgba(34, 61, 85, 0.035);
+  transition: all 0.3s ease;
+  box-shadow: 1px 0 7px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 `;
 
@@ -1277,65 +1327,28 @@ const MenuList = styled.div<CollapsibleProps>`
   align-items: flex-start;
   overflow-y: auto;
   overflow-x: hidden;
-  min-height: 0;
-`;
-
-const MenuHeader = styled.div<CollapsibleProps>`
-  position: relative;
-  width: 100%;
-  height: 70px;
-  flex: 0 0 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const ArrowButton = styled.button<CollapsibleProps>`
-  position: ${({ $collapsed }) => ($collapsed ? "static" : "absolute")};
-  right: ${({ $collapsed }) => ($collapsed ? "auto" : "0")};
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-
-  &:hover {
-    background: #f0f5f7;
-  }
 `;
 
 const ArrowIcon = styled.img<CollapsibleProps>`
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
+  margin-bottom: 28px;
+  cursor: pointer;
   transform: ${({ $collapsed }) =>
     $collapsed ? "rotate(180deg)" : "rotate(0)"};
   transition: transform 0.3s ease;
 `;
 
-const Logo = styled.img<CollapsibleProps>`
-  width: ${({ $collapsed }) => ($collapsed ? "42px" : "132px")};
-  height: ${({ $collapsed }) => ($collapsed ? "42px" : "auto")};
-  object-fit: contain;
-  transform: translateX(-10px);
-`;
-
-const SectionLabel = styled.div`
-  padding: 5px 14px 10px;
-  color: #7d8ba0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.045em;
-  text-align: left;
+const Logo = styled.img`
+  width: 85%;
+  max-width: 196px;
+  align-self: center;
+  margin-bottom: 22px;
 `;
 
 const MenuItemText = styled.span`
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
-  white-space: nowrap;
 `;
 
 const SubMenu = styled.div`

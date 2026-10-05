@@ -1,12 +1,19 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { formatPhoneHref } from "../../utils/phoneUtils";
+import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import CustomSelect from "../../components/ui/fields/CustomSelect";
 import Pagination from "../../components/ui/fields/CustomPagination";
 import CustomTable, {
   type RowStyle,
 } from "../../components/ui/tables/CustomTable";
+import FilterField from "../../components/ui/Layouts/FilterField";
+import PageLayout from "../../components/ui/Layouts/PageLayout";
+import PaginationLayout from "../../components/ui/Layouts/PaginationLayout";
+import TitleField from "../../components/ui/Layouts/TitleLayout";
+import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
+import CustomTitle from "../../components/ui/Text/CustomTitle";
 import EmployeeModal from "../../components/modal/CrudInherited/EmployeeModal";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import { useEmployee } from "../../api/hooks/useEmployee";
@@ -75,22 +82,14 @@ const ConfirmText = styled.p`
 // ─── Styled components ─────────────────────────────────────────────────────────
 
 const SearchBar = styled.div`
-  width: min(336px, 100%);
-  flex: 0 1 336px;
+  flex: 1;
+  max-width: 480px;
 `;
 
 const SearchWrapper = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-
-  input {
-    height: 46px;
-    max-width: none;
-    border-color: #d4dee8;
-    border-radius: 8px;
-    font-size: 14px;
-  }
 `;
 
 const SearchIcon = styled.span`
@@ -177,159 +176,6 @@ const ModalLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
   color: #374151;
-`;
-
-const EmployeePageContainer = styled.main`
-  width: 100%;
-  padding-bottom: 40px;
-  text-align: left;
-`;
-
-const PageHeader = styled.header`
-  margin: 0 4px 27px;
-
-  h1 {
-    margin: 0 0 4px;
-    color: #0b1932;
-    font-size: 32px;
-    line-height: 1.25;
-    letter-spacing: -0.7px;
-  }
-
-  p {
-    margin: 0;
-    color: #6b7c94;
-    font-size: 15px;
-  }
-`;
-
-const EmployeesCard = styled.section`
-  padding: 29px 27px 25px;
-  border: 1px solid rgba(226, 234, 241, 0.78);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 10px 34px rgba(37, 65, 91, 0.045);
-
-  @media (max-width: 760px) {
-    padding: 20px 16px;
-  }
-`;
-
-const FiltersRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 28px;
-
-  @media (max-width: 860px) {
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-`;
-
-const RoleFilter = styled.div`
-  width: 226px;
-  flex: 0 0 226px;
-
-  > div,
-  select {
-    min-height: 46px;
-  }
-`;
-
-const CreateEmployeeButton = styled.button`
-  min-width: 214px;
-  height: 46px;
-  margin-left: auto;
-  padding: 0 24px;
-  border: 0;
-  border-radius: 10px;
-  background: linear-gradient(100deg, #008690, #09b7ad);
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 8px 18px rgba(0, 139, 145, 0.14);
-
-  &:hover {
-    border-color: transparent;
-    filter: brightness(1.04);
-  }
-
-  &:focus-visible {
-    outline: 2px solid rgba(0, 139, 145, 0.3);
-    outline-offset: 2px;
-  }
-`;
-
-const TableVisual = styled.div`
-  overflow-x: auto;
-
-  > div {
-    border-color: #dfe7ee;
-    border-radius: 10px;
-    scrollbar-gutter: auto;
-  }
-
-  table {
-    min-width: 1050px;
-  }
-
-  th {
-    padding: 15px 12px !important;
-    background: #f4f7f9 !important;
-    color: #415169;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  td {
-    height: 54px;
-    padding: 7px 12px !important;
-    color: #34445b;
-    font-size: 13px;
-  }
-
-  th,
-  td {
-    border-color: #dfe7ee !important;
-  }
-
-  tbody tr::after {
-    left: 0 !important;
-    width: 100% !important;
-    background: #dfe7ee !important;
-  }
-`;
-
-const TableState = styled.div`
-  padding: 24px;
-  color: #63738a;
-  text-align: center;
-`;
-
-const CardFooter = styled.footer`
-  min-height: 62px;
-  padding-top: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-`;
-
-const TotalText = styled.span`
-  color: #10213b;
-  font-size: 17px;
-  font-weight: 500;
-`;
-
-const PaginationHolder = styled.div`
-  margin-left: auto;
-
-  > div {
-    margin-top: 0;
-  }
 `;
 
 // ─── Icons ─────────────────────────────────────────────────────────────────────
@@ -1028,116 +874,108 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
   });
 
   return (
-    <EmployeePageContainer>
-      <PageHeader>
-        <h1>Сотрудники</h1>
-        <p>Управляйте списком сотрудников, их ролями и контактной информацией.</p>
-      </PageHeader>
+    <PageLayout>
+      <TitleField style={{ marginTop: 0 }}>
+        <CustomTitle style={{ marginTop: 0 }}>Сотрудники</CustomTitle>
+      </TitleField>
 
-      <EmployeesCard>
-        <FiltersRow>
-          <SearchBar>
-            <SearchWrapper>
-              <SearchIcon>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle
-                    cx="6.5"
-                    cy="6.5"
-                    r="5"
-                    stroke="#9CA3AF"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M10.5 10.5L14 14"
-                    stroke="#9CA3AF"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </SearchIcon>
-              <CustomInput
-                inputType="text"
-                placeholder="Поиск по ФИО..."
-                value={nameFilter}
-                onChange={(e) => {
-                  setNameFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                style={{ paddingLeft: "36px" }}
-              />
-              {nameFilter && (
-                <ClearButton
-                  onClick={() => {
-                    setNameFilter("");
-                    setCurrentPage(1);
-                  }}
-                  aria-label="Очистить поиск"
-                >
-                  ✕
-                </ClearButton>
-              )}
-            </SearchWrapper>
-          </SearchBar>
-
-          <RoleFilter>
-            <CustomSelect
-              value={roleFilter}
+      <FilterField>
+        <SearchBar>
+          <SearchWrapper>
+            <SearchIcon>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle
+                  cx="6.5"
+                  cy="6.5"
+                  r="5"
+                  stroke="#9CA3AF"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M10.5 10.5L14 14"
+                  stroke="#9CA3AF"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </SearchIcon>
+            <CustomInput
+              inputType="text"
+              placeholder="Поиск по ФИО"
+              value={nameFilter}
               onChange={(e) => {
-                setRoleFilter(e.target.value);
+                setNameFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              options={roleSelectOptions}
-              dropdownInPortal
+              style={{ paddingLeft: "36px" }}
             />
-          </RoleFilter>
+            {nameFilter && (
+              <ClearButton
+                onClick={() => {
+                  setNameFilter("");
+                  setCurrentPage(1);
+                }}
+              >
+                ✕
+              </ClearButton>
+            )}
+          </SearchWrapper>
+        </SearchBar>
 
-          <CreateEmployeeButton onClick={handleCreateEmployee}>
-            +&nbsp;&nbsp; Новый сотрудник
-          </CreateEmployeeButton>
-        </FiltersRow>
+        <div style={{ width: "200px" }}>
+          <CustomSelect
+            value={roleFilter}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            options={roleSelectOptions}
+            dropdownInPortal
+          />
+        </div>
 
-        {employeesLoading && <TableState>Загрузка...</TableState>}
-        {employeesError && (
-          <TableState>Ошибка: {employeesError}</TableState>
-        )}
+        <DarkCyanButton
+          style={{ width: "15vw", marginLeft: "auto" }}
+          onClick={handleCreateEmployee}
+        >
+          + Новый сотрудник
+        </DarkCyanButton>
+      </FilterField>
 
-        {!employeesLoading && !employeesError && (
-          <>
-            <TableVisual>
-              <CustomTable
-                columns={[
-                  { name: "ID", isSortable: true },
-                  { name: "ФИО", isSortable: true, align: "left" },
-                  { name: "Роль", isSortable: true, align: "left" },
-                  { name: "Мин. надбавка", align: "left" },
-                  { name: "Телефон", align: "left" },
-                  { name: "Адрес", align: "left" },
-                  { name: "Бухгалтерия", align: "center" },
-                ]}
-                data={tableData}
-                onRowDoubleClick={handleRowDoubleClick}
-                contextMenuActions={getTableActions}
-                onSort={handleSort}
-                sortConfig={sortConfig}
-                rowStyles={rowStyles}
-                multiSelect
-              />
-            </TableVisual>
+      {employeesLoading && <div>Загрузка...</div>}
+      {employeesError && <div>Ошибка: {employeesError}</div>}
 
-            <CardFooter>
-              <TotalText>Всего: {totalCount - filteredOutCount}</TotalText>
-              <PaginationHolder>
-                <Pagination
-                  total={totalCount - filteredOutCount}
-                  current={currentPage}
-                  onChange={setCurrentPage}
-                  itemsPerPage={pageSize}
-                />
-              </PaginationHolder>
-            </CardFooter>
-          </>
-        )}
-      </EmployeesCard>
+      {!employeesLoading && !employeesError && (
+        <>
+          <CustomTable
+            columns={[
+              { name: "ID", isSortable: true },
+              { name: "ФИО", isSortable: true, align: "left" },
+              { name: "Роль", isSortable: true, align: "left" },
+              { name: "Мин. надбавка", align: "left" },
+              { name: "Телефон", align: "left" },
+              { name: "Адрес", align: "left" },
+              { name: "Бухгалтерия", align: "center" },
+            ]}
+            data={tableData}
+            onRowDoubleClick={handleRowDoubleClick}
+            contextMenuActions={getTableActions}
+            onSort={handleSort}
+            sortConfig={sortConfig}
+            rowStyles={rowStyles}
+          />
+
+          <PaginationLayout>
+            <CountInfoTitle total={totalCount - filteredOutCount} />
+            <Pagination
+              total={totalCount - filteredOutCount}
+              current={currentPage}
+              onChange={setCurrentPage}
+              itemsPerPage={pageSize}
+            />
+          </PaginationLayout>
+        </>
+      )}
 
       <EmployeeModal
         mode={modalMode}
@@ -1242,7 +1080,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           </Toast>
         ))}
       </ToastContainer>
-    </EmployeePageContainer>
+    </PageLayout>
   );
 };
 
