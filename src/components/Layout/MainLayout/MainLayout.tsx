@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import SideMenu from "./SideMenu";
 import TopMenu, { pathToMenuItemMap } from "./TopMenu";
 import { SideMenuContext } from "./SideMenuContext";
 import { useLocation } from "react-router-dom";
@@ -25,10 +24,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 };
 
 const FullLayout = ({ children }: MainLayoutProps) => {
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    const saved = localStorage.getItem(SIDE_MENU_COLLAPSED_KEY);
-    return saved ? JSON.parse(saved) : false;
-  });
+  const [collapsed, setCollapsed] = useState<boolean>(true);
 
   const [selectedSideMenuItem, setSelectedSideMenuItem] = useState<
     string | null
@@ -48,25 +44,6 @@ const FullLayout = ({ children }: MainLayoutProps) => {
       setSelectedTopMenuItem(null);
     }
   }, [location.pathname]);
-
-  // На узких экранах меню по умолчанию свёрнуто (узкая полоса иконок), чтобы не
-  // перекрывать контент и верхнюю панель. Разворачивается уже поверх (drawer).
-  useEffect(() => {
-    const collapseIfNarrow = () => {
-      if (window.innerWidth <= 1280) {
-        setCollapsed((prev) => {
-          if (!prev) {
-            localStorage.setItem(SIDE_MENU_COLLAPSED_KEY, "true");
-            return true;
-          }
-          return prev;
-        });
-      }
-    };
-    collapseIfNarrow();
-    window.addEventListener("resize", collapseIfNarrow);
-    return () => window.removeEventListener("resize", collapseIfNarrow);
-  }, []);
 
   const toggleCollapsed = () => {
     const newCollapsedState = !collapsed;
@@ -88,14 +65,10 @@ const FullLayout = ({ children }: MainLayoutProps) => {
           selectedTopMenuItem,
           setSelectedTopMenuItem,
         }}
-      >
+        >
         <LayoutContainer>
-          <SideMenu />
-          {/* На узких экранах развёрнутое меню выезжает поверх контента —
-            затемняем фон, клик по нему сворачивает меню. */}
-          <SideMenuBackdrop $visible={!collapsed} onClick={toggleCollapsed} />
           <TopMenu />
-          <ContentContainer $collapsed={collapsed}>{children}</ContentContainer>
+          <ContentContainer>{children}</ContentContainer>
           <LicenseExpiryNotice />
         </LayoutContainer>
       </SideMenuContext.Provider>
@@ -116,32 +89,13 @@ const LayoutContainer = styled.div`
   background-color: rgba(249, 250, 250, 1);
 `;
 
-const ContentContainer = styled.div<{ $collapsed: boolean }>`
+const ContentContainer = styled.div`
   flex: 1;
   min-width: 0;
-  margin-left: ${({ $collapsed }) => ($collapsed ? "65px" : "315px")};
-  margin-top: var(--header-height, 56px);
+  margin-top: var(--header-height, 70px);
   box-sizing: border-box;
-  transition: margin-left 0.3s ease;
-  height: calc(100vh - var(--header-height, 56px));
+  height: calc(100vh - var(--header-height, 70px));
   overflow-y: auto;
-
-  @media (max-width: 1280px) {
-    margin-left: 70px;
-  }
-`;
-
-// Затемнение под развёрнутым меню — только на узких экранах.
-const SideMenuBackdrop = styled.div<{ $visible: boolean }>`
-  display: none;
-
-  @media (max-width: 1280px) {
-    display: ${({ $visible }) => ($visible ? "block" : "none")};
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    z-index: 95;
-  }
 `;
 
 export default MainLayout;

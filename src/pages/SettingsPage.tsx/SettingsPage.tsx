@@ -1,9 +1,7 @@
-import PageLayout from "../../components/ui/Layouts/PageLayout";
 import { useEffect, useState } from "react";
+import styled from "styled-components";
 import BackButtonComponent from "../../components/ui/Buttons/BackButton";
 import { useAuth } from "../../сontext/AuthContext";
-import type { Tab } from "../../components/ui/fields/Tabs";
-import Tabs from "../../components/ui/fields/Tabs";
 import EmployeeProfilePage from "../ProfilePage/EmployeeProfilePage";
 import EmployeePage from "./EmployeePage";
 import CustomRolesPage from "./CustomRolesPage";
@@ -57,7 +55,9 @@ const SettingsPage = () => {
     setActiveTab("Сотрудники");
   };
 
-  const tabs: Tab[] = [{ id: "Сотрудники", label: "Сотрудники" }];
+  const tabs: { id: string; label: string }[] = [
+    { id: "Сотрудники", label: "Сотрудники" },
+  ];
 
   if (hasRole("директор") || hasRole("суперадмин")) {
     tabs.push(
@@ -116,16 +116,84 @@ const SettingsPage = () => {
   };
 
   return (
-    <PageLayout>
-      <Tabs
-        tabs={tabs}
-        activeTab={activeTab}
-        onChange={setActiveTab}
-        fontSize={18}
-      />
-      {renderTabContent()}
-    </PageLayout>
+    <SettingsShell>
+      <TabsBar aria-label="Разделы настроек">
+        {tabs.map((tab) => (
+          <TabButton
+            key={tab.id}
+            type="button"
+            $active={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </TabButton>
+        ))}
+      </TabsBar>
+      <SettingsContent $fullWidth={activeTab === "Данные компании"}>
+        {renderTabContent()}
+      </SettingsContent>
+    </SettingsShell>
   );
 };
+
+const SettingsShell = styled.div`
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 46% 18%, rgba(222, 234, 243, 0.55), transparent 36%),
+    #f7fafc;
+`;
+
+const TabsBar = styled.nav`
+  min-height: 53px;
+  box-sizing: border-box;
+  padding: 0 clamp(24px, 5vw, 88px);
+  display: flex;
+  align-items: stretch;
+  gap: clamp(22px, 3vw, 44px);
+  overflow-x: auto;
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom: 1px solid #dfe7ef;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  position: relative;
+  padding: 0 1px;
+  border: 0;
+  background: transparent;
+  color: ${({ $active }) => ($active ? "#007f7c" : "#53657f")};
+  font: inherit;
+  font-size: 15px;
+  font-weight: ${({ $active }) => ($active ? 700 : 500)};
+  white-space: nowrap;
+  cursor: pointer;
+
+  &::after {
+    content: "";
+    position: absolute;
+    right: -8px;
+    bottom: -1px;
+    left: -8px;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: #008b88;
+    opacity: ${({ $active }) => ($active ? 1 : 0)};
+  }
+
+  &:hover {
+    color: #007f7c;
+  }
+`;
+
+const SettingsContent = styled.div<{ $fullWidth: boolean }>`
+  ${({ $fullWidth }) =>
+    $fullWidth
+      ? ""
+      : `width: min(1344px, calc(100% - 64px)); margin: 0 auto; padding-top: 24px;`}
+`;
 
 export default SettingsPage;

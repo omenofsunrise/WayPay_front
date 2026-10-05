@@ -1,10 +1,4 @@
-import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import CalculatorIcon from "../../../assets/ui/TopBar/calculator.svg";
 import ChatIcon from "../../../assets/ui/TopBar/chat.svg";
@@ -12,18 +6,20 @@ import TodoIcon from "../../../assets/ui/TopBar/to_do.svg";
 import newCreditIcon from "../../../assets/ui/TopBar/newCredit.svg";
 import SettingsIcon from "../../../assets/ui/TopBar/settings.svg";
 import BellIcon from "../../../assets/ui/TopBar/bell.svg";
-import { SideMenuContext } from "./SideMenuContext";
-import { useNavigate, useLocation } from "react-router-dom";
+import WayPayLogo from "../../../assets/logos/vectorLogo.svg";
+import { useLocation, useNavigate } from "react-router-dom";
 import CalculatorModal from "../../modal/CalculatorModal";
-import SettingsModal from "../../modal/SettingsModal";
 import { useAuth } from "../../../сontext/AuthContext";
-import type { Permission, Role } from "../../../api/types/auth";
+import type { Permission } from "../../../api/types/auth";
 import useTask from "../../../api/hooks/useTask";
 import { useTaskCount } from "../../../сontext/TaskCountContext";
 import useChat from "../../../api/hooks/useChat";
 import NotificationContextMenu from "../../ui/contextMenus/NotificationContextMenu";
 import { useEmployee } from "../../../api/hooks/useEmployee";
 import { useTopMenuActions } from "../../../сontext/TopMenuActionsContext";
+import { FILE_BASE_URL } from "../../../api/client";
+import { generateAvatar, getInitials } from "../../../utils/avatarUtils";
+import { authStorage } from "../../../api/utils/auth-storage";
 
 interface MenuItem {
   id: string;
@@ -31,8 +27,6 @@ interface MenuItem {
   text: string;
   path?: string;
   modal?: boolean;
-  permission?: Permission;
-  forbiddenRole?: Role;
   forbiddenPermissions?: Permission[];
 }
 
@@ -56,24 +50,36 @@ export const pathToMenuItemMap: Record<string, string> = {
   "/todo": "todo",
 };
 
+const applicationLinks = [
+  ["Аналитика", "/analytics"],
+  ["Договоры", "/credits"],
+  ["Клиенты", "/clients"],
+  ["Ожидаемые платежи", "/schedules"],
+  ["Журнал платежей", "/payments"],
+  ["Инвесторы", "/investors"],
+  ["Финансы", "/finance"],
+  ["Настройки", "/settings"],
+] as const;
+
 const TopMenu = () => {
-  const {
-    collapsed,
-    selectedTopMenuItem,
-    setSelectedTopMenuItem,
-    setSelectedSideMenuItem,
-  } = useContext(SideMenuContext);
-  const {
-    hasPermission,
-    forbiddenRole,
-    hasRole,
-    isSuperAdminCompany,
-    refresh,
-  } = useAuth();
+  const { hasPermission, hasRole, isSuperAdminCompany, refresh, authInfo } =
+    useAuth();
   const { rightAction } = useTopMenuActions();
   const { setSelfCompany } = useEmployee();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { activeTasksCount, setActiveTasksCount } = useTaskCount();
+  const { getActiveTasksCount } = useTask();
+  const { getUnreadChatsCount } = useChat();
+  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAppMenu, setShowAppMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [exitDone, setExitDone] = useState(false);
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
+
   const storedCompanyName = localStorage.getItem("enteredCompanyName");
   const isInOtherCompany =
     !exitDone &&
@@ -85,9 +91,38 @@ const TopMenu = () => {
   useLayoutEffect(() => {
     document.documentElement.style.setProperty(
       "--header-height",
-      isInOtherCompany ? "92px" : "56px"
+      isInOtherCompany ? "106px" : "70px"
     );
   }, [isInOtherCompany]);
+
+  useEffect(() => {
+    getActiveTasksCount().then((count) => {
+      if (count !== null) setActiveTasksCount(count);
+    });
+  }, [getActiveTasksCount, setActiveTasksCount]);
+
+  useEffect(() => {
+    const fetchCount = () =>
+      getUnreadChatsCount().then((count) => {
+        if (count !== null) setUnreadChatsCount(count);
+      });
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [getUnreadChatsCount]);
+
+  const menuItems = allMenuItems.filter((item) => {
+    if (hasRole("директор") || hasRole("суперадмин") || hasRole("админ")) {
+      return true;
+    }
+    return !item.forbiddenPermissions?.some((permission) =>
+      hasPermission(permission)
+    );
+  });
+
+  const currentMenuItem = location.pathname.startsWith("/chat/")
+    ? "chat"
+    : pathToMenuItemMap[location.pathname] || null;
 
   const handleExitCompany = async () => {
     if (isExiting) return;
@@ -106,400 +141,410 @@ const TopMenu = () => {
       setExitDone(false);
     }
   };
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const { activeTasksCount, setActiveTasksCount } = useTaskCount();
-  const { getActiveTasksCount } = useTask();
-  const { getUnreadChatsCount } = useChat();
-  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const bellButtonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    const fetchTaskCount = async () => {
-      const count = await getActiveTasksCount();
-      if (count !== null) {
-        setActiveTasksCount(count);
-      }
-    };
-    fetchTaskCount();
-  }, [getActiveTasksCount, setActiveTasksCount]);
-
-  // Функция для проверки запрещенных пермишенов
-  const hasForbiddenPermission = (
-    forbiddenPermissions?: Permission[]
-  ): boolean => {
-    if (!forbiddenPermissions || forbiddenPermissions.length === 0) {
-      return false;
-    }
-
-    // Проверяем, есть ли хотя бы один запрещенный пермишен у пользователя
-    return forbiddenPermissions.some((permission) => hasPermission(permission));
+  const handleLogout = () => {
+    authStorage.clear();
+    window.dispatchEvent(new Event("storage"));
+    window.location.href = "/auth";
   };
 
-  const menuItems = allMenuItems.filter((item) => {
-    // Для директора, суперадмина и админа показываем все элементы
-    if (hasRole("директор") || hasRole("суперадмин") || hasRole("админ")) {
-      return true;
-    }
-
-    // Проверяем запрещенные пермишены (теперь массив)
-    const hasForbiddenPerm = hasForbiddenPermission(item.forbiddenPermissions);
-
-    // Показываем элемент только если нет запрещенных пермишенов И нет запрещенной роли
-    return !hasForbiddenPerm;
-  });
-
-  useEffect(() => {
-    const fetchUnreadChatsCount = async () => {
-      const count = await getUnreadChatsCount();
-      if (count !== null) {
-        setUnreadChatsCount(count);
-      }
-    };
-
-    fetchUnreadChatsCount();
-    const interval = setInterval(fetchUnreadChatsCount, 30000);
-
-    return () => clearInterval(interval);
-  }, [getUnreadChatsCount]);
-
-  const handleBellClick = () => {
-    setShowNotifications(!showNotifications);
-  };
-
-  const handleNotificationsClose = () => {
-    setShowNotifications(false);
-  };
-
-  const getCurrentMenuItem = () => {
-    const currentPath = location.pathname;
-
-    if (currentPath.startsWith("/chat/")) {
-      return "chat";
-    }
-
-    return pathToMenuItemMap[currentPath] || null;
-  };
-
-  useEffect(() => {
-    const currentMenuItem = getCurrentMenuItem();
-    if (currentMenuItem) {
-      setSelectedTopMenuItem(currentMenuItem);
-      setSelectedSideMenuItem(null);
-    }
-  }, [location.pathname, setSelectedTopMenuItem, setSelectedSideMenuItem]);
-
-  const handleMenuItemClick = (
-    itemId: string,
-    path?: string,
-    isModal?: boolean
-  ) => {
-    setSelectedTopMenuItem(itemId);
-    if (!isModal && path) {
-      navigate(path);
-    }
-    if (isModal) {
-      setShowCalculator(true);
-    }
-  };
-
-  const handleCalculatorClose = () => {
-    setShowCalculator(false);
-    setSelectedTopMenuItem(null);
-  };
-
-  const handleSettingsClick = () => {
-    setShowSettings(true);
-  };
-
-  const handleSettingsClose = () => {
-    setShowSettings(false);
-  };
-
-  const isItemSelected = (itemId: string) => {
-    if (itemId === "calculator") {
-      return showCalculator || selectedTopMenuItem === "calculator";
-    }
-    return selectedTopMenuItem === itemId || getCurrentMenuItem() === itemId;
-  };
+  const employee = authInfo?.employee;
+  const avatarSrc = employee?.photoPath
+    ? `${FILE_BASE_URL}${employee.photoPath}`
+    : generateAvatar(getInitials(employee?.fullName || ""), 44);
 
   return (
     <>
       {isInOtherCompany && (
-        <CompanyBanner $collapsed={collapsed}>
+        <CompanyBanner>
           <CompanyBannerDot />
-          <CompanyBannerText>
+          <span>
             Вы находитесь в компании <strong>{enteredCompanyName}</strong>
-          </CompanyBannerText>
-          <CompanyBannerExit
-            onClick={handleExitCompany}
-            disabled={isExiting}
-            title={`Выйти из компании ${enteredCompanyName}`}
-          >
-            {isExiting ? <Spinner /> : "✕ Выйти"}
+          </span>
+          <CompanyBannerExit onClick={handleExitCompany} disabled={isExiting}>
+            {isExiting ? "Выход..." : "✕ Выйти"}
           </CompanyBannerExit>
         </CompanyBanner>
       )}
-      <TopMenuContainer $collapsed={collapsed} $hasBanner={isInOtherCompany}>
-        <MenuItemsWrapper>
-          {menuItems.map((item) => (
-            <MenuItem
-              key={item.id}
-              onClick={() =>
-                handleMenuItemClick(item.id, item.path, item.modal)
-              }
-              $selected={isItemSelected(item.id)}
+
+      <Header $hasBanner={isInOtherCompany}>
+        <BrandArea>
+          <BrandButton
+            type="button"
+            onClick={() => setShowAppMenu((value) => !value)}
+            aria-label="Открыть основную навигацию"
+            aria-expanded={showAppMenu}
+          >
+            <BrandLogo src={WayPayLogo} alt="WayPay" />
+          </BrandButton>
+          {showAppMenu && (
+            <AppMenu>
+              {applicationLinks.map(([label, path]) => (
+                <AppMenuItem
+                  key={path}
+                  $active={location.pathname.startsWith(path)}
+                  onClick={() => {
+                    navigate(path);
+                    setShowAppMenu(false);
+                  }}
+                >
+                  {label}
+                </AppMenuItem>
+              ))}
+            </AppMenu>
+          )}
+        </BrandArea>
+
+        <QuickNavigation>
+          {menuItems.map((item) => {
+            const selected =
+              currentMenuItem === item.id ||
+              (item.id === "calculator" && showCalculator);
+            const count =
+              item.id === "todo"
+                ? activeTasksCount
+                : item.id === "chat"
+                ? unreadChatsCount
+                : 0;
+            return (
+              <QuickItem
+                key={item.id}
+                type="button"
+                $selected={selected}
+                onClick={() => {
+                  if (item.modal) setShowCalculator(true);
+                  else if (item.path) navigate(item.path);
+                }}
+              >
+                <QuickIcon src={item.icon} alt="" $selected={selected} />
+                <span>{item.text}</span>
+                {count > 0 && <CountBadge>{count}</CountBadge>}
+              </QuickItem>
+            );
+          })}
+        </QuickNavigation>
+
+        <HeaderActions>
+          {rightAction && <RightActionSlot>{rightAction}</RightActionSlot>}
+          <IconButton
+            ref={bellButtonRef}
+            type="button"
+            onClick={() => setShowNotifications((value) => !value)}
+            title="Уведомления"
+          >
+            <ActionIcon src={BellIcon} alt="" />
+          </IconButton>
+          <IconButton
+            type="button"
+            onClick={() => navigate("/settings")}
+            title="Настройки"
+            $active={location.pathname === "/settings"}
+          >
+            <ActionIcon src={SettingsIcon} alt="" />
+          </IconButton>
+          <ProfileArea>
+            <ProfileButton
+              type="button"
+              onClick={() => setShowProfileMenu((value) => !value)}
+              aria-expanded={showProfileMenu}
             >
-              <IconWrapper>
-                <Icon
-                  src={item.icon}
-                  alt={item.text}
-                  $selected={isItemSelected(item.id)}
-                />
-              </IconWrapper>
-              <Text $selected={isItemSelected(item.id)}>{item.text}</Text>
-              {item.id === "todo" && activeTasksCount > 0 && (
-                <TaskCountBadge>{activeTasksCount}</TaskCountBadge>
-              )}
-              {item.id === "chat" && unreadChatsCount > 0 && (
-                <TaskCountBadge>{unreadChatsCount}</TaskCountBadge>
-              )}
-            </MenuItem>
-          ))}
-        </MenuItemsWrapper>
-
-        {rightAction && <RightActionSlot>{rightAction}</RightActionSlot>}
-
-        <BellButton ref={bellButtonRef} onClick={handleBellClick}>
-          <SettingsIconImg src={BellIcon} alt="Уведомления" />
-        </BellButton>
-
-        <SettingsButton
-          onClick={handleSettingsClick}
-          title="Персональные настройки"
-        >
-          <SettingsIconImg src={SettingsIcon} alt="Персональные настройки" />
-        </SettingsButton>
-      </TopMenuContainer>
+              <ProfileAvatar src={avatarSrc} alt={employee?.fullName || "Профиль"} />
+              <Chevron $open={showProfileMenu}>⌄</Chevron>
+            </ProfileButton>
+            {showProfileMenu && (
+              <ProfileMenu>
+                <ProfileSummary>
+                  <strong>{employee?.fullName || "Профиль"}</strong>
+                  <span>{employee?.role || ""}</span>
+                </ProfileSummary>
+                <ProfileMenuItem onClick={() => navigate("/profile")}>
+                  Открыть профиль
+                </ProfileMenuItem>
+                <ProfileMenuItem onClick={handleLogout}>Выйти</ProfileMenuItem>
+              </ProfileMenu>
+            )}
+          </ProfileArea>
+        </HeaderActions>
+      </Header>
 
       <NotificationContextMenu
         isOpen={showNotifications}
-        onClose={handleNotificationsClose}
+        onClose={() => setShowNotifications(false)}
         anchorElement={bellButtonRef.current}
       />
-
-      {showCalculator && <CalculatorModal onClose={handleCalculatorClose} />}
-      {showSettings && <SettingsModal onClose={handleSettingsClose} />}
+      {showCalculator && (
+        <CalculatorModal onClose={() => setShowCalculator(false)} />
+      )}
     </>
   );
 };
 
-type TopMenuContainerProps = {
-  $collapsed: boolean;
-  $hasBanner?: boolean;
-};
-
-type MenuItemProps = {
-  $selected?: boolean;
-  onClick?: () => void;
-};
-
-type IconProps = {
-  $selected?: boolean;
-};
-
-type TextProps = {
-  $selected?: boolean;
-};
-
-const TaskCountBadge = styled.div`
-  margin-left: 8px;
-  background-color: rgba(89, 212, 188, 1);
-  color: black;
-  border-radius: 5px;
-  padding: 2px 6px;
-  font-size: 16px;
-  font-weight: 500;
-`;
-
-const TopMenuContainer = styled.div<TopMenuContainerProps>`
-  width: calc(100% - ${({ $collapsed }) => ($collapsed ? "70px" : "315px")});
-  height: 56px;
+const Header = styled.header<{ $hasBanner: boolean }>`
   position: fixed;
-  left: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
+  z-index: 100;
   top: ${({ $hasBanner }) => ($hasBanner ? "36px" : "0")};
-  /* Справа резервируем место под кластер кнопок (фильтр/колокол/настройки),
-     которые позиционируются абсолютно у правого края, — чтобы пункты меню
-     (в т.ч. Todo) к ним не прилипали ни на широких, ни на узких экранах. */
-  padding: 0 150px 0 14px;
-  box-sizing: border-box;
-  display: flex;
+  left: 0;
+  right: 0;
+  height: 70px;
+  display: grid;
+  grid-template-columns: minmax(155px, 240px) minmax(500px, 1fr) auto;
   align-items: center;
-  z-index: 90;
-  background-color: rgba(249, 250, 250, 1);
-  box-shadow: 0 1px 7px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  border-bottom: 1px solid rgba(209, 213, 219, 1);
+  padding: 0 clamp(24px, 5vw, 88px);
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.98);
+  border-bottom: 1px solid #e7edf3;
+  box-shadow: 0 2px 14px rgba(36, 54, 78, 0.035);
 
-  /* На узких экранах меню выезжает поверх контента, поэтому верхняя панель
-     всегда выровнена по узкой полосе иконок (70px). */
-  @media (max-width: 1280px) {
-    left: 70px;
-    width: calc(100% - 70px);
+  @media (max-width: 1050px) {
+    grid-template-columns: 140px 1fr auto;
+    padding: 0 22px;
   }
 `;
 
-const MenuItemsWrapper = styled.div`
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  width: 100%;
-  max-width: 1050px;
-  margin: 0 auto;
+const BrandArea = styled.div`
+  position: relative;
+  justify-self: start;
+`;
 
-  /* На узких экранах прижимаем пункты влево и убираем «слипание» иконок.
-     Место справа под кнопки уже зарезервировано padding-right контейнера. */
-  @media (max-width: 1280px) {
+const BrandButton = styled.button`
+  border: 0;
+  padding: 5px 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 8px;
+
+  &:focus-visible {
+    outline: 2px solid #0aa99b;
+    outline-offset: 4px;
+  }
+`;
+
+const BrandLogo = styled.img`
+  width: 118px;
+  height: auto;
+  display: block;
+`;
+
+const QuickNavigation = styled.nav`
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: clamp(10px, 2vw, 46px);
+  min-width: 0;
+
+  @media (max-width: 900px) {
     justify-content: flex-start;
-    gap: 6px;
-    max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
   }
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 `;
 
-const Icon = styled.img<IconProps>`
-  width: 17px;
-  height: 17px;
-  filter: ${({ $selected }) =>
-    $selected ? "brightness(0)" : "brightness(0.7)"};
-  transition: filter 0.3s ease;
-`;
-
-const IconWrapper = styled.div`
-  margin-right: 6px;
+const QuickItem = styled.button<{ $selected: boolean }>`
+  min-height: 42px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: ${({ $selected }) => ($selected ? "#eef8f7" : "transparent")};
+  color: ${({ $selected }) => ($selected ? "#007f7c" : "#50617b")};
   display: flex;
   align-items: center;
-`;
-
-const Text = styled.span<TextProps>`
-  color: ${({ $selected }) =>
-    $selected ? "rgba(0, 0, 0, 1)" : "rgba(80, 85, 92, 1)"};
-  font-size: 18px;
+  gap: 10px;
+  font: inherit;
+  font-size: 16px;
   font-weight: 500;
-  transition: color 0.3s ease;
   white-space: nowrap;
-
-  @media (max-width: 1280px) {
-    font-size: 14px;
-  }
-`;
-
-const MenuItem = styled.div<MenuItemProps>`
-  display: flex;
-  align-items: center;
   cursor: pointer;
-  padding: 7px 11px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  margin-right: 14px;
-  background-color: ${({ $selected }) =>
-    $selected ? "rgba(209, 213, 219, 1)" : "transparent"};
-
-  @media (max-width: 1280px) {
-    padding: 6px 8px;
-    margin-right: 4px;
-    flex-shrink: 0;
-  }
 
   &:hover {
-    background-color: ${({ $selected }) =>
-      $selected ? "rgba(209, 213, 219, 1)" : "rgba(209, 213, 219, 0.5)"};
-
-    ${Icon} {
-      filter: brightness(0);
-    }
-
-    ${Text} {
-      color: rgba(0, 0, 0, 1);
-    }
+    background: #f3f7f9;
+    color: #10213d;
   }
 
-  &:last-child {
-    margin-right: 0;
+  @media (max-width: 1150px) {
+    span:not(:last-child) {
+      display: none;
+    }
   }
 `;
 
-const SettingsButton = styled.button`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 6px;
-  display: flex;
+const QuickIcon = styled.img<{ $selected: boolean }>`
+  width: 21px;
+  height: 21px;
+  opacity: ${({ $selected }) => ($selected ? 1 : 0.82)};
+`;
+
+const CountBadge = styled.span`
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 5px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
-  outline: none;
+  background: #20c4b5;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: clamp(16px, 3vw, 54px);
+`;
+
+const IconButton = styled.button<{ $active?: boolean }>`
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: ${({ $active }) => ($active ? "#eef8f7" : "transparent")};
+  display: grid;
+  place-items: center;
+  cursor: pointer;
 
   &:hover {
-    background-color: rgba(209, 213, 219, 0.5);
-  }
-
-  &:active {
-    background-color: rgba(209, 213, 219, 0.7);
-  }
-
-  /* Кастомный фокус для доступности */
-  &:focus-visible {
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    background: #f1f5f8;
   }
 `;
 
-const BellButton = styled(SettingsButton)`
-  top: 10px;
-  right: 56px;
+const ActionIcon = styled.img`
+  width: 21px;
+  height: 21px;
+  opacity: 0.82;
 `;
 
 const RightActionSlot = styled.div`
-  position: absolute;
-  right: 102px;
-  top: 10px;
   display: flex;
   align-items: center;
 `;
 
-const CompanyBanner = styled.div<{ $collapsed: boolean }>`
+const ProfileArea = styled.div`
+  position: relative;
+  margin-left: 5px;
+`;
+
+const ProfileButton = styled.button`
+  height: 52px;
+  padding: 4px 3px 4px 5px;
+  border: 0;
+  border-radius: 28px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f4f7f9;
+  }
+`;
+
+const ProfileAvatar = styled.img`
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 50%;
+`;
+
+const Chevron = styled.span<{ $open: boolean }>`
+  color: #52627b;
+  font-size: 23px;
+  line-height: 1;
+  transform: ${({ $open }) => ($open ? "rotate(180deg)" : "none")};
+  transition: transform 0.2s ease;
+`;
+
+const FloatingMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 10px);
+  background: #fff;
+  border: 1px solid #e3e9ef;
+  border-radius: 12px;
+  box-shadow: 0 16px 38px rgba(28, 45, 70, 0.16);
+  padding: 8px;
+  text-align: left;
+`;
+
+const AppMenu = styled(FloatingMenu)`
+  left: 0;
+  width: 220px;
+`;
+
+const AppMenuItem = styled.button<{ $active: boolean }>`
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: ${({ $active }) => ($active ? "#eaf7f5" : "transparent")};
+  color: ${({ $active }) => ($active ? "#007f7c" : "#34445d")};
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f6f8;
+  }
+`;
+
+const ProfileMenu = styled(FloatingMenu)`
+  right: 0;
+  width: 230px;
+`;
+
+const ProfileSummary = styled.div`
+  padding: 8px 10px 11px;
+  border-bottom: 1px solid #edf1f4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong {
+    color: #11213c;
+    font-size: 14px;
+  }
+
+  span {
+    color: #8190a5;
+    font-size: 12px;
+  }
+`;
+
+const ProfileMenuItem = styled.button`
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #34445d;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f6f8;
+  }
+`;
+
+const CompanyBanner = styled.div`
   position: fixed;
-  top: 0;
-  left: ${({ $collapsed }) => ($collapsed ? "70px" : "315px")};
-  width: calc(100% - ${({ $collapsed }) => ($collapsed ? "70px" : "315px")});
+  z-index: 101;
+  inset: 0 0 auto;
   height: 36px;
   background: #007d88;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  z-index: 91;
-  padding: 0 16px;
-  box-sizing: border-box;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-
-  @media (max-width: 1280px) {
-    left: 70px;
-    width: calc(100% - 70px);
-  }
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
 `;
 
 const CompanyBannerDot = styled.span`
@@ -507,73 +552,16 @@ const CompanyBannerDot = styled.span`
   height: 8px;
   border-radius: 50%;
   background: #fff;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
-`;
-
-const CompanyBannerText = styled.span`
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  strong {
-    font-weight: 700;
-    color: #fff;
-  }
 `;
 
 const CompanyBannerExit = styled.button`
-  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 10px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 6px;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background 0.15s;
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.28);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const Spinner = styled.span`
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-`;
-
-const SettingsIconImg = styled.img`
-  width: 20px;
-  height: 20px;
-  filter: brightness(0.7);
-  transition: filter 0.3s ease;
-  outline: none;
-
-  ${SettingsButton}:hover & {
-    filter: brightness(0);
-    outline: none;
-  }
+  font: inherit;
+  cursor: pointer;
 `;
 
 export default TopMenu;
