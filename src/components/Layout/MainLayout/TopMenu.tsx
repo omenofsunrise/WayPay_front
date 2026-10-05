@@ -287,7 +287,7 @@ const Header = styled.header<{ $hasBanner: boolean }>`
   right: 0;
   height: 70px;
   display: grid;
-  grid-template-columns: minmax(155px, 240px) minmax(500px, 1fr) auto;
+  grid-template-columns: minmax(155px, 210px) minmax(500px, 1fr) auto;
   align-items: center;
   padding: 0 clamp(24px, 5vw, 88px);
   box-sizing: border-box;

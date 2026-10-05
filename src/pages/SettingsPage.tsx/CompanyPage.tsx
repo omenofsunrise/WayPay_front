@@ -279,13 +279,14 @@ const Field = ({ label, icon, ...inputProps }: FieldProps) => (
 );
 
 const Page = styled.main`
-  width: min(1344px, calc(100% - 64px));
-  margin: 0 auto;
+  width: auto;
+  margin: 0 clamp(32px, 10vw, 166px);
   padding: 31px 0 46px;
   text-align: left;
 
   @media (max-width: 720px) {
-    width: calc(100% - 28px);
+    width: auto;
+    margin: 0 14px;
     padding-top: 24px;
   }
 `;
