@@ -469,7 +469,12 @@ const SideMenu = () => {
     <SideMenuContainer $collapsed={collapsed}>
       <MenuHeader $collapsed={collapsed}>
         {!collapsed && <Logo src={logo} alt="WayPay" $collapsed={collapsed} />}
-        <ArrowButton type="button" onClick={toggleMenu} title={collapsed ? "Развернуть меню" : "Свернуть меню"}>
+        <ArrowButton
+          type="button"
+          onClick={toggleMenu}
+          title={collapsed ? "Развернуть меню" : "Свернуть меню"}
+          $collapsed={collapsed}
+        >
           <ArrowIcon src={arrow} alt="" $collapsed={collapsed} />
         </ArrowButton>
       </MenuHeader>
@@ -1040,6 +1045,7 @@ const ProfileFooter = styled.div`
   width: 100%;
   border-top: 1px solid #e7edf1;
   padding-top: 4px;
+  margin-bottom: 18px;
 `;
 
 const UserAvatar = styled.img`
@@ -1275,16 +1281,18 @@ const MenuList = styled.div<CollapsibleProps>`
 `;
 
 const MenuHeader = styled.div<CollapsibleProps>`
+  position: relative;
   width: 100%;
   height: 70px;
   flex: 0 0 70px;
   display: flex;
   align-items: center;
-  justify-content: ${({ $collapsed }) => ($collapsed ? "center" : "space-between")};
-  gap: 12px;
+  justify-content: center;
 `;
 
-const ArrowButton = styled.button`
+const ArrowButton = styled.button<CollapsibleProps>`
+  position: ${({ $collapsed }) => ($collapsed ? "static" : "absolute")};
+  right: ${({ $collapsed }) => ($collapsed ? "auto" : "0")};
   width: 34px;
   height: 34px;
   padding: 0;
