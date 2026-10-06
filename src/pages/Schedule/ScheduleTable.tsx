@@ -40,6 +40,11 @@ import useSender from "../../api/hooks/useSender";
 import scheduleService from "../../api/services/scheduleService";
 import type { VisitMode } from "../../api/types/schedule";
 import usePersistedState from "../../hooks/usePersistedState";
+import {
+  useScrollMemory,
+  restoreScroll,
+  forgetScroll,
+} from "../../utils/listPosition";
 
 interface ScheduleTableProps {
   isListMode: boolean;
@@ -200,13 +205,15 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
   );
 
   const resetPage = useCallback(() => {
+    // Отбор изменился — прежнее место в списке потеряло смысл.
+    forgetScroll(`${store}.list.scroll`);
     setCurrentPage(1);
     if (isListMode) {
       accumulatedItemsRef.current = [];
       setAccumulatedItems([]);
       setHasMore(true);
     }
-  }, [isListMode]);
+  }, [isListMode, store]);
 
   const resetFilters = useCallback(() => {
     setClientNameFilter("");
@@ -229,13 +236,6 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
   ]);
 
 
-  // В режиме списка номер страницы означает глубину подгрузки, а не место в
-  // выдаче: восстановить его в отрыве от накопленных строк нельзя — человек
-  // увидел бы середину списка без всего, что над ней. Там начинаем сначала.
-  useEffect(() => {
-    if (isListMode) setCurrentPage(1);
-  }, [isListMode, setCurrentPage]);
-
   // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
   // платежи закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
   useEffect(() => {
@@ -250,10 +250,20 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     ? accumulatedItems
     : scheduleData?.items ?? [];
 
+  const scrollKey = `${store}.list.scroll`;
+  useScrollMemory(scrollKey, isListMode);
+  const restoredRef = useRef(false);
+
   const loadSchedules = useCallback(async () => {
+    // Возврат в список: строк в памяти нет, а номер страницы восстановлен из
+    // хранилища. Тянем весь объём одним запросом — иначе человек увидел бы
+    // середину списка без всего, что над ней.
+    const isRestoring =
+      isListMode && currentPage > 1 && accumulatedItemsRef.current.length === 0;
+
     const params: ScheduleParams = {
-      page: currentPage,
-      pageSize: pageSize,
+      page: isRestoring ? 1 : currentPage,
+      pageSize: isRestoring ? pageSize * currentPage : pageSize,
       clientName: clientNameFilter || undefined,
       dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
       dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
@@ -289,6 +299,11 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
       accumulatedItemsRef.current = next;
       setAccumulatedItems(next);
       setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
+
+      if (isRestoring && !restoredRef.current) {
+        restoredRef.current = true;
+        restoreScroll(scrollKey);
+      }
     }
     setIsLoadingMore(false);
   }, [

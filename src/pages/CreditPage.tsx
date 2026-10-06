@@ -59,6 +59,11 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
 import { useUiSettings } from "../utils/uiSettings";
 import usePersistedState from "../hooks/usePersistedState";
+import {
+  useScrollMemory,
+  restoreScroll,
+  forgetScroll,
+} from "../utils/listPosition";
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 
@@ -302,13 +307,6 @@ const CreditPage = () => {
     acceptCredit,
     acceptCredits,
   } = useCredit();
-
-  // В режиме списка номер страницы означает глубину подгрузки, а не место в
-  // выдаче: восстановить его в отрыве от накопленных строк нельзя — человек
-  // увидел бы середину списка без всего, что над ней. Там начинаем сначала.
-  useEffect(() => {
-    if (isListMode) setCurrentPage(1);
-  }, [isListMode, setCurrentPage]);
 
   // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
   // платежи закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
@@ -1118,6 +1116,14 @@ const CreditPage = () => {
     creditTypeId,
   ]);
 
+  const SCROLL_KEY = "creditsFilters.list.scroll";
+  // Сброс накопленного списка срабатывает и при открытии страницы, где
+  // ничего не менялось. Первый прогон пропускаем, иначе он затирал бы
+  // восстановленное место.
+  const filtersSettledRef = useRef(false);
+  useScrollMemory(SCROLL_KEY, isListMode);
+  const restoredRef = useRef(false);
+
   const loadCredits = useCallback(async () => {
     if (!isPageSizeReady) return;
     // Отменяем предыдущий запрос, если он есть
@@ -1132,9 +1138,15 @@ const CreditPage = () => {
 
     const shouldInclude = includeAllStates;
 
+    // Возврат в список: строк в памяти нет, а номер страницы восстановлен из
+    // хранилища. Тянем весь объём одним запросом — иначе человек увидел бы
+    // середину списка без всего, что над ней.
+    const isRestoring =
+      isListMode && currentPage > 1 && accumulatedItemsRef.current.length === 0;
+
     const params = {
-      page: currentPage,
-      pageSize: itemsPerPage,
+      page: isRestoring ? 1 : currentPage,
+      pageSize: isRestoring ? itemsPerPage * currentPage : itemsPerPage,
       name: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
       includeAllStates: shouldInclude ? true : undefined,
@@ -1172,6 +1184,11 @@ const CreditPage = () => {
       accumulatedItemsRef.current = next;
       setAccumulatedItems(next);
       setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
+
+      if (isRestoring && !restoredRef.current) {
+        restoredRef.current = true;
+        restoreScroll(SCROLL_KEY);
+      }
     }
     if (!signal.aborted) {
       setIsLoadingMore(false);
@@ -1212,10 +1229,17 @@ const CreditPage = () => {
 
   // Сброс накопленного списка при смене фильтров/режима
   useEffect(() => {
+    if (!filtersSettledRef.current) {
+      filtersSettledRef.current = true;
+      return;
+    }
+
     accumulatedItemsRef.current = [];
     setAccumulatedItems([]);
     setHasMore(true);
     if (isListMode) {
+      // Отбор изменился — прежнее место в списке потеряло смысл.
+      forgetScroll(SCROLL_KEY);
       setCurrentPage(1);
     }
   }, [
