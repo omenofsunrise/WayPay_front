@@ -18,6 +18,7 @@ import CustomInput from "../../components/ui/fields/CustomInput";
 import CustomCalendar from "../../components/ui/fields/CustomCalendar";
 import InvestorSelect from "../../components/ui/fields/InvestorSelect";
 import ObjectTypeSelect from "../../components/ui/fields/ObjectTypeSelect";
+import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import NewPaymentModal from "../../components/modal/NewPaymentModal";
 import ViewCreditModal from "../../components/modal/ViewCreditModal";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
@@ -180,6 +181,18 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
 
   const isFirstRender = useRef(true);
 
+  // Сортировка фильтром не считается: сбрасывать порядок столбцов вместе с
+  // отбором никто не ждёт.
+  const hasActiveFilters = Boolean(
+    clientNameFilter ||
+      investorFilter ||
+      selectedEntity ||
+      tableObjectTypeName ||
+      selectedTableObjectType ||
+      dateFromFilter ||
+      dateToFilter
+  );
+
   const resetPage = useCallback(() => {
     setCurrentPage(1);
     if (isListMode) {
@@ -188,6 +201,26 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
       setHasMore(true);
     }
   }, [isListMode]);
+
+  const resetFilters = useCallback(() => {
+    setClientNameFilter("");
+    setInvestorFilter("");
+    setSelectedEntity(null);
+    setTableObjectTypeName("");
+    setSelectedTableObjectType(null);
+    setDateFromFilter("");
+    setDateToFilter("");
+    resetPage();
+  }, [
+    setClientNameFilter,
+    setInvestorFilter,
+    setSelectedEntity,
+    setTableObjectTypeName,
+    setSelectedTableObjectType,
+    setDateFromFilter,
+    setDateToFilter,
+    resetPage,
+  ]);
 
   const displayedSchedules = isListMode
     ? accumulatedItems
@@ -768,6 +801,16 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
                 onChange={handleDateToChange}
               />
             </DateInputWrapper>
+            <ResetWrapper>
+              <DarkCyanButton
+                type="button"
+                style={{ margin: 0, height: 40, fontSize: 14 }}
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+              >
+                Сброс по фильтрам
+              </DarkCyanButton>
+            </ResetWrapper>
           </FilterFieldItem>
         </FilterField>
       </FilterContainer>
@@ -964,6 +1007,12 @@ const InputWrapper = styled.div`
 const DateInputWrapper = styled.div`
   flex: 1;
   min-width: 180px;
+`;
+
+const ResetWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 `;
 
 const NotifyCell = styled.div`
