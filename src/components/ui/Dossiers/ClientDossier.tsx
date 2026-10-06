@@ -705,6 +705,7 @@ interface ClientDossierProps {
     docIssueDate: Date | null;
     docIssueYear: number;
     registrationAddress: string | null;
+    actualAddress?: string | null;
     hasPassportPhoto?: boolean;
     hasSecondPassportPhoto?: boolean;
     contacts?: ClientContact[];
@@ -1390,6 +1391,10 @@ const ClientDossier: React.FC<ClientDossierProps> = ({
             <InfoItem>
               <InfoLabel>Адрес регистрации</InfoLabel>
               <InfoValue>{client.registrationAddress || 'Не указан'}</InfoValue>
+            </InfoItem>
+            <InfoItem>
+              <InfoLabel>Фактический адрес</InfoLabel>
+              <InfoValue>{client.actualAddress || 'Не указан'}</InfoValue>
             </InfoItem>
             <InfoItem>
               <InfoLabel>Серия и номер</InfoLabel>
