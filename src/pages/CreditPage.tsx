@@ -58,6 +58,7 @@ import {
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
 import { useUiSettings } from "../utils/uiSettings";
+import usePersistedState from "../hooks/usePersistedState";
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 
@@ -185,7 +186,13 @@ const CreditPage = () => {
   const [contractNumber, setContractNumber] = useState(
     () => savedFilters?.contractNumber ?? ""
   );
-  const [currentPage, setCurrentPage] = useState(1);
+  // Номер страницы переживает уход в другой раздел: человек долистал до
+  // нужного платежа, отошёл свериться и вернулся — возвращать его в начало
+  // выдачи незачем. Смена любого фильтра по-прежнему сбрасывает на первую.
+  const [currentPage, setCurrentPage] = usePersistedState(
+    "creditsFilters.page",
+    1
+  );
   const [investorName, setInvestorName] = useState(
     () => savedFilters?.investorName ?? ""
   );
@@ -295,6 +302,24 @@ const CreditPage = () => {
     acceptCredit,
     acceptCredits,
   } = useCredit();
+
+  // В режиме списка номер страницы означает глубину подгрузки, а не место в
+  // выдаче: восстановить его в отрыве от накопленных строк нельзя — человек
+  // увидел бы середину списка без всего, что над ней. Там начинаем сначала.
+  useEffect(() => {
+    if (isListMode) setCurrentPage(1);
+  }, [isListMode, setCurrentPage]);
+
+  // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
+  // платежи закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
+  useEffect(() => {
+    if (isListMode) return;
+    const total = creditsData?.totalCount ?? 0;
+    if (!total) return;
+    const pages = Math.ceil(total / itemsPerPage);
+    if (pages > 0 && currentPage > pages) setCurrentPage(1);
+  }, [isListMode, creditsData, itemsPerPage, currentPage, setCurrentPage]);
+
   const rawCredits = isListMode ? accumulatedItems : creditsData?.items ?? [];
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<number[]>([]);

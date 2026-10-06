@@ -146,7 +146,13 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
   const [selectedTableObjectType, setSelectedTableObjectType] =
     usePersistedState<SelectedObjectType | null>(`${store}.objectType`, null);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  // Номер страницы переживает уход в другой раздел: человек долистал до
+  // нужного платежа, отошёл свериться и вернулся — возвращать его в начало
+  // выдачи незачем. Смена любого фильтра по-прежнему сбрасывает на первую.
+  const [currentPage, setCurrentPage] = usePersistedState(
+    `${store}.page`,
+    1
+  );
   // По умолчанию сортируем по дате платежа, от ближайшей: в графике это
   // первое, что ищут глазами. Ключ хранения сменён намеренно — у тех, кто
   // уже открывал страницу, лежит старое значение без сортировки, и без
@@ -221,6 +227,24 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     setDateToFilter,
     resetPage,
   ]);
+
+
+  // В режиме списка номер страницы означает глубину подгрузки, а не место в
+  // выдаче: восстановить его в отрыве от накопленных строк нельзя — человек
+  // увидел бы середину списка без всего, что над ней. Там начинаем сначала.
+  useEffect(() => {
+    if (isListMode) setCurrentPage(1);
+  }, [isListMode, setCurrentPage]);
+
+  // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
+  // платежи закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
+  useEffect(() => {
+    if (isListMode) return;
+    const total = scheduleData?.totalCount ?? 0;
+    if (!total) return;
+    const pages = Math.ceil(total / pageSize);
+    if (pages > 0 && currentPage > pages) setCurrentPage(1);
+  }, [isListMode, scheduleData, pageSize, currentPage, setCurrentPage]);
 
   const displayedSchedules = isListMode
     ? accumulatedItems

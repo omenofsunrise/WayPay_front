@@ -47,13 +47,18 @@ const formatPaymentType = (payment: Payment): string => {
 
 const PaymentPage = () => {
   // Фильтры переживают уход со страницы: при переключении разделов
-  // набранное больше не сбрасывается. Номер страницы намеренно не
-  // сохраняется — возвращаться на 7-ю страницу выдачи никто не ждёт.
+  // набранное больше не сбрасывается.
   const [fullnameFilter, setFullnameFilter] = usePersistedState(
     "paymentsJournal.fullname",
     ""
   );
-  const [currentPage, setCurrentPage] = useState(1);
+  // Номер страницы переживает уход в другой раздел: человек долистал до
+  // нужного платежа, отошёл свериться и вернулся — возвращать его в начало
+  // выдачи незачем. Смена любого фильтра по-прежнему сбрасывает на первую.
+  const [currentPage, setCurrentPage] = usePersistedState(
+    "paymentsJournal.page",
+    1
+  );
   const [sortConfig, setSortConfig] = usePersistedState<{
     key: number | null;
     direction: "asc" | "desc";
@@ -294,6 +299,17 @@ const PaymentPage = () => {
     loadPayments,
     isPageSizeReady,
   ]);
+
+
+  // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
+  // платежи закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
+  useEffect(() => {
+    if (false) return;
+    const total = paymentsData?.totalCount ?? 0;
+    if (!total) return;
+    const pages = Math.ceil(total / itemsPerPage);
+    if (pages > 0 && currentPage > pages) setCurrentPage(1);
+  }, [paymentsData, itemsPerPage, currentPage, setCurrentPage]);
 
   const handleFilterChange = (value: string) => {
     setFullnameFilter(value);
