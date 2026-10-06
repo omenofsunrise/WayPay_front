@@ -194,6 +194,9 @@ const ClientSelectModal = ({
           : undefined,
         docIssueYear: clientData.docIssueYear || 0,
         registrationAddress: clientData.registrationAddress || "",
+        // Форма его заполняет, а сюда он не доезжал: при создании клиента из
+        // окна выбора фактический адрес терялся по дороге к серверу.
+        actualAddress: clientData.actualAddress || "",
         secondPhone: clientData.secondPhone || "",
         creditIds: null,
         creditRestTerms: null,
