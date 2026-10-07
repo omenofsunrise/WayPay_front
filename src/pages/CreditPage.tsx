@@ -154,6 +154,8 @@ const CreditPage = () => {
   const colors = {
     primary: "#007D88",
   };
+  // Сервер отвергает запрос с pageSize больше сотни.
+  const MAX_PAGE_SIZE = 100;
   const FILTERS_STORAGE_KEY = "creditsFilters";
   const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const savedFilters = useMemo(() => {
@@ -1139,14 +1141,14 @@ const CreditPage = () => {
     const shouldInclude = includeAllStates;
 
     // Возврат в список: строк в памяти нет, а номер страницы восстановлен из
-    // хранилища. Тянем весь объём одним запросом — иначе человек увидел бы
+    // хранилища. Накопленное надо поднять целиком, иначе человек увидел бы
     // середину списка без всего, что над ней.
     const isRestoring =
       isListMode && currentPage > 1 && accumulatedItemsRef.current.length === 0;
 
     const params = {
-      page: isRestoring ? 1 : currentPage,
-      pageSize: isRestoring ? itemsPerPage * currentPage : itemsPerPage,
+      page: currentPage,
+      pageSize: itemsPerPage,
       name: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
       includeAllStates: shouldInclude ? true : undefined,
@@ -1169,6 +1171,49 @@ const CreditPage = () => {
       ...filters,
     };
 
+    if (isRestoring) {
+      // Сервер не отдаёт больше сотни строк за раз, поэтому поднимаем
+      // накопленное несколькими запросами подряд.
+      const needed = itemsPerPage * currentPage;
+      const chunk = Math.min(MAX_PAGE_SIZE, Math.max(itemsPerPage, 1));
+      const collected: Credit[] = [];
+      let total = 0;
+
+      for (let part = 1; collected.length < needed; part++) {
+        const portion = await getCredits(
+          { ...params, page: part, pageSize: chunk },
+          signal
+        );
+        if (!portion || signal.aborted) break;
+
+        const items = portion.items || [];
+        collected.push(...items);
+        total = portion.totalCount || 0;
+
+        if (items.length < chunk) break;
+      }
+
+      if (!signal.aborted) {
+        const seenIds = new Set<number>();
+        const restored = collected.filter((c) => {
+          if (seenIds.has(c.id)) return false;
+          seenIds.add(c.id);
+          return true;
+        });
+
+        accumulatedItemsRef.current = restored;
+        setAccumulatedItems(restored);
+        setHasMore(restored.length < total && restored.length > 0);
+        setIsLoadingMore(false);
+
+        if (!restoredRef.current) {
+          restoredRef.current = true;
+          restoreScroll(SCROLL_KEY);
+        }
+      }
+      return;
+    }
+
     const result = await getCredits(params, signal);
 
     if (isListMode && result && !signal.aborted) {
@@ -1184,11 +1229,6 @@ const CreditPage = () => {
       accumulatedItemsRef.current = next;
       setAccumulatedItems(next);
       setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
-
-      if (isRestoring && !restoredRef.current) {
-        restoredRef.current = true;
-        restoreScroll(SCROLL_KEY);
-      }
     }
     if (!signal.aborted) {
       setIsLoadingMore(false);

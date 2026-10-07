@@ -107,6 +107,9 @@ export const GuarantorWhatsAppIcon = () => (
   </svg>
 );
 
+// Сервер отвергает запрос с pageSize больше сотни.
+const MAX_PAGE_SIZE = 100;
+
 const columnToApiSortMap: Record<number, string> = {
   0: "creditid",
   1: "clientname",
@@ -256,14 +259,14 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
 
   const loadSchedules = useCallback(async () => {
     // Возврат в список: строк в памяти нет, а номер страницы восстановлен из
-    // хранилища. Тянем весь объём одним запросом — иначе человек увидел бы
+    // хранилища. Накопленное надо поднять целиком, иначе человек увидел бы
     // середину списка без всего, что над ней.
     const isRestoring =
       isListMode && currentPage > 1 && accumulatedItemsRef.current.length === 0;
 
     const params: ScheduleParams = {
-      page: isRestoring ? 1 : currentPage,
-      pageSize: isRestoring ? pageSize * currentPage : pageSize,
+      page: currentPage,
+      pageSize: pageSize,
       clientName: clientNameFilter || undefined,
       dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
       dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
@@ -284,6 +287,44 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
       params.sortDirection = sortConfig.direction;
     }
 
+    if (isRestoring) {
+      // Сервер не отдаёт больше сотни строк за раз, поэтому поднимаем
+      // накопленное несколькими запросами подряд.
+      const needed = pageSize * currentPage;
+      const chunk = Math.min(MAX_PAGE_SIZE, Math.max(pageSize, 1));
+      const collected: ScheduleDetails[] = [];
+      let total = 0;
+
+      for (let part = 1; collected.length < needed; part++) {
+        const portion = await getList({ ...params, page: part, pageSize: chunk });
+        if (!portion) break;
+
+        const items = portion.items || [];
+        collected.push(...items);
+        total = portion.totalCount || 0;
+
+        if (items.length < chunk) break;
+      }
+
+      const seenIds = new Set<number>();
+      const restored = collected.filter((it) => {
+        if (seenIds.has(it.id)) return false;
+        seenIds.add(it.id);
+        return true;
+      });
+
+      accumulatedItemsRef.current = restored;
+      setAccumulatedItems(restored);
+      setHasMore(restored.length < total && restored.length > 0);
+      setIsLoadingMore(false);
+
+      if (!restoredRef.current) {
+        restoredRef.current = true;
+        restoreScroll(scrollKey);
+      }
+      return;
+    }
+
     const result = await getList(params);
 
     if (isListMode && result) {
@@ -299,11 +340,6 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
       accumulatedItemsRef.current = next;
       setAccumulatedItems(next);
       setHasMore(next.length < (result.totalCount || 0) && items.length > 0);
-
-      if (isRestoring && !restoredRef.current) {
-        restoredRef.current = true;
-        restoreScroll(scrollKey);
-      }
     }
     setIsLoadingMore(false);
   }, [
