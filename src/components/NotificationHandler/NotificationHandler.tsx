@@ -288,7 +288,7 @@ const NotificationHandler: React.FC = () => {
     loadInitialNotifications();
   }, [getMyNotifications]);
 
-  const handleNewNotification = useCallback((message: any) => {
+  const handleNewNotification = useCallback(async (message: any) => {
     console.log(`${message}`);
 
     const showContractCreation = getShowContractCreationNotificationSetting();
@@ -321,7 +321,36 @@ const NotificationHandler: React.FC = () => {
       console.log("📋 Notifications updated:", updated);
       return updated;
     });
-  }, []);
+
+    // Номер уведомления сервер в сообщение сокета не кладёт, поэтому выше
+    // поставлен временный. С ним отметка «прочитано» отвечает 400, уведомление
+    // остаётся непрочитанным и возвращается при каждой загрузке страницы.
+    // Подтягиваем список и подменяем временный номер настоящим.
+    try {
+      const fresh = await getMyNotifications({
+        page: 1,
+        pageSize: 10,
+        sortDirection: "desc",
+      });
+
+      const match = fresh?.items?.find(
+        (item) =>
+          !item.isRead &&
+          item.title === message.Title &&
+          item.message === message.Body
+      );
+
+      if (match) {
+        setNotifications((prev) =>
+          prev.map((notif) =>
+            notif.id === newNotification.id ? { ...notif, id: match.id } : notif
+          )
+        );
+      }
+    } catch (error) {
+      console.error("❌ Не удалось узнать номер уведомления:", error);
+    }
+  }, [getMyNotifications]);
 
   const handleWebSocketError = useCallback((error: Event) => {
     console.error("💥 WebSocket error in component:", error);
@@ -367,8 +396,14 @@ const NotificationHandler: React.FC = () => {
       );
 
       try {
-        await ReadNotification(notification.id);
-        console.log("✅ Уведомление помечено как прочитанное");
+        // Хук гасит ошибку внутри и возвращает null — иначе 400 printed бы как
+        // успех, что и сбивало с толку в логах.
+        const failed = (await ReadNotification(notification.id)) === null;
+        console.log(
+          failed
+            ? "⚠️ Сервер не принял отметку о прочтении"
+            : "✅ Уведомление помечено как прочитанное"
+        );
       } catch (error) {
         console.error(
           "❌ Ошибка при отметке уведомления как прочитанного:",
