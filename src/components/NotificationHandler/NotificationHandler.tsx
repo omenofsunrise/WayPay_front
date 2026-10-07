@@ -345,21 +345,30 @@ const NotificationHandler: React.FC = () => {
     }, 300);
   };
 
+  // «Только что», «минуту назад» считаются прямо при отрисовке, а сама по
+  // себе она не повторяется: время замирало и дёргалось только когда по экрану
+  // водили мышкой. Пока всплывашки на экране, перерисовываем раз в секунду.
+  const [, setTick] = useState(0);
+
   const navigate = useNavigate();
 
   const handleNotificationClick = async (notification: Notification) => {
     console.log("🖱️ Notification clicked:", notification);
 
     if (!notification.isRead) {
+      // Гасим у себя в любом случае: человек уведомление открыл. Отметка на
+      // сервере может не пройти — у пришедших по сокету номер выдуманный,
+      // настоящего сервер в сообщение не кладёт. Но висеть на экране после
+      // нажатия всплывашка не должна.
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === notification.id ? { ...notif, isRead: true } : notif
+        )
+      );
+
       try {
         await ReadNotification(notification.id);
         console.log("✅ Уведомление помечено как прочитанное");
-
-        setNotifications((prev) =>
-          prev.map((notif) =>
-            notif.id === notification.id ? { ...notif, isRead: true } : notif
-          )
-        );
       } catch (error) {
         console.error(
           "❌ Ошибка при отметке уведомления как прочитанного:",
@@ -432,6 +441,14 @@ const NotificationHandler: React.FC = () => {
 
     return true;
   });
+
+  const hasVisible = unreadNotifications.length > 0;
+
+  useEffect(() => {
+    if (!hasVisible) return;
+    const timer = window.setInterval(() => setTick((t) => t + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasVisible]);
 
   return (
     <NotificationsContainer>
