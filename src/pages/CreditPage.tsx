@@ -150,6 +150,47 @@ const SORT_OPTIONS: { key: string | null; label: string }[] = [
   { key: "client", label: "ФИО клиента" },
 ];
 
+type CreditTabFilters = {
+  isFavourite?: boolean;
+  isActive?: boolean;
+  myCredits?: boolean;
+  debt?: boolean;
+  inDebt?: boolean;
+  Terminated?: boolean;
+  objectTypeId?: number;
+};
+
+/**
+ * Фильтр, который задаёт сама вкладка.
+ *
+ * Раньше эта таблица была написана в файле дважды, и обе копии применялись
+ * только по нажатию на вкладку. При заходе по ссылке — например из
+ * уведомления на «В долг» — вкладка выбиралась из адреса, а фильтр оставался
+ * тот, что лежал в хранилище: вкладка показывала одно, список другое.
+ */
+const filtersForTab = (tabId: string): CreditTabFilters => {
+  if (tabId.startsWith("tab-")) {
+    return { objectTypeId: parseInt(tabId.replace("tab-", "")) };
+  }
+
+  switch (tabId) {
+    case "my":
+      return { myCredits: true };
+    case "favourite":
+      return { isFavourite: true };
+    case "archive":
+      return { isActive: false };
+    case "debtors":
+      return { debt: true };
+    case "inDebt":
+      return { inDebt: true };
+    case "terminated":
+      return { Terminated: true };
+    default:
+      return {};
+  }
+};
+
 const CreditPage = () => {
   const colors = {
     primary: "#007D88",
@@ -167,6 +208,10 @@ const CreditPage = () => {
       return null;
     }
   }, []);
+
+  // Заход по ссылке — из уведомления или из закладки. Тогда вкладку задаёт
+  // адрес, и фильтр надо брать от неё, а не из хранилища.
+  const tabFromUrl = Boolean(tab) || location.pathname === "/credits/in-debt";
 
   const initialTab = useMemo(() => {
     if (tab) {
@@ -247,7 +292,9 @@ const CreditPage = () => {
     inDebt?: boolean;
     Terminated?: boolean;
     objectTypeId?: number;
-  }>(() => savedFilters?.filters ?? {});
+  }>(() =>
+    tabFromUrl ? filtersForTab(initialTab) : savedFilters?.filters ?? {}
+  );
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -910,35 +957,7 @@ const CreditPage = () => {
     setClientAddress("");
 
     // Сохраняем только фильтры от текущей вкладки
-    let newFilters = {};
-    if (activeTab.startsWith("tab-")) {
-      const objectTypeId = parseInt(activeTab.replace("tab-", ""));
-      newFilters = { objectTypeId };
-    } else {
-      switch (activeTab) {
-        case "my":
-          newFilters = { myCredits: true };
-          break;
-        case "favourite":
-          newFilters = { isFavourite: true };
-          break;
-        case "archive":
-          newFilters = { isActive: false };
-          break;
-        case "debtors":
-          newFilters = { debt: true };
-          break;
-        case "inDebt":
-          newFilters = { inDebt: true };
-          break;
-        case "terminated":
-          newFilters = { Terminated: true };
-          break;
-        default:
-          newFilters = {};
-          break;
-      }
-    }
+    const newFilters = filtersForTab(activeTab);
 
     setFilters(newFilters);
     setSortConfig({ key: null, direction: "desc" });
@@ -1365,35 +1384,7 @@ const CreditPage = () => {
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
 
-    let newFilters = {};
-    if (tabId.startsWith("tab-")) {
-      const objectTypeId = parseInt(tabId.replace("tab-", ""));
-      newFilters = { objectTypeId };
-    } else {
-      switch (tabId) {
-        case "my":
-          newFilters = { myCredits: true };
-          break;
-        case "favourite":
-          newFilters = { isFavourite: true };
-          break;
-        case "archive":
-          newFilters = { isActive: false };
-          break;
-        case "debtors":
-          newFilters = { debt: true };
-          break;
-        case "inDebt":
-          newFilters = { inDebt: true };
-          break;
-        case "terminated":
-          newFilters = { Terminated: true };
-          break;
-        default:
-          newFilters = {};
-          break;
-      }
-    }
+    const newFilters = filtersForTab(tabId);
 
     setFilters(newFilters);
     setCurrentPage(1);
