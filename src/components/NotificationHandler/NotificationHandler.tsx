@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, type JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useWebSocket } from "../../api/hooks/useWebSocket";
 import { formatRelativeTime } from "../../utils/dateFormatter";
@@ -344,6 +345,8 @@ const NotificationHandler: React.FC = () => {
     }, 300);
   };
 
+  const navigate = useNavigate();
+
   const handleNotificationClick = async (notification: Notification) => {
     console.log("🖱️ Notification clicked:", notification);
 
@@ -374,7 +377,15 @@ const NotificationHandler: React.FC = () => {
           ? notification.route
           : `/${notification.route}`;
       console.log("🔗 Navigating to:", target);
-      window.location.href = target;
+
+      if (isExternal) {
+        window.location.href = target;
+      } else {
+        // Переход внутри приложения, без перезагрузки. Перезагрузка поднимала
+        // непрочитанные заново и показывала только что закрытое уведомление
+        // второй раз.
+        navigate(target);
+      }
     }
 
     removeNotification(notification.id);

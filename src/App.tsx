@@ -402,7 +402,6 @@ function App() {
 
   return (
     <AuthProvider>
-      {!disableNotifications && <NotificationHandler />}
       {showPinModal && (
         <PinCodeModal
           isOpen={true}
@@ -412,6 +411,10 @@ function App() {
         />
       )}
       <BrowserRouter>
+        {/* Внутри роутера: иначе переход по уведомлению пришлось бы делать
+            перезагрузкой страницы, а она заново поднимает непрочитанные и
+            показывает только что закрытое уведомление снова. */}
+        {!disableNotifications && <NotificationHandler />}
         <TaskCountProvider>
           <ClientFeedbackProvider>
             {authInfo?.type === "payment_place" ||
