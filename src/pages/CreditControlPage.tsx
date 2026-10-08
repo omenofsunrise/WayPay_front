@@ -40,6 +40,12 @@ import type { PaymentTab } from "../api/types/payment";
 import PaymentConfirmationGenerator from "../utils/doxcUtils/paymentConfirmationGenerator";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
 import { useUiSettings } from "../utils/uiSettings";
+import usePersistedState from "../hooks/usePersistedState";
+import {
+  useScrollMemory,
+  restoreScroll,
+  forgetScroll,
+} from "../utils/listPosition";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 
 interface EmptyStarIconProps {
@@ -50,6 +56,13 @@ const CreditControlPage = () => {
   const colors = {
     primary: "#007D88",
   };
+  // Сервер отвергает запрос с pageSize больше сотни.
+  const MAX_PAGE_SIZE = 100;
+  const SCROLL_KEY = "creditControlFilters.list.scroll";
+  // Сброс накопленного срабатывает и при открытии страницы, где ничего не
+  // менялось. Первый прогон пропускаем, иначе он затирал бы восстановленное.
+  const filtersSettledRef = useRef(false);
+  const restoredRef = useRef(false);
   const FILTERS_STORAGE_KEY = "creditControlFilters";
 
   const savedFilters = useMemo(() => {
@@ -88,7 +101,13 @@ const CreditControlPage = () => {
   const [contractNumber, setContractNumber] = useState(
     () => savedFilters?.contractNumber ?? ""
   );
-  const [currentPage, setCurrentPage] = useState(1);
+  // Номер страницы переживает уход в другой раздел: человек долистал до
+  // нужного договора, отошёл свериться и вернулся — возвращать его в начало
+  // выдачи незачем. Смена любого фильтра по-прежнему сбрасывает на первую.
+  const [currentPage, setCurrentPage] = usePersistedState(
+    "creditControlFilters.page",
+    1
+  );
   const [investorName, setInvestorName] = useState(
     () => savedFilters?.investorName ?? ""
   );
@@ -212,6 +231,16 @@ const CreditControlPage = () => {
   // Клиентскую дофильтрацию по terminated/isActive убрали: иначе список мог
   // расходиться с тем, что реально вернул бэк (и приводить к неожиданным
   // последствиям).
+  // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
+  // договоры закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
+  useEffect(() => {
+    if (isListMode) return;
+    const total = creditsData?.totalCount ?? 0;
+    if (!total) return;
+    const pages = Math.ceil(total / itemsPerPage);
+    if (pages > 0 && currentPage > pages) setCurrentPage(1);
+  }, [isListMode, creditsData, itemsPerPage, currentPage, setCurrentPage]);
+
   const displayedCredits = useMemo(() => {
     return isListMode ? accumulatedItems : creditsData?.items ?? [];
   }, [isListMode, accumulatedItems, creditsData?.items]);
@@ -509,6 +538,8 @@ const CreditControlPage = () => {
     ]
   );
 
+  useScrollMemory(SCROLL_KEY, isListMode);
+
   const loadCredits = useCallback(async () => {
     if (!isPageSizeReady) return;
 
@@ -523,6 +554,54 @@ const CreditControlPage = () => {
     const signal = controller.signal;
 
     const params = buildCreditParams(currentPage, itemsPerPage);
+
+    // Возврат в список: строк в памяти нет, а номер страницы восстановлен из
+    // хранилища. Накопленное поднимаем целиком, иначе человек увидел бы
+    // середину списка без всего, что над ней. Запросами по сотне — больше
+    // сервер за раз не отдаёт.
+    const isRestoring =
+      isListMode && currentPage > 1 && accumulatedItemsRef.current.length === 0;
+
+    if (isRestoring) {
+      const needed = itemsPerPage * currentPage;
+      const chunk = Math.min(MAX_PAGE_SIZE, Math.max(itemsPerPage, 1));
+      const collected: Credit[] = [];
+      let total = 0;
+
+      for (let part = 1; collected.length < needed; part++) {
+        const portion = await getCredits(
+          buildCreditParams(part, chunk),
+          signal
+        );
+        if (!portion || signal.aborted) break;
+
+        const items = portion.items || [];
+        collected.push(...items);
+        total = portion.totalCount || 0;
+
+        if (items.length < chunk) break;
+      }
+
+      if (!signal.aborted) {
+        const seenIds = new Set<number>();
+        const restored = collected.filter((c) => {
+          if (seenIds.has(c.id)) return false;
+          seenIds.add(c.id);
+          return true;
+        });
+
+        accumulatedItemsRef.current = restored;
+        setAccumulatedItems(restored);
+        setHasMore(restored.length < total && restored.length > 0);
+        setIsLoadingMore(false);
+
+        if (!restoredRef.current) {
+          restoredRef.current = true;
+          restoreScroll(SCROLL_KEY);
+        }
+      }
+      return;
+    }
 
     const result = await getCredits(params, signal);
 
@@ -562,10 +641,17 @@ const CreditControlPage = () => {
 
   // Сброс накопленного списка при смене фильтров/режима
   useEffect(() => {
+    if (!filtersSettledRef.current) {
+      filtersSettledRef.current = true;
+      return;
+    }
+
     accumulatedItemsRef.current = [];
     setAccumulatedItems([]);
     setHasMore(true);
     if (isListMode) {
+      // Отбор изменился — прежнее место в списке потеряло смысл.
+      forgetScroll(SCROLL_KEY);
       setCurrentPage(1);
     }
   }, [
