@@ -10,6 +10,21 @@ import {
 import type { PaginatedResponse } from '../types/common';
 import clientService from '../services/clientService';
 
+/** Достаёт из отказа текст, который написал сервер. */
+const serverMessage = (err: unknown): string => {
+  const response = (err as { response?: { data?: unknown } })?.response;
+  const data = response?.data;
+
+  if (typeof data === 'string' && data.trim()) return data;
+  if (data && typeof data === 'object') {
+    const named = data as { message?: string; title?: string; Error?: string };
+    const text = named.message || named.title || named.Error;
+    if (text) return text;
+  }
+
+  return err instanceof Error ? err.message : 'Не удалось сохранить клиента';
+};
+
 const useClient = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +76,13 @@ const useClient = () => {
       const createdClient = await clientService.createClient(client);
       return createdClient;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
+      // Отказ сервера нельзя гасить молча: вызывающий принимал null за успех,
+      // окно закрывалось, а клиент не создавался. Текст берём из ответа —
+      // сервер объясняет причину человеческим языком, например что номер уже
+      // занят. Без этого осталось бы «Request failed with status code 409».
+      const message = serverMessage(err);
+      setError(message);
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
