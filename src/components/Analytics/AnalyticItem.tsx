@@ -31,8 +31,12 @@ const IconContainer = styled.div<{ $iconColor?: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 60px;
   width: 60px;
   height: 60px;
+  min-width: 60px;
+  min-height: 60px;
+  aspect-ratio: 1;
   border-radius: 50%;
   background-color: ${({ $iconColor }) => $iconColor || '#000'};
   transition: background-color 0.3s ease;
