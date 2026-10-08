@@ -240,8 +240,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="22"
-                height="17"
+                width="26"
+                height="20"
                 viewBox="0 0 22 17"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -345,8 +345,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="61"
-                height="60"
+                width="26"
+                height="26"
                 viewBox="0 0 61 60"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -379,8 +379,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="25"
-                height="25"
+                width="26"
+                height="26"
                 viewBox="0 0 25 25"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -400,8 +400,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="22"
-                height="21"
+                width="26"
+                height="25"
                 viewBox="0 0 22 21"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -421,8 +421,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="60"
-                height="60"
+                width="26"
+                height="26"
                 viewBox="0 0 60 60"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
