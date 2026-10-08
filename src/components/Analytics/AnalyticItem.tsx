@@ -21,10 +21,11 @@ const fadeIn = keyframes`
 `;
 
 const Container = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
   align-items: flex-start;
   gap: 16px;
-  width: auto;
+  width: 100%;
   min-width: 0;
 `;
 
@@ -46,7 +47,7 @@ const IconContainer = styled.div<{ $iconColor?: string }>`
 const Content = styled.div`
   display: flex;
   flex-direction: column;
-  flex: 1;
+  width: 100%;
   min-width: 0;
   text-align: left;
   max-width: 200px;
@@ -58,6 +59,7 @@ const Label = styled.span`
   line-height: 18px;
   white-space: normal;
   overflow-wrap: anywhere;
+  min-height: 36px;
   font-weight: 500;
   max-width: 200px;
   transition: color 0.3s ease;
