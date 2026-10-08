@@ -207,7 +207,12 @@ const ClientSelectModal = ({
       return true;
     } catch (error) {
       console.error("Error creating client:", error);
-      return false;
+      // Отказ пробрасываем в форму: она покажет причину и останется открытой
+      // с набранным. Возврат false оставлял человека без объяснения — окно
+      // просто не закрывалось, и выглядело это как поломка.
+      throw error instanceof Error
+        ? error
+        : new Error("Не удалось сохранить клиента");
     }
   };
 
