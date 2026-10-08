@@ -294,7 +294,7 @@ const AnalyticsPage = () => {
                 />
               </svg>
             }
-            iconColor="rgba(50, 186, 143, 0.3)"
+            iconColor="rgba(194, 234, 221, 1)"
             label="Фактически"
             value={formatNumber(analyticData?.currentCash)}
             changeValue={analyticData?.currentCashDiffrence}
@@ -315,7 +315,7 @@ const AnalyticsPage = () => {
                 />
               </svg>
             }
-            iconColor="rgba(255, 142, 66, 0.3)"
+            iconColor="rgba(255, 221, 198, 1)"
             label="Неподтверждённых договоров"
             value={formatNumber(analyticData?.unconfirmedCredits)}
             changeValue={analyticData?.unconfirmedCreditsDiffrence}
@@ -336,7 +336,7 @@ const AnalyticsPage = () => {
                 />
               </svg>
             }
-            iconColor="rgba(255, 142, 66, 0.3)"
+            iconColor="rgba(255, 221, 198, 1)"
             label="Неподтверждённых платежей"
             value={formatNumber(analyticData?.unconfirmedPayments)}
             changeValue={analyticData?.unconfirmedPaymentsDiffrence}
