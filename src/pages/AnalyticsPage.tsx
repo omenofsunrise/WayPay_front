@@ -240,8 +240,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="22"
-                height="17"
+                width="26"
+                height="20"
                 viewBox="0 0 22 17"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -294,7 +294,7 @@ const AnalyticsPage = () => {
                 />
               </svg>
             }
-            iconColor="rgba(50, 186, 143, 0.3)"
+            iconColor="rgba(194, 234, 221, 1)"
             label="Фактически"
             value={formatNumber(analyticData?.currentCash)}
             changeValue={analyticData?.currentCashDiffrence}
@@ -315,7 +315,7 @@ const AnalyticsPage = () => {
                 />
               </svg>
             }
-            iconColor="rgba(255, 142, 66, 0.3)"
+            iconColor="rgba(255, 221, 198, 1)"
             label="Неподтверждённых договоров"
             value={formatNumber(analyticData?.unconfirmedCredits)}
             changeValue={analyticData?.unconfirmedCreditsDiffrence}
@@ -336,7 +336,7 @@ const AnalyticsPage = () => {
                 />
               </svg>
             }
-            iconColor="rgba(255, 142, 66, 0.3)"
+            iconColor="rgba(255, 221, 198, 1)"
             label="Неподтверждённых платежей"
             value={formatNumber(analyticData?.unconfirmedPayments)}
             changeValue={analyticData?.unconfirmedPaymentsDiffrence}
@@ -345,8 +345,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="61"
-                height="60"
+                width="26"
+                height="26"
                 viewBox="0 0 61 60"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -379,8 +379,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="25"
-                height="25"
+                width="26"
+                height="26"
                 viewBox="0 0 25 25"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -400,8 +400,8 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="22"
-                height="21"
+                width="26"
+                height="25"
                 viewBox="0 0 22 21"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -421,13 +421,12 @@ const AnalyticsPage = () => {
           <AnalyticItem
             icon={
               <svg
-                width="60"
-                height="60"
+                width="26"
+                height="26"
                 viewBox="0 0 60 60"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <circle cx="30" cy="30" r="30" fill="#FFE8A0" />
                 <path
                   d="M40.1812 20.595L36.03 16.5C35.6976 16.1498 35.2983 15.8698 34.8558 15.6765C34.4133 15.4833 33.9366 15.3808 33.4537 15.375H22.395C21.4292 15.378 20.5038 15.7629 19.8209 16.4459C19.1379 17.1288 18.753 18.0542 18.75 19.02V40.98C18.753 41.9458 19.1379 42.8712 19.8209 43.5541C20.5038 44.2371 21.4292 44.622 22.395 44.625H37.605C38.5708 44.622 39.4962 44.2371 40.1791 43.5541C40.8621 42.8712 41.247 41.9458 41.25 40.98V23.1713C41.2515 22.6924 41.1579 22.2181 40.9744 21.7758C40.7909 21.3335 40.5213 20.9321 40.1812 20.595ZM38.5387 22.125H34.5V18.0862L38.5387 22.125ZM39 40.98C38.9971 41.3491 38.8491 41.7022 38.5882 41.9632C38.3272 42.2241 37.9741 42.3721 37.605 42.375H22.395C22.0259 42.3721 21.6728 42.2241 21.4118 41.9632C21.1509 41.7022 21.0029 41.3491 21 40.98V19.02C21.0029 18.6509 21.1509 18.2978 21.4118 18.0368C21.6728 17.7759 22.0259 17.6279 22.395 17.625H32.25V23.25C32.25 23.5484 32.3685 23.8345 32.5795 24.0455C32.7905 24.2565 33.0766 24.375 33.375 24.375H39V40.98Z"
                   fill="#ED8C2F"
@@ -442,7 +441,7 @@ const AnalyticsPage = () => {
                 />
               </svg>
             }
-            iconColor="rgba(153, 203, 207, 1)"
+            iconColor="#FFE8A0"
             label="Закрытые договоры за период"
             value={formatNumber(analyticData?.closedCreditsPerPeriod)}
             changeValue={analyticData?.closedCreditsPerPeriodDiffrence}

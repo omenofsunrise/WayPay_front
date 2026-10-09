@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
-import CustomTitle from "../../components/ui/Text/CustomTitle";
-import ModalInfoTitle from "../../components/ui/Text/ModalInfoTitle";
 import CustomInput from "../../components/ui/fields/CustomInput";
 import GrayButton from "../../components/ui/Buttons/GrayButton";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
@@ -245,144 +243,137 @@ const CompanyPage = () => {
   };
 
   if (isLoading && !company) {
-    return <PageLayout>Загрузка...</PageLayout>;
+    return <CompanyPageLayout>Загрузка...</CompanyPageLayout>;
   }
 
   if (error) {
-    return <PageLayout>Ошибка: {error}</PageLayout>;
+    return <CompanyPageLayout>Ошибка: {error}</CompanyPageLayout>;
   }
 
   return (
-    <PageLayout>
-      <HeaderWrapper>
-        <TitleWrapper>
-          <CustomTitle style={{ marginTop: 0 }}>Данные о компании</CustomTitle>
-          <ModalInfoTitle>Сведения о компании</ModalInfoTitle>
-        </TitleWrapper>
+    <CompanyPageLayout>
+      <PageHeading>
+        <h1>Данные о компании</h1>
+        <p>Основные сведения, которые используются при оформлении договоров.</p>
+      </PageHeading>
 
-        <LogoContainer>
-          <LogoPreview
-            $hasLogo={!!previewUrl}
-            onClick={handleLogoClick}
-            onContextMenu={handleLogoClick}
-            title={
-              previewUrl
-                ? "Нажмите для замены логотипа"
-                : "Нажмите для загрузки логотипа"
-            }
-          >
-            {previewUrl ? (
-              <>
-                <LogoImage src={previewUrl} alt="Логотип компании" />
-                <EditOverlay>
-                  <EditIconSvg />
-                </EditOverlay>
-              </>
-            ) : (
-              <CameraIconSvg />
-            )}
-          </LogoPreview>
+      <CompanyCard>
+        <CardHeader>
+          <CardTitle>
+            <h2>Основная информация</h2>
+            <p>Проверьте реквизиты и контактные данные вашей компании.</p>
+          </CardTitle>
 
-          <input
-            type="file"
-            onChange={handleFileChange}
-            accept="image/*"
-            style={{ display: "none" }}
-            id="logo-upload"
-            disabled={isUploading}
-          />
-        </LogoContainer>
-      </HeaderWrapper>
+          <LogoContainer>
+            <LogoPreview
+              $hasLogo={!!previewUrl}
+              onClick={handleLogoClick}
+              onContextMenu={handleLogoClick}
+              title={
+                previewUrl
+                  ? "Нажмите для замены логотипа"
+                  : "Нажмите для загрузки логотипа"
+              }
+            >
+              {previewUrl ? (
+                <>
+                  <LogoImage src={previewUrl} alt="Логотип компании" />
+                  <EditOverlay>
+                    <EditIconSvg />
+                  </EditOverlay>
+                </>
+              ) : (
+                <CameraIconSvg />
+              )}
+            </LogoPreview>
 
-      <ContentGrid>
-        <FormSection>
-          <InputContainer>
-            <InputGroup>
-              <Label>Название организации</Label>
-              <CustomInput
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-              />
-            </InputGroup>
-            <InputGroup>
-              <Label>Учредитель</Label>
-              <CustomInput
-                name="chief"
-                inputType="fullname"
-                value={formData.chief}
-                onChange={handleInputChange}
-              />
-            </InputGroup>
-          </InputContainer>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              accept="image/*"
+              style={{ display: "none" }}
+              id="logo-upload"
+              disabled={isUploading}
+            />
+          </LogoContainer>
+        </CardHeader>
 
-          <InputContainer>
-            <InputGroup>
-              <Label>Населённый пункт</Label>
-              <CustomInput
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-              />
-            </InputGroup>
-            <InputGroup>
-              <Label>Адрес офиса</Label>
-              <CustomInput
-                name="officeAddress"
-                value={formData.officeAddress}
-                onChange={handleInputChange}
-              />
-            </InputGroup>
-          </InputContainer>
+        <FormGrid>
+          <InputGroup>
+            <Label>Название организации</Label>
+            <CustomInput
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+          <InputGroup>
+            <Label>Учредитель</Label>
+            <CustomInput
+              name="chief"
+              inputType="fullname"
+              value={formData.chief}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+          <InputGroup>
+            <Label>Населённый пункт</Label>
+            <CustomInput
+              name="city"
+              value={formData.city}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+          <InputGroup>
+            <Label>Адрес офиса</Label>
+            <CustomInput
+              name="officeAddress"
+              value={formData.officeAddress}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+          <InputGroup>
+            <Label>Email</Label>
+            <CustomInput
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+          <InputGroup>
+            <Label>Телефон</Label>
+            <PhoneModalInput
+              name="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+          <InputGroup $wide>
+            <Label>Телефон поддержки</Label>
+            <PhoneModalInput
+              name="supportPhone"
+              value={formData.supportPhone}
+              onChange={handleInputChange}
+            />
+          </InputGroup>
+        </FormGrid>
 
-          <InputContainer>
-            <InputGroup>
-              <Label>Email</Label>
-              <CustomInput
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-              />
-            </InputGroup>
-          </InputContainer>
-
-          <InputContainer>
-            <InputGroup>
-              <Label>Телефон</Label>
-              <PhoneModalInput
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-              />
-            </InputGroup>
-            <InputGroup>
-              <Label>Телефон поддержки</Label>
-              <PhoneModalInput
-                name="supportPhone"
-                value={formData.supportPhone}
-                onChange={handleInputChange}
-              />
-            </InputGroup>
-          </InputContainer>
-
+        <CardFooter>
+          <Disclaimer>
+            Все данные используются только для автоматического оформления
+            договора займа и не передаются третьим лицам.
+          </Disclaimer>
           <ButtonsContainer>
             <GrayButton width="120px" onClick={handleReset}>
               Сбросить
             </GrayButton>
             <DarkCyanButton onClick={handleSave} disabled={isLoading}>
-              Сохранить
+              Сохранить изменения
             </DarkCyanButton>
           </ButtonsContainer>
-        </FormSection>
-      </ContentGrid>
-
-      <FooterContainer>
-        <Disclaimer>
-          *Все данные компании используются только для автоматического
-          оформления договора займа и не передаются третьим лицам.
-        </Disclaimer>
-      </FooterContainer>
+        </CardFooter>
+      </CompanyCard>
 
       {showContextMenu && (
         <>
@@ -413,24 +404,73 @@ const CompanyPage = () => {
           </Toast>
         ))}
       </ToastContainer>
-    </PageLayout>
+    </CompanyPageLayout>
   );
 };
 
 // ─── Styled components ─────────────────────────────────────────────────────────
 
-const HeaderWrapper = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
-  margin-bottom: 24px;
+const CompanyPageLayout = styled(PageLayout)`
   gap: 24px;
+  padding-bottom: 36px;
 `;
 
-const TitleWrapper = styled.div`
-  flex: 1;
+const PageHeading = styled.header`
+  h1 {
+    margin: 0 0 6px;
+    color: #172033;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  p {
+    margin: 0;
+    color: #718096;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+`;
+
+const CompanyCard = styled.section`
+  width: 100%;
+  padding: 28px 32px 0;
+  border: 1px solid #e5eaef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(28, 48, 74, 0.05);
+  box-sizing: border-box;
+
+  @media (max-width: 720px) {
+    padding: 22px 18px 0;
+  }
+`;
+
+const CardHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+`;
+
+const CardTitle = styled.div`
   min-width: 0;
+
+  h2 {
+    margin: 0 0 5px;
+    color: #172033;
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  p {
+    margin: 0;
+    color: #7a8799;
+    font-size: 13px;
+    line-height: 1.5;
+  }
 `;
 
 const LogoContainer = styled.div`
@@ -438,21 +478,22 @@ const LogoContainer = styled.div`
 `;
 
 const LogoPreview = styled.div<{ $hasLogo: boolean }>`
-  width: 120px;
-  height: 120px;
-  border-radius: 8px;
-  background-color: ${(p) => (p.$hasLogo ? "transparent" : "#f5f5f5")};
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  background-color: ${(p) => (p.$hasLogo ? "transparent" : "#f6f8fa")};
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px dashed ${(p) => (p.$hasLogo ? "transparent" : "#ccc")};
+  border: 1px dashed ${(p) => (p.$hasLogo ? "#dce4ea" : "#cbd5df")};
   position: relative;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
     border-color: #007d88;
+    background-color: ${(p) => (p.$hasLogo ? "transparent" : "#f0f8f8")};
   }
 
   &:hover > div:last-child {
@@ -463,7 +504,7 @@ const LogoPreview = styled.div<{ $hasLogo: boolean }>`
 const LogoImage = styled.img`
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 `;
 
 const EditOverlay = styled.div`
@@ -477,54 +518,93 @@ const EditOverlay = styled.div`
   transition: opacity 0.2s ease;
 `;
 
-const ContentGrid = styled.div`
+const FormGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
   width: 100%;
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
-const FormSection = styled.div`
+const InputGroup = styled.div<{ $wide?: boolean }>`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-`;
+  grid-column: ${(p) => (p.$wide ? "1 / -1" : "auto")};
+  min-width: 0;
+  gap: 7px;
 
-const InputContainer = styled.div`
-  display: flex;
-  gap: 16px;
-  width: 100%;
-`;
+  input {
+    width: 100%;
+    max-width: none;
+    min-height: 42px;
+    padding: 8px 13px;
+    border-color: #d4dce5;
+    border-radius: 7px;
+    color: #26364d;
+    box-sizing: border-box;
+  }
 
-const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: 6px;
+  @media (max-width: 760px) {
+    grid-column: auto;
+  }
 `;
 
 const Label = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #45566e;
 `;
 
 const ButtonsContainer = styled.div`
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-  margin-top: 16px;
-`;
 
-const FooterContainer = styled.div`
-  margin-top: 24px;
+  button {
+    min-height: 42px;
+    padding: 9px 20px;
+  }
+
+  button:first-child {
+    margin-right: 0;
+    background: #edf0f3;
+    color: #3f4e63;
+  }
 `;
 
 const Disclaimer = styled.p`
-  font-size: 13px;
-  color: #6b7280;
-  max-width: 560px;
-  line-height: 1.5;
+  max-width: 620px;
   margin: 0;
+  color: #7a8799;
+  font-size: 12px;
+  line-height: 1.5;
+`;
+
+const CardFooter = styled.footer`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 28px;
+  padding: 20px 0 24px;
+  border-top: 1px solid #edf0f3;
+
+  @media (max-width: 720px) {
+    align-items: stretch;
+    flex-direction: column;
+
+    ${ButtonsContainer} {
+      justify-content: stretch;
+    }
+
+    ${ButtonsContainer} button {
+      flex: 1;
+    }
+  }
 `;
 
 const ContextMenuBackdrop = styled.div`

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, type JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useWebSocket } from "../../api/hooks/useWebSocket";
 import { formatRelativeTime } from "../../utils/dateFormatter";
@@ -287,7 +288,7 @@ const NotificationHandler: React.FC = () => {
     loadInitialNotifications();
   }, [getMyNotifications]);
 
-  const handleNewNotification = useCallback((message: any) => {
+  const handleNewNotification = useCallback(async (message: any) => {
     console.log(`${message}`);
 
     const showContractCreation = getShowContractCreationNotificationSetting();
@@ -320,7 +321,36 @@ const NotificationHandler: React.FC = () => {
       console.log("📋 Notifications updated:", updated);
       return updated;
     });
-  }, []);
+
+    // Номер уведомления сервер в сообщение сокета не кладёт, поэтому выше
+    // поставлен временный. С ним отметка «прочитано» отвечает 400, уведомление
+    // остаётся непрочитанным и возвращается при каждой загрузке страницы.
+    // Подтягиваем список и подменяем временный номер настоящим.
+    try {
+      const fresh = await getMyNotifications({
+        page: 1,
+        pageSize: 10,
+        sortDirection: "desc",
+      });
+
+      const match = fresh?.items?.find(
+        (item) =>
+          !item.isRead &&
+          item.title === message.Title &&
+          item.message === message.Body
+      );
+
+      if (match) {
+        setNotifications((prev) =>
+          prev.map((notif) =>
+            notif.id === newNotification.id ? { ...notif, id: match.id } : notif
+          )
+        );
+      }
+    } catch (error) {
+      console.error("❌ Не удалось узнать номер уведомления:", error);
+    }
+  }, [getMyNotifications]);
 
   const handleWebSocketError = useCallback((error: Event) => {
     console.error("💥 WebSocket error in component:", error);
@@ -344,18 +374,35 @@ const NotificationHandler: React.FC = () => {
     }, 300);
   };
 
+  // «Только что», «минуту назад» считаются прямо при отрисовке, а сама по
+  // себе она не повторяется: время замирало и дёргалось только когда по экрану
+  // водили мышкой. Пока всплывашки на экране, перерисовываем раз в секунду.
+  const [, setTick] = useState(0);
+
+  const navigate = useNavigate();
+
   const handleNotificationClick = async (notification: Notification) => {
     console.log("🖱️ Notification clicked:", notification);
 
     if (!notification.isRead) {
-      try {
-        await ReadNotification(notification.id);
-        console.log("✅ Уведомление помечено как прочитанное");
+      // Гасим у себя в любом случае: человек уведомление открыл. Отметка на
+      // сервере может не пройти — у пришедших по сокету номер выдуманный,
+      // настоящего сервер в сообщение не кладёт. Но висеть на экране после
+      // нажатия всплывашка не должна.
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === notification.id ? { ...notif, isRead: true } : notif
+        )
+      );
 
-        setNotifications((prev) =>
-          prev.map((notif) =>
-            notif.id === notification.id ? { ...notif, isRead: true } : notif
-          )
+      try {
+        // Хук гасит ошибку внутри и возвращает null — иначе 400 printed бы как
+        // успех, что и сбивало с толку в логах.
+        const failed = (await ReadNotification(notification.id)) === null;
+        console.log(
+          failed
+            ? "⚠️ Сервер не принял отметку о прочтении"
+            : "✅ Уведомление помечено как прочитанное"
         );
       } catch (error) {
         console.error(
@@ -374,7 +421,15 @@ const NotificationHandler: React.FC = () => {
           ? notification.route
           : `/${notification.route}`;
       console.log("🔗 Navigating to:", target);
-      window.location.href = target;
+
+      if (isExternal) {
+        window.location.href = target;
+      } else {
+        // Переход внутри приложения, без перезагрузки. Перезагрузка поднимала
+        // непрочитанные заново и показывала только что закрытое уведомление
+        // второй раз.
+        navigate(target);
+      }
     }
 
     removeNotification(notification.id);
@@ -421,6 +476,14 @@ const NotificationHandler: React.FC = () => {
 
     return true;
   });
+
+  const hasVisible = unreadNotifications.length > 0;
+
+  useEffect(() => {
+    if (!hasVisible) return;
+    const timer = window.setInterval(() => setTick((t) => t + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasVisible]);
 
   return (
     <NotificationsContainer>

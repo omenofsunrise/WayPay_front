@@ -194,6 +194,9 @@ const ClientSelectModal = ({
           : undefined,
         docIssueYear: clientData.docIssueYear || 0,
         registrationAddress: clientData.registrationAddress || "",
+        // Форма его заполняет, а сюда он не доезжал: при создании клиента из
+        // окна выбора фактический адрес терялся по дороге к серверу.
+        actualAddress: clientData.actualAddress || "",
         secondPhone: clientData.secondPhone || "",
         creditIds: null,
         creditRestTerms: null,
@@ -204,7 +207,12 @@ const ClientSelectModal = ({
       return true;
     } catch (error) {
       console.error("Error creating client:", error);
-      return false;
+      // Отказ пробрасываем в форму: она покажет причину и останется открытой
+      // с набранным. Возврат false оставлял человека без объяснения — окно
+      // просто не закрывалось, и выглядело это как поломка.
+      throw error instanceof Error
+        ? error
+        : new Error("Не удалось сохранить клиента");
     }
   };
 

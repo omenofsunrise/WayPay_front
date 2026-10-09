@@ -456,7 +456,12 @@ const ClientPage = () => {
       setIsModalOpen(false);
       return true;
     } catch (error: any) {
-      return false;
+      // Отказ пробрасываем дальше: форма покажет причину и останется открытой
+      // с набранным. Раньше он гасился здесь, окно закрывалось, и человек
+      // считал, что клиент создан.
+      throw error instanceof Error
+        ? error
+        : new Error("Не удалось сохранить клиента");
     }
   };
 

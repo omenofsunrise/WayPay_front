@@ -61,10 +61,6 @@ const menuItemsMap: Record<
     mainItem: "payments",
     subItems: { "/payments": "payments-journal" },
   },
-  "/payments-pending": {
-    mainItem: "payments",
-    subItems: { "/payments-pending": "reception-payments" },
-  },
   "/investors": {
     mainItem: "investors",
     subItems: { "/investors": "investors" },
@@ -170,7 +166,6 @@ const SideMenu = () => {
       hasRole("суперадмин") ||
       hasPermission("MANAGE_ACCOUNTING", true),
     "payments-journal": () => true,
-    "reception-payments": () => true,
     investors: () =>
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
     "investors-pool": () =>
@@ -323,7 +318,6 @@ const SideMenu = () => {
       "pending-payments": "Ожидаемые",
       "payments-calendar": "Календарь",
       "payments-journal": "Журнал",
-      "reception-payments": "Платежи с приёмки",
       investors: "Инвесторы",
       "investors-pool": "Пулы инвесторов",
       "investors-report": "Отчёт для инвестора",
@@ -667,8 +661,7 @@ const SideMenu = () => {
               $selected={
                 selectedSideMenuItem === "pending-payments" ||
                 selectedSideMenuItem === "payments-calendar" ||
-                selectedSideMenuItem === "payments-journal" ||
-                selectedSideMenuItem === "reception-payments"
+                selectedSideMenuItem === "payments-journal"
               }
             >
               <Icon
@@ -677,8 +670,7 @@ const SideMenu = () => {
                 $selected={
                   selectedSideMenuItem === "pending-payments" ||
                   selectedSideMenuItem === "payments-calendar" ||
-                  selectedSideMenuItem === "payments-journal" ||
-                  selectedSideMenuItem === "reception-payments"
+                  selectedSideMenuItem === "payments-journal"
                 }
               />
               {!collapsed && (
@@ -736,17 +728,6 @@ const SideMenu = () => {
                   $selected={selectedSideMenuItem === "payments-journal"}
                 >
                   Журнал
-                </SubMenuItem>
-                <SubMenuItem
-                  onClick={() =>
-                    handleSubMenuItemClick(
-                      "reception-payments",
-                      "/payments-pending"
-                    )
-                  }
-                  $selected={selectedSideMenuItem === "reception-payments"}
-                >
-                  Платежи с приёмки
                 </SubMenuItem>
               </SubMenu>
             )}

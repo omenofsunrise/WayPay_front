@@ -21,18 +21,24 @@ const fadeIn = keyframes`
 `;
 
 const Container = styled.div`
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  align-items: flex-start;
   gap: 16px;
-  width: auto;
+  width: 100%;
+  min-width: 0;
 `;
 
 const IconContainer = styled.div<{ $iconColor?: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 60px;
   width: 60px;
   height: 60px;
+  min-width: 60px;
+  min-height: 60px;
+  aspect-ratio: 1;
   border-radius: 50%;
   background-color: ${({ $iconColor }) => $iconColor || '#000'};
   transition: background-color 0.3s ease;
@@ -41,7 +47,8 @@ const IconContainer = styled.div<{ $iconColor?: string }>`
 const Content = styled.div`
   display: flex;
   flex-direction: column;
-  flex: 1;
+  width: 100%;
+  min-width: 0;
   text-align: left;
   max-width: 200px;
 `;
@@ -49,7 +56,10 @@ const Content = styled.div`
 const Label = styled.span`
   font-size: 15px;
   color: rgba(80, 85, 92, 1);
-  white-space: nowrap;
+  line-height: 18px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-height: 36px;
   font-weight: 500;
   max-width: 200px;
   transition: color 0.3s ease;

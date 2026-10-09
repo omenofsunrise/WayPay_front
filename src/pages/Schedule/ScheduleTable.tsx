@@ -18,6 +18,7 @@ import CustomInput from "../../components/ui/fields/CustomInput";
 import CustomCalendar from "../../components/ui/fields/CustomCalendar";
 import InvestorSelect from "../../components/ui/fields/InvestorSelect";
 import ObjectTypeSelect from "../../components/ui/fields/ObjectTypeSelect";
+import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import NewPaymentModal from "../../components/modal/NewPaymentModal";
 import ViewCreditModal from "../../components/modal/ViewCreditModal";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
@@ -39,6 +40,11 @@ import useSender from "../../api/hooks/useSender";
 import scheduleService from "../../api/services/scheduleService";
 import type { VisitMode } from "../../api/types/schedule";
 import usePersistedState from "../../hooks/usePersistedState";
+import {
+  useScrollMemory,
+  restoreScroll,
+  forgetScroll,
+} from "../../utils/listPosition";
 
 interface ScheduleTableProps {
   isListMode: boolean;
@@ -101,6 +107,9 @@ export const GuarantorWhatsAppIcon = () => (
   </svg>
 );
 
+// Сервер отвергает запрос с pageSize больше сотни.
+const MAX_PAGE_SIZE = 100;
+
 const columnToApiSortMap: Record<number, string> = {
   0: "creditid",
   1: "clientname",
@@ -145,11 +154,21 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
   const [selectedTableObjectType, setSelectedTableObjectType] =
     usePersistedState<SelectedObjectType | null>(`${store}.objectType`, null);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  // Номер страницы переживает уход в другой раздел: человек долистал до
+  // нужного платежа, отошёл свериться и вернулся — возвращать его в начало
+  // выдачи незачем. Смена любого фильтра по-прежнему сбрасывает на первую.
+  const [currentPage, setCurrentPage] = usePersistedState(
+    `${store}.page`,
+    1
+  );
+  // По умолчанию сортируем по дате платежа, от ближайшей: в графике это
+  // первое, что ищут глазами. Ключ хранения сменён намеренно — у тех, кто
+  // уже открывал страницу, лежит старое значение без сортировки, и без
+  // смены ключа новый порядок к ним бы не применился.
   const [sortConfig, setSortConfig] = usePersistedState<{
     key: number | null;
     direction: "asc" | "desc";
-  }>(`${store}.sort`, { key: null, direction: "asc" });
+  }>(`${store}.sort.v2`, { key: 3, direction: "asc" });
 
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [accumulatedItems, setAccumulatedItems] = useState<ScheduleDetails[]>(
@@ -176,20 +195,75 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
 
   const isFirstRender = useRef(true);
 
+  // Сортировка фильтром не считается: сбрасывать порядок столбцов вместе с
+  // отбором никто не ждёт.
+  const hasActiveFilters = Boolean(
+    clientNameFilter ||
+      investorFilter ||
+      selectedEntity ||
+      tableObjectTypeName ||
+      selectedTableObjectType ||
+      dateFromFilter ||
+      dateToFilter
+  );
+
   const resetPage = useCallback(() => {
+    // Отбор изменился — прежнее место в списке потеряло смысл.
+    forgetScroll(`${store}.list.scroll`);
     setCurrentPage(1);
     if (isListMode) {
       accumulatedItemsRef.current = [];
       setAccumulatedItems([]);
       setHasMore(true);
     }
-  }, [isListMode]);
+  }, [isListMode, store]);
+
+  const resetFilters = useCallback(() => {
+    setClientNameFilter("");
+    setInvestorFilter("");
+    setSelectedEntity(null);
+    setTableObjectTypeName("");
+    setSelectedTableObjectType(null);
+    setDateFromFilter("");
+    setDateToFilter("");
+    resetPage();
+  }, [
+    setClientNameFilter,
+    setInvestorFilter,
+    setSelectedEntity,
+    setTableObjectTypeName,
+    setSelectedTableObjectType,
+    setDateFromFilter,
+    setDateToFilter,
+    resetPage,
+  ]);
+
+
+  // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
+  // платежи закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
+  useEffect(() => {
+    if (isListMode) return;
+    const total = scheduleData?.totalCount ?? 0;
+    if (!total) return;
+    const pages = Math.ceil(total / pageSize);
+    if (pages > 0 && currentPage > pages) setCurrentPage(1);
+  }, [isListMode, scheduleData, pageSize, currentPage, setCurrentPage]);
 
   const displayedSchedules = isListMode
     ? accumulatedItems
     : scheduleData?.items ?? [];
 
+  const scrollKey = `${store}.list.scroll`;
+  useScrollMemory(scrollKey, isListMode);
+  const restoredRef = useRef(false);
+
   const loadSchedules = useCallback(async () => {
+    // Возврат в список: строк в памяти нет, а номер страницы восстановлен из
+    // хранилища. Накопленное надо поднять целиком, иначе человек увидел бы
+    // середину списка без всего, что над ней.
+    const isRestoring =
+      isListMode && currentPage > 1 && accumulatedItemsRef.current.length === 0;
+
     const params: ScheduleParams = {
       page: currentPage,
       pageSize: pageSize,
@@ -211,6 +285,44 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     if (sortConfig.key !== null) {
       params.sortBy = columnToApiSortMap[sortConfig.key];
       params.sortDirection = sortConfig.direction;
+    }
+
+    if (isRestoring) {
+      // Сервер не отдаёт больше сотни строк за раз, поэтому поднимаем
+      // накопленное несколькими запросами подряд.
+      const needed = pageSize * currentPage;
+      const chunk = Math.min(MAX_PAGE_SIZE, Math.max(pageSize, 1));
+      const collected: ScheduleDetails[] = [];
+      let total = 0;
+
+      for (let part = 1; collected.length < needed; part++) {
+        const portion = await getList({ ...params, page: part, pageSize: chunk });
+        if (!portion) break;
+
+        const items = portion.items || [];
+        collected.push(...items);
+        total = portion.totalCount || 0;
+
+        if (items.length < chunk) break;
+      }
+
+      const seenIds = new Set<number>();
+      const restored = collected.filter((it) => {
+        if (seenIds.has(it.id)) return false;
+        seenIds.add(it.id);
+        return true;
+      });
+
+      accumulatedItemsRef.current = restored;
+      setAccumulatedItems(restored);
+      setHasMore(restored.length < total && restored.length > 0);
+      setIsLoadingMore(false);
+
+      if (!restoredRef.current) {
+        restoredRef.current = true;
+        restoreScroll(scrollKey);
+      }
+      return;
     }
 
     const result = await getList(params);
@@ -764,6 +876,16 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
                 onChange={handleDateToChange}
               />
             </DateInputWrapper>
+            <ResetWrapper>
+              <DarkCyanButton
+                type="button"
+                style={{ margin: 0, height: 40, fontSize: 14 }}
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+              >
+                Сброс по фильтрам
+              </DarkCyanButton>
+            </ResetWrapper>
           </FilterFieldItem>
         </FilterField>
       </FilterContainer>
@@ -960,6 +1082,12 @@ const InputWrapper = styled.div`
 const DateInputWrapper = styled.div`
   flex: 1;
   min-width: 180px;
+`;
+
+const ResetWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 `;
 
 const NotifyCell = styled.div`

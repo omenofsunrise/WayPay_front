@@ -58,6 +58,12 @@ import {
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import { useResponsivePageSize } from "../utils/useResponsivePageSize";
 import { useUiSettings } from "../utils/uiSettings";
+import usePersistedState from "../hooks/usePersistedState";
+import {
+  useScrollMemory,
+  restoreScroll,
+  forgetScroll,
+} from "../utils/listPosition";
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 
@@ -144,10 +150,53 @@ const SORT_OPTIONS: { key: string | null; label: string }[] = [
   { key: "client", label: "ФИО клиента" },
 ];
 
+type CreditTabFilters = {
+  isFavourite?: boolean;
+  isActive?: boolean;
+  myCredits?: boolean;
+  debt?: boolean;
+  inDebt?: boolean;
+  Terminated?: boolean;
+  objectTypeId?: number;
+};
+
+/**
+ * Фильтр, который задаёт сама вкладка.
+ *
+ * Раньше эта таблица была написана в файле дважды, и обе копии применялись
+ * только по нажатию на вкладку. При заходе по ссылке — например из
+ * уведомления на «В долг» — вкладка выбиралась из адреса, а фильтр оставался
+ * тот, что лежал в хранилище: вкладка показывала одно, список другое.
+ */
+const filtersForTab = (tabId: string): CreditTabFilters => {
+  if (tabId.startsWith("tab-")) {
+    return { objectTypeId: parseInt(tabId.replace("tab-", "")) };
+  }
+
+  switch (tabId) {
+    case "my":
+      return { myCredits: true };
+    case "favourite":
+      return { isFavourite: true };
+    case "archive":
+      return { isActive: false };
+    case "debtors":
+      return { debt: true };
+    case "inDebt":
+      return { inDebt: true };
+    case "terminated":
+      return { Terminated: true };
+    default:
+      return {};
+  }
+};
+
 const CreditPage = () => {
   const colors = {
     primary: "#007D88",
   };
+  // Сервер отвергает запрос с pageSize больше сотни.
+  const MAX_PAGE_SIZE = 100;
   const FILTERS_STORAGE_KEY = "creditsFilters";
   const { id, tab } = useParams<{ id?: string; tab?: string }>();
   const savedFilters = useMemo(() => {
@@ -159,6 +208,10 @@ const CreditPage = () => {
       return null;
     }
   }, []);
+
+  // Заход по ссылке — из уведомления или из закладки. Тогда вкладку задаёт
+  // адрес, и фильтр надо брать от неё, а не из хранилища.
+  const tabFromUrl = Boolean(tab) || location.pathname === "/credits/in-debt";
 
   const initialTab = useMemo(() => {
     if (tab) {
@@ -185,7 +238,13 @@ const CreditPage = () => {
   const [contractNumber, setContractNumber] = useState(
     () => savedFilters?.contractNumber ?? ""
   );
-  const [currentPage, setCurrentPage] = useState(1);
+  // Номер страницы переживает уход в другой раздел: человек долистал до
+  // нужного платежа, отошёл свериться и вернулся — возвращать его в начало
+  // выдачи незачем. Смена любого фильтра по-прежнему сбрасывает на первую.
+  const [currentPage, setCurrentPage] = usePersistedState(
+    "creditsFilters.page",
+    1
+  );
   const [investorName, setInvestorName] = useState(
     () => savedFilters?.investorName ?? ""
   );
@@ -233,7 +292,9 @@ const CreditPage = () => {
     inDebt?: boolean;
     Terminated?: boolean;
     objectTypeId?: number;
-  }>(() => savedFilters?.filters ?? {});
+  }>(() =>
+    tabFromUrl ? filtersForTab(initialTab) : savedFilters?.filters ?? {}
+  );
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCreditId, setViewingCreditId] = useState<number | null>(null);
@@ -295,6 +356,17 @@ const CreditPage = () => {
     acceptCredit,
     acceptCredits,
   } = useCredit();
+
+  // Сохранённая страница может оказаться за пределами выдачи: фильтр сузили,
+  // платежи закрыли. Тогда человек увидел бы пустоту — возвращаем в начало.
+  useEffect(() => {
+    if (isListMode) return;
+    const total = creditsData?.totalCount ?? 0;
+    if (!total) return;
+    const pages = Math.ceil(total / itemsPerPage);
+    if (pages > 0 && currentPage > pages) setCurrentPage(1);
+  }, [isListMode, creditsData, itemsPerPage, currentPage, setCurrentPage]);
+
   const rawCredits = isListMode ? accumulatedItems : creditsData?.items ?? [];
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
@@ -885,35 +957,7 @@ const CreditPage = () => {
     setClientAddress("");
 
     // Сохраняем только фильтры от текущей вкладки
-    let newFilters = {};
-    if (activeTab.startsWith("tab-")) {
-      const objectTypeId = parseInt(activeTab.replace("tab-", ""));
-      newFilters = { objectTypeId };
-    } else {
-      switch (activeTab) {
-        case "my":
-          newFilters = { myCredits: true };
-          break;
-        case "favourite":
-          newFilters = { isFavourite: true };
-          break;
-        case "archive":
-          newFilters = { isActive: false };
-          break;
-        case "debtors":
-          newFilters = { debt: true };
-          break;
-        case "inDebt":
-          newFilters = { inDebt: true };
-          break;
-        case "terminated":
-          newFilters = { Terminated: true };
-          break;
-        default:
-          newFilters = {};
-          break;
-      }
-    }
+    const newFilters = filtersForTab(activeTab);
 
     setFilters(newFilters);
     setSortConfig({ key: null, direction: "desc" });
@@ -1093,6 +1137,14 @@ const CreditPage = () => {
     creditTypeId,
   ]);
 
+  const SCROLL_KEY = "creditsFilters.list.scroll";
+  // Сброс накопленного списка срабатывает и при открытии страницы, где
+  // ничего не менялось. Первый прогон пропускаем, иначе он затирал бы
+  // восстановленное место.
+  const filtersSettledRef = useRef(false);
+  useScrollMemory(SCROLL_KEY, isListMode);
+  const restoredRef = useRef(false);
+
   const loadCredits = useCallback(async () => {
     if (!isPageSizeReady) return;
     // Отменяем предыдущий запрос, если он есть
@@ -1106,6 +1158,12 @@ const CreditPage = () => {
     const signal = controller.signal;
 
     const shouldInclude = includeAllStates;
+
+    // Возврат в список: строк в памяти нет, а номер страницы восстановлен из
+    // хранилища. Накопленное надо поднять целиком, иначе человек увидел бы
+    // середину списка без всего, что над ней.
+    const isRestoring =
+      isListMode && currentPage > 1 && accumulatedItemsRef.current.length === 0;
 
     const params = {
       page: currentPage,
@@ -1131,6 +1189,49 @@ const CreditPage = () => {
       sortDirection: sortConfig.direction,
       ...filters,
     };
+
+    if (isRestoring) {
+      // Сервер не отдаёт больше сотни строк за раз, поэтому поднимаем
+      // накопленное несколькими запросами подряд.
+      const needed = itemsPerPage * currentPage;
+      const chunk = Math.min(MAX_PAGE_SIZE, Math.max(itemsPerPage, 1));
+      const collected: Credit[] = [];
+      let total = 0;
+
+      for (let part = 1; collected.length < needed; part++) {
+        const portion = await getCredits(
+          { ...params, page: part, pageSize: chunk },
+          signal
+        );
+        if (!portion || signal.aborted) break;
+
+        const items = portion.items || [];
+        collected.push(...items);
+        total = portion.totalCount || 0;
+
+        if (items.length < chunk) break;
+      }
+
+      if (!signal.aborted) {
+        const seenIds = new Set<number>();
+        const restored = collected.filter((c) => {
+          if (seenIds.has(c.id)) return false;
+          seenIds.add(c.id);
+          return true;
+        });
+
+        accumulatedItemsRef.current = restored;
+        setAccumulatedItems(restored);
+        setHasMore(restored.length < total && restored.length > 0);
+        setIsLoadingMore(false);
+
+        if (!restoredRef.current) {
+          restoredRef.current = true;
+          restoreScroll(SCROLL_KEY);
+        }
+      }
+      return;
+    }
 
     const result = await getCredits(params, signal);
 
@@ -1187,10 +1288,17 @@ const CreditPage = () => {
 
   // Сброс накопленного списка при смене фильтров/режима
   useEffect(() => {
+    if (!filtersSettledRef.current) {
+      filtersSettledRef.current = true;
+      return;
+    }
+
     accumulatedItemsRef.current = [];
     setAccumulatedItems([]);
     setHasMore(true);
     if (isListMode) {
+      // Отбор изменился — прежнее место в списке потеряло смысл.
+      forgetScroll(SCROLL_KEY);
       setCurrentPage(1);
     }
   }, [
@@ -1276,35 +1384,7 @@ const CreditPage = () => {
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
 
-    let newFilters = {};
-    if (tabId.startsWith("tab-")) {
-      const objectTypeId = parseInt(tabId.replace("tab-", ""));
-      newFilters = { objectTypeId };
-    } else {
-      switch (tabId) {
-        case "my":
-          newFilters = { myCredits: true };
-          break;
-        case "favourite":
-          newFilters = { isFavourite: true };
-          break;
-        case "archive":
-          newFilters = { isActive: false };
-          break;
-        case "debtors":
-          newFilters = { debt: true };
-          break;
-        case "inDebt":
-          newFilters = { inDebt: true };
-          break;
-        case "terminated":
-          newFilters = { Terminated: true };
-          break;
-        default:
-          newFilters = {};
-          break;
-      }
-    }
+    const newFilters = filtersForTab(tabId);
 
     setFilters(newFilters);
     setCurrentPage(1);
