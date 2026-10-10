@@ -331,10 +331,10 @@ const BudgetPage = () => {
     }
   };
 
-  const prepareTableData = (data: any[] = []) => {
+  const prepareTableData = (data: any[] = [], withComment = false) => {
     return data
       .map((item) => {
-        if (!item) return ["", "", "", ""];
+        if (!item) return withComment ? ["", "", "", "", ""] : ["", "", "", ""];
 
         const amount =
           item.amount !== undefined ? formatMoney(item.amount.toString()) : "";
@@ -349,12 +349,12 @@ const BudgetPage = () => {
 
         const comment = item.comment || "";
 
-        return [
-          item.id || "",
-          amount,
-          date,
-          item.investorNickname || item.comment,
-        ];
+        // У расходов никнейма нет, и комментарий исторически занимал его
+        // место. У приходов оба поля свои, поэтому комментарий выносится
+        // отдельным столбцом, а общая форма строки остаётся одна.
+        return withComment
+          ? [item.id || "", amount, date, item.investorNickname || "", comment]
+          : [item.id || "", amount, date, item.investorNickname || comment];
       })
       .filter((row) => row !== null);
   };
@@ -531,8 +531,9 @@ const BudgetPage = () => {
               { name: "Сумма", align: "left" },
               { name: "Дата", isSortable: true, align: "left" },
               { name: "Инвестора никнейм", align: "left" },
+              { name: "Комментарий", align: "left" },
             ]}
-            data={prepareTableData(incomes?.items)}
+            data={prepareTableData(incomes?.items, true)}
             contextMenuActions={incomeContextMenuActions}
             isLoading={isLoadingIncomes}
           />
