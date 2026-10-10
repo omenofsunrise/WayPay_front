@@ -24,18 +24,43 @@ const BOT_TYPE_LABEL: Record<BotType, string> = {
   Events: "По событию",
 };
 
+const isOverdueEvent = (rule: BotResponse) =>
+  rule.event === "ComingPayment" &&
+  ((rule.eventDays != null && rule.eventDays < 0) ||
+    (rule.eventHours != null && rule.eventHours < 0));
+
+const getEventLabel = (rule: BotResponse) => {
+  if (!rule.event) return "";
+  return isOverdueEvent(rule) ? EVENT_LABEL.OverduePayment : EVENT_LABEL[rule.event];
+};
+
+const getEventSchedule = (rule: BotResponse) => {
+  if (rule.event !== "ComingPayment") return "";
+  const days = rule.eventDays != null ? Math.abs(rule.eventDays) : 0;
+  const hours = rule.eventHours != null ? Math.abs(rule.eventHours) : 0;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} дн.`);
+  if (hours > 0) parts.push(`${hours} ч.`);
+  if (parts.length === 0) return "";
+  const prefix = isOverdueEvent(rule) ? "через" : "за";
+  const suffix = isOverdueEvent(rule) ? "после" : "до";
+  return ` · ${prefix} ${parts.join(" ")} ${suffix} платежа`;
+};
+
 const EVENT_LABEL: Record<BotEventType, string> = {
   CreatedCredit: "Создание рассрочки",
   CreatedPayment: "Создание платежа",
   ClientBirthdate: "День рождения клиента",
-  UpcomingPayment: "На приближающийся платёж",
+  ComingPayment: "На приближающийся платёж",
+  OverduePayment: "На просроченный платёж",
 };
 
 const EVENT_OPTIONS: BotEventType[] = [
   "CreatedCredit",
   "CreatedPayment",
   "ClientBirthdate",
-  "UpcomingPayment",
+  "ComingPayment",
+  "OverduePayment",
 ];
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -160,12 +185,14 @@ const BotManagementPage: React.FC = () => {
     rule: BotResponse | null;
     eventType: BotEventType;
     eventDays: string;
+    eventHours: string;
     saving: boolean;
   }>({
     isOpen: false,
     rule: null,
     eventType: "CreatedCredit",
     eventDays: "",
+    eventHours: "",
     saving: false,
   });
 
@@ -427,14 +454,16 @@ const BotManagementPage: React.FC = () => {
     });
   };
 
-  // === Управление событием ===
-
   const handleOpenEvent = (rule: BotResponse) => {
+    const overdue = isOverdueEvent(rule);
     setEventModal({
       isOpen: true,
       rule,
-      eventType: rule.event ?? "CreatedCredit",
-      eventDays: rule.eventDays != null ? String(rule.eventDays) : "",
+      eventType: overdue ? "OverduePayment" : rule.event ?? "CreatedCredit",
+      eventDays:
+        rule.eventDays != null ? String(Math.abs(rule.eventDays)) : "",
+      eventHours:
+        rule.eventHours != null ? String(Math.abs(rule.eventHours)) : "",
       saving: false,
     });
   };
@@ -443,24 +472,63 @@ const BotManagementPage: React.FC = () => {
     e.preventDefault();
     if (!eventModal.rule) return;
 
+    const isTimed =
+      eventModal.eventType === "ComingPayment" ||
+      eventModal.eventType === "OverduePayment";
+
     let eventDays: number | null = null;
-    if (eventModal.eventType === "UpcomingPayment") {
-      const parsed = Number(eventModal.eventDays);
-      if (
-        !eventModal.eventDays.trim() ||
-        !Number.isFinite(parsed) ||
-        !Number.isInteger(parsed) ||
-        parsed < 0
-      ) {
-        alert("Укажите целое неотрицательное число дней до платежа");
+    let eventHours: number | null = null;
+
+    if (isTimed) {
+      const daysRaw = eventModal.eventDays.trim();
+      const hoursRaw = eventModal.eventHours.trim();
+
+      let parsedDays = 0;
+      let parsedHours = 0;
+
+      if (daysRaw) {
+        const n = Number(daysRaw);
+        if (!Number.isInteger(n) || n < 0) {
+          addToast("warning", "Дни должны быть целым неотрицательным числом");
+          return;
+        }
+        parsedDays = n;
+      }
+
+      if (hoursRaw) {
+        const n = Number(hoursRaw);
+        if (!Number.isInteger(n) || n < 0 || n > 23) {
+          addToast("warning", "Часы должны быть целым числом от 0 до 23");
+          return;
+        }
+        parsedHours = n;
+      }
+
+      if (parsedDays === 0 && parsedHours === 0) {
+        addToast("warning", "Укажите хотя бы дни или часы");
         return;
       }
-      eventDays = parsed;
+
+      // Для "просрочки" уходит ComingPayment с отрицательными значениями
+      const sign = eventModal.eventType === "OverduePayment" ? -1 : 1;
+      eventDays = parsedDays ? sign * parsedDays : null;
+      eventHours = parsedHours ? sign * parsedHours : null;
     }
+
+    // На бэк всегда уходит ComingPayment (даже для "просрочки")
+    const eventTypeToSend: BotEventType =
+      eventModal.eventType === "OverduePayment"
+        ? "ComingPayment"
+        : eventModal.eventType;
 
     setEventModal((prev) => ({ ...prev, saving: true }));
     try {
-      await setBotEvent(eventModal.rule.id, eventModal.eventType, eventDays);
+      await setBotEvent(
+        eventModal.rule.id,
+        eventTypeToSend,
+        eventDays,
+        eventHours,
+      );
       await loadRules();
       addToast("success", "Событие установлено");
       setEventModal((prev) => ({ ...prev, isOpen: false }));
@@ -610,12 +678,9 @@ const BotManagementPage: React.FC = () => {
                     </ResponseLabel>
                     <ResponseText>
                       {rule.event
-                        ? EVENT_LABEL[rule.event]
+                        ? getEventLabel(rule)
                         : "— Нажмите чтобы выбрать событие —"}
-                      {rule.event === "ComingPayment" &&
-                        rule.eventDays != null && (
-                          <> · за {rule.eventDays} дн. до платежа</>
-                        )}
+                      {getEventSchedule(rule)}
                     </ResponseText>
                   </EventBlock>
                 ) : rule.keywords && rule.keywords.length > 0 ? (
@@ -892,6 +957,7 @@ const BotManagementPage: React.FC = () => {
                     ...prev,
                     eventType: e.target.value as BotEventType,
                     eventDays: "",
+                    eventHours: "",          // ← сбрасываем и часы
                   }))
                 }
                 options={EVENT_OPTIONS.map((opt) => ({
@@ -902,26 +968,36 @@ const BotManagementPage: React.FC = () => {
                 dropdownInPortal
               />
             </ModalField>
-            {eventModal.eventType === "UpcomingPayment" && (
-              <ModalField>
-                <ModalLabel>За сколько дней до платежа рассылать</ModalLabel>
-                <CustomInput
-                  inputType="number"
-                  value={eventModal.eventDays}
-                  onChange={(e) =>
-                    setEventModal((prev) => ({
-                      ...prev,
-                      eventDays: e.target.value,
-                    }))
-                  }
-                  placeholder="Например: 3"
-                  disabled={eventModal.saving}
-                />
-                <FieldHint>
-                  Рассылка уйдёт за указанное число дней до даты платежа по
-                  графику. 0 — в день платежа.
-                </FieldHint>
-              </ModalField>
+
+            {(eventModal.eventType === "ComingPayment" ||
+              eventModal.eventType === "OverduePayment") && (
+              <>
+                <ModalField>
+                  <ModalLabel>За сколько дней</ModalLabel>
+                  <CustomInput
+                    inputType="number"
+                    value={eventModal.eventDays}
+                    onChange={(e) =>
+                      setEventModal((prev) => ({ ...prev, eventDays: e.target.value }))
+                    }
+                    placeholder="Например: 3"
+                    disabled={eventModal.saving}
+                  />
+                </ModalField>
+
+                <ModalField>
+                  <ModalLabel>И часов (0–23)</ModalLabel>
+                  <CustomInput
+                    inputType="number"
+                    value={eventModal.eventHours}
+                    onChange={(e) =>
+                      setEventModal((prev) => ({ ...prev, eventHours: e.target.value }))
+                    }
+                    placeholder="Не обязательно (установится 9)"
+                    disabled={eventModal.saving}
+                  />
+                </ModalField>
+              </>
             )}
           </ModalForm>
         </BaseModal>

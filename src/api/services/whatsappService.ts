@@ -220,12 +220,14 @@ class WhatsAppService {
   async setBotEvent(
     botId: number,
     eventType: BotEventType,
-    eventDays?: number | null
+    eventDays?: number | null,
+    eventHours?: number | null,
   ): Promise<void> {
     const request: SetBotEventRequest = {
       botId,
       eventType,
       eventDays: eventDays ?? null,
+      eventHours: eventHours ?? null
     };
     await apiClient.patch("/WhatsApp/bot/event", request);
   }
