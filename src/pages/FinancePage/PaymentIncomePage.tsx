@@ -34,6 +34,12 @@ const PaymentIncomePage = () => {
     currentDate.getMonth() + 1
   );
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+
+  // Отбор по дню внутри выбранного месяца. Пусто — весь месяц, как было.
+  // Нужны именно дни, а не полные даты: месяц и год уже заданы соседними
+  // полями, повторять их в календаре незачем.
+  const [dayFrom, setDayFrom] = useState("");
+  const [dayTo, setDayTo] = useState("");
   const [investorName, setInvestorName] = useState("");
   const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(
     null
@@ -91,15 +97,41 @@ const PaymentIncomePage = () => {
     deletePayment,
   } = usePayment();
 
-  const getDateRangeForMonth = (month: number, year: number) => {
-    const dateFrom = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-    const dateTo = new Date(
-      Date.UTC(year, month - 1, getDaysInMonth(year, month), 23, 59, 59, 999)
-    );
+  const daysInSelectedMonth = new Date(selectedYear, selectedMonth, 0).getDate();
 
-    function getDaysInMonth(year, month) {
+  const dayOptions = [
+    { value: "", label: "Любой" },
+    ...Array.from({ length: daysInSelectedMonth }, (_, i) => ({
+      value: (i + 1).toString(),
+      label: (i + 1).toString(),
+    })),
+  ];
+
+  // В коротком месяце выбранный день может перестать существовать: был 31-й,
+  // переключили на февраль. Молча оставлять такое нельзя — отбор стал бы
+  // пустым без видимой причины.
+  useEffect(() => {
+    if (dayFrom && parseInt(dayFrom) > daysInSelectedMonth) setDayFrom("");
+    if (dayTo && parseInt(dayTo) > daysInSelectedMonth) setDayTo("");
+  }, [daysInSelectedMonth, dayFrom, dayTo]);
+
+  const getDateRangeForMonth = (month: number, year: number) => {
+    function getDaysInMonth(year: number, month: number) {
       return new Date(year, month, 0).getDate();
     }
+
+    const lastDay = getDaysInMonth(year, month);
+
+    // Пусто — значит граница не задана: от первого дня месяца и до последнего.
+    const from = dayFrom ? parseInt(dayFrom) : 1;
+    const to = dayTo ? parseInt(dayTo) : lastDay;
+
+    // Перепутанные местами дни не считаем ошибкой: меньший становится началом.
+    const first = Math.min(Math.max(Math.min(from, to), 1), lastDay);
+    const last = Math.min(Math.max(Math.max(from, to), first), lastDay);
+
+    const dateFrom = new Date(Date.UTC(year, month - 1, first, 0, 0, 0, 0));
+    const dateTo = new Date(Date.UTC(year, month - 1, last, 23, 59, 59, 999));
 
     return {
       dateFrom,
@@ -134,6 +166,8 @@ const PaymentIncomePage = () => {
     sortConfig,
     selectedMonth,
     selectedYear,
+    dayFrom,
+    dayTo,
     investorName,
     getPayments,
   ]);
@@ -341,6 +375,26 @@ const PaymentIncomePage = () => {
           onChange={(e) => setSelectedYear(parseInt(e.target.value))}
           options={years}
           style={{ flex: "0 1 150px" }}
+        />
+        <CustomSelect
+          placeholder="День от"
+          value={dayFrom}
+          onChange={(e) => {
+            setDayFrom(e.target.value);
+            setCurrentPage(1);
+          }}
+          options={dayOptions}
+          style={{ flex: "0 1 120px" }}
+        />
+        <CustomSelect
+          placeholder="День до"
+          value={dayTo}
+          onChange={(e) => {
+            setDayTo(e.target.value);
+            setCurrentPage(1);
+          }}
+          options={dayOptions}
+          style={{ flex: "0 1 120px" }}
         />
         <InvestorSelect
           placeholder="Инвестор"
