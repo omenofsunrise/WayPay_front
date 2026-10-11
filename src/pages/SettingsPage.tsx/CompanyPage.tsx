@@ -507,13 +507,18 @@ const CompanyCard = styled.section`
 
 const SettingRow = styled.div`
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
+  padding: 16px 18px;
+  border: 1px solid #eef1f4;
+  border-radius: 12px;
+  background: #fbfcfd;
 
   @media (max-width: 600px) {
+    align-items: flex-start;
     flex-direction: column;
-    align-items: stretch;
+    gap: 14px;
   }
 `;
 

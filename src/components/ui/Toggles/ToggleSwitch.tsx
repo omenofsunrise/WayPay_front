@@ -7,55 +7,52 @@ interface ToggleSwitchProps {
   disabled?: boolean;
 }
 
-const SwitchContainer = styled.label`
+/**
+ * Переключатель.
+ *
+ * Прежний не менял цвет: включённый и выключенный отличались только
+ * положением точки, и состояние приходилось угадывать. Теперь дорожка
+ * закрашивается, а кружок белый — как принято в системных переключателях.
+ */
+const Track = styled.label<{ $checked: boolean; $disabled?: boolean }>`
   position: relative;
-  display: inline-block;
-  width: 50px;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 44px;
   height: 24px;
-  background-color: white;
-  border: 4px solid rgba(0, 125, 136, 1);
-  border-radius: 35px;
-  color: black;
+  border-radius: 999px;
+  background-color: ${({ $checked }) =>
+    $checked ? 'rgba(0, 125, 136, 1)' : '#cbd3dd'};
+  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
+  transition: background-color 0.2s ease;
 `;
 
-const Slider = styled.span<{ checked: boolean; disabled?: boolean }>`
+const Knob = styled.span<{ $checked: boolean }>`
   position: absolute;
-  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  transition: .4s;
-  border-radius: 24px;
-  opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
-  color: black;
-
-  &:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
-    background-color: rgba(0, 125, 136, 1);
-    transition: .4s;
-    border-radius: 50%;
-    transform: ${({ checked }) => 
-      checked ? 'translateX(26px)' : 'translateX(0)'};
-  }
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.25);
+  transition: transform 0.2s ease;
+  transform: ${({ $checked }) =>
+    $checked ? 'translateX(20px)' : 'translateX(0)'};
 `;
 
 const HiddenCheckbox = styled.input.attrs({ type: 'checkbox' })`
+  position: absolute;
   opacity: 0;
   width: 0;
-  color: black;
   height: 0;
 `;
 
-const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ 
-  checked, 
-  onChange, 
-  disabled 
+const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
+  checked,
+  onChange,
+  disabled,
 }) => {
   const handleChange = () => {
     if (!disabled) {
@@ -64,14 +61,14 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
   };
 
   return (
-    <SwitchContainer>
-      <HiddenCheckbox 
-        checked={checked} 
-        onChange={handleChange} 
-        disabled={disabled} 
+    <Track $checked={checked} $disabled={disabled}>
+      <HiddenCheckbox
+        checked={checked}
+        onChange={handleChange}
+        disabled={disabled}
       />
-      <Slider checked={checked} disabled={disabled} />
-    </SwitchContainer>
+      <Knob $checked={checked} />
+    </Track>
   );
 };
 
