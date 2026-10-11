@@ -512,17 +512,7 @@ const BudgetPage = () => {
       </TitleField>
 
       <FilterField>
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            width: "100%",
-            maxWidth: "760px",
-            marginRight: "auto",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
+        <BudgetFilters>
           <CustomSelect
             placeholder="Месяц"
             value={selectedMonth.toString()}
@@ -566,7 +556,7 @@ const BudgetPage = () => {
               aria-label="День до"
             />
           </DayFilterGroup>
-        </div>
+        </BudgetFilters>
       </FilterField>
 
       <TablesContainer>
@@ -781,12 +771,23 @@ const TemplatesButton = styled.button`
   }
 `;
 
+const BudgetFilters = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  max-width: 760px;
+  margin-right: auto;
+`;
+
 const DayFilterGroup = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0 8px;
-  height: 40px;
+  height: 37.5px;
+  box-sizing: border-box;
   background: #fff;
   border: 1px solid #d1d5db;
   border-radius: 5px;
@@ -801,8 +802,9 @@ const DayFilterLabel = styled.span`
 
 const DayInput = styled.input`
   width: 56px;
-  height: 28px;
+  height: 26px;
   padding: 0 6px;
+  box-sizing: border-box;
   font-size: 14px;
   color: #333;
   border: 1px solid #d1d5db;
