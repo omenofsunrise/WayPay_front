@@ -1,5 +1,10 @@
 import { useState, useCallback } from 'react';
-import type { BudgetOutcome, CreateBudgetOutcomeDto, BudgetParams, BudgetOutcomeResponse } from '../types/budget';
+import type {
+  BudgetOutcome,
+  CreateBudgetOutcomeDto,
+  BudgetParams,
+  BudgetOutcomeResponse
+} from '../types/budget';
 import { BudgetService } from '../services/budgetService';
 
 const useBudgetOutcome = () => {
@@ -7,22 +12,27 @@ const useBudgetOutcome = () => {
   const [error, setError] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<BudgetOutcomeResponse | null>(null);
 
-  const getOutcomes = useCallback(async (params: BudgetParams): Promise<BudgetOutcomeResponse | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await BudgetService.getOutcomes(params);
-      setOutcomes(result);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const getOutcomes = useCallback(
+    async (params: BudgetParams): Promise<BudgetOutcomeResponse | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await BudgetService.getOutcomes(params);
+        setOutcomes(result);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
-  const createOutcome = async (outcomeData: CreateBudgetOutcomeDto): Promise<BudgetOutcome | null> => {
+  const createOutcome = async (
+    outcomeData: CreateBudgetOutcomeDto
+  ): Promise<BudgetOutcome | null> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -47,7 +57,9 @@ const useBudgetOutcome = () => {
           ...outcomes,
           items: filteredItems,
           totalCount: outcomes.totalCount - 1,
-          totalOutcomeAmount: outcomes.totalOutcomeAmount - (outcomes.items.find(item => item.id === id)?.amount || 0)
+          totalOutcomeAmount:
+            outcomes.totalOutcomeAmount -
+            (outcomes.items.find(item => item.id === id)?.amount || 0)
         });
       }
     } catch (err) {
