@@ -187,7 +187,8 @@ const CreditControlPage = () => {
     5: "income_percents",
     6: "income_rubles",
   };
-  const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
+  const { authInfo, hasPermission, hasRole, forbiddenRole, denyPermission } =
+    useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
@@ -874,6 +875,10 @@ const CreditControlPage = () => {
     }
   };
 
+  // Подтверждение договоров выключается в настройках компании. Выключено —
+  // договор подтверждать не требуется, и кнопки для этого не нужны.
+  const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
+
   const tableActions = [
     {
       label: "Подтвердить договор",
@@ -884,6 +889,7 @@ const CreditControlPage = () => {
         const credit = displayedCredits.find((c) => c.id === Number(id));
 
         return (
+          creditAcceptance &&
           hasPermission("MANAGE_ACCOUNTING", true) &&
           credit &&
           !credit.hasCounterApproved
@@ -1418,7 +1424,7 @@ const CreditControlPage = () => {
             </ExportButton>
           </FilterModalFooter>
 
-          {hasPermission("MANAGE_ACCOUNTING", true) && (
+          {creditAcceptance && hasPermission("MANAGE_ACCOUNTING", true) && (
             <FilterConfirmAllRow>
               <DarkCyanButton
                 onClick={handleConfirmAllCredits}

@@ -15,6 +15,20 @@ export interface GetAllCompaniesParams {
 }
 
 class CompanyService {
+  /**
+   * Переключение настройки компании.
+   *
+   * Сервер принимает пару «что» и «включить или выключить». Сейчас
+   * поддерживается только подтверждение договоров: выключенное прячет кнопки
+   * подтверждения и счётчик неподтверждённых в аналитике.
+   */
+  async updateSettings(
+    setting: "credit_acceptence",
+    action: "on" | "off"
+  ): Promise<void> {
+    await apiClient.patch("/Company/settings", { setting, action });
+  }
+
   async getCompany(): Promise<Company> {
     const response = await apiClient.get<Company>("/Company");
     return response.data;

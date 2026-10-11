@@ -6,6 +6,9 @@ import GrayButton from "../../components/ui/Buttons/GrayButton";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
 import useCompany from "../../api/hooks/useCompany";
 import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
+import ToggleSwitch from "../../components/ui/Toggles/ToggleSwitch";
+import companyService from "../../api/services/companyService";
+import { useAuth } from "../../сontext/AuthContext";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -126,6 +129,10 @@ const CompanyPage = () => {
     { id: number; type: "success" | "error" | "warning"; message: string }[]
   >([]);
 
+  const { authInfo, refresh } = useAuth();
+  const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
+  const [isSavingSetting, setIsSavingSetting] = useState(false);
+
   const addToast = useCallback(
     (type: "success" | "error" | "warning", msg: string) => {
       const id = Date.now();
@@ -136,6 +143,33 @@ const CompanyPage = () => {
       );
     },
     []
+  );
+
+  const handleCreditAcceptanceChange = useCallback(
+    async (checked: boolean) => {
+      setIsSavingSetting(true);
+      try {
+        await companyService.updateSettings(
+          "credit_acceptence",
+          checked ? "on" : "off"
+        );
+        // Признак приходит в данных авторизации, и от него зависят кнопки на
+        // других страницах. Перечитываем, чтобы они обновились сразу.
+        await refresh();
+        addToast(
+          "success",
+          checked
+            ? "Подтверждение договоров включено"
+            : "Подтверждение договоров выключено"
+        );
+      } catch (error) {
+        console.error("Не удалось изменить настройку:", error);
+        addToast("error", "Не удалось изменить настройку");
+      } finally {
+        setIsSavingSetting(false);
+      }
+    },
+    [addToast, refresh]
   );
 
   useEffect(() => {
@@ -375,6 +409,31 @@ const CompanyPage = () => {
         </CardFooter>
       </CompanyCard>
 
+      <CompanyCard>
+        <CardHeader>
+          <CardTitle>
+            <h2>Настройки</h2>
+            <p>Как компания работает с договорами.</p>
+          </CardTitle>
+        </CardHeader>
+
+        <SettingRow>
+          <SettingText>
+            <SettingName>Подтверждение договоров</SettingName>
+            <SettingHint>
+              Выключено — договоры не требуют подтверждения: кнопки
+              подтверждения скрываются, а из аналитики уходит счётчик
+              неподтверждённых.
+            </SettingHint>
+          </SettingText>
+          <ToggleSwitch
+            checked={creditAcceptance}
+            onChange={handleCreditAcceptanceChange}
+            disabled={isSavingSetting}
+          />
+        </SettingRow>
+      </CompanyCard>
+
       {showContextMenu && (
         <>
           <ContextMenuBackdrop onClick={() => setShowContextMenu(false)} />
@@ -444,6 +503,37 @@ const CompanyCard = styled.section`
   @media (max-width: 720px) {
     padding: 22px 18px 0;
   }
+`;
+
+const SettingRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const SettingText = styled.div`
+  min-width: 0;
+`;
+
+const SettingName = styled.div`
+  color: #172033;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+`;
+
+const SettingHint = styled.p`
+  margin: 0;
+  color: #7a8799;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 640px;
 `;
 
 const CardHeader = styled.div`
