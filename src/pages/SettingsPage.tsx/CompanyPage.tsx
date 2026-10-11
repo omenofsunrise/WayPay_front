@@ -413,15 +413,17 @@ const CompanyPage = () => {
         </FormGrid>
 
         <SettingsSection>
-          <SettingIcon>
-            <ContractApprovalIcon />
-          </SettingIcon>
-          <SettingText>
-            <SettingName>Подтверждение договоров</SettingName>
-            <SettingHint>
-              Выключите, если договоры не требуют отдельного подтверждения.
-            </SettingHint>
-          </SettingText>
+          <SettingContent>
+            <SettingIcon>
+              <ContractApprovalIcon />
+            </SettingIcon>
+            <SettingText>
+              <SettingName>Подтверждение договоров</SettingName>
+              <SettingHint>
+                Выключите, если договоры не требуют отдельного подтверждения.
+              </SettingHint>
+            </SettingText>
+          </SettingContent>
           <SettingControl>
             <SettingStatus $enabled={creditAcceptance}>
               {isSavingSetting
@@ -526,9 +528,9 @@ const CompanyCard = styled.section`
 `;
 
 const SettingsSection = styled.section`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 640px) minmax(0, 1fr);
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 24px;
   margin-top: 28px;
   padding: 22px 0;
@@ -536,9 +538,17 @@ const SettingsSection = styled.section`
   border-bottom: 1px solid #edf0f3;
 
   @media (max-width: 600px) {
-    grid-template-columns: 40px minmax(0, 1fr);
-    gap: 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
   }
+`;
+
+const SettingContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
 `;
 
 const SettingIcon = styled.div`
@@ -555,11 +565,6 @@ const SettingIcon = styled.div`
 
 const SettingText = styled.div`
   min-width: 0;
-  text-align: center;
-
-  @media (max-width: 600px) {
-    text-align: left;
-  }
 `;
 
 const SettingName = styled.div`
@@ -581,14 +586,12 @@ const SettingControl = styled.div`
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  justify-self: end;
   flex-shrink: 0;
   gap: 12px;
 
   @media (max-width: 600px) {
-    grid-column: 2;
-    justify-self: stretch;
     justify-content: space-between;
+    padding-left: 54px;
   }
 `;
 
