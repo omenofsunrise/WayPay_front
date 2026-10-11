@@ -412,31 +412,7 @@ const CompanyPage = () => {
           </InputGroup>
         </FormGrid>
 
-        <CardFooter>
-          <Disclaimer>
-            Все данные используются только для автоматического оформления
-            договора займа и не передаются третьим лицам.
-          </Disclaimer>
-          <ButtonsContainer>
-            <GrayButton width="120px" onClick={handleReset}>
-              Сбросить
-            </GrayButton>
-            <DarkCyanButton onClick={handleSave} disabled={isLoading}>
-              Сохранить изменения
-            </DarkCyanButton>
-          </ButtonsContainer>
-        </CardFooter>
-      </CompanyCard>
-
-      <SettingsCard>
-        <CardHeader>
-          <CardTitle>
-            <h2>Настройки</h2>
-            <p>Как компания работает с договорами.</p>
-          </CardTitle>
-        </CardHeader>
-
-        <SettingRow>
+        <SettingsSection>
           <SettingContent>
             <SettingIcon>
               <ContractApprovalIcon />
@@ -444,8 +420,7 @@ const CompanyPage = () => {
             <SettingText>
               <SettingName>Подтверждение договоров</SettingName>
               <SettingHint>
-                Когда настройка выключена, договоры не требуют подтверждения,
-                а связанные кнопки и показатель в аналитике скрываются.
+                Выключите, если договоры не требуют отдельного подтверждения.
               </SettingHint>
             </SettingText>
           </SettingContent>
@@ -463,8 +438,23 @@ const CompanyPage = () => {
               disabled={isSavingSetting}
             />
           </SettingControl>
-        </SettingRow>
-      </SettingsCard>
+        </SettingsSection>
+
+        <CardFooter>
+          <Disclaimer>
+            Все данные используются только для автоматического оформления
+            договора займа и не передаются третьим лицам.
+          </Disclaimer>
+          <ButtonsContainer>
+            <GrayButton width="120px" onClick={handleReset}>
+              Сбросить
+            </GrayButton>
+            <DarkCyanButton onClick={handleSave} disabled={isLoading}>
+              Сохранить изменения
+            </DarkCyanButton>
+          </ButtonsContainer>
+        </CardFooter>
+      </CompanyCard>
 
       {showContextMenu && (
         <>
@@ -537,21 +527,20 @@ const CompanyCard = styled.section`
   }
 `;
 
-const SettingRow = styled.div`
+const SettingsSection = styled.section`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 18px 20px;
-  border: 1px solid #dce9ea;
-  border-radius: 12px;
-  background: rgba(0, 125, 136, 0.035);
+  margin-top: 28px;
+  padding: 22px 0;
+  border-top: 1px solid #edf0f3;
+  border-bottom: 1px solid #edf0f3;
 
   @media (max-width: 600px) {
     flex-direction: column;
     align-items: stretch;
-    gap: 18px;
-    padding: 16px;
+    gap: 16px;
   }
 `;
 
@@ -566,10 +555,10 @@ const SettingIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   color: #007d88;
   background: rgba(0, 125, 136, 0.1);
 `;
@@ -602,7 +591,7 @@ const SettingControl = styled.div`
 
   @media (max-width: 600px) {
     justify-content: space-between;
-    padding-left: 56px;
+    padding-left: 54px;
   }
 `;
 
@@ -623,18 +612,6 @@ const CardHeader = styled.div`
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 28px;
-`;
-
-const SettingsCard = styled(CompanyCard)`
-  padding-bottom: 28px;
-
-  ${CardHeader} {
-    margin-bottom: 20px;
-  }
-
-  @media (max-width: 720px) {
-    padding-bottom: 22px;
-  }
 `;
 
 const CardTitle = styled.div`
@@ -772,9 +749,8 @@ const CardFooter = styled.footer`
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 28px;
+  margin-top: 0;
   padding: 20px 0 24px;
-  border-top: 1px solid #edf0f3;
 
   @media (max-width: 720px) {
     align-items: stretch;
