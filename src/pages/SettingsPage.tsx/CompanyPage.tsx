@@ -93,6 +93,25 @@ const TrashIconSvg = () => (
   </svg>
 );
 
+const ContractApprovalIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-5-5Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M14 2v5h5M9 14l2 2 4-4"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const CompanyPage = () => {
@@ -409,7 +428,7 @@ const CompanyPage = () => {
         </CardFooter>
       </CompanyCard>
 
-      <CompanyCard>
+      <SettingsCard>
         <CardHeader>
           <CardTitle>
             <h2>Настройки</h2>
@@ -418,21 +437,34 @@ const CompanyPage = () => {
         </CardHeader>
 
         <SettingRow>
-          <SettingText>
-            <SettingName>Подтверждение договоров</SettingName>
-            <SettingHint>
-              Выключено — договоры не требуют подтверждения: кнопки
-              подтверждения скрываются, а из аналитики уходит счётчик
-              неподтверждённых.
-            </SettingHint>
-          </SettingText>
-          <ToggleSwitch
-            checked={creditAcceptance}
-            onChange={handleCreditAcceptanceChange}
-            disabled={isSavingSetting}
-          />
+          <SettingContent>
+            <SettingIcon>
+              <ContractApprovalIcon />
+            </SettingIcon>
+            <SettingText>
+              <SettingName>Подтверждение договоров</SettingName>
+              <SettingHint>
+                Когда настройка выключена, договоры не требуют подтверждения,
+                а связанные кнопки и показатель в аналитике скрываются.
+              </SettingHint>
+            </SettingText>
+          </SettingContent>
+          <SettingControl>
+            <SettingStatus $enabled={creditAcceptance}>
+              {isSavingSetting
+                ? "Сохранение..."
+                : creditAcceptance
+                ? "Включено"
+                : "Выключено"}
+            </SettingStatus>
+            <ToggleSwitch
+              checked={creditAcceptance}
+              onChange={handleCreditAcceptanceChange}
+              disabled={isSavingSetting}
+            />
+          </SettingControl>
         </SettingRow>
-      </CompanyCard>
+      </SettingsCard>
 
       {showContextMenu && (
         <>
@@ -510,16 +542,36 @@ const SettingRow = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 16px 18px;
-  border: 1px solid #eef1f4;
+  padding: 18px 20px;
+  border: 1px solid #dce9ea;
   border-radius: 12px;
-  background: #fbfcfd;
+  background: rgba(0, 125, 136, 0.035);
 
   @media (max-width: 600px) {
-    align-items: flex-start;
     flex-direction: column;
-    gap: 14px;
+    align-items: stretch;
+    gap: 18px;
+    padding: 16px;
   }
+`;
+
+const SettingContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+`;
+
+const SettingIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: #007d88;
+  background: rgba(0, 125, 136, 0.1);
 `;
 
 const SettingText = styled.div`
@@ -541,12 +593,48 @@ const SettingHint = styled.p`
   max-width: 640px;
 `;
 
+const SettingControl = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  gap: 12px;
+
+  @media (max-width: 600px) {
+    justify-content: space-between;
+    padding-left: 56px;
+  }
+`;
+
+const SettingStatus = styled.span<{ $enabled: boolean }>`
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: ${({ $enabled }) => ($enabled ? "#006b74" : "#657286")};
+  background: ${({ $enabled }) =>
+    $enabled ? "rgba(0, 125, 136, 0.1)" : "#edf0f3"};
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+`;
+
 const CardHeader = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 28px;
+`;
+
+const SettingsCard = styled(CompanyCard)`
+  padding-bottom: 28px;
+
+  ${CardHeader} {
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 720px) {
+    padding-bottom: 22px;
+  }
 `;
 
 const CardTitle = styled.div`
