@@ -213,6 +213,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     );
   }, []);
 
+  // Пустое поле дней — правило недозаполнено. Раньше оно молча пропадало при
+  // сохранении, и человек не понимал, куда делось. Теперь не даём сохранить,
+  // пока не вписал или не убрал.
+  const hasIncompleteRule = paymentColorRules.some(
+    (rule) => rule.days.trim() === ""
+  );
+
   const handleSave = () => {
     setHideCurrencySetting(hideCurrency);
     setAutoCollapseMenuSetting(autoCollapseMenu);
@@ -405,6 +412,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               </ColorRuleRow>
             ))}
 
+            {hasIncompleteRule && (
+              <ColorRulesWarning>
+                Укажите количество дней — правило без него не сохранится.
+              </ColorRulesWarning>
+            )}
+
             <ColorRuleAdd
               type="button"
               onClick={() =>
@@ -468,7 +481,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
           <GrayButton style={{ width: "120px" }} onClick={onClose}>
             Отмена
           </GrayButton>
-          <DarkCyanButton style={{ width: "120px" }} onClick={handleSave}>
+          <DarkCyanButton
+            style={{ width: "120px" }}
+            onClick={handleSave}
+            disabled={hasIncompleteRule}
+            title={
+              hasIncompleteRule
+                ? "Укажите количество дней в правиле цвета или уберите его"
+                : undefined
+            }
+          >
             Сохранить
           </DarkCyanButton>
         </ModalFooter>
@@ -538,6 +560,12 @@ const ColorRuleAdd = styled.button`
   &:hover {
     border-color: rgba(0, 125, 136, 1);
   }
+`;
+
+const ColorRulesWarning = styled.p`
+  margin: 0;
+  color: #d14343;
+  font-size: 13px;
 `;
 
 const ColorRulesEmpty = styled.p`
