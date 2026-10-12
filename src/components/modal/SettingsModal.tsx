@@ -7,6 +7,7 @@ import Checkbox from "../ui/CheckBoxes/Checkbox";
 import Tabs from "../ui/fields/Tabs";
 import {
   getUiSettings,
+  type PaymentColorRule,
   setUiSettings,
   type CreditsDisplayMode,
 } from "../../utils/uiSettings";
@@ -186,6 +187,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     useState<CreditsDisplayMode>("pagination");
   const [paymentsDisplayMode, setPaymentsDisplayMode] =
     useState<CreditsDisplayMode>("pagination");
+  const [paymentColorRules, setPaymentColorRules] = useState<
+    PaymentColorRule[]
+  >([]);
   const [activeTab, setActiveTab] = useState<SettingsTab>("interface");
 
   useEffect(() => {
@@ -199,6 +203,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     setDisableWhatsAppNotifications(getDisableWhatsAppNotificationsSetting());
     setCreditsDisplayMode(getUiSettings().creditsDisplayMode);
     setPaymentsDisplayMode(getUiSettings().paymentsDisplayMode);
+    setPaymentColorRules(getUiSettings().paymentColorRules);
   }, []);
 
   const handleSave = () => {
@@ -210,7 +215,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
       showContractCreationNotification
     );
     setDisableWhatsAppNotificationsSetting(disableWhatsAppNotifications);
-    setUiSettings({ creditsDisplayMode, paymentsDisplayMode });
+    setUiSettings({
+      creditsDisplayMode,
+      paymentsDisplayMode,
+      // Пустые и повторяющиеся правила не храним: они только мешали бы
+      // выбирать нужное.
+      paymentColorRules: paymentColorRules
+        .filter((rule) => Number.isFinite(rule.days) && rule.days >= 0)
+        .filter(
+          (rule, i, all) =>
+            all.findIndex((other) => other.days === rule.days) === i
+        )
+        .sort((a, b) => a.days - b.days),
+    });
     onClose();
   };
 
@@ -307,6 +324,76 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               </OptionText>
             </DisplayModeOption>
           </SectionGroup>
+
+          <SectionGroup>
+            <SectionGroupTitle>Цвета ожидаемых платежей</SectionGroupTitle>
+            <SectionGroupHint>
+              Строка в «Ожидаемых» закрашивается, когда до платежа остаётся не
+              больше указанных дней. Если подходят несколько правил, берётся
+              самое близкое: «за 3 дня» важнее, чем «за 7».
+            </SectionGroupHint>
+
+            {paymentColorRules.length === 0 && (
+              <ColorRulesEmpty>
+                Правил нет — платежи не закрашиваются.
+              </ColorRulesEmpty>
+            )}
+
+            {paymentColorRules.map((rule, index) => (
+              <ColorRuleRow key={index}>
+                <ColorRuleLabel>За</ColorRuleLabel>
+                <ColorRuleDays
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={Number.isFinite(rule.days) ? rule.days : 0}
+                  onChange={(e) =>
+                    setPaymentColorRules((prev) =>
+                      prev.map((item, i) =>
+                        i === index
+                          ? { ...item, days: parseInt(e.target.value) || 0 }
+                          : item
+                      )
+                    )
+                  }
+                />
+                <ColorRuleLabel>дн. — цвет</ColorRuleLabel>
+                <ColorRuleColor
+                  type="color"
+                  value={rule.color}
+                  onChange={(e) =>
+                    setPaymentColorRules((prev) =>
+                      prev.map((item, i) =>
+                        i === index ? { ...item, color: e.target.value } : item
+                      )
+                    )
+                  }
+                />
+                <ColorRuleRemove
+                  type="button"
+                  onClick={() =>
+                    setPaymentColorRules((prev) =>
+                      prev.filter((_, i) => i !== index)
+                    )
+                  }
+                >
+                  Убрать
+                </ColorRuleRemove>
+              </ColorRuleRow>
+            ))}
+
+            <ColorRuleAdd
+              type="button"
+              onClick={() =>
+                setPaymentColorRules((prev) => [
+                  ...prev,
+                  { days: 3, color: "#FFE6B0" },
+                ])
+              }
+            >
+              + Добавить правило
+            </ColorRuleAdd>
+          </SectionGroup>
         </SettingsSection>
       ),
     },
@@ -366,6 +453,75 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     </ModalOverlay>
   );
 };
+
+const ColorRuleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #eef1f4;
+  border-radius: 10px;
+  background: #fbfcfd;
+`;
+
+const ColorRuleLabel = styled.span`
+  color: #52606d;
+  font-size: 13px;
+  white-space: nowrap;
+`;
+
+const ColorRuleDays = styled.input`
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid #d6dce3;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+`;
+
+const ColorRuleColor = styled.input`
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #d6dce3;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+`;
+
+const ColorRuleRemove = styled.button`
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: #8a94a6;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    color: #d14343;
+  }
+`;
+
+const ColorRuleAdd = styled.button`
+  align-self: flex-start;
+  border: 1px dashed #c4ccd6;
+  background: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: rgba(0, 125, 136, 1);
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: rgba(0, 125, 136, 1);
+  }
+`;
+
+const ColorRulesEmpty = styled.p`
+  margin: 0;
+  color: #8a94a6;
+  font-size: 13px;
+`;
 
 const ModalOverlay = styled.div`
   position: fixed;

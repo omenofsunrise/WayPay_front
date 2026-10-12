@@ -40,6 +40,7 @@ import useSender from "../../api/hooks/useSender";
 import scheduleService from "../../api/services/scheduleService";
 import type { VisitMode } from "../../api/types/schedule";
 import usePersistedState from "../../hooks/usePersistedState";
+import { useUiSettings, colorForPaymentDate } from "../../utils/uiSettings";
 import {
   useScrollMemory,
   restoreScroll,
@@ -686,6 +687,8 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     setViewingCreditId(null);
   }, []);
 
+  const { paymentColorRules } = useUiSettings();
+
   const tableData = useMemo(
     () =>
       displayedSchedules.map((schedule) => {
@@ -725,10 +728,28 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     [displayedSchedules, handleWhatsAppClick, handleGuarantorWhatsAppClick]
   );
 
-  const rowStyles = useMemo(
-    () => getRowStyles(displayedSchedules, selectedRow),
-    [displayedSchedules, selectedRow]
-  );
+  const rowStyles = useMemo(() => {
+    const base = getRowStyles(displayedSchedules, selectedRow);
+    if (paymentColorRules.length === 0) return base;
+
+    // Раскраска по правилам из персональных настроек: чем ближе платёж, тем
+    // заметнее строка. Поверх базовых стилей, но ниже выделения выбранной —
+    // её getRowStyles ставит сам, и перебивать выбор цветом правила нельзя.
+    const withColors: typeof base = { ...base };
+    displayedSchedules.forEach((schedule, index) => {
+      if (index === selectedRow) return;
+
+      const color = colorForPaymentDate(
+        schedule.paymentDate,
+        paymentColorRules
+      );
+      if (color) {
+        withColors[index] = { ...withColors[index], backgroundColor: color };
+      }
+    });
+
+    return withColors;
+  }, [displayedSchedules, selectedRow, paymentColorRules]);
 
   const findSchedule = useCallback(
     (rowData: any[]) =>
