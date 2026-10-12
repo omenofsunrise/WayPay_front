@@ -1865,7 +1865,9 @@ const CreditPage = () => {
         baseStyle.color = "#6B21A8";
       }
 
-      if (!credit.hasCounterApproved) {
+      // Подтверждение договоров выключено — делить их на подтверждённые и
+      // нет незачем, подсветка только мешает.
+      if (creditAcceptance && !credit.hasCounterApproved) {
         baseStyle.backgroundColor = "#FFD6D6";
         baseStyle.color = "#B91C1C";
       }

@@ -1163,7 +1163,9 @@ const CreditControlPage = () => {
         baseStyle.color = "#1B5E20";
       }
 
-      if (!credit.hasCounterApproved) {
+      // Подтверждение договоров выключено — делить их на подтверждённые и
+      // нет незачем, подсветка только мешает.
+      if (creditAcceptance && !credit.hasCounterApproved) {
         baseStyle.backgroundColor = "#FFD6D6";
         baseStyle.color = "#B91C1C";
       }
@@ -1279,6 +1281,8 @@ const CreditControlPage = () => {
               />
             </FilterSlot>
 
+            {/* Подтверждение выключено — отбирать по нему нечего. */}
+            {creditAcceptance && (
             <FilterSlot>
               <FilterSlotLabel>Статус подтверждения</FilterSlotLabel>
               <CustomSelect
@@ -1294,6 +1298,7 @@ const CreditControlPage = () => {
                 disabled={false}
               />
             </FilterSlot>
+            )}
           </FilterGrid>
 
           <FilterGroupRow>
