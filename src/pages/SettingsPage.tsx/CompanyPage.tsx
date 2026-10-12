@@ -70,10 +70,10 @@ const CameraIconSvg = () => (
 );
 
 const EditIconSvg = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
     <path
       d="M13 3l4 4L6 18H2v-4L13 3z"
-      stroke="#fff"
+      stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -378,7 +378,7 @@ const CompanyPage = () => {
   return (
     <CompanyPageLayout>
       <PageHeading>
-        <h1>Данные о компании</h1>
+        <h1>Данные компании</h1>
         <p>Основные сведения, которые используются при оформлении договоров.</p>
       </PageHeading>
 
@@ -403,9 +403,9 @@ const CompanyPage = () => {
               {previewUrl ? (
                 <>
                   <LogoImage src={previewUrl} alt="Логотип компании" />
-                  <EditOverlay>
+                  <EditBadge aria-hidden="true">
                     <EditIconSvg />
-                  </EditOverlay>
+                  </EditBadge>
                 </>
               ) : (
                 <CameraIconSvg />
@@ -425,11 +425,14 @@ const CompanyPage = () => {
 
         <FormGrid>
           <InputGroup>
-            <Label>Название организации</Label>
+            <Label>
+              Название организации <RequiredMark>*</RequiredMark>
+            </Label>
             <CustomInput
               name="name"
               value={formData.name}
               onChange={handleInputChange}
+              placeholder="Введите название организации"
             />
           </InputGroup>
           <InputGroup>
@@ -439,14 +442,18 @@ const CompanyPage = () => {
               inputType="fullname"
               value={formData.chief}
               onChange={handleInputChange}
+              placeholder="Введите ФИО учредителя"
             />
           </InputGroup>
           <InputGroup>
-            <Label>Населённый пункт</Label>
+            <Label>
+              Населённый пункт <RequiredMark>*</RequiredMark>
+            </Label>
             <CustomInput
               name="city"
               value={formData.city}
               onChange={handleInputChange}
+              placeholder="Введите населённый пункт"
             />
           </InputGroup>
           <InputGroup>
@@ -455,15 +462,19 @@ const CompanyPage = () => {
               name="officeAddress"
               value={formData.officeAddress}
               onChange={handleInputChange}
+              placeholder="Введите адрес офиса"
             />
           </InputGroup>
           <InputGroup>
-            <Label>Email</Label>
+            <Label>
+              Email <RequiredMark>*</RequiredMark>
+            </Label>
             <CustomInput
               name="email"
               type="email"
               value={formData.email}
               onChange={handleInputChange}
+              placeholder="Введите email"
             />
           </InputGroup>
           <InputGroup>
@@ -484,72 +495,73 @@ const CompanyPage = () => {
           </InputGroup>
         </FormGrid>
 
-        <SettingsSection>
-          <SettingContent>
-            <SettingIcon>
-              <ContractApprovalIcon />
-            </SettingIcon>
-            <SettingText>
-              <SettingName>Подтверждение договоров</SettingName>
-              <SettingHint>
-                Выключите, если договоры не требуют отдельного подтверждения.
-              </SettingHint>
-            </SettingText>
-          </SettingContent>
-          <SettingControl>
-            <SettingStatus $enabled={creditAcceptance}>
-              {isSavingSetting
-                ? "Сохранение..."
-                : creditAcceptance
-                ? "Включено"
-                : "Выключено"}
-            </SettingStatus>
-            <ToggleSwitch
-              checked={creditAcceptance}
-              onChange={handleCreditAcceptanceChange}
-              disabled={isSavingSetting}
-            />
-          </SettingControl>
-        </SettingsSection>
-
-        {canEditRoundingStep && (
-          <SettingsSection>
+        <AdditionalSettings>
+          <SettingsTitle>Дополнительные настройки</SettingsTitle>
+          <SettingsList>
+            <SettingsSection>
             <SettingContent>
               <SettingIcon>
-                <RoundingIcon />
+                <ContractApprovalIcon />
               </SettingIcon>
               <SettingText>
-                <SettingName>Шаг округления</SettingName>
+                <SettingName>Подтверждение договоров</SettingName>
                 <SettingHint>
-                  К этому шагу округляются суммы при оформлении: платёж по
-                  графику и суммы товаров. От 0 до 100, ноль — не округлять.
+                  Требовать отдельное подтверждение перед оформлением договоров.
                 </SettingHint>
               </SettingText>
             </SettingContent>
             <SettingControl>
-              <SettingStatus $enabled={savedRoundingStep > 0}>
-                {isSavingRounding
+              <ToggleSwitch
+                checked={creditAcceptance}
+                onChange={handleCreditAcceptanceChange}
+                disabled={isSavingSetting}
+              />
+              <SettingStatus $enabled={creditAcceptance}>
+                {isSavingSetting
                   ? "Сохранение..."
-                  : savedRoundingStep > 0
-                  ? `Шаг ${savedRoundingStep}`
+                  : creditAcceptance
+                  ? "Включено"
                   : "Выключено"}
               </SettingStatus>
-              <RoundingStepInput
-                type="text"
-                inputMode="numeric"
-                value={roundingStepInput}
-                disabled={isSavingRounding}
-                onChange={(e) =>
-                  setRoundingStepInput(e.target.value.replace(/[^0-9]/g, ""))
-                }
-                onBlur={handleRoundingStepSave}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") e.currentTarget.blur();
-                }}
-              />
             </SettingControl>
-          </SettingsSection>
-        )}
+            </SettingsSection>
+
+            {canEditRoundingStep && (
+              <SettingsSection>
+                <SettingContent>
+                  <SettingIcon>
+                    <RoundingIcon />
+                  </SettingIcon>
+                  <SettingText>
+                    <SettingName>Шаг округления</SettingName>
+                    <SettingHint>
+                      Суммы будут округляться до указанного шага при оформлении:
+                      платёж по графику и суммы товаров.
+                    </SettingHint>
+                  </SettingText>
+                </SettingContent>
+                <SettingControl>
+                  <RoundingStepInput
+                    type="text"
+                    inputMode="numeric"
+                    aria-label="Шаг округления"
+                    value={roundingStepInput}
+                    disabled={isSavingRounding}
+                    onChange={(e) =>
+                      setRoundingStepInput(
+                        e.target.value.replace(/[^0-9]/g, "")
+                      )
+                    }
+                    onBlur={handleRoundingStepSave}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                  />
+                </SettingControl>
+              </SettingsSection>
+            )}
+          </SettingsList>
+        </AdditionalSettings>
 
         <CardFooter>
           <Disclaimer>
@@ -603,22 +615,24 @@ const CompanyPage = () => {
 // ─── Styled components ─────────────────────────────────────────────────────────
 
 const CompanyPageLayout = styled(PageLayout)`
-  gap: 24px;
-  padding-bottom: 36px;
+  gap: 22px;
+  margin: 0;
+  padding: 8px 0 36px;
+  background: transparent;
 `;
 
 const PageHeading = styled.header`
   h1 {
     margin: 0 0 6px;
     color: #172033;
-    font-size: 30px;
-    font-weight: 600;
+    font-size: 28px;
+    font-weight: 700;
     line-height: 1.25;
   }
 
   p {
     margin: 0;
-    color: #718096;
+    color: #8391a7;
     font-size: 14px;
     line-height: 1.5;
   }
@@ -626,11 +640,11 @@ const PageHeading = styled.header`
 
 const CompanyCard = styled.section`
   width: 100%;
-  padding: 28px 32px 0;
-  border: 1px solid #e5eaef;
-  border-radius: 14px;
+  padding: 26px 32px 0;
+  border: 1px solid #e7ebef;
+  border-radius: 16px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(28, 48, 74, 0.05);
+  box-shadow: 0 6px 24px rgba(16, 24, 40, 0.04);
   box-sizing: border-box;
 
   @media (max-width: 720px) {
@@ -638,15 +652,36 @@ const CompanyCard = styled.section`
   }
 `;
 
-const SettingsSection = styled.section`
+const AdditionalSettings = styled.section`
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid #edf1f4;
+`;
+
+const SettingsTitle = styled.h3`
+  margin: 0 0 12px;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 600;
+`;
+
+const SettingsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
+const SettingsSection = styled.div`
+  min-height: 84px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 28px;
-  padding: 22px 0;
-  border-top: 1px solid #edf0f3;
-  border-bottom: 1px solid #edf0f3;
+  padding: 16px 20px;
+  border: 1px solid #edf1f4;
+  border-radius: 12px;
+  background: #f8fafb;
+  box-sizing: border-box;
 
   @media (max-width: 600px) {
     flex-direction: column;
@@ -669,9 +704,9 @@ const SettingIcon = styled.div`
   flex: 0 0 40px;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  color: #007d88;
-  background: rgba(0, 125, 136, 0.1);
+  border-radius: 10px;
+  color: #168b96;
+  background: #eaf7f7;
 `;
 
 const SettingText = styled.div`
@@ -679,16 +714,16 @@ const SettingText = styled.div`
 `;
 
 const SettingName = styled.div`
-  color: #172033;
-  font-size: 15px;
+  color: #344054;
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 4px;
 `;
 
 const SettingHint = styled.p`
   margin: 0;
-  color: #7a8799;
-  font-size: 13px;
+  color: #98a2b3;
+  font-size: 12px;
   line-height: 1.5;
   max-width: 640px;
 `;
@@ -698,7 +733,7 @@ const SettingControl = styled.div`
   align-items: center;
   justify-content: flex-end;
   flex-shrink: 0;
-  gap: 12px;
+  gap: 13px;
 
   @media (max-width: 600px) {
     justify-content: space-between;
@@ -707,14 +742,16 @@ const SettingControl = styled.div`
 `;
 
 const RoundingStepInput = styled.input`
-  width: 72px;
-  padding: 9px 10px;
-  border: 1px solid #d7dde5;
-  border-radius: 8px;
+  width: 100px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid #d9e0e7;
+  border-radius: 9px;
+  background: #fff;
   color: #172033;
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
   outline: none;
   transition: border-color 0.15s ease;
 
@@ -729,14 +766,10 @@ const RoundingStepInput = styled.input`
 `;
 
 const SettingStatus = styled.span<{ $enabled: boolean }>`
-  padding: 5px 9px;
-  border-radius: 999px;
-  color: ${({ $enabled }) => ($enabled ? "#006b74" : "#657286")};
-  background: ${({ $enabled }) =>
-    $enabled ? "rgba(0, 125, 136, 0.1)" : "#edf0f3"};
+  min-width: 70px;
+  color: ${({ $enabled }) => ($enabled ? "#168b96" : "#98a2b3")};
   font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
+  font-weight: 400;
 `;
 
 const CardHeader = styled.div`
@@ -771,15 +804,15 @@ const LogoContainer = styled.div`
 `;
 
 const LogoPreview = styled.div<{ $hasLogo: boolean }>`
-  width: 88px;
-  height: 88px;
-  border-radius: 12px;
+  width: 100px;
+  height: 100px;
+  border-radius: 14px;
   background-color: ${(p) => (p.$hasLogo ? "transparent" : "#f6f8fa")};
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px dashed ${(p) => (p.$hasLogo ? "#dce4ea" : "#cbd5df")};
+  border: 1px solid ${(p) => (p.$hasLogo ? "#dce4ea" : "#cbd5df")};
   position: relative;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -790,7 +823,7 @@ const LogoPreview = styled.div<{ $hasLogo: boolean }>`
   }
 
   &:hover > div:last-child {
-    opacity: 1;
+    transform: scale(1.06);
   }
 `;
 
@@ -800,15 +833,21 @@ const LogoImage = styled.img`
   object-fit: contain;
 `;
 
-const EditOverlay = styled.div`
+const EditBadge = styled.div`
   position: absolute;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  top: -1px;
+  right: -1px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #dce4ea;
+  border-radius: 50%;
+  color: #53657b;
+  background: #f7fafc;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  box-shadow: 0 2px 7px rgba(16, 24, 40, 0.08);
+  transition: transform 0.15s ease;
 `;
 
 const FormGrid = styled.div`
@@ -832,12 +871,24 @@ const InputGroup = styled.div<{ $wide?: boolean }>`
   input {
     width: 100%;
     max-width: none;
-    min-height: 42px;
-    padding: 8px 13px;
-    border-color: #d4dce5;
-    border-radius: 7px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-color: #d9e0e7;
+    border-radius: 9px;
     color: #26364d;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
     box-sizing: border-box;
+
+    &::placeholder {
+      color: #98a2b3;
+    }
+
+    &:focus {
+      border-color: #1593a0;
+      box-shadow: 0 0 0 3px rgba(21, 147, 160, 0.12);
+    }
   }
 
   @media (max-width: 760px) {
@@ -847,8 +898,12 @@ const InputGroup = styled.div<{ $wide?: boolean }>`
 
 const Label = styled.label`
   font-size: 13px;
-  font-weight: 600;
-  color: #45566e;
+  font-weight: 500;
+  color: #475467;
+`;
+
+const RequiredMark = styled.span`
+  color: #ef4444;
 `;
 
 const ButtonsContainer = styled.div`
@@ -882,8 +937,9 @@ const CardFooter = styled.footer`
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 0;
-  padding: 20px 0 24px;
+  margin-top: 26px;
+  padding: 14px 0 22px;
+  border-top: 1px solid #edf1f4;
 
   @media (max-width: 720px) {
     align-items: stretch;
