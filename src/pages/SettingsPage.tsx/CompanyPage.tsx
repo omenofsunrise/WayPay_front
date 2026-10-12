@@ -622,6 +622,8 @@ const CompanyPageLayout = styled(PageLayout)`
 `;
 
 const PageHeading = styled.header`
+  padding-left: 106px;
+
   h1 {
     margin: 0 0 6px;
     color: #172033;
@@ -635,6 +637,10 @@ const PageHeading = styled.header`
     color: #8391a7;
     font-size: 14px;
     line-height: 1.5;
+  }
+
+  @media (max-width: 720px) {
+    padding-left: 0;
   }
 `;
 
@@ -782,6 +788,7 @@ const CardHeader = styled.div`
 
 const CardTitle = styled.div`
   min-width: 0;
+  margin-left: 74px;
 
   h2 {
     margin: 0 0 5px;
@@ -796,6 +803,10 @@ const CardTitle = styled.div`
     color: #7a8799;
     font-size: 13px;
     line-height: 1.5;
+  }
+
+  @media (max-width: 720px) {
+    margin-left: 0;
   }
 `;
 
