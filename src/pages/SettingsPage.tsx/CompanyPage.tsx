@@ -622,8 +622,7 @@ const CompanyPageLayout = styled(PageLayout)`
 `;
 
 const PageHeading = styled.header`
-  /* 32px карточки + 20px внутреннего отступа строк настроек. */
-  padding-left: 52px;
+  padding-left: 106px;
 
   h1 {
     margin: 0 0 6px;
@@ -641,7 +640,7 @@ const PageHeading = styled.header`
   }
 
   @media (max-width: 720px) {
-    padding-left: 38px;
+    padding-left: 0;
   }
 `;
 
@@ -666,7 +665,7 @@ const AdditionalSettings = styled.section`
 `;
 
 const SettingsTitle = styled.h3`
-  margin: 0 0 12px 20px;
+  margin: 0 0 12px;
   color: #172033;
   font-size: 15px;
   font-weight: 600;
@@ -700,11 +699,20 @@ const SettingsSection = styled.div`
 const SettingContent = styled.div`
   display: flex;
   align-items: center;
+  gap: 14px;
   min-width: 0;
 `;
 
 const SettingIcon = styled.div`
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: #168b96;
+  background: #eaf7f7;
 `;
 
 const SettingText = styled.div`
@@ -735,7 +743,7 @@ const SettingControl = styled.div`
 
   @media (max-width: 600px) {
     justify-content: space-between;
-    padding-left: 0;
+    padding-left: 54px;
   }
 `;
 
@@ -780,7 +788,7 @@ const CardHeader = styled.div`
 
 const CardTitle = styled.div`
   min-width: 0;
-  margin-left: 20px;
+  margin-left: 74px;
 
   h2 {
     margin: 0 0 5px;
@@ -798,7 +806,7 @@ const CardTitle = styled.div`
   }
 
   @media (max-width: 720px) {
-    margin-left: 20px;
+    margin-left: 0;
   }
 `;
 
@@ -929,13 +937,13 @@ const ButtonsContainer = styled.div`
 
 const Disclaimer = styled.p`
   max-width: 620px;
-  margin: 0 0 0 20px;
+  margin: 0 0 0 74px;
   color: #7a8799;
   font-size: 12px;
   line-height: 1.5;
 
   @media (max-width: 720px) {
-    margin-left: 20px;
+    margin-left: 0;
   }
 `;
 
