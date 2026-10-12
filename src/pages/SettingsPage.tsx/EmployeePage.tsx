@@ -25,10 +25,13 @@ import { useAuth } from "../../сontext/AuthContext";
 import PhoneLink from "../../components/ui/links/PhoneLink";
 import Checkbox from "../../components/ui/CheckBoxes/Checkbox";
 
-// Служебные аккаунты прячем из списка только в проде. Сборка с main идёт в
-// режиме production, с dev — staging, локальный запуск — development, так что
-// на тесте и локально они видны: иначе роли на них не проверить.
-const HIDE_SERVICE_ACCOUNTS = import.meta.env.MODE === "production";
+// Сборка с main идёт в режиме production, с dev — staging, локальный запуск —
+// development.
+const IS_PRODUCTION_BUILD = import.meta.env.MODE === "production";
+
+// Служебные аккаунты прячем из списка только в проде: на тесте и локально они
+// нужны видимыми, иначе роли на них не проверить.
+const HIDE_SERVICE_ACCOUNTS = IS_PRODUCTION_BUILD;
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -550,6 +553,18 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
     return false;
   };
 
+  const canEditRole = (employee: Employee): boolean => {
+    if (!canEditEmployee(employee)) return false;
+
+    // Роль суперадмина бэкенд не даёт менять никому, даже другому
+    // суперадмину (EmployeeService.UpdateRoleAsync), и отвечает
+    // "Failed to update role". Карандаш на таких строках вёл в тупик.
+    // В прод-сборке их в списке нет вовсе, так что гасим только вне прода.
+    if (!IS_PRODUCTION_BUILD && employee.role === "суперадмин") return false;
+
+    return true;
+  };
+
   const canDeleteEmployee = (employee: Employee): boolean => {
     if (!authInfo || employee.id === authInfo.employee.id) return false;
     if (hasRole("суперадмин") || hasRole("директор")) return true;
@@ -818,7 +833,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
       ) : (
         employee.role
       )}
-      {canEditEmployee(employee) && (
+      {canEditRole(employee) && (
         <EditBtn
           onClick={(e) => handleOpenRoleModal(employee, e)}
           title="Изменить роль"
