@@ -187,8 +187,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     useState<CreditsDisplayMode>("pagination");
   const [paymentsDisplayMode, setPaymentsDisplayMode] =
     useState<CreditsDisplayMode>("pagination");
+  // Дни храним строкой, а не числом: иначе стёртое поле тут же становилось
+  // нулём, и следующая цифра приписывалась к нему — «05» вместо «5».
   const [paymentColorRules, setPaymentColorRules] = useState<
-    PaymentColorRule[]
+    { days: string; color: string }[]
   >([]);
   const [activeTab, setActiveTab] = useState<SettingsTab>("interface");
 
@@ -203,7 +205,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     setDisableWhatsAppNotifications(getDisableWhatsAppNotificationsSetting());
     setCreditsDisplayMode(getUiSettings().creditsDisplayMode);
     setPaymentsDisplayMode(getUiSettings().paymentsDisplayMode);
-    setPaymentColorRules(getUiSettings().paymentColorRules);
+    setPaymentColorRules(
+      getUiSettings().paymentColorRules.map((rule) => ({
+        days: String(rule.days),
+        color: rule.color,
+      }))
+    );
   }, []);
 
   const handleSave = () => {
@@ -221,10 +228,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
       // Пустые и повторяющиеся правила не храним: они только мешали бы
       // выбирать нужное.
       paymentColorRules: paymentColorRules
-        // Предел поля — год. Проверяем и здесь: в поле можно вписать число
-        // руками, минуя стрелки, и тогда ограничение разметки не сработает.
-        .map((rule) => ({ ...rule, days: Math.min(Math.max(rule.days, 0), 365) }))
-        .filter((rule) => Number.isFinite(rule.days))
+        // Пустое поле — правило не заполнили, его не сохраняем.
+        .filter((rule) => rule.days.trim() !== "")
+        .map(
+          (rule): PaymentColorRule => ({
+            color: rule.color,
+            // Предел поля — год. Проверяем и здесь: число можно вписать
+            // руками, минуя стрелки, и ограничение разметки не сработает.
+            days: Math.min(Math.max(parseInt(rule.days, 10) || 0, 0), 365),
+          })
+        )
         .filter(
           (rule, i, all) =>
             all.findIndex((other) => other.days === rule.days) === i
@@ -346,15 +359,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               <ColorRuleRow key={index}>
                 <ColorRuleLabel>За</ColorRuleLabel>
                 <ColorRuleDays
-                  type="number"
-                  min={0}
-                  max={365}
-                  value={Number.isFinite(rule.days) ? rule.days : 0}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={3}
+                  value={rule.days}
                   onChange={(e) =>
                     setPaymentColorRules((prev) =>
                       prev.map((item, i) =>
                         i === index
-                          ? { ...item, days: parseInt(e.target.value) || 0 }
+                          ? {
+                              ...item,
+                              // Оставляем только цифры и убираем ведущие нули,
+                              // чтобы «05» не получалось в принципе.
+                              days: e.target.value
+                                .replace(/\D/g, "")
+                                .replace(/^0+(?=\d)/, ""),
+                            }
                           : item
                       )
                     )
@@ -390,7 +410,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               onClick={() =>
                 setPaymentColorRules((prev) => [
                   ...prev,
-                  { days: 3, color: "#FFE6B0" },
+                  { days: "3", color: "#FFE6B0" },
                 ])
               }
             >
