@@ -221,7 +221,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
       // Пустые и повторяющиеся правила не храним: они только мешали бы
       // выбирать нужное.
       paymentColorRules: paymentColorRules
-        .filter((rule) => Number.isFinite(rule.days) && rule.days >= 0)
+        // Предел поля — год. Проверяем и здесь: в поле можно вписать число
+        // руками, минуя стрелки, и тогда ограничение разметки не сработает.
+        .map((rule) => ({ ...rule, days: Math.min(Math.max(rule.days, 0), 365) }))
+        .filter((rule) => Number.isFinite(rule.days))
         .filter(
           (rule, i, all) =>
             all.findIndex((other) => other.days === rule.days) === i
