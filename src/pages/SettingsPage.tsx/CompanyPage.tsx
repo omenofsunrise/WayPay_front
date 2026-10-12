@@ -93,6 +93,25 @@ const TrashIconSvg = () => (
   </svg>
 );
 
+const RoundingIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M4 7h7a4 4 0 0 1 0 8H6l3-3m-3 3 3 3"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M16 9h4M18 7v4"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const ContractApprovalIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
     <path
@@ -148,9 +167,20 @@ const CompanyPage = () => {
     { id: number; type: "success" | "error" | "warning"; message: string }[]
   >([]);
 
-  const { authInfo, refresh } = useAuth();
+  const { authInfo, refresh, hasRole } = useAuth();
   const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
   const [isSavingSetting, setIsSavingSetting] = useState(false);
+
+  // Шаг округления меняет только директор компании, поэтому остальным поле
+  // не показываем. Суперадмин — служебная роль, ему тоже можно.
+  const canEditRoundingStep = hasRole("директор") || hasRole("суперадмин");
+  const savedRoundingStep = authInfo?.employee.roundingStep ?? 50;
+  // Держим строкой: иначе стёртое поле превращается в 0 и к нему прилипает
+  // следующая цифра.
+  const [roundingStepInput, setRoundingStepInput] = useState(
+    String(savedRoundingStep)
+  );
+  const [isSavingRounding, setIsSavingRounding] = useState(false);
 
   const addToast = useCallback(
     (type: "success" | "error" | "warning", msg: string) => {
@@ -163,6 +193,48 @@ const CompanyPage = () => {
     },
     []
   );
+
+  // Значение приходит в данных авторизации: подтягиваем, когда оно пришло или
+  // изменилось на сервере, чтобы в поле не висело старое.
+  useEffect(() => {
+    setRoundingStepInput(String(savedRoundingStep));
+  }, [savedRoundingStep]);
+
+  const handleRoundingStepSave = useCallback(async () => {
+    const trimmed = roundingStepInput.trim();
+    if (trimmed === "") {
+      setRoundingStepInput(String(savedRoundingStep));
+      return;
+    }
+
+    const value = Number(trimmed);
+    if (!Number.isInteger(value) || value < 0 || value > 100) {
+      addToast("error", "Шаг округления должен быть целым числом от 0 до 100");
+      setRoundingStepInput(String(savedRoundingStep));
+      return;
+    }
+
+    if (value === savedRoundingStep) return;
+
+    setIsSavingRounding(true);
+    try {
+      await companyService.updateRoundingStep(value);
+      // Шаг приходит в данных авторизации, по нему считает таблица товаров.
+      await refresh();
+      addToast(
+        "success",
+        value === 0
+          ? "Округление отключено"
+          : `Шаг округления — ${value}`
+      );
+    } catch (error) {
+      console.error("Не удалось изменить шаг округления:", error);
+      addToast("error", "Не удалось изменить шаг округления");
+      setRoundingStepInput(String(savedRoundingStep));
+    } finally {
+      setIsSavingRounding(false);
+    }
+  }, [roundingStepInput, savedRoundingStep, addToast, refresh]);
 
   const handleCreditAcceptanceChange = useCallback(
     async (checked: boolean) => {
@@ -440,6 +512,45 @@ const CompanyPage = () => {
           </SettingControl>
         </SettingsSection>
 
+        {canEditRoundingStep && (
+          <SettingsSection>
+            <SettingContent>
+              <SettingIcon>
+                <RoundingIcon />
+              </SettingIcon>
+              <SettingText>
+                <SettingName>Шаг округления</SettingName>
+                <SettingHint>
+                  К этому шагу округляются суммы при оформлении: платёж по
+                  графику и суммы товаров. От 0 до 100, ноль — не округлять.
+                </SettingHint>
+              </SettingText>
+            </SettingContent>
+            <SettingControl>
+              <SettingStatus $enabled={savedRoundingStep > 0}>
+                {isSavingRounding
+                  ? "Сохранение..."
+                  : savedRoundingStep > 0
+                  ? `Шаг ${savedRoundingStep}`
+                  : "Выключено"}
+              </SettingStatus>
+              <RoundingStepInput
+                type="text"
+                inputMode="numeric"
+                value={roundingStepInput}
+                disabled={isSavingRounding}
+                onChange={(e) =>
+                  setRoundingStepInput(e.target.value.replace(/[^0-9]/g, ""))
+                }
+                onBlur={handleRoundingStepSave}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                }}
+              />
+            </SettingControl>
+          </SettingsSection>
+        )}
+
         <CardFooter>
           <Disclaimer>
             Все данные используются только для автоматического оформления
@@ -592,6 +703,28 @@ const SettingControl = styled.div`
   @media (max-width: 600px) {
     justify-content: space-between;
     padding-left: 54px;
+  }
+`;
+
+const RoundingStepInput = styled.input`
+  width: 72px;
+  padding: 9px 10px;
+  border: 1px solid #d7dde5;
+  border-radius: 8px;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s ease;
+
+  &:focus {
+    border-color: #007d88;
+  }
+
+  &:disabled {
+    background: #f4f6f8;
+    color: #7a8799;
   }
 `;
 
