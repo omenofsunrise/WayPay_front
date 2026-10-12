@@ -926,10 +926,14 @@ const ButtonsContainer = styled.div`
 
 const Disclaimer = styled.p`
   max-width: 620px;
-  margin: 0;
+  margin: 0 0 0 74px;
   color: #7a8799;
   font-size: 12px;
   line-height: 1.5;
+
+  @media (max-width: 720px) {
+    margin-left: 0;
+  }
 `;
 
 const CardFooter = styled.footer`
