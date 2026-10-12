@@ -64,6 +64,12 @@ const PaymentPage = () => {
     direction: "asc" | "desc";
   }>("paymentsJournal.sort", { key: null, direction: "asc" });
   const { authInfo, denyPermission, refresh } = useAuth();
+
+  // Запрещающие права: кода нет — показываем, как и раньше. Директорам и
+  // суперадминам denyPermission отвечает «можно» всегда, так и задумано.
+  const showInvestor = denyPermission("FORBID_PAYMENT_INVESTOR");
+  const showEmployee = denyPermission("FORBID_PAYMENT_EMPLOYEE");
+  const showPaymentType = denyPermission("FORBID_PAYMENT_TYPE");
   const [investorName, setInvestorName] = usePersistedState(
     "paymentsJournal.investorName",
     ""
@@ -768,6 +774,7 @@ const PaymentPage = () => {
           value={fullnameFilter}
           onChange={(e) => handleFilterChange(e.target.value)}
         />
+        {showInvestor && (
         <InvestorSelect
           placeholder="Инвестор/Пул"
           value={investorName}
@@ -776,25 +783,30 @@ const PaymentPage = () => {
           includePools={true}
           onClear={handleClearInvestorFilter}
         />
+        )}
+        {showEmployee && (
         <UserSelect
           placeholder="Сотрудник"
           value={employeeFullname}
           onChange={handleEmployeeChange}
           options={employeeOptions}
         />
+        )}
         <CustomSelect
           placeholder="Статус подтверждения"
           value={confirmedFilter}
           onChange={handleConfirmedChange}
           options={confirmedOptions}
         />
-        <CustomSelect
-          placeholder="Тип платежа"
-          value={typeFilter}
-          onChange={handleTypeChange}
-          options={typeOptions}
-        />
-        {typeFilter === "card" && (
+        {showPaymentType && (
+          <CustomSelect
+            placeholder="Тип платежа"
+            value={typeFilter}
+            onChange={handleTypeChange}
+            options={typeOptions}
+          />
+        )}
+        {showPaymentType && typeFilter === "card" && (
           <CustomSelect<number>
             placeholder="Карта"
             value={bankCardId}
@@ -918,8 +930,8 @@ const PaymentPage = () => {
               { name: "ФИО", isSortable: true, align: "left" },
               { name: "Платёж", isSortable: true, align: "right" },
               { name: "Дата платежа", isSortable: true, align: "right" },
-              { name: "Тип платежа", align: "left" },
-              { name: "Платёж принял", align: "left" },
+              { name: "Тип платежа", align: "left", isHidden: !showPaymentType },
+              { name: "Платёж принял", align: "left", isHidden: !showEmployee },
               { name: "Подтверждён", align: "center" },
               { name: "Инвестор/Пул", align: "left", isHidden: true },
               { name: "id", align: "center", isHidden: true },

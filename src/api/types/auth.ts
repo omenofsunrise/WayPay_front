@@ -9,7 +9,11 @@ export type Permission =
   | "FORBID_CREATING_PAYMENTS"
   | "FORBID_DELETING_PAYMENTS"
   | "FORBID_CREDIT_APPLICATIONS"
-  | "MANAGE_ACCOUNTING";
+  | "MANAGE_ACCOUNTING"
+  // Скрытие сведений в платежах. Запрещающие: у кого права нет — видит всё.
+  | "FORBID_PAYMENT_INVESTOR"
+  | "FORBID_PAYMENT_EMPLOYEE"
+  | "FORBID_PAYMENT_TYPE";
 
 export type Role = "админ" | "сотрудник" | "директор" | "суперадмин";
 
