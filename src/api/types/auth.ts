@@ -51,6 +51,8 @@ export interface AuthInfo {
     creditAcceptance?: boolean;
     /** Шаг округления сумм при оформлении, 0..100. Ноль — не округлять. */
     roundingStep?: number;
+    /** Показывать ли при оформлении выбор способа оплаты. Включают отдельным компаниям. */
+    paymentMethodEnabled?: boolean;
   };
 }
 

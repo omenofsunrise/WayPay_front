@@ -1,3 +1,6 @@
+/** Как договорились платить при оформлении. Не путать с типом состоявшегося платежа. */
+export type CreditPaymentMethod = "cash" | "transfer";
+
 import type { PaginationParams, PaginatedResponse } from "./common";
 import type { ClientContact } from "./client";
 
@@ -45,6 +48,7 @@ export interface Credit {
   rest: number;
   currentMonthDebt: number;
   debtComment?: string;
+  paymentMethod?: CreditPaymentMethod | null;
   debt: number;
   incomeRubles: number;
   incomePercents: number;
@@ -78,6 +82,7 @@ export interface CreateCreditRequest {
   termMonths: number;
   startPaymentDay: Date;
   turnOfRounding: boolean;
+  paymentMethod?: CreditPaymentMethod | null;
   inDebt: boolean;
   debtComment?: string;
   products: Array<{

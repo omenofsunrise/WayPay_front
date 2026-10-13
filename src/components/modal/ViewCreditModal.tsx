@@ -1891,6 +1891,25 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                         </SummaryItemBody>
                       </SummaryCard>
                     )}
+
+                    {/* Пусто у договоров, заведённых до настройки, и у компаний,
+                        где её нет. Тогда карточку не показываем вовсе, чтобы не
+                        выдумывать договорённость, которой не было. */}
+                    {creditData.paymentMethod && (
+                      <SummaryCard>
+                        <SummaryIcon>
+                          <PaymentsOutlinedIcon fontSize="small" />
+                        </SummaryIcon>
+                        <SummaryItemBody>
+                          <SummaryLabel>Способ оплаты</SummaryLabel>
+                          <SummaryValue>
+                            {creditData.paymentMethod === "transfer"
+                              ? "Переводом"
+                              : "Наличными"}
+                          </SummaryValue>
+                        </SummaryItemBody>
+                      </SummaryCard>
+                    )}
                   </SummaryHeader>
                 )}
 

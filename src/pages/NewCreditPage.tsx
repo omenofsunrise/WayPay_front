@@ -23,9 +23,11 @@ import useSchedule from "../api/hooks/useSchedule";
 import useCredit from "../api/hooks/useCredit";
 import type {
   CreateCreditRequest,
+  CreditPaymentMethod,
   UpdateCreditRequest,
 } from "../api/types/credit";
 import type { Investor } from "../api/types/investor";
+import { useAuth } from "../сontext/AuthContext";
 import { type Guarantor } from "../components/modal/CrudInherited/GuarantorModal";
 import Checkbox from "../components/ui/CheckBoxes/Checkbox";
 import type { EntityType } from "../api/types/objectType";
@@ -81,6 +83,7 @@ interface SelectedObjectType {
 
 const NewCreditPage = () => {
   const navigate = useNavigate();
+  const { authInfo } = useAuth();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
   const location = useLocation();
@@ -106,6 +109,11 @@ const NewCreditPage = () => {
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>("");
   const [months, setMonths] = useState<string>("");
   const [creditName, setCreditName] = useState<string>("");
+  // Выбор способа оплаты показываем только компаниям, которым его включили.
+  const paymentMethodEnabled = authInfo?.employee.paymentMethodEnabled ?? false;
+  const [paymentMethod, setPaymentMethod] =
+    useState<CreditPaymentMethod>("cash");
+
   const [turnOfRounding, setTurnOfRounding] = useState<boolean>(() => {
     const savedturnOfRounding = localStorage.getItem(TURN_OF_ROUNDING_KEY);
     return savedturnOfRounding === "true";
@@ -233,6 +241,9 @@ const NewCreditPage = () => {
               : null
           );
           setTurnOfRounding(creditData.turnOfRounding);
+          // У договоров, заведённых до появления настройки, способ пустой —
+          // показываем наличные, но в базе так и останется пусто, пока не сохранят.
+          setPaymentMethod(creditData.paymentMethod ?? "cash");
 
           setStartPaymentDate(
             creditData.startPaymentDay
@@ -523,6 +534,7 @@ const NewCreditPage = () => {
       selectedTabType,
       paymentSchedule,
       turnOfRounding,
+      paymentMethod,
       startPaymentDate,
     };
     try {
@@ -551,6 +563,7 @@ const NewCreditPage = () => {
     paymentDue,
     nextMonthStart,
     turnOfRounding,
+    paymentMethod,
     inDebt,
     objectTypeName,
     tabTypeName,
@@ -660,6 +673,9 @@ const NewCreditPage = () => {
       termMonths: parseInt(months),
       startPaymentDay: new Date(startPaymentDate),
       turnOfRounding: turnOfRounding,
+      // У компаний без настройки поле не отправляем, чтобы в базе осталось
+      // пусто: пусто значит «не спрашивали», а не «наличными».
+      paymentMethod: paymentMethodEnabled ? paymentMethod : undefined,
       inDebt: inDebt,
       products: products
         .filter((product) => product.name.trim() !== "" && product.price > 0)
@@ -1350,6 +1366,29 @@ const NewCreditPage = () => {
                   onChange={handleTurnOfRoundingChange}
                 />
               </SettingsCard>
+              {paymentMethodEnabled && (
+                <SettingsCard>
+                  <SettingsCardLabel>Способ оплаты</SettingsCardLabel>
+                  <MarkupPillContainer role="group" aria-label="Способ оплаты">
+                    <MarkupPill
+                      type="button"
+                      $active={paymentMethod === "cash"}
+                      onClick={() => setPaymentMethod("cash")}
+                      aria-pressed={paymentMethod === "cash"}
+                    >
+                      Наличными
+                    </MarkupPill>
+                    <MarkupPill
+                      type="button"
+                      $active={paymentMethod === "transfer"}
+                      onClick={() => setPaymentMethod("transfer")}
+                      aria-pressed={paymentMethod === "transfer"}
+                    >
+                      Переводом
+                    </MarkupPill>
+                  </MarkupPillContainer>
+                </SettingsCard>
+              )}
             </TotalSumRow>
           </SectionBody>
         </SectionCard>
@@ -1732,6 +1771,13 @@ const SettingsCard = styled.div`
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+`;
+
+const SettingsCardLabel = styled.span`
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 `;
 
 const TotalSumRow = styled.div`
