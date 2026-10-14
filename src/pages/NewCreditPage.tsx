@@ -2126,6 +2126,11 @@ const CompactField = styled.div`
     color: #344054;
   }
 
+  & ${EntitySelectWrapper} input {
+    height: 46px;
+    box-sizing: border-box;
+  }
+
   & ${EntitySelectWrapper} > div > button {
     width: 40px;
     height: 40px;
