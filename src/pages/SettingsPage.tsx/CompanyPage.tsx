@@ -505,9 +505,6 @@ const CompanyPage = () => {
               </SettingIcon>
               <SettingText>
                 <SettingName>Подтверждение договоров</SettingName>
-                <SettingHint>
-                  Требовать отдельное подтверждение перед оформлением договоров.
-                </SettingHint>
               </SettingText>
             </SettingContent>
             <SettingControl>
@@ -533,18 +530,14 @@ const CompanyPage = () => {
                     <RoundingIcon />
                   </SettingIcon>
                   <SettingText>
-                    <SettingName>Шаг округления</SettingName>
-                    <SettingHint>
-                      Суммы будут округляться до указанного шага при оформлении:
-                      платёж по графику и суммы товаров.
-                    </SettingHint>
+                    <SettingName>Округление</SettingName>
                   </SettingText>
                 </SettingContent>
                 <SettingControl>
                   <RoundingStepInput
                     type="text"
                     inputMode="numeric"
-                    aria-label="Шаг округления"
+                    aria-label="Округление"
                     value={roundingStepInput}
                     disabled={isSavingRounding}
                     onChange={(e) =>
@@ -564,10 +557,6 @@ const CompanyPage = () => {
         </AdditionalSettings>
 
         <CardFooter>
-          <Disclaimer>
-            Все данные используются только для автоматического оформления
-            договора займа и не передаются третьим лицам.
-          </Disclaimer>
           <ButtonsContainer>
             <GrayButton width="120px" onClick={handleReset}>
               Сбросить
@@ -924,22 +913,10 @@ const ButtonsContainer = styled.div`
   }
 `;
 
-const Disclaimer = styled.p`
-  max-width: 620px;
-  margin: 0 0 0 74px;
-  color: #7a8799;
-  font-size: 12px;
-  line-height: 1.5;
-
-  @media (max-width: 720px) {
-    margin-left: 0;
-  }
-`;
-
 const CardFooter = styled.footer`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 24px;
   margin-top: 26px;
   padding: 14px 0 22px;
