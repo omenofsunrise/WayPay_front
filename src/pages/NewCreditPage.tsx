@@ -49,7 +49,6 @@ import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
 
 const MARKUP_TYPE_STORAGE_KEY = "credit_product_markup_type";
-const TURN_OF_ROUNDING_KEY = "turn_of_rounding";
 const NEXT_MONTH_START_STORAGE_KEY = "credit_next_month_start";
 const IN_DEBT_STORAGE_KEY = "credit_in_debt";
 const CREDIT_DRAFT_STORAGE_KEY = "credit_draft";
@@ -117,10 +116,9 @@ const NewCreditPage = () => {
   const [paymentMethod, setPaymentMethod] =
     useState<CreditPaymentMethod>("cash");
 
-  const [turnOfRounding, setTurnOfRounding] = useState<boolean>(() => {
-    const savedturnOfRounding = localStorage.getItem(TURN_OF_ROUNDING_KEY);
-    return savedturnOfRounding === "true";
-  });
+  // Округление всегда включено, признак остаётся только для редактирования
+  // старых договоров, где его когда-то отключали.
+  const [turnOfRounding, setTurnOfRounding] = useState<boolean>(false);
   const [debtComment, setDebtComment] = useState<string>("");
   const [paymentDue, setPaymentDue] = useState<string>("1");
   const [startPaymentDate, setStartPaymentDate] = useState<string | null>(null);
@@ -574,11 +572,6 @@ const NewCreditPage = () => {
   const handleMarkupTypeChange = useCallback((type: "percent" | "fixed") => {
     setMarkupType(type);
     localStorage.setItem(MARKUP_TYPE_STORAGE_KEY, type);
-  }, []);
-
-  const handleTurnOfRoundingChange = useCallback((checked: boolean) => {
-    setTurnOfRounding(checked);
-    localStorage.setItem(TURN_OF_ROUNDING_KEY, checked.toString());
   }, []);
 
   const parseAmount = useCallback((formatted: string): number => {
@@ -1364,20 +1357,6 @@ const NewCreditPage = () => {
                 </TotalSumValue>
               </TotalSumGroup>
               <ProductSettings>
-                <RoundingControl>
-                  <RoundingCopy>
-                    <RoundingLabel>
-                      Округление суммы <InfoBadge title="Сумма будет округляться до заданного шага">i</InfoBadge>
-                    </RoundingLabel>
-                  </RoundingCopy>
-                  <SwitchButton
-                    type="button"
-                    $active={!turnOfRounding}
-                    onClick={() => handleTurnOfRoundingChange(!turnOfRounding)}
-                    aria-label="Округление суммы"
-                    aria-pressed={!turnOfRounding}
-                  />
-                </RoundingControl>
                 {paymentMethodEnabled && (
                   <PaymentControl>
                     <PaymentLabel>Способ оплаты</PaymentLabel>
@@ -1917,71 +1896,10 @@ const ProductSettings = styled.div`
   }
 `;
 
-const RoundingControl = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 18px;
-`;
 
-const RoundingCopy = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-`;
 
-const RoundingLabel = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #475467;
-`;
 
-const InfoBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  border: 1px solid #667085;
-  border-radius: 50%;
-  font-size: 10px;
-  font-weight: 700;
-  color: #667085;
-`;
 
-const SwitchButton = styled.button<{ $active: boolean }>`
-  position: relative;
-  width: 42px;
-  min-width: 42px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: ${({ $active }) => ($active ? "#168b96" : "#d0d5dd")};
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
-    transform: translateX(${({ $active }) => ($active ? "18px" : "0")});
-    transition: transform 0.2s ease;
-  }
-
-  &:focus-visible {
-    outline: 2px solid rgba(22, 139, 150, 0.35);
-    outline-offset: 2px;
-  }
-`;
 
 const PaymentControl = styled.div`
   display: flex;
