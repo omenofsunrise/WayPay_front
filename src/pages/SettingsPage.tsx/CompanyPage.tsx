@@ -209,7 +209,7 @@ const CompanyPage = () => {
 
     const value = Number(trimmed);
     if (!Number.isInteger(value) || value < 0 || value > 100) {
-      addToast("error", "Шаг округления должен быть целым числом от 0 до 100");
+      addToast("error", "Округление должно быть целым числом от 0 до 100");
       setRoundingStepInput(String(savedRoundingStep));
       return;
     }
@@ -223,13 +223,11 @@ const CompanyPage = () => {
       await refresh();
       addToast(
         "success",
-        value === 0
-          ? "Округление отключено"
-          : `Шаг округления — ${value}`
+        value === 0 ? "Округление отключено" : `Округление — ${value}`
       );
     } catch (error) {
       console.error("Не удалось изменить шаг округления:", error);
-      addToast("error", "Не удалось изменить шаг округления");
+      addToast("error", "Не удалось изменить округление");
       setRoundingStepInput(String(savedRoundingStep));
     } finally {
       setIsSavingRounding(false);
