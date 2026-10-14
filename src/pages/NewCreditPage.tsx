@@ -1606,9 +1606,9 @@ const StickySummaryBar = styled.div`
   z-index: 40;
   display: flex;
   align-items: stretch;
-  gap: 20px;
-  padding: 8px 0 16px;
-  margin: 0 0 16px;
+  gap: 12px;
+  padding: 8px 0 10px;
+  margin: 0 0 12px;
   background-color: rgba(249, 250, 250, 1);
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 `;
@@ -1632,8 +1632,8 @@ const HeaderActions = styled.div`
 const SummaryGrid = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 258px));
-  gap: 2px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+  gap: 8px;
   min-width: 0;
 `;
 
@@ -1658,14 +1658,14 @@ const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> =
 const SummaryCard = styled.div<{ $variant?: SummaryVariant }>`
   display: flex;
   align-items: center;
-  min-height: 94px;
-  gap: 16px;
-  padding: 14px 18px;
+  min-height: 62px;
+  gap: 10px;
+  padding: 10px 14px;
   background-color: ${({ $variant = "default" }) =>
     summaryCardPalette[$variant].bg};
   border: 1px solid
     ${({ $variant = "default" }) => summaryCardPalette[$variant].border};
-  border-radius: 12px;
+  border-radius: 10px;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 
   &:hover {
@@ -1678,13 +1678,17 @@ const SummaryIcon = styled.div<{ $accent?: SummaryAccent }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   flex-shrink: 0;
   background-color: ${({ $accent = "default" }) =>
     summaryIconPalette[$accent].bg};
   color: ${({ $accent = "default" }) => summaryIconPalette[$accent].color};
+
+  svg {
+    font-size: 20px;
+  }
 `;
 
 const SummaryItemBody = styled.div`
@@ -1694,15 +1698,15 @@ const SummaryItemBody = styled.div`
 `;
 
 const SummaryLabel = styled.span`
-  font-size: 12px;
+  font-size: 11px;
   color: #667085;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 `;
 
 const SummaryValue = styled.span`
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #101828;
   white-space: nowrap;
