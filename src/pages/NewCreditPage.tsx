@@ -1369,9 +1369,6 @@ const NewCreditPage = () => {
                     <RoundingLabel>
                       Округление суммы <InfoBadge title="Сумма будет округляться до заданного шага">i</InfoBadge>
                     </RoundingLabel>
-                    <RoundingHint>
-                      Сумма будет округляться до заданного шага
-                    </RoundingHint>
                   </RoundingCopy>
                   <SwitchButton
                     type="button"
@@ -1939,12 +1936,6 @@ const RoundingLabel = styled.span`
   font-size: 13px;
   font-weight: 500;
   color: #475467;
-`;
-
-const RoundingHint = styled.span`
-  font-size: 11px;
-  color: #98a2b3;
-  white-space: nowrap;
 `;
 
 const InfoBadge = styled.span`
