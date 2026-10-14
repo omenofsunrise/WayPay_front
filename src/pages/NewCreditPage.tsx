@@ -106,9 +106,6 @@ const NewCreditPage = () => {
   const [initialPaymentPercent, setInitialPaymentPercent] =
     useState<string>("");
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>("");
-  const [initialPaymentMode, setInitialPaymentMode] = useState<
-    "percent" | "amount"
-  >("percent");
   const [months, setMonths] = useState<string>("");
   const [creditName, setCreditName] = useState<string>("");
   // Выбор способа оплаты показываем только компаниям, которым его включили.
@@ -1400,26 +1397,13 @@ const NewCreditPage = () => {
 
               <PaymentScheduleInputs>
                 <InputGroup>
-                  <InputLabel>Первоначальный взнос</InputLabel>
-                  <ContributionSegmented role="group" aria-label="Формат первоначального взноса">
-                    <ContributionButton
-                      type="button"
-                      $active={initialPaymentMode === "percent"}
-                      onClick={() => setInitialPaymentMode("percent")}
-                      aria-pressed={initialPaymentMode === "percent"}
-                    >
-                      В процентах
-                    </ContributionButton>
-                    <ContributionButton
-                      type="button"
-                      $active={initialPaymentMode === "amount"}
-                      onClick={() => setInitialPaymentMode("amount")}
-                      aria-pressed={initialPaymentMode === "amount"}
-                    >
-                      В рублях
-                    </ContributionButton>
-                  </ContributionSegmented>
-                  {initialPaymentMode === "percent" ? (
+                  <InputRow>
+                    <InputLabel style={{ flex: 1 }}>
+                      Первоначальный взнос, %
+                    </InputLabel>
+                    <InputLabel style={{ flex: 1 }}>Сумма</InputLabel>
+                  </InputRow>
+                  <InputRow>
                     <SuffixInput>
                       <CustomInput
                         inputType="number"
@@ -1430,7 +1414,6 @@ const NewCreditPage = () => {
                       />
                       <InputSuffix>%</InputSuffix>
                     </SuffixInput>
-                  ) : (
                     <CustomInput
                       inputType="rubles"
                       placeholder="0 ₽"
@@ -1438,11 +1421,7 @@ const NewCreditPage = () => {
                       onChange={handleAmountChange}
                       disabled={totalSum <= 0}
                     />
-                  )}
-                </InputGroup>
-                <InputGroup>
-                  <InputLabel>Сумма</InputLabel>
-                  <ReadOnlyAmount>{initialPaymentAmount || "0 ₽"}</ReadOnlyAmount>
+                  </InputRow>
                 </InputGroup>
                 <InputGroup>
                   <InputRow>
@@ -2205,40 +2184,12 @@ const InputGroup = styled.div`
   gap: 8px;
 `;
 
-const ContributionSegmented = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid #e4e7ec;
-  border-radius: 9px;
-  overflow: hidden;
-  background: #f8fafc;
-`;
 
-const ContributionButton = styled.button<{ $active: boolean }>`
-  height: 38px;
-  padding: 0 12px;
-  border: 0;
-  border-right: 1px solid #e4e7ec;
-  background: ${({ $active }) =>
-    $active ? "rgba(22, 139, 150, 0.08)" : "transparent"};
-  color: ${({ $active }) => ($active ? "#147d87" : "#667085")};
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-
-  &:last-child {
-    border-right: 0;
-  }
-
-  &:focus-visible {
-    position: relative;
-    outline: 2px solid rgba(22, 139, 150, 0.35);
-    outline-offset: -2px;
-  }
-`;
 
 const SuffixInput = styled.div`
   position: relative;
+  flex: 1;
+  min-width: 0;
 
   & input {
     padding-right: 36px;
@@ -2255,17 +2206,6 @@ const InputSuffix = styled.span`
   pointer-events: none;
 `;
 
-const ReadOnlyAmount = styled.div`
-  display: flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 5px 15px;
-  border: 1px solid #d0d5dd;
-  border-radius: 7px;
-  background: #ffffff;
-  color: #101828;
-  font-size: 14px;
-`;
 
 const InputLabel = styled.label`
   font-size: 14px;
