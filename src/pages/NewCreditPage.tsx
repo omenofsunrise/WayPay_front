@@ -1183,28 +1183,12 @@ const NewCreditPage = () => {
       </StickySummaryBar>
 
       <ContentStack>
-        <SectionCard $accent="teal">
+        <TopDetailsCard>
           <SectionAccentBar $accent="teal" />
-          <SectionBody>
-            <SectionTopRow>
-              <SectionHeader>
-                <SectionIcon>
-                  <DescriptionOutlinedIcon fontSize="small" />
-                </SectionIcon>
-                <SectionTitle>Основная информация</SectionTitle>
-              </SectionHeader>
-              <SettingsCard>
-                <Checkbox
-                  label="Договор в долг"
-                  checked={inDebt}
-                  onChange={handleInDebtChange}
-                />
-              </SettingsCard>
-            </SectionTopRow>
-
-            <FormRow>
-              <FieldGroup $width="248px">
-                <Label>Дата договора</Label>
+          <TopDetailsRow>
+            <TopField $basis="240px">
+              <CompactField>
+                <DescriptionOutlinedIcon fontSize="small" />
                 <DateInputWrapper>
                   <CustomCalendar
                     prefix=""
@@ -1213,11 +1197,13 @@ const NewCreditPage = () => {
                     onReset={() => setContractDate(null)}
                   />
                 </DateInputWrapper>
-              </FieldGroup>
+              </CompactField>
+            </TopField>
 
-              {!inDebt ? (
-                <FieldGroup $width="365px">
-                  <Label>Инвестор / Пул</Label>
+            {!inDebt ? (
+              <TopField $basis="360px">
+                <CompactField>
+                  <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
                     <EntitySelectContainer
                       mode="create"
@@ -1229,10 +1215,12 @@ const NewCreditPage = () => {
                       customIcon={plusIcon}
                     />
                   </EntitySelectWrapper>
-                </FieldGroup>
-              ) : inDebt ? (
-                <FieldGroup $width="365px">
-                  <Label>Комментарий к долгу</Label>
+                </CompactField>
+              </TopField>
+            ) : inDebt ? (
+              <TopField $basis="360px">
+                <CompactField>
+                  <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
                     <CustomInput
                       placeholder="Кем выдан долг"
@@ -1240,23 +1228,25 @@ const NewCreditPage = () => {
                       onChange={(e) => setDebtComment(e.target.value)}
                     />
                   </EntitySelectWrapper>
-                </FieldGroup>
-              ) : null}
+                </CompactField>
+              </TopField>
+            ) : null}
 
-              <FieldGroup $width="248px">
-                <Label>Имя договора (необязательно)</Label>
-                <DateInputWrapper>
-                  <CustomInput
-                    inputType="text"
-                    placeholder="Имя договора"
-                    value={creditName}
-                    onChange={(e) => setCreditName(e.target.value)}
-                  />
-                </DateInputWrapper>
-              </FieldGroup>
+            <TopField $basis="360px">
+              <CompactField>
+                <DescriptionOutlinedIcon fontSize="small" />
+                <CustomInput
+                  inputType="text"
+                  placeholder="Имя договора"
+                  value={creditName}
+                  onChange={(e) => setCreditName(e.target.value)}
+                />
+              </CompactField>
+            </TopField>
 
-              <FieldGroup $width="265px">
-                <Label>Папка (необязательно)</Label>
+            <TopField $basis="390px">
+              <CompactField>
+                <Inventory2OutlinedIcon fontSize="small" />
                 <ObjectTypeSelect
                   value={objectTypeName}
                   onChange={handleObjectTypeNameChange}
@@ -1264,11 +1254,18 @@ const NewCreditPage = () => {
                   placeholder="Выберите тип договора"
                   entityType="credit"
                 />
-              </FieldGroup>
-            </FormRow>
+              </CompactField>
+            </TopField>
 
-          </SectionBody>
-        </SectionCard>
+            <TopDebtSetting>
+              <Checkbox
+                label="Договор в долг"
+                checked={inDebt}
+                onChange={handleInDebtChange}
+              />
+            </TopDebtSetting>
+          </TopDetailsRow>
+        </TopDetailsCard>
 
         <PersonRow>
           <SectionCard $accent="teal">
@@ -1280,7 +1277,7 @@ const NewCreditPage = () => {
                 </SectionIcon>
                 <SectionTitle>Покупатель</SectionTitle>
               </SectionHeader>
-              <EntitySelectWrapper>
+              <WideEntitySelectWrapper>
                 <EntitySelectContainer
                   mode="create"
                   primaryValue={client?.fullName || ""}
@@ -1290,7 +1287,7 @@ const NewCreditPage = () => {
                   onClear={() => setClient(null)}
                   customIcon={plusIcon}
                 />
-              </EntitySelectWrapper>
+              </WideEntitySelectWrapper>
             </SectionBody>
           </SectionCard>
 
@@ -1305,7 +1302,7 @@ const NewCreditPage = () => {
                   Поручитель <SectionOptional>(не обязательно)</SectionOptional>
                 </SectionTitle>
               </SectionHeader>
-              <EntitySelectWrapper>
+              <WideEntitySelectWrapper>
                 <EntitySelectContainer
                   mode="create"
                   primaryValue={guarantorInfo.primaryValue}
@@ -1315,7 +1312,7 @@ const NewCreditPage = () => {
                   onClear={clearGuarantor}
                   customIcon={plusIcon}
                 />
-              </EntitySelectWrapper>
+              </WideEntitySelectWrapper>
             </SectionBody>
           </SectionCard>
         </PersonRow>
@@ -1356,7 +1353,6 @@ const NewCreditPage = () => {
                 onProductsChange={setProducts}
                 onTotalSumChange={setTotalSum}
                 markupType={markupType}
-                onMarkupTypeChange={setMarkupType}
               />
             </ProductsTableWrapper>
 
@@ -1610,8 +1606,8 @@ const StickySummaryBar = styled.div`
   z-index: 40;
   display: flex;
   align-items: stretch;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 20px;
+  padding: 8px 0 16px;
   margin: 0 0 16px;
   background-color: rgba(249, 250, 250, 1);
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
@@ -1624,14 +1620,20 @@ const HeaderActions = styled.div`
 
   & > button {
     margin: 0;
+    height: 48px;
+    padding: 0 18px;
+    border-radius: 14px;
+    background: #eef1f5;
+    color: #475467;
+    font-size: 14px;
   }
 `;
 
 const SummaryGrid = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 245px));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 258px));
+  gap: 2px;
   min-width: 0;
 `;
 
@@ -1656,13 +1658,14 @@ const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> =
 const SummaryCard = styled.div<{ $variant?: SummaryVariant }>`
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  min-height: 94px;
+  gap: 16px;
+  padding: 14px 18px;
   background-color: ${({ $variant = "default" }) =>
     summaryCardPalette[$variant].bg};
   border: 1px solid
     ${({ $variant = "default" }) => summaryCardPalette[$variant].border};
-  border-radius: 10px;
+  border-radius: 12px;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 
   &:hover {
@@ -1675,9 +1678,9 @@ const SummaryIcon = styled.div<{ $accent?: SummaryAccent }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   flex-shrink: 0;
   background-color: ${({ $accent = "default" }) =>
     summaryIconPalette[$accent].bg};
@@ -1691,17 +1694,17 @@ const SummaryItemBody = styled.div`
 `;
 
 const SummaryLabel = styled.span`
-  font-size: 11px;
-  color: rgba(80, 85, 92, 1);
+  font-size: 12px;
+  color: #667085;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 2px;
 `;
 
 const SummaryValue = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: #000;
+  font-size: 18px;
+  font-weight: 700;
+  color: #101828;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1722,14 +1725,53 @@ const accentBarPalette: Record<"teal" | "orange" | "gray", string> = {
 
 const SectionCard = styled.section<{ $accent?: "teal" | "orange" | "gray" }>`
   display: flex;
-  gap: 16px;
-  padding: 20px;
+  gap: 20px;
+  padding: 18px 20px;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   align-items: stretch;
   min-width: 0;
   flex: 1;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.025);
+`;
+
+const TopDetailsCard = styled.section`
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  min-width: 0;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.025);
+`;
+
+const TopDetailsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+
+  @media (max-width: 1280px) {
+    flex-wrap: wrap;
+  }
+`;
+
+const TopField = styled.div<{ $basis: string }>`
+  flex: 1 1 ${({ $basis }) => $basis};
+  min-width: 210px;
+`;
+
+const TopDebtSetting = styled.div`
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0 4px;
+  white-space: nowrap;
 `;
 
 const SectionAccentBar = styled.div<{ $accent?: "teal" | "orange" | "gray" }>`
@@ -1783,7 +1825,7 @@ const SectionIcon = styled.span<{ $accent?: "teal" | "orange" | "gray" }>`
 `;
 
 const SectionTitle = styled.div`
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #000;
 `;
@@ -1810,21 +1852,11 @@ const SectionOptional = styled.span`
 const PersonRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 
   @media (min-width: 992px) {
     flex-direction: row;
   }
-`;
-
-const SettingsCard = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
 `;
 
 const TotalSumRow = styled.div`
@@ -1999,18 +2031,18 @@ const SegmentedButton = styled.button<{ $active: boolean }>`
 const MarkupPillContainer = styled.div`
   display: inline-flex;
   padding: 3px;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background-color: #f2f4f7;
+  border: 1px solid #dbe2ea;
   border-radius: 999px;
-  gap: 2px;
 `;
 
 const MarkupPill = styled.button<{ $active: boolean }>`
-  min-width: 36px;
-  padding: 4px 12px;
+  min-width: 54px;
+  height: 32px;
+  padding: 0 12px;
   border: none;
   border-radius: 999px;
-  background: ${({ $active }) => ($active ? "#007D88" : "transparent")};
+  background: ${({ $active }) => ($active ? "#078d99" : "transparent")};
   color: ${({ $active }) => ($active ? "#FFFFFF" : "#475569")};
   font-size: 13px;
   font-weight: 600;
@@ -2038,6 +2070,60 @@ const EntitySelectWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+`;
+
+const WideEntitySelectWrapper = styled(EntitySelectWrapper)`
+  & input {
+    min-height: 46px;
+    padding: 0 44px 0 14px;
+    border-color: #cbd5e1;
+    border-radius: 7px;
+  }
+
+  & > div > button {
+    width: 46px;
+    height: 46px;
+    margin-left: 10px;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+  }
+`;
+
+const CompactField = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  & > svg {
+    position: absolute;
+    left: 14px;
+    z-index: 2;
+    color: #667085;
+    pointer-events: none;
+  }
+
+  & > div {
+    width: 100%;
+  }
+
+  & input {
+    min-height: 46px;
+    padding-left: 44px !important;
+    border-color: #cbd5e1 !important;
+    border-radius: 7px !important;
+    color: #344054;
+  }
+
+  & ${EntitySelectWrapper} > div > button {
+    width: 46px;
+    height: 46px;
+    margin-left: 10px;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+  }
 `;
 
 
@@ -2126,42 +2212,6 @@ const SubmitErrorClose = styled.button`
 const DateInputWrapper = styled.div`
   width: 100%;
   min-width: 0;
-`;
-
-const FormRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding-top: 4px;
-  align-items: stretch;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    row-gap: 20px;
-    column-gap: 28px;
-  }
-`;
-
-const FieldGroup = styled.div<{ $width?: string }>`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: ${({ $width }) => $width || "100%"};
-  min-width: 0;
-
-  @media (min-width: 768px) {
-    flex: 0 1 ${({ $width }) => $width || "100%"};
-  }
-`;
-
-const Label = styled.label`
-  font-size: 13px;
-  color: rgba(80, 85, 92, 1);
-  margin-bottom: 6px;
-  font-weight: 500;
-  text-align: left;
 `;
 
 const ButtonWrapper = styled.div`
