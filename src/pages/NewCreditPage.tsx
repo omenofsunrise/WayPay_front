@@ -1632,7 +1632,7 @@ const HeaderActions = styled.div`
 const SummaryGrid = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 8px;
   min-width: 0;
 `;
@@ -1658,7 +1658,8 @@ const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> =
 const SummaryCard = styled.div<{ $variant?: SummaryVariant }>`
   display: flex;
   align-items: center;
-  min-height: 62px;
+  min-height: 78px;
+  box-sizing: border-box;
   gap: 10px;
   padding: 10px 14px;
   background-color: ${({ $variant = "default" }) =>
