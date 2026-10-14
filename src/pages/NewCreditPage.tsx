@@ -1201,7 +1201,7 @@ const NewCreditPage = () => {
             </TopField>
 
             {!inDebt ? (
-              <TopField $basis="420px">
+              <TopField $basis="390px">
                 <CompactField>
                   <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
@@ -1218,7 +1218,7 @@ const NewCreditPage = () => {
                 </CompactField>
               </TopField>
             ) : inDebt ? (
-              <TopField $basis="420px">
+              <TopField $basis="390px">
                 <CompactField>
                   <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
@@ -2127,9 +2127,9 @@ const CompactField = styled.div`
   }
 
   & ${EntitySelectWrapper} > div > button {
-    width: 46px;
-    height: 46px;
-    margin-left: 10px;
+    width: 40px;
+    height: 40px;
+    margin-left: 8px;
     padding: 0;
     border: 1px solid #cbd5e1;
     border-radius: 9px;
