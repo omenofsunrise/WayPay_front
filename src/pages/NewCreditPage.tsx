@@ -1372,10 +1372,10 @@ const NewCreditPage = () => {
                   </RoundingCopy>
                   <SwitchButton
                     type="button"
-                    $active={turnOfRounding}
+                    $active={!turnOfRounding}
                     onClick={() => handleTurnOfRoundingChange(!turnOfRounding)}
                     aria-label="Округление суммы"
-                    aria-pressed={turnOfRounding}
+                    aria-pressed={!turnOfRounding}
                   />
                 </RoundingControl>
                 {paymentMethodEnabled && (
