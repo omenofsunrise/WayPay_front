@@ -1396,33 +1396,29 @@ const NewCreditPage = () => {
               </SectionHeader>
 
               <PaymentScheduleInputs>
-                <InputGroup>
-                  <InputRow>
-                    <InputLabel style={{ flex: 1 }}>
-                      Первоначальный взнос, %
-                    </InputLabel>
-                    <InputLabel style={{ flex: 1 }}>Сумма</InputLabel>
-                  </InputRow>
-                  <InputRow>
-                    <SuffixInput>
-                      <CustomInput
-                        inputType="number"
-                        placeholder="0"
-                        value={initialPaymentPercent}
-                        onChange={handlePercentChange}
-                        max={100}
-                      />
-                      <InputSuffix>%</InputSuffix>
-                    </SuffixInput>
+                <StackedField>
+                  <InputLabel>Первоначальный взнос, %</InputLabel>
+                  <SuffixInput>
                     <CustomInput
-                      inputType="rubles"
-                      placeholder="0 ₽"
-                      value={initialPaymentAmount}
-                      onChange={handleAmountChange}
-                      disabled={totalSum <= 0}
+                      inputType="number"
+                      placeholder="0"
+                      value={initialPaymentPercent}
+                      onChange={handlePercentChange}
+                      max={100}
                     />
-                  </InputRow>
-                </InputGroup>
+                    <InputSuffix>%</InputSuffix>
+                  </SuffixInput>
+                </StackedField>
+                <StackedField>
+                  <InputLabel>Сумма</InputLabel>
+                  <CustomInput
+                    inputType="rubles"
+                    placeholder="0 ₽"
+                    value={initialPaymentAmount}
+                    onChange={handleAmountChange}
+                    disabled={totalSum <= 0}
+                  />
+                </StackedField>
                 <InputGroup>
                   <InputRow>
                     <InputLabel style={{ flex: 1 }}>Месяцев</InputLabel>
@@ -2188,8 +2184,6 @@ const InputGroup = styled.div`
 
 const SuffixInput = styled.div`
   position: relative;
-  flex: 1;
-  min-width: 0;
 
   & input {
     padding-right: 36px;
@@ -2215,6 +2209,14 @@ const InputLabel = styled.label`
   text-align: left;
   margin-bottom: 0;
   padding-bottom: 0;
+`;
+
+const StackedField = styled(InputGroup)`
+  width: 100%;
+
+  @media (min-width: 576px) {
+    max-width: 440px;
+  }
 `;
 
 const InputRow = styled.div`
