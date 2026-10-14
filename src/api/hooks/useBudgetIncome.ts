@@ -1,5 +1,10 @@
 import { useState, useCallback } from 'react';
-import type { BudgetIncome, CreateBudgetIncomeDto, BudgetParams, BudgetIncomeResponse } from '../types/budget';
+import type {
+  BudgetIncome,
+  CreateBudgetIncomeDto,
+  BudgetParams,
+  BudgetIncomeResponse
+} from '../types/budget';
 import { BudgetService } from '../services/budgetService';
 
 const useBudgetIncome = () => {
@@ -7,22 +12,27 @@ const useBudgetIncome = () => {
   const [error, setError] = useState<string | null>(null);
   const [incomes, setIncomes] = useState<BudgetIncomeResponse | null>(null);
 
-  const getIncomes = useCallback(async (params: BudgetParams): Promise<BudgetIncomeResponse | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await BudgetService.getIncomes(params);
-      setIncomes(result);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const getIncomes = useCallback(
+    async (params: BudgetParams): Promise<BudgetIncomeResponse | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await BudgetService.getIncomes(params);
+        setIncomes(result);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
-  const createIncome = async (incomeData: CreateBudgetIncomeDto): Promise<BudgetIncome | null> => {
+  const createIncome = async (
+    incomeData: CreateBudgetIncomeDto
+  ): Promise<BudgetIncome | null> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -47,7 +57,9 @@ const useBudgetIncome = () => {
           ...incomes,
           items: filteredItems,
           totalCount: incomes.totalCount - 1,
-          totalIncomeAmount: incomes.totalIncomeAmount - (incomes.items.find(item => item.id === id)?.amount) || 0
+          totalIncomeAmount:
+            incomes.totalIncomeAmount -
+            (incomes.items.find(item => item.id === id)?.amount || 0)
         });
       }
     } catch (err) {

@@ -81,6 +81,11 @@ const BudgetPage = () => {
     currentDate.getMonth() + 1
   );
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+
+  // Фильтр по дням — применяется и к доходам, и к расходам одновременно.
+  const [dayFrom, setDayFrom] = useState("1");
+  const [dayTo, setDayTo] = useState("31");
+
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showOutcomeModal, setShowOutcomeModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -144,11 +149,24 @@ const BudgetPage = () => {
 
   const pageSize = 10;
 
+  // Приводим строковые значения дней к числам и защищаемся от мусора
+  const getDayParams = useCallback(() => {
+    const from = parseInt(dayFrom, 10);
+    const to = parseInt(dayTo, 10);
+    return {
+      dayFrom: Number.isFinite(from) ? Math.max(1, from) : 1,
+      dayTo: Number.isFinite(to) ? Math.max(1, to) : 31,
+    };
+  }, [dayFrom, dayTo]);
+
   const fetchData = useCallback(async () => {
+    const { dayFrom: dFrom, dayTo: dTo } = getDayParams();
     try {
       const incomeData = await getIncomes({
         month: selectedMonth,
         year: selectedYear,
+        dayFrom: dFrom,
+        dayTo: dTo,
         page: 1,
         pageSize,
       });
@@ -157,6 +175,8 @@ const BudgetPage = () => {
       const outcomeData = await getOutcomes({
         month: selectedMonth,
         year: selectedYear,
+        dayFrom: dFrom,
+        dayTo: dTo,
         page: 1,
         pageSize,
       });
@@ -164,7 +184,7 @@ const BudgetPage = () => {
     } catch (error) {
       console.error("Error fetching budget data:", error);
     }
-  }, [selectedMonth, selectedYear, getIncomes, getOutcomes]);
+  }, [selectedMonth, selectedYear, getDayParams, getIncomes, getOutcomes]);
 
   const incomeContextMenuActions = [
     {
@@ -197,10 +217,13 @@ const BudgetPage = () => {
   }, [fetchData]);
 
   const handleIncomePageChange = async (page: number) => {
+    const { dayFrom: dFrom, dayTo: dTo } = getDayParams();
     try {
       const incomeData = await getIncomes({
         month: selectedMonth,
         year: selectedYear,
+        dayFrom: dFrom,
+        dayTo: dTo,
         page,
         pageSize,
       });
@@ -211,9 +234,12 @@ const BudgetPage = () => {
   };
 
   const handleOutcomePageChange = async (page: number) => {
+    const { dayFrom: dFrom, dayTo: dTo } = getDayParams();
     const outcomeData = await getOutcomes({
       month: selectedMonth,
       year: selectedYear,
+      dayFrom: dFrom,
+      dayTo: dTo,
       page,
       pageSize,
     });
@@ -223,6 +249,8 @@ const BudgetPage = () => {
   const handleExportBudget = async () => {
     setIsExporting(true);
     setExportProgress(0);
+
+    const { dayFrom: dFrom, dayTo: dTo } = getDayParams();
 
     try {
       let allIncomes: Income[] = [];
@@ -234,6 +262,8 @@ const BudgetPage = () => {
         const incomeData = await BudgetService.getIncomes({
           month: selectedMonth,
           year: selectedYear,
+          dayFrom: dFrom,
+          dayTo: dTo,
           page,
           pageSize: 100,
         });
@@ -254,6 +284,8 @@ const BudgetPage = () => {
         const outcomeData = await BudgetService.getOutcomes({
           month: selectedMonth,
           year: selectedYear,
+          dayFrom: dFrom,
+          dayTo: dTo,
           page,
           pageSize: 100,
         });
@@ -316,7 +348,9 @@ const BudgetPage = () => {
       const monthName =
         months.find((m) => m.value === selectedMonth.toString())?.label ||
         selectedMonth;
-      const fileName = `Бюджет_${monthName}_${selectedYear}`;
+      const dayRangeLabel =
+        dFrom === dTo ? `_${dFrom}` : `_${dFrom}-${dTo}`;
+      const fileName = `Бюджет_${monthName}_${selectedYear}${dayRangeLabel}`;
 
       setExportProgress(95);
 
@@ -331,10 +365,11 @@ const BudgetPage = () => {
     }
   };
 
-  const prepareTableData = (data: any[] = []) => {
+  const prepareTableData = (data: any[] = [], withComment = false) => {
     return data
       .map((item) => {
-        if (!item) return ["", "", "", ""];
+        if (!item)
+          return withComment ? ["", "", "", "", ""] : ["", "", "", ""];
 
         const amount =
           item.amount !== undefined ? formatMoney(item.amount.toString()) : "";
@@ -349,12 +384,9 @@ const BudgetPage = () => {
 
         const comment = item.comment || "";
 
-        return [
-          item.id || "",
-          amount,
-          date,
-          item.investorNickname || item.comment,
-        ];
+        return withComment
+          ? [item.id || "", amount, date, item.investorNickname || "", comment]
+          : [item.id || "", amount, date, item.investorNickname || comment];
       })
       .filter((row) => row !== null);
   };
@@ -362,7 +394,6 @@ const BudgetPage = () => {
   const handleSelectEntity = (entity: SelectedEntity) => {
     setSelectedEntity(entity);
 
-    // Сбрасываем оба ID и устанавливаем только выбранный тип
     if (entity.type === "investor") {
       setNewIncome((prev) => ({
         ...prev,
@@ -382,14 +413,12 @@ const BudgetPage = () => {
 
   const handleAddIncome = async () => {
     try {
-      // Подготавливаем данные для отправки
       const incomeData: any = {
         amount: parseFloat(newIncome.amount),
         comment: newIncome.comment,
         companyShare: newIncome.companyShare,
       };
 
-      // Добавляем только один параметр в зависимости от выбранного типа
       if (selectedEntity?.type === "investor" && newIncome.investorId) {
         incomeData.investorId = parseInt(newIncome.investorId);
       } else if (selectedEntity?.type === "pool" && newIncome.investorPoolId) {
@@ -483,15 +512,7 @@ const BudgetPage = () => {
       </TitleField>
 
       <FilterField>
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            width: "100%",
-            maxWidth: "500px",
-            marginRight: "auto",
-          }}
-        >
+        <BudgetFilters>
           <CustomSelect
             placeholder="Месяц"
             value={selectedMonth.toString()}
@@ -506,7 +527,36 @@ const BudgetPage = () => {
             options={years}
             style={{ flex: "0 1 150px" }}
           />
-        </div>
+
+          <DayFilterGroup>
+            <DayFilterLabel>Дни:</DayFilterLabel>
+            <DayInput
+              type="number"
+              min={1}
+              max={31}
+              value={dayFrom}
+              onChange={(e) => setDayFrom(e.target.value)}
+              onBlur={() => {
+                if (!dayFrom) setDayFrom("1");
+              }}
+              placeholder="От"
+              aria-label="День от"
+            />
+            <span style={{ color: "#888" }}>—</span>
+            <DayInput
+              type="number"
+              min={1}
+              max={31}
+              value={dayTo}
+              onChange={(e) => setDayTo(e.target.value)}
+              onBlur={() => {
+                if (!dayTo) setDayTo("31");
+              }}
+              placeholder="До"
+              aria-label="День до"
+            />
+          </DayFilterGroup>
+        </BudgetFilters>
       </FilterField>
 
       <TablesContainer>
@@ -531,8 +581,9 @@ const BudgetPage = () => {
               { name: "Сумма", align: "left" },
               { name: "Дата", isSortable: true, align: "left" },
               { name: "Инвестора никнейм", align: "left" },
+              { name: "Комментарий", align: "left" },
             ]}
-            data={prepareTableData(incomes?.items)}
+            data={prepareTableData(incomes?.items, true)}
             contextMenuActions={incomeContextMenuActions}
             isLoading={isLoadingIncomes}
           />
@@ -717,5 +768,61 @@ const TemplatesButton = styled.button`
   &:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.5);
+  }
+`;
+
+const BudgetFilters = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  max-width: 760px;
+  margin-right: auto;
+`;
+
+const DayFilterGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 37.5px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+`;
+
+const DayFilterLabel = styled.span`
+  font-size: 14px;
+  color: rgba(80, 85, 92, 1);
+  margin-right: 4px;
+  white-space: nowrap;
+`;
+
+const DayInput = styled.input`
+  width: 56px;
+  height: 26px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  font-size: 14px;
+  color: #333;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  outline: none;
+  text-align: center;
+  background: #fff;
+
+  /* Убираем стрелки у number-инпута */
+  -moz-appearance: textfield;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &:focus {
+    border-color: #0e7490;
+    box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.15);
   }
 `;

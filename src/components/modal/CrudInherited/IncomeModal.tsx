@@ -322,6 +322,14 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                             </ProgressBarContainer>
                         </PercentageSection>
                     )}
+
+                    <CustomInput
+                        value={newIncome.comment}
+                        onChange={(e) =>
+                            setNewIncome({ ...newIncome, comment: e.target.value })
+                        }
+                        placeholder="Введите комментарий"
+                    />
                 </div>
             </BaseModal>
         </>

@@ -803,12 +803,13 @@ const useWhatsApp = () => {
     async (
       botId: number,
       eventType: BotEventType,
-      eventDays?: number | null
+      eventDays?: number | null,
+      eventHours?: number | null
     ): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
       try {
-        await whatsappService.setBotEvent(botId, eventType, eventDays);
+        await whatsappService.setBotEvent(botId, eventType, eventDays, eventHours);
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
