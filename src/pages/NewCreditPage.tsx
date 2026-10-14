@@ -1186,7 +1186,7 @@ const NewCreditPage = () => {
         <TopDetailsCard>
           <SectionAccentBar $accent="teal" />
           <TopDetailsRow>
-            <TopField $basis="240px">
+            <TopField $basis="320px">
               <CompactField>
                 <DescriptionOutlinedIcon fontSize="small" />
                 <DateInputWrapper>
@@ -1201,7 +1201,7 @@ const NewCreditPage = () => {
             </TopField>
 
             {!inDebt ? (
-              <TopField $basis="360px">
+              <TopField $basis="420px">
                 <CompactField>
                   <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
@@ -1218,7 +1218,7 @@ const NewCreditPage = () => {
                 </CompactField>
               </TopField>
             ) : inDebt ? (
-              <TopField $basis="360px">
+              <TopField $basis="420px">
                 <CompactField>
                   <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
@@ -1761,8 +1761,14 @@ const TopDetailsRow = styled.div`
 `;
 
 const TopField = styled.div<{ $basis: string }>`
-  flex: 1 1 ${({ $basis }) => $basis};
+  flex: 0 1 ${({ $basis }) => $basis};
+  width: ${({ $basis }) => $basis};
   min-width: 210px;
+
+  @media (max-width: 1280px) {
+    flex: 1 1 280px;
+    width: auto;
+  }
 `;
 
 const TopDebtSetting = styled.div`
