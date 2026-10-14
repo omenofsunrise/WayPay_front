@@ -1257,7 +1257,7 @@ const NewCreditPage = () => {
               </CompactField>
             </TopField>
 
-            <TopDebtSetting>
+            <TopDebtSetting $active={inDebt}>
               <Checkbox
                 label="Договор в долг"
                 checked={inDebt}
@@ -1775,13 +1775,45 @@ const TopField = styled.div<{ $basis: string }>`
   }
 `;
 
-const TopDebtSetting = styled.div`
+const TopDebtSetting = styled.div<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
-  min-height: 46px;
-  padding: 0 4px;
+  height: 46px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid ${({ $active }) => ($active ? "#7AC4CA" : "#CBD5E1")};
+  border-radius: 9px;
+  background-color: ${({ $active }) =>
+    $active ? "rgba(0, 125, 136, 0.08)" : "#F8FAFC"};
   white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: #7ac4ca;
+    background-color: rgba(0, 125, 136, 0.06);
+  }
+
+  & > div {
+    align-items: center;
+    width: auto;
+  }
+
+  & > div > div {
+    margin-top: 0;
+  }
+
+  & span {
+    color: #344054;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1280px) {
+    flex: 0 0 auto;
+  }
 `;
 
 const SectionAccentBar = styled.div<{ $accent?: "teal" | "orange" | "gray" }>`
@@ -2132,8 +2164,8 @@ const CompactField = styled.div`
   }
 
   & ${EntitySelectWrapper} > div > button {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
     margin-left: 8px;
     padding: 0;
     border: 1px solid #cbd5e1;
@@ -2227,6 +2259,14 @@ const SubmitErrorClose = styled.button`
 const DateInputWrapper = styled.div`
   width: 100%;
   min-width: 0;
+
+  & > div > div:first-child {
+    height: 46px;
+    max-height: 46px;
+    box-sizing: border-box;
+    border-color: #cbd5e1;
+    border-radius: 7px;
+  }
 `;
 
 const ButtonWrapper = styled.div`
