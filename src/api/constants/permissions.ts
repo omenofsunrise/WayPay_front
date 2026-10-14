@@ -25,6 +25,15 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     code: "FORBID_CREDIT_APPLICATIONS",
     description: "Запретить просмотр заявок",
   },
+  {
+    code: "FORBID_PAYMENT_INVESTOR",
+    description: "Скрыть инвестора и пул в платежах",
+  },
+  {
+    code: "FORBID_PAYMENT_EMPLOYEE",
+    description: "Скрыть сотрудника, принявшего платёж",
+  },
+  { code: "FORBID_PAYMENT_TYPE", description: "Скрыть тип платежа" },
 ];
 
 /** Карта код → описание для быстрого вывода названия права. */

@@ -187,7 +187,8 @@ const CreditControlPage = () => {
     5: "income_percents",
     6: "income_rubles",
   };
-  const { hasPermission, hasRole, forbiddenRole, denyPermission } = useAuth();
+  const { authInfo, hasPermission, hasRole, forbiddenRole, denyPermission } =
+    useAuth();
   const { exportData, isExporting, exportProgress } = useExport<Credit>();
   const {
     isLoading,
@@ -874,6 +875,10 @@ const CreditControlPage = () => {
     }
   };
 
+  // Подтверждение договоров выключается в настройках компании. Выключено —
+  // договор подтверждать не требуется, и кнопки для этого не нужны.
+  const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
+
   const tableActions = [
     {
       label: "Подтвердить договор",
@@ -884,6 +889,7 @@ const CreditControlPage = () => {
         const credit = displayedCredits.find((c) => c.id === Number(id));
 
         return (
+          creditAcceptance &&
           hasPermission("MANAGE_ACCOUNTING", true) &&
           credit &&
           !credit.hasCounterApproved
@@ -1157,7 +1163,9 @@ const CreditControlPage = () => {
         baseStyle.color = "#1B5E20";
       }
 
-      if (!credit.hasCounterApproved) {
+      // Подтверждение договоров выключено — делить их на подтверждённые и
+      // нет незачем, подсветка только мешает.
+      if (creditAcceptance && !credit.hasCounterApproved) {
         baseStyle.backgroundColor = "#FFD6D6";
         baseStyle.color = "#B91C1C";
       }
@@ -1273,6 +1281,8 @@ const CreditControlPage = () => {
               />
             </FilterSlot>
 
+            {/* Подтверждение выключено — отбирать по нему нечего. */}
+            {creditAcceptance && (
             <FilterSlot>
               <FilterSlotLabel>Статус подтверждения</FilterSlotLabel>
               <CustomSelect
@@ -1288,6 +1298,7 @@ const CreditControlPage = () => {
                 disabled={false}
               />
             </FilterSlot>
+            )}
           </FilterGrid>
 
           <FilterGroupRow>
@@ -1418,7 +1429,7 @@ const CreditControlPage = () => {
             </ExportButton>
           </FilterModalFooter>
 
-          {hasPermission("MANAGE_ACCOUNTING", true) && (
+          {creditAcceptance && hasPermission("MANAGE_ACCOUNTING", true) && (
             <FilterConfirmAllRow>
               <DarkCyanButton
                 onClick={handleConfirmAllCredits}

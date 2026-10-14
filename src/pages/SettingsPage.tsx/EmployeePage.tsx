@@ -25,6 +25,11 @@ import { useAuth } from "../../сontext/AuthContext";
 import PhoneLink from "../../components/ui/links/PhoneLink";
 import Checkbox from "../../components/ui/CheckBoxes/Checkbox";
 
+// Служебные аккаунты прячем из списка только в проде. Сборка с main идёт в
+// режиме production, с dev — staging, локальный запуск — development, так что
+// на тесте и локально они видны: иначе роли на них не проверить.
+const HIDE_SERVICE_ACCOUNTS = import.meta.env.MODE === "production";
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 const ToastContainer = styled.div`
@@ -357,9 +362,11 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
 
   const filteredEmployees = useMemo(
     () =>
-      localEmployees.filter(
-        (emp) => !isSuperAdminIdUser(emp.id) && emp.role !== "суперадмин"
-      ),
+      HIDE_SERVICE_ACCOUNTS
+        ? localEmployees.filter(
+            (emp) => !isSuperAdminIdUser(emp.id) && emp.role !== "суперадмин"
+          )
+        : localEmployees,
     [localEmployees, isSuperAdminIdUser]
   );
   const filteredOutCount = localEmployees.length - filteredEmployees.length;

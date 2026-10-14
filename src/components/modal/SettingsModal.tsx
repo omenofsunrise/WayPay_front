@@ -7,6 +7,7 @@ import Checkbox from "../ui/CheckBoxes/Checkbox";
 import Tabs from "../ui/fields/Tabs";
 import {
   getUiSettings,
+  type PaymentColorRule,
   setUiSettings,
   type CreditsDisplayMode,
 } from "../../utils/uiSettings";
@@ -186,6 +187,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     useState<CreditsDisplayMode>("pagination");
   const [paymentsDisplayMode, setPaymentsDisplayMode] =
     useState<CreditsDisplayMode>("pagination");
+  // Дни храним строкой, а не числом: иначе стёртое поле тут же становилось
+  // нулём, и следующая цифра приписывалась к нему — «05» вместо «5».
+  const [paymentColorRules, setPaymentColorRules] = useState<
+    { days: string; color: string }[]
+  >([]);
   const [activeTab, setActiveTab] = useState<SettingsTab>("interface");
 
   useEffect(() => {
@@ -199,7 +205,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     setDisableWhatsAppNotifications(getDisableWhatsAppNotificationsSetting());
     setCreditsDisplayMode(getUiSettings().creditsDisplayMode);
     setPaymentsDisplayMode(getUiSettings().paymentsDisplayMode);
+    setPaymentColorRules(
+      getUiSettings().paymentColorRules.map((rule) => ({
+        days: String(rule.days),
+        color: rule.color,
+      }))
+    );
   }, []);
+
+  // Пустое поле дней — правило недозаполнено. Раньше оно молча пропадало при
+  // сохранении, и человек не понимал, куда делось. Теперь не даём сохранить,
+  // пока не вписал или не убрал.
+  const hasIncompleteRule = paymentColorRules.some(
+    (rule) => rule.days.trim() === ""
+  );
 
   const handleSave = () => {
     setHideCurrencySetting(hideCurrency);
@@ -210,7 +229,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
       showContractCreationNotification
     );
     setDisableWhatsAppNotificationsSetting(disableWhatsAppNotifications);
-    setUiSettings({ creditsDisplayMode, paymentsDisplayMode });
+    setUiSettings({
+      creditsDisplayMode,
+      paymentsDisplayMode,
+      // Пустые и повторяющиеся правила не храним: они только мешали бы
+      // выбирать нужное.
+      paymentColorRules: paymentColorRules
+        // Пустое поле — правило не заполнили, его не сохраняем.
+        .filter((rule) => rule.days.trim() !== "")
+        .map(
+          (rule): PaymentColorRule => ({
+            color: rule.color,
+            // Предел поля — год. Проверяем и здесь: число можно вписать
+            // руками, минуя стрелки, и ограничение разметки не сработает.
+            days: Math.min(Math.max(parseInt(rule.days, 10) || 0, 0), 365),
+          })
+        )
+        .filter(
+          (rule, i, all) =>
+            all.findIndex((other) => other.days === rule.days) === i
+        )
+        .sort((a, b) => a.days - b.days),
+    });
     onClose();
   };
 
@@ -307,6 +347,89 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               </OptionText>
             </DisplayModeOption>
           </SectionGroup>
+
+          <SectionGroup>
+            <SectionGroupTitle>Цвета ожидаемых платежей</SectionGroupTitle>
+            <SectionGroupHint>
+              Строка в «Ожидаемых» закрашивается, когда до платежа остаётся не
+              больше указанных дней. Если подходят несколько правил, берётся
+              самое близкое: «за 3 дня» важнее, чем «за 7».
+            </SectionGroupHint>
+
+            {paymentColorRules.length === 0 && (
+              <ColorRulesEmpty>
+                Правил нет — платежи не закрашиваются.
+              </ColorRulesEmpty>
+            )}
+
+            {paymentColorRules.map((rule, index) => (
+              <ColorRuleRow key={index}>
+                <ColorRuleLabel>За</ColorRuleLabel>
+                <ColorRuleDays
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={3}
+                  value={rule.days}
+                  onChange={(e) =>
+                    setPaymentColorRules((prev) =>
+                      prev.map((item, i) =>
+                        i === index
+                          ? {
+                              ...item,
+                              // Оставляем только цифры и убираем ведущие нули,
+                              // чтобы «05» не получалось в принципе.
+                              days: e.target.value
+                                .replace(/\D/g, "")
+                                .replace(/^0+(?=\d)/, ""),
+                            }
+                          : item
+                      )
+                    )
+                  }
+                />
+                <ColorRuleLabel>дн. — цвет</ColorRuleLabel>
+                <ColorRuleColor
+                  type="color"
+                  value={rule.color}
+                  onChange={(e) =>
+                    setPaymentColorRules((prev) =>
+                      prev.map((item, i) =>
+                        i === index ? { ...item, color: e.target.value } : item
+                      )
+                    )
+                  }
+                />
+                <ColorRuleRemove
+                  type="button"
+                  onClick={() =>
+                    setPaymentColorRules((prev) =>
+                      prev.filter((_, i) => i !== index)
+                    )
+                  }
+                >
+                  Убрать
+                </ColorRuleRemove>
+              </ColorRuleRow>
+            ))}
+
+            {hasIncompleteRule && (
+              <ColorRulesWarning>
+                Укажите количество дней — правило без него не сохранится.
+              </ColorRulesWarning>
+            )}
+
+            <ColorRuleAdd
+              type="button"
+              onClick={() =>
+                setPaymentColorRules((prev) => [
+                  ...prev,
+                  { days: "3", color: "#FFE6B0" },
+                ])
+              }
+            >
+              + Добавить правило
+            </ColorRuleAdd>
+          </SectionGroup>
         </SettingsSection>
       ),
     },
@@ -358,7 +481,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
           <GrayButton style={{ width: "120px" }} onClick={onClose}>
             Отмена
           </GrayButton>
-          <DarkCyanButton style={{ width: "120px" }} onClick={handleSave}>
+          <DarkCyanButton
+            style={{ width: "120px" }}
+            onClick={handleSave}
+            disabled={hasIncompleteRule}
+            title={
+              hasIncompleteRule
+                ? "Укажите количество дней в правиле цвета или уберите его"
+                : undefined
+            }
+          >
             Сохранить
           </DarkCyanButton>
         </ModalFooter>
@@ -366,6 +498,81 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     </ModalOverlay>
   );
 };
+
+const ColorRuleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #eef1f4;
+  border-radius: 10px;
+  background: #fbfcfd;
+`;
+
+const ColorRuleLabel = styled.span`
+  color: #52606d;
+  font-size: 13px;
+  white-space: nowrap;
+`;
+
+const ColorRuleDays = styled.input`
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid #d6dce3;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+`;
+
+const ColorRuleColor = styled.input`
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #d6dce3;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+`;
+
+const ColorRuleRemove = styled.button`
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: #8a94a6;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    color: #d14343;
+  }
+`;
+
+const ColorRuleAdd = styled.button`
+  align-self: flex-start;
+  border: 1px dashed #c4ccd6;
+  background: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: rgba(0, 125, 136, 1);
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: rgba(0, 125, 136, 1);
+  }
+`;
+
+const ColorRulesWarning = styled.p`
+  margin: 0;
+  color: #d14343;
+  font-size: 13px;
+`;
+
+const ColorRulesEmpty = styled.p`
+  margin: 0;
+  color: #8a94a6;
+  font-size: 13px;
+`;
 
 const ModalOverlay = styled.div`
   position: fixed;

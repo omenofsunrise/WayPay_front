@@ -1,4 +1,5 @@
 import React from "react";
+import { useAuth } from "../../../сontext/AuthContext";
 import styled from "styled-components";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
@@ -58,11 +59,17 @@ const FIELD_LABEL: Record<CreditCardField, string> = {
   employee: "Сотрудник",
 };
 
-const computeStatus = (credit: Credit): CreditCardStatus => {
+const computeStatus = (
+  credit: Credit,
+  creditAcceptance: boolean
+): CreditCardStatus => {
   // Неподтверждённый договор имеет наивысший приоритет — его нужно
   // визуально выделить, чтобы сразу было понятно, что требуется подтверждение
   // (так же, как в табличном режиме на CreditPage / CreditControlPage).
-  if (!credit.hasCounterApproved) return "unconfirmed";
+  //
+  // Если подтверждение договоров выключено в настройках компании, делить их
+  // на подтверждённые и нет незачем: показываем обычный статус.
+  if (creditAcceptance && !credit.hasCounterApproved) return "unconfirmed";
   if (credit.terminated) return "terminated";
   if (!credit.isActive) return "closed";
   if ((credit.debt ?? 0) > 0) return "overdue";
@@ -144,7 +151,9 @@ const CreditCard: React.FC<CreditCardProps> = ({
   subtitle,
   title,
 }) => {
-  const status = computeStatus(credit);
+  const { authInfo } = useAuth();
+  const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
+  const status = computeStatus(credit, creditAcceptance);
   const palette = STATUS_PALETTE[status];
   const isUnconfirmed = status === "unconfirmed";
 

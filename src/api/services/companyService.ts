@@ -15,6 +15,34 @@ export interface GetAllCompaniesParams {
 }
 
 class CompanyService {
+  /**
+   * Переключение настройки компании.
+   *
+   * Сервер принимает пару «что» и «включить или выключить». Сейчас
+   * поддерживается только подтверждение договоров: выключенное прячет кнопки
+   * подтверждения и счётчик неподтверждённых в аналитике.
+   */
+  async updateSettings(
+    setting: "credit_acceptence",
+    action: "on" | "off"
+  ): Promise<void> {
+    await apiClient.patch("/Company/settings", { setting, action });
+  }
+
+  /**
+   * Шаг округления сумм при оформлении, от 0 до 100. Ноль — не округлять.
+   *
+   * Тот же эндпоинт, но вместо «включить-выключить» принимает число, поэтому
+   * отдельным методом. Менять его может только директор компании: остальным
+   * сервер ответит 403.
+   */
+  async updateRoundingStep(value: number): Promise<void> {
+    await apiClient.patch("/Company/settings", {
+      setting: "rounding_step",
+      value,
+    });
+  }
+
   async getCompany(): Promise<Company> {
     const response = await apiClient.get<Company>("/Company");
     return response.data;

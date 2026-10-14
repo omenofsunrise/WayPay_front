@@ -1671,6 +1671,10 @@ const CreditPage = () => {
     fundingSourceActionLabel = `Перенести в активные (${selectedRows.length})`;
   }
 
+  // Подтверждение договоров выключается в настройках компании. Выключено —
+  // договор подтверждать не требуется, и кнопки для этого не нужны.
+  const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
+
   const tableActions = [
     {
       label: "Подтвердить договор",
@@ -1680,6 +1684,7 @@ const CreditPage = () => {
         const [_, id] = rowData;
         const credit = displayedCredits.find((c) => c.id === Number(id));
         return (
+          creditAcceptance &&
           hasPermission("MANAGE_ACCOUNTING", true) &&
           credit &&
           !credit.hasCounterApproved
@@ -1860,7 +1865,9 @@ const CreditPage = () => {
         baseStyle.color = "#6B21A8";
       }
 
-      if (!credit.hasCounterApproved) {
+      // Подтверждение договоров выключено — делить их на подтверждённые и
+      // нет незачем, подсветка только мешает.
+      if (creditAcceptance && !credit.hasCounterApproved) {
         baseStyle.backgroundColor = "#FFD6D6";
         baseStyle.color = "#B91C1C";
       }
@@ -2226,7 +2233,7 @@ const CreditPage = () => {
             </ExportButton>
           </FilterModalFooter>
 
-          {hasPermission("MANAGE_ACCOUNTING", true) && (
+          {creditAcceptance && hasPermission("MANAGE_ACCOUNTING", true) && (
             <FilterConfirmAllRow>
               <DarkCyanButton
                 onClick={handleConfirmAllCredits}

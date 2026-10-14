@@ -223,8 +223,13 @@ const ProductsTable = ({
     onProductsChange(updatedProducts);
   };
 
+  // Шаг берётся из настроек компании, его задаёт директор. Ноль — не
+  // округлять. Пятьдесят — то, что было прошито здесь до появления настройки.
+  const roundingStep = authInfo?.employee.roundingStep ?? 50;
+
   const roundTo50 = (value: number): number => {
-    return Math.ceil(value / 50) * 50;
+    if (roundingStep <= 0) return value;
+    return Math.ceil(value / roundingStep) * roundingStep;
   };
 
   const handleProductSelect = (id: number, productName: string) => {

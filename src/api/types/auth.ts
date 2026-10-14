@@ -9,7 +9,11 @@ export type Permission =
   | "FORBID_CREATING_PAYMENTS"
   | "FORBID_DELETING_PAYMENTS"
   | "FORBID_CREDIT_APPLICATIONS"
-  | "MANAGE_ACCOUNTING";
+  | "MANAGE_ACCOUNTING"
+  // Скрытие сведений в платежах. Запрещающие: у кого права нет — видит всё.
+  | "FORBID_PAYMENT_INVESTOR"
+  | "FORBID_PAYMENT_EMPLOYEE"
+  | "FORBID_PAYMENT_TYPE";
 
 export type Role = "админ" | "сотрудник" | "директор" | "суперадмин";
 
@@ -42,6 +46,13 @@ export interface AuthInfo {
     status?: string;
     transactionStatus?: string;
     poolV2?: boolean;
+    // Подтверждение договоров включено. Выключено — кнопки подтверждения
+    // прячутся везде, и из аналитики уходит счётчик неподтверждённых.
+    creditAcceptance?: boolean;
+    /** Шаг округления сумм при оформлении, 0..100. Ноль — не округлять. */
+    roundingStep?: number;
+    /** Показывать ли при оформлении выбор способа оплаты. Включают отдельным компаниям. */
+    paymentMethodEnabled?: boolean;
   };
 }
 
