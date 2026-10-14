@@ -772,6 +772,9 @@ const NewCreditPage = () => {
 
   const generateSchedulePreview = useCallback(async () => {
     if (!contractDate || !months || !paymentDue || totalSum <= 0) return;
+    // Без даты начала выплат new Date(null) превращается в 01.01.1970,
+    // и график показывает платёж в этой дате.
+    if (!startPaymentDate) return;
 
     try {
       const initialPayment = initialPaymentAmount
@@ -839,7 +842,7 @@ const NewCreditPage = () => {
   }, [previewData, totalSum, initialPaymentAmount, contractDate, parseAmount]);
 
   useEffect(() => {
-    if (contractDate && months && paymentDue && totalSum > 0) {
+    if (contractDate && months && startPaymentDate && paymentDue && totalSum > 0) {
       generateSchedulePreview();
     } else {
       if (paymentSchedule.length > 0) {
@@ -849,6 +852,7 @@ const NewCreditPage = () => {
   }, [
     contractDate,
     months,
+    startPaymentDate,
     paymentDue,
     totalSum,
     nextMonthStart,
@@ -984,13 +988,16 @@ const NewCreditPage = () => {
   };
 
   const handleMonthsBlur = (value: string) => {
+    // Пустое поле оставляем пустым: иначе переход к «Началу выплат» сам
+    // проставлял единицу, которую никто не вводил.
+    if (value.trim() === "") return;
+
     const numericValue = Number(value) || 0;
     if (numericValue > 180) {
       setMonths("180");
     } else if (numericValue < 1) {
       setMonths("1");
     }
-
   };
 
   const getSelectedEntityDisplayName = () => {
