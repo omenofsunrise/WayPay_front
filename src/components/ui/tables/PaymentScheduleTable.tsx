@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { formatMoney } from '../../../utils/formatPrice';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 
 export interface PaymentScheduleItem {
   id: number;
@@ -17,7 +18,7 @@ interface PaymentScheduleTableProps {
   isLoading?: boolean;
 }
 
-const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps) => {
+const PaymentScheduleTable = ({ data, isLoading }: PaymentScheduleTableProps) => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
   return (
@@ -49,6 +50,22 @@ const PaymentScheduleTable = ({ data, onDataChange }: PaymentScheduleTableProps)
           })}
         </TableBody>
       </StyledTable>
+      {data.length === 0 && (
+        <EmptyState role="status" aria-live="polite">
+          <EmptyIcon>
+            <CalendarMonthOutlinedIcon />
+          </EmptyIcon>
+          <EmptyTitle>
+            {isLoading ? 'Рассчитываем график…' : 'График выплат пока пуст'}
+          </EmptyTitle>
+          {!isLoading && (
+            <EmptyDescription>
+              Заполните параметры слева — платежи будут
+              <br />рассчитаны автоматически.
+            </EmptyDescription>
+          )}
+        </EmptyState>
+      )}
     </TableContainer>
   );
 };
@@ -57,11 +74,53 @@ const TableContainer = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   margin-top: 16px;
-  height: 220px;
+  height: 100%;
+  min-height: 430px;
   overflow: auto;
   position: relative;
   background-color: white;
   margin-left: auto;
+`;
+
+const EmptyState = styled.div`
+  position: absolute;
+  inset: 55px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+`;
+
+const EmptyIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: rgba(22, 139, 150, 0.08);
+  color: rgba(20, 125, 135, 0.48);
+
+  & svg {
+    width: 48px;
+    height: 48px;
+  }
+`;
+
+const EmptyTitle = styled.div`
+  margin-bottom: 8px;
+  color: #101828;
+  font-size: 20px;
+  font-weight: 600;
+`;
+
+const EmptyDescription = styled.div`
+  color: #7b8aa5;
+  font-size: 15px;
+  line-height: 1.45;
 `;
 
 const StyledTable = styled.table`
