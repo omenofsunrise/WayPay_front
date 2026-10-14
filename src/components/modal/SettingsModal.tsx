@@ -350,11 +350,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
           <SectionGroup>
             <SectionGroupTitle>Цвета ожидаемых платежей</SectionGroupTitle>
-            <SectionGroupHint>
-              Строка в «Ожидаемых» закрашивается, когда до платежа остаётся не
-              больше указанных дней. Если подходят несколько правил, берётся
-              самое близкое: «за 3 дня» важнее, чем «за 7».
-            </SectionGroupHint>
 
             {paymentColorRules.length === 0 && (
               <ColorRulesEmpty>
@@ -548,7 +543,7 @@ const ColorRuleRemove = styled.button`
 `;
 
 const ColorRuleAdd = styled.button`
-  align-self: flex-start;
+  align-self: flex-end;
   border: 1px dashed #c4ccd6;
   background: none;
   border-radius: 10px;
