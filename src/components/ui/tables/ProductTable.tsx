@@ -7,6 +7,8 @@ import CustomInput from "../fields/CustomInput";
 import ProductSelectModal from "../../modal/CrudInherited/ProductSelectModal";
 import { useAuth } from "../../../сontext/AuthContext";
 import { formatMoney } from "../../../utils/formatPrice";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
 interface Product {
   id: number;
@@ -22,7 +24,6 @@ interface ProductsTableProps {
   onProductsChange: (products: Product[]) => void;
   onTotalSumChange?: (sum: number) => void;
   markupType: "percent" | "fixed";
-  onMarkupTypeChange: (type: "percent" | "fixed") => void;
 }
 
 const ProductsTable = ({
@@ -30,7 +31,6 @@ const ProductsTable = ({
   onProductsChange,
   onTotalSumChange,
   markupType,
-  onMarkupTypeChange,
 }: ProductsTableProps) => {
   const { authInfo } = useAuth();
   const { data: productsData, getProducts } = useProducts();
@@ -45,7 +45,6 @@ const ProductsTable = ({
     left: 0,
     width: 0,
   });
-  const minMarkup = authInfo?.employee.minSurcharge || 0;
 
   useEffect(() => {
     if (products.length === 0) {
@@ -114,6 +113,24 @@ const ProductsTable = ({
       totalPrice: 0,
     };
     onProductsChange([...products, newProduct]);
+  };
+
+  const removeRow = (id: number) => {
+    const remainingProducts = products.filter((product) => product.id !== id);
+    onProductsChange(
+      remainingProducts.length > 0
+        ? remainingProducts
+        : [
+            {
+              id: Date.now(),
+              name: "",
+              price: 0,
+              quantity: 1,
+              markup: 0,
+              totalPrice: 0,
+            },
+          ]
+    );
   };
 
   const handlePriceChange = (
@@ -285,6 +302,7 @@ const ProductsTable = ({
                 {markupType === "percent" ? " (%)" : " (₽)"}
               </HeaderCell>
               <HeaderCell>Цена</HeaderCell>
+              <ActionHeaderCell aria-label="Действия" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -320,7 +338,7 @@ const ProductsTable = ({
                           updateMenuPosition(product.id);
                         }}
                         onKeyDown={(e) => handleKeyDown(e, product.id)}
-                        placeholder="Введите название"
+                        placeholder="Введите название товара"
                       />
                       <AnimatePresence>
                         {activeDropdown === product.id && (
@@ -386,7 +404,6 @@ const ProductsTable = ({
                       onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="0"
                       min="0"
-                      style={{ border: "none", padding: "0" }}
                     />
                   </BodyCell>
                   <BodyCell>
@@ -401,7 +418,6 @@ const ProductsTable = ({
                       onKeyDown={(e) => handleKeyDown(e, product.id)}
                       placeholder="0"
                       min="0"
-                      style={{ border: "none", padding: "0" }}
                     />
                   </BodyCell>
                   <BodyCell>
@@ -417,18 +433,33 @@ const ProductsTable = ({
                         onKeyDown={(e) => handleKeyDown(e, product.id)}
                         placeholder="0"
                         min="0"
-                        style={{ border: "none", padding: "0" }}
                       />
                     ) : (
-                      formatMoney(product.totalPrice.toString())
+                      <PriceValue>
+                        {formatMoney(product.totalPrice.toString())}
+                      </PriceValue>
                     )}
                   </BodyCell>
+                  <ActionCell>
+                    <DeleteButton
+                      type="button"
+                      onClick={() => removeRow(product.id)}
+                      aria-label="Удалить товар"
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </DeleteButton>
+                  </ActionCell>
                 </TableRow>
               ))}
             </AnimatePresence>
           </TableBody>
         </StyledTable>
       </TableContainer>
+
+      <AddProductButton type="button" onClick={addNewRow}>
+        <AddCircleOutlineIcon fontSize="small" />
+        Добавить товар
+      </AddProductButton>
 
       <ProductSelectModal
         isOpen={showProductSelectModal}
@@ -439,39 +470,10 @@ const ProductsTable = ({
   );
 };
 
-const MarkupTypeToggle = styled.button<{ active: boolean }>`
-  padding: 4px 8px;
-  border: 1px solid #e2e8f0;
-  background: ${(props) => (props.active ? "#007d88" : "white")};
-  color: ${(props) => (props.active ? "white" : "#333")};
-  cursor: pointer;
-  font-size: 12px;
-  margin-left: 4px;
-
-  &:first-child {
-    border-radius: 4px 0 0 4px;
-    border-right: none;
-  }
-
-  &:last-child {
-    border-radius: 0 4px 4px 0;
-  }
-
-  &:hover {
-    background: ${(props) => (props.active ? "#007d88" : "#f7fafc")};
-  }
-`;
-
-const ToggleContainer = styled.div`
-  display: flex;
-  margin-bottom: 4px;
-`;
-
 const TableContainer = styled.div`
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e4e7ec;
   border-radius: 8px;
-  margin-top: 16px;
-  height: 180px;
+  max-height: 230px;
   overflow: auto;
   position: relative;
   background-color: white;
@@ -502,7 +504,7 @@ const StyledTable = styled.table`
 `;
 
 const TableHeader = styled.thead`
-  background-color: #f7fafc;
+  background-color: #f7f9fc;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -518,28 +520,39 @@ const TableBody = styled.tbody`
   }
 `;
 
-const MinMarkupHint = styled.div`
-  font-size: 10px;
-  color: #666;
-  margin-top: 2px;
-`;
-
 const TableRow = styled(motion.tr)`
   background-color: white;
 `;
 
 const HeaderCell = styled.th`
-  padding: 12px 16px;
+  height: 46px;
+  padding: 0 16px;
   text-align: left;
-  font-weight: 500;
+  color: #101828;
+  font-size: 14px;
+  font-weight: 600;
+
+  &:first-child {
+    width: 34%;
+  }
 `;
 
 const BodyCell = styled.td`
-  padding: 2px 16px;
+  height: 64px;
+  padding: 7px 14px;
   vertical-align: middle;
   position: relative;
   background-color: white;
   color: black;
+
+  & input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d0d5dd;
+    border-radius: 7px;
+    box-sizing: border-box;
+  }
 `;
 
 const NameCellContainer = styled.div`
@@ -547,15 +560,88 @@ const NameCellContainer = styled.div`
 `;
 
 const NameInput = styled.input`
-  padding: 8px 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
   font-size: 14px;
   background-color: white;
-  border: none;
+  border: 1px solid #d0d5dd;
+  border-radius: 7px;
   color: black;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
     border-color: #3182ce;
+  }
+`;
+
+const ActionHeaderCell = styled.th`
+  width: 48px;
+  border-right: 0 !important;
+`;
+
+const PriceValue = styled.div`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #475467;
+  box-sizing: border-box;
+`;
+
+const ActionCell = styled.td`
+  width: 48px;
+  padding: 0;
+  text-align: center;
+  border-right: 0 !important;
+`;
+
+const DeleteButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+
+  &:hover {
+    background: #f2f4f7;
+    color: #b42318;
+  }
+`;
+
+const AddProductButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 44px;
+  margin-top: 8px;
+  padding: 0 16px;
+  border: 1px dashed #d0d5dd;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #53627a;
+  font-size: 14px;
+  cursor: pointer;
+
+  & svg {
+    color: #78aeb4;
+  }
+
+  &:hover {
+    border-color: #168b96;
+    color: #147d87;
   }
 `;
 

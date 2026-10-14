@@ -36,7 +36,6 @@ import { formatMoney } from "../utils/formatPrice";
 import DateModalInput from "../components/ui/fields/DateModalInput";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import useInvestor from "../api/hooks/useInvestor";
-import { isOwnCashInvestorName } from "../utils/investorUtils";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -47,6 +46,7 @@ import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalance
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
+import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
 
 const MARKUP_TYPE_STORAGE_KEY = "credit_product_markup_type";
 const TURN_OF_ROUNDING_KEY = "turn_of_rounding";
@@ -107,6 +107,9 @@ const NewCreditPage = () => {
   const [initialPaymentPercent, setInitialPaymentPercent] =
     useState<string>("");
   const [initialPaymentAmount, setInitialPaymentAmount] = useState<string>("");
+  const [initialPaymentMode, setInitialPaymentMode] = useState<
+    "percent" | "amount"
+  >("percent");
   const [months, setMonths] = useState<string>("");
   const [creditName, setCreditName] = useState<string>("");
   // Выбор способа оплаты показываем только компаниям, которым его включили.
@@ -143,9 +146,6 @@ const NewCreditPage = () => {
     useState<SelectedObjectType | null>(null);
   const [selectedTabType, setSelectedTabType] =
     useState<SelectedObjectType | null>(null);
-  const [editMarkupType, setEditMarkupType] = useState<"percent" | "fixed">(
-    "percent"
-  );
   const [markupType, setMarkupType] = useState<"percent" | "fixed">(() => {
     const savedMarkupType = localStorage.getItem(MARKUP_TYPE_STORAGE_KEY);
     return savedMarkupType === "percent" || savedMarkupType === "fixed"
@@ -290,9 +290,8 @@ const NewCreditPage = () => {
             }
           }
 
-          // Set markup type states
+          // Set markup type
           setMarkupType(determinedMarkupType);
-          setEditMarkupType(determinedMarkupType);
 
           setClient({
             id: creditData.clientId,
@@ -740,13 +739,17 @@ const NewCreditPage = () => {
         navigate("/credits");
       }
     } catch (err) {
-      const responseData = (err as any)?.response?.data;
+      const requestError = err as {
+        response?: { data?: string | { message?: string } };
+        message?: string;
+      };
+      const responseData = requestError.response?.data;
       const errorMessage =
         typeof responseData === "string"
           ? responseData
           : responseData?.message
           ? responseData.message
-          : (err as any)?.message ||
+          : requestError.message ||
             "Не удалось сохранить договор. Попробуйте ещё раз.";
       setSubmitError(errorMessage);
     }
@@ -1169,34 +1172,23 @@ const NewCreditPage = () => {
 
         {hasDraft && !isEditMode && (
           <HeaderActions>
-            <GrayButton onClick={resetDraft}>Сбросить черновик</GrayButton>
+            <GrayButton
+              icon={<RestartAltOutlinedIcon fontSize="small" />}
+              onClick={resetDraft}
+            >
+              Сбросить черновик
+            </GrayButton>
           </HeaderActions>
         )}
       </StickySummaryBar>
 
       <ContentStack>
-        <SectionCard $accent="teal">
+        <TopDetailsCard>
           <SectionAccentBar $accent="teal" />
-          <SectionBody>
-            <SectionTopRow>
-              <SectionHeader>
-                <SectionIcon>
-                  <DescriptionOutlinedIcon fontSize="small" />
-                </SectionIcon>
-                <SectionTitle>Основная информация</SectionTitle>
-              </SectionHeader>
-              <SettingsCard>
-                <Checkbox
-                  label="Договор в долг"
-                  checked={inDebt}
-                  onChange={handleInDebtChange}
-                />
-              </SettingsCard>
-            </SectionTopRow>
-
-            <FormRow>
-              <FieldGroup $width="248px">
-                <Label>Дата договора</Label>
+          <TopDetailsRow>
+            <TopField $basis="320px">
+              <CompactField>
+                <DescriptionOutlinedIcon fontSize="small" />
                 <DateInputWrapper>
                   <CustomCalendar
                     prefix=""
@@ -1205,11 +1197,13 @@ const NewCreditPage = () => {
                     onReset={() => setContractDate(null)}
                   />
                 </DateInputWrapper>
-              </FieldGroup>
+              </CompactField>
+            </TopField>
 
-              {!inDebt ? (
-                <FieldGroup $width="365px">
-                  <Label>Инвестор / Пул</Label>
+            {!inDebt ? (
+              <TopField $basis="390px">
+                <CompactField>
+                  <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
                     <EntitySelectContainer
                       mode="create"
@@ -1221,10 +1215,12 @@ const NewCreditPage = () => {
                       customIcon={plusIcon}
                     />
                   </EntitySelectWrapper>
-                </FieldGroup>
-              ) : inDebt ? (
-                <FieldGroup $width="365px">
-                  <Label>Комментарий к долгу</Label>
+                </CompactField>
+              </TopField>
+            ) : inDebt ? (
+              <TopField $basis="390px">
+                <CompactField>
+                  <PersonOutlineIcon fontSize="small" />
                   <EntitySelectWrapper>
                     <CustomInput
                       placeholder="Кем выдан долг"
@@ -1232,23 +1228,25 @@ const NewCreditPage = () => {
                       onChange={(e) => setDebtComment(e.target.value)}
                     />
                   </EntitySelectWrapper>
-                </FieldGroup>
-              ) : null}
+                </CompactField>
+              </TopField>
+            ) : null}
 
-              <FieldGroup $width="248px">
-                <Label>Имя договора (необязательно)</Label>
-                <DateInputWrapper>
-                  <CustomInput
-                    inputType="text"
-                    placeholder="Имя договора"
-                    value={creditName}
-                    onChange={(e) => setCreditName(e.target.value)}
-                  />
-                </DateInputWrapper>
-              </FieldGroup>
+            <TopField $basis="360px">
+              <CompactField>
+                <DescriptionOutlinedIcon fontSize="small" />
+                <CustomInput
+                  inputType="text"
+                  placeholder="Имя договора"
+                  value={creditName}
+                  onChange={(e) => setCreditName(e.target.value)}
+                />
+              </CompactField>
+            </TopField>
 
-              <FieldGroup $width="265px">
-                <Label>Папка (необязательно)</Label>
+            <TopField $basis="390px">
+              <CompactField>
+                <Inventory2OutlinedIcon fontSize="small" />
                 <ObjectTypeSelect
                   value={objectTypeName}
                   onChange={handleObjectTypeNameChange}
@@ -1256,11 +1254,18 @@ const NewCreditPage = () => {
                   placeholder="Выберите тип договора"
                   entityType="credit"
                 />
-              </FieldGroup>
-            </FormRow>
+              </CompactField>
+            </TopField>
 
-          </SectionBody>
-        </SectionCard>
+            <TopDebtSetting>
+              <Checkbox
+                label="Договор в долг"
+                checked={inDebt}
+                onChange={handleInDebtChange}
+              />
+            </TopDebtSetting>
+          </TopDetailsRow>
+        </TopDetailsCard>
 
         <PersonRow>
           <SectionCard $accent="teal">
@@ -1272,7 +1277,7 @@ const NewCreditPage = () => {
                 </SectionIcon>
                 <SectionTitle>Покупатель</SectionTitle>
               </SectionHeader>
-              <EntitySelectWrapper>
+              <WideEntitySelectWrapper>
                 <EntitySelectContainer
                   mode="create"
                   primaryValue={client?.fullName || ""}
@@ -1282,7 +1287,7 @@ const NewCreditPage = () => {
                   onClear={() => setClient(null)}
                   customIcon={plusIcon}
                 />
-              </EntitySelectWrapper>
+              </WideEntitySelectWrapper>
             </SectionBody>
           </SectionCard>
 
@@ -1297,7 +1302,7 @@ const NewCreditPage = () => {
                   Поручитель <SectionOptional>(не обязательно)</SectionOptional>
                 </SectionTitle>
               </SectionHeader>
-              <EntitySelectWrapper>
+              <WideEntitySelectWrapper>
                 <EntitySelectContainer
                   mode="create"
                   primaryValue={guarantorInfo.primaryValue}
@@ -1307,7 +1312,7 @@ const NewCreditPage = () => {
                   onClear={clearGuarantor}
                   customIcon={plusIcon}
                 />
-              </EntitySelectWrapper>
+              </WideEntitySelectWrapper>
             </SectionBody>
           </SectionCard>
         </PersonRow>
@@ -1348,7 +1353,6 @@ const NewCreditPage = () => {
                 onProductsChange={setProducts}
                 onTotalSumChange={setTotalSum}
                 markupType={markupType}
-                onMarkupTypeChange={setMarkupType}
               />
             </ProductsTableWrapper>
 
@@ -1359,75 +1363,110 @@ const NewCreditPage = () => {
                   {formatMoney(totalSum.toString())}
                 </TotalSumValue>
               </TotalSumGroup>
-              <SettingsCard>
-                <Checkbox
-                  label="Отключить округление"
-                  checked={turnOfRounding}
-                  onChange={handleTurnOfRoundingChange}
-                />
-              </SettingsCard>
-              {paymentMethodEnabled && (
-                <SettingsCard>
-                  <SettingsCardLabel>Способ оплаты</SettingsCardLabel>
-                  <MarkupPillContainer role="group" aria-label="Способ оплаты">
-                    <MarkupPill
+              <ProductSettings>
+                <RoundingControl>
+                  <RoundingCopy>
+                    <RoundingLabel>
+                      Округление суммы <InfoBadge title="Сумма будет округляться до заданного шага">i</InfoBadge>
+                    </RoundingLabel>
+                    <RoundingHint>
+                      Сумма будет округляться до заданного шага
+                    </RoundingHint>
+                  </RoundingCopy>
+                  <SwitchButton
+                    type="button"
+                    $active={turnOfRounding}
+                    onClick={() => handleTurnOfRoundingChange(!turnOfRounding)}
+                    aria-label="Округление суммы"
+                    aria-pressed={turnOfRounding}
+                  />
+                </RoundingControl>
+                {paymentMethodEnabled && (
+                  <PaymentControl>
+                    <PaymentLabel>Способ оплаты</PaymentLabel>
+                    <Segmented role="group" aria-label="Способ оплаты">
+                      <SegmentedButton
                       type="button"
                       $active={paymentMethod === "cash"}
                       onClick={() => setPaymentMethod("cash")}
                       aria-pressed={paymentMethod === "cash"}
                     >
                       Наличными
-                    </MarkupPill>
-                    <MarkupPill
+                      </SegmentedButton>
+                      <SegmentedButton
                       type="button"
                       $active={paymentMethod === "transfer"}
                       onClick={() => setPaymentMethod("transfer")}
                       aria-pressed={paymentMethod === "transfer"}
                     >
                       Переводом
-                    </MarkupPill>
-                  </MarkupPillContainer>
-                </SettingsCard>
-              )}
+                      </SegmentedButton>
+                    </Segmented>
+                  </PaymentControl>
+                )}
+              </ProductSettings>
             </TotalSumRow>
           </SectionBody>
         </SectionCard>
 
         <PaymentRow>
           <PaymentParamsCard $accent="teal">
-            <SectionAccentBar $accent="teal" />
             <SectionBody>
               <SectionHeader>
                 <SectionIcon>
                   <PaymentsOutlinedIcon fontSize="small" />
                 </SectionIcon>
-                <SectionTitle>Параметры выплат</SectionTitle>
+                <SectionHeading>
+                  <SectionTitle>Параметры выплат</SectionTitle>
+                  <SectionSubtitle>Настройте условия договора</SectionSubtitle>
+                </SectionHeading>
               </SectionHeader>
 
               <PaymentScheduleInputs>
                 <InputGroup>
-                  <InputRow>
-                    <InputLabel style={{ flex: 1 }}>
-                      Первоначальный взнос, %
-                    </InputLabel>
-                    <InputLabel style={{ flex: 1 }}>Сумма</InputLabel>
-                  </InputRow>
-                  <InputRow>
-                    <CustomInput
-                      inputType="number"
-                      placeholder="%"
-                      value={initialPaymentPercent}
-                      onChange={handlePercentChange}
-                      max={100}
-                    />
+                  <InputLabel>Первоначальный взнос</InputLabel>
+                  <ContributionSegmented role="group" aria-label="Формат первоначального взноса">
+                    <ContributionButton
+                      type="button"
+                      $active={initialPaymentMode === "percent"}
+                      onClick={() => setInitialPaymentMode("percent")}
+                      aria-pressed={initialPaymentMode === "percent"}
+                    >
+                      В процентах
+                    </ContributionButton>
+                    <ContributionButton
+                      type="button"
+                      $active={initialPaymentMode === "amount"}
+                      onClick={() => setInitialPaymentMode("amount")}
+                      aria-pressed={initialPaymentMode === "amount"}
+                    >
+                      В рублях
+                    </ContributionButton>
+                  </ContributionSegmented>
+                  {initialPaymentMode === "percent" ? (
+                    <SuffixInput>
+                      <CustomInput
+                        inputType="number"
+                        placeholder="0"
+                        value={initialPaymentPercent}
+                        onChange={handlePercentChange}
+                        max={100}
+                      />
+                      <InputSuffix>%</InputSuffix>
+                    </SuffixInput>
+                  ) : (
                     <CustomInput
                       inputType="rubles"
-                      placeholder="Сумма"
+                      placeholder="0 ₽"
                       value={initialPaymentAmount}
                       onChange={handleAmountChange}
                       disabled={totalSum <= 0}
                     />
-                  </InputRow>
+                  )}
+                </InputGroup>
+                <InputGroup>
+                  <InputLabel>Сумма</InputLabel>
+                  <ReadOnlyAmount>{initialPaymentAmount || "0 ₽"}</ReadOnlyAmount>
                 </InputGroup>
                 <InputGroup>
                   <InputRow>
@@ -1509,7 +1548,6 @@ const NewCreditPage = () => {
           </PaymentParamsCard>
 
           <PaymentScheduleCard $accent="teal">
-            <SectionAccentBar $accent="teal" />
             <SectionBody>
               <SectionHeader>
                 <SectionIcon>
@@ -1569,8 +1607,8 @@ const StickySummaryBar = styled.div`
   display: flex;
   align-items: stretch;
   gap: 12px;
-  padding: 12px 0;
-  margin: 0 0 16px;
+  padding: 8px 0 10px;
+  margin: 0 0 12px;
   background-color: rgba(249, 250, 250, 1);
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 `;
@@ -1582,14 +1620,20 @@ const HeaderActions = styled.div`
 
   & > button {
     margin: 0;
+    height: 48px;
+    padding: 0 18px;
+    border-radius: 14px;
+    background: #eef1f5;
+    color: #475467;
+    font-size: 14px;
   }
 `;
 
 const SummaryGrid = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+  gap: 8px;
   min-width: 0;
 `;
 
@@ -1614,8 +1658,9 @@ const summaryIconPalette: Record<SummaryAccent, { bg: string; color: string }> =
 const SummaryCard = styled.div<{ $variant?: SummaryVariant }>`
   display: flex;
   align-items: center;
+  min-height: 62px;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   background-color: ${({ $variant = "default" }) =>
     summaryCardPalette[$variant].bg};
   border: 1px solid
@@ -1640,6 +1685,10 @@ const SummaryIcon = styled.div<{ $accent?: SummaryAccent }>`
   background-color: ${({ $accent = "default" }) =>
     summaryIconPalette[$accent].bg};
   color: ${({ $accent = "default" }) => summaryIconPalette[$accent].color};
+
+  svg {
+    font-size: 20px;
+  }
 `;
 
 const SummaryItemBody = styled.div`
@@ -1650,16 +1699,16 @@ const SummaryItemBody = styled.div`
 
 const SummaryLabel = styled.span`
   font-size: 11px;
-  color: rgba(80, 85, 92, 1);
+  color: #667085;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 `;
 
 const SummaryValue = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: #000;
+  font-size: 15px;
+  font-weight: 700;
+  color: #101828;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1680,14 +1729,59 @@ const accentBarPalette: Record<"teal" | "orange" | "gray", string> = {
 
 const SectionCard = styled.section<{ $accent?: "teal" | "orange" | "gray" }>`
   display: flex;
-  gap: 16px;
-  padding: 20px;
+  gap: 20px;
+  padding: 18px 20px;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   align-items: stretch;
   min-width: 0;
   flex: 1;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.025);
+`;
+
+const TopDetailsCard = styled.section`
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  min-width: 0;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.025);
+`;
+
+const TopDetailsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+
+  @media (max-width: 1280px) {
+    flex-wrap: wrap;
+  }
+`;
+
+const TopField = styled.div<{ $basis: string }>`
+  flex: 0 1 ${({ $basis }) => $basis};
+  width: ${({ $basis }) => $basis};
+  min-width: 210px;
+
+  @media (max-width: 1280px) {
+    flex: 1 1 280px;
+    width: auto;
+  }
+`;
+
+const TopDebtSetting = styled.div`
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0 4px;
+  white-space: nowrap;
 `;
 
 const SectionAccentBar = styled.div<{ $accent?: "teal" | "orange" | "gray" }>`
@@ -1741,9 +1835,21 @@ const SectionIcon = styled.span<{ $accent?: "teal" | "orange" | "gray" }>`
 `;
 
 const SectionTitle = styled.div`
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #000;
+`;
+
+const SectionHeading = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const SectionSubtitle = styled.div`
+  color: #7b8aa5;
+  font-size: 12px;
+  font-weight: 400;
 `;
 
 const SectionOptional = styled.span`
@@ -1756,28 +1862,11 @@ const SectionOptional = styled.span`
 const PersonRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 
   @media (min-width: 992px) {
     flex-direction: row;
   }
-`;
-
-const SettingsCard = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-`;
-
-const SettingsCardLabel = styled.span`
-  color: #475569;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
 `;
 
 const TotalSumRow = styled.div`
@@ -1786,7 +1875,8 @@ const TotalSumRow = styled.div`
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding-top: 4px;
+  padding-top: 20px;
+  border-top: 1px solid #e4e7ec;
 `;
 
 const TotalSumGroup = styled.div`
@@ -1801,26 +1891,168 @@ const TotalSumLabel = styled.span`
 `;
 
 const TotalSumValue = styled.span`
-  font-size: 18px;
-  font-weight: 600;
-  color: #000;
+  font-size: 24px;
+  font-weight: 700;
+  color: #101828;
+`;
+
+const ProductSettings = styled.div`
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+
+  & > * {
+    min-height: 44px;
+    padding: 0 24px;
+    border-left: 1px solid #e4e7ec;
+  }
+
+  @media (max-width: 820px) {
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    & > * {
+      padding: 0;
+      border-left: 0;
+    }
+  }
+`;
+
+const RoundingControl = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+`;
+
+const RoundingCopy = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+`;
+
+const RoundingLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475467;
+`;
+
+const RoundingHint = styled.span`
+  font-size: 11px;
+  color: #98a2b3;
+  white-space: nowrap;
+`;
+
+const InfoBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid #667085;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  color: #667085;
+`;
+
+const SwitchButton = styled.button<{ $active: boolean }>`
+  position: relative;
+  width: 42px;
+  min-width: 42px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: ${({ $active }) => ($active ? "#168b96" : "#d0d5dd")};
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+    transform: translateX(${({ $active }) => ($active ? "18px" : "0")});
+    transition: transform 0.2s ease;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(22, 139, 150, 0.35);
+    outline-offset: 2px;
+  }
+`;
+
+const PaymentControl = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const PaymentLabel = styled.span`
+  font-size: 13px;
+  font-weight: 500;
+  color: #667085;
+  white-space: nowrap;
+`;
+
+const Segmented = styled.div`
+  display: inline-flex;
+  padding: 3px;
+  background: #f2f4f7;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+`;
+
+const SegmentedButton = styled.button<{ $active: boolean }>`
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: ${({ $active }) => ($active ? "#ffffff" : "transparent")};
+  color: ${({ $active }) => ($active ? "#147d87" : "#667085")};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.15s ease;
+  box-shadow: ${({ $active }) =>
+    $active
+      ? "0 1px 2px rgba(16, 24, 40, 0.08), 0 0 0 1px rgba(16, 24, 40, 0.02)"
+      : "none"};
+
+  &:hover {
+    color: ${({ $active }) => ($active ? "#147d87" : "#344054")};
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(22, 139, 150, 0.35);
+  }
 `;
 
 const MarkupPillContainer = styled.div`
   display: inline-flex;
   padding: 3px;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background-color: #f2f4f7;
+  border: 1px solid #dbe2ea;
   border-radius: 999px;
-  gap: 2px;
 `;
 
 const MarkupPill = styled.button<{ $active: boolean }>`
-  min-width: 36px;
-  padding: 4px 12px;
+  min-width: 54px;
+  height: 32px;
+  padding: 0 12px;
   border: none;
   border-radius: 999px;
-  background: ${({ $active }) => ($active ? "#007D88" : "transparent")};
+  background: ${({ $active }) => ($active ? "#078d99" : "transparent")};
   color: ${({ $active }) => ($active ? "#FFFFFF" : "#475569")};
   font-size: 13px;
   font-weight: 600;
@@ -1845,10 +2077,63 @@ const ProductsTableWrapper = styled.div`
 
 const EntitySelectWrapper = styled.div`
   width: 100%;
-  max-width: 465px;
   display: flex;
   align-items: center;
   gap: 8px;
+`;
+
+const WideEntitySelectWrapper = styled(EntitySelectWrapper)`
+  & input {
+    min-height: 46px;
+    padding: 0 44px 0 14px;
+    border-color: #cbd5e1;
+    border-radius: 7px;
+  }
+
+  & > div > button {
+    width: 46px;
+    height: 46px;
+    margin-left: 10px;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+  }
+`;
+
+const CompactField = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  & > svg {
+    position: absolute;
+    left: 14px;
+    z-index: 2;
+    color: #667085;
+    pointer-events: none;
+  }
+
+  & > div {
+    width: 100%;
+  }
+
+  & input {
+    min-height: 46px;
+    padding-left: 44px !important;
+    border-color: #cbd5e1 !important;
+    border-radius: 7px !important;
+    color: #344054;
+  }
+
+  & ${EntitySelectWrapper} > div > button {
+    width: 40px;
+    height: 40px;
+    margin-left: 8px;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+  }
 `;
 
 
@@ -1939,51 +2224,32 @@ const DateInputWrapper = styled.div`
   min-width: 0;
 `;
 
-const FormRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding-top: 4px;
-  align-items: stretch;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    row-gap: 20px;
-    column-gap: 28px;
-  }
-`;
-
-const FieldGroup = styled.div<{ $width?: string }>`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: ${({ $width }) => $width || "100%"};
-  min-width: 0;
-
-  @media (min-width: 768px) {
-    flex: 0 1 ${({ $width }) => $width || "100%"};
-  }
-`;
-
-const Label = styled.label`
-  font-size: 13px;
-  color: rgba(80, 85, 92, 1);
-  margin-bottom: 6px;
-  font-weight: 500;
-  text-align: left;
-`;
-
 const ButtonWrapper = styled.div`
   margin-top: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 
-  @media (min-width: 576px) {
-    flex-direction: row;
-    align-items: center;
+  & > button {
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 9px;
+    flex: 1;
+    margin: 0 !important;
+    font-size: 14px;
+  }
+
+  & > button:first-child {
+    flex: 0.75;
+    background: #f0f2f5;
+    color: #475467;
+  }
+
+  & > button:last-child {
+    flex: 1.25;
+    padding: 0 20px;
+    background: #168b96;
+    color: #ffffff;
+    font-weight: 500;
   }
 `;
 
@@ -2000,7 +2266,7 @@ const PaymentRow = styled.div`
 
 const PaymentParamsCard = styled(SectionCard)`
   @media (min-width: 992px) {
-    flex: 0 0 360px;
+    flex: 0 0 410px;
   }
 `;
 
@@ -2028,6 +2294,68 @@ const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+`;
+
+const ContributionSegmented = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #e4e7ec;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #f8fafc;
+`;
+
+const ContributionButton = styled.button<{ $active: boolean }>`
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid #e4e7ec;
+  background: ${({ $active }) =>
+    $active ? "rgba(22, 139, 150, 0.08)" : "transparent"};
+  color: ${({ $active }) => ($active ? "#147d87" : "#667085")};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:last-child {
+    border-right: 0;
+  }
+
+  &:focus-visible {
+    position: relative;
+    outline: 2px solid rgba(22, 139, 150, 0.35);
+    outline-offset: -2px;
+  }
+`;
+
+const SuffixInput = styled.div`
+  position: relative;
+
+  & input {
+    padding-right: 36px;
+  }
+`;
+
+const InputSuffix = styled.span`
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: #667085;
+  font-size: 14px;
+  pointer-events: none;
+`;
+
+const ReadOnlyAmount = styled.div`
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 5px 15px;
+  border: 1px solid #d0d5dd;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #101828;
+  font-size: 14px;
 `;
 
 const InputLabel = styled.label`
