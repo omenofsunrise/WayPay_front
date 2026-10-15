@@ -117,6 +117,7 @@ export interface CreditParams extends PaginationParams {
   includeAllStates?: boolean;
   Terminated?: boolean;
   clientAddress?: string;
+  paymentMethod?: CreditPaymentMethod;
 }
 
 export interface CreditDocs {

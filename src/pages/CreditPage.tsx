@@ -17,6 +17,7 @@ import useCredit from "../api/hooks/useCredit";
 import {
   InvestmentSourceType,
   type Credit,
+  type CreditPaymentMethod,
   type SetInvestmentSourceRequest,
 } from "../api/types/credit";
 import useExport from "../api/hooks/useExport";
@@ -138,6 +139,15 @@ interface EmptyStarIconProps {
 // Ключи должны совпадать с кейсами CreditSortingExtensions.ApplySorting на
 // бэке — сортировка серверная, произвольную строку он молча проигнорирует и
 // отдаст порядок по умолчанию (id по убыванию).
+const PAYMENT_METHOD_OPTIONS: {
+  value: "" | CreditPaymentMethod;
+  label: string;
+}[] = [
+  { value: "", label: "Любой" },
+  { value: "cash", label: "Наличными" },
+  { value: "transfer", label: "Переводом" },
+];
+
 const SORT_OPTIONS: { key: string | null; label: string }[] = [
   { key: null, label: "По умолчанию" },
   { key: "debt", label: "Сумма просрочки" },
@@ -280,6 +290,10 @@ const CreditPage = () => {
   const [clientAddress, setClientAddress] = useState<string>(
     () => savedFilters?.clientAddress ?? ""
   );
+  // Способ оплаты показываем и фильтруем только там, где его включили.
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<
+    "" | CreditPaymentMethod
+  >(() => savedFilters?.paymentMethodFilter ?? "");
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
     direction: "asc" | "desc";
@@ -327,6 +341,8 @@ const CreditPage = () => {
   const { authInfo, hasPermission, hasRole, denyPermission, forbiddenRole } =
     useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
+  const paymentMethodEnabled =
+    authInfo?.employee?.paymentMethodEnabled ?? false;
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -825,6 +841,7 @@ const CreditPage = () => {
       objectType,
       creditTypeId,
       clientAddress,
+      paymentMethodFilter,
       activeTab,
       filters,
     };
@@ -842,6 +859,7 @@ const CreditPage = () => {
     objectType,
     creditTypeId,
     clientAddress,
+    paymentMethodFilter,
     activeTab,
     filters,
   ]);
@@ -858,6 +876,7 @@ const CreditPage = () => {
     if (toCreationDate) count++;
     if (objectType) count++;
     if (clientAddress) count++;
+    if (paymentMethodFilter) count++;
 
     // Исключаем фильтры от вкладок из подсчета
     const filterKeys = Object.keys(filters);
@@ -893,6 +912,7 @@ const CreditPage = () => {
     objectType,
     creditTypeId,
     clientAddress,
+    paymentMethodFilter,
     filters,
     activeTab,
   ]);
@@ -911,6 +931,7 @@ const CreditPage = () => {
           toCreationDate ||
           objectType ||
           clientAddress ||
+          paymentMethodFilter ||
           (creditTypeId !== null && creditTypeId !== undefined)
       ) ||
       (Object.keys(filters).length > 0 &&
@@ -940,6 +961,7 @@ const CreditPage = () => {
     objectType,
     creditTypeId,
     clientAddress,
+    paymentMethodFilter,
     filters,
   ]);
 
@@ -955,6 +977,7 @@ const CreditPage = () => {
     setObjectType("");
     setCreditTypeId(null);
     setClientAddress("");
+    setPaymentMethodFilter("");
 
     // Сохраняем только фильтры от текущей вкладки
     const newFilters = filtersForTab(activeTab);
@@ -976,6 +999,7 @@ const CreditPage = () => {
       toCreationDate: "",
       objectType: "",
       creditTypeId: null,
+      paymentMethodFilter: "",
       activeTab,
       filters: newFilters,
     };
@@ -1185,6 +1209,7 @@ const CreditPage = () => {
       CreatedTo: toCreationDate ? new Date(toCreationDate) : undefined,
       creditTypeId: creditTypeId || undefined,
       clientAddress: clientAddress || undefined,
+      paymentMethod: paymentMethodFilter || undefined,
       sortBy: sortConfig.key ?? undefined,
       sortDirection: sortConfig.direction,
       ...filters,
@@ -2119,6 +2144,27 @@ const CreditPage = () => {
                 }}
               />
             </FilterSlot>
+
+            {paymentMethodEnabled && (
+              <FilterSlot>
+                <FilterSlotLabel>Способ оплаты</FilterSlotLabel>
+                <SortChipRow>
+                  {PAYMENT_METHOD_OPTIONS.map((option) => (
+                    <SortChip
+                      key={option.value || "any"}
+                      type="button"
+                      $active={paymentMethodFilter === option.value}
+                      onClick={() => {
+                        setPaymentMethodFilter(option.value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      {option.label}
+                    </SortChip>
+                  ))}
+                </SortChipRow>
+              </FilterSlot>
+            )}
 
             <FilterSlot>
               <FilterSlotLabel>Сортировка</FilterSlotLabel>
