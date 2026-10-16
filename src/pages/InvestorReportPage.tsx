@@ -6,6 +6,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from "../api/types/investor";
 import useInvestor from "../api/hooks/useInvestor";
+import useInvestorShare from "../api/hooks/useInvestorShare";
 import CustomSelect from "../components/ui/fields/CustomSelect";
 import { formatDate } from "../utils/dateFormatter";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
@@ -58,6 +59,9 @@ import { deleteInvestorPayout } from "../api/services/investorPayoutService";
 import investorContributionService from "../api/services/investorContributionService";
 
 const DELETED_OPTION_VALUE = "deleted";
+
+// Сутки: инвестору хватает посмотреть кассу, а ссылка не живёт вечно.
+const SHARE_LINK_HOURS = 24;
 
 const InvestorReportPage = () => {
   const {
@@ -168,6 +172,8 @@ const InvestorReportPage = () => {
   }, [getInvestors]);
 
   const isSuperUser = hasRole("директор") || hasRole("суперадмин");
+  const { createShareLink, isLoading: isCreatingShareLink } =
+    useInvestorShare();
 
   useEffect(() => {
     if (!selectedInvestorId) return;
@@ -829,6 +835,31 @@ const InvestorReportPage = () => {
     }
   };
 
+  // Временная ссылка инвестору на его кассу: он открывает её без входа в
+  // систему, поэтому ссылку не показываем, а сразу кладём в буфер обмена.
+  const handleShareLinkClick = async () => {
+    const investorId = Number(selectedInvestorId);
+    if (!investorId) return;
+
+    const created = await createShareLink(investorId, SHARE_LINK_HOURS);
+    if (!created?.token) {
+      alert("Не удалось создать ссылку. Попробуйте ещё раз.");
+      return;
+    }
+
+    const link = `${window.location.origin}/investor-public?token=${created.token}`;
+    const until = created.expiresAt
+      ? ` Действует до ${formatDate(created.expiresAt)}.`
+      : "";
+
+    try {
+      await navigator.clipboard.writeText(link);
+      alert(`Ссылка скопирована.${until}`);
+    } catch {
+      prompt(`Скопируйте ссылку для инвестора.${until}`, link);
+    }
+  };
+
   const handlePayoutSubmit = async () => {
     if (!selectedInvestorId || !payoutAmount || !currentInvestor || !report)
       return;
@@ -1188,6 +1219,12 @@ const InvestorReportPage = () => {
               icon={<ShareIcon />}
               onClick={handleShareClick}
               disabled={!report}
+            />
+            <ExportButton
+              children={"Ссылка инвестору"}
+              icon={<ShareIcon />}
+              onClick={handleShareLinkClick}
+              disabled={!report || isCreatingShareLink}
             />
           </>
         )}

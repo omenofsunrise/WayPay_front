@@ -42,9 +42,11 @@ import { DesktopOnlyContent } from "./components/DesktopOnly";
 import MobileAppsPage from "./pages/MobileAppsPage";
 import CreditApplicationPage from "./pages/CreditApplicationPage";
 import PublicClientPage from "./pages/PublicClientPage";
+import PublicInvestorReportPage from "./pages/PublicInvestorReportPage";
 
 // Путь публичной страницы клиента по токену (должен совпадать с ClientLinkModal).
 const CLIENT_PUBLIC_PATH = "/client-public";
+const INVESTOR_PUBLIC_PATH = "/investor-public";
 import NotificationHandler from "./components/NotificationHandler/NotificationHandler";
 import {
   DISABLE_NOTIFICATIONS_KEY,
@@ -370,9 +372,11 @@ function App() {
     window.location.href = "/auth";
   }, []);
 
-  // Публичная страница клиента по токену должна открываться и на мобильных.
+  // Публичные страницы по токену должны открываться и на мобильных: и
+  // клиент, и инвестор чаще всего откроют ссылку с телефона.
   const isPublicClientRoute =
-    window.location.pathname.startsWith(CLIENT_PUBLIC_PATH);
+    window.location.pathname.startsWith(CLIENT_PUBLIC_PATH) ||
+    window.location.pathname.startsWith(INVESTOR_PUBLIC_PATH);
 
   if (isMobile && !isPublicClientRoute) {
     return <DesktopOnlyContent />;
@@ -749,6 +753,12 @@ function App() {
                 <Route
                   path={CLIENT_PUBLIC_PATH}
                   element={<PublicClientPage />}
+                />
+
+                {/* Касса инвестора по временной ссылке — тоже без авторизации. */}
+                <Route
+                  path={INVESTOR_PUBLIC_PATH}
+                  element={<PublicInvestorReportPage />}
                 />
 
                 <Route
