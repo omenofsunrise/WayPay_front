@@ -12,12 +12,12 @@ const useInvestorShare = () => {
   const createShareLink = useCallback(
     async (
       investorId: number,
-      hours?: number
+      minutes?: number
     ): Promise<InvestorShareTokenResponse | null> => {
       setIsLoading(true);
       setError(null);
       try {
-        return await investorShareService.createShareLink(investorId, hours);
+        return await investorShareService.createShareLink(investorId, minutes);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Не удалось создать ссылку"

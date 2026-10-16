@@ -13,11 +13,11 @@ class InvestorShareService {
   // Ссылку выписывает сотрудник, поэтому запрос идёт с его токеном.
   async createShareLink(
     investorId: number,
-    hours?: number
+    minutes?: number
   ): Promise<InvestorShareTokenResponse> {
     const response = await apiClient.post("/Investor/report/temporary-token", {
       investorId,
-      hours,
+      minutes,
     });
     return asObject<InvestorShareTokenResponse>(response.data);
   }

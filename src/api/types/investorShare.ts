@@ -8,8 +8,22 @@ export interface InvestorShareTokenResponse {
   expiresAt: string;
 }
 
+// Договор, в котором лежат деньги инвестора.
+export interface InvestorSharedCredit {
+  id: number;
+  name?: string | null;
+  clientFullName?: string | null;
+  creditDate: string;
+  termMonths: number;
+  isActive: boolean;
+  totalAmount: number;
+  payed: number;
+  rest: number;
+}
+
 // Ответ GET /api/Investor/report/by/temporary-token
 export interface InvestorSharedReportResponse {
   expiresAt: string;
   report: InvestorReport;
+  credits: InvestorSharedCredit[];
 }

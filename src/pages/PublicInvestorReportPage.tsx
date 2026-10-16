@@ -47,6 +47,16 @@ const PublicInvestorReportPage = () => {
   }, [token, getSharedReport]);
 
   const report = data?.report;
+  const credits = data?.credits ?? [];
+  // Ссылка живёт полчаса, поэтому важна не дата, а время.
+  const expiresAtLabel = data?.expiresAt
+    ? new Date(data.expiresAt).toLocaleString("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
   return (
     <Page>
@@ -109,10 +119,46 @@ const PublicInvestorReportPage = () => {
               </Grid>
             </Card>
 
+            <Card>
+              <CardTitle>Договоры с вашими деньгами</CardTitle>
+              {credits.length === 0 ? (
+                <Muted>Пока ни одного договора.</Muted>
+              ) : (
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Договор</Th>
+                      <Th>Дата</Th>
+                      <Th $right>Сумма</Th>
+                      <Th $right>Оплачено</Th>
+                      <Th $right>Остаток</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {credits.map((credit) => (
+                      <tr key={credit.id}>
+                        <Td>
+                          <CreditName>
+                            {credit.name || `Договор №${credit.id}`}
+                          </CreditName>
+                          <CreditClient>
+                            {credit.clientFullName || "—"}
+                            {!credit.isActive && " · закрыт"}
+                          </CreditClient>
+                        </Td>
+                        <Td>{formatDate(credit.creditDate)}</Td>
+                        <Td $right>{money(credit.totalAmount)}</Td>
+                        <Td $right>{money(credit.payed)}</Td>
+                        <Td $right>{money(credit.rest)}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </Card>
+
             {data?.expiresAt && (
-              <Footer>
-                Ссылка действует до {formatDate(data.expiresAt)}
-              </Footer>
+              <Footer>Ссылка действует до {expiresAtLabel}</Footer>
             )}
           </>
         )}
@@ -211,6 +257,40 @@ const TileValue = styled.div`
   font-size: 18px;
   font-weight: 700;
   color: #111827;
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const Th = styled.th<{ $right?: boolean }>`
+  text-align: ${({ $right }) => ($right ? "right" : "left")};
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+`;
+
+const Td = styled.td<{ $right?: boolean }>`
+  text-align: ${({ $right }) => ($right ? "right" : "left")};
+  padding: 10px;
+  font-size: 14px;
+  color: #111827;
+  border-bottom: 1px solid #f3f4f6;
+  white-space: nowrap;
+`;
+
+const CreditName = styled.div`
+  font-weight: 600;
+`;
+
+const CreditClient = styled.div`
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
 `;
 
 const Muted = styled.div`
