@@ -23,7 +23,7 @@ class CompanyService {
    * подтверждения и счётчик неподтверждённых в аналитике.
    */
   async updateSettings(
-    setting: "credit_acceptence",
+    setting: "credit_acceptence" | "payment_acceptence",
     action: "on" | "off"
   ): Promise<void> {
     await apiClient.patch("/Company/settings", { setting, action });

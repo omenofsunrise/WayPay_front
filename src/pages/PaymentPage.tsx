@@ -70,6 +70,7 @@ const PaymentPage = () => {
   const showInvestor = denyPermission("FORBID_PAYMENT_INVESTOR");
   const showEmployee = denyPermission("FORBID_PAYMENT_EMPLOYEE");
   const showPaymentType = denyPermission("FORBID_PAYMENT_TYPE");
+  const paymentAcceptance = authInfo?.employee.paymentAcceptance ?? true;
   const [investorName, setInvestorName] = usePersistedState(
     "paymentsJournal.investorName",
     ""
@@ -653,7 +654,7 @@ const PaymentPage = () => {
         fontWeight: "normal",
       };
 
-      if (!payment.accepted) {
+      if (!payment.accepted && paymentAcceptance) {
         baseStyle.color = "#FF5A5A";
       }
 
@@ -682,7 +683,8 @@ const PaymentPage = () => {
         return (
           payment &&
           !payment.accepted &&
-          authInfo?.employee.permissions.includes("MANAGE_ACCOUNTING")
+          authInfo?.employee.permissions.includes("MANAGE_ACCOUNTING") &&
+          paymentAcceptance
         );
       },
     },
@@ -714,6 +716,8 @@ const PaymentPage = () => {
       },
     });
   }
+
+  
 
   const confirmedOptions = [
     { value: "all", label: "Все" },

@@ -131,6 +131,18 @@ const ContractApprovalIcon = () => (
   </svg>
 );
 
+const PaymentApprovalIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M22 10H2M6 16h4M14 16h4M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const CompanyPage = () => {
@@ -169,6 +181,7 @@ const CompanyPage = () => {
 
   const { authInfo, refresh, hasRole } = useAuth();
   const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
+  const paymentAcceptance = authInfo?.employee.paymentAcceptance ?? true;
   const [isSavingSetting, setIsSavingSetting] = useState(false);
 
   // Шаг округления меняет только директор компании, поэтому остальным поле
@@ -250,6 +263,31 @@ const CompanyPage = () => {
           checked
             ? "Подтверждение договоров включено"
             : "Подтверждение договоров выключено"
+        );
+      } catch (error) {
+        console.error("Не удалось изменить настройку:", error);
+        addToast("error", "Не удалось изменить настройку");
+      } finally {
+        setIsSavingSetting(false);
+      }
+    },
+    [addToast, refresh]
+  );
+
+  const handlePaymentAcceptanceChange = useCallback(
+    async (checked: boolean) => {
+      setIsSavingSetting(true);
+      try {
+        await companyService.updateSettings(
+          "payment_acceptence",
+          checked ? "on" : "off"
+        );
+        await refresh();
+        addToast(
+          "success",
+          checked
+            ? "Подтверждение платежей включено"
+            : "Подтверждение платежей выключено"
         );
       } catch (error) {
         console.error("Не удалось изменить настройку:", error);
@@ -520,6 +558,31 @@ const CompanyPage = () => {
               </SettingStatus>
             </SettingControl>
             </SettingsSection>
+
+            <SettingsSection>
+              <SettingContent>
+                <SettingIcon>
+                  <PaymentApprovalIcon />
+                </SettingIcon>
+                <SettingText>
+                  <SettingName>Подтверждение платежей</SettingName>
+                </SettingText>
+              </SettingContent>
+              <SettingControl>
+                <ToggleSwitch
+                  checked={paymentAcceptance}
+                  onChange={handlePaymentAcceptanceChange}
+                  disabled={isSavingSetting}
+                />
+                <SettingStatus $enabled={paymentAcceptance}>
+                  {isSavingSetting
+                    ? "Сохранение..."
+                    : paymentAcceptance
+                    ? "Включено"
+                    : "Выключено"}
+                </SettingStatus>
+              </SettingControl>
+              </SettingsSection>
 
             {canEditRoundingStep && (
               <SettingsSection>
