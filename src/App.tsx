@@ -47,6 +47,13 @@ import PublicInvestorReportPage from "./pages/PublicInvestorReportPage";
 // Путь публичной страницы клиента по токену (должен совпадать с ClientLinkModal).
 const CLIENT_PUBLIC_PATH = "/client-public";
 const INVESTOR_PUBLIC_PATH = "/investor-public";
+
+// Страницы по временной ссылке открываются без входа в систему. Любая
+// проверка авторизации должна спрашивать именно этот список, иначе новая
+// публичная страница молча начнёт требовать вход.
+const isPublicLinkPath = (pathname: string) =>
+  pathname.startsWith(CLIENT_PUBLIC_PATH) ||
+  pathname.startsWith(INVESTOR_PUBLIC_PATH);
 import NotificationHandler from "./components/NotificationHandler/NotificationHandler";
 import {
   DISABLE_NOTIFICATIONS_KEY,
@@ -301,7 +308,7 @@ function App() {
       if (
         !authenticated &&
         window.location.pathname !== "/auth" &&
-        !window.location.pathname.startsWith(CLIENT_PUBLIC_PATH)
+        !isPublicLinkPath(window.location.pathname)
       ) {
         window.location.href = "/auth";
       }
@@ -374,9 +381,7 @@ function App() {
 
   // Публичные страницы по токену должны открываться и на мобильных: и
   // клиент, и инвестор чаще всего откроют ссылку с телефона.
-  const isPublicClientRoute =
-    window.location.pathname.startsWith(CLIENT_PUBLIC_PATH) ||
-    window.location.pathname.startsWith(INVESTOR_PUBLIC_PATH);
+  const isPublicClientRoute = isPublicLinkPath(window.location.pathname);
 
   if (isMobile && !isPublicClientRoute) {
     return <DesktopOnlyContent />;
