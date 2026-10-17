@@ -13,6 +13,7 @@ import SenderPage from "./SenderPage";
 import AboutPage from "../AboutPage";
 import WhatsAppSettingsPage from "./WhatsAppSettingsPage";
 import PaymentPlacePage from "./PaymentPlacePage";
+import ActionLogPage from "./ActionLogPage";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -67,6 +68,7 @@ const SettingsPage = () => {
       { id: "Пункты приёма", label: "Пункты приёма" },
       { id: "Рассылка", label: "Рассылка" },
       { id: "WhatsApp", label: "WhatsApp" },
+      { id: "Журнал действий", label: "Журнал действий" },
       { id: "О программе", label: "О программе" }
     );
   } else if (hasRole("админ")) {
@@ -108,6 +110,8 @@ const SettingsPage = () => {
         return <SenderPage />;
       case "WhatsApp":
         return <WhatsAppSettingsPage />;
+      case "Журнал действий":
+        return <ActionLogPage />;
       case "О программе":
         return <AboutPage />;
       default:
