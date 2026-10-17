@@ -1,7 +1,4 @@
 import React, {
-import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
-import EntityHistory from "../ui/EntityHistory";
-import { useAuth } from "../../сontext/AuthContext";
   useCallback,
   useEffect,
   useMemo,
@@ -9,6 +6,9 @@ import { useAuth } from "../../сontext/AuthContext";
   useState,
 } from "react";
 import styled from "styled-components";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
+import EntityHistory from "../ui/EntityHistory";
+import { useAuth } from "../../сontext/AuthContext";
 import TitleField from "../ui/Layouts/TitleLayout";
 import CustomTitle from "../ui/Text/CustomTitle";
 import ModalInfoTitle from "../ui/Text/ModalInfoTitle";
