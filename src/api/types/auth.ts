@@ -53,6 +53,7 @@ export interface AuthInfo {
     roundingStep?: number;
     /** Показывать ли при оформлении выбор способа оплаты. Включают отдельным компаниям. */
     paymentMethodEnabled?: boolean;
+    investorShareEnabled?: boolean;
   };
 }
 

@@ -18,6 +18,7 @@ import useInvestor from '../api/hooks/useInvestor';
 import { formatMoney, parseMoney } from '../utils/formatPrice';
 import BaseModal from '../components/modal/BASE/modalCRUBase';
 import { InputContainer, InputLabel, InputRow } from '../components/Containers/InputComponents';
+import useInvestorShare from "../api/hooks/useInvestorShare";
 import { useAuth } from '../сontext/AuthContext';
 import { formatDate } from '../utils/dateFormatter';
 import { formatPhoneHref } from '../utils/phoneUtils';
@@ -39,6 +40,9 @@ const InvestorPage = () => {
     const [isPageSizeReady, setIsPageSizeReady] = useState(false);
     const { authInfo, hasRole } = useAuth();
     const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
+    // Временные ссылки включены не всем компаниям.
+    const investorShareEnabled = authInfo?.employee?.investorShareEnabled ?? false;
+    const { createShareLink } = useInvestorShare();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(null);
@@ -468,6 +472,14 @@ const InvestorPage = () => {
             });
         }
 
+        if (canEdit && investorShareEnabled && !isBlocked) {
+            actions.push({
+                label: 'Временная ссылка',
+                action: (rowData) => handleCreateShareLink(rowData),
+                color: '#2563EB'
+            });
+        }
+
         if (canEdit) {
             if (isBlocked) {
                 actions.push(
@@ -511,6 +523,38 @@ const InvestorPage = () => {
         }
 
         return actions;
+    };
+
+    // Ссылку инвестор откроет без входа в систему, поэтому показывать её в
+    // окне незачем — сразу кладём в буфер обмена и говорим, сколько живёт.
+    const handleCreateShareLink = async (rowData: any[]) => {
+        const [id] = rowData;
+        const investorId = Number(id);
+        if (!investorId) return;
+
+        const created = await createShareLink(investorId);
+        if (!created?.token) {
+            alert('Не удалось создать ссылку. Попробуйте ещё раз.');
+            return;
+        }
+
+        const link = `${window.location.origin}/investor-public?token=${created.token}`;
+        const minutes = created.expiresAt
+            ? Math.max(
+                1,
+                Math.round(
+                    (new Date(created.expiresAt).getTime() - Date.now()) / 60000
+                )
+            )
+            : null;
+        const note = minutes ? ` Действует ${minutes} мин.` : '';
+
+        try {
+            await navigator.clipboard.writeText(link);
+            alert(`Ссылка скопирована.${note}`);
+        } catch {
+            prompt(`Скопируйте ссылку для инвестора.${note}`, link);
+        }
     };
 
     const handleBlockInvestor = async (rowData: any[]) => {
