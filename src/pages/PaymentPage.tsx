@@ -797,12 +797,14 @@ const PaymentPage = () => {
           options={employeeOptions}
         />
         )}
+        {paymentAcceptance && (
         <CustomSelect
           placeholder="Статус подтверждения"
           value={confirmedFilter}
           onChange={handleConfirmedChange}
           options={confirmedOptions}
         />
+        )}
         {showPaymentType && (
           <CustomSelect
             placeholder="Тип платежа"
@@ -937,7 +939,7 @@ const PaymentPage = () => {
               { name: "Дата платежа", isSortable: true, align: "right" },
               { name: "Тип платежа", align: "left", isHidden: !showPaymentType },
               { name: "Платёж принял", align: "left", isHidden: !showEmployee },
-              { name: "Подтверждён", align: "center" },
+              { name: "Подтверждён", align: "center", isHidden: !paymentAcceptance },
               { name: "Инвестор/Пул", align: "left", isHidden: true },
               { name: "id", align: "center", isHidden: true },
             ]}
