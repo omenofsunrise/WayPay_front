@@ -63,7 +63,7 @@ const PaymentPage = () => {
     key: number | null;
     direction: "asc" | "desc";
   }>("paymentsJournal.sort", { key: null, direction: "asc" });
-  const { authInfo, denyPermission, refresh } = useAuth();
+  const { authInfo, denyPermission, hasRole, refresh } = useAuth();
 
   // Запрещающие права: кода нет — показываем, как и раньше. Директорам и
   // суперадминам denyPermission отвечает «можно» всегда, так и задумано.
@@ -706,10 +706,11 @@ const PaymentPage = () => {
       shouldShow: (rowData: any[]) => {
         const rowIndex = tableData.indexOf(rowData);
         const payment = paymentsData?.items[rowIndex];
-        return (
-          (payment && !payment.accepted) ||
-          authInfo?.employee.permissions.includes("MANAGE_ACCOUNTING")
-        );
+        if (!payment) return false;
+        // Подтверждённый платёж убирает только директор или суперадмин:
+        // удаление меняет поступления и кассу задним числом.
+        if (payment.accepted) return hasRole("директор") || hasRole("суперадмин");
+        return true;
       },
     });
   }

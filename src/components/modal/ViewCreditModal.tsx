@@ -6,6 +6,9 @@ import React, {
   useState,
 } from "react";
 import styled from "styled-components";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
+import EntityHistory from "../ui/EntityHistory";
+import { useAuth } from "../../сontext/AuthContext";
 import TitleField from "../ui/Layouts/TitleLayout";
 import CustomTitle from "../ui/Text/CustomTitle";
 import ModalInfoTitle from "../ui/Text/ModalInfoTitle";
@@ -76,7 +79,13 @@ interface ViewCreditModalProps {
   onOpenCredit?: (id: number) => void;
 }
 
-type CreditTab = "client" | "payments" | "products" | "guarantor" | "notes";
+type CreditTab =
+  | "client"
+  | "payments"
+  | "products"
+  | "guarantor"
+  | "notes"
+  | "history";
 
 const ACTIVE_TAB_STORAGE_KEY = "view_credit_modal_active_tab";
 
@@ -339,12 +348,18 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     },
     []
   );
+  // Журнал доступен только директору и суперадмину, вкладку остальным не рисуем.
+  const { hasRole } = useAuth();
+  const canSeeHistory = hasRole("директор") || hasRole("суперадмин");
+
   const [activeTab, setActiveTab] = useState<CreditTab>(() => {
     const saved = localStorage.getItem(
       ACTIVE_TAB_STORAGE_KEY
     ) as CreditTab | null;
     return saved &&
-      ["client", "payments", "products", "guarantor", "notes"].includes(saved)
+      ["client", "payments", "products", "guarantor", "notes", "history"].includes(
+        saved
+      )
       ? saved
       : "client";
   });
@@ -2377,6 +2392,27 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                         </TabPanel>
                       ),
                     },
+                    ...(canSeeHistory
+                      ? [
+                          {
+                            id: "history" as CreditTab,
+                            label: (
+                              <TabLabel
+                                icon={<HistoryOutlinedIcon fontSize="small" />}
+                                label="История"
+                              />
+                            ),
+                            content: (
+                              <TabPanel>
+                                <EntityHistory
+                                  entity="Credit"
+                                  entityId={creditData?.id}
+                                />
+                              </TabPanel>
+                            ),
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               </LeftColumn>
