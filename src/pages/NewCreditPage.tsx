@@ -6,6 +6,7 @@ import {
   type ChangeEvent,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import PageLayout from "../components/ui/Layouts/PageLayout";
@@ -127,6 +128,7 @@ const NewCreditPage = () => {
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleItem[]>(
     []
   );
+  const nameAutoFilledRef = useRef(false);
   const {
     createCredit,
     updateCredit,
@@ -926,6 +928,24 @@ const NewCreditPage = () => {
   const hasEmptyProductNames = products.every(
     (product) => product.name.trim() === ""
   );
+
+  useEffect(() => {
+  if (!isDraftLoaded) return;
+  if (isEditMode) return;
+  if (nameAutoFilledRef.current) return;
+  if (!authInfo?.employee?.incrementCreditName) return;
+  if (creditName.trim() !== "") {
+    // В черновике уже есть имя — уважаем его.
+    nameAutoFilledRef.current = true;
+    return;
+  }
+
+  const next = authInfo?.employee?.currentNameNumber;
+  if (next !== undefined && next !== null) {
+    setCreditName(String(next));
+    nameAutoFilledRef.current = true;
+  }
+}, [isDraftLoaded, isEditMode, authInfo, creditName]);
 
   const isFormValid =
     client &&

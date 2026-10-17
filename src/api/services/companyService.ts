@@ -23,10 +23,11 @@ class CompanyService {
    * подтверждения и счётчик неподтверждённых в аналитике.
    */
   async updateSettings(
-    setting: "credit_acceptence" | "payment_acceptence",
-    action: "on" | "off"
+    setting: "credit_acceptence" | "payment_acceptence" | "increment_credit_name",
+    action: "on" | "off" | "set",
+    value?: number
   ): Promise<void> {
-    await apiClient.patch("/Company/settings", { setting, action });
+    await apiClient.patch("/Company/settings", { setting, action, value });
   }
 
   /**

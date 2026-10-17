@@ -50,6 +50,8 @@ export interface AuthInfo {
     // прячутся везде, и из аналитики уходит счётчик неподтверждённых.
     creditAcceptance?: boolean;
     paymentAcceptance?: boolean;
+    incrementCreditName?: boolean;
+    currentNameNumber?: number;
     /** Шаг округления сумм при оформлении, 0..100. Ноль — не округлять. */
     roundingStep?: number;
     /** Показывать ли при оформлении выбор способа оплаты. Включают отдельным компаниям. */
