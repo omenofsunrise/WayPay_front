@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import useInvestorShare from "../api/hooks/useInvestorShare";
-import type { InvestorSharedReportResponse } from "../api/types/investorShare";
+import type {
+  InvestorSharedCredit,
+  InvestorSharedReportResponse,
+} from "../api/types/investorShare";
 import { formatMoney } from "../utils/formatPrice";
 import { formatDate } from "../utils/dateFormatter";
 
@@ -16,10 +19,17 @@ const PublicInvestorReportPage = () => {
     rawToken && rawToken !== "undefined" && rawToken !== "null"
       ? rawToken
       : null;
-  const { getSharedReport } = useInvestorShare();
+  const { getSharedReport, getSharedCredits } = useInvestorShare();
 
   const [data, setData] = useState<InvestorSharedReportResponse | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "done">("loading");
+  // Договоры копим по страницам: у инвестора их может быть тысяча, и
+  // вываливать всё разом незачем.
+  const [credits, setCredits] = useState<InvestorSharedCredit[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalCredits, setTotalCredits] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +44,10 @@ const PublicInvestorReportPage = () => {
       if (cancelled) return;
       if (response?.report) {
         setData(response);
+        setCredits(response.credits?.items ?? []);
+        setTotalCredits(response.credits?.totalCount ?? 0);
+        setPageSize(response.credits?.pageSize || 20);
+        setPage(response.credits?.page || 1);
         setStatus("done");
       } else {
         setStatus("error");
@@ -47,7 +61,19 @@ const PublicInvestorReportPage = () => {
   }, [token, getSharedReport]);
 
   const report = data?.report;
-  const credits = data?.credits ?? [];
+  const hasMoreCredits = credits.length < totalCredits;
+
+  const loadMoreCredits = async () => {
+    if (!token || isLoadingMore) return;
+    setIsLoadingMore(true);
+    const next = await getSharedCredits(token, page + 1, pageSize);
+    if (next?.items?.length) {
+      setCredits((current) => [...current, ...next.items]);
+      setPage(next.page || page + 1);
+      setTotalCredits(next.totalCount ?? totalCredits);
+    }
+    setIsLoadingMore(false);
+  };
   // Ссылка живёт полчаса, поэтому важна не дата, а время.
   const expiresAtLabel = data?.expiresAt
     ? new Date(data.expiresAt).toLocaleString("ru-RU", {
@@ -120,7 +146,10 @@ const PublicInvestorReportPage = () => {
             </Card>
 
             <Card>
-              <CardTitle>Договоры с вашими деньгами</CardTitle>
+              <CardTitle>
+                Договоры с вашими деньгами
+                {totalCredits > 0 && <CountBadge>{totalCredits}</CountBadge>}
+              </CardTitle>
               {credits.length === 0 ? (
                 <Muted>Пока ни одного договора.</Muted>
               ) : (
@@ -154,6 +183,21 @@ const PublicInvestorReportPage = () => {
                     ))}
                   </tbody>
                 </Table>
+              )}
+
+              {hasMoreCredits && (
+                <MoreRow>
+                  <MoreButton
+                    type="button"
+                    onClick={loadMoreCredits}
+                    disabled={isLoadingMore}
+                  >
+                    {isLoadingMore ? "Загружаю…" : "Показать ещё"}
+                  </MoreButton>
+                  <Muted>
+                    Показано {credits.length} из {totalCredits}
+                  </Muted>
+                </MoreRow>
               )}
             </Card>
 
@@ -291,6 +335,41 @@ const CreditClient = styled.div`
   margin-top: 2px;
   font-size: 12px;
   color: #6b7280;
+`;
+
+const CountBadge = styled.span`
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+`;
+
+const MoreRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+`;
+
+const MoreButton = styled.button`
+  padding: 9px 16px;
+  border: 1px solid #b6e0e4;
+  border-radius: 9px;
+  background: rgba(0, 125, 136, 0.06);
+  color: #007d88;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
 `;
 
 const Muted = styled.div`

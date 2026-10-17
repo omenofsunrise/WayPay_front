@@ -2,6 +2,7 @@ import apiClient from "../client";
 import publicClient from "../publicClient";
 import type {
   InvestorShareTokenResponse,
+  InvestorSharedCreditsPage,
   InvestorSharedReportResponse,
 } from "../types/investorShare";
 
@@ -29,6 +30,19 @@ class InvestorShareService {
       { params: { token } }
     );
     return asObject<InvestorSharedReportResponse>(response.data);
+  }
+
+  // Следующие страницы договоров — тем же публичным клиентом.
+  async getSharedCredits(
+    token: string,
+    page: number,
+    pageSize: number
+  ): Promise<InvestorSharedCreditsPage> {
+    const response = await publicClient.get(
+      "/Investor/report/by/temporary-token/credits",
+      { params: { token, page, pageSize } }
+    );
+    return asObject<InvestorSharedCreditsPage>(response.data);
   }
 }
 

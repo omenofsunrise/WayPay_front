@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import investorShareService from "../services/investorShareService";
 import type {
   InvestorShareTokenResponse,
+  InvestorSharedCreditsPage,
   InvestorSharedReportResponse,
 } from "../types/investorShare";
 
@@ -46,7 +47,31 @@ const useInvestorShare = () => {
     []
   );
 
-  return { createShareLink, getSharedReport, isLoading, error };
+  const getSharedCredits = useCallback(
+    async (
+      token: string,
+      page: number,
+      pageSize: number
+    ): Promise<InvestorSharedCreditsPage | null> => {
+      try {
+        return await investorShareService.getSharedCredits(token, page, pageSize);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Не удалось загрузить договоры"
+        );
+        return null;
+      }
+    },
+    []
+  );
+
+  return {
+    createShareLink,
+    getSharedReport,
+    getSharedCredits,
+    isLoading,
+    error,
+  };
 };
 
 export default useInvestorShare;

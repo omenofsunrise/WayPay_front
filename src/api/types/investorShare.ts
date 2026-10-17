@@ -21,9 +21,18 @@ export interface InvestorSharedCredit {
   rest: number;
 }
 
+// Страница договоров: у инвестора их может быть тысяча.
+export interface InvestorSharedCreditsPage {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  items: InvestorSharedCredit[];
+}
+
 // Ответ GET /api/Investor/report/by/temporary-token
 export interface InvestorSharedReportResponse {
   expiresAt: string;
   report: InvestorReport;
-  credits: InvestorSharedCredit[];
+  credits: InvestorSharedCreditsPage;
 }
