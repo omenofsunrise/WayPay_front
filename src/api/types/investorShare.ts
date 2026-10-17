@@ -16,6 +16,7 @@ export interface InvestorSharedCredit {
   creditDate: string;
   termMonths: number;
   isActive: boolean;
+  fromPool?: boolean;
   totalAmount: number;
   payed: number;
   rest: number;

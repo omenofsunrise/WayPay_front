@@ -172,6 +172,7 @@ const PublicInvestorReportPage = () => {
                           </CreditName>
                           <CreditClient>
                             {credit.clientFullName || "—"}
+                            {credit.fromPool && " · из пула"}
                             {!credit.isActive && " · закрыт"}
                           </CreditClient>
                         </Td>
