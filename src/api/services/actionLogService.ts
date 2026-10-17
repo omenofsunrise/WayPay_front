@@ -19,6 +19,14 @@ class ActionLogService {
     return response.data;
   }
 
+  // История одного объекта для его карточки.
+  async getForEntity(entity: string, entityId: string): Promise<ActionLogDetails[]> {
+    const response = await apiClient.get(
+      `/ActionLog/entity/${entity}/${encodeURIComponent(entityId)}`
+    );
+    return response.data;
+  }
+
   async getById(id: number): Promise<ActionLogDetails> {
     const response = await apiClient.get(`/ActionLog/${id}`);
     return response.data;

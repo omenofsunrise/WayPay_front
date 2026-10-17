@@ -51,7 +51,18 @@ const useActionLog = () => {
     []
   );
 
-  return { getPage, getEntities, getById, isLoading, error };
+  const getForEntity = useCallback(
+    async (entity: string, entityId: string): Promise<ActionLogDetails[]> => {
+      try {
+        return await actionLogService.getForEntity(entity, entityId);
+      } catch {
+        return [];
+      }
+    },
+    []
+  );
+
+  return { getPage, getEntities, getById, getForEntity, isLoading, error };
 };
 
 export default useActionLog;
