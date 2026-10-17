@@ -10,15 +10,26 @@ export interface ActionLogRecord {
   actionName: string;
   entity: string;
   entityName: string;
+  // Он же в винительном падеже: «изменил клиента», а не «изменил клиент».
+  entityNameAccusative: string;
   entityId?: string | null;
   title?: string | null;
   hasDetails: boolean;
 }
 
-// То же плюс содержимое попапа: при создании и удалении весь объект,
-// при изменении только изменённые поля как { was, now }.
+// Поле объекта в понятном виде: название по-русски и значения строками.
+export interface ActionLogField {
+  field: string;
+  name: string;
+  was?: string | null;
+  now?: string | null;
+  isChange: boolean;
+  // Служебное поле: прячем под «показать все поля».
+  technical: boolean;
+}
+
 export interface ActionLogDetails extends ActionLogRecord {
-  payload?: Record<string, unknown> | null;
+  fields: ActionLogField[];
 }
 
 export interface ActionLogPage {

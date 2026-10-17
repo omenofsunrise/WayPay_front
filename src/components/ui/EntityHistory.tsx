@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import styled from "styled-components";
 import useActionLog from "../../api/hooks/useActionLog";
 import type { ActionLogDetails } from "../../api/types/actionLog";
+import ActionLogFields from "./ActionLogFields";
 import { useAuth } from "../../сontext/AuthContext";
 
 interface Props {
@@ -18,23 +19,6 @@ const formatMoment = (value: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
-
-const formatValue = (value: unknown): string => {
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "boolean") return value ? "да" : "нет";
-  if (typeof value === "string") {
-    const asDate = /^\d{4}-\d{2}-\d{2}T/.test(value) ? new Date(value) : null;
-    if (asDate && !Number.isNaN(asDate.getTime())) return formatMoment(value);
-    return value;
-  }
-  if (typeof value === "number") return new Intl.NumberFormat("ru-RU").format(value);
-  return JSON.stringify(value);
-};
-
-const isChange = (value: unknown): value is { was: unknown; now: unknown } =>
-  typeof value === "object" &&
-  value !== null &&
-  ("was" in (value as object) || "now" in (value as object));
 
 /**
  * История одного объекта: кто его создавал, менял и удалял. Журнал доступен
@@ -77,7 +61,7 @@ const EntityHistory = ({ entity, entityId }: Props) => {
   return (
     <List>
       {records.map((record) => {
-        const entries = record.payload ? Object.entries(record.payload) : [];
+        const hasFields = (record.fields ?? []).length > 0;
         const isOpen = openId === record.id;
 
         return (
@@ -85,32 +69,17 @@ const EntityHistory = ({ entity, entityId }: Props) => {
             <Head
               type="button"
               onClick={() => setOpenId(isOpen ? null : record.id)}
-              $clickable={entries.length > 0}
+              $clickable={hasFields}
             >
               <Moment>{formatMoment(record.createdAt)}</Moment>
               <Who>{record.employeeName}</Who>
               <Action $action={record.action}>{record.actionName}</Action>
-              {entries.length > 0 && <Toggle>{isOpen ? "скрыть" : "подробнее"}</Toggle>}
+              {hasFields && <Toggle>{isOpen ? "скрыть" : "подробнее"}</Toggle>}
             </Head>
 
-            {isOpen && entries.length > 0 && (
+            {isOpen && hasFields && (
               <Details>
-                {entries.map(([field, value]) => (
-                  <DetailsRow key={field}>
-                    <DetailsField>{field}</DetailsField>
-                    <DetailsValue>
-                      {isChange(value) ? (
-                        <>
-                          <Was>{formatValue(value.was)}</Was>
-                          <Arrow>→</Arrow>
-                          <Now>{formatValue(value.now)}</Now>
-                        </>
-                      ) : (
-                        formatValue(value)
-                      )}
-                    </DetailsValue>
-                  </DetailsRow>
-                ))}
+                <ActionLogFields fields={record.fields} />
               </Details>
             )}
           </Item>
@@ -174,39 +143,11 @@ const Details = styled.div`
   border-top: 1px solid #f3f4f6;
 `;
 
-const DetailsRow = styled.div`
-  display: flex;
-  gap: 10px;
-  padding: 5px 0;
-`;
 
-const DetailsField = styled.div`
-  flex: 0 0 40%;
-  font-size: 13px;
-  color: #6b7280;
-`;
 
-const DetailsValue = styled.div`
-  flex: 1;
-  font-size: 14px;
-  color: #111827;
-  word-break: break-word;
-`;
 
-const Was = styled.span`
-  color: #b91c1c;
-  text-decoration: line-through;
-`;
 
-const Arrow = styled.span`
-  margin: 0 6px;
-  color: #9ca3af;
-`;
 
-const Now = styled.span`
-  color: #047857;
-  font-weight: 600;
-`;
 
 const Muted = styled.div`
   font-size: 14px;
