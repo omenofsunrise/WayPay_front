@@ -131,6 +131,30 @@ const ContractApprovalIcon = () => (
   </svg>
 );
 
+const PaymentApprovalIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M22 10H2M6 16h4M14 16h4M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const NameNumberIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M4 7h16M4 12h16M4 17h10"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const CompanyPage = () => {
@@ -169,6 +193,8 @@ const CompanyPage = () => {
 
   const { authInfo, refresh, hasRole } = useAuth();
   const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
+  const paymentAcceptance = authInfo?.employee.paymentAcceptance ?? true;
+  const incrementCredits = authInfo?.employee.incrementCreditName ?? false;
   const [isSavingSetting, setIsSavingSetting] = useState(false);
 
   // Шаг округления меняет только директор компании, поэтому остальным поле
@@ -181,6 +207,16 @@ const CompanyPage = () => {
     String(savedRoundingStep)
   );
   const [isSavingRounding, setIsSavingRounding] = useState(false);
+
+  // ─── Текущий номер договора (инкрементация) ──────────────────────────────
+  // Приходит в данных авторизации. Показываем и даём редактировать только
+  // когда включена автоматическая инкрементация номеров договоров.
+  const currentNameNumber = authInfo?.employee.currentNameNumber ?? 0;
+  const [currentNameNumberInput, setCurrentNameNumberInput] = useState(
+    String(currentNameNumber)
+  );
+  const [isSavingCurrentNameNumber, setIsSavingCurrentNameNumber] =
+    useState(false);
 
   const addToast = useCallback(
     (type: "success" | "error" | "warning", msg: string) => {
@@ -199,6 +235,10 @@ const CompanyPage = () => {
   useEffect(() => {
     setRoundingStepInput(String(savedRoundingStep));
   }, [savedRoundingStep]);
+
+  useEffect(() => {
+    setCurrentNameNumberInput(String(currentNameNumber));
+  }, [currentNameNumber]);
 
   const handleRoundingStepSave = useCallback(async () => {
     const trimmed = roundingStepInput.trim();
@@ -234,6 +274,47 @@ const CompanyPage = () => {
     }
   }, [roundingStepInput, savedRoundingStep, addToast, refresh]);
 
+  const handleCurrentNameNumberSave = useCallback(async () => {
+    const trimmed = currentNameNumberInput.trim();
+    if (trimmed === "") {
+      setCurrentNameNumberInput(String(currentNameNumber));
+      return;
+    }
+
+    const value = Number(trimmed);
+    if (!Number.isInteger(value) || value < 0) {
+      addToast(
+        "error",
+        "Текущий номер договора должен быть неотрицательным целым числом"
+      );
+      setCurrentNameNumberInput(String(currentNameNumber));
+      return;
+    }
+
+    if (value === currentNameNumber) return;
+
+    setIsSavingCurrentNameNumber(true);
+    try {
+      // Для установки текущего номера передаём "set" вместо "on"/"off",
+      // а само значение — третьим аргументом (его должен принимать
+      // companyService.updateSettings).
+      await companyService.updateSettings(
+        "increment_credit_name",
+        "set",
+        value
+      );
+      // currentNameNumber приходит в данных авторизации — перечитываем.
+      await refresh();
+      addToast("success", `Текущий номер договора установлен: ${value}`);
+    } catch (error) {
+      console.error("Не удалось изменить текущий номер договора:", error);
+      addToast("error", "Не удалось изменить текущий номер договора");
+      setCurrentNameNumberInput(String(currentNameNumber));
+    } finally {
+      setIsSavingCurrentNameNumber(false);
+    }
+  }, [currentNameNumberInput, currentNameNumber, addToast, refresh]);
+
   const handleCreditAcceptanceChange = useCallback(
     async (checked: boolean) => {
       setIsSavingSetting(true);
@@ -250,6 +331,56 @@ const CompanyPage = () => {
           checked
             ? "Подтверждение договоров включено"
             : "Подтверждение договоров выключено"
+        );
+      } catch (error) {
+        console.error("Не удалось изменить настройку:", error);
+        addToast("error", "Не удалось изменить настройку");
+      } finally {
+        setIsSavingSetting(false);
+      }
+    },
+    [addToast, refresh]
+  );
+
+  const handlePaymentAcceptanceChange = useCallback(
+    async (checked: boolean) => {
+      setIsSavingSetting(true);
+      try {
+        await companyService.updateSettings(
+          "payment_acceptence",
+          checked ? "on" : "off"
+        );
+        await refresh();
+        addToast(
+          "success",
+          checked
+            ? "Подтверждение платежей включено"
+            : "Подтверждение платежей выключено"
+        );
+      } catch (error) {
+        console.error("Не удалось изменить настройку:", error);
+        addToast("error", "Не удалось изменить настройку");
+      } finally {
+        setIsSavingSetting(false);
+      }
+    },
+    [addToast, refresh]
+  );
+
+  const handleIncrementalNamesChange = useCallback(
+    async (checked: boolean) => {
+      setIsSavingSetting(true);
+      try {
+        await companyService.updateSettings(
+          "increment_credit_name",
+          checked ? "on" : "off"
+        );
+        await refresh();
+        addToast(
+          "success",
+          checked
+            ? "Подтверждение платежей включено"
+            : "Подтверждение платежей выключено"
         );
       } catch (error) {
         console.error("Не удалось изменить настройку:", error);
@@ -497,29 +628,118 @@ const CompanyPage = () => {
           <SettingsTitle>Дополнительные настройки</SettingsTitle>
           <SettingsList>
             <SettingsSection>
-            <SettingContent>
-              <SettingIcon>
-                <ContractApprovalIcon />
-              </SettingIcon>
-              <SettingText>
-                <SettingName>Подтверждение договоров</SettingName>
-              </SettingText>
-            </SettingContent>
-            <SettingControl>
-              <ToggleSwitch
-                checked={creditAcceptance}
-                onChange={handleCreditAcceptanceChange}
-                disabled={isSavingSetting}
-              />
-              <SettingStatus $enabled={creditAcceptance}>
-                {isSavingSetting
-                  ? "Сохранение..."
-                  : creditAcceptance
-                  ? "Включено"
-                  : "Выключено"}
-              </SettingStatus>
-            </SettingControl>
+              <SettingContent>
+                <SettingIcon>
+                  <ContractApprovalIcon />
+                </SettingIcon>
+                <SettingText>
+                  <SettingName>Подтверждение договоров</SettingName>
+                </SettingText>
+              </SettingContent>
+              <SettingControl>
+                <ToggleSwitch
+                  checked={creditAcceptance}
+                  onChange={handleCreditAcceptanceChange}
+                  disabled={isSavingSetting}
+                />
+                <SettingStatus $enabled={creditAcceptance}>
+                  {isSavingSetting
+                    ? "Сохранение..."
+                    : creditAcceptance
+                    ? "Включено"
+                    : "Выключено"}
+                </SettingStatus>
+              </SettingControl>
             </SettingsSection>
+
+            <SettingsSection>
+              <SettingContent>
+                <SettingIcon>
+                  <PaymentApprovalIcon />
+                </SettingIcon>
+                <SettingText>
+                  <SettingName>Подтверждение платежей</SettingName>
+                </SettingText>
+              </SettingContent>
+              <SettingControl>
+                <ToggleSwitch
+                  checked={paymentAcceptance}
+                  onChange={handlePaymentAcceptanceChange}
+                  disabled={isSavingSetting}
+                />
+                <SettingStatus $enabled={paymentAcceptance}>
+                  {isSavingSetting
+                    ? "Сохранение..."
+                    : paymentAcceptance
+                    ? "Включено"
+                    : "Выключено"}
+                </SettingStatus>
+              </SettingControl>
+            </SettingsSection>
+
+            <SettingsSection>
+              <SettingContent>
+                <SettingIcon>
+                  <PaymentApprovalIcon />
+                </SettingIcon>
+                <SettingText>
+                  <SettingName>
+                    Автоматическая инкрементация номеров договоров
+                  </SettingName>
+                </SettingText>
+              </SettingContent>
+              <SettingControl>
+                <ToggleSwitch
+                  checked={incrementCredits}
+                  onChange={handleIncrementalNamesChange}
+                  disabled={isSavingSetting}
+                />
+                <SettingStatus $enabled={incrementCredits}>
+                  {isSavingSetting
+                    ? "Сохранение..."
+                    : incrementCredits
+                    ? "Включено"
+                    : "Выключено"}
+                </SettingStatus>
+              </SettingControl>
+            </SettingsSection>
+
+            {/* Текущий номер договора — показываем только при включённой
+                инкрементации. Позволяет посмотреть и изменить счётчик. */}
+            {incrementCredits && (
+              <SettingsSection>
+                <SettingContent>
+                  <SettingIcon>
+                    <NameNumberIcon />
+                  </SettingIcon>
+                  <SettingText>
+                    <SettingName>Текущий номер договора</SettingName>
+                    <SettingHint>
+                      Если авто-инкрементация включена - в след договор посдавится этот номер. Можно изменить
+                      вручную.
+                    </SettingHint>
+                  </SettingText>
+                </SettingContent>
+                <SettingControl>
+                  <RoundingStepInput
+                    type="text"
+                    inputMode="numeric"
+                    aria-label="Текущий номер договора"
+                    value={currentNameNumberInput}
+                    disabled={isSavingCurrentNameNumber}
+                    onChange={(e) =>
+                      setCurrentNameNumberInput(
+                        e.target.value.replace(/[^0-9]/g, "")
+                      )
+                    }
+                    onBlur={handleCurrentNameNumberSave}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                  />
+                </SettingControl>
+              </SettingsSection>
+            )}
 
             {canEditRoundingStep && (
               <SettingsSection>

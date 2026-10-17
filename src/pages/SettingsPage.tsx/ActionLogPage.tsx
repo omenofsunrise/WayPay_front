@@ -6,6 +6,7 @@ import type {
   ActionLogEntity,
   ActionLogRecord,
 } from "../../api/types/actionLog";
+import ActionLogFields from "../../components/ui/ActionLogFields";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import { useAuth } from "../../сontext/AuthContext";
 
@@ -27,24 +28,33 @@ const formatMoment = (value: string) =>
     minute: "2-digit",
   });
 
-// Значения из снимка приходят как есть: числа, даты, перечисления. Приводим
-// к человеческому виду, не теряя того, что в них было.
-const formatValue = (value: unknown): string => {
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "boolean") return value ? "да" : "нет";
-  if (typeof value === "string") {
-    const asDate = /^\d{4}-\d{2}-\d{2}T/.test(value) ? new Date(value) : null;
-    if (asDate && !Number.isNaN(asDate.getTime())) return formatMoment(value);
-    return value;
-  }
-  if (typeof value === "number") return new Intl.NumberFormat("ru-RU").format(value);
-  return JSON.stringify(value);
+// Дата дня для заголовка группы: «Сегодня», «Вчера» или «16 октября».
+const dayTitle = (value: string) => {
+  const date = new Date(value);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const sameDay = (a: Date, b: Date) =>
+    a.getDate() === b.getDate() &&
+    a.getMonth() === b.getMonth() &&
+    a.getFullYear() === b.getFullYear();
+
+  if (sameDay(date, today)) return "Сегодня";
+  if (sameDay(date, yesterday)) return "Вчера";
+
+  return date.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+  });
 };
 
-const isChange = (value: unknown): value is { was: unknown; now: unknown } =>
-  typeof value === "object" &&
-  value !== null &&
-  ("was" in (value as object) || "now" in (value as object));
+const timeOnly = (value: string) =>
+  new Date(value).toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 const ActionLogPage = () => {
   const { getPage, getEntities, getById, isLoading } = useActionLog();
@@ -100,7 +110,20 @@ const ActionLogPage = () => {
   };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const payloadEntries = details?.payload ? Object.entries(details.payload) : [];
+
+  // Записи приходят по убыванию времени, остаётся разложить их по дням.
+  const groups = useMemo(() => {
+    const byDay = new Map<string, ActionLogRecord[]>();
+
+    records.forEach((record) => {
+      const day = dayTitle(record.createdAt);
+      const list = byDay.get(day) ?? [];
+      list.push(record);
+      byDay.set(day, list);
+    });
+
+    return Array.from(byDay.entries());
+  }, [records]);
 
   return (
     <Wrapper>
@@ -179,40 +202,32 @@ const ActionLogPage = () => {
       ) : records.length === 0 ? (
         <Muted>За выбранный период записей нет.</Muted>
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Когда</Th>
-              <Th>Кто</Th>
-              {isSuperAdmin && <Th>Компания</Th>}
-              <Th>Что сделал</Th>
-              <Th>Объект</Th>
-              <Th />
-            </tr>
-          </thead>
-          <tbody>
-            {records.map((record) => (
-              <Row
+        groups.map(([day, dayRecords]) => (
+          <Group key={day}>
+            <DayTitle>{day}</DayTitle>
+            {dayRecords.map((record) => (
+              <Line
                 key={record.id}
                 $clickable={record.hasDetails}
                 onClick={() => openDetails(record)}
               >
-                <Td>{formatMoment(record.createdAt)}</Td>
-                <Td>{record.employeeName}</Td>
-                {isSuperAdmin && <Td>{record.companyName || "—"}</Td>}
-                <Td>
-                  <Action $action={record.action}>{record.actionName}</Action>{" "}
-                  {record.entityName}
-                </Td>
-                <Td>
-                  {record.title || "—"}
-                  {record.entityId && <Dim> №{record.entityId}</Dim>}
-                </Td>
-                <Td>{record.hasDetails && <Dim>подробнее</Dim>}</Td>
-              </Row>
+                <Time>{timeOnly(record.createdAt)}</Time>
+                <Sentence>
+                  <Who>{record.employeeName}</Who> {record.actionName}{" "}
+                  <Action $action={record.action}>
+                    {record.entityNameAccusative}
+                  </Action>
+                  {record.entityId && <Dim> № {record.entityId}</Dim>}
+                  {record.title && <Subject> — {record.title}</Subject>}
+                  {isSuperAdmin && record.companyName && (
+                    <Dim> · {record.companyName}</Dim>
+                  )}
+                </Sentence>
+                {record.hasDetails && <Toggle>подробнее</Toggle>}
+              </Line>
             ))}
-          </tbody>
-        </Table>
+          </Group>
+        ))
       )}
 
       {totalPages > 1 && (
@@ -249,35 +264,12 @@ const ActionLogPage = () => {
         >
           <ModalBody>
             <ModalHead>
-              {formatMoment(details.createdAt)}
+              {dayTitle(details.createdAt)}, {timeOnly(details.createdAt)}
               {details.title && ` · ${details.title}`}
-              {details.entityId && ` · №${details.entityId}`}
+              {details.entityId && ` · № ${details.entityId}`}
             </ModalHead>
 
-            {payloadEntries.length === 0 ? (
-              <Muted>Подробностей не сохранилось.</Muted>
-            ) : (
-              <DetailsTable>
-                <tbody>
-                  {payloadEntries.map(([field, value]) => (
-                    <tr key={field}>
-                      <DetailsField>{field}</DetailsField>
-                      <DetailsValue>
-                        {isChange(value) ? (
-                          <>
-                            <Was>{formatValue(value.was)}</Was>
-                            <Arrow>→</Arrow>
-                            <Now>{formatValue(value.now)}</Now>
-                          </>
-                        ) : (
-                          formatValue(value)
-                        )}
-                      </DetailsValue>
-                    </tr>
-                  ))}
-                </tbody>
-              </DetailsTable>
-            )}
+            <ActionLogFields fields={details.fields ?? []} />
           </ModalBody>
         </BaseModal>
       )}
@@ -329,41 +321,9 @@ const Select = styled.select`
   background: #fff;
 `;
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  overflow: hidden;
-`;
 
-const Th = styled.th`
-  text-align: left;
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
-`;
 
-const Row = styled.tr<{ $clickable?: boolean }>`
-  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
 
-  &:hover {
-    background: ${({ $clickable }) => ($clickable ? "#f9fafb" : "transparent")};
-  }
-`;
-
-const Td = styled.td`
-  padding: 10px 12px;
-  font-size: 14px;
-  color: #111827;
-  border-bottom: 1px solid #f3f4f6;
-  vertical-align: top;
-`;
 
 const Action = styled.span<{ $action: string }>`
   font-weight: 600;
@@ -374,6 +334,62 @@ const Action = styled.span<{ $action: string }>`
 const Dim = styled.span`
   color: #9ca3af;
   font-size: 13px;
+`;
+
+const Group = styled.div`
+  margin-bottom: 18px;
+`;
+
+const DayTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+`;
+
+const Line = styled.div<{ $clickable?: boolean }>`
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  background: #fff;
+  margin-bottom: 6px;
+  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
+
+  &:hover {
+    background: ${({ $clickable }) => ($clickable ? "#f9fafb" : "#fff")};
+  }
+`;
+
+const Time = styled.span`
+  flex: 0 0 44px;
+  font-size: 13px;
+  color: #9ca3af;
+`;
+
+const Sentence = styled.span`
+  flex: 1;
+  font-size: 14px;
+  color: #111827;
+  line-height: 1.4;
+`;
+
+const Who = styled.span`
+  font-weight: 600;
+`;
+
+const Subject = styled.span`
+  color: #374151;
+`;
+
+const Toggle = styled.span`
+  color: #9ca3af;
+  font-size: 13px;
+  white-space: nowrap;
 `;
 
 const Muted = styled.div`
@@ -414,40 +430,10 @@ const ModalHead = styled.div`
   color: #6b7280;
 `;
 
-const DetailsTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-`;
 
-const DetailsField = styled.td`
-  padding: 7px 10px 7px 0;
-  font-size: 13px;
-  color: #6b7280;
-  white-space: nowrap;
-  vertical-align: top;
-  width: 40%;
-`;
 
-const DetailsValue = styled.td`
-  padding: 7px 0;
-  font-size: 14px;
-  color: #111827;
-  word-break: break-word;
-`;
 
-const Was = styled.span`
-  color: #b91c1c;
-  text-decoration: line-through;
-`;
 
-const Arrow = styled.span`
-  margin: 0 6px;
-  color: #9ca3af;
-`;
 
-const Now = styled.span`
-  color: #047857;
-  font-weight: 600;
-`;
 
 export default ActionLogPage;
