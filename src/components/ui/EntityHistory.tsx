@@ -96,7 +96,7 @@ const List = styled.div`
 `;
 
 const Item = styled.div`
-  border: 1px solid #e5e7eb;
+  border: 1px solid #E2E8F0;
   border-radius: 9px;
   background: #fff;
   overflow: hidden;
@@ -116,7 +116,7 @@ const Head = styled.button<{ $clickable?: boolean }>`
 `;
 
 const Moment = styled.span`
-  color: #6b7280;
+  color: rgba(80, 85, 92, 1);
   font-size: 13px;
   white-space: nowrap;
 `;
@@ -129,7 +129,7 @@ const Who = styled.span`
 const Action = styled.span<{ $action: string }>`
   font-weight: 600;
   color: ${({ $action }) =>
-    $action === "deleted" ? "#b91c1c" : $action === "created" ? "#047857" : "#2563eb"};
+    $action === "deleted" ? "#B71C1C" : $action === "created" ? "#007D88" : "#2563EB"};
 `;
 
 const Toggle = styled.span`
@@ -151,7 +151,7 @@ const Details = styled.div`
 
 const Muted = styled.div`
   font-size: 14px;
-  color: #6b7280;
+  color: rgba(80, 85, 92, 1);
 `;
 
 export default EntityHistory;

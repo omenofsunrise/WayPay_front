@@ -8,62 +8,106 @@ import type {
 } from "../../api/types/actionLog";
 import ActionLogFields from "../../components/ui/ActionLogFields";
 import BaseModal from "../../components/modal/BASE/modalCRUBase";
+import CustomInput from "../../components/ui/fields/CustomInput";
+import CustomSelect from "../../components/ui/fields/CustomSelect";
+import Pagination from "../../components/ui/fields/CustomPagination";
+import PeriodField from "../../components/ui/fields/PeriodField";
+import FilterField from "../../components/ui/Layouts/FilterField";
+import PaginationLayout from "../../components/ui/Layouts/PaginationLayout";
+import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
+import CustomTable, {
+  type Column,
+  type RowStyle,
+  type TableAction,
+} from "../../components/ui/tables/CustomTable";
 import { useAuth } from "../../сontext/AuthContext";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 
-const ACTIONS = [
+const ACTION_OPTIONS = [
   { value: "", label: "Все действия" },
   { value: "created", label: "Создание" },
   { value: "updated", label: "Изменение" },
   { value: "deleted", label: "Удаление" },
 ];
 
-const formatMoment = (value: string) =>
+const moment = (value: string) =>
   new Date(value).toLocaleString("ru-RU", {
     day: "2-digit",
     month: "2-digit",
-    year: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
 
-// Дата дня для заголовка группы: «Сегодня», «Вчера» или «16 октября».
-const dayTitle = (value: string) => {
-  const date = new Date(value);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const sameDay = (a: Date, b: Date) =>
-    a.getDate() === b.getDate() &&
-    a.getMonth() === b.getMonth() &&
-    a.getFullYear() === b.getFullYear();
-
-  if (sameDay(date, today)) return "Сегодня";
-  if (sameDay(date, yesterday)) return "Вчера";
-
-  return date.toLocaleDateString("ru-RU", {
-    day: "numeric",
+const fullMoment = (value: string) =>
+  new Date(value).toLocaleString("ru-RU", {
+    day: "2-digit",
     month: "long",
-    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+
+const asIsoDate = (date: Date) => date.toISOString().slice(0, 10);
+
+// Дата из календаря приходит как дд.мм.гггг, а бэкенду нужна гггг-мм-дд.
+const normalizeDate = (value?: string) => {
+  if (!value) return "";
+
+  const parts = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (parts) return `${parts[3]}-${parts[2]}-${parts[1]}`;
+
+  return value.slice(0, 10);
 };
 
-const timeOnly = (value: string) =>
-  new Date(value).toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+/**
+ * PeriodField отдаёт только название периода, даты считает тот, кто его
+ * показывает. Своя дата приходит отдельными значениями.
+ */
+const periodToRange = (period: string): { from: string; to: string } => {
+  const today = new Date();
+  const start = new Date(today);
+
+  switch (period) {
+    case "Last7Days":
+      start.setDate(today.getDate() - 6);
+      return { from: asIsoDate(start), to: asIsoDate(today) };
+    case "Last31Days":
+      start.setDate(today.getDate() - 30);
+      return { from: asIsoDate(start), to: asIsoDate(today) };
+    case "ThisMonth":
+      return {
+        from: asIsoDate(new Date(today.getFullYear(), today.getMonth(), 1)),
+        to: asIsoDate(today),
+      };
+    case "PreviousMonth":
+      return {
+        from: asIsoDate(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+        to: asIsoDate(new Date(today.getFullYear(), today.getMonth(), 0)),
+      };
+    case "ThisYear":
+      return {
+        from: asIsoDate(new Date(today.getFullYear(), 0, 1)),
+        to: asIsoDate(today),
+      };
+    case "PreviousYear":
+      return {
+        from: asIsoDate(new Date(today.getFullYear() - 1, 0, 1)),
+        to: asIsoDate(new Date(today.getFullYear() - 1, 11, 31)),
+      };
+    default:
+      return { from: "", to: "" };
+  }
+};
 
 const ActionLogPage = () => {
-  const { getPage, getEntities, getById, isLoading } = useActionLog();
+  const { getPage, getEntities, getById, isLoading, error } = useActionLog();
   const { hasRole } = useAuth();
   const isSuperAdmin = hasRole("суперадмин");
 
   const [records, setRecords] = useState<ActionLogRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [entities, setEntities] = useState<ActionLogEntity[]>([]);
   const [entity, setEntity] = useState("");
@@ -71,12 +115,13 @@ const ActionLogPage = () => {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [period, setPeriod] = useState("");
 
   const [details, setDetails] = useState<ActionLogDetails | null>(null);
 
   const filters = useMemo(
     () => ({
-      page,
+      page: currentPage,
       pageSize: PAGE_SIZE,
       entity: entity || undefined,
       action: action || undefined,
@@ -84,7 +129,7 @@ const ActionLogPage = () => {
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
     }),
-    [page, entity, action, search, dateFrom, dateTo]
+    [currentPage, entity, action, search, dateFrom, dateTo]
   );
 
   const load = useCallback(async () => {
@@ -103,337 +148,250 @@ const ActionLogPage = () => {
     getEntities().then(setEntities);
   }, [getEntities]);
 
-  const openDetails = async (record: ActionLogRecord) => {
-    if (!record.hasDetails) return;
-    const full = await getById(record.id);
-    if (full) setDetails(full);
+  const handlePeriodChange = (
+    value: string,
+    startDate?: string,
+    endDate?: string
+  ) => {
+    setPeriod(value);
+
+    if (value === "Custom") {
+      setDateFrom(normalizeDate(startDate));
+      setDateTo(normalizeDate(endDate));
+    } else {
+      const range = periodToRange(value);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    }
+
+    setCurrentPage(1);
   };
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const openDetails = useCallback(
+    async (record?: ActionLogRecord) => {
+      if (!record?.hasDetails) return;
+      const full = await getById(record.id);
+      if (full) setDetails(full);
+    },
+    [getById]
+  );
 
-  // Записи приходят по убыванию времени, остаётся разложить их по дням.
-  const groups = useMemo(() => {
-    const byDay = new Map<string, ActionLogRecord[]>();
+  const columns: Column[] = useMemo(() => {
+    const list: Column[] = [
+      { name: "Когда", align: "left" },
+      { name: "Кто", align: "left" },
+      { name: "Что сделал", align: "left" },
+      { name: "Объект", align: "left" },
+    ];
 
-    records.forEach((record) => {
-      const day = dayTitle(record.createdAt);
-      const list = byDay.get(day) ?? [];
-      list.push(record);
-      byDay.set(day, list);
+    if (isSuperAdmin) list.push({ name: "Компания", align: "left" });
+
+    return list;
+  }, [isSuperAdmin]);
+
+  const tableData = useMemo(
+    () =>
+      records.map((record) => {
+        const object = [record.title, record.entityId && `№ ${record.entityId}`]
+          .filter(Boolean)
+          .join("  ");
+
+        const row = [
+          moment(record.createdAt),
+          record.employeeName,
+          `${record.actionName} ${record.entityNameAccusative}`,
+          object || "—",
+        ];
+
+        if (isSuperAdmin) row.push(record.companyName || "—");
+
+        return row;
+      }),
+    [records, isSuperAdmin]
+  );
+
+  // Удаление помечаем цветом строки: именно его ищут, когда открывают журнал.
+  const rowStyles = useMemo(() => {
+    const styles: Record<number, RowStyle> = {};
+
+    records.forEach((record, index) => {
+      if (record.action === "deleted") {
+        styles[index] = { color: "#B71C1C" };
+      }
     });
 
-    return Array.from(byDay.entries());
+    return styles;
   }, [records]);
 
+  const tableActions: TableAction[] = [
+    {
+      label: "Подробнее",
+      action: (_rowData, rowIndex) => openDetails(records[rowIndex]),
+      color: "#007D88",
+      shouldShow: (rowData) => {
+        const index = tableData.indexOf(rowData);
+        return Boolean(records[index]?.hasDetails);
+      },
+    },
+  ];
+
   return (
-    <Wrapper>
-      <Filters>
-        <Field>
-          <Label>С даты</Label>
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              setPage(1);
-            }}
-          />
-        </Field>
-        <Field>
-          <Label>По дату</Label>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              setPage(1);
-            }}
-          />
-        </Field>
-        <Field>
-          <Label>Объект</Label>
-          <Select
-            value={entity}
-            onChange={(e) => {
-              setEntity(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">Все объекты</option>
-            {entities.map((item) => (
-              <option key={item.entity} value={item.entity}>
-                {item.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field>
-          <Label>Действие</Label>
-          <Select
-            value={action}
-            onChange={(e) => {
-              setAction(e.target.value);
-              setPage(1);
-            }}
-          >
-            {ACTIONS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field $wide>
-          <Label>Поиск</Label>
-          <Input
-            type="text"
-            placeholder="Номер договора, имя клиента, сумма"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </Field>
-      </Filters>
+    <>
+      <FilterField>
+        <PeriodField
+          value={period}
+          placeholder="Период"
+          onChange={handlePeriodChange}
+        />
 
-      {isLoading && records.length === 0 ? (
-        <Muted>Загрузка…</Muted>
-      ) : records.length === 0 ? (
-        <Muted>За выбранный период записей нет.</Muted>
-      ) : (
-        groups.map(([day, dayRecords]) => (
-          <Group key={day}>
-            <DayTitle>{day}</DayTitle>
-            {dayRecords.map((record) => (
-              <Line
-                key={record.id}
-                $clickable={record.hasDetails}
-                onClick={() => openDetails(record)}
-              >
-                <Time>{timeOnly(record.createdAt)}</Time>
-                <Sentence>
-                  <Who>{record.employeeName}</Who> {record.actionName}{" "}
-                  <Action $action={record.action}>
-                    {record.entityNameAccusative}
-                  </Action>
-                  {record.entityId && <Dim> № {record.entityId}</Dim>}
-                  {record.title && <Subject> — {record.title}</Subject>}
-                  {isSuperAdmin && record.companyName && (
-                    <Dim> · {record.companyName}</Dim>
-                  )}
-                </Sentence>
-                {record.hasDetails && <Toggle>подробнее</Toggle>}
-              </Line>
-            ))}
-          </Group>
-        ))
+        <CustomSelect
+          placeholder="Все объекты"
+          value={entity}
+          options={[
+            { value: "", label: "Все объекты" },
+            ...entities.map((item) => ({
+              value: item.entity,
+              label: item.name,
+            })),
+          ]}
+          onChange={(event) => {
+            setEntity(event.target.value);
+            setCurrentPage(1);
+          }}
+        />
+
+        <CustomSelect
+          placeholder="Все действия"
+          value={action}
+          options={ACTION_OPTIONS}
+          onChange={(event) => {
+            setAction(event.target.value);
+            setCurrentPage(1);
+          }}
+        />
+
+        <CustomInput
+          inputType="text"
+          placeholder="Договор, клиент, сумма"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
+        />
+      </FilterField>
+
+      {error && <ErrorText>{error}</ErrorText>}
+
+      <CustomTable
+        columns={columns}
+        data={tableData}
+        rowStyles={rowStyles}
+        isLoading={isLoading}
+        contextMenuActions={tableActions}
+        onRowClick={(_rowData: unknown, rowIndex: number) =>
+          openDetails(records[rowIndex])
+        }
+        onRowDoubleClick={(_rowData: unknown, rowIndex: number) =>
+          openDetails(records[rowIndex])
+        }
+      />
+
+      {!isLoading && records.length === 0 && (
+        <EmptyText>
+          За выбранный период записей нет. Журнал ведётся с момента его
+          включения и хранится три месяца.
+        </EmptyText>
       )}
 
-      {totalPages > 1 && (
-        <Pager>
-          <PagerButton
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((value) => Math.max(1, value - 1))}
-          >
-            Назад
-          </PagerButton>
-          <Muted>
-            Страница {page} из {totalPages}, всего {totalCount}
-          </Muted>
-          <PagerButton
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => setPage((value) => value + 1)}
-          >
-            Вперёд
-          </PagerButton>
-        </Pager>
-      )}
+      <PaginationLayout>
+        <CountInfoTitle total={totalCount} />
+        <Pagination
+          total={totalCount}
+          current={currentPage}
+          onChange={setCurrentPage}
+          itemsPerPage={PAGE_SIZE}
+        />
+      </PaginationLayout>
 
       {details && (
         <BaseModal
           isOpen={true}
-          title={`${details.employeeName} ${details.actionName} ${details.entityName}`}
+          title={`${details.employeeName} ${details.actionName} ${details.entityNameAccusative}`}
           onClose={() => setDetails(null)}
           onCancel={() => setDetails(null)}
           hideSaveButton
           cancelButtonText="Закрыть"
-          width="620px"
+          width="640px"
         >
           <ModalBody>
             <ModalHead>
-              {dayTitle(details.createdAt)}, {timeOnly(details.createdAt)}
-              {details.title && ` · ${details.title}`}
-              {details.entityId && ` · № ${details.entityId}`}
+              <Badge $action={details.action}>{details.actionName}</Badge>
+              <span>{fullMoment(details.createdAt)}</span>
+              {details.title && <Separator>·</Separator>}
+              {details.title && <strong>{details.title}</strong>}
+              {details.entityId && <Separator>·</Separator>}
+              {details.entityId && <span>№ {details.entityId}</span>}
             </ModalHead>
 
             <ActionLogFields fields={details.fields ?? []} />
           </ModalBody>
         </BaseModal>
       )}
-    </Wrapper>
+    </>
   );
 };
 
-const Wrapper = styled.div`
-  padding: 16px 0 32px;
-`;
-
-const Filters = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-`;
-
-const Field = styled.div<{ $wide?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: ${({ $wide }) => ($wide ? "1 1 240px" : "0 0 auto")};
-`;
-
-const Label = styled.span`
-  font-size: 12px;
-  color: #6b7280;
-`;
-
-const Input = styled.input`
-  min-height: 38px;
-  padding: 0 12px;
-  border: 1px solid #d0d5dd;
-  border-radius: 7px;
+const ErrorText = styled.div`
+  margin-bottom: 12px;
   font-size: 14px;
-  color: #344054;
-  width: 100%;
-  box-sizing: border-box;
+  color: #b71c1c;
 `;
 
-const Select = styled.select`
-  min-height: 38px;
-  padding: 0 10px;
-  border: 1px solid #d0d5dd;
-  border-radius: 7px;
+const EmptyText = styled.div`
+  padding: 24px 0;
   font-size: 14px;
-  color: #344054;
-  background: #fff;
-`;
-
-
-
-
-
-const Action = styled.span<{ $action: string }>`
-  font-weight: 600;
-  color: ${({ $action }) =>
-    $action === "deleted" ? "#b91c1c" : $action === "created" ? "#047857" : "#2563eb"};
-`;
-
-const Dim = styled.span`
-  color: #9ca3af;
-  font-size: 13px;
-`;
-
-const Group = styled.div`
-  margin-bottom: 18px;
-`;
-
-const DayTitle = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 6px;
-`;
-
-const Line = styled.div<{ $clickable?: boolean }>`
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 9px 12px;
-  border: 1px solid #eef0f3;
-  border-radius: 8px;
-  background: #fff;
-  margin-bottom: 6px;
-  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
-
-  &:hover {
-    background: ${({ $clickable }) => ($clickable ? "#f9fafb" : "#fff")};
-  }
-`;
-
-const Time = styled.span`
-  flex: 0 0 44px;
-  font-size: 13px;
-  color: #9ca3af;
-`;
-
-const Sentence = styled.span`
-  flex: 1;
-  font-size: 14px;
-  color: #111827;
-  line-height: 1.4;
-`;
-
-const Who = styled.span`
-  font-weight: 600;
-`;
-
-const Subject = styled.span`
-  color: #374151;
-`;
-
-const Toggle = styled.span`
-  color: #9ca3af;
-  font-size: 13px;
-  white-space: nowrap;
-`;
-
-const Muted = styled.div`
-  font-size: 14px;
-  color: #6b7280;
-`;
-
-const Pager = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 14px;
-`;
-
-const PagerButton = styled.button`
-  padding: 8px 14px;
-  border: 1px solid #d0d5dd;
-  border-radius: 8px;
-  background: #fff;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
+  color: rgba(80, 85, 92, 1);
+  text-align: center;
 `;
 
 const ModalBody = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   padding: 20px;
 `;
 
 const ModalHead = styled.div`
-  font-size: 13px;
-  color: #6b7280;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(80, 85, 92, 1);
 `;
 
+const Badge = styled.span<{ $action: string }>`
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: ${({ $action }) =>
+    $action === "deleted"
+      ? "#B71C1C"
+      : $action === "created"
+      ? "#007D88"
+      : "#2563EB"};
+  background: ${({ $action }) =>
+    $action === "deleted"
+      ? "rgba(239, 68, 68, 0.1)"
+      : $action === "created"
+      ? "rgba(0, 125, 136, 0.1)"
+      : "rgba(59, 130, 246, 0.1)"};
+`;
 
-
-
-
-
+const Separator = styled.span`
+  color: #cbd5e1;
+`;
 
 export default ActionLogPage;
