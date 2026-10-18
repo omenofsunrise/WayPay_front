@@ -27,8 +27,10 @@ const formatMoment = (value: string) =>
  */
 const EntityHistory = ({ entity, entityId }: Props) => {
   const { getForEntity } = useActionLog();
-  const { hasRole } = useAuth();
-  const allowed = hasRole("директор") || hasRole("суперадмин");
+  const { hasRole, authInfo } = useAuth();
+  const allowed =
+    (authInfo?.employee?.actionLogEnabled ?? false) &&
+    (hasRole("директор") || hasRole("суперадмин"));
 
   const [records, setRecords] = useState<ActionLogDetails[]>([]);
   const [status, setStatus] = useState<"loading" | "done">("loading");
