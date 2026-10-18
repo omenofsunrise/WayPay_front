@@ -102,8 +102,10 @@ const periodToRange = (period: string): { from: string; to: string } => {
 
 const ActionLogPage = () => {
   const { getPage, getEntities, getById, isLoading, error } = useActionLog();
-  const { hasRole } = useAuth();
-  const isSuperAdmin = hasRole("суперадмин");
+  const { authInfo } = useAuth();
+  // Журнал можно выключить в данных компании: тогда новые действия не пишутся,
+  // а записанное лежит до конца трёхмесячного хранения.
+  const loggingEnabled = authInfo?.employee.actionLogEnabled ?? true;
 
   const [records, setRecords] = useState<ActionLogRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -184,10 +186,8 @@ const ActionLogPage = () => {
       { name: "Объект", align: "left" },
     ];
 
-    if (isSuperAdmin) list.push({ name: "Компания", align: "left" });
-
     return list;
-  }, [isSuperAdmin]);
+  }, []);
 
   const tableData = useMemo(
     () =>
@@ -203,11 +203,9 @@ const ActionLogPage = () => {
           object || "—",
         ];
 
-        if (isSuperAdmin) row.push(record.companyName || "—");
-
         return row;
       }),
-    [records, isSuperAdmin]
+    [records]
   );
 
   // Удаление помечаем цветом строки: именно его ищут, когда открывают журнал.
@@ -281,6 +279,13 @@ const ActionLogPage = () => {
         />
       </FilterField>
 
+      {!loggingEnabled && (
+        <Notice>
+          Логирование выключено в данных компании: новые действия не
+          записываются. Уже записанное хранится три месяца.
+        </Notice>
+      )}
+
       {error && <ErrorText>{error}</ErrorText>}
 
       <CustomTable
@@ -341,6 +346,17 @@ const ActionLogPage = () => {
     </>
   );
 };
+
+const Notice = styled.div`
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(245, 166, 35, 0.4);
+  border-left: 3px solid #f5a623;
+  border-radius: 8px;
+  background: rgba(245, 166, 35, 0.08);
+  font-size: 14px;
+  color: rgba(80, 85, 92, 1);
+`;
 
 const ErrorText = styled.div`
   margin-bottom: 12px;

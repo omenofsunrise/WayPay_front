@@ -31,10 +31,7 @@ const SettingsPage = () => {
     }
   );
 
-  const { hasRole, authInfo } = useAuth();
-  // Журнал открывается компании настройкой: пишется он по всем, а смотреть
-  // его разрешено только тем, кому включили.
-  const actionLogEnabled = authInfo?.employee?.actionLogEnabled ?? false;
+  const { hasRole } = useAuth();
 
   useEffect(() => {
     localStorage.setItem("settingsActiveTab", activeTab);
@@ -71,15 +68,9 @@ const SettingsPage = () => {
       { id: "Пункты приёма", label: "Пункты приёма" },
       { id: "Рассылка", label: "Рассылка" },
       { id: "WhatsApp", label: "WhatsApp" },
+      { id: "Журнал действий", label: "Журнал действий" },
       { id: "О программе", label: "О программе" }
     );
-
-    if (actionLogEnabled) {
-      tabs.splice(tabs.length - 1, 0, {
-        id: "Журнал действий",
-        label: "Журнал действий",
-      });
-    }
   } else if (hasRole("админ")) {
     tabs.push(
       { id: "WhatsApp", label: "WhatsApp" },
