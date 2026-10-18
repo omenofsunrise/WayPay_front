@@ -64,7 +64,7 @@ const Row = styled.div`
   display: flex;
   gap: 12px;
   padding: 6px 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 
   &:last-child {
     border-bottom: 0;
@@ -85,7 +85,7 @@ const Value = styled.div`
 `;
 
 const Was = styled.span`
-  color: #b91c1c;
+  color: #b71c1c;
   text-decoration: line-through;
 `;
 
@@ -95,13 +95,13 @@ const Arrow = styled.span`
 `;
 
 const Now = styled.span`
-  color: #047857;
+  color: #007d88;
   font-weight: 600;
 `;
 
 const Muted = styled.div`
   font-size: 14px;
-  color: #6b7280;
+  color: rgba(80, 85, 92, 1);
 `;
 
 const Toggle = styled.button`
@@ -109,7 +109,7 @@ const Toggle = styled.button`
   padding: 0;
   border: 0;
   background: transparent;
-  color: #2563eb;
+  color: #007d88;
   font-size: 13px;
   cursor: pointer;
 `;
