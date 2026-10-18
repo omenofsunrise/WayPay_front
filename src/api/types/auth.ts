@@ -57,6 +57,7 @@ export interface AuthInfo {
     /** Показывать ли при оформлении выбор способа оплаты. Включают отдельным компаниям. */
     paymentMethodEnabled?: boolean;
     investorShareEnabled?: boolean;
+    actionLogEnabled?: boolean;
   };
 }
 
