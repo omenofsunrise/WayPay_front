@@ -684,7 +684,7 @@ const CompanyPage = () => {
                 </SettingIcon>
                 <SettingText>
                   <SettingName>
-                    Автоматическая инкрементация номеров договоров
+                    Автоматическая нумерация договоров
                   </SettingName>
                 </SettingText>
               </SettingContent>
