@@ -18,7 +18,7 @@ const TechnicalPauseInner = () => {
                     В данный момент проводятся технические мероприятия.
                     Мы уже работаем над восстановлением доступа —
                     сайт снова будет доступен примерно в{' '}
-                    <TimeHighlight>24:00</TimeHighlight>.
+                    <TimeHighlight>23:45</TimeHighlight>.
                 </Description>
             </ContentContainer>
         </TechnicalPauseWrapper>
