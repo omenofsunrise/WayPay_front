@@ -47,5 +47,5 @@ jobs:
 
       - name: Deploy to Staging (dev branch)
         if: github.ref == 'refs/heads/dev'
-        run: |
+        run: | 
           sshpass -p "${{ secrets.STAGING_SERVER_PASSWORD }}" scp -o StrictHostKeyChecking=no -r dist/* ${{ secrets.STAGING_SERVER_USER }}@${{ secrets.STAGING_SERVER_HOST }}:${{ secrets.STAGING_DEPLOY_PATH }}
