@@ -67,7 +67,6 @@ import BotManagementPage from "./pages/SettingsPage.tsx/BotManagementPage";
 import WhatsAppSendersPage from "./pages/SettingsPage.tsx/WhatsAppSendersPage";
 import ReceptionPage from "./pages/ReceptionPage";
 import PaymentPendingPage from "./pages/PaymentPendingPage";
-import { TechnicalPause } from "./components/TechnicalPause";
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
@@ -122,7 +121,7 @@ const isMobileDevice = (): boolean => {
   return screenWidthCheck;
 };
 
-function AppContent() {
+function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -818,13 +817,6 @@ function AppContent() {
       </BrowserRouter>
     </AuthProvider>
   );
-}
-
-const TECH_PAUSE_ENABLED = true;
-
-function App() {
-  if (TECH_PAUSE_ENABLED) return <TechnicalPause />;
-  return <AppContent />;
 }
 
 export default App;
