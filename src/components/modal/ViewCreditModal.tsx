@@ -349,10 +349,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     []
   );
   // Журнал доступен только директору и суперадмину, вкладку остальным не рисуем.
-  const { hasRole, authInfo } = useAuth();
-  const canSeeHistory =
-    (authInfo?.employee?.actionLogEnabled ?? false) &&
-    (hasRole("директор") || hasRole("суперадмин"));
+  const { hasRole } = useAuth();
+  const canSeeHistory = hasRole("директор") || hasRole("суперадмин");
 
   const [activeTab, setActiveTab] = useState<CreditTab>(() => {
     const saved = localStorage.getItem(

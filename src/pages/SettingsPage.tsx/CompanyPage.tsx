@@ -143,6 +143,12 @@ const PaymentApprovalIcon = () => (
   </svg>
 );
 
+const ActionLogIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M4 5h16M4 10h16M4 15h10M4 20h7" strokeLinecap="round" />
+  </svg>
+);
+
 const NameNumberIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
     <path
@@ -314,6 +320,36 @@ const CompanyPage = () => {
       setIsSavingCurrentNameNumber(false);
     }
   }, [currentNameNumberInput, currentNameNumber, addToast, refresh]);
+
+  // Журнал действий ведётся по умолчанию. Выключатель для тех, кому он не
+  // нужен: после выключения новые действия не записываются, а записанное
+  // остаётся до истечения трёх месяцев хранения.
+  const actionLogEnabled = authInfo?.employee.actionLogEnabled ?? true;
+
+  const handleActionLogChange = useCallback(
+    async (checked: boolean) => {
+      setIsSavingSetting(true);
+      try {
+        await companyService.updateSettings(
+          "action_log",
+          checked ? "on" : "off"
+        );
+        await refresh();
+        addToast(
+          "success",
+          checked
+            ? "Журнал действий включён"
+            : "Журнал действий выключен: новые действия не записываются"
+        );
+      } catch (error) {
+        console.error("Не удалось изменить журнал действий:", error);
+        addToast("error", "Не удалось изменить журнал действий");
+      } finally {
+        setIsSavingSetting(false);
+      }
+    },
+    [addToast, refresh]
+  );
 
   const handleCreditAcceptanceChange = useCallback(
     async (checked: boolean) => {
@@ -671,6 +707,35 @@ const CompanyPage = () => {
                   {isSavingSetting
                     ? "Сохранение..."
                     : paymentAcceptance
+                    ? "Включено"
+                    : "Выключено"}
+                </SettingStatus>
+              </SettingControl>
+            </SettingsSection>
+
+            <SettingsSection>
+              <SettingContent>
+                <SettingIcon>
+                  <ActionLogIcon />
+                </SettingIcon>
+                <SettingText>
+                  <SettingName>Журнал действий</SettingName>
+                  <SettingHint>
+                    Кто из сотрудников что создал, изменил и удалил. Виден
+                    директору, хранится три месяца.
+                  </SettingHint>
+                </SettingText>
+              </SettingContent>
+              <SettingControl>
+                <ToggleSwitch
+                  checked={actionLogEnabled}
+                  onChange={handleActionLogChange}
+                  disabled={isSavingSetting}
+                />
+                <SettingStatus $enabled={actionLogEnabled}>
+                  {isSavingSetting
+                    ? "Сохранение..."
+                    : actionLogEnabled
                     ? "Включено"
                     : "Выключено"}
                 </SettingStatus>

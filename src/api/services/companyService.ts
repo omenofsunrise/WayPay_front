@@ -23,7 +23,11 @@ class CompanyService {
    * подтверждения и счётчик неподтверждённых в аналитике.
    */
   async updateSettings(
-    setting: "credit_acceptence" | "payment_acceptence" | "increment_credit_name",
+    setting:
+      | "credit_acceptence"
+      | "payment_acceptence"
+      | "increment_credit_name"
+      | "action_log",
     action: "on" | "off" | "set",
     value?: number
   ): Promise<void> {
