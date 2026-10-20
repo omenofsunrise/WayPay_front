@@ -266,6 +266,9 @@ const CreditPage = () => {
   const [clientFullName, setClientFullName] = useState(
     () => savedFilters?.clientFullName ?? ""
   );
+  const [clientPhone, setClientPhone] = useState(
+    () => savedFilters?.clientPhone ?? ""
+  );
   const [fromDate, setFromDate] = useState<string>(
     () => savedFilters?.fromDate ?? ""
   );
@@ -834,6 +837,7 @@ const CreditPage = () => {
       investorName,
       selectedInvestmentSource,
       clientFullName,
+      clientPhone,
       fromDate,
       toDate,
       fromCreationDate,
@@ -852,6 +856,7 @@ const CreditPage = () => {
     investorName,
     selectedInvestmentSource,
     clientFullName,
+    clientPhone,
     fromDate,
     toDate,
     fromCreationDate,
@@ -870,6 +875,7 @@ const CreditPage = () => {
     if (contractNumber) count++;
     if (investorName) count++;
     if (clientFullName) count++;
+    if (clientPhone) count++;
     if (fromDate) count++;
     if (toDate) count++;
     if (fromCreationDate) count++;
@@ -905,6 +911,7 @@ const CreditPage = () => {
     investorName,
     selectedInvestmentSource,
     clientFullName,
+    clientPhone,
     fromDate,
     toDate,
     fromCreationDate,
@@ -925,6 +932,7 @@ const CreditPage = () => {
           investorName ||
           selectedInvestmentSource ||
           clientFullName ||
+          clientPhone ||
           fromDate ||
           toDate ||
           fromCreationDate ||
@@ -954,6 +962,7 @@ const CreditPage = () => {
     investorName,
     selectedInvestmentSource,
     clientFullName,
+    clientPhone,
     fromDate,
     toDate,
     fromCreationDate,
@@ -970,6 +979,7 @@ const CreditPage = () => {
     setInvestorName("");
     setSelectedInvestmentSource(null);
     setClientFullName("");
+    setClientPhone("");
     setFromDate("");
     setToDate("");
     setFromCreationDate("");
@@ -993,6 +1003,7 @@ const CreditPage = () => {
       investorName: "",
       selectedInvestmentSource: null,
       clientFullName: "",
+      clientPhone: "",
       fromDate: "",
       toDate: "",
       fromCreationDate: "",
@@ -1147,6 +1158,7 @@ const CreditPage = () => {
     return (
       contractNumber.trim() !== "" ||
       clientFullName.trim() !== "" ||
+      clientPhone.trim() !== "" ||
       investorName.trim() !== "" ||
       (creditTypeId !== null &&
         creditTypeId !== undefined &&
@@ -1155,6 +1167,7 @@ const CreditPage = () => {
   }, [
     contractNumber,
     clientFullName,
+    clientPhone,
     investorName,
     objectType,
     selectedInvestmentSource,
@@ -1194,6 +1207,7 @@ const CreditPage = () => {
       pageSize: itemsPerPage,
       name: contractNumber || undefined,
       clientFullname: clientFullName || undefined,
+      clientPhone: clientPhone || undefined,
       includeAllStates: shouldInclude ? true : undefined,
       investorNickname:
         selectedInvestmentSource?.type === "pool"
@@ -1281,6 +1295,7 @@ const CreditPage = () => {
     currentPage,
     includeAllStates,
     clientFullName,
+    clientPhone,
     investorName,
     isPageSizeReady,
     fromDate,
@@ -1332,6 +1347,7 @@ const CreditPage = () => {
     investorName,
     selectedInvestmentSource,
     clientFullName,
+    clientPhone,
     fromDate,
     toDate,
     fromCreationDate,
@@ -1481,6 +1497,7 @@ const CreditPage = () => {
       const params = {
         name: contractNumber || undefined,
         clientFullname: clientFullName || undefined,
+        clientPhone: clientPhone || undefined,
         includeAllStates: includeAllStates ? true : undefined,
         investorNickname:
           selectedInvestmentSource?.type === "pool"
@@ -1518,6 +1535,7 @@ const CreditPage = () => {
     hasActiveFilters,
     contractNumber,
     clientFullName,
+    clientPhone,
     investorName,
     objectType,
     fromDate,
@@ -1542,6 +1560,7 @@ const CreditPage = () => {
             pageSize,
             creditId: contractNumber || undefined,
             clientFullname: clientFullName || undefined,
+            clientPhone: clientPhone || undefined,
             investorNickname: investorName || undefined,
             dateFrom: fromDate ? new Date(fromDate) : undefined,
             dateTo: toDate ? new Date(toDate) : undefined,
@@ -2092,6 +2111,19 @@ const CreditPage = () => {
                 value={clientFullName}
                 onChange={(e) => {
                   setClientFullName(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </FilterSlot>
+
+            <FilterSlot>
+              <FilterSlotLabel>Номер телефона</FilterSlotLabel>
+              <CustomInput
+                inputType="text"
+                placeholder="Поиск по номеру"
+                value={clientPhone}
+                onChange={(e) => {
+                  setClientPhone(e.target.value);
                   setCurrentPage(1);
                 }}
               />
