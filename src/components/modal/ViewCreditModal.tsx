@@ -1769,6 +1769,17 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                             </StatusBadge>
                           );
                         })()}
+                      {creditData && (
+                        <PrintCreditButton
+                          type="button"
+                          title="Открыть страницу печати договора"
+                          onClick={() =>
+                            window.open(`/credits/${id}/print`, "_blank")
+                          }
+                        >
+                          Печать
+                        </PrintCreditButton>
+                      )}
                       {creditData?.terminated && (
                         <StatusBadge
                           $status="closed"
@@ -2994,6 +3005,24 @@ const HeaderActions = styled.div`
 const HeaderSubtitle = styled.div`
   font-size: 14px;
   color: rgba(80, 85, 92, 1);
+`;
+
+const PrintCreditButton = styled.button`
+  background: #fff;
+  color: #007d88;
+  border: 1px solid #99c9cd;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: #f0f9fa;
+    border-color: #007d88;
+  }
 `;
 
 const TerminateButton = styled.button<{ $variant: "terminate" | "restore" }>`

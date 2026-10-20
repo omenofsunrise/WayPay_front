@@ -42,6 +42,7 @@ import { DesktopOnlyContent } from "./components/DesktopOnly";
 import MobileAppsPage from "./pages/MobileAppsPage";
 import CreditApplicationPage from "./pages/CreditApplicationPage";
 import PublicClientPage from "./pages/PublicClientPage";
+import CreditPrintPage from "./pages/CreditPrintPage";
 import PublicInvestorReportPage from "./pages/PublicInvestorReportPage";
 
 // Путь публичной страницы клиента по токену (должен совпадать с ClientLinkModal).
@@ -464,6 +465,18 @@ function App() {
                       <AuthPage
                         onLoginSuccess={() => setIsAuthenticated(true)}
                       />
+                    )
+                  }
+                />
+
+                {/* Печать договора — без MainLayout, чтобы на бумагу шёл только документ. */}
+                <Route
+                  path="/credits/:id/print"
+                  element={
+                    isAuthenticated ? (
+                      <CreditPrintPage />
+                    ) : (
+                      <Navigate to="/auth" replace />
                     )
                   }
                 />
