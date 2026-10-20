@@ -235,49 +235,57 @@ const ActionLogPage = () => {
 
   return (
     <>
-      <FilterField>
-        <PeriodField
-          value={period}
-          placeholder="Период"
-          onChange={handlePeriodChange}
-        />
+      <ActionLogFilters>
+        <PeriodFilterSlot>
+          <PeriodField
+            value={period}
+            placeholder="Период"
+            onChange={handlePeriodChange}
+          />
+        </PeriodFilterSlot>
 
-        <CustomSelect
-          placeholder="Все объекты"
-          value={entity}
-          options={[
-            { value: "", label: "Все объекты" },
-            ...entities.map((item) => ({
-              value: item.entity,
-              label: item.name,
-            })),
-          ]}
-          onChange={(event) => {
-            setEntity(event.target.value);
-            setCurrentPage(1);
-          }}
-        />
+        <FilterSlot>
+          <CustomSelect
+            placeholder="Все объекты"
+            value={entity}
+            options={[
+              { value: "", label: "Все объекты" },
+              ...entities.map((item) => ({
+                value: item.entity,
+                label: item.name,
+              })),
+            ]}
+            onChange={(event) => {
+              setEntity(event.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </FilterSlot>
 
-        <CustomSelect
-          placeholder="Все действия"
-          value={action}
-          options={ACTION_OPTIONS}
-          onChange={(event) => {
-            setAction(event.target.value);
-            setCurrentPage(1);
-          }}
-        />
+        <FilterSlot>
+          <CustomSelect
+            placeholder="Все действия"
+            value={action}
+            options={ACTION_OPTIONS}
+            onChange={(event) => {
+              setAction(event.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </FilterSlot>
 
-        <CustomInput
-          inputType="text"
-          placeholder="Договор, клиент, сумма"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setCurrentPage(1);
-          }}
-        />
-      </FilterField>
+        <FilterSlot>
+          <CustomInput
+            inputType="text"
+            placeholder="Договор, клиент, сумма"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </FilterSlot>
+      </ActionLogFilters>
 
       {!loggingEnabled && (
         <Notice>
@@ -346,6 +354,36 @@ const ActionLogPage = () => {
     </>
   );
 };
+
+const ActionLogFilters = styled(FilterField)`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+  gap: 24px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 700px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+`;
+
+const FilterSlot = styled.div`
+  min-width: 0;
+
+  > div {
+    width: 100%;
+  }
+`;
+
+const PeriodFilterSlot = styled(FilterSlot)`
+  > div > div:first-child {
+    box-sizing: border-box;
+    height: 38px;
+  }
+`;
 
 const Notice = styled.div`
   margin-bottom: 14px;
