@@ -1,4 +1,11 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
 import { ListFilter } from "lucide-react";
 import { getCollapseFiltersOnClickSetting } from "../components/modal/SettingsModal";
 import CustomInput from "../components/ui/fields/CustomInput";
@@ -973,6 +980,46 @@ const CreditPage = () => {
     paymentMethodFilter,
     filters,
   ]);
+
+  // Договор мог попасть в выдачу по данным поручителя, а не клиента: поиск по
+  // ФИО и по номеру смотрит и на него. Без пометки непонятно, почему он нашёлся.
+  const digitsOf = (value?: string | null) => (value ?? "").replace(/\D/g, "");
+
+  const guarantorMatchNote = useCallback(
+    (credit: Credit): ReactNode => {
+      const guarantorName =
+        credit.guarantorFullname || credit.guarantor?.fullName || "";
+      const guarantorPhone =
+        credit.guarantorPhone || credit.guarantor?.phone || "";
+
+      const phone = digitsOf(clientPhone);
+      const byGuarantorPhone =
+        phone.length > 0 &&
+        digitsOf(guarantorPhone).includes(phone) &&
+        !digitsOf(credit.clientPhone).includes(phone);
+
+      const words = clientFullName
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
+      const clientName = (credit.clientFullName ?? "").toLowerCase();
+      const guarantorLower = guarantorName.toLowerCase();
+      const byGuarantorName =
+        words.length > 0 &&
+        words.every((word) => guarantorLower.includes(word)) &&
+        !words.every((word) => clientName.includes(word));
+
+      if (!byGuarantorPhone && !byGuarantorName) return null;
+
+      return (
+        <GuarantorMatch>
+          Найден по поручителю{guarantorName ? `: ${guarantorName}` : ""}
+        </GuarantorMatch>
+      );
+    },
+    [clientPhone, clientFullName]
+  );
 
   const resetFilters = useCallback(() => {
     setContractNumber("");
@@ -2404,6 +2451,7 @@ const CreditPage = () => {
             <>
               <CreditCardList
                 credits={displayedCredits}
+                getSubtitle={guarantorMatchNote}
                 fields={
                   [
                     "totalClean",
@@ -2558,6 +2606,18 @@ const CreditPage = () => {
 // Иконка-кнопка фильтра — рядом с колокольчиком/настройками в TopMenu.
 // Кнопки 36px с шагом 46px дают одинаковый зазор 10px:
 // настройки right:10 → колокол right:56 → фильтр right:102.
+const GuarantorMatch = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef6f6;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
 const FilterIconButton = styled.button<{ $hasActiveFilters: boolean }>`
   position: relative;
   z-index: 101;
