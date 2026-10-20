@@ -720,10 +720,6 @@ const CompanyPage = () => {
                 </SettingIcon>
                 <SettingText>
                   <SettingName>Журнал действий</SettingName>
-                  <SettingHint>
-                    Кто из сотрудников что создал, изменил и удалил. Виден
-                    директору, хранится три месяца.
-                  </SettingHint>
                 </SettingText>
               </SettingContent>
               <SettingControl>
