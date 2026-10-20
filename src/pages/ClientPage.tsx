@@ -65,7 +65,15 @@ const StickyFilterField = styled(FilterField)`
   top: 50px;
   z-index: 10;
   padding: 16px 0;
-  background: none;
+  background-color: rgba(249, 250, 250, 1);
+`;
+
+const StickyTitleContainer = styled(TitleContainer)`
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  background-color: rgba(249, 250, 250, 1);
+  padding: 8px 0;
 `;
 
 const ResetButton = styled.button`
@@ -560,7 +568,7 @@ const ClientPage = () => {
         />
       ) : (
         <>
-          <TitleContainer style={{ position: "sticky" }}>
+          <StickyTitleContainer>
             <TitleContainer style={{ maxWidth: "100px" }}>
               <CustomTitle>Клиенты</CustomTitle>
               {clientsData && clientsData.items.length > 0 && (
@@ -568,7 +576,7 @@ const ClientPage = () => {
               )}
             </TitleContainer>
             <StyledCountInfo total={clientsData?.totalItemsCount} />
-          </TitleContainer>
+          </StickyTitleContainer>
 
           <StickyFilterField>
             <Container
