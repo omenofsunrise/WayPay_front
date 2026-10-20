@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { CircleAlert } from "lucide-react";
 import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
@@ -9,6 +10,9 @@ import { generateAvatar, getInitials } from "../../../utils/avatarUtils";
 import { useEmployee } from "../../../api/hooks/useEmployee";
 import PhoneModalInput from "../../ui/fields/PhoneModalInput";
 import type { CustomRole } from "../../../api/types/employee";
+
+const EMPLOYEE_PHONE_EXISTS_MESSAGE =
+  "Сотрудник с таким номером телефона уже есть";
 
 type EmployeeModalProps = {
   mode: ModalMode;
@@ -117,7 +121,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
         exists &&
         (mode === "create" || (mode === "edit" && phone !== initialData.phone))
       ) {
-        return "Сотрудник с таким номером телефона уже есть";
+        return EMPLOYEE_PHONE_EXISTS_MESSAGE;
       }
     } catch (error) {
       console.error("Error checking phone:", error);
@@ -227,6 +231,11 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
     return false;
   };
+
+  const showDuplicatePhoneWarning =
+    mode === "create" &&
+    touchedFields.phone &&
+    errorMessages.phone === EMPLOYEE_PHONE_EXISTS_MESSAGE;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,7 +374,9 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                   disabled={mode === "view" || mode === "edit"}
                   hasError={touchedFields.phone && validationErrors.phone}
                   errorMessage={
-                    touchedFields.phone ? errorMessages.phone : undefined
+                    touchedFields.phone && !showDuplicatePhoneWarning
+                      ? errorMessages.phone
+                      : undefined
                   }
                 />
               </FieldContainer>
@@ -383,6 +394,21 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 />
               </FieldContainer>
             </RowContainer>
+
+            {showDuplicatePhoneWarning && (
+              <PhoneWarning role="alert" aria-live="polite">
+                <WarningIcon>
+                  <CircleAlert size={18} strokeWidth={2.2} />
+                </WarningIcon>
+                <WarningContent>
+                  <WarningTitle>Номер уже используется</WarningTitle>
+                  <WarningText>
+                    Сотрудник с таким номером телефона уже есть. Укажите другой
+                    номер.
+                  </WarningText>
+                </WarningContent>
+              </PhoneWarning>
+            )}
           </FormSection>
         </ModalLayout>
       }
@@ -429,6 +455,45 @@ const RowContainer = styled.div`
 const FieldContainer = styled.div`
   flex: 1;
   min-width: 0;
+`;
+
+const PhoneWarning = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  background: #fffbeb;
+  box-shadow: 0 1px 2px rgba(146, 64, 14, 0.06);
+`;
+
+const WarningIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #d97706;
+  margin-top: 1px;
+`;
+
+const WarningContent = styled.div`
+  min-width: 0;
+`;
+
+const WarningTitle = styled.div`
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+`;
+
+const WarningText = styled.div`
+  margin-top: 2px;
+  color: #78350f;
+  font-size: 12px;
+  line-height: 1.4;
 `;
 
 export default EmployeeModal;
