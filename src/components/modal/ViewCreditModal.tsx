@@ -807,6 +807,14 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     initialDate?: string;
   }>({ isOpen: false, ids: [] });
 
+  // Окно договора не размонтируется, а только скрывается флагом isOpen,
+  // поэтому состояние вложенных окон переезжает на следующий договор.
+  // Чистим его при закрытии и при смене договора.
+  useEffect(() => {
+    setEditDateModal({ isOpen: false, ids: [] });
+    setSelectedScheduleRows([]);
+  }, [id, isOpen]);
+
   const openEditDateModal = (rowIndex: number) => {
     if (!scheduleData?.items?.length) return;
 
