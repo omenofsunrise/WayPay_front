@@ -16,7 +16,11 @@ import ClientDossier from "../components/ui/Dossiers/ClientDossier";
 import { formatPhoneHref } from "../utils/phoneUtils";
 import { useAuth } from "../сontext/AuthContext";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
+import Pagination from "../components/ui/fields/CustomPagination";
+import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import { TitleContainer } from "./BlackCatalog";
+
+const PAGE_SIZE = 20;
 
 export const ClientCount = styled.span`
   font-size: 16px;
@@ -149,6 +153,7 @@ const ClientPage = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [phoneFilter, setPhoneFilter] = useState("");
   const [searchTriggered, setSearchTriggered] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedClientDossier, setSelectedClientDossier] =
     useState<Client | null>(null);
@@ -252,6 +257,7 @@ const ClientPage = () => {
     setNameFilter("");
     setPhoneFilter("");
     setSearchTriggered(false);
+    setCurrentPage(1);
     setHasSearched(false);
     setSortConfig({ key: null, direction: "asc" });
   }, []);
@@ -267,7 +273,7 @@ const ClientPage = () => {
 
     const shouldSearch =
       searchTriggered &&
-      (trimmedName.length >= 5 ||
+      (trimmedName.length >= 2 ||
         (trimmedPhone.replace(/\D/g, "").length >= 11 &&
           trimmedPhone.replace(/\D/g, "").length <= 15));
 
@@ -276,8 +282,8 @@ const ClientPage = () => {
     }
 
     const params: any = {
-      page: 1,
-      pageSize: 1000,
+      page: currentPage,
+      pageSize: PAGE_SIZE,
       FullName: trimmedName || undefined,
       Phone: trimmedPhone || undefined,
     };
@@ -289,7 +295,7 @@ const ClientPage = () => {
 
     await getClients(params);
     setHasSearched(true);
-  }, [nameFilter, phoneFilter, sortConfig, getClients, searchTriggered]);
+  }, [nameFilter, phoneFilter, sortConfig, getClients, searchTriggered, currentPage]);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -366,6 +372,7 @@ const ClientPage = () => {
   };
 
   const handleSearch = () => {
+    setCurrentPage(1);
     setSearchTriggered(true);
   };
 
@@ -524,6 +531,18 @@ const ClientPage = () => {
             onTouchCancel={handleCardTouchEnd}
           />
         ))}
+
+        {(clientsData?.totalItemsCount || 0) > PAGE_SIZE && (
+          <PaginationLayout>
+            <CountInfoTitle total={clientsData?.totalItemsCount || 0} />
+            <Pagination
+              total={clientsData?.totalItemsCount || 0}
+              current={currentPage}
+              onChange={setCurrentPage}
+              itemsPerPage={PAGE_SIZE}
+            />
+          </PaginationLayout>
+        )}
       </div>
     );
   };
