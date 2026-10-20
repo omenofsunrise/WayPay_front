@@ -62,15 +62,15 @@ const EmptyStateText = styled.p`
 
 const StickyFilterField = styled(FilterField)`
   position: sticky;
-  top: 50px;
+  top: 0;
   z-index: 10;
   padding: 16px 0;
-  background: none;
+  background-color: rgba(249, 250, 250, 1);
 `;
 
 const ResetButton = styled.button`
   background: none;
-  border: 10px;
+  border: none;
   color: black;
   cursor: pointer;
   font-size: 14px;
@@ -78,7 +78,8 @@ const ResetButton = styled.button`
   margin-left: 16px;
   height: 40px;
   padding: 0;
-  width: 100px;
+  min-width: 130px;
+  white-space: nowrap;
 
   &:hover {
     color: #374151;
