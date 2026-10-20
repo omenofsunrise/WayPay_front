@@ -111,6 +111,7 @@ export interface CreditParams extends PaginationParams {
   percentsIncomeTo?: number;
   investorNickname?: string;
   clientFullname?: string;
+  clientPhone?: string;
   isFavourite?: boolean;
   isActive?: boolean;
   clientId?: number;
