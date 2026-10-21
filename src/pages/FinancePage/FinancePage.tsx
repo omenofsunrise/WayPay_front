@@ -19,13 +19,6 @@ const FinancePage = () => {
         localStorage.setItem('financeActiveTab', activeTab);
     }, [activeTab]);
 
-    // Вкладку могли скрыть, пока она была выбрана: переводим на первую доступную.
-    useEffect(() => {
-        if (tabs.length > 0 && !tabs.some((tab) => tab.id === activeTab)) {
-            setActiveTab(tabs[0].id);
-        }
-    }, [tabs, activeTab]);
-
     // Запрещающие права: у кого права нет — видит вкладку, как и раньше.
     const tabs: Tab[] = [
         { id: "Бюджет", label: "Бюджет", hidden: !denyPermission('FORBID_FINANCE_BUDGET') },
@@ -38,6 +31,12 @@ const FinancePage = () => {
         && denyPermission('FORBID_FINANCE_EMPLOYEES')) {
         tabs.push({ id: "Сотрудники", label: "Сотрудники" });
     }
+
+    useEffect(() => {
+        if (tabs.length > 0 && !tabs.some((tab) => tab.id === activeTab)) {
+            setActiveTab(tabs[0].id);
+        }
+    }, [tabs, activeTab]);
 
     const renderTabContent = () => {
         switch (activeTab) {
