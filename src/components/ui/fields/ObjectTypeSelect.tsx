@@ -9,6 +9,7 @@ import BaseModal from "../../modal/BASE/modalCRUBase";
 import Pagination from "./CustomPagination";
 import DarkCyanButton from "../Buttons/DarkCyanButton";
 import CustomInput from "./CustomInput";
+import { extractErrorMessage } from "../../../api/utils/errorMessage";
 
 interface ObjectTypeSelectProps {
   value: string;
@@ -260,7 +261,7 @@ const ObjectTypeSelect = ({
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (window.confirm(`Вы уверены, что хотите удалить папку "${name}"?`)) {
+    if (window.confirm(`Вы уверены, что хотите удалить вкладку "${name}"?`)) {
       try {
         await deleteObjectType(id);
         // Обновляем данные после удаления
@@ -269,9 +270,12 @@ const ObjectTypeSelect = ({
         } else {
           fetchObjectTypes(1, itemsPerPage);
         }
-      } catch {
+      } catch (error) {
+        // Раньше на любой отказ показывался один и тот же текст про договоры,
+        // и настоящая причина — нет прав, вкладка не найдена, ошибка сервера —
+        // не доходила до пользователя.
         window.alert(
-          "Невозможно удалить категорию к которой привязаны договоры"
+          extractErrorMessage(error, "Не удалось удалить вкладку")
         );
       }
     }
