@@ -810,19 +810,26 @@ const ClientModal: React.FC<ClientModalProps> = ({
             </InputContainer>
           </InputRow>
 
-          <ModalInfoTitle>Дополнительные данные</ModalInfoTitle>
-          <InputRow>
-            <InputLabel>WhatsApp:</InputLabel>
-            <InputContainer>
-              <PhoneModalInput
-                name="secondPhone"
-                placeholder="WhatsApp"
-                value={formData.secondPhone || ""}
-                onChange={handleInputChange}
-                disabled={mode === "view"}
-              />
-            </InputContainer>
-          </InputRow>
+          {/* При добавлении дополнительные данные не нужны: номер WhatsApp
+              заполняют позже, уже у созданного клиента. Контакты ниже и так
+              показываются только после создания. */}
+          {mode !== "create" && (
+            <>
+              <ModalInfoTitle>Дополнительные данные</ModalInfoTitle>
+              <InputRow>
+                <InputLabel>WhatsApp:</InputLabel>
+                <InputContainer>
+                  <PhoneModalInput
+                    name="secondPhone"
+                    placeholder="WhatsApp"
+                    value={formData.secondPhone || ""}
+                    onChange={handleInputChange}
+                    disabled={mode === "view"}
+                  />
+                </InputContainer>
+              </InputRow>
+            </>
+          )}
 
           {initialData.id > 0 && mode !== "create" && (
             <InputRow style={{ alignItems: "flex-start" }}>
