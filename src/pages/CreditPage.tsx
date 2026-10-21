@@ -74,6 +74,7 @@ import {
 } from "../utils/listPosition";
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
+import ConfirmationModal from "../components/modal/ConfirmationModal";
 
 type ShareOption = "contractData" | "paymentHistory" | "paymentSchedule";
 
@@ -333,6 +334,9 @@ const CreditPage = () => {
   const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
   const [customTabs, setCustomTabs] = useState<ObjectType[]>([]);
+  // Текст отказа при удалении вкладки. Раньше он уходил в alert, и сотрудник
+  // видел общее «Произошла ошибка» — причину приходилось искать в Network.
+  const [tabDeleteError, setTabDeleteError] = useState<string | null>(null);
   // Папки-категории (entityType "credit") — те же, что в фильтре «Папка».
   // Нужны, чтобы переносить договор не только в кастомные вкладки.
   const [creditFolders, setCreditFolders] = useState<ObjectType[]>([]);
@@ -710,9 +714,9 @@ const CreditPage = () => {
         alert("Вкладка успешно удалена");
       } catch (error) {
         console.error("Ошибка при удалении вкладки:", error);
-        // Раньше здесь был общий текст, и настоящая причина — например,
-        // что на вкладку ссылаются договоры — до пользователя не доходила.
-        alert(extractErrorMessage(error, "Не удалось удалить вкладку"));
+        setTabDeleteError(
+          extractErrorMessage(error, "Не удалось удалить вкладку")
+        );
       }
     },
     [deleteObjectTypeApi, loadCustomTabs, activeTab]
@@ -2657,6 +2661,14 @@ const CreditPage = () => {
         entityType="creditTab"
         maxTabs={5}
         currentTabCount={customTabs.length}
+      />
+
+      <ConfirmationModal
+        isOpen={tabDeleteError !== null}
+        title="Вкладку нельзя удалить"
+        message={tabDeleteError ?? ""}
+        confirmText="Понятно"
+        onConfirm={() => setTabDeleteError(null)}
       />
 
       <EditObjectTypeModal
