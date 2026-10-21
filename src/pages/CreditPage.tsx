@@ -155,6 +155,11 @@ const PAYMENT_METHOD_OPTIONS: {
   { value: "transfer", label: "Переводом" },
 ];
 
+// Краткая выгрузка договоров: только ID, дата, ФИО, телефон, остаток и
+// просрочка. Запрошена отдельной компанией, остальным не нужна, поэтому
+// кнопка показывается по идентификатору компании.
+const SHORT_EXPORT_COMPANY_IDS = [59]; // FIN MUSLIM
+
 const SORT_OPTIONS: { key: string | null; label: string }[] = [
   { key: null, label: "По умолчанию" },
   { key: "debt", label: "Сумма просрочки" },
@@ -1654,6 +1659,57 @@ const CreditPage = () => {
     }
   };
 
+  // Та же выборка, что у обычной выгрузки, но столбцов шесть.
+  const handleShortExport = async () => {
+    try {
+      await exportData({
+        fetchData: async (page, pageSize) => {
+          const params = {
+            page,
+            pageSize,
+            creditId: contractNumber || undefined,
+            clientFullname: clientFullName || undefined,
+            clientPhone: clientPhone || undefined,
+            investorNickname: investorName || undefined,
+            dateFrom: fromDate ? new Date(fromDate) : undefined,
+            dateTo: toDate ? new Date(toDate) : undefined,
+            creditTypeId: creditTypeId || undefined,
+            sortBy: sortConfig.key ?? undefined,
+            sortDirection: sortConfig.direction,
+            ...filters,
+          };
+
+          const result = await creditService.getCredits(params);
+          return {
+            items: Array.isArray(result.items) ? result.items : [],
+            totalCount: result.totalCount || 0,
+          };
+        },
+        fileName: "credits_export_short",
+        transformData: (credit) => {
+          const creditDate =
+            typeof credit.creditDate === "string"
+              ? new Date(credit.creditDate)
+              : credit.creditDate;
+
+          return {
+            ID: credit.id,
+            "Дата договора": creditDate
+              ? creditDate.toLocaleDateString()
+              : "Нет данных",
+            "ФИО покупателя": credit.clientFullName,
+            Телефон: credit.clientPhone || "Нет данных",
+            Остаток: formatMoney(credit.rest?.toString() || "0"),
+            Просрочка: formatMoney(credit.debt?.toString() || "0"),
+          };
+        },
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Произошла ошибка при экспорте. Пожалуйста, попробуйте еще раз.");
+    }
+  };
+
   // Экспорт конкретного набора договоров (для действий по строке / по выбранным).
   const exportCredits = async (credits: Credit[]) => {
     if (credits.length === 0) return;
@@ -2356,6 +2412,18 @@ const CreditPage = () => {
             >
               Экспорт по фильтру
             </ExportButton>
+
+            {SHORT_EXPORT_COMPANY_IDS.includes(
+              authInfo?.employee.companyId ?? 0
+            ) && (
+              <ExportButton
+                onClick={handleShortExport}
+                isExporting={isExporting}
+                exportProgress={exportProgress}
+              >
+                Краткая выгрузка
+              </ExportButton>
+            )}
           </FilterModalFooter>
 
           {creditAcceptance && hasPermission("MANAGE_ACCOUNTING", true) && (
