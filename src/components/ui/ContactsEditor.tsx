@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { FaPlus } from "react-icons/fa";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import StarOutlineOutlinedIcon from "@mui/icons-material/StarOutlineOutlined";
@@ -375,7 +374,7 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
               title="Добавить контакт"
               aria-label="Добавить контакт"
             >
-              <FaPlus size={12} />
+              Добавить контакт
             </AddButton>
           )}
         </>
@@ -644,22 +643,25 @@ const MainBadge = styled.span`
 `;
 
 const AddButton = styled.button`
-  align-self: flex-end;
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
-  border: none;
-  background: #007d88;
-  color: #fff;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #007d88;
+  background: #fff;
+  color: #007d88;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s, color 0.15s;
 
   &:hover:not(:disabled) {
-    background: #006670;
+    background: #007d88;
+    border-color: #007d88;
+    color: #fff;
   }
 
   &:disabled {
