@@ -58,6 +58,7 @@ import CreateObjectTypeModal from "../components/modal/CrudInherited/CreateObjec
 import EditButton from "../components/ui/Buttons/EditButton";
 import DeleteButton from "../components/ui/Buttons/DeleteButton";
 import EditObjectTypeModal from "../components/modal/CrudInherited/EditObjectTypeModal";
+import ConfirmationModal from "../components/modal/ConfirmationModal";
 import type { ContextMenuItem } from "../components/modal/ContextMenu";
 import {
   createWhatsAppMessageWithoutPhone,
@@ -332,6 +333,10 @@ const CreditPage = () => {
   const [isCreateTabModalOpen, setIsCreateTabModalOpen] = useState(false);
   const [isEditTabModalOpen, setIsEditTabModalOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<ObjectType | null>(null);
+  const [tabPendingDeletion, setTabPendingDeletion] =
+    useState<ObjectType | null>(null);
+  const [isDeletingTab, setIsDeletingTab] = useState(false);
+  const [deleteTabError, setDeleteTabError] = useState<string | null>(null);
   const [customTabs, setCustomTabs] = useState<ObjectType[]>([]);
   // Папки-категории (entityType "credit") — те же, что в фильтре «Папка».
   // Нужны, чтобы переносить договор не только в кастомные вкладки.
@@ -630,9 +635,8 @@ const CreditPage = () => {
             <DeleteButton
               onClick={(e) => {
                 e.stopPropagation();
-                if (window.confirm(`Удалить вкладку "${tab.name}"?`)) {
-                  handleDeleteTab(tab.id);
-                }
+                setDeleteTabError(null);
+                setTabPendingDeletion(tab);
               }}
               size={25}
             />
@@ -697,24 +701,37 @@ const CreditPage = () => {
     [editingTab, updateObjectType, loadCustomTabs]
   );
 
-  const handleDeleteTab = useCallback(
-    async (tabId: number) => {
-      try {
-        await deleteObjectTypeApi(tabId);
-        await loadCustomTabs();
+  const handleDeleteTab = useCallback(async () => {
+    if (!tabPendingDeletion || isDeletingTab) return;
 
-        if (activeTab === `tab-${tabId}`) {
-          setActiveTab("all");
-        }
+    const tabId = tabPendingDeletion.id;
+    setIsDeletingTab(true);
+    setDeleteTabError(null);
 
-        alert("Вкладка успешно удалена");
-      } catch (error) {
-        console.error("Ошибка при удалении вкладки:", error);
-        alert("Произошла ошибка при удалении вкладки");
+    try {
+      await deleteObjectTypeApi(tabId);
+      await loadCustomTabs();
+
+      if (activeTab === `tab-${tabId}`) {
+        setActiveTab("all");
       }
-    },
-    [deleteObjectTypeApi, loadCustomTabs, activeTab]
-  );
+
+      setTabPendingDeletion(null);
+    } catch (error) {
+      console.error("Ошибка при удалении вкладки:", error);
+      setDeleteTabError(
+        extractErrorMessage(error, "Не удалось удалить вкладку")
+      );
+    } finally {
+      setIsDeletingTab(false);
+    }
+  }, [
+    tabPendingDeletion,
+    isDeletingTab,
+    deleteObjectTypeApi,
+    loadCustomTabs,
+    activeTab,
+  ]);
 
   useEffect(() => {
     if (id) {
@@ -2666,6 +2683,22 @@ const CreditPage = () => {
         onSubmit={handleEditTab}
         initialData={editingTab}
         entityType="creditTab"
+      />
+
+      <ConfirmationModal
+        isOpen={tabPendingDeletion !== null}
+        title="Удаление вкладки"
+        message={`Удалить вкладку «${tabPendingDeletion?.name ?? ""}»? Это действие нельзя отменить.`}
+        confirmText="Удалить"
+        cancelText="Отмена"
+        confirmColor="#dc2626"
+        isLoading={isDeletingTab}
+        error={deleteTabError}
+        onConfirm={handleDeleteTab}
+        onCancel={() => {
+          setTabPendingDeletion(null);
+          setDeleteTabError(null);
+        }}
       />
     </FilterAwarePageLayout>
   );
