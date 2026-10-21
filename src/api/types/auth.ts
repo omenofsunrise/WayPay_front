@@ -13,7 +13,14 @@ export type Permission =
   // Скрытие сведений в платежах. Запрещающие: у кого права нет — видит всё.
   | "FORBID_PAYMENT_INVESTOR"
   | "FORBID_PAYMENT_EMPLOYEE"
-  | "FORBID_PAYMENT_TYPE";
+  | "FORBID_PAYMENT_TYPE"
+  // Скрытие разделов финансов и денежных итогов. Тоже запрещающие.
+  | "FORBID_FINANCE_BUDGET"
+  | "FORBID_FINANCE_PAYMENTS"
+  | "FORBID_FINANCE_CARDS"
+  | "FORBID_FINANCE_EMPLOYEES"
+  | "FORBID_TOTAL_INCOME"
+  | "FORBID_TOTAL_PAYOUTS";
 
 export type Role = "админ" | "сотрудник" | "директор" | "суперадмин";
 
