@@ -1,5 +1,12 @@
 import type { PaginatedResponse, PaginationParams } from "./common";
 
+export const PayoutSource = {
+  Income: 1,
+  Investment: 2,
+} as const;
+
+export type PayoutSource = (typeof PayoutSource)[keyof typeof PayoutSource];
+
 export interface BudgetIncome {
   id: number;
   amount: number;
@@ -21,6 +28,7 @@ export interface CreateBudgetIncomeDto {
   investorId?: number;
   investorPoolId?: number;
   companyShare?: number;
+  payoutSource: PayoutSource;
 }
 
 export interface CreateBudgetOutcomeDto {

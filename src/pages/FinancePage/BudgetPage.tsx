@@ -22,6 +22,7 @@ import BudgetTemplatesModal from "../../components/modal/CrudInherited/BudgetTem
 import { BudgetService } from "../../api/services/budgetService";
 import { formatDate } from "../../utils/dateFormatter";
 import * as XLSX from "xlsx";
+import { PayoutSource, type CreateBudgetIncomeDto } from "../../api/types/budget";
 
 interface Investor {
   id: number;
@@ -97,6 +98,7 @@ const BudgetPage = () => {
     investorId: "",
     investorPoolId: "",
     companyShare: 100,
+    payoutSource: PayoutSource.Income
   });
   const [newOutcome, setNewOutcome] = useState({
     amount: "",
@@ -413,10 +415,11 @@ const BudgetPage = () => {
 
   const handleAddIncome = async () => {
     try {
-      const incomeData: any = {
+      const incomeData: CreateBudgetIncomeDto = {
         amount: parseFloat(newIncome.amount),
         comment: newIncome.comment,
         companyShare: newIncome.companyShare,
+        payoutSource: newIncome.payoutSource,
       };
 
       if (selectedEntity?.type === "investor" && newIncome.investorId) {
@@ -438,11 +441,13 @@ const BudgetPage = () => {
           investorId: "",
           investorPoolId: "",
           companyShare: 100,
+          payoutSource: PayoutSource.Income,
         });
         setSelectedEntity(null);
         await fetchData();
         return true;
       }
+      return false;
     } catch (error) {
       console.error("Error adding income:", error);
       alert("Произошла ошибка при добавлении прихода");

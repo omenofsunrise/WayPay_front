@@ -1,9 +1,10 @@
 import React from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
+import CustomSelect from '../../ui/fields/CustomSelect';
 import EntitySelectContainer from '../../ui/Layouts/EntitySelectContainer';
-import InvestorSelectModal from './InvestorSelectModal';
 import { ProgressBar } from '../../ui/ProgressBar';
+import { PayoutSource } from '../../../api/types/budget';
 import styled from 'styled-components';
 
 interface Investor {
@@ -40,6 +41,7 @@ interface IncomeModalProps {
         investorId: string;
         investorPoolId: string;
         companyShare: number;
+        payoutSource: PayoutSource;
     };
     setNewIncome: React.Dispatch<React.SetStateAction<{
         amount: string;
@@ -47,11 +49,17 @@ interface IncomeModalProps {
         investorId: string;
         investorPoolId: string;
         companyShare: number;
+        payoutSource: PayoutSource;
     }>>;
     selectedEntity: SelectedEntity | null;
     onEntitySelect: () => void;
     onEntityClear: () => void;
 }
+
+const payoutSourceOptions = [
+    { value: String(PayoutSource.Income), label: 'Доход' },
+    { value: String(PayoutSource.Investment), label: 'Инвестиция' },
+];
 
 const IncomeModal: React.FC<IncomeModalProps> = ({
     show,
@@ -76,14 +84,11 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
             } else {
                 setDisplayAmount('');
             }
-            
-            // Устанавливаем распределение на основе выбранной сущности
+
             if (selectedEntity?.type === 'investor' && !selectedEntity.isCompany) {
-                // Для инвесторов устанавливаем распределение из настроек или по умолчанию
                 setCompanyPercentage(newIncome.companyShare.toString());
                 setInvestorPercentage((100 - newIncome.companyShare).toString());
             } else {
-                // Для пулов и компании-инвесторов 100% компании
                 setCompanyPercentage('100');
                 setInvestorPercentage('0');
                 setNewIncome(prev => ({...prev, companyShare: 100}));
@@ -97,13 +102,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        
         const cleanedValue = value.replace(/[^\d,.]/g, '');
-        
         const numericValue = cleanedValue.replace(/[.,]/g, '');
-        
         setNewIncome(prev => ({...prev, amount: numericValue}));
-        
+
         if (numericValue) {
             const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
             setDisplayAmount(formatted);
@@ -114,7 +116,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
     const handleCompanyPercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (selectedEntity?.type !== 'investor' || selectedEntity.isCompany) return;
-        
         const value = e.target.value.replace(/[^0-9]/g, '');
         if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 100)) {
             setCompanyPercentage(value);
@@ -129,7 +130,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
     const handleInvestorPercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (selectedEntity?.type !== 'investor' || selectedEntity.isCompany) return;
-        
         const value = e.target.value.replace(/[^0-9]/g, '');
         if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 100)) {
             setInvestorPercentage(value);
@@ -144,7 +144,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
     const handleProgressChange = (percentage: number) => {
         if (selectedEntity?.type !== 'investor' || selectedEntity.isCompany) return;
-        
         setCompanyPercentage(percentage.toString());
         setInvestorPercentage((100 - percentage).toString());
         setNewIncome(prev => ({...prev, companyShare: percentage}));
@@ -152,13 +151,12 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!newIncome.amount || (!newIncome.investorId && !newIncome.investorPoolId)) {
             alert('Пожалуйста, заполните все обязательные поля');
             return;
         }
 
-        // Проверка баланса только для инвесторов
         if (selectedEntity?.type === 'investor') {
             const amountNumber = parseInt(newIncome.amount, 10);
             if (selectedEntity.balance && amountNumber > selectedEntity.balance) {
@@ -176,12 +174,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
     const getEntityDisplayName = () => {
         if (!selectedEntity) return '';
-        
         if (selectedEntity.type === 'investor') {
             return selectedEntity.nickname || selectedEntity.fullName || '';
-        } else {
-            return selectedEntity.name || '';
         }
+        return selectedEntity.name || '';
     };
 
     const getEntityTypeLabel = () => {
@@ -190,11 +186,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     };
 
     const showDistributionSection = selectedEntity?.type === 'investor' && !selectedEntity.isCompany;
-    
-    // Проверка превышения баланса
+
     const amountNumber = parseInt(newIncome.amount, 10) || 0;
-    const isAmountExceedingBalance = selectedEntity?.type === 'investor' && 
-                                     selectedEntity.balance && 
+    const isAmountExceedingBalance = selectedEntity?.type === 'investor' &&
+                                     selectedEntity.balance &&
                                      amountNumber > selectedEntity.balance;
 
     if (!show) return null;
@@ -209,6 +204,18 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                 isSaveDisabled={!newIncome.amount || !selectedEntity || isAmountExceedingBalance}
             >
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
+                    <CustomSelect
+                        placeholder="Источник выплаты"
+                        value={String(newIncome.payoutSource ?? PayoutSource.Income)}
+                        onChange={(e) =>
+                            setNewIncome((prev) => ({
+                                ...prev,
+                                payoutSource: Number(e.target.value) as PayoutSource,
+                            }))
+                        }
+                        options={payoutSourceOptions}
+                    />
+
                     <div>
                         <CustomInput
                             type="text"
@@ -219,7 +226,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                             required
                             hasError={isAmountExceedingBalance}
                         />
-                        
+
                         {selectedEntity?.type === 'investor' && selectedEntity.balance !== undefined && (
                             <BalanceInfo>
                                 <BalanceLabel>Доступно для вывода:</BalanceLabel>
@@ -239,7 +246,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                             </BalanceInfo>
                         )}
                     </div>
-                    
+
                     <div style={{ margin: "0 10px", display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <EntitySelectContainer
                             mode="create"
@@ -257,7 +264,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                             <PercentageSubtitle>
                                 Укажите, как распределить сумму между компанией и инвестором
                             </PercentageSubtitle>
-                            
+
                             <PercentageInputsContainer>
                                 <PercentageInputGroup>
                                     <PercentageLabel>Компания (%)</PercentageLabel>
@@ -271,13 +278,11 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                                     />
                                     <PercentageAmount>
                                         {amountNumber > 0 ? (
-                                            <>
-                                                {formatMoney(Math.round(amountNumber * parseInt(companyPercentage) / 100).toString())} руб.
-                                            </>
+                                            <>{formatMoney(Math.round(amountNumber * parseInt(companyPercentage) / 100).toString())} руб.</>
                                         ) : '—'}
                                     </PercentageAmount>
                                 </PercentageInputGroup>
-                                
+
                                 <PercentageInputGroup>
                                     <PercentageLabel>Инвестор (%)</PercentageLabel>
                                     <CustomInput
@@ -290,9 +295,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                                     />
                                     <PercentageAmount>
                                         {amountNumber > 0 ? (
-                                            <>
-                                                {formatMoney(Math.round(amountNumber * parseInt(investorPercentage) / 100).toString())} руб.
-                                            </>
+                                            <>{formatMoney(Math.round(amountNumber * parseInt(investorPercentage) / 100).toString())} руб.</>
                                         ) : '—'}
                                     </PercentageAmount>
                                 </PercentageInputGroup>
@@ -309,7 +312,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                                         Инвестор: {investorPercentage}%
                                     </ProgressBarLabel>
                                 </ProgressBarLabels>
-                                
+
                                 <ProgressBar
                                     percentage={parseInt(companyPercentage) || 0}
                                     onChange={handleProgressChange}
@@ -336,7 +339,6 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     );
 };
 
-// Вспомогательная функция для форматирования денег
 const formatMoney = (amount: string) => {
     const num = parseInt(amount) || 0;
     return new Intl.NumberFormat('ru-RU').format(num);
