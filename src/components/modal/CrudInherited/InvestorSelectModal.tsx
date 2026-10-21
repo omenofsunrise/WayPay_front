@@ -25,6 +25,7 @@ interface InvestorSelectModalProps {
     investorPie?: number;
     pie?: number;
     investmentAmount?: number;
+    currentIncome?: number;
     balance?: number;
     type: 'investor' | 'pool';
   }) => void;
@@ -60,6 +61,7 @@ const InvestorSelectModal = ({
     investmentAmount?: number;
     balance?: number;
     isCompany: boolean;
+    currentIncome?: number;
     isCompanyPool?: boolean;
     type: 'investor' | 'pool';
   } | null>(null);
@@ -178,6 +180,7 @@ const InvestorSelectModal = ({
           investmentAmount: investor.investmentAmount,
           balance: investor.balance,
           isCompany: investor.isCompany,
+          currentIncome: investor.currentIncome,
           type: 'investor'
         });
       }

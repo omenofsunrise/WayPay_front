@@ -74,6 +74,8 @@ interface SelectedEntity {
   phoneNumber?: string;
   balance?: number;
   isCompany?: boolean;
+  currentIncome?: number;
+  investmentAmount?: number;
 }
 
 const BudgetPage = () => {
