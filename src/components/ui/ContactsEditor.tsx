@@ -310,18 +310,8 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
         <>
           {isAdding ? (
             <AddCard>
-              <AddCardHeader>
-                <div>
-                  <AddCardTitle>Новый контакт</AddCardTitle>
-                  <AddCardHint>
-                    Выберите способ связи и укажите контактные данные
-                  </AddCardHint>
-                </div>
-              </AddCardHeader>
-
               <AddFields>
                 <FieldGroup>
-                  <FieldLabel>Способ связи</FieldLabel>
                   <SelectBox>
                     <CustomSelect<ContactType>
                       options={CONTACT_TYPE_OPTIONS}
@@ -337,7 +327,6 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
                 </FieldGroup>
 
                 <FieldGroup>
-                  <FieldLabel>Контактные данные</FieldLabel>
                   {isPhoneType(newType) ? (
                     <PhoneModalInput
                       name="new-contact"
@@ -355,37 +344,38 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
                     />
                   )}
                 </FieldGroup>
-              </AddFields>
 
-              <ActionRow>
-                <PrimaryButton
-                  type="button"
-                  onClick={handleAdd}
-                  disabled={busy || !newValue.trim()}
-                >
-                  Сохранить
-                </PrimaryButton>
-                <SecondaryButton
-                  type="button"
-                  onClick={() => {
-                    setIsAdding(false);
-                    setNewValue("");
-                    setNewType("WhatsAppPhone");
-                  }}
-                  disabled={busy}
-                >
-                  Отмена
-                </SecondaryButton>
-              </ActionRow>
+                <ActionRow>
+                  <PrimaryButton
+                    type="button"
+                    onClick={handleAdd}
+                    disabled={busy || !newValue.trim()}
+                  >
+                    Сохранить
+                  </PrimaryButton>
+                  <SecondaryButton
+                    type="button"
+                    onClick={() => {
+                      setIsAdding(false);
+                      setNewValue("");
+                      setNewType("WhatsAppPhone");
+                    }}
+                    disabled={busy}
+                  >
+                    Отмена
+                  </SecondaryButton>
+                </ActionRow>
+              </AddFields>
             </AddCard>
           ) : (
             <AddButton
               type="button"
               onClick={() => setIsAdding(true)}
               disabled={busy || !clientId}
+              title="Добавить контакт"
+              aria-label="Добавить контакт"
             >
-              <FaPlus size={10} />
-              Добавить контакт
+              <FaPlus size={12} />
             </AddButton>
           )}
         </>
@@ -397,9 +387,8 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  max-width: 920px;
 `;
 
 const EmptyText = styled.div`
@@ -410,12 +399,7 @@ const EmptyText = styled.div`
 
 const ErrorText = styled.div`
   color: #dc2626;
-  font-size: 13px;
-  line-height: 18px;
-  padding: 10px 12px;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  background: #fef2f2;
+  font-size: 12px;
 `;
 
 const List = styled.div`
@@ -430,27 +414,17 @@ const ItemCard = styled.div`
   gap: 10px;
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-
-  &:hover {
-    border-color: #d1d5db;
-    box-shadow: 0 2px 8px rgba(17, 24, 39, 0.04);
-  }
 `;
 
 const AddCard = styled(ItemCard)`
-  gap: 18px;
-  padding: 18px;
-  border-color: rgba(0, 125, 136, 0.28);
-  background: linear-gradient(135deg, rgba(0, 125, 136, 0.055), #ffffff 70%);
-  box-shadow: 0 8px 24px rgba(0, 77, 85, 0.07);
-
-  &:hover {
-    border-color: rgba(0, 125, 136, 0.42);
-    box-shadow: 0 8px 24px rgba(0, 77, 85, 0.07);
-  }
+  width: min(100%, 880px);
+  box-sizing: border-box;
+  padding: 12px;
+  border-style: dashed;
+  border-color: #007d88;
+  background: rgba(0, 125, 136, 0.03);
 `;
 
 const TopRow = styled.div`
@@ -496,50 +470,31 @@ const ActionRow = styled.div`
   }
 `;
 
-const AddCardHeader = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-`;
-
-const AddCardTitle = styled.div`
-  color: #1f2937;
-  font-size: 15px;
-  line-height: 21px;
-  font-weight: 600;
-`;
-
-const AddCardHint = styled.div`
-  margin-top: 3px;
-  color: #6b7280;
-  font-size: 12px;
-  line-height: 17px;
-`;
-
 const AddFields = styled.div`
   display: grid;
-  grid-template-columns: minmax(180px, 0.7fr) minmax(260px, 1.3fr);
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: 180px minmax(260px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
 
-  @media (max-width: 640px) {
+  @media (max-width: 760px) {
+    grid-template-columns: 160px minmax(0, 1fr);
+
+    ${ActionRow} {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 520px) {
     grid-template-columns: 1fr;
+
+    ${ActionRow} {
+      grid-column: auto;
+    }
   }
 `;
 
-const FieldGroup = styled.label`
-  display: flex;
+const FieldGroup = styled.div`
   min-width: 0;
-  flex-direction: column;
-  gap: 7px;
-`;
-
-const FieldLabel = styled.span`
-  color: #4b5563;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
 `;
 
 const TypeBadge = styled.span<{ $type: ContactType }>`
@@ -604,6 +559,7 @@ const PrimaryButton = styled.button`
 
   &:hover:not(:disabled) {
     background: #006670;
+    border-color: transparent;
   }
 
   &:disabled {
@@ -688,23 +644,22 @@ const MainBadge = styled.span`
 `;
 
 const AddButton = styled.button`
-  align-self: flex-start;
+  align-self: flex-end;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 125, 136, 0.3);
-  background: rgba(0, 125, 136, 0.06);
-  color: #007d88;
-  font-size: 13px;
-  font-weight: 500;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: #007d88;
+  color: #fff;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color 0.15s;
 
   &:hover:not(:disabled) {
-    background: rgba(0, 125, 136, 0.11);
-    border-color: rgba(0, 125, 136, 0.5);
+    background: #006670;
   }
 
   &:disabled {
