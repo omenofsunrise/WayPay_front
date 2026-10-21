@@ -79,6 +79,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
                 fullName: updatedData.fullName,
                 address: updatedData.address,
                 phone: updatedData.phone,
+                secondPhone: updatedData.secondPhone ?? "",
             });
             if (employee) {
                 employee.fullName = result.fullName;
@@ -300,6 +301,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
                         address: employee.address || '',
                         role: employee.role,
                         phone: employee.phone,
+                        secondPhone: employee.secondPhone,
                         minSurcharge: employee.minSurcharge,
                         avatar: employee.photoPath,
                         id: employee.id,

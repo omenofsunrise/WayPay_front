@@ -343,6 +343,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
         const createdEmployee = await createEmployee({
           fullName: employeeData.fullName || "",
           phone: employeeData.phone || "",
+          secondPhone: employeeData.secondPhone || undefined,
           address: employeeData.address,
           minSurcharge: employeeData.minSurcharge || 0,
           role: employeeData.role || "сотрудник",
@@ -364,6 +365,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
           fullName: employeeData.fullName || "",
           address: employeeData.address,
           phone: employeeData.phone || "",
+          secondPhone: employeeData.secondPhone ?? "",
         });
         message.success("Данные сотрудника обновлены");
       }

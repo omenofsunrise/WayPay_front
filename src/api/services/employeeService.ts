@@ -39,6 +39,7 @@ class EmployeeService {
   static async createEmployee(employeeData: {
     fullName: string;
     phone: string;
+    secondPhone?: string;
     address?: string;
     minSurcharge?: number;
     role?: string;
@@ -48,6 +49,9 @@ class EmployeeService {
       const formData = new FormData();
       formData.append("FullName", employeeData.fullName);
       formData.append("Phone", employeeData.phone);
+      if (employeeData.secondPhone) {
+        formData.append("SecondPhone", employeeData.secondPhone);
+      }
       if (employeeData.address) {
         formData.append("Address", employeeData.address);
       }
@@ -76,6 +80,8 @@ class EmployeeService {
     id: number;
     fullName: string;
     address?: string;
+    /** Пустая строка убирает второй номер, undefined оставляет как было. */
+    secondPhone?: string;
   }): Promise<Employee> {
     try {
       const formData = new FormData();
@@ -83,6 +89,9 @@ class EmployeeService {
       formData.append("FullName", employeeData.fullName);
       if (employeeData.address) {
         formData.append("Address", employeeData.address);
+      }
+      if (employeeData.secondPhone !== undefined) {
+        formData.append("SecondPhone", employeeData.secondPhone);
       }
 
       const response = await apiClient.put("/Employee", formData, {

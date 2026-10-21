@@ -681,6 +681,7 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         const created = await createEmployee({
           fullName: employeeData.fullName || "",
           phone: employeeData.phone || "",
+          secondPhone: employeeData.secondPhone || undefined,
           address: employeeData.address,
           minSurcharge: employeeData.minSurcharge || 0,
           role:
@@ -704,6 +705,8 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
           fullName: employeeData.fullName || "",
           address: employeeData.address,
           phone: employeeData.phone || "",
+          // Пустая строка убирает второй номер, поэтому передаём как есть.
+          secondPhone: employeeData.secondPhone ?? "",
         });
         addToast("success", "Данные сотрудника обновлены");
       }

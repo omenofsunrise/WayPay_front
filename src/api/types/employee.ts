@@ -33,6 +33,8 @@ export interface Employee {
   fullName: string;
   address: string;
   phone: string;
+  /** Второй номер для входа: вход работает с любого из двух. */
+  secondPhone?: string | null;
   role: string;
   permissions: Permission[] | null;
   customRoleId?: number | null;

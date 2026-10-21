@@ -23,6 +23,7 @@ type EmployeeModalProps = {
     address: string;
     role: string;
     phone: string;
+    secondPhone: string;
     minSurcharge: number;
     customRoleId?: number | null;
   }) => Promise<void>;
@@ -32,6 +33,7 @@ type EmployeeModalProps = {
     address: string;
     role: string;
     phone: string;
+    secondPhone?: string | null;
     minSurcharge: number;
     avatar?: string;
   };
@@ -79,6 +81,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     address: initialData?.address || "",
     role: encodeBaseRole(initialData?.role),
     phone: initialData?.phone || "",
+    secondPhone: initialData?.secondPhone || "",
     minSurcharge: initialData?.minSurcharge || 0,
   });
 
@@ -259,6 +262,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
         address: formData.address.trim(),
         role: isCustom ? "" : formData.role.slice("role:".length),
         phone: formData.phone.trim(),
+        secondPhone: formData.secondPhone.trim(),
         minSurcharge: Number(formData.minSurcharge),
         customRoleId: isCustom
           ? Number(formData.role.slice("custom:".length))
@@ -378,6 +382,19 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                       ? errorMessages.phone
                       : undefined
                   }
+                />
+              </FieldContainer>
+
+              {/* Второй номер, в отличие от основного, меняется и после
+                  создания: им добавляют вход со второй сим-карты. */}
+              <FieldContainer>
+                <Title>Второй номер (необязательно)</Title>
+                <PhoneModalInput
+                  name="secondPhone"
+                  placeholder="8 (XXX) XXX-XX-XX"
+                  value={formData.secondPhone}
+                  onChange={handleInputChange}
+                  disabled={mode === "view"}
                 />
               </FieldContainer>
 
