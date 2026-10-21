@@ -710,7 +710,9 @@ const CreditPage = () => {
         alert("Вкладка успешно удалена");
       } catch (error) {
         console.error("Ошибка при удалении вкладки:", error);
-        alert("Произошла ошибка при удалении вкладки");
+        // Раньше здесь был общий текст, и настоящая причина — например,
+        // что на вкладку ссылаются договоры — до пользователя не доходила.
+        alert(extractErrorMessage(error, "Не удалось удалить вкладку"));
       }
     },
     [deleteObjectTypeApi, loadCustomTabs, activeTab]
