@@ -310,8 +310,18 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
         <>
           {isAdding ? (
             <AddCard>
-              <TopRow>
-                <BadgeColumn>
+              <AddCardHeader>
+                <div>
+                  <AddCardTitle>Новый контакт</AddCardTitle>
+                  <AddCardHint>
+                    Выберите способ связи и укажите контактные данные
+                  </AddCardHint>
+                </div>
+              </AddCardHeader>
+
+              <AddFields>
+                <FieldGroup>
+                  <FieldLabel>Способ связи</FieldLabel>
                   <SelectBox>
                     <CustomSelect<ContactType>
                       options={CONTACT_TYPE_OPTIONS}
@@ -321,11 +331,13 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
                         setNewValue("");
                       }}
                       placeholder="Тип"
+                      dropdownInPortal
                     />
                   </SelectBox>
-                </BadgeColumn>
+                </FieldGroup>
 
-                <ValueColumn>
+                <FieldGroup>
+                  <FieldLabel>Контактные данные</FieldLabel>
                   {isPhoneType(newType) ? (
                     <PhoneModalInput
                       name="new-contact"
@@ -342,8 +354,8 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
                       placeholder={placeholderForType(newType)}
                     />
                   )}
-                </ValueColumn>
-              </TopRow>
+                </FieldGroup>
+              </AddFields>
 
               <ActionRow>
                 <PrimaryButton
@@ -385,8 +397,9 @@ const ContactsEditor: React.FC<ContactsEditorProps> = ({
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
+  max-width: 920px;
 `;
 
 const EmptyText = styled.div`
@@ -397,7 +410,12 @@ const EmptyText = styled.div`
 
 const ErrorText = styled.div`
   color: #dc2626;
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 18px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
 `;
 
 const List = styled.div`
@@ -412,14 +430,27 @@ const ItemCard = styled.div`
   gap: 10px;
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(17, 24, 39, 0.04);
+  }
 `;
 
 const AddCard = styled(ItemCard)`
-  border-style: dashed;
-  border-color: #007d88;
-  background: rgba(0, 125, 136, 0.04);
+  gap: 18px;
+  padding: 18px;
+  border-color: rgba(0, 125, 136, 0.28);
+  background: linear-gradient(135deg, rgba(0, 125, 136, 0.055), #ffffff 70%);
+  box-shadow: 0 8px 24px rgba(0, 77, 85, 0.07);
+
+  &:hover {
+    border-color: rgba(0, 125, 136, 0.42);
+    box-shadow: 0 8px 24px rgba(0, 77, 85, 0.07);
+  }
 `;
 
 const TopRow = styled.div`
@@ -427,11 +458,19 @@ const TopRow = styled.div`
   grid-template-columns: 140px 1fr auto;
   align-items: center;
   gap: 12px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr auto;
+  }
 `;
 
 const BadgeColumn = styled.div`
   display: flex;
   align-items: center;
+
+  @media (max-width: 640px) {
+    grid-column: 1 / -1;
+  }
 `;
 
 const ValueColumn = styled.div`
@@ -449,6 +488,58 @@ const ActionRow = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+
+  @media (max-width: 480px) {
+    & > button {
+      flex: 1;
+    }
+  }
+`;
+
+const AddCardHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+`;
+
+const AddCardTitle = styled.div`
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 21px;
+  font-weight: 600;
+`;
+
+const AddCardHint = styled.div`
+  margin-top: 3px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 17px;
+`;
+
+const AddFields = styled.div`
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(260px, 1.3fr);
+  gap: 14px;
+  align-items: start;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const FieldGroup = styled.label`
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+`;
+
+const FieldLabel = styled.span`
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
 `;
 
 const TypeBadge = styled.span<{ $type: ContactType }>`
@@ -458,6 +549,7 @@ const TypeBadge = styled.span<{ $type: ContactType }>`
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
+  line-height: 18px;
   background: ${({ $type }) => {
     switch ($type) {
       case "WhatsAppPhone":
@@ -492,6 +584,10 @@ const Value = styled.span`
 
 const SelectBox = styled.div`
   width: 100%;
+
+  & > div > div {
+    max-width: none;
+  }
 `;
 
 const PrimaryButton = styled.button`
@@ -596,18 +692,19 @@ const AddButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: 1px dashed #007d88;
-  background: transparent;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 125, 136, 0.3);
+  background: rgba(0, 125, 136, 0.06);
   color: #007d88;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s, border-color 0.15s;
 
   &:hover:not(:disabled) {
-    background: rgba(0, 125, 136, 0.08);
+    background: rgba(0, 125, 136, 0.11);
+    border-color: rgba(0, 125, 136, 0.5);
   }
 
   &:disabled {
