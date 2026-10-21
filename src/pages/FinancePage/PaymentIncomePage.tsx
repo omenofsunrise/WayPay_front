@@ -29,7 +29,11 @@ const PaymentIncomePage = () => {
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
   const pageSize = 10;
-  const { authInfo } = useAuth();
+  const { authInfo, denyPermission } = useAuth();
+
+  // Запрещающие права: у кого права нет — видит итоги, как и раньше.
+  const showTotalIncome = denyPermission("FORBID_TOTAL_INCOME");
+  const showTotalPayouts = denyPermission("FORBID_TOTAL_PAYOUTS");
   const [selectedMonth, setSelectedMonth] = useState(
     currentDate.getMonth() + 1
   );
@@ -345,14 +349,18 @@ const PaymentIncomePage = () => {
                     isExporting={isExporting}
                     exportProgress={exportProgress}
                 /> */}
-        <TableTitle>
-          Всего доход:{" "}
-          {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
-        </TableTitle>
-        <TableTitle>
-          Всего выплат:{" "}
-          {formatMoney(paymentsData?.totalPayments?.toString() || "0")}
-        </TableTitle>
+        {showTotalIncome && (
+          <TableTitle>
+            Всего доход:{" "}
+            {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
+          </TableTitle>
+        )}
+        {showTotalPayouts && (
+          <TableTitle>
+            Всего выплат:{" "}
+            {formatMoney(paymentsData?.totalPayments?.toString() || "0")}
+          </TableTitle>
+        )}
       </TitleField>
 
       <FilterField>

@@ -34,6 +34,24 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     description: "Скрыть сотрудника, принявшего платёж",
   },
   { code: "FORBID_PAYMENT_TYPE", description: "Скрыть тип платежа" },
+  {
+    code: "FORBID_FINANCE_BUDGET",
+    description: "Скрыть вкладку «Бюджет» в финансах",
+  },
+  {
+    code: "FORBID_FINANCE_PAYMENTS",
+    description: "Скрыть вкладку «Платежи» в финансах",
+  },
+  {
+    code: "FORBID_FINANCE_CARDS",
+    description: "Скрыть вкладку «Карточки» в финансах",
+  },
+  {
+    code: "FORBID_FINANCE_EMPLOYEES",
+    description: "Скрыть вкладку «Сотрудники» в финансах",
+  },
+  { code: "FORBID_TOTAL_INCOME", description: "Скрыть «Всего доход»" },
+  { code: "FORBID_TOTAL_PAYOUTS", description: "Скрыть «Всего выплат»" },
 ];
 
 /** Карта код → описание для быстрого вывода названия права. */
