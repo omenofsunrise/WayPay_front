@@ -21,7 +21,6 @@ const ProfileTabs = ({ activeTab, onTabChange }: ProfileTabsProps) => {
     if (hasRole('директор') || hasRole("суперадмин")) {
         tabs.push({ name: "Сотрудники" });
         tabs.push({ name: "Данные компании" });
-        tabs.push({ name: "Отделения" });
     } else if (hasRole("админ")) {
         tabs.push({ name: "Сотрудники" });
     }
