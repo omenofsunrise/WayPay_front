@@ -40,7 +40,7 @@ const InvestorSelectModal = ({
   onSubmit, 
   width = "1000px",
   includePools = false,
-  poolId // Добавлено
+  poolId
 }: InvestorSelectModalProps) => {
   const { authInfo } = useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
