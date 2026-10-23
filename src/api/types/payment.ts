@@ -24,6 +24,8 @@ export interface PaymentParams extends PaginationParams {
   employeeFullname?: string;
   dateFrom?: Date;
   dateTo?: Date;
+  amountFrom?: number;
+  amountTo?: number;
   poolId?: number;
   investorId?: number;
   paymentType?: "cash" | "card" | "paymentPlace";

@@ -58,6 +58,8 @@ export interface ScheduleFilters {
   investorName?: string;
   dateFrom?: string;
   dateTo?: string;
+  amountFrom?: string;
+  amountTo?: string;
   objectTypeId?: number;
   entityId?: number;
   entityType?: "investor" | "pool";
@@ -148,6 +150,14 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     `${store}.dateTo`,
     ""
   );
+  const [amountFromFilter, setAmountFromFilter] = usePersistedState(
+    `${store}.amountFrom`,
+    ""
+  );
+  const [amountToFilter, setAmountToFilter] = usePersistedState(
+    `${store}.amountTo`,
+    ""
+  );
   const [tableObjectTypeName, setTableObjectTypeName] = usePersistedState(
     `${store}.objectTypeName`,
     ""
@@ -205,7 +215,9 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
       tableObjectTypeName ||
       selectedTableObjectType ||
       dateFromFilter ||
-      dateToFilter
+      dateToFilter ||
+      amountFromFilter ||
+      amountToFilter
   );
 
   const resetPage = useCallback(() => {
@@ -227,6 +239,8 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     setSelectedTableObjectType(null);
     setDateFromFilter("");
     setDateToFilter("");
+    setAmountFromFilter("");
+    setAmountToFilter("");
     resetPage();
   }, [
     setClientNameFilter,
@@ -236,6 +250,8 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     setSelectedTableObjectType,
     setDateFromFilter,
     setDateToFilter,
+    setAmountFromFilter,
+    setAmountToFilter,
     resetPage,
   ]);
 
@@ -271,6 +287,8 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
       clientName: clientNameFilter || undefined,
       dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
       dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
+      amountFrom: amountFromFilter ? Number(amountFromFilter) : undefined,
+      amountTo: amountToFilter ? Number(amountToFilter) : undefined,
       creditTypeId: selectedTableObjectType?.id || undefined,
       schouldBeVisited: shouldBeVisited || undefined,
     };
@@ -348,6 +366,8 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
     clientNameFilter,
     dateFromFilter,
     dateToFilter,
+    amountFromFilter,
+    amountToFilter,
     selectedTableObjectType,
     sortConfig,
     selectedEntity,
@@ -504,6 +524,8 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
         investorName: investorFilter || undefined,
         dateFrom: dateFromFilter || undefined,
         dateTo: dateToFilter || undefined,
+        amountFrom: amountFromFilter || undefined,
+        amountTo: amountToFilter || undefined,
         objectTypeId: selectedTableObjectType?.id,
         entityId: selectedEntity?.id,
         entityType: selectedEntity?.type,
@@ -517,6 +539,8 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
       investorFilter,
       dateFromFilter,
       dateToFilter,
+      amountFromFilter,
+      amountToFilter,
       selectedTableObjectType,
       selectedEntity,
       sortConfig,
@@ -897,6 +921,28 @@ const ScheduleTable = forwardRef<ScheduleTableHandle, ScheduleTableProps>(
                 onChange={handleDateToChange}
               />
             </DateInputWrapper>
+            <InputWrapper>
+              <CustomInput
+                inputType="ufloat"
+                placeholder="Сумма от"
+                value={amountFromFilter}
+                onChange={(e) => {
+                  setAmountFromFilter(e.target.value);
+                  resetPage();
+                }}
+              />
+            </InputWrapper>
+            <InputWrapper>
+              <CustomInput
+                inputType="ufloat"
+                placeholder="Сумма до"
+                value={amountToFilter}
+                onChange={(e) => {
+                  setAmountToFilter(e.target.value);
+                  resetPage();
+                }}
+              />
+            </InputWrapper>
             <ResetWrapper>
               <DarkCyanButton
                 type="button"

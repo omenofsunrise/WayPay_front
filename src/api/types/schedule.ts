@@ -21,6 +21,8 @@ export interface ScheduleParams extends PaginationParams {
   investorNickname?: string;
   dateFrom?: Date;
   dateTo?: Date;
+  amountFrom?: number;
+  amountTo?: number;
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   investorId?: number;
