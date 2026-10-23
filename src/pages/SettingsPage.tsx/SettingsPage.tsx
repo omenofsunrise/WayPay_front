@@ -8,11 +8,9 @@ import EmployeeProfilePage from "../ProfilePage/EmployeeProfilePage";
 import EmployeePage from "./EmployeePage";
 import CustomRolesPage from "./CustomRolesPage";
 import CompanyPage from "./CompanyPage";
-import BranchPage from "./BranchPage";
 import SenderPage from "./SenderPage";
 import AboutPage from "../AboutPage";
 import WhatsAppSettingsPage from "./WhatsAppSettingsPage";
-import PaymentPlacePage from "./PaymentPlacePage";
 import ActionLogPage from "./ActionLogPage";
 
 const SettingsPage = () => {
@@ -21,7 +19,12 @@ const SettingsPage = () => {
     if (savedEmployeeId) {
       return "Сотрудники";
     }
-    return localStorage.getItem("settingsActiveTab") || "Сотрудники";
+    const savedTab = localStorage.getItem("settingsActiveTab");
+    // Разделы скрыты, но старое выбранное значение могло сохраниться в браузере.
+    if (savedTab === "Отделения" || savedTab === "Пункты приёма") {
+      return "Сотрудники";
+    }
+    return savedTab || "Сотрудники";
   });
 
   const [viewingEmployeeId, setViewingEmployeeId] = useState<number | null>(
@@ -64,8 +67,6 @@ const SettingsPage = () => {
     tabs.push(
       { id: "Роли", label: "Роли" },
       { id: "Данные компании", label: "Данные компании" },
-      { id: "Отделения", label: "Отделения" },
-      { id: "Пункты приёма", label: "Пункты приёма" },
       { id: "Рассылка", label: "Рассылка" },
       { id: "WhatsApp", label: "WhatsApp" },
       { id: "Журнал действий", label: "Журнал действий" },
@@ -102,10 +103,6 @@ const SettingsPage = () => {
         return <CustomRolesPage />;
       case "Данные компании":
         return <CompanyPage />;
-      case "Отделения":
-        return <BranchPage />;
-      case "Пункты приёма":
-        return <PaymentPlacePage />;
       case "Рассылка":
         return <SenderPage />;
       case "WhatsApp":
