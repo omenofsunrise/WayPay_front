@@ -10,6 +10,7 @@ import Pagination from "./CustomPagination";
 import DarkCyanButton from "../Buttons/DarkCyanButton";
 import CustomInput from "./CustomInput";
 import { extractErrorMessage } from "../../../api/utils/errorMessage";
+import ConfirmationModal from "../../modal/ConfirmationModal";
 
 interface ObjectTypeSelectProps {
   value: string;
@@ -57,6 +58,8 @@ const ObjectTypeSelect = ({
   const [objectTypesData, setObjectTypesData] =
     useState<PaginationResponse | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // Текст отказа при удалении: показываем окном, а не системным alert.
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [manageModalMode, setManageModalMode] = useState<
     "create" | "edit" | null
@@ -274,7 +277,7 @@ const ObjectTypeSelect = ({
         // Раньше на любой отказ показывался один и тот же текст про договоры,
         // и настоящая причина — нет прав, вкладка не найдена, ошибка сервера —
         // не доходила до пользователя.
-        window.alert(
+        setDeleteError(
           extractErrorMessage(error, "Не удалось удалить вкладку")
         );
       }
@@ -365,6 +368,14 @@ const ObjectTypeSelect = ({
 
   return (
     <>
+      <ConfirmationModal
+        isOpen={deleteError !== null}
+        title="Вкладку нельзя удалить"
+        message={deleteError ?? ""}
+        confirmText="Понятно"
+        onConfirm={() => setDeleteError(null)}
+      />
+
       <InputContainer>
         <ControlsRow>
           <InputWrapper>

@@ -8,9 +8,11 @@ interface ConfirmModalProps {
     title: string;
     message: string;
     confirmText: string;
-    cancelText: string;
+    /** Без этого текста кнопка отмены не рисуется: окно становится
+     *  сообщением с одной кнопкой, годным для показа ошибки. */
+    cancelText?: string;
     onConfirm: () => void | Promise<void>;
-    onCancel: () => void;
+    onCancel?: () => void;
     confirmColor?: string;
     isLoading?: boolean;
     error?: string | null;
@@ -39,12 +41,14 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
                 </ModalBody>
                 <ModalFooter>
-                    <GrayButton 
-                        onClick={onCancel}
-                        disabled={isLoading}
-                    >
-                        {cancelText}
-                    </GrayButton>
+                    {cancelText && (
+                        <GrayButton
+                            onClick={onCancel}
+                            disabled={isLoading}
+                        >
+                            {cancelText}
+                        </GrayButton>
+                    )}
                     <DarkCyanButton 
                         onClick={onConfirm}
                         disabled={isLoading}
