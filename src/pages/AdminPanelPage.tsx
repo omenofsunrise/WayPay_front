@@ -37,6 +37,7 @@ import { useEmployee } from "../api/hooks/useEmployee";
 import UserSelect from "../components/ui/fields/UserSelect";
 import CreditApplicationCompaniesManager from "../components/CreditApplicationCompaniesManager";
 import BroadcastCampaignsManager from "../components/AdminPanel/BroadcastCampaignsManager";
+import BlacklistPlusUsersManager from "../components/AdminPanel/BlacklistPlusUsersManager";
 import CustomTextArea from "../components/ui/fields/CustomTextArea";
 import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Tabs from "../components/ui/fields/Tabs";
@@ -860,6 +861,7 @@ const AdminPanelPage = () => {
     | "credit-applications"
     | "notifications"
     | "broadcast"
+    | "blacklist-plus"
   >("companies");
 
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
@@ -1620,6 +1622,11 @@ const AdminPanelPage = () => {
       label: "Рекламные кампании",
       content: broadcastContent,
     },
+    {
+      id: "blacklist-plus",
+      label: "ЧС+",
+      content: <BlacklistPlusUsersManager />,
+    },
   ];
 
   const addButton =
@@ -1709,6 +1716,7 @@ const AdminPanelPage = () => {
               | "notifications"
               | "credit-applications"
               | "broadcast"
+              | "blacklist-plus"
           );
           setCurrentPage(1);
           setNameFilter("");
