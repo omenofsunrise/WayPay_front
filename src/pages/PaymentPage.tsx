@@ -112,6 +112,14 @@ const PaymentPage = () => {
     "paymentsJournal.dateTo",
     ""
   );
+  const [amountFromFilter, setAmountFromFilter] = usePersistedState(
+    "paymentsJournal.amountFrom",
+    ""
+  );
+  const [amountToFilter, setAmountToFilter] = usePersistedState(
+    "paymentsJournal.amountTo",
+    ""
+  );
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedPaymentForPrint, setSelectedPaymentForPrint] =
     useState<Payment | null>(null);
@@ -226,6 +234,8 @@ const PaymentPage = () => {
       employeeFullname: employeeFullname.trim() || undefined,
       dateFrom: dateFromFilter ? parseDateInput(dateFromFilter) : undefined,
       dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
+      amountFrom: amountFromFilter ? Number(amountFromFilter) : undefined,
+      amountTo: amountToFilter ? Number(amountToFilter) : undefined,
     };
 
     // Добавляем фильтр по инвестору/пулу в зависимости от типа
@@ -277,6 +287,8 @@ const PaymentPage = () => {
     bankCardId,
     dateFromFilter,
     dateToFilter,
+    amountFromFilter,
+    amountToFilter,
     sortConfig,
     getPayments,
     itemsPerPage,
@@ -302,6 +314,8 @@ const PaymentPage = () => {
     bankCardId,
     dateFromFilter,
     dateToFilter,
+    amountFromFilter,
+    amountToFilter,
     sortConfig,
     loadPayments,
     isPageSizeReady,
@@ -394,7 +408,9 @@ const PaymentPage = () => {
           isPool ||
           employeeFullname ||
           dateFromFilter ||
-          dateToFilter
+          dateToFilter ||
+          amountFromFilter ||
+          amountToFilter
       ) ||
       confirmedFilter !== "all" ||
       typeFilter !== "all" ||
@@ -407,6 +423,8 @@ const PaymentPage = () => {
       employeeFullname,
       dateFromFilter,
       dateToFilter,
+      amountFromFilter,
+      amountToFilter,
       confirmedFilter,
       typeFilter,
       bankCardId,
@@ -424,6 +442,8 @@ const PaymentPage = () => {
     setBankCardId(0);
     setDateFromFilter("");
     setDateToFilter("");
+    setAmountFromFilter("");
+    setAmountToFilter("");
     setCurrentPage(1);
   }, [
     setFullnameFilter,
@@ -436,6 +456,8 @@ const PaymentPage = () => {
     setBankCardId,
     setDateFromFilter,
     setDateToFilter,
+    setAmountFromFilter,
+    setAmountToFilter,
   ]);
 
   const handleSort = (columnIndex: number) => {
@@ -468,6 +490,8 @@ const PaymentPage = () => {
               ? parseDateInput(dateFromFilter)
               : undefined,
             dateTo: dateToFilter ? parseDateInput(dateToFilter) : undefined,
+            amountFrom: amountFromFilter ? Number(amountFromFilter) : undefined,
+            amountTo: amountToFilter ? Number(amountToFilter) : undefined,
             sortBy:
               sortConfig.key !== null
                 ? columnToApiSortMap[sortConfig.key]
@@ -830,6 +854,24 @@ const PaymentPage = () => {
           prefix="До"
           value={dateToFilter}
           onChange={handleDateToFilterChange}
+        />
+        <CustomInput
+          inputType="ufloat"
+          placeholder="Сумма от"
+          value={amountFromFilter}
+          onChange={(e) => {
+            setAmountFromFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+        />
+        <CustomInput
+          inputType="ufloat"
+          placeholder="Сумма до"
+          value={amountToFilter}
+          onChange={(e) => {
+            setAmountToFilter(e.target.value);
+            setCurrentPage(1);
+          }}
         />
       </FilterField>
 

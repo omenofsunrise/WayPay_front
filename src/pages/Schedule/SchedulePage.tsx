@@ -124,6 +124,10 @@ const SchedulePage = ({
               dateTo: filters.dateTo
                 ? parseDateInput(filters.dateTo)
                 : undefined,
+              amountFrom: filters.amountFrom
+                ? Number(filters.amountFrom)
+                : undefined,
+              amountTo: filters.amountTo ? Number(filters.amountTo) : undefined,
               creditTypeId: filters.objectTypeId || undefined,
               schouldBeVisited: filters.shouldBeVisited || undefined,
               sortBy:
