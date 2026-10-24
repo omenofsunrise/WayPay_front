@@ -112,6 +112,71 @@ class AdminPanelService {
       `/AdminPanel/broadcast/campaigns/chat/${chatId}/mark/read`
     );
   }
+
+  async getBlacklistPlusUsers(params: {
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<BlacklistPlusUsersResponse> {
+    const response = await apiClient.get<BlacklistPlusUsersResponse>(
+      "/AdminPanel/blacklist-plus/users",
+      { params }
+    );
+    return response.data;
+  }
+
+  async setBlacklistPlusModeration(
+    userId: string,
+    isModerated: boolean
+  ): Promise<BlacklistPlusAdminUser> {
+    const response = await apiClient.patch<BlacklistPlusAdminUser>(
+      `/AdminPanel/blacklist-plus/users/${userId}/moderation`,
+      { isModerated }
+    );
+    return response.data;
+  }
+
+  async addBlacklistPlusSubscription(
+    userId: string,
+    data: AddBlacklistPlusSubscriptionRequest
+  ): Promise<BlacklistPlusSubscriptionResult> {
+    const response = await apiClient.post<BlacklistPlusSubscriptionResult>(
+      `/AdminPanel/blacklist-plus/users/${userId}/subscription`,
+      data
+    );
+    return response.data;
+  }
+}
+
+export interface BlacklistPlusAdminUser {
+  id: string;
+  phone: string;
+  fullName: string;
+  nickname: string | null;
+  isModerated: boolean;
+  isDeleted: boolean;
+  lastActiveAt: string | null;
+  subscriptionStatus: "active" | "expired" | "pending" | "undefined";
+  subscriptionEndAt: string | null;
+}
+
+export interface BlacklistPlusUsersResponse {
+  items: BlacklistPlusAdminUser[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AddBlacklistPlusSubscriptionRequest {
+  days: number;
+  cost: number;
+  paymentType: 1 | 2;
+}
+
+export interface BlacklistPlusSubscriptionResult {
+  userId: string;
+  status: string;
+  endAt: string | null;
 }
 
 export interface CreateBroadcastCampaignRequest {
