@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { CircleAlert } from "lucide-react";
 import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
 import CustomInput from "../../ui/fields/CustomInput";
@@ -10,9 +10,12 @@ import { generateAvatar, getInitials } from "../../../utils/avatarUtils";
 import { useEmployee } from "../../../api/hooks/useEmployee";
 import PhoneModalInput from "../../ui/fields/PhoneModalInput";
 import type { CustomRole } from "../../../api/types/employee";
+import { extractErrorMessage } from "../../../api/utils/errorMessage";
 
 const EMPLOYEE_PHONE_EXISTS_MESSAGE =
   "Сотрудник с таким номером телефона уже есть";
+const PHONE_FORMAT_MESSAGE = "Введите телефон в формате 8 (XXX) XXX-XX-XX";
+const phoneRegex = /^8\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$/;
 
 type EmployeeModalProps = {
   mode: ModalMode;
@@ -88,19 +91,23 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   const [validationErrors, setValidationErrors] = useState({
     fullName: false,
     phone: false,
+    secondPhone: false,
   });
 
   const [errorMessages, setErrorMessages] = useState({
     fullName: "",
     phone: "",
+    secondPhone: "",
   });
 
   const [touchedFields, setTouchedFields] = useState({
     fullName: false,
     phone: false,
+    secondPhone: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [avatarSrc, setAvatarSrc] = useState<string>(
     initialData.avatar
       ? `${BASE_URL}${initialData.avatar}?${Date.now()}`
@@ -108,10 +115,8 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   );
 
   const validatePhone = async (phone: string) => {
-    const phoneRegex = /^8\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$/;
-
     if (!phoneRegex.test(phone.trim())) {
-      return "Введите телефон в формате 8 (XXX) XXX-XX-XX";
+      return PHONE_FORMAT_MESSAGE;
     }
 
     if (phone.trim().length === 0) {
@@ -128,6 +133,27 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       }
     } catch (error) {
       console.error("Error checking phone:", error);
+      return "Ошибка проверки номера телефона";
+    }
+
+    return "";
+  };
+
+  const validateSecondPhone = async (secondPhone: string) => {
+    const normalizedValue = secondPhone.trim();
+    if (!normalizedValue) return "";
+    if (!phoneRegex.test(normalizedValue)) return PHONE_FORMAT_MESSAGE;
+    if (normalizedValue === formData.phone.trim())
+      return "Второй номер совпадает с основным";
+
+    const initialSecondPhone = initialData.secondPhone?.trim() || "";
+    if (mode === "edit" && normalizedValue === initialSecondPhone) return "";
+
+    try {
+      if (await checkEmployeeExists(normalizedValue))
+        return EMPLOYEE_PHONE_EXISTS_MESSAGE;
+    } catch (error) {
+      console.error("Error checking second phone:", error);
       return "Ошибка проверки номера телефона";
     }
 
@@ -161,20 +187,25 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       address: initialData.address || "",
       role: encodeBaseRole(initialData.role),
       phone: initialData.phone || "",
+      secondPhone: initialData.secondPhone || "",
       minSurcharge: initialData.minSurcharge || 0,
     });
     setValidationErrors({
       fullName: false,
       phone: false,
+      secondPhone: false,
     });
     setErrorMessages({
       fullName: "",
       phone: "",
+      secondPhone: "",
     });
     setTouchedFields({
       fullName: false,
       phone: false,
+      secondPhone: false,
     });
+    setSubmitError("");
 
     if (initialData.avatar) {
       setAvatarSrc(`${BASE_URL}${initialData.avatar}?${Date.now()}`);
@@ -192,6 +223,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       const newErrorMessages = {
         fullName: "",
         phone: "",
+        secondPhone: "",
       };
 
       if (formData.fullName.trim().split(/\s+/).length < 2) {
@@ -201,12 +233,16 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       }
 
       newErrorMessages.phone = await validatePhone(formData.phone);
+      newErrorMessages.secondPhone = await validateSecondPhone(
+        formData.secondPhone
+      );
 
       setErrorMessages(newErrorMessages);
 
       const errors = {
         fullName: !!newErrorMessages.fullName,
         phone: !!newErrorMessages.phone,
+        secondPhone: !!newErrorMessages.secondPhone,
       };
 
       setValidationErrors(errors);
@@ -228,6 +264,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
         formData.fullName !== initialData.fullName ||
         formData.address !== initialData.address ||
         formData.phone !== initialData.phone ||
+        formData.secondPhone !== (initialData.secondPhone || "") ||
         formData.minSurcharge !== initialData.minSurcharge;
       return !isChanged;
     }
@@ -246,6 +283,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     setTouchedFields({
       fullName: true,
       phone: true,
+      secondPhone: true,
     });
 
     const isValid = !Object.values(validationErrors).some(Boolean);
@@ -270,6 +308,9 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       });
     } catch (error) {
       console.error("Error submitting form:", error);
+      setSubmitError(
+        extractErrorMessage(error, "Не удалось сохранить данные сотрудника")
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -279,6 +320,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setTouchedFields((prev) => ({ ...prev, [name]: true }));
+    setSubmitError("");
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -299,7 +341,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       case "view":
         return "Просмотр сотрудника";
       default:
-        const _exhaustiveCheck: never = mode;
         return "Сотрудник";
     }
   };
@@ -315,7 +356,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       isSaveDisabled={isSaveDisabled() || isSubmitting}
       isSubmitting={isSubmitting}
       children={<div></div>}
-      width={"750px"}
+      width={"920px"}
       mode={mode}
       customLayout={
         <ModalLayout>
@@ -395,6 +436,14 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                   value={formData.secondPhone}
                   onChange={handleInputChange}
                   disabled={mode === "view"}
+                  hasError={
+                    touchedFields.secondPhone && validationErrors.secondPhone
+                  }
+                  errorMessage={
+                    touchedFields.secondPhone
+                      ? errorMessages.secondPhone
+                      : undefined
+                  }
                 />
               </FieldContainer>
 
@@ -425,6 +474,12 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                   </WarningText>
                 </WarningContent>
               </PhoneWarning>
+            )}
+
+            {submitError && (
+              <SubmitError role="alert" aria-live="polite">
+                {submitError}
+              </SubmitError>
             )}
           </FormSection>
         </ModalLayout>
@@ -472,6 +527,16 @@ const RowContainer = styled.div`
 const FieldContainer = styled.div`
   flex: 1;
   min-width: 0;
+`;
+
+const SubmitError = styled.div`
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
 `;
 
 const PhoneWarning = styled.div`
