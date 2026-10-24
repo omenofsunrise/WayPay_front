@@ -63,6 +63,23 @@ const payoutSourceOptions = [
   { value: String(PayoutSource.Investment), label: 'Инвестиция' },
 ];
 
+// Отрицательные суммы не допускаются — приводим к 0
+const normalizeAmount = (raw: string): string => {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  const parsed = parseInt(trimmed, 10);
+  if (trimmed.startsWith('-') || (!Number.isNaN(parsed) && parsed < 0)) {
+    return '0';
+  }
+  return raw;
+};
+
+// Отрицательные лимиты/балансы приводим к 0
+const nonNegative = (value: number | undefined | null): number | undefined => {
+  if (value === undefined || value === null) return undefined;
+  return value < 0 ? 0 : value;
+};
+
 const IncomeModal: React.FC<IncomeModalProps> = ({
   show,
   onClose,
@@ -89,7 +106,13 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
   React.useEffect(() => {
     if (show) {
-      const numericValue = newIncome.amount.replace(/\D/g, '');
+      // Отрицательное значение прихода приводим к 0
+      const normalized = normalizeAmount(newIncome.amount);
+      if (normalized !== newIncome.amount) {
+        setNewIncome(prev => ({ ...prev, amount: normalized }));
+      }
+
+      const numericValue = normalized.replace(/\D/g, '');
       if (numericValue) {
         const formatted = new Intl.NumberFormat('ru-RU').format(parseInt(numericValue, 10));
         setDisplayAmount(formatted);
@@ -114,8 +137,25 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+
+    // Явно введённый минус — записываем 0
+    if (value.trim().startsWith('-')) {
+      setNewIncome(prev => ({ ...prev, amount: '0' }));
+      setDisplayAmount('0');
+      return;
+    }
+
     const cleanedValue = value.replace(/[^\d,.]/g, '');
     const numericValue = cleanedValue.replace(/[.,]/g, '');
+
+    // Отрицательное значение (например, из вставки) — записываем 0
+    const parsed = parseInt(numericValue, 10);
+    if (!Number.isNaN(parsed) && parsed < 0) {
+      setNewIncome(prev => ({ ...prev, amount: '0' }));
+      setDisplayAmount('0');
+      return;
+    }
+
     setNewIncome(prev => ({ ...prev, amount: numericValue }));
 
     if (numericValue) {
@@ -161,18 +201,24 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     setNewIncome(prev => ({ ...prev, companyShare: percentage }));
   };
 
-  // Лимит по источнику: для инвестора — min(баланс по источнику, общий баланс)
-  const sourceBalance = isInvestor
+  // Баланс и лимит по источнику — нормализуем отрицательные значения к 0
+  const totalBalance = nonNegative(selectedEntity?.balance);
+
+  const rawSourceBalance = isInvestor
     ? newIncome.payoutSource === PayoutSource.Investment
       ? selectedEntity?.investmentAmount ?? selectedEntity?.balance
       : selectedEntity?.currentIncome ?? selectedEntity?.balance
     : undefined;
 
-  const maxAvailable = isInvestor && selectedEntity?.balance !== undefined
-    ? Math.min(selectedEntity.balance, sourceBalance ?? selectedEntity.balance)
-    : undefined;
+  const sourceBalance = nonNegative(rawSourceBalance);
 
-  const amountNumber = parseInt(newIncome.amount, 10) || 0;
+  const maxAvailable =
+    isInvestor && totalBalance !== undefined
+      ? Math.min(totalBalance, sourceBalance ?? totalBalance)
+      : undefined;
+
+  // Отрицательные суммы приводим к 0
+  const amountNumber = Math.max(0, parseInt(newIncome.amount, 10) || 0);
   const isAmountExceedingBalance =
     maxAvailable !== undefined && amountNumber > maxAvailable;
 
@@ -229,9 +275,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
         isSaveDisabled={!newIncome.amount || !selectedEntity || isAmountExceedingBalance}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
-          {/* Для пула источник не выбирается — всегда «Доход» */}
-          {!isPool && (
-            <CustomSelect
+          {/* Поле источника выплаты показываем только после выбора инвестора (не пула) */}
+          {isInvestor && (
+
+            <CustomSelect style={{ marginLeft: '10px'}}
               placeholder="Источник выплаты"
               value={String(newIncome.payoutSource ?? PayoutSource.Income)}
               onChange={(e) =>
@@ -269,18 +316,16 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                     {new Intl.NumberFormat('ru-RU').format(amountNumber - maxAvailable)} руб.
                   </BalanceError>
                 )}
-                {!isAmountExceedingBalance && amountNumber > 0 && (
+                {!isAmountExceedingBalance && amountNumber > 0 && maxAvailable > 0 && (
                   <BalanceSuccess>
                     Можно вывести ещё{' '}
                     {new Intl.NumberFormat('ru-RU').format(maxAvailable - amountNumber)} руб.
                   </BalanceSuccess>
                 )}
-                {selectedEntity?.balance !== undefined &&
+                {totalBalance !== undefined &&
                   sourceBalance !== undefined &&
-                  sourceBalance !== selectedEntity.balance && (
-                    <BalanceNote>
-                      Общий баланс: {new Intl.NumberFormat('ru-RU').format(selectedEntity.balance)} руб.
-                    </BalanceNote>
+                  sourceBalance !== totalBalance && (
+                    <></>
                   )}
               </BalanceInfo>
             )}
