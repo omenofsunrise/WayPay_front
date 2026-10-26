@@ -600,25 +600,30 @@ const ModalBackdrop = styled.div`
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
   background: rgba(25, 35, 48, 0.48);
   backdrop-filter: blur(3px);
+
+  @media (max-height: 900px) {
+    padding: 12px;
+  }
 `;
 
 const ModalDialog = styled.div`
   position: relative;
   display: flex;
   width: min(1040px, calc(100vw - 48px));
-  max-height: min(920px, calc(100vh - 48px));
+  margin: auto;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid #e1e6eb;
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 24px 70px rgba(27, 39, 51, 0.22);
+  text-align: left;
 
   @media (max-width: 700px) {
     width: calc(100vw - 24px);
-    max-height: calc(100vh - 24px);
     border-radius: 12px;
   }
 `;
@@ -652,6 +657,10 @@ const ModalHeader = styled.header`
   @media (max-width: 700px) {
     padding: 28px 60px 14px 24px;
   }
+
+  @media (max-height: 900px) {
+    padding: 22px 68px 10px 36px;
+  }
 `;
 
 const ModalTitle = styled.h2`
@@ -665,6 +674,10 @@ const ModalTitle = styled.h2`
   @media (max-width: 700px) {
     font-size: 24px;
   }
+
+  @media (max-height: 900px) {
+    font-size: 26px;
+  }
 `;
 
 const ModalSubtitle = styled.p`
@@ -674,6 +687,11 @@ const ModalSubtitle = styled.p`
   line-height: 1.45;
 
   @media (max-width: 700px) {
+    font-size: 15px;
+  }
+
+  @media (max-height: 900px) {
+    margin-top: 4px;
     font-size: 15px;
   }
 `;
@@ -687,11 +705,15 @@ const EmployeeForm = styled.form`
 
 const ScrollableContent = styled.div`
   min-height: 0;
-  overflow-y: auto;
+  overflow: visible;
   padding: 8px 42px 24px;
 
   @media (max-width: 700px) {
     padding: 6px 24px 20px;
+  }
+
+  @media (max-height: 900px) {
+    padding: 0 36px 10px;
   }
 `;
 
@@ -700,6 +722,16 @@ const PhotoSection = styled.section`
   align-items: center;
   gap: 30px;
   min-height: 164px;
+
+  @media (max-height: 900px) {
+    min-height: 112px;
+
+    > div:first-child {
+      width: 104px;
+      height: 104px;
+      flex: 0 0 104px;
+    }
+  }
 
   @media (max-width: 520px) {
     align-items: flex-start;
@@ -718,6 +750,10 @@ const PhotoActions = styled.div`
   align-items: flex-start;
   flex-direction: column;
   gap: 11px;
+
+  @media (max-height: 900px) {
+    gap: 6px;
+  }
 `;
 
 const ChangePhotoButton = styled.button`
@@ -748,12 +784,22 @@ const ChangePhotoButton = styled.button`
     padding: 0 16px;
     font-size: 15px;
   }
+
+  @media (max-height: 900px) {
+    min-height: 42px;
+    padding: 0 20px;
+    font-size: 15px;
+  }
 `;
 
 const PhotoHint = styled.span`
   color: #718096;
   font-size: 15px;
   line-height: 1.4;
+
+  @media (max-height: 900px) {
+    font-size: 13px;
+  }
 `;
 
 const HiddenPhotoInput = styled.input`
@@ -764,11 +810,19 @@ const Divider = styled.div`
   height: 1px;
   margin: 14px 0 24px;
   background: #dbe2e8;
+
+  @media (max-height: 900px) {
+    margin: 8px 0 14px;
+  }
 `;
 
 const FormField = styled.div`
   min-width: 0;
   margin-bottom: 22px;
+
+  @media (max-height: 900px) {
+    margin-bottom: 12px;
+  }
 `;
 
 const FieldLabel = styled.label`
@@ -778,6 +832,11 @@ const FieldLabel = styled.label`
   font-size: 16px;
   font-weight: 500;
   line-height: 1.35;
+
+  @media (max-height: 900px) {
+    margin-bottom: 5px;
+    font-size: 14px;
+  }
 `;
 
 const FieldControl = styled.div`
@@ -805,6 +864,14 @@ const FieldControl = styled.div`
   input::placeholder {
     color: #9aa7b7;
   }
+
+  @media (max-height: 900px) {
+    input,
+    div[tabindex] {
+      min-height: 44px;
+      font-size: 15px;
+    }
+  }
 `;
 
 const SectionTitle = styled.h3`
@@ -813,12 +880,21 @@ const SectionTitle = styled.h3`
   font-size: 21px;
   font-weight: 700;
   line-height: 1.35;
+
+  @media (max-height: 900px) {
+    margin: 2px 0 8px;
+    font-size: 18px;
+  }
 `;
 
 const FieldsGrid = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 28px;
+
+  @media (max-height: 900px) {
+    gap: 22px;
+  }
 
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
@@ -831,6 +907,11 @@ const FieldHint = styled.span`
   margin-top: 7px;
   color: #7a8799;
   font-size: 14px;
+
+  @media (max-height: 900px) {
+    margin-top: 4px;
+    font-size: 12px;
+  }
 `;
 
 const PercentField = styled.div`
@@ -865,6 +946,10 @@ const ModalFooter = styled.footer`
     margin: 0 12px;
     padding: 14px 12px 18px;
   }
+
+  @media (max-height: 900px) {
+    padding: 10px 8px 12px;
+  }
 `;
 
 const FooterButton = styled.button`
@@ -878,6 +963,11 @@ const FooterButton = styled.button`
   @media (max-width: 520px) {
     min-height: 46px;
     padding: 0 18px;
+  }
+
+  @media (max-height: 900px) {
+    min-height: 44px;
+    font-size: 15px;
   }
 `;
 
