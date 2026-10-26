@@ -24,6 +24,7 @@ import { FILE_BASE_URL } from "../../api/client";
 import { useAuth } from "../../сontext/AuthContext";
 import PhoneLink from "../../components/ui/links/PhoneLink";
 import Checkbox from "../../components/ui/CheckBoxes/Checkbox";
+import { extractErrorMessage } from "../../api/utils/errorMessage";
 
 // Служебные аккаунты прячем из списка только в проде. Сборка с main идёт в
 // режиме production, с dev — staging, локальный запуск — development, так что
@@ -711,10 +712,13 @@ const EmployeePage = ({ onViewEmployee }: EmployeePageProps) => {
         addToast("success", "Данные сотрудника обновлены");
       }
       setIsModalOpen(false);
-    } catch {
-      addToast("error", "Не удалось сохранить данные сотрудника");
+    } catch (error) {
+      addToast(
+        "error",
+        extractErrorMessage(error, "Не удалось сохранить данные сотрудника")
+      );
       loadEmployees();
-      throw new Error("save failed");
+      throw error;
     }
   };
 

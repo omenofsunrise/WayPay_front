@@ -69,6 +69,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
         address: string;
         role: string;
         phone: string;
+        secondPhone: string;
         minSurcharge: number;
     }) => {        
         if (!employee?.id) return;
@@ -89,6 +90,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
             await refresh();
         } catch (err) {
             console.error("Failed to update employee:", err);
+            throw err;
         }
     };
 
