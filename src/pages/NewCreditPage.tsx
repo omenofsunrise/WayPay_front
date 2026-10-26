@@ -22,14 +22,15 @@ import PaymentScheduleTable, {
 import CustomInput from "../components/ui/fields/CustomInput";
 import useSchedule from "../api/hooks/useSchedule";
 import useCredit from "../api/hooks/useCredit";
-import type {
-  CreateCreditRequest,
-  CreditPaymentMethod,
-  UpdateCreditRequest,
+import {
+  MAX_CREDIT_GUARANTORS,
+  type CreateCreditRequest,
+  type CreditGuarantorRequest,
+  type CreditPaymentMethod,
+  type UpdateCreditRequest,
 } from "../api/types/credit";
 import type { Investor } from "../api/types/investor";
 import { useAuth } from "../сontext/AuthContext";
-import { type Guarantor } from "../components/modal/CrudInherited/GuarantorModal";
 import Checkbox from "../components/ui/CheckBoxes/Checkbox";
 import type { EntityType } from "../api/types/objectType";
 import ObjectTypeSelect from "../components/ui/fields/ObjectTypeSelect";
@@ -81,6 +82,117 @@ interface SelectedObjectType {
   entityType: EntityType;
 }
 
+/**
+ * Поручитель в форме: клиент или отдельный поручитель. Отдельных
+ * поручителей в форме не заводят, но они приходят из старых договоров —
+ * их сохраняем как есть.
+ */
+type GuarantorItem =
+  | { kind: "client"; clientId: number; fullName: string; phone?: string }
+  | {
+      kind: "guarantor";
+      guarantorId?: number | null;
+      fullName: string;
+      phone: string;
+      birthdate?: string | Date | null;
+      address?: string | null;
+      doc?: string | null;
+    };
+
+const toGuarantorRequest = (g: GuarantorItem): CreditGuarantorRequest =>
+  g.kind === "client"
+    ? { clientId: g.clientId }
+    : {
+        guarantorId: g.guarantorId ?? null,
+        guarantor: {
+          fullName: g.fullName,
+          phone: g.phone,
+          birthdate: g.birthdate ? new Date(g.birthdate) : null,
+          address: g.address ?? null,
+          doc: g.doc ?? null,
+        },
+      };
+
+/* eslint-disable @typescript-eslint/no-explicit-any -- черновик и ответ create-request приходят без строгого типа */
+
+/** Поручители из черновика: новый формат — список, старый — по одному полю. */
+const guarantorsFromDraft = (draft: any): GuarantorItem[] => {
+  if (Array.isArray(draft?.guarantors)) return draft.guarantors;
+  if (draft?.guarantorClient?.id) {
+    return [
+      {
+        kind: "client",
+        clientId: draft.guarantorClient.id,
+        fullName: draft.guarantorClient.fullName ?? "",
+        phone: draft.guarantorClient.phone,
+      },
+    ];
+  }
+  if (draft?.guarantor?.fullName) {
+    return [
+      {
+        kind: "guarantor",
+        fullName: draft.guarantor.fullName,
+        phone: draft.guarantor.phone ?? "",
+        birthdate: draft.guarantor.birthdate,
+        address: draft.guarantor.address,
+        doc: draft.guarantor.doc,
+      },
+    ];
+  }
+  return [];
+};
+
+/** Поручители договора из ответа create-request (редактирование). */
+const guarantorsFromCreateRequest = (data: any): GuarantorItem[] => {
+  if (Array.isArray(data?.guarantors) && data.guarantors.length > 0) {
+    return data.guarantors.map(
+      (g: CreditGuarantorRequest): GuarantorItem =>
+        g.clientId
+          ? {
+              kind: "client",
+              clientId: g.clientId,
+              fullName: g.fullname ?? "",
+              phone: g.phone ?? undefined,
+            }
+          : {
+              kind: "guarantor",
+              guarantorId: g.guarantorId ?? null,
+              fullName: g.guarantor?.fullName ?? g.fullname ?? "",
+              phone: g.guarantor?.phone ?? g.phone ?? "",
+              birthdate: g.guarantor?.birthdate ?? null,
+              address: g.guarantor?.address ?? null,
+              doc: g.guarantor?.doc ?? null,
+            }
+    );
+  }
+  // Бэкенд без списка: старые поля с одним поручителем.
+  if (data?.guarantorClientId) {
+    return [
+      {
+        kind: "client",
+        clientId: data.guarantorClientId,
+        fullName: data.guarantorFullname ?? "",
+      },
+    ];
+  }
+  if (data?.guarantor?.fullName) {
+    return [
+      {
+        kind: "guarantor",
+        fullName: data.guarantor.fullName,
+        phone: data.guarantor.phone ?? "",
+        birthdate: data.guarantor.birthdate,
+        address: data.guarantor.address,
+        doc: data.guarantor.doc,
+      },
+    ];
+  }
+  return [];
+};
+
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 const NewCreditPage = () => {
   const navigate = useNavigate();
   const { authInfo } = useAuth();
@@ -91,8 +203,9 @@ const NewCreditPage = () => {
     new Date().toISOString().split("T")[0]
   );
   const [client, setClient] = useState<Client | null>(null);
-  const [guarantor, setGuarantor] = useState<Guarantor | null>(null);
-  const [guarantorClient, setGuarantorClient] = useState<Client | null>(null);
+  const [guarantors, setGuarantors] = useState<GuarantorItem[]>([]);
+  // Какую строку поручителя заменяет выбор в модалке; null — добавить новую.
+  const [guarantorSlot, setGuarantorSlot] = useState<number | null>(null);
   const [investor, setInvestor] = useState<Investor | null>(null);
   const [selectedPool, setSelectedPool] = useState<Investor | null>(null);
   const [modalType, setModalType] = useState<
@@ -175,8 +288,7 @@ const NewCreditPage = () => {
           draft.contractDate ?? new Date().toISOString().split("T")[0]
         );
         setClient(draft.client ?? null);
-        setGuarantor(draft.guarantor ?? null);
-        setGuarantorClient(draft.guarantorClient ?? null);
+        setGuarantors(guarantorsFromDraft(draft));
         setInvestor(draft.investor ?? null);
         setSelectedPool(draft.selectedPool ?? null);
         setProducts(draft.products ?? []);
@@ -337,21 +449,7 @@ const NewCreditPage = () => {
             }
           }
 
-          if (creditData.guarantorClientId) {
-            setGuarantorClient({
-              id: creditData.guarantorClientId,
-              fullName: creditData.guarantorFullname,
-            });
-          } else if (creditData.guarantor) {
-            setGuarantor({
-              id: null,
-              fullName: creditData.guarantor.fullName,
-              phone: creditData.guarantor.phone || "",
-              doc: creditData.guarantor.doc || "",
-              birthdate: creditData.guarantor.birthdate,
-              address: creditData.guarantor.address || "",
-            });
-          }
+          setGuarantors(guarantorsFromCreateRequest(creditData));
 
           if (creditData.creditTypeId) {
             setSelectedObjectType({
@@ -510,8 +608,7 @@ const NewCreditPage = () => {
     const draft = {
       contractDate,
       client,
-      guarantor,
-      guarantorClient,
+      guarantors,
       investor,
       selectedPool,
       products,
@@ -544,8 +641,7 @@ const NewCreditPage = () => {
     isEditMode,
     contractDate,
     client,
-    guarantor,
-    guarantorClient,
+    guarantors,
     investor,
     selectedPool,
     startPaymentDate,
@@ -582,8 +678,7 @@ const NewCreditPage = () => {
     setHasDraft(false);
     setContractDate(new Date().toISOString().split("T")[0]);
     setClient(null);
-    setGuarantor(null);
-    setGuarantorClient(null);
+    setGuarantors([]);
     setInvestor(null);
     setSelectedPool(null);
     setProducts([
@@ -648,7 +743,7 @@ const NewCreditPage = () => {
       return;
     }
 
-    if (guarantorClient && guarantorClient.id === client.id) {
+    if (guarantors.some((g) => g.kind === "client" && g.clientId === client.id)) {
       window.alert("Клиент не может быть одновременно и поручителем");
       return;
     }
@@ -678,25 +773,11 @@ const NewCreditPage = () => {
             : { surchargeAmount: product.markup }),
         })),
       creditTypeId: null,
-      GuarantorClientId: null,
+      guarantors: guarantors.map(toGuarantorRequest),
     };
 
     if (selectedObjectType && selectedObjectType.id) {
       creditData.creditTypeId = selectedObjectType.id;
-    }
-
-    if (guarantorClient) {
-      creditData.GuarantorClientId = guarantorClient.id;
-    } else if (guarantor) {
-      creditData.guarantor = {
-        fullName: guarantor.fullName,
-        phone: guarantor.phone,
-        birthdate: guarantor.birthdate
-          ? new Date(guarantor.birthdate)
-          : undefined,
-        address: guarantor.address,
-        doc: guarantor.doc,
-      };
     }
 
     if (!inDebt) {
@@ -750,8 +831,7 @@ const NewCreditPage = () => {
     contractDate,
     investor,
     selectedPool,
-    guarantor,
-    guarantorClient,
+    guarantors,
     initialPaymentAmount,
     months,
     startPaymentDate,
@@ -918,8 +998,22 @@ const NewCreditPage = () => {
     if (modalType === "client") {
       setClient(client);
     } else if (modalType === "guarantorClient") {
-      setGuarantorClient(client);
-      setGuarantor(null);
+      const error = addGuarantorClientError(client);
+      if (error) {
+        window.alert(error);
+        return;
+      }
+      const item: GuarantorItem = {
+        kind: "client",
+        clientId: client.id,
+        fullName: client.fullName,
+        phone: client.phone,
+      };
+      setGuarantors((prev) =>
+        guarantorSlot === null || guarantorSlot >= prev.length
+          ? [...prev, item]
+          : prev.map((g, i) => (i === guarantorSlot ? item : g))
+      );
     }
     setIsClientModalOpen(false);
     setIsGuarantorClientModalOpen(false);
@@ -998,6 +1092,29 @@ const NewCreditPage = () => {
     setIsInvestorModalOpen(false);
   };
 
+  /** Почему клиента нельзя поставить поручителем в текущую строку; null — можно. */
+  const addGuarantorClientError = (picked: Client): string | null => {
+    if (client && picked.id === client.id)
+      return "Клиент не может быть одновременно и поручителем";
+    const duplicate = guarantors.some(
+      (g, i) =>
+        i !== guarantorSlot && g.kind === "client" && g.clientId === picked.id
+    );
+    if (duplicate) return "Этот клиент уже добавлен поручителем";
+    if (guarantorSlot === null && guarantors.length >= MAX_CREDIT_GUARANTORS)
+      return `Можно добавить не больше ${MAX_CREDIT_GUARANTORS} поручителей`;
+    return null;
+  };
+
+  const openGuarantorModal = (slot: number | null) => {
+    setGuarantorSlot(slot);
+    openClientModal("guarantorClient");
+  };
+
+  const removeGuarantor = (index: number) => {
+    setGuarantors((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const openClientModal = (type: "client" | "guarantorClient") => {
     setModalType(type);
     if (type === "client") {
@@ -1037,33 +1154,6 @@ const NewCreditPage = () => {
     setSelectedPool(null);
   };
 
-  const getGuarantorDisplayInfo = () => {
-    if (guarantorClient) {
-      return {
-        primaryValue: guarantorClient.fullName,
-        secondaryValue: guarantorClient.phone,
-        type: "client",
-      };
-    } else if (guarantor) {
-      return {
-        primaryValue: guarantor.fullName,
-        secondaryValue: guarantor.phone,
-        type: "custom",
-      };
-    }
-    return {
-      primaryValue: "",
-      secondaryValue: "",
-      type: null,
-    };
-  };
-
-  const clearGuarantor = () => {
-    setGuarantor(null);
-    setGuarantorClient(null);
-  };
-
-  const guarantorInfo = getGuarantorDisplayInfo();
 
   const plusIcon = (
     <svg
@@ -1316,20 +1406,51 @@ const NewCreditPage = () => {
                   <ShieldOutlinedIcon fontSize="small" />
                 </SectionIcon>
                 <SectionTitle>
-                  Поручитель <SectionOptional>(не обязательно)</SectionOptional>
+                  {guarantors.length > 1 ? "Поручители" : "Поручитель"}{" "}
+                  <SectionOptional>
+                    {guarantors.length > 0
+                      ? `(${guarantors.length} из ${MAX_CREDIT_GUARANTORS})`
+                      : "(не обязательно)"}
+                  </SectionOptional>
                 </SectionTitle>
               </SectionHeader>
-              <WideEntitySelectWrapper>
-                <EntitySelectContainer
-                  mode="create"
-                  primaryValue={guarantorInfo.primaryValue}
-                  secondaryValue={guarantorInfo.secondaryValue}
-                  placeholder="Выберите поручителя"
-                  onSelect={() => openClientModal("guarantorClient")}
-                  onClear={clearGuarantor}
-                  customIcon={plusIcon}
-                />
-              </WideEntitySelectWrapper>
+              <GuarantorList>
+                {guarantors.map((g, index) => (
+                  <WideEntitySelectWrapper
+                    key={
+                      g.kind === "client"
+                        ? `client-${g.clientId}`
+                        : `guarantor-${g.guarantorId ?? index}`
+                    }
+                  >
+                    <EntitySelectContainer
+                      mode="create"
+                      primaryValue={g.fullName}
+                      secondaryValue={g.phone}
+                      placeholder="Выберите поручителя"
+                      onSelect={() => openGuarantorModal(index)}
+                      onClear={() => removeGuarantor(index)}
+                      customIcon={plusIcon}
+                    />
+                  </WideEntitySelectWrapper>
+                ))}
+                {guarantors.length < MAX_CREDIT_GUARANTORS && (
+                  <WideEntitySelectWrapper>
+                    <EntitySelectContainer
+                      mode="create"
+                      primaryValue=""
+                      placeholder={
+                        guarantors.length === 0
+                          ? "Выберите поручителя"
+                          : "Добавить ещё поручителя"
+                      }
+                      onSelect={() => openGuarantorModal(null)}
+                      onClear={() => undefined}
+                      customIcon={plusIcon}
+                    />
+                  </WideEntitySelectWrapper>
+                )}
+              </GuarantorList>
             </SectionBody>
           </SectionCard>
         </PersonRow>
@@ -1861,6 +1982,12 @@ const SectionSubtitle = styled.div`
   color: #7b8aa5;
   font-size: 12px;
   font-weight: 400;
+`;
+
+const GuarantorList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const SectionOptional = styled.span`

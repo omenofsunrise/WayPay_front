@@ -75,6 +75,7 @@ import {
 } from "../utils/listPosition";
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
+import { getCreditGuarantors } from "../utils/creditGuarantors";
 
 type ShareOption = "contractData" | "paymentHistory" | "paymentSchedule";
 
@@ -1009,30 +1010,33 @@ const CreditPage = () => {
 
   const guarantorMatchNote = useCallback(
     (credit: Credit): ReactNode => {
-      const guarantorName =
-        credit.guarantorFullname || credit.guarantor?.fullName || "";
-      const guarantorPhone =
-        credit.guarantorPhone || credit.guarantor?.phone || "";
-
       const phone = digitsOf(clientPhone);
-      const byGuarantorPhone =
-        phone.length > 0 &&
-        digitsOf(guarantorPhone).includes(phone) &&
-        !digitsOf(credit.clientPhone).includes(phone);
-
       const words = clientFullName
         .trim()
         .toLowerCase()
         .split(/\s+/)
         .filter(Boolean);
       const clientName = (credit.clientFullName ?? "").toLowerCase();
-      const guarantorLower = guarantorName.toLowerCase();
-      const byGuarantorName =
-        words.length > 0 &&
-        words.every((word) => guarantorLower.includes(word)) &&
-        !words.every((word) => clientName.includes(word));
+      const clientPhoneMatches =
+        phone.length > 0 && digitsOf(credit.clientPhone).includes(phone);
+      const clientNameMatches =
+        words.length > 0 && words.every((word) => clientName.includes(word));
 
-      if (!byGuarantorPhone && !byGuarantorName) return null;
+      // Поручителей может быть несколько — показываем того, кто совпал.
+      const matched = getCreditGuarantors(credit).find((g) => {
+        const byPhone =
+          phone.length > 0 &&
+          digitsOf(g.phone).includes(phone) &&
+          !clientPhoneMatches;
+        const name = (g.fullname ?? "").toLowerCase();
+        const byName =
+          words.length > 0 &&
+          words.every((word) => name.includes(word)) &&
+          !clientNameMatches;
+        return byPhone || byName;
+      });
+      if (!matched) return null;
+      const guarantorName = matched.fullname ?? "";
 
       return (
         <GuarantorMatch>
