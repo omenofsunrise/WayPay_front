@@ -252,6 +252,11 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   useEffect(() => {
     if (mode === "view") return;
 
+    // Проверка номера ходит на сервер, и ответы приходят не по порядку.
+    // Результат устаревшей проверки (форму уже изменили) отбрасываем,
+    // иначе при быстром наборе оставалась ошибка от недонабранного номера.
+    let isStale = false;
+
     const validateForm = async () => {
       const newErrorMessages = {
         fullName: "",
@@ -270,6 +275,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
         formData.secondPhone
       );
 
+      if (isStale) return;
       setErrorMessages(newErrorMessages);
 
       const errors = {
@@ -282,6 +288,10 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     };
 
     validateForm();
+
+    return () => {
+      isStale = true;
+    };
   }, [formData, mode]);
 
   const isSaveDisabled = () => {
