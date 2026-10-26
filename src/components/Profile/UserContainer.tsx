@@ -3,8 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
-import { FILE_BASE_URL } from "../../api/client";
 import { getInitials, generateAvatar } from "../../utils/avatarUtils";
+import { getFileUrl } from "../../utils/fileUrl";
 import type { Employee } from "../../api/types/employee";
 import { formatPhoneHref } from "../../utils/phoneUtils";
 import PhoneLink from "../ui/links/PhoneLink";
@@ -16,12 +16,13 @@ interface UserContainerProps {
 }
 
 const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit = true }: UserContainerProps) => {
-    const { authInfo, loading, error, updateEmployee, updateEmployeePhoto, refresh, deletePhoto } = useEmployee();
+    const { loading, error, updateEmployee, updateEmployeePhoto, refresh, deletePhoto } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const [isViewingPhoto, setIsViewingPhoto] = useState(false);
     const [isDefaultAvatar, setIsDefaultAvatar] = useState(true);
+    const [photoVersion, setPhotoVersion] = useState(() => Date.now());
     const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarRef = useRef<HTMLImageElement>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -32,6 +33,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
     useEffect(() => {
         if (employee?.photoPath) {
             setIsDefaultAvatar(false);
+            setPhotoVersion(Date.now());
         } else {
             setIsDefaultAvatar(true);
         }
@@ -59,8 +61,9 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
     };
 
     const handleModalClose = async () => {
-        let result = await refresh();
+        const result = await refresh();
         if (employee) employee.photoPath = result.employee.photoPath;
+        setPhotoVersion(Date.now());
         setIsModalOpen(false);
     };
 
@@ -168,9 +171,10 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
         
         if (e.target.files && e.target.files.length > 0) {
             try {
-                let result = await updateEmployeePhoto(employee.id, e.target.files[0]);
+                const result = await updateEmployeePhoto(employee.id, e.target.files[0]);
                 if (employee) employee.photoPath = result.photoPath;
                 setIsDefaultAvatar(false);
+                setPhotoVersion(Date.now());
             } catch (err) {
                 console.error("Failed to update photo:", err);
             } finally {
@@ -194,7 +198,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
     }
     
     const avatarSrc = employee?.photoPath 
-        ? `${FILE_BASE_URL}${employee.photoPath}?${Date.now()}`
+        ? getFileUrl(employee.photoPath, photoVersion) || generateAvatar(getInitials(employee.fullName), 100)
         : generateAvatar(getInitials(employee?.fullName || ''), 100);
         
     return (

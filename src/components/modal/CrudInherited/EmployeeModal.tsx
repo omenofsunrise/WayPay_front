@@ -5,8 +5,8 @@ import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
 import Avatar from "../../Profile/Avatar";
 import styled from "styled-components";
-import { BASE_URL } from "../../../api/client";
 import { generateAvatar, getInitials } from "../../../utils/avatarUtils";
+import { getFileUrl } from "../../../utils/fileUrl";
 import { useEmployee } from "../../../api/hooks/useEmployee";
 import PhoneModalInput from "../../ui/fields/PhoneModalInput";
 import type { CustomRole } from "../../../api/types/employee";
@@ -111,7 +111,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [avatarSrc, setAvatarSrc] = useState<string>(
     initialData.avatar
-      ? `${BASE_URL}${initialData.avatar}?${Date.now()}`
+      ? getFileUrl(initialData.avatar, Date.now()) || ""
       : generateAvatar(getInitials(initialData.fullName || ""), 100)
   );
 
@@ -179,9 +179,8 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       const updatedEmployee = await updateEmployeePhoto(initialData.id, file);
 
       if (updatedEmployee.photoPath) {
-        const newAvatarUrl = `${BASE_URL}${
-          updatedEmployee.photoPath
-        }?${Date.now()}`;
+        const newAvatarUrl =
+          getFileUrl(updatedEmployee.photoPath, Date.now()) || "";
         setAvatarSrc(newAvatarUrl);
         await refresh();
       }
@@ -225,7 +224,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     setSubmitError("");
 
     if (initialData.avatar) {
-      setAvatarSrc(`${BASE_URL}${initialData.avatar}?${Date.now()}`);
+      setAvatarSrc(getFileUrl(initialData.avatar, Date.now()) || "");
     } else if (initialData.fullName) {
       setAvatarSrc(
         generateAvatar(getInitials(initialData.fullName || ""), 100)

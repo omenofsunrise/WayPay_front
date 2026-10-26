@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { generateAvatar, getInitials } from '../../utils/avatarUtils';
 
@@ -23,6 +23,10 @@ const Avatar: React.FC<AvatarProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [src]);
 
   const generatedAvatar = useMemo(() => {
     const initials = getInitials(name);
