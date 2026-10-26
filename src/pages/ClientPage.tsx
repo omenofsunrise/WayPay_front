@@ -155,6 +155,8 @@ interface Client {
   creditIds?: string[];
   creditRestTerms?: string[];
   hasPassportPhoto?: boolean;
+  blacklist?: boolean;
+  employeeId?: number;
 }
 
 const ClientPage = () => {
@@ -179,7 +181,8 @@ const ClientPage = () => {
     null
   );
   const [longPressClient, setLongPressClient] = useState<Client | null>(null);
-  const { hasRole, authInfo } = useAuth();
+  const [blacklistUpdatingIds, setBlacklistUpdatingIds] = useState<Set<number>>(new Set());
+  const { hasRole } = useAuth();
 
   // Добавляем состояние для общего количества клиентов
   const [totalClientsCount, setTotalClientsCount] = useState<number>(0);
@@ -199,6 +202,7 @@ const ClientPage = () => {
     updateClient,
     deleteClient,
     checkClientCredits,
+    setClientBlacklist,
   } = useClients();
 
   // Загружаем общее количество клиентов при инициализации
@@ -321,6 +325,29 @@ const ClientPage = () => {
     client: Client | null;
   } | null>(null);
 
+  const handleBlacklistChange = useCallback(async (client: Client, blacklist: boolean) => {
+    const action = blacklist ? "добавить в чёрный список" : "убрать из чёрного списка";
+    if (!window.confirm(`Вы уверены, что хотите ${action} клиента ${client.fullName}?`)) {
+      return;
+    }
+
+    setBlacklistUpdatingIds(prev => new Set(prev).add(client.id));
+    try {
+      await setClientBlacklist(client.id, blacklist);
+      setSelectedClientDossier(prev => prev?.id === client.id
+        ? { ...prev, blacklist }
+        : prev);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Не удалось изменить чёрный список");
+    } finally {
+      setBlacklistUpdatingIds(prev => {
+        const next = new Set(prev);
+        next.delete(client.id);
+        return next;
+      });
+    }
+  }, [setClientBlacklist]);
+
   const handleCardRightClick = useCallback(
     (e: React.MouseEvent, client: Client) => {
       e.preventDefault();
@@ -334,18 +361,20 @@ const ClientPage = () => {
   );
 
   const handleContextMenuAction = useCallback(
-    (action: "edit" | "delete") => {
+    (action: "edit" | "delete" | "blacklist") => {
       if (!contextMenu?.client) return;
 
       if (action === "edit") {
         handleEditClient(contextMenu.client);
       } else if (action === "delete") {
         handleDeleteClient(contextMenu.client);
+      } else if (action === "blacklist") {
+        void handleBlacklistChange(contextMenu.client, contextMenu.client.blacklist !== true);
       }
 
       setContextMenu(null);
     },
-    [contextMenu]
+    [contextMenu, handleBlacklistChange]
   );
 
   const closeContextMenu = useCallback(() => {
@@ -541,6 +570,9 @@ const ClientPage = () => {
             onDelete={handleDeleteClient}
             onRightClick={handleCardRightClick}
             onOpenDossier={handleOpenDossier}
+            onBlacklistChange={handleBlacklistChange}
+            canRemoveFromBlacklist={hasRole("суперадмин")}
+            isBlacklistUpdating={blacklistUpdatingIds.has(client.id)}
             onMouseDown={() => handleCardMouseDown(client)}
             onMouseUp={handleCardMouseUp}
             onMouseLeave={handleCardMouseUp}
@@ -664,6 +696,16 @@ const ClientPage = () => {
                 <MenuItem onClick={() => handleContextMenuAction("edit")}>
                   Редактировать клиента
                 </MenuItem>
+                {(!contextMenu.client?.blacklist || hasRole("суперадмин")) && (
+                  <MenuItem
+                    danger={!contextMenu.client?.blacklist}
+                    onClick={() => handleContextMenuAction("blacklist")}
+                  >
+                    {contextMenu.client?.blacklist
+                      ? "Убрать из чёрного списка"
+                      : "Добавить в чёрный список"}
+                  </MenuItem>
+                )}
                 <MenuItem
                   danger
                   onClick={() => handleContextMenuAction("delete")}

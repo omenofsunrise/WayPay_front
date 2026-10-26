@@ -305,7 +305,7 @@ const ContextMenu = styled.div<{ $isVisible: boolean }>`
   min-width: 150px;
 `;
 
-const MenuItem = styled.button`
+const MenuItem = styled.button<{ $danger?: boolean }>`
   width: 100%;
   text-align: left;
   padding: 10px 16px;
@@ -313,11 +313,16 @@ const MenuItem = styled.button`
   border: none;
   cursor: pointer;
   font-size: 14px;
-  color: #333;
+  color: ${props => props.$danger ? '#DC2626' : '#333'};
   transition: background-color 0.2s;
 
   &:hover {
     background: rgba(0, 0, 0, 0.05);
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.6;
   }
 `;
 
@@ -368,6 +373,9 @@ interface ClientCardProps {
   onDelete: (client: Client) => void;
   onRightClick: (e: React.MouseEvent, client: Client) => void;
   onOpenDossier: (client: Client) => void;
+  onBlacklistChange: (client: Client, blacklist: boolean) => void;
+  canRemoveFromBlacklist?: boolean;
+  isBlacklistUpdating?: boolean;
   showMenu?: boolean;
 }
 
@@ -377,6 +385,9 @@ const ClientCard: React.FC<ClientCardProps> = ({
   onDelete, 
   onRightClick,
   onOpenDossier,
+  onBlacklistChange,
+  canRemoveFromBlacklist = false,
+  isBlacklistUpdating = false,
   showMenu = true,
 }) => {
   const { createPrivateChat } = useChat();
@@ -484,6 +495,12 @@ const ClientCard: React.FC<ClientCardProps> = ({
     onDelete(client);
   };
 
+  const handleBlacklistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    onBlacklistChange(client, client.blacklist !== true);
+  };
+
   const handleCardClick = () => {
     onOpenDossier(client);
   };
@@ -567,7 +584,18 @@ const ClientCard: React.FC<ClientCardProps> = ({
 
               <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
                 <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
-                <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem>
+                {(!isBlacklisted || canRemoveFromBlacklist) && (
+                  <MenuItem
+                    $danger={!isBlacklisted}
+                    disabled={isBlacklistUpdating}
+                    onClick={handleBlacklistClick}
+                  >
+                    {isBlacklisted
+                      ? 'Убрать из чёрного списка'
+                      : 'Добавить в чёрный список'}
+                  </MenuItem>
+                )}
+                <MenuItem $danger onClick={handleDeleteClick}>Удалить</MenuItem>
               </ContextMenu>
             </>
           )}

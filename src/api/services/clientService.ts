@@ -37,6 +37,14 @@ class ClientService {
     await apiClient.delete(`/Client/${id}`);
   }
 
+  async addToBlacklist(id: number): Promise<void> {
+    await apiClient.put(`/Client/${id}/to_blacklist`);
+  }
+
+  async removeFromBlacklist(id: number): Promise<void> {
+    await apiClient.put(`/Client/${id}/from_blacklist`);
+  }
+
   async updateClientDoc(id: number, doc: string): Promise<void> {
     await apiClient.put(`/Client/${id}/doc`, { doc });
   }

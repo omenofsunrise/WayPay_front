@@ -46,10 +46,6 @@ const menuItemsMap: Record<
     subItems: { "/credit-control": "contracts-control" },
   },
   "/clients": { mainItem: "clients", subItems: { "/clients": "clients" } },
-  "/blacklist": {
-    mainItem: "clients",
-    subItems: { "/blacklist": "blacklist" },
-  },
   // '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
   "/schedules": {
     mainItem: "payments",
@@ -178,7 +174,6 @@ const SideMenu = () => {
     "contracts-control": () =>
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
     clients: () => true,
-    blacklist: () => true,
     // 'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
     "pending-payments": () => true,
     "payments-calendar": () =>
@@ -334,7 +329,6 @@ const SideMenu = () => {
       contracts: "Договоры",
       "contracts-control": "Контроль договоров",
       clients: "Клиенты",
-      blacklist: "Чёрный список",
       // 'credit-application': 'Заявки',
       "pending-payments": "Ожидаемые",
       "payments-calendar": "Календарь",
@@ -614,18 +608,12 @@ const SideMenu = () => {
                 }
               }}
               $collapsed={collapsed}
-              $selected={
-                selectedSideMenuItem === "clients" ||
-                selectedSideMenuItem === "blacklist"
-              }
+              $selected={selectedSideMenuItem === "clients"}
             >
               <Icon
                 src={clientsIcon}
                 $collapsed={collapsed}
-                $selected={
-                  selectedSideMenuItem === "clients" ||
-                  selectedSideMenuItem === "blacklist"
-                }
+                $selected={selectedSideMenuItem === "clients"}
               />
               {!collapsed && (
                 <>
@@ -656,14 +644,6 @@ const SideMenu = () => {
                   $selected={selectedSideMenuItem === "clients"}
                 >
                   Клиенты
-                </SubMenuItem>
-                <SubMenuItem
-                  onClick={() =>
-                    handleSubMenuItemClick("blacklist", "/blacklist")
-                  }
-                  $selected={selectedSideMenuItem === "blacklist"}
-                >
-                  Чёрный список
                 </SubMenuItem>
               </SubMenu>
             )}

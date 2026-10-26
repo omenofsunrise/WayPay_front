@@ -10,7 +10,6 @@ import ProductPage from "./pages/ProductPage";
 import { authStorage } from "./api/utils/auth-storage";
 import QueuePage from "./pages/QueuePage";
 import ClientPage from "./pages/ClientPage";
-import BlacklistPage from "./pages/BlacklistPage";
 import InvestorPage from "./pages/InvestorPage";
 import NewCreditPage from "./pages/NewCreditPage";
 import SchedulePage from "./pages/Schedule/SchedulePage";
@@ -541,11 +540,7 @@ function App() {
 
                 <Route
                   path="blacklist"
-                  element={
-                    <MainLayout>
-                      <BlacklistPage />
-                    </MainLayout>
-                  }
+                  element={<Navigate to="/clients" replace />}
                 />
 
                 <Route
