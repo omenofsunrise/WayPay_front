@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { CircleAlert } from "lucide-react";
-import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
+import React, { useState, useEffect, useRef } from "react";
+import { CircleAlert, X } from "lucide-react";
+import { type ModalMode } from "../BASE/modalCRUBase";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
 import Avatar from "../../Profile/Avatar";
@@ -108,6 +108,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [avatarSrc, setAvatarSrc] = useState<string>(
     initialData.avatar
       ? `${BASE_URL}${initialData.avatar}?${Date.now()}`
@@ -163,6 +164,16 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   const handlePhotoChange = async (file: File) => {
     if (!initialData.id) return;
 
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      setSubmitError("Выберите изображение в формате JPG или PNG");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError("Размер изображения не должен превышать 5 МБ");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const updatedEmployee = await updateEmployeePhoto(initialData.id, file);
@@ -179,6 +190,12 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) void handlePhotoChange(file);
+    e.target.value = "";
   };
 
   useEffect(() => {
@@ -215,6 +232,23 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       );
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (mode === "view") return;
@@ -348,118 +382,170 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <BaseModal
-      title={getTitle()}
-      onClose={onClose}
-      onCancel={onClose}
-      onSave={handleSubmit}
-      isSaveDisabled={isSaveDisabled() || isSubmitting}
-      isSubmitting={isSubmitting}
-      children={<div></div>}
-      width={"920px"}
-      mode={mode}
-      customLayout={
-        <ModalLayout>
-          <AvatarSection>
-            <Avatar
-              src={avatarSrc}
-              size={220}
-              name={formData.fullName}
-              disabled={mode === "view"}
-              showCameraIndicator={mode === "edit"}
-              onPhotoChange={mode === "edit" ? handlePhotoChange : undefined}
-            />
-          </AvatarSection>
+    <ModalBackdrop onMouseDown={onClose}>
+      <ModalDialog
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <CloseButton type="button" onClick={onClose} aria-label="Закрыть">
+          <X size={27} strokeWidth={1.8} />
+        </CloseButton>
 
-          <FormSection>
-            <Title>ФИО</Title>
-            <CustomInput
-              name="fullName"
-              inputType="fullname"
-              placeholder="ФИО сотрудника"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              disabled={mode === "view"}
-              hasError={touchedFields.fullName && validationErrors.fullName}
-              errorMessage={
-                touchedFields.fullName ? errorMessages.fullName : undefined
-              }
-            />
+        <ModalHeader>
+          <ModalTitle id="employee-modal-title">{getTitle()}</ModalTitle>
+          <ModalSubtitle>
+            {mode === "create"
+              ? "Заполните личные данные и рабочие настройки"
+              : "Обновите личные данные и рабочие настройки"}
+          </ModalSubtitle>
+        </ModalHeader>
 
-            <Title>Адрес</Title>
-            <CustomInput
-              name="address"
-              inputType="text"
-              placeholder="Адрес"
-              value={formData.address}
-              onChange={handleInputChange}
-              disabled={mode === "view"}
-            />
-
-            <RowContainer>
-              <FieldContainer>
-                <Title>Роль</Title>
-                <CustomSelect
-                  options={roleOptions}
-                  disabled={mode === "view" || mode === "edit"}
-                  placeholder="Выберите роль"
-                  value={formData.role}
-                  onChange={handleSelectChange}
-                  dropdownInPortal
+        <EmployeeForm onSubmit={handleSubmit}>
+          <ScrollableContent>
+            <PhotoSection>
+              <Avatar
+                src={avatarSrc}
+                size={144}
+                name={formData.fullName}
+                disabled
+              />
+              <PhotoActions>
+                {mode !== "view" && (
+                  <ChangePhotoButton
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={mode !== "edit" || isSubmitting}
+                  >
+                    Изменить фото
+                  </ChangePhotoButton>
+                )}
+                <PhotoHint>JPG или PNG, до 5 МБ</PhotoHint>
+                <HiddenPhotoInput
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  onChange={handlePhotoInputChange}
                 />
-              </FieldContainer>
+              </PhotoActions>
+            </PhotoSection>
 
-              <FieldContainer>
-                <Title>Телефон</Title>
-                <PhoneModalInput
-                  name="phone"
-                  placeholder="8 (XXX) XXX-XX-XX"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  disabled={mode === "view" || mode === "edit"}
-                  hasError={touchedFields.phone && validationErrors.phone}
-                  errorMessage={
-                    touchedFields.phone && !showDuplicatePhoneWarning
-                      ? errorMessages.phone
-                      : undefined
-                  }
-                />
-              </FieldContainer>
+            <Divider />
 
-              {/* Второй номер, в отличие от основного, меняется и после
-                  создания: им добавляют вход со второй сим-карты. */}
-              <FieldContainer>
-                <Title>Второй номер (необязательно)</Title>
-                <PhoneModalInput
-                  name="secondPhone"
-                  placeholder="8 (XXX) XXX-XX-XX"
-                  value={formData.secondPhone}
+            <FormField>
+              <FieldLabel>ФИО</FieldLabel>
+              <FieldControl>
+                <CustomInput
+                  name="fullName"
+                  inputType="fullname"
+                  placeholder="ФИО сотрудника"
+                  value={formData.fullName}
                   onChange={handleInputChange}
                   disabled={mode === "view"}
-                  hasError={
-                    touchedFields.secondPhone && validationErrors.secondPhone
-                  }
+                  hasError={touchedFields.fullName && validationErrors.fullName}
                   errorMessage={
-                    touchedFields.secondPhone
-                      ? errorMessages.secondPhone
-                      : undefined
+                    touchedFields.fullName ? errorMessages.fullName : undefined
                   }
                 />
-              </FieldContainer>
+              </FieldControl>
+            </FormField>
 
-              <FieldContainer>
-                <Title>Мин. надбавка%</Title>
+            <FormField>
+              <FieldLabel>Адрес</FieldLabel>
+              <FieldControl>
                 <CustomInput
-                  name="minSurcharge"
-                  inputType="number"
-                  placeholder="Минимальная надбавка"
-                  value={formData.minSurcharge.toString()}
-                  onChange={handleNumberChange}
-                  disabled={mode === "view" || mode === "edit"}
-                  min={0}
+                  name="address"
+                  inputType="text"
+                  placeholder="Адрес"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  disabled={mode === "view"}
                 />
-              </FieldContainer>
-            </RowContainer>
+              </FieldControl>
+            </FormField>
+
+            <SectionTitle>Контакты</SectionTitle>
+            <FieldsGrid>
+              <FormField>
+                <FieldLabel>Телефон</FieldLabel>
+                <FieldControl>
+                  <PhoneModalInput
+                    name="phone"
+                    placeholder="8 (XXX) XXX-XX-XX"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    disabled={mode === "view" || mode === "edit"}
+                    hasError={touchedFields.phone && validationErrors.phone}
+                    errorMessage={
+                      touchedFields.phone && !showDuplicatePhoneWarning
+                        ? errorMessages.phone
+                        : undefined
+                    }
+                  />
+                </FieldControl>
+              </FormField>
+
+              {/* Дополнительный номер можно менять и после создания. */}
+              <FormField>
+                <FieldLabel>Дополнительный телефон</FieldLabel>
+                <FieldControl>
+                  <PhoneModalInput
+                    name="secondPhone"
+                    placeholder="8 (XXX) XXX-XX-XX"
+                    value={formData.secondPhone}
+                    onChange={handleInputChange}
+                    disabled={mode === "view"}
+                    hasError={
+                      touchedFields.secondPhone && validationErrors.secondPhone
+                    }
+                    errorMessage={
+                      touchedFields.secondPhone
+                        ? errorMessages.secondPhone
+                        : undefined
+                    }
+                  />
+                </FieldControl>
+                {!validationErrors.secondPhone && (
+                  <FieldHint>Необязательно</FieldHint>
+                )}
+              </FormField>
+            </FieldsGrid>
+
+            <SectionTitle>Рабочие настройки</SectionTitle>
+            <FieldsGrid>
+              <FormField>
+                <FieldLabel>Роль</FieldLabel>
+                <FieldControl>
+                  <CustomSelect
+                    options={roleOptions}
+                    disabled={mode === "view" || mode === "edit"}
+                    placeholder="Выберите роль"
+                    value={formData.role}
+                    onChange={handleSelectChange}
+                    dropdownInPortal
+                  />
+                </FieldControl>
+              </FormField>
+
+              <FormField>
+                <FieldLabel>Минимальная надбавка</FieldLabel>
+                <PercentField>
+                  <FieldControl>
+                    <CustomInput
+                      name="minSurcharge"
+                      inputType="number"
+                      placeholder="Минимальная надбавка"
+                      value={formData.minSurcharge.toString()}
+                      onChange={handleNumberChange}
+                      disabled={mode === "view" || mode === "edit"}
+                      min={0}
+                    />
+                  </FieldControl>
+                  <PercentSuffix>%</PercentSuffix>
+                </PercentField>
+              </FormField>
+            </FieldsGrid>
 
             {showDuplicatePhoneWarning && (
               <PhoneWarning role="alert" aria-live="polite">
@@ -481,52 +567,349 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 {submitError}
               </SubmitError>
             )}
-          </FormSection>
-        </ModalLayout>
-      }
-    />
+          </ScrollableContent>
+
+          <ModalFooter>
+            <CancelButton type="button" onClick={onClose}>
+              {mode === "view" ? "Закрыть" : "Отмена"}
+            </CancelButton>
+            {mode !== "view" && (
+              <SaveButton
+                type="submit"
+                disabled={isSaveDisabled() || isSubmitting}
+              >
+                {isSubmitting
+                  ? "Сохранение..."
+                  : mode === "create"
+                  ? "Добавить сотрудника"
+                  : "Сохранить изменения"}
+              </SaveButton>
+            )}
+          </ModalFooter>
+        </EmployeeForm>
+      </ModalDialog>
+    </ModalBackdrop>
   );
 };
 
-const ModalLayout = styled.div`
+const ModalBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   display: flex;
-  gap: 20px;
-  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(25, 35, 48, 0.48);
+  backdrop-filter: blur(3px);
 `;
 
-const AvatarSection = styled.div`
-  flex-shrink: 0;
-  padding: 40px 0;
-`;
-
-const FormSection = styled.div`
-  flex: 1;
-  min-width: 0;
-  padding: 20px 20px 20px 0;
+const ModalDialog = styled.div`
+  position: relative;
   display: flex;
+  width: min(1040px, calc(100vw - 48px));
+  max-height: min(920px, calc(100vh - 48px));
   flex-direction: column;
-  gap: 4px;
+  overflow: hidden;
+  border: 1px solid #e1e6eb;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(27, 39, 51, 0.22);
+
+  @media (max-width: 700px) {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    border-radius: 12px;
+  }
 `;
 
-const Title = styled.h3`
-  color: black;
-  text-align: left;
-  margin: 0;
+const CloseButton = styled.button`
+  position: absolute;
+  top: 28px;
+  right: 30px;
+  z-index: 2;
+  display: grid;
+  width: 38px;
+  height: 38px;
   padding: 0;
-  margin-top: 15px;
-  font-size: 14px;
-  font-weight: 400;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #526071;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f5f7;
+    color: #111827;
+  }
 `;
 
-const RowContainer = styled.div`
+const ModalHeader = styled.header`
+  flex: 0 0 auto;
+  padding: 38px 74px 18px 42px;
+
+  @media (max-width: 700px) {
+    padding: 28px 60px 14px 24px;
+  }
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0;
+  color: #101522;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 700px) {
+    font-size: 24px;
+  }
+`;
+
+const ModalSubtitle = styled.p`
+  margin: 8px 0 0;
+  color: #728095;
+  font-size: 18px;
+  line-height: 1.45;
+
+  @media (max-width: 700px) {
+    font-size: 15px;
+  }
+`;
+
+const EmployeeForm = styled.form`
   display: flex;
-  gap: 16px;
-  width: 100%;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
 `;
 
-const FieldContainer = styled.div`
-  flex: 1;
+const ScrollableContent = styled.div`
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 42px 24px;
+
+  @media (max-width: 700px) {
+    padding: 6px 24px 20px;
+  }
+`;
+
+const PhotoSection = styled.section`
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  min-height: 164px;
+
+  @media (max-width: 520px) {
+    align-items: flex-start;
+    gap: 20px;
+
+    > div:first-child {
+      width: 112px;
+      height: 112px;
+      flex: 0 0 112px;
+    }
+  }
+`;
+
+const PhotoActions = styled.div`
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 11px;
+`;
+
+const ChangePhotoButton = styled.button`
+  min-width: 184px;
+  min-height: 50px;
+  padding: 0 24px;
+  border: 1.5px solid #008b98;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #007783;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #f0fbfc;
+  }
+
+  &:disabled {
+    border-color: #cbd5dc;
+    color: #98a4b2;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 520px) {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 15px;
+  }
+`;
+
+const PhotoHint = styled.span`
+  color: #718096;
+  font-size: 15px;
+  line-height: 1.4;
+`;
+
+const HiddenPhotoInput = styled.input`
+  display: none;
+`;
+
+const Divider = styled.div`
+  height: 1px;
+  margin: 14px 0 24px;
+  background: #dbe2e8;
+`;
+
+const FormField = styled.div`
   min-width: 0;
+  margin-bottom: 22px;
+`;
+
+const FieldLabel = styled.label`
+  display: block;
+  margin-bottom: 8px;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.35;
+`;
+
+const FieldControl = styled.div`
+  width: 100%;
+
+  > div,
+  > div > div {
+    width: 100%;
+    max-width: none;
+  }
+
+  input,
+  div[tabindex] {
+    width: 100%;
+    max-width: none;
+    min-height: 54px;
+    padding: 0 18px;
+    border-color: #bac6d3;
+    border-radius: 10px;
+    font-size: 17px;
+    line-height: 1.35;
+    box-sizing: border-box;
+  }
+
+  input::placeholder {
+    color: #9aa7b7;
+  }
+`;
+
+const SectionTitle = styled.h3`
+  margin: 5px 0 13px;
+  color: #0d1320;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.35;
+`;
+
+const FieldsGrid = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+`;
+
+const FieldHint = styled.span`
+  display: block;
+  margin-top: 7px;
+  color: #7a8799;
+  font-size: 14px;
+`;
+
+const PercentField = styled.div`
+  position: relative;
+
+  input {
+    padding-right: 48px;
+  }
+`;
+
+const PercentSuffix = styled.span`
+  position: absolute;
+  top: 50%;
+  right: 19px;
+  color: #465568;
+  font-size: 17px;
+  transform: translateY(-50%);
+  pointer-events: none;
+`;
+
+const ModalFooter = styled.footer`
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin: 0 28px;
+  padding: 18px 14px 22px;
+  border-top: 1px solid #dbe2e8;
+
+  @media (max-width: 520px) {
+    margin: 0 12px;
+    padding: 14px 12px 18px;
+  }
+`;
+
+const FooterButton = styled.button`
+  min-height: 50px;
+  padding: 0 30px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+
+  @media (max-width: 520px) {
+    min-height: 46px;
+    padding: 0 18px;
+  }
+`;
+
+const CancelButton = styled(FooterButton)`
+  border: 1px solid #8f9baa;
+  background: #ffffff;
+  color: #253044;
+
+  &:hover {
+    background: #f5f7f9;
+  }
+`;
+
+const SaveButton = styled(FooterButton)`
+  min-width: 220px;
+  border: 1px solid #008b98;
+  background: #008b98;
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background: #007783;
+  }
+
+  &:disabled {
+    border-color: #99ccd1;
+    background: #99ccd1;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 520px) {
+    min-width: 0;
+  }
 `;
 
 const SubmitError = styled.div`
