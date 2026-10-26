@@ -85,9 +85,14 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
                 phone: updatedData.phone,
                 secondPhone: updatedData.secondPhone ?? "",
             });
+            // Объект сотрудника пришёл от страницы, а refresh() обновляет
+            // другую копию данных. Без этих строк модалка открывалась со
+            // старыми номерами до перезагрузки страницы.
             if (employee) {
                 employee.fullName = result.fullName;
                 employee.address = result.address;
+                employee.phone = result.phone;
+                employee.secondPhone = result.secondPhone ?? null;
             }
             setIsModalOpen(false);
             await refresh();
