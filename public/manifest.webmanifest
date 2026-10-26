@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "WayPay CRM",
+  "short_name": "WayPay",
+  "description": "WayPay — управление договорами, клиентами и платежами",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f9fafa",
+  "theme_color": "#008b8b",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/WayPay.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
