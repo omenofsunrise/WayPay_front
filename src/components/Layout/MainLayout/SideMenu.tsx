@@ -45,7 +45,9 @@ const menuItemsMap: Record<
     mainItem: "contracts",
     subItems: { "/credit-control": "contracts-control" },
   },
-  "/clients": { mainItem: "clients", subItems: { "/clients": "clients" } },
+  // Подпункт у «Клиентов» один (чёрный список переехал в карточки), поэтому
+  // пункт без раскрытия — сразу ведёт на страницу.
+  "/clients": { mainItem: "clients" },
   // '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
   "/schedules": {
     mainItem: "payments",
@@ -602,9 +604,9 @@ const SideMenu = () => {
             <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, "clients", true);
+                  handleCollapsedMenuClick(e, "clients", false);
                 } else {
-                  handleMainMenuItemClick("clients", undefined, true);
+                  handleMenuItemClick("clients", "/clients");
                 }
               }}
               $collapsed={collapsed}
@@ -615,38 +617,8 @@ const SideMenu = () => {
                 $collapsed={collapsed}
                 $selected={selectedSideMenuItem === "clients"}
               />
-              {!collapsed && (
-                <>
-                  <MenuItemText>Клиенты</MenuItemText>
-                  <ExpandArrow
-                    width="14"
-                    height="8"
-                    viewBox="0 0 14 8"
-                    fill="none"
-                    $expanded={expandedItem === "clients"}
-                  >
-                    <path
-                      d="M1 1.32422L7 7.32422L13 1.32422"
-                      stroke="#50555C"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </ExpandArrow>
-                </>
-              )}
+              {!collapsed && <MenuItemText>Клиенты</MenuItemText>}
             </MenuItem>
-
-            {!collapsed && expandedItem === "clients" && (
-              <SubMenu>
-                <SubMenuLine />
-                <SubMenuItem
-                  onClick={() => handleSubMenuItemClick("clients", "/clients")}
-                  $selected={selectedSideMenuItem === "clients"}
-                >
-                  Клиенты
-                </SubMenuItem>
-              </SubMenu>
-            )}
           </DraggableRow>
 
           <DraggableRow {...dragProps("payments")}>
