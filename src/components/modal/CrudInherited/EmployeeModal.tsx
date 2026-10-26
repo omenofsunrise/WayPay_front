@@ -600,11 +600,11 @@ const ModalBackdrop = styled.div`
   align-items: center;
   justify-content: center;
   padding: 24px;
-  overflow-y: auto;
+  overflow: hidden;
   background: rgba(25, 35, 48, 0.48);
   backdrop-filter: blur(3px);
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     padding: 12px;
   }
 `;
@@ -613,6 +613,7 @@ const ModalDialog = styled.div`
   position: relative;
   display: flex;
   width: min(1040px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
   margin: auto;
   flex-direction: column;
   overflow: hidden;
@@ -625,6 +626,10 @@ const ModalDialog = styled.div`
   @media (max-width: 700px) {
     width: calc(100vw - 24px);
     border-radius: 12px;
+  }
+
+  @media (max-height: 1000px) {
+    max-height: calc(100dvh - 24px);
   }
 `;
 
@@ -648,6 +653,13 @@ const CloseButton = styled.button`
     background: #f1f5f7;
     color: #111827;
   }
+
+  @media (max-height: 740px) {
+    top: 10px;
+    right: 18px;
+    width: 32px;
+    height: 32px;
+  }
 `;
 
 const ModalHeader = styled.header`
@@ -658,8 +670,12 @@ const ModalHeader = styled.header`
     padding: 28px 60px 14px 24px;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     padding: 22px 68px 10px 36px;
+  }
+
+  @media (max-height: 740px) {
+    padding: 12px 58px 4px 28px;
   }
 `;
 
@@ -675,8 +691,12 @@ const ModalTitle = styled.h2`
     font-size: 24px;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     font-size: 26px;
+  }
+
+  @media (max-height: 740px) {
+    font-size: 22px;
   }
 `;
 
@@ -690,9 +710,14 @@ const ModalSubtitle = styled.p`
     font-size: 15px;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     margin-top: 4px;
     font-size: 15px;
+  }
+
+  @media (max-height: 740px) {
+    margin-top: 2px;
+    font-size: 13px;
   }
 `;
 
@@ -701,19 +726,24 @@ const EmployeeForm = styled.form`
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
 `;
 
 const ScrollableContent = styled.div`
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
   padding: 8px 42px 24px;
 
   @media (max-width: 700px) {
     padding: 6px 24px 20px;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     padding: 0 36px 10px;
+  }
+
+  @media (max-height: 740px) {
+    padding: 0 28px 4px;
   }
 `;
 
@@ -723,13 +753,24 @@ const PhotoSection = styled.section`
   gap: 30px;
   min-height: 164px;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     min-height: 112px;
 
     > div:first-child {
       width: 104px;
       height: 104px;
       flex: 0 0 104px;
+    }
+  }
+
+  @media (max-height: 740px) {
+    min-height: 78px;
+    gap: 18px;
+
+    > div:first-child {
+      width: 72px;
+      height: 72px;
+      flex: 0 0 72px;
     }
   }
 
@@ -743,6 +784,16 @@ const PhotoSection = styled.section`
       flex: 0 0 112px;
     }
   }
+
+  @media (max-width: 520px) and (max-height: 740px) {
+    gap: 12px;
+
+    > div:first-child {
+      width: 72px;
+      height: 72px;
+      flex: 0 0 72px;
+    }
+  }
 `;
 
 const PhotoActions = styled.div`
@@ -751,8 +802,12 @@ const PhotoActions = styled.div`
   flex-direction: column;
   gap: 11px;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     gap: 6px;
+  }
+
+  @media (max-height: 740px) {
+    gap: 2px;
   }
 `;
 
@@ -785,10 +840,17 @@ const ChangePhotoButton = styled.button`
     font-size: 15px;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     min-height: 42px;
     padding: 0 20px;
     font-size: 15px;
+  }
+
+  @media (max-height: 740px) {
+    min-height: 32px;
+    padding: 0 14px;
+    border-radius: 7px;
+    font-size: 13px;
   }
 `;
 
@@ -797,8 +859,12 @@ const PhotoHint = styled.span`
   font-size: 15px;
   line-height: 1.4;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     font-size: 13px;
+  }
+
+  @media (max-height: 740px) {
+    font-size: 11px;
   }
 `;
 
@@ -811,8 +877,12 @@ const Divider = styled.div`
   margin: 14px 0 24px;
   background: #dbe2e8;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     margin: 8px 0 14px;
+  }
+
+  @media (max-height: 740px) {
+    margin: 3px 0 6px;
   }
 `;
 
@@ -820,8 +890,12 @@ const FormField = styled.div`
   min-width: 0;
   margin-bottom: 22px;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     margin-bottom: 12px;
+  }
+
+  @media (max-height: 740px) {
+    margin-bottom: 5px;
   }
 `;
 
@@ -833,9 +907,14 @@ const FieldLabel = styled.label`
   font-weight: 500;
   line-height: 1.35;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     margin-bottom: 5px;
     font-size: 14px;
+  }
+
+  @media (max-height: 740px) {
+    margin-bottom: 2px;
+    font-size: 12px;
   }
 `;
 
@@ -865,11 +944,21 @@ const FieldControl = styled.div`
     color: #9aa7b7;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     input,
     div[tabindex] {
       min-height: 44px;
       font-size: 15px;
+    }
+  }
+
+  @media (max-height: 740px) {
+    input,
+    div[tabindex] {
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 7px;
+      font-size: 13px;
     }
   }
 `;
@@ -881,9 +970,14 @@ const SectionTitle = styled.h3`
   font-weight: 700;
   line-height: 1.35;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     margin: 2px 0 8px;
     font-size: 18px;
+  }
+
+  @media (max-height: 740px) {
+    margin: 0 0 3px;
+    font-size: 15px;
   }
 `;
 
@@ -892,13 +986,22 @@ const FieldsGrid = styled.div`
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 28px;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     gap: 22px;
+  }
+
+  @media (max-height: 740px) {
+    gap: 14px;
   }
 
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  @media (max-width: 760px) and (max-height: 740px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
   }
 `;
 
@@ -908,9 +1011,14 @@ const FieldHint = styled.span`
   color: #7a8799;
   font-size: 14px;
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     margin-top: 4px;
     font-size: 12px;
+  }
+
+  @media (max-height: 740px) {
+    margin-top: 2px;
+    font-size: 10px;
   }
 `;
 
@@ -930,6 +1038,11 @@ const PercentSuffix = styled.span`
   font-size: 17px;
   transform: translateY(-50%);
   pointer-events: none;
+
+  @media (max-height: 740px) {
+    right: 13px;
+    font-size: 13px;
+  }
 `;
 
 const ModalFooter = styled.footer`
@@ -947,8 +1060,14 @@ const ModalFooter = styled.footer`
     padding: 14px 12px 18px;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     padding: 10px 8px 12px;
+  }
+
+  @media (max-height: 740px) {
+    gap: 10px;
+    margin: 0 20px;
+    padding: 5px 8px 7px;
   }
 `;
 
@@ -965,9 +1084,16 @@ const FooterButton = styled.button`
     padding: 0 18px;
   }
 
-  @media (max-height: 900px) {
+  @media (max-height: 1000px) {
     min-height: 44px;
     font-size: 15px;
+  }
+
+  @media (max-height: 740px) {
+    min-height: 34px;
+    padding: 0 18px;
+    border-radius: 7px;
+    font-size: 13px;
   }
 `;
 
@@ -999,6 +1125,10 @@ const SaveButton = styled(FooterButton)`
 
   @media (max-width: 520px) {
     min-width: 0;
+  }
+
+  @media (max-height: 740px) {
+    min-width: 170px;
   }
 `;
 
