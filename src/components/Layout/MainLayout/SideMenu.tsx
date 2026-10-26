@@ -23,6 +23,7 @@ import React from "react";
 import type { CommonInfo } from "../../../api/types/company";
 import { formatDate, getLicenseDateColor } from "../../../utils/dateFormatter";
 import { usePwaInstall } from "../../../hooks/usePwaInstall";
+import InstallAppHelpModal from "../../modal/InstallAppHelpModal";
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -107,11 +108,18 @@ const SideMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasRole, hasPermission, denyPermission, authInfo } = useAuth();
-  const { canInstall, install } = usePwaInstall();
+  const { canInstall, isInstalled, install } = usePwaInstall();
   const [isInstalling, setIsInstalling] = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
 
   const handleInstallApp = async () => {
     if (isInstalling) return;
+
+    if (!canInstall) {
+      setShowInstallHelp(true);
+      return;
+    }
+
     setIsInstalling(true);
     try {
       await install();
@@ -1000,7 +1008,7 @@ const SideMenu = () => {
         </ScrollableMenuContent>
       </MenuList>
 
-      {canInstall && (
+      {!isInstalled && (
         <InstallAppButton
           type="button"
           onClick={handleInstallApp}
@@ -1085,6 +1093,11 @@ const SideMenu = () => {
           ))}
         </ContextMenu>
       )}
+
+      <InstallAppHelpModal
+        isOpen={showInstallHelp}
+        onClose={() => setShowInstallHelp(false)}
+      />
 
       <RightBorder $collapsed={collapsed} />
     </SideMenuContainer>

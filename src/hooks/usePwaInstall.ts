@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 type InstallOutcome = "accepted" | "dismissed";
+type InstallAvailability = "installed" | "installable" | "manual";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<{ outcome: InstallOutcome; platform: string }>;
@@ -9,9 +10,15 @@ interface BeforeInstallPromptEvent extends Event {
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 const listeners = new Set<() => void>();
 
-const isStandalone = () =>
-  typeof window !== "undefined" &&
-  window.matchMedia("(display-mode: standalone)").matches;
+const isStandalone = () => {
+  if (typeof window === "undefined") return false;
+
+  const safariNavigator = navigator as Navigator & { standalone?: boolean };
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    safariNavigator.standalone === true
+  );
+};
 
 const notify = () => {
   listeners.forEach((listener) => listener());
@@ -22,8 +29,11 @@ const subscribe = (listener: () => void) => {
   return () => listeners.delete(listener);
 };
 
-const getSnapshot = () => Boolean(deferredPrompt) && !isStandalone();
-const getServerSnapshot = () => false;
+const getSnapshot = (): InstallAvailability => {
+  if (isStandalone()) return "installed";
+  return deferredPrompt ? "installable" : "manual";
+};
+const getServerSnapshot = (): InstallAvailability => "manual";
 
 if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (event) => {
@@ -54,7 +64,16 @@ const install = async (): Promise<InstallOutcome | "unavailable"> => {
   }
 };
 
-export const usePwaInstall = () => ({
-  canInstall: useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot),
-  install,
-});
+export const usePwaInstall = () => {
+  const availability = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
+
+  return {
+    canInstall: availability === "installable",
+    isInstalled: availability === "installed",
+    install,
+  };
+};
