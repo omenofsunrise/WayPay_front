@@ -161,6 +161,8 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       address: initialData.address || "",
       role: encodeBaseRole(initialData.role),
       phone: initialData.phone || "",
+      // Второй номер необязателен: null/undefined из initialData → пустая строка.
+      secondPhone: initialData.secondPhone || "",
       minSurcharge: initialData.minSurcharge || 0,
     });
     setValidationErrors({
@@ -224,10 +226,12 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     if (mode === "edit") {
       // Роль в режиме редактирования не меняется (для смены роли — отдельная модалка),
       // поэтому её закодированное значение из сравнения исключаем.
+      // secondPhone в initialData имеет тип string | null → нормализуем через ?? "".
       const isChanged =
         formData.fullName !== initialData.fullName ||
         formData.address !== initialData.address ||
         formData.phone !== initialData.phone ||
+        formData.secondPhone !== (initialData.secondPhone ?? "") ||
         formData.minSurcharge !== initialData.minSurcharge;
       return !isChanged;
     }
@@ -262,6 +266,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
         address: formData.address.trim(),
         role: isCustom ? "" : formData.role.slice("role:".length),
         phone: formData.phone.trim(),
+        // Второй номер необязателен: если пустой — отправляем пустую строку.
         secondPhone: formData.secondPhone.trim(),
         minSurcharge: Number(formData.minSurcharge),
         customRoleId: isCustom
@@ -385,8 +390,8 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 />
               </FieldContainer>
 
-              {/* Второй номер, в отличие от основного, меняется и после
-                  создания: им добавляют вход со второй сим-карты. */}
+              {/* Второй номер необязателен и, в отличие от основного,
+                  меняется и после создания: им добавляют вход со второй сим-карты. */}
               <FieldContainer>
                 <Title>Второй номер (необязательно)</Title>
                 <PhoneModalInput
