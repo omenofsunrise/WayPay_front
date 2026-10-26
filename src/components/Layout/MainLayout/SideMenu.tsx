@@ -22,6 +22,7 @@ import useCompany from "../../../api/hooks/useCompany";
 import React from "react";
 import type { CommonInfo } from "../../../api/types/company";
 import { formatDate, getLicenseDateColor } from "../../../utils/dateFormatter";
+import { usePwaInstall } from "../../../hooks/usePwaInstall";
 
 type CollapsibleProps = {
   $collapsed?: boolean;
@@ -106,6 +107,18 @@ const SideMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasRole, hasPermission, denyPermission, authInfo } = useAuth();
+  const { canInstall, install } = usePwaInstall();
+  const [isInstalling, setIsInstalling] = useState(false);
+
+  const handleInstallApp = async () => {
+    if (isInstalling) return;
+    setIsInstalling(true);
+    try {
+      await install();
+    } finally {
+      setIsInstalling(false);
+    }
+  };
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -987,6 +1000,36 @@ const SideMenu = () => {
         </ScrollableMenuContent>
       </MenuList>
 
+      {canInstall && (
+        <InstallAppButton
+          type="button"
+          onClick={handleInstallApp}
+          disabled={isInstalling}
+          $collapsed={collapsed}
+          title="Установить WayPay на компьютер"
+          aria-label="Установить WayPay на компьютер"
+        >
+          <svg
+            width="21"
+            height="21"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M8 17L12 21L16 17M12 4V20M5 4H19C20.1046 4 21 4.89543 21 6V14C21 15.1046 20.1046 16 19 16H18M6 16H5C3.89543 16 3 15.1046 3 14V6C3 4.89543 3.89543 4 5 4Z"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {!collapsed && (
+            <span>{isInstalling ? "Установка..." : "Установить приложение"}</span>
+          )}
+        </InstallAppButton>
+      )}
+
       {/* Блок с профилем - теперь всегда в самом низу */}
       {employee &&
         (collapsed ? (
@@ -1156,6 +1199,47 @@ const LogoutButton = styled.button`
     svg path {
       fill: #000;
     }
+  }
+`;
+
+const InstallAppButton = styled.button<CollapsibleProps>`
+  width: 100%;
+  min-height: 40px;
+  margin: 8px 0 2px;
+  padding: ${({ $collapsed }) => ($collapsed ? "0" : "0 14px")};
+  border: 1px solid rgba(0, 139, 139, 0.35);
+  border-radius: 8px;
+  background: rgba(0, 139, 139, 0.08);
+  color: #007d88;
+  display: flex;
+  align-items: center;
+  justify-content: ${({ $collapsed }) =>
+    $collapsed ? "center" : "flex-start"};
+  gap: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 139, 139, 0.15);
+    border-color: rgba(0, 139, 139, 0.55);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(0, 139, 139, 0.4);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.65;
   }
 `;
 
