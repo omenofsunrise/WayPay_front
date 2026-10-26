@@ -3,6 +3,18 @@ import { TemplateHandler, MimeType } from 'easy-template-x';
 import type { CreditDocs, SoldProductItem } from '../../api/types/credit';
 import { formatMoney } from '../formatPrice';
 
+/** Поля одного поручителя в шаблонах договоров. */
+type GuarantorTemplateFields = {
+  guarantorNumber: string;
+  guarantorName: string;
+  guarantorBirthdate: string;
+  guarantorPassportSeries: string;
+  guarantorPassportNumber: string;
+  guarantorDocIssueDate: string;
+  guarantorPhone: string;
+  guarantorAddress: string;
+};
+
 class DocxGenerator {
   private templateUrl: string;
   private getDocsData: (id: number) => Promise<CreditDocs | null>;
@@ -35,6 +47,21 @@ class DocxGenerator {
       const handler = new TemplateHandler({
         maxXmlDepth: 30,
       });
+
+      // Договор поручительства составляется на одного человека — при
+      // нескольких поручителях делаем отдельный файл на каждого.
+      const guarantors: GuarantorTemplateFields[] = templateData.guarantorsList;
+      if (templateUrl.includes('guaranteeandConsentAgreement') && guarantors.length > 1) {
+        for (const [index, guarantor] of guarantors.entries()) {
+          const docx = await handler.process(templateFile, { ...templateData, ...guarantor });
+          const surname = guarantor.guarantorName.split(' ')[0] || `${index + 1}`;
+          const fileName = this.generateFileName(docsData, templateUrl)
+            .replace(/\.docx$/, `_поручитель_${index + 1}_${surname}.docx`);
+          saveAs(docx, fileName);
+        }
+        return;
+      }
+
       const docx = await handler.process(templateFile, templateData);
       
       const fileName = this.generateFileName(docsData, templateUrl);
@@ -81,7 +108,34 @@ class DocxGenerator {
     // Обработка изображений по URL
     await this.processImageUrls(result, docsData.logo);
 
-    result.hasGuarantor = !!docsData.guarantorName;
+    // Поручители для шаблона. Поля названы как старые одиночные (guarantorName…),
+    // чтобы внутри цикла {#guarantorsList} работали те же теги.
+    const guarantorsList: GuarantorTemplateFields[] = (docsData.guarantors ?? []).map((g) => ({
+      guarantorNumber: String(g.number),
+      guarantorName: g.name ?? '',
+      guarantorBirthdate: g.birthdate ?? '',
+      guarantorPassportSeries: g.passportSeries ?? '',
+      guarantorPassportNumber: g.passportNumber ?? '',
+      guarantorDocIssueDate: g.docIssueDate ?? '',
+      guarantorPhone: g.phone ?? '',
+      guarantorAddress: g.address ?? '',
+    }));
+    // Бэкенд без списка: один поручитель из старых полей.
+    if (guarantorsList.length === 0 && docsData.guarantorName) {
+      guarantorsList.push({
+        guarantorNumber: '1',
+        guarantorName: docsData.guarantorName,
+        guarantorBirthdate: docsData.guarantorBirthdate ?? '',
+        guarantorPassportSeries: docsData.guarantorPassportSeries ?? '',
+        guarantorPassportNumber: docsData.guarantorPassportNumber ?? '',
+        guarantorDocIssueDate: docsData.guarantorDocIssueDate ?? '',
+        guarantorPhone: docsData.guarantorPhone ?? '',
+        guarantorAddress: docsData.guarantorAddress ?? '',
+      });
+    }
+    result.guarantorsList = guarantorsList;
+    result.guarantorNames = guarantorsList.map((g) => g.guarantorName).filter(Boolean).join(', ');
+    result.hasGuarantor = guarantorsList.length > 0;
     result.hasProducts = !!docsData.soldProducts && docsData.soldProducts.length > 0;
     
     return result;
