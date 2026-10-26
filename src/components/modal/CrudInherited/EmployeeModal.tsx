@@ -855,7 +855,7 @@ const ModalFooter = styled.footer`
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 16px;
   margin: 0 28px;
   padding: 18px 14px 22px;
