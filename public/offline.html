@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#008b8b" />
+    <title>WayPay — нет подключения</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 24px;
+        display: grid;
+        place-items: center;
+        background: #f9fafa;
+        color: #1f2937;
+        font-family: Arial, sans-serif;
+      }
+      main {
+        width: min(440px, 100%);
+        padding: 32px;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        background: #fff;
+        text-align: center;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+      }
+      img { width: 96px; height: 96px; }
+      h1 { margin: 20px 0 10px; font-size: 24px; }
+      p { margin: 0 0 24px; color: #6b7280; line-height: 1.5; }
+      button {
+        min-height: 42px;
+        padding: 0 20px;
+        border: 0;
+        border-radius: 8px;
+        background: #008b8b;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/WayPay.png" alt="WayPay" />
+      <h1>Нет подключения к интернету</h1>
+      <p>Проверьте соединение и попробуйте открыть WayPay снова.</p>
+      <button type="button" onclick="window.location.reload()">Повторить</button>
+    </main>
+  </body>
+</html>
