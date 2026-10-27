@@ -129,19 +129,19 @@ const SessionsPage = () => {
 
           <SessionDetails>
             <DetailRow>
-              <MapPin size={19} />
+              <MapPin size={17} />
               <span>IP: {session.ipAddress || 'Не определён'}</span>
             </DetailRow>
             <DetailRow>
-              <Clock size={19} />
+              <Clock size={17} />
               <span>Создана: {formatDate(session.createdAt)}</span>
             </DetailRow>
             <DetailRow>
-              <Clock size={19} />
+              <Clock size={17} />
               <span>Последняя активность: {formatDate(session.lastUsedAt)}</span>
             </DetailRow>
             <DetailRow>
-              <Monitor size={19} />
+              <Monitor size={17} />
               <span>Истекает: {formatDate(session.expiresAt)}</span>
             </DetailRow>
           </SessionDetails>
@@ -175,7 +175,7 @@ const SessionsPage = () => {
         <PinSection>
           <PinSectionMain>
             <PinIcon $disabled={pinDisabled}>
-              <Lock size={29} />
+              <Lock size={24} />
             </PinIcon>
             <PinText>
               <strong>Вход по ПИН-коду</strong>
@@ -233,13 +233,13 @@ const SessionsPage = () => {
               <X size={25} />
             </CloseButton>
 
-            <ModalIcon><Lock size={29} /></ModalIcon>
+            <ModalIcon><Lock size={24} /></ModalIcon>
             <ModalTitle id="disable-pin-title">Отключить ПИН-код?</ModalTitle>
             <ModalDescription>
               ПИН-код больше не будет запрашиваться при входе<br />и после простоя.
             </ModalDescription>
             <WarningBox>
-              <AlertTriangle size={23} />
+              <AlertTriangle size={20} />
               <span>Не отключайте защиту на общем устройстве.</span>
             </WarningBox>
             <ModalActions>
@@ -325,11 +325,11 @@ const getDevicePresentation = (deviceInfo: string): { label: string; browser: Br
 const SessionsPageLayout = styled(PageLayout)`
   width: 100%;
   margin: 0;
-  padding: 20px 0 48px;
+  padding: 12px 0 32px;
   overflow-y: auto;
 
   @media (max-width: 768px) {
-    padding: 18px 0 36px;
+    padding: 12px 0 28px;
   }
 `;
 
@@ -339,7 +339,7 @@ const HeaderContainer = styled.div`
   align-items: center;
   gap: 24px;
   width: 100%;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 `;
 
 const TitleWrapper = styled.div`
@@ -349,7 +349,7 @@ const TitleWrapper = styled.div`
 const PageTitle = styled.h1`
   margin: 0;
   color: #0f172a;
-  font-size: clamp(28px, 2.3vw, 40px);
+  font-size: clamp(24px, 1.8vw, 32px);
   font-weight: 700;
   line-height: 1.16;
 `;
@@ -357,7 +357,7 @@ const PageTitle = styled.h1`
 const PageSubtitle = styled.p`
   margin: 4px 0 0;
   color: #007d88;
-  font-size: 18px;
+  font-size: 15px;
 
   @media (max-width: 640px) {
     font-size: 15px;
@@ -365,13 +365,13 @@ const PageSubtitle = styled.p`
 `;
 
 const RefreshButton = styled.button`
-  min-width: 130px;
-  padding: 12px 22px;
+  min-width: 108px;
+  padding: 9px 18px;
   border: 0;
   border-radius: 10px;
   background: #e2e5e9;
   color: #182033;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
 
   &:hover:not(:disabled) { background: #d7dce2; }
@@ -384,8 +384,8 @@ const PinSection = styled.section`
   justify-content: space-between;
   gap: 24px;
   width: 100%;
-  padding: 26px 28px;
-  margin-bottom: 28px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
   border: 1px solid #e2e8f0;
   border-radius: 15px;
   background: #fff;
@@ -393,14 +393,14 @@ const PinSection = styled.section`
 
   @media (max-width: 640px) {
     align-items: flex-start;
-    padding: 20px;
+    padding: 16px;
   }
 `;
 
 const PinSectionMain = styled.div`
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   min-width: 0;
 `;
 
@@ -408,8 +408,8 @@ const PinIcon = styled.div<{ $disabled: boolean }>`
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 62px;
-  height: 62px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: ${({ $disabled }) => $disabled ? '#f1f5f9' : '#e3f6f7'};
   color: ${({ $disabled }) => $disabled ? '#94a3b8' : '#007d88'};
@@ -423,27 +423,27 @@ const PinText = styled.div`
 
   strong {
     color: #111827;
-    font-size: 21px;
+    font-size: 18px;
     line-height: 1.2;
   }
 
   span {
     color: #7a8495;
-    font-size: 16px;
+    font-size: 14px;
   }
 `;
 
 const PinControl = styled.div`
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   flex: 0 0 auto;
 `;
 
 const SwitchButton = styled.button<{ $checked: boolean }>`
   position: relative;
-  width: 76px;
-  height: 42px;
+  width: 60px;
+  height: 34px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -462,9 +462,9 @@ const SwitchButton = styled.button<{ $checked: boolean }>`
 const SwitchThumb = styled.span<{ $checked: boolean }>`
   position: absolute;
   top: 4px;
-  left: ${({ $checked }) => $checked ? '38px' : '4px'};
-  width: 34px;
-  height: 34px;
+  left: ${({ $checked }) => $checked ? '30px' : '4px'};
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #e4e7eb;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
@@ -473,13 +473,13 @@ const SwitchThumb = styled.span<{ $checked: boolean }>`
 
 const PinStatus = styled.span`
   color: #172033;
-  font-size: 17px;
+  font-size: 15px;
 `;
 
 const SessionsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
   width: 100%;
 `;
 
@@ -490,8 +490,8 @@ const SessionCard = styled.article<{ $isCurrent?: boolean }>`
   align-items: flex-start;
   gap: 24px;
   width: 100%;
-  min-height: 240px;
-  padding: 28px 26px 24px 32px;
+  min-height: 188px;
+  padding: 20px 22px 18px 24px;
   border: 1px solid #e3e8ef;
   border-left: 4px solid ${({ $isCurrent }) => $isCurrent ? '#008b95' : '#e3e8ef'};
   border-radius: 15px;
@@ -500,22 +500,22 @@ const SessionCard = styled.article<{ $isCurrent?: boolean }>`
 
   @media (max-width: 720px) {
     flex-direction: column;
-    padding: 22px 18px;
+    padding: 18px 16px;
   }
 `;
 
 const SessionMain = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 25px;
+  gap: 18px;
   min-width: 0;
 `;
 
 const BrowserIcon = styled.div<{ $browser: BrowserKind }>`
   position: relative;
   flex: 0 0 auto;
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: ${({ $browser }) => {
     if ($browser === 'chrome') return 'conic-gradient(#db4437 0 33%, #f4b400 0 56%, #0f9d58 0 78%, #db4437 0)';
@@ -529,8 +529,8 @@ const BrowserIcon = styled.div<{ $browser: BrowserKind }>`
   &::before {
     content: '';
     position: absolute;
-    inset: 13px;
-    border: 4px solid #dbeafe;
+    inset: 11px;
+    border: 3px solid #dbeafe;
     border-radius: 50%;
     background: ${({ $browser }) => $browser === 'chrome' ? '#4285f4' : '#f8fafc'};
   }
@@ -545,49 +545,49 @@ const DeviceHeading = styled.div`
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin: 2px 0 25px;
+  margin: 1px 0 17px;
 `;
 
 const DeviceName = styled.strong`
   color: #111827;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
 `;
 
 const CurrentBadge = styled.span`
-  padding: 5px 11px;
+  padding: 4px 9px;
   border-radius: 5px;
   background: #def2f3;
   color: #007d88;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
 `;
 
 const SessionDetails = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 `;
 
 const DetailRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 10px;
   color: #707b8d;
-  font-size: 15px;
+  font-size: 13px;
 
   svg { flex: 0 0 auto; color: #707b8d; }
 `;
 
 const EndSessionButton = styled.button`
   flex: 0 0 auto;
-  min-width: 145px;
-  padding: 13px 21px;
+  min-width: 124px;
+  padding: 10px 16px;
   border: 0;
   border-radius: 10px;
   background: #00838d;
   color: #fff;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
 
   &:hover:not(:disabled) { background: #006f77; }
@@ -634,19 +634,19 @@ const ModalOverlay = styled.div`
 
 const DisableModal = styled.div`
   position: relative;
-  width: min(650px, 100%);
-  padding: 36px;
-  border-radius: 18px;
+  width: min(560px, 100%);
+  padding: 30px;
+  border-radius: 16px;
   background: #fff;
   box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
 
-  @media (max-width: 600px) { padding: 26px 22px; }
+  @media (max-width: 600px) { padding: 24px 20px; }
 `;
 
 const CloseButton = styled.button`
   position: absolute;
-  top: 22px;
-  right: 22px;
+  top: 16px;
+  right: 16px;
   display: grid;
   place-items: center;
   width: 38px;
@@ -664,9 +664,9 @@ const CloseButton = styled.button`
 const ModalIcon = styled.div`
   display: grid;
   place-items: center;
-  width: 74px;
-  height: 74px;
-  margin-bottom: 24px;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 20px;
   border-radius: 50%;
   background: #e3f6f7;
   color: #008b95;
@@ -675,16 +675,16 @@ const ModalIcon = styled.div`
 const ModalTitle = styled.h2`
   margin: 0 0 10px;
   color: #111827;
-  font-size: 34px;
+  font-size: 28px;
   line-height: 1.2;
 
-  @media (max-width: 600px) { font-size: 28px; }
+  @media (max-width: 600px) { font-size: 25px; }
 `;
 
 const ModalDescription = styled.p`
   margin: 0;
   color: #798396;
-  font-size: 19px;
+  font-size: 16px;
   line-height: 1.55;
 `;
 
@@ -692,12 +692,12 @@ const WarningBox = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 28px;
-  padding: 18px 20px;
+  margin-top: 22px;
+  padding: 14px 16px;
   border-radius: 10px;
   background: #fff4df;
   color: #a55700;
-  font-size: 16px;
+  font-size: 14px;
 
   svg { flex: 0 0 auto; color: #d97706; }
 `;
@@ -706,30 +706,30 @@ const ModalActions = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 34px;
+  margin-top: 26px;
 
   @media (max-width: 480px) { flex-direction: column-reverse; }
 `;
 
 const CancelButton = styled.button`
-  padding: 14px 25px;
+  padding: 11px 20px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   background: #fff;
   color: #172033;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
 
   &:hover:not(:disabled) { background: #f8fafc; }
 `;
 
 const ConfirmButton = styled.button`
-  padding: 14px 25px;
+  padding: 11px 20px;
   border: 0;
   border-radius: 10px;
   background: #008b95;
   color: #fff;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
 
   &:hover:not(:disabled) { background: #00747c; }
