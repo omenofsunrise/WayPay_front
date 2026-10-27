@@ -1,6 +1,5 @@
 import React, { type ReactNode, useEffect, useRef, useState } from "react";
 import styled, { css } from "styled-components";
-import { X } from "lucide-react";
 import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
 
 export type ModalMode =
@@ -159,7 +158,7 @@ const BaseModal: React.FC<ModalProps> = ({
           onClick={onClose}
           type="button"
         >
-          <X size={20} strokeWidth={2} />
+          <CloseIcon aria-hidden="true" />
         </CloseButton>
         <ModalHeader $appearance={appearance}>
           <div>
@@ -315,6 +314,8 @@ const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   right: 20px;
   width: 32px;
   height: 32px;
+  padding: 0;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,7 +324,8 @@ const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   border-radius: 8px;
   cursor: pointer;
   color: #6b7280;
-  z-index: 1;
+  z-index: 10;
+  opacity: 1;
   transition: background-color 0.15s, color 0.15s;
 
   ${({ $appearance }) => $appearance === "compact-form" && css`
@@ -339,6 +341,29 @@ const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   &:active {
     background-color: #e5e7eb;
   }
+`;
+
+const CloseIcon = styled.span`
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 0;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+  }
+
+  &::before { transform: rotate(45deg); }
+  &::after { transform: rotate(-45deg); }
 `;
 
 const ModalContent = styled.div<{
