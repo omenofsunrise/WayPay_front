@@ -333,7 +333,11 @@ function App() {
               ) {
                 needsFullReloadRef.current = true;
               }
-              if (!addingAccount) {
+              if (
+                !addingAccount &&
+                response.data.hasPin &&
+                !response.data.pinDisabled
+              ) {
                 setShowPinModal(true);
               }
             }

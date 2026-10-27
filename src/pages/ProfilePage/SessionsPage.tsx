@@ -1,64 +1,76 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
+import {
+  AlertTriangle,
+  Clock,
+  Loader,
+  Lock,
+  MapPin,
+  Monitor,
+  X,
+} from 'react-feather';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import type { AuthSession } from '../../api/types/auth';
 import { formatDate } from '../../utils/dateFormatter';
-import DarkCyanButton from '../../components/ui/Buttons/DarkCyanButton';
-import { Loader } from 'react-feather';
 import PageLayout from '../../components/ui/Layouts/PageLayout';
-import CustomTitle from '../../components/ui/Text/CustomTitle';
-import ModalInfoTitle from '../../components/ui/Text/ModalInfoTitle';
-import GrayButton from '../../components/ui/Buttons/GrayButton';
 import PinCodeModal from '../../components/modal/PinCodeModal';
 import EmployeeService from '../../api/services/employeeService';
 
 const SessionsPage = () => {
-  const { 
-    sessions, 
-    sessionsLoading, 
-    sessionsError, 
-    fetchSessions, 
+  const {
+    sessions,
+    sessionsLoading,
+    sessionsError,
+    fetchSessions,
     revokeSession,
     revokeLoading,
     revokeError,
-    revokeAllSessions,
-    authInfo
+    authInfo,
   } = useEmployee();
 
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isDisableConfirmOpen, setIsDisableConfirmOpen] = useState(false);
   const [isPinConfirmOpen, setIsPinConfirmOpen] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
 
   const pinDisabled = authInfo?.pinDisabled === true;
 
-  // После смены настройки перезагружаем страницу: так приложение заново
-  // прочитает /Auth/info и при включении сразу попросит задать пин.
   const handleDisablePin = async (pin?: string) => {
     await EmployeeService.disablePin(pin);
     window.location.reload();
   };
 
-  const handleDisableClick = async () => {
+  const handleDisableConfirm = async () => {
     if (authInfo?.hasPin) {
+      setIsDisableConfirmOpen(false);
       setIsPinConfirmOpen(true);
       return;
     }
+
     setPinBusy(true);
+    setLocalError(null);
     try {
       await handleDisablePin();
     } catch {
-      setLocalError('Не удалось отключить пин-код');
+      setLocalError('Не удалось отключить ПИН-код');
       setPinBusy(false);
+      setIsDisableConfirmOpen(false);
     }
   };
 
-  const handleEnableClick = async () => {
+  const handlePinToggle = async () => {
+    if (!pinDisabled) {
+      setIsDisableConfirmOpen(true);
+      return;
+    }
+
     setPinBusy(true);
+    setLocalError(null);
     try {
       await EmployeeService.enablePin();
       window.location.reload();
     } catch {
-      setLocalError('Не удалось включить пин-код');
+      setLocalError('Не удалось включить ПИН-код');
       setPinBusy(false);
     }
   };
@@ -67,265 +79,661 @@ const SessionsPage = () => {
     try {
       await fetchSessions();
       setLocalError(null);
-    } catch (err) {
+    } catch {
       setLocalError('Не удалось загрузить сессии');
     }
   }, [fetchSessions]);
 
   useEffect(() => {
-    loadSessions();
+    void loadSessions();
   }, [loadSessions]);
+
+  useEffect(() => {
+    if (!isDisableConfirmOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !pinBusy) setIsDisableConfirmOpen(false);
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isDisableConfirmOpen, pinBusy]);
 
   const handleRevoke = async (sessionId?: number) => {
     try {
       await revokeSession(sessionId);
       await loadSessions();
-    } catch (err) {
+    } catch {
       setLocalError('Не удалось завершить сессию');
     }
   };
 
-  const handleRevokeAllExceptCurrent = async () => {
-    try {
-      await revokeAllSessions();
-      await loadSessions();
-    } catch (err) {
-      setLocalError('Не удалось завершить все сессии');
-    }
+  const renderSessionRow = (session: AuthSession) => {
+    const device = getDevicePresentation(session.deviceInfo);
+
+    return (
+      <SessionCard key={session.id} $isCurrent={session.isCurrentSession}>
+      <SessionMain>
+        <BrowserIcon $browser={device.browser} aria-hidden="true" />
+        <SessionInfo>
+          <DeviceHeading>
+            <DeviceName>{device.label}</DeviceName>
+            {session.isCurrentSession && <CurrentBadge>Текущая сессия</CurrentBadge>}
+          </DeviceHeading>
+
+          <SessionDetails>
+            <DetailRow>
+              <MapPin size={19} />
+              <span>IP: {session.ipAddress || 'Не определён'}</span>
+            </DetailRow>
+            <DetailRow>
+              <Clock size={19} />
+              <span>Создана: {formatDate(session.createdAt)}</span>
+            </DetailRow>
+            <DetailRow>
+              <Clock size={19} />
+              <span>Последняя активность: {formatDate(session.lastUsedAt)}</span>
+            </DetailRow>
+            <DetailRow>
+              <Monitor size={19} />
+              <span>Истекает: {formatDate(session.expiresAt)}</span>
+            </DetailRow>
+          </SessionDetails>
+        </SessionInfo>
+      </SessionMain>
+
+      <EndSessionButton
+        type="button"
+        onClick={() => void handleRevoke(session.isCurrentSession ? undefined : session.id)}
+        disabled={revokeLoading}
+      >
+        {session.isCurrentSession ? 'Завершить текущую сессию' : 'Завершить'}
+      </EndSessionButton>
+      </SessionCard>
+    );
   };
 
-  const renderSessionRow = (session: AuthSession) => (
-    <SessionRow key={session.id} $isCurrent={session.isCurrentSession}>
-      <SessionInfo>
-        <DeviceInfo>
-          <strong>{session.deviceInfo}</strong>
-          {session.isCurrentSession && <CurrentBadge>Текущая</CurrentBadge>}
-        </DeviceInfo>
-        <SessionMeta>
-          <div>IP: {session.ipAddress}</div>
-        </SessionMeta>
-        <SessionDates>
-          <div>Создана: {formatDate(session.createdAt)}</div>
-          <div>Последняя активность: {formatDate(session.lastUsedAt)}</div>
-          <div>Истекает: {formatDate(session.expiresAt)}</div>
-        </SessionDates>
-      </SessionInfo>
-      <SessionActions>
-        {!session.isCurrentSession ? (
-          <DarkCyanButton 
-            onClick={() => handleRevoke(session.id)}
-            disabled={revokeLoading}
-            style={{ width: '120px' }}
-          >
-            Завершить
-          </DarkCyanButton>
-        ) : (
-          <DarkCyanButton
-            onClick={() => handleRevoke()}
-            disabled={revokeLoading}
-          >
-            Завершить текущую сессию
-          </DarkCyanButton>
-        )}
-      </SessionActions>
-    </SessionRow>
-  );
-
   return (
-    <PageLayout>
+    <SessionsPageLayout>
       <HeaderContainer>
         <TitleWrapper>
-          <CustomTitle style={{ margin: 0 }}>Активные сессии</CustomTitle>
-          <ModalInfoTitle>Управление активными сессиями вашего аккаунта</ModalInfoTitle>
+          <PageTitle>Активные сессии</PageTitle>
+          <PageSubtitle>Управление активными сессиями вашего аккаунта</PageSubtitle>
         </TitleWrapper>
-        
-        <ButtonGroup>
-          <GrayButton 
-            onClick={loadSessions} 
-            disabled={sessionsLoading}
-          >
-            Обновить
-          </GrayButton>
-        </ButtonGroup>
+        <RefreshButton type="button" onClick={() => void loadSessions()} disabled={sessionsLoading}>
+          Обновить
+        </RefreshButton>
       </HeaderContainer>
 
       {authInfo && (
         <PinSection>
-          <PinText>
-            <strong>Пин-код</strong>
-            <span>
-              {pinDisabled
-                ? 'Отключён: при входе и после простоя пин-код не спрашивается.'
-                : 'Включён: пин-код спрашивается при входе и после простоя.'}
-            </span>
-          </PinText>
-          {pinDisabled ? (
-            <DarkCyanButton onClick={handleEnableClick} disabled={pinBusy}>
-              Включить пин-код
-            </DarkCyanButton>
-          ) : (
-            <GrayButton onClick={handleDisableClick} disabled={pinBusy}>
-              Отключить пин-код
-            </GrayButton>
-          )}
+          <PinSectionMain>
+            <PinIcon $disabled={pinDisabled}>
+              <Lock size={29} />
+            </PinIcon>
+            <PinText>
+              <strong>Вход по ПИН-коду</strong>
+              <span>Запрашивать при входе и после простоя</span>
+            </PinText>
+          </PinSectionMain>
+
+          <PinControl>
+            <SwitchButton
+              type="button"
+              role="switch"
+              aria-checked={!pinDisabled}
+              aria-label={pinDisabled ? 'Включить ПИН-код' : 'Отключить ПИН-код'}
+              $checked={!pinDisabled}
+              onClick={() => void handlePinToggle()}
+              disabled={pinBusy}
+            >
+              <SwitchThumb $checked={!pinDisabled} />
+            </SwitchButton>
+            <PinStatus>{pinDisabled ? 'Отключён' : 'Включён'}</PinStatus>
+          </PinControl>
         </PinSection>
+      )}
+
+      {sessionsError || localError || revokeError ? (
+        <ErrorMessage>{sessionsError || localError || revokeError}</ErrorMessage>
+      ) : null}
+
+      {sessionsLoading ? (
+        <LoaderWrapper><Loader /></LoaderWrapper>
+      ) : sessions ? (
+        <SessionsList>
+          {sessions.length > 0
+            ? sessions.map(renderSessionRow)
+            : <EmptyMessage>Нет активных сессий</EmptyMessage>}
+        </SessionsList>
+      ) : null}
+
+      {isDisableConfirmOpen && (
+        <ModalOverlay
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !pinBusy) {
+              setIsDisableConfirmOpen(false);
+            }
+          }}
+        >
+          <DisableModal role="dialog" aria-modal="true" aria-labelledby="disable-pin-title">
+            <CloseButton
+              type="button"
+              aria-label="Закрыть"
+              onClick={() => setIsDisableConfirmOpen(false)}
+              disabled={pinBusy}
+            >
+              <X size={25} />
+            </CloseButton>
+
+            <ModalIcon><Lock size={29} /></ModalIcon>
+            <ModalTitle id="disable-pin-title">Отключить ПИН-код?</ModalTitle>
+            <ModalDescription>
+              ПИН-код больше не будет запрашиваться при входе<br />и после простоя.
+            </ModalDescription>
+            <WarningBox>
+              <AlertTriangle size={23} />
+              <span>Не отключайте защиту на общем устройстве.</span>
+            </WarningBox>
+            <ModalActions>
+              <CancelButton
+                type="button"
+                onClick={() => setIsDisableConfirmOpen(false)}
+                disabled={pinBusy}
+              >
+                Отмена
+              </CancelButton>
+              <ConfirmButton type="button" onClick={() => void handleDisableConfirm()} disabled={pinBusy}>
+                {pinBusy ? 'Отключение...' : 'Отключить ПИН-код'}
+              </ConfirmButton>
+            </ModalActions>
+          </DisableModal>
+        </ModalOverlay>
       )}
 
       <PinCodeModal
         isOpen={isPinConfirmOpen}
         mode="confirm"
-        title="Отключение пин-кода"
-        description="Введите текущий пин-код, чтобы отключить его. Пин-код перестанет спрашиваться во всех ваших сессиях."
+        title="Подтвердите отключение"
+        description="Введите текущий ПИН-код, чтобы отключить защиту."
         onConfirm={handleDisablePin}
         onSuccess={() => setIsPinConfirmOpen(false)}
         onCancel={() => setIsPinConfirmOpen(false)}
       />
-
-      {sessionsLoading && <LoaderWrapper><Loader /></LoaderWrapper>}
-      
-      {sessionsError || localError || revokeError ? (
-        <ErrorMessage>
-          {sessionsError || localError || revokeError}
-        </ErrorMessage>
-      ) : null}
-
-      {!sessionsLoading && sessions && (
-        <SessionsList>
-          {sessions.length > 0 ? (
-            sessions.map(renderSessionRow)
-          ) : (
-            <EmptyMessage>Нет активных сессий</EmptyMessage>
-          )}
-        </SessionsList>
-      )}
-    </PageLayout>
+    </SessionsPageLayout>
   );
 };
 
+type BrowserKind = 'chrome' | 'edge' | 'yandex' | 'opera' | 'firefox' | 'safari' | 'other';
 
-const PinSection = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+const getDevicePresentation = (deviceInfo: string): { label: string; browser: BrowserKind } => {
+  if (!deviceInfo) return { label: 'Неизвестное устройство', browser: 'other' };
+
+  const browser: BrowserKind = /YaBrowser/i.test(deviceInfo)
+    ? 'yandex'
+    : /Edg\//i.test(deviceInfo)
+      ? 'edge'
+      : /OPR\//i.test(deviceInfo)
+        ? 'opera'
+        : /Firefox\//i.test(deviceInfo)
+          ? 'firefox'
+          : /Chrome\//i.test(deviceInfo)
+            ? 'chrome'
+            : /Safari\//i.test(deviceInfo)
+              ? 'safari'
+              : 'other';
+
+  const browserNames: Record<BrowserKind, string> = {
+    chrome: 'Chrome',
+    edge: 'Microsoft Edge',
+    yandex: 'Яндекс Браузер',
+    opera: 'Opera',
+    firefox: 'Firefox',
+    safari: 'Safari',
+    other: 'Браузер',
+  };
+
+  const os = /Windows NT/i.test(deviceInfo)
+    ? 'Windows'
+    : /Android/i.test(deviceInfo)
+      ? 'Android'
+      : /iPhone|iPad|iPod/i.test(deviceInfo)
+        ? 'iOS'
+        : /Macintosh|Mac OS X/i.test(deviceInfo)
+          ? 'macOS'
+          : /Linux/i.test(deviceInfo)
+            ? 'Linux'
+            : '';
+
+  if (browser === 'other' && !os && deviceInfo.length <= 70) {
+    return { label: deviceInfo.replace(/\s*[|/]\s*/g, ' · '), browser };
+  }
+
+  return {
+    label: os ? `${browserNames[browser]} · ${os}` : browserNames[browser],
+    browser,
+  };
+};
+
+const SessionsPageLayout = styled(PageLayout)`
   width: 100%;
-  padding: 16px 20px;
-  margin-bottom: 24px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-`;
+  margin: 0;
+  padding: 20px 0 48px;
+  overflow-y: auto;
 
-const PinText = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: #50555c;
-
-  strong {
-    color: #1a202c;
-    font-size: 16px;
+  @media (max-width: 768px) {
+    padding: 18px 0 36px;
   }
 `;
 
 const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 24px;
   width: 100%;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 `;
 
 const TitleWrapper = styled.div`
-  flex: 1;
+  min-width: 0;
 `;
 
-const ButtonGroup = styled.div`
+const PageTitle = styled.h1`
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(28px, 2.3vw, 40px);
+  font-weight: 700;
+  line-height: 1.16;
+`;
+
+const PageSubtitle = styled.p`
+  margin: 4px 0 0;
+  color: #007d88;
+  font-size: 18px;
+
+  @media (max-width: 640px) {
+    font-size: 15px;
+  }
+`;
+
+const RefreshButton = styled.button`
+  min-width: 130px;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: 10px;
+  background: #e2e5e9;
+  color: #182033;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: #d7dce2; }
+  &:disabled { cursor: wait; opacity: 0.65; }
+`;
+
+const PinSection = styled.section`
   display: flex;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 26px 28px;
+  margin-bottom: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+
+  @media (max-width: 640px) {
+    align-items: flex-start;
+    padding: 20px;
+  }
 `;
 
-const LoaderWrapper = styled.div`
+const PinSectionMain = styled.div`
   display: flex;
-  justify-content: center;
-  padding: 20px;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
 `;
 
-const ErrorMessage = styled.div`
-  color: #ef4444;
-  padding: 16px;
-  background-color: #fef2f2;
-  border-radius: 6px;
-  margin-bottom: 16px;
+const PinIcon = styled.div<{ $disabled: boolean }>`
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: ${({ $disabled }) => $disabled ? '#f1f5f9' : '#e3f6f7'};
+  color: ${({ $disabled }) => $disabled ? '#94a3b8' : '#007d88'};
+`;
+
+const PinText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  strong {
+    color: #111827;
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  span {
+    color: #7a8495;
+    font-size: 16px;
+  }
+`;
+
+const PinControl = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+`;
+
+const SwitchButton = styled.button<{ $checked: boolean }>`
+  position: relative;
+  width: 76px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: ${({ $checked }) => $checked ? '#008b95' : '#cbd5e1'};
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:focus-visible {
+    outline: 3px solid rgba(0, 139, 149, 0.25);
+    outline-offset: 3px;
+  }
+
+  &:disabled { cursor: wait; opacity: 0.65; }
+`;
+
+const SwitchThumb = styled.span<{ $checked: boolean }>`
+  position: absolute;
+  top: 4px;
+  left: ${({ $checked }) => $checked ? '38px' : '4px'};
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e4e7eb;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+  transition: left 0.2s ease;
+`;
+
+const PinStatus = styled.span`
+  color: #172033;
+  font-size: 17px;
 `;
 
 const SessionsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 22px;
   width: 100%;
 `;
 
-const SessionRow = styled.div<{ $isCurrent?: boolean }>`
-  background-color: white;
-  border-radius: 8px;
-  padding: 16px;
+const SessionCard = styled.article<{ $isCurrent?: boolean }>`
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  border-left: 4px solid ${({ $isCurrent }) => $isCurrent ? 'rgba(0, 125, 136, 1)' : 'transparent'};
+  gap: 24px;
+  width: 100%;
+  min-height: 240px;
+  padding: 28px 26px 24px 32px;
+  border: 1px solid #e3e8ef;
+  border-left: 4px solid ${({ $isCurrent }) => $isCurrent ? '#008b95' : '#e3e8ef'};
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 2px 9px rgba(15, 23, 42, 0.035);
+
+  @media (max-width: 720px) {
+    flex-direction: column;
+    padding: 22px 18px;
+  }
+`;
+
+const SessionMain = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 25px;
+  min-width: 0;
+`;
+
+const BrowserIcon = styled.div<{ $browser: BrowserKind }>`
+  position: relative;
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: ${({ $browser }) => {
+    if ($browser === 'chrome') return 'conic-gradient(#db4437 0 33%, #f4b400 0 56%, #0f9d58 0 78%, #db4437 0)';
+    if ($browser === 'firefox') return 'linear-gradient(145deg, #7c3aed, #f97316 58%, #facc15)';
+    if ($browser === 'opera') return 'linear-gradient(145deg, #ff1b2d, #a70014)';
+    if ($browser === 'safari') return 'linear-gradient(145deg, #60a5fa, #0ea5e9)';
+    return 'linear-gradient(145deg, #00a4a6, #2563eb)';
+  }};
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 13px;
+    border: 4px solid #dbeafe;
+    border-radius: 50%;
+    background: ${({ $browser }) => $browser === 'chrome' ? '#4285f4' : '#f8fafc'};
+  }
 `;
 
 const SessionInfo = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  min-width: 0;
 `;
 
-const DeviceInfo = styled.div`
+const DeviceHeading = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  font-size: 15px;
+  margin: 2px 0 25px;
+`;
+
+const DeviceName = styled.strong`
+  color: #111827;
+  font-size: 20px;
+  font-weight: 700;
 `;
 
 const CurrentBadge = styled.span`
-  background-color: rgba(0, 125, 136, 0.1);
-  color: rgba(0, 125, 136, 1);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 5px;
+  background: #def2f3;
+  color: #007d88;
+  font-size: 14px;
   font-weight: 500;
 `;
 
-const SessionMeta = styled.div`
-  display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: #6b7280;
-`;
-
-const SessionDates = styled.div`
+const SessionDetails = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: #9ca3af;
+  gap: 15px;
 `;
 
-const SessionActions = styled.div`
-  margin-left: 20px;
+const DetailRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: #707b8d;
+  font-size: 15px;
+
+  svg { flex: 0 0 auto; color: #707b8d; }
+`;
+
+const EndSessionButton = styled.button`
+  flex: 0 0 auto;
+  min-width: 145px;
+  padding: 13px 21px;
+  border: 0;
+  border-radius: 10px;
+  background: #00838d;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: #006f77; }
+  &:disabled { cursor: wait; opacity: 0.65; }
+
+  @media (max-width: 720px) { align-self: flex-end; }
+`;
+
+const LoaderWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+  color: #007d88;
+`;
+
+const ErrorMessage = styled.div`
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
 `;
 
 const EmptyMessage = styled.div`
+  padding: 48px;
+  border: 1px solid #e3e8ef;
+  border-radius: 15px;
+  background: #fff;
+  color: #7a8495;
   text-align: center;
-  padding: 40px;
-  color: #9ca3af;
-  font-size: 14px;
-  background-color: white;
-  border-radius: 8px;
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(3px);
+`;
+
+const DisableModal = styled.div`
+  position: relative;
+  width: min(650px, 100%);
+  padding: 36px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
+
+  @media (max-width: 600px) { padding: 26px 22px; }
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: #f1f5f9; }
+`;
+
+const ModalIcon = styled.div`
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  margin-bottom: 24px;
+  border-radius: 50%;
+  background: #e3f6f7;
+  color: #008b95;
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0 0 10px;
+  color: #111827;
+  font-size: 34px;
+  line-height: 1.2;
+
+  @media (max-width: 600px) { font-size: 28px; }
+`;
+
+const ModalDescription = styled.p`
+  margin: 0;
+  color: #798396;
+  font-size: 19px;
+  line-height: 1.55;
+`;
+
+const WarningBox = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+  padding: 18px 20px;
+  border-radius: 10px;
+  background: #fff4df;
+  color: #a55700;
+  font-size: 16px;
+
+  svg { flex: 0 0 auto; color: #d97706; }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 34px;
+
+  @media (max-width: 480px) { flex-direction: column-reverse; }
+`;
+
+const CancelButton = styled.button`
+  padding: 14px 25px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: #f8fafc; }
+`;
+
+const ConfirmButton = styled.button`
+  padding: 14px 25px;
+  border: 0;
+  border-radius: 10px;
+  background: #008b95;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: #00747c; }
+  &:disabled { cursor: wait; opacity: 0.65; }
 `;
 
 export default SessionsPage;
