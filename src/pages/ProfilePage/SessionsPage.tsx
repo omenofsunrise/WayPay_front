@@ -431,8 +431,10 @@ const PinIcon = styled.div<{ $disabled: boolean }>`
 const PinText = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
+  text-align: left;
 
   strong {
     color: #111827;
