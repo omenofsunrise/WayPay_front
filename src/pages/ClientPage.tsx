@@ -104,13 +104,13 @@ const PageHeader = styled.header`
   flex-shrink: 0;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
-  padding: 18px 0 14px;
+  gap: 18px;
+  padding: 10px 0 12px;
 
   @media (max-width: 640px) {
     align-items: stretch;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
   }
 `;
 
@@ -121,47 +121,47 @@ const HeadingBlock = styled.div`
 const HeadingRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
 `;
 
 const PageTitle = styled.h1`
   margin: 0;
   color: #101827;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.15;
 `;
 
 const HeaderCountBadge = styled.span`
   display: inline-grid;
-  min-width: 34px;
-  height: 30px;
-  padding: 0 10px;
+  min-width: 28px;
+  height: 25px;
+  padding: 0 8px;
   box-sizing: border-box;
   place-items: center;
   color: #4b596b;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 650;
   background: #e8eef4;
   border-radius: 999px;
 `;
 
 const PageSubtitle = styled.p`
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #778497;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.4;
 `;
 
 const AddClientButton = styled.button`
   display: inline-flex;
-  min-height: 46px;
-  padding: 0 22px;
+  min-height: 38px;
+  padding: 0 17px;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   color: #fff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   background: #078891;
@@ -180,13 +180,13 @@ const SearchPanel = styled.section`
   display: grid;
   grid-template-columns: minmax(230px, 1.15fr) minmax(230px, 1.15fr) 112px auto minmax(180px, 1fr);
   flex-shrink: 0;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
-  margin: 0 0 18px;
-  padding: 14px 18px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
   background: #fff;
   border: 1px solid #e8edf2;
-  border-radius: 13px;
+  border-radius: 10px;
   box-shadow: 0 5px 18px rgba(25, 46, 74, 0.05);
 
   @media (max-width: 1150px) {
@@ -209,7 +209,7 @@ const SearchField = styled.div<{ $hasClearButton?: boolean }>`
   > svg {
     position: absolute;
     top: 50%;
-    left: 14px;
+    left: 12px;
     z-index: 1;
     color: #65748a;
     transform: translateY(-50%);
@@ -225,13 +225,13 @@ const SearchField = styled.div<{ $hasClearButton?: boolean }>`
   input {
     width: 100%;
     max-width: none;
-    min-height: 44px;
-    padding: 8px ${({ $hasClearButton }) => ($hasClearButton ? "42px" : "14px")} 8px 44px;
+    min-height: 38px;
+    padding: 6px ${({ $hasClearButton }) => ($hasClearButton ? "38px" : "12px")} 6px 38px;
     color: #172133;
-    font-size: 14px;
+    font-size: 13px;
     background: #fff;
     border: 1px solid #ced8e2;
-    border-radius: 8px;
+    border-radius: 7px;
   }
 
   input::placeholder { color: #8a96a8; }
@@ -240,11 +240,11 @@ const SearchField = styled.div<{ $hasClearButton?: boolean }>`
 const ClearSearchButton = styled.button`
   position: absolute;
   top: 50%;
-  right: 10px;
+  right: 7px;
   z-index: 2;
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   place-items: center;
   color: #718096;
@@ -258,14 +258,14 @@ const ClearSearchButton = styled.button`
 `;
 
 const SearchButton = styled.button`
-  min-height: 44px;
-  padding: 0 22px;
+  min-height: 38px;
+  padding: 0 18px;
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   background: #078891;
   border: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
 
   &:hover:not(:disabled) { background: #007d88; }
@@ -274,10 +274,10 @@ const SearchButton = styled.button`
 `;
 
 const PanelResetButton = styled.button`
-  min-height: 44px;
-  padding: 0 8px;
+  min-height: 38px;
+  padding: 0 6px;
   color: #087d86;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 550;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -290,13 +290,13 @@ const PanelResetButton = styled.button`
 `;
 
 const ResultSummary = styled.div<{ $visible: boolean }>`
-  min-height: 36px;
-  padding-left: 22px;
+  min-height: 32px;
+  padding-left: 18px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   color: #68768a;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   border-left: 1px solid #e4e9ef;
@@ -305,7 +305,7 @@ const ResultSummary = styled.div<{ $visible: boolean }>`
   @media (max-width: 1150px) {
     grid-column: 1 / -1;
     min-height: auto;
-    padding: 12px 0 0;
+    padding: 9px 0 0;
     justify-content: flex-start;
     border-top: 1px solid #e4e9ef;
     border-left: 0;
@@ -790,14 +790,14 @@ const ClientPage = () => {
               <PageSubtitle>Управление клиентами и договорами</PageSubtitle>
             </HeadingBlock>
             <AddClientButton onClick={handleCreateClient} type="button">
-              <Plus size={20} />
+              <Plus size={18} />
               Добавить клиента
             </AddClientButton>
           </PageHeader>
 
           <SearchPanel>
             <SearchField $hasClearButton={Boolean(nameFilter)}>
-              <Search size={19} />
+              <Search size={16} />
               <CustomInput
                 inputType="fullname"
                 placeholder="ФИО клиента"
@@ -811,12 +811,12 @@ const ClientPage = () => {
                   onClick={() => handleFilterChange("")}
                   type="button"
                 >
-                  <X size={17} />
+                  <X size={15} />
                 </ClearSearchButton>
               )}
             </SearchField>
             <SearchField>
-              <Phone size={18} />
+              <Phone size={16} />
               <PhoneModalInput
                 placeholder="Телефон (полный номер)"
                 value={phoneFilter}
