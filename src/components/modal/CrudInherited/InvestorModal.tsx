@@ -486,7 +486,7 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       title={getTitle()}
       subtitle={getSubtitle()}
       appearance="compact-form"
-      width="620px"
+      width="680px"
       maxHeight="calc(100vh - 32px)"
       cancelButtonText={mode === 'view' ? 'Закрыть' : 'Отмена'}
       saveButtonText={mode === 'create' || mode === 'create-pool' ? 'Создать инвестора' : 'Сохранить'}
