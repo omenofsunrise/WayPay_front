@@ -15,12 +15,12 @@ const Card = styled.article<{ $isBlacklisted?: boolean }>`
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
-  margin: 0 0 18px;
-  padding: 24px 30px 28px;
+  margin: 0 0 14px;
+  padding: 18px 22px 20px;
   color: #111827;
   background: #fff;
   border: 1px solid #e5eaf0;
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: 0 5px 18px rgba(25, 46, 74, 0.06);
   cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
@@ -29,7 +29,7 @@ const Card = styled.article<{ $isBlacklisted?: boolean }>`
     content: '';
     position: absolute;
     inset: 0 auto 0 0;
-    width: 6px;
+    width: 4px;
     background: ${({ $isBlacklisted }) => ($isBlacklisted ? '#ff5b61' : 'transparent')};
   }
 
@@ -44,36 +44,36 @@ const Card = styled.article<{ $isBlacklisted?: boolean }>`
     outline-offset: 2px;
   }
 
-  @media (max-width: 720px) { padding: 20px 18px 22px; }
+  @media (max-width: 720px) { padding: 16px; }
 `;
 
 const Header = styled.header`
   display: flex;
   align-items: center;
   min-width: 0;
-  padding-right: 52px;
+  padding-right: 42px;
 `;
 
 const Avatar = styled.div`
   display: grid;
-  flex: 0 0 58px;
-  width: 58px;
-  height: 58px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
   place-items: center;
-  margin-right: 22px;
+  margin-right: 16px;
   color: #087c86;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.02em;
   background: #e5f5f7;
   border-radius: 50%;
 
   @media (max-width: 520px) {
-    flex-basis: 48px;
-    width: 48px;
-    height: 48px;
-    margin-right: 14px;
-    font-size: 17px;
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+    font-size: 15px;
   }
 `;
 
@@ -82,7 +82,7 @@ const NameRow = styled.div`
   flex-wrap: wrap;
   align-items: center;
   min-width: 0;
-  gap: 10px 16px;
+  gap: 8px 12px;
 `;
 
 const NameButton = styled.button`
@@ -91,7 +91,7 @@ const NameButton = styled.button`
   overflow: hidden;
   color: #0d1525;
   font: inherit;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.25;
   text-align: left;
@@ -104,21 +104,21 @@ const NameButton = styled.button`
 
   &:hover { color: #007d88; }
   &:focus-visible { outline: 2px solid rgba(0, 125, 136, 0.45); outline-offset: 3px; }
-  @media (max-width: 720px) { max-width: 100%; font-size: 19px; }
+  @media (max-width: 720px) { max-width: 100%; font-size: 17px; }
 `;
 
 const BlacklistBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
+  gap: 6px;
+  padding: 6px 9px;
   color: #e5484d;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 650;
   line-height: 1;
   white-space: nowrap;
   background: #ffeaeb;
-  border-radius: 9px;
+  border-radius: 7px;
 `;
 
 const CopiedBadge = styled.span`
@@ -135,11 +135,11 @@ const CopiedBadge = styled.span`
 
 const MenuButton = styled.button`
   position: absolute;
-  top: 28px;
-  right: 24px;
+  top: 18px;
+  right: 16px;
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   place-items: center;
   color: #526071;
@@ -149,33 +149,33 @@ const MenuButton = styled.button`
   cursor: pointer;
 
   &:hover, &:focus-visible { color: #182235; background: #f1f5f7; outline: none; }
-  @media (max-width: 520px) { top: 21px; right: 13px; }
+  @media (max-width: 520px) { top: 15px; right: 12px; }
 `;
 
 const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   width: 100%;
-  margin-top: 28px;
+  margin-top: 20px;
 
-  @media (max-width: 1280px) { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 24px; }
+  @media (max-width: 1280px) { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 20px; }
   @media (max-width: 760px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 480px) { grid-template-columns: 1fr; row-gap: 18px; }
+  @media (max-width: 480px) { grid-template-columns: 1fr; row-gap: 16px; }
 `;
 
 const InfoItem = styled.div`
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 21px minmax(0, 1fr);
   grid-template-rows: auto auto;
   min-width: 0;
-  padding: 0 22px;
+  padding: 0 15px;
   border-left: 1px solid #e3e9ef;
 
   &:first-child { padding-left: 0; border-left: 0; }
   @media (max-width: 1280px) { &:nth-child(4) { padding-left: 0; border-left: 0; } }
   @media (max-width: 760px) {
     &:nth-child(odd) { padding-left: 0; border-left: 0; }
-    &:nth-child(4) { padding-left: 22px; border-left: 1px solid #e3e9ef; }
+    &:nth-child(4) { padding-left: 15px; border-left: 1px solid #e3e9ef; }
   }
   @media (max-width: 480px) {
     padding: 0;
@@ -195,7 +195,7 @@ const InfoLabel = styled.span`
   min-width: 0;
   overflow: hidden;
   color: #7c889b;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -203,10 +203,10 @@ const InfoLabel = styled.span`
 
 const InfoValue = styled.span`
   min-width: 0;
-  margin-top: 6px;
+  margin-top: 4px;
   overflow: hidden;
   color: #222c3c;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -220,34 +220,34 @@ const ContactLink = styled.a`
 `;
 
 const Section = styled.section`
-  margin-top: 28px;
-  padding-top: 20px;
+  margin-top: 20px;
+  padding-top: 15px;
   border-top: 1px solid #e4eaf0;
 `;
 
 const SectionHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 9px;
+  margin-bottom: 11px;
 `;
 
 const SectionTitle = styled.h4`
   margin: 0;
   color: #1c2738;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
 `;
 
 const CountBadge = styled.span`
   display: inline-grid;
-  min-width: 28px;
-  height: 25px;
-  padding: 0 8px;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 7px;
   box-sizing: border-box;
   place-items: center;
   color: #344154;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 650;
   background: #edf3f8;
   border-radius: 999px;
@@ -255,17 +255,17 @@ const CountBadge = styled.span`
 
 const TileGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 490px));
-  gap: 12px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 420px));
+  gap: 10px 12px;
   @media (max-width: 650px) { grid-template-columns: 1fr; }
 `;
 
 const DetailTile = styled.button`
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   min-width: 0;
-  min-height: 70px;
-  padding: 10px 16px;
+  min-height: 56px;
+  padding: 8px 12px;
   align-items: center;
   color: #172133;
   text-align: left;
@@ -281,14 +281,14 @@ const DetailTile = styled.button`
     box-shadow: 0 4px 12px rgba(31, 64, 80, 0.08);
     outline: none;
   }
-  @media (max-width: 420px) { grid-template-columns: 32px minmax(0, 1fr) auto; padding: 10px 12px; }
+  @media (max-width: 420px) { grid-template-columns: 28px minmax(0, 1fr) auto; }
 `;
 
 const TileIcon = styled.span`display: inline-flex; color: #07848c;`;
 const TileMain = styled.span`
   min-width: 0;
   overflow: hidden;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -296,13 +296,13 @@ const TileMain = styled.span`
 const TileAside = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  margin-left: 12px;
+  gap: 10px;
+  margin-left: 10px;
 `;
 const TermBadge = styled.span`
-  padding: 7px 12px;
+  padding: 6px 9px;
   color: #a86615;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -433,14 +433,14 @@ const ClientCard: React.FC<ClientCardProps> = ({
             <NameButton onClick={copyName} title="Скопировать ФИО" type="button">
               {client.fullName || 'Не указано'}
             </NameButton>
-            {isBlacklisted && <BlacklistBadge><AlertTriangle size={15} strokeWidth={2.4} />Чёрный список</BlacklistBadge>}
+            {isBlacklisted && <BlacklistBadge><AlertTriangle size={13} strokeWidth={2.4} />Чёрный список</BlacklistBadge>}
             {isNameCopied && <CopiedBadge>Скопировано</CopiedBadge>}
           </NameRow>
         </Header>
 
         {showMenu && <>
           <MenuButton aria-label="Действия с клиентом" onMouseDown={(event) => event.stopPropagation()} onClick={handleMenuClick} type="button">
-            <MoreVertical size={22} />
+            <MoreVertical size={20} />
           </MenuButton>
           {menuAt && <FloatingContextMenu
             x={menuAt.x} y={menuAt.y} onClose={() => setMenuAt(null)}
@@ -458,18 +458,18 @@ const ClientCard: React.FC<ClientCardProps> = ({
         </>}
 
         <InfoGrid>
-          <InfoItem><InfoIcon><IdCard size={18} /></InfoIcon><InfoLabel>ID клиента</InfoLabel><InfoValue>{client.id}</InfoValue></InfoItem>
+          <InfoItem><InfoIcon><IdCard size={16} /></InfoIcon><InfoLabel>ID клиента</InfoLabel><InfoValue>{client.id}</InfoValue></InfoItem>
           <InfoItem>
-            <InfoIcon><Phone size={17} /></InfoIcon><InfoLabel>Телефон</InfoLabel>
+            <InfoIcon><Phone size={15} /></InfoIcon><InfoLabel>Телефон</InfoLabel>
             <InfoValue>{client.phone ? <ContactLink href={formatPhoneHref(client.phone)} onClick={(event) => event.stopPropagation()}>{formatPhone(client.phone)}</ContactLink> : 'Не указан'}</InfoValue>
           </InfoItem>
           <InfoItem>
-            <InfoIcon><MessageCircle size={18} /></InfoIcon><InfoLabel>WhatsApp</InfoLabel>
+            <InfoIcon><MessageCircle size={16} /></InfoIcon><InfoLabel>WhatsApp</InfoLabel>
             <InfoValue>{client.secondPhone ? <ContactLink href={`https://wa.me/${client.secondPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>{formatPhone(client.secondPhone)}</ContactLink> : 'Не указан'}</InfoValue>
           </InfoItem>
-          <InfoItem><InfoIcon><CalendarDays size={18} /></InfoIcon><InfoLabel>Дата рождения</InfoLabel><InfoValue>{formatDate(client.birthdate)}</InfoValue></InfoItem>
-          <InfoItem><InfoIcon><MapPin size={18} /></InfoIcon><InfoLabel>Адрес регистрации</InfoLabel><InfoValue title={client.registrationAddress || undefined}>{client.registrationAddress || 'Не указан'}</InfoValue></InfoItem>
-          <InfoItem><InfoIcon><House size={18} /></InfoIcon><InfoLabel>Фактический адрес</InfoLabel><InfoValue title={client.actualAddress || undefined}>{client.actualAddress || 'Не указан'}</InfoValue></InfoItem>
+          <InfoItem><InfoIcon><CalendarDays size={16} /></InfoIcon><InfoLabel>Дата рождения</InfoLabel><InfoValue>{formatDate(client.birthdate)}</InfoValue></InfoItem>
+          <InfoItem><InfoIcon><MapPin size={16} /></InfoIcon><InfoLabel>Адрес регистрации</InfoLabel><InfoValue title={client.registrationAddress || undefined}>{client.registrationAddress || 'Не указан'}</InfoValue></InfoItem>
+          <InfoItem><InfoIcon><House size={16} /></InfoIcon><InfoLabel>Фактический адрес</InfoLabel><InfoValue title={client.actualAddress || undefined}>{client.actualAddress || 'Не указан'}</InfoValue></InfoItem>
         </InfoGrid>
 
         {creditIds.length > 0 && <Section>
@@ -477,9 +477,9 @@ const ClientCard: React.FC<ClientCardProps> = ({
           <TileGrid>{creditIds.map((contractId, index) => {
             const months = Number.parseInt(creditRestTerms[index] ?? '0', 10) || 0;
             return <DetailTile key={`${contractId}-${index}`} onClick={(event) => openContract(event, contractId)} type="button">
-              <TileIcon><FileText size={24} /></TileIcon>
+              <TileIcon><FileText size={20} /></TileIcon>
               <TileMain>№ {contractId || 'Без номера'}</TileMain>
-              <TileAside><TermBadge>Осталось {months} мес.</TermBadge><ChevronRight size={20} /></TileAside>
+              <TileAside><TermBadge>Осталось {months} мес.</TermBadge><ChevronRight size={18} /></TileAside>
             </DetailTile>;
           })}</TileGrid>
         </Section>}
@@ -492,9 +492,9 @@ const ClientCard: React.FC<ClientCardProps> = ({
             title={guarantor.fullname || undefined}
             type="button"
           >
-            <TileIcon><Link2 size={22} /></TileIcon>
+            <TileIcon><Link2 size={19} /></TileIcon>
             <TileMain>Договор № {guarantor.creditId || 'Без номера'}</TileMain>
-            <ChevronRight size={20} />
+            <ChevronRight size={18} />
           </DetailTile>)}</TileGrid>
         </Section>}
       </Card>
