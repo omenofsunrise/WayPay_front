@@ -1,5 +1,5 @@
 import React, { type ReactNode, useEffect, useRef, useState } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
 
 export type ModalMode =
@@ -26,6 +26,8 @@ interface ModalProps {
   saveButtonText?: string;
   customLayout?: React.ReactNode;
   maxHeight?: string;
+  subtitle?: string;
+  appearance?: "default" | "client-create";
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -45,6 +47,8 @@ const BaseModal: React.FC<ModalProps> = ({
   saveButtonText = "Сохранить",
   customLayout,
   maxHeight = "90vh",
+  subtitle,
+  appearance = "default",
 }) => {
   const isViewMode = mode === "view";
 
@@ -143,33 +147,38 @@ const BaseModal: React.FC<ModalProps> = ({
       <ModalContainer
         width={width}
         maxHeight={maxHeight}
+        $appearance={appearance}
         ref={modalRef}
         onWheel={handleModalScroll}
         onClick={(e) => e.stopPropagation()}
       >
-        <CloseButton onClick={onClose}>&times;</CloseButton>
-        <ModalHeader>
-          <ModalTitle>{title}</ModalTitle>
+        <CloseButton $appearance={appearance} onClick={onClose}>&times;</CloseButton>
+        <ModalHeader $appearance={appearance}>
+          <div>
+            <ModalTitle $appearance={appearance}>{title}</ModalTitle>
+            {subtitle && <ModalSubtitle>{subtitle}</ModalSubtitle>}
+          </div>
         </ModalHeader>
         <div className="modal-body">{customLayout}</div>
         <ModalForm onSubmit={onSave}>
-          <ModalContent ref={contentRef} isScrollable={isScrollable}>
+          <ModalContent ref={contentRef} isScrollable={isScrollable} $appearance={appearance}>
             {children}
           </ModalContent>
 
-          <ModalFooter>
+          <ModalFooter $appearance={appearance}>
             {!hideCanselButton && (
-              <CancelButton onClick={handleCancel}>
+              <CancelButton $appearance={appearance} onClick={handleCancel}>
                 {cancelButtonText}
               </CancelButton>
             )}
             {!isViewMode && !hideSaveButton && (
               <DarkCyanButton
                 style={{
-                  minWidth: "136px",
-                  padding: "10px 20px",
-                  borderRadius: "10px",
-                  fontSize: "16px",
+                  minWidth: appearance === "client-create" ? "150px" : "128px",
+                  minHeight: "40px",
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  fontSize: "14px",
                 }}
                 type="submit"
                 disabled={isSaveDisabled || isSubmitting}
@@ -201,28 +210,40 @@ const ModalBackdrop = styled.div`
   overflow: hidden;
 `;
 
-const ModalContainer = styled.div<{ width: string; maxHeight: string }>`
+const ModalContainer = styled.div<{
+  width: string;
+  maxHeight: string;
+  $appearance: "default" | "client-create";
+}>`
   width: ${(props) => props.width};
   max-width: calc(100vw - 32px);
   max-height: ${(props) => props.maxHeight};
-  background-color: rgba(249, 250, 250, 1);
-  border: 1px solid rgba(173, 179, 188, 1);
-  border-radius: 5px;
-  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25), 0 0 25px rgba(0, 0, 0, 0.25);
+  background: #fff;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 0;
   position: relative;
   margin: 0;
   overflow: hidden;
+
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    padding: 0;
+    background: #fff;
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
+  `}
 
   @media (max-height: 768px) {
     max-height: 95vh;
   }
 
   @media (max-width: 600px) {
-    padding: 16px;
-    border-radius: 8px;
+    padding: 0;
+    border-radius: 10px;
     max-height: 95vh;
   }
 `;
@@ -235,26 +256,49 @@ const ModalForm = styled.form`
   overflow: hidden;
 `;
 
-export const ModalHeader = styled.div`
+export const ModalHeader = styled.div<{ $appearance?: "default" | "client-create" }>`
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  margin-top: 0;
+  margin: 0;
+  padding: 24px 28px 14px;
   flex-shrink: 0;
+
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    justify-content: flex-start;
+    padding: 28px 34px 10px;
+  `}
 `;
 
-export const ModalTitle = styled.h2`
-  font-size: 24px;
-  font-weight: 600;
-  color: #000;
-  margin: 0 40px 0 0;
-  padding-left: 4px;
+export const ModalTitle = styled.h2<{ $appearance?: "default" | "client-create" }>`
+  margin: 0;
+  padding: 0;
+  color: #172235;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    margin: 0;
+    padding: 0;
+    color: #172235;
+    font-size: 25px;
+    font-weight: 700;
+    line-height: 1.2;
+  `}
 `;
 
-const CloseButton = styled.button`
+const ModalSubtitle = styled.p`
+  margin: 5px 0 0;
+  color: #7b8799;
+  font-size: 14px;
+  line-height: 1.4;
+`;
+
+const CloseButton = styled.button<{ $appearance: "default" | "client-create" }>`
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 17px;
+  right: 20px;
   width: 32px;
   height: 32px;
   display: flex;
@@ -270,6 +314,13 @@ const CloseButton = styled.button`
   z-index: 1;
   transition: background-color 0.15s, color 0.15s;
 
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    top: 20px;
+    right: 24px;
+    font-size: 26px;
+    font-weight: 300;
+  `}
+
   &:hover {
     background-color: #f3f4f6;
     color: #111827;
@@ -280,9 +331,14 @@ const CloseButton = styled.button`
   }
 `;
 
-const ModalContent = styled.div<{ isScrollable: boolean }>`
+const ModalContent = styled.div<{
+  isScrollable: boolean;
+  $appearance: "default" | "client-create";
+}>`
   flex: 1;
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  padding: 0 24px;
+  box-sizing: border-box;
   min-height: 0;
   overflow-y: ${(props) => (props.isScrollable ? "auto" : "visible")};
 
@@ -306,27 +362,58 @@ const ModalContent = styled.div<{ isScrollable: boolean }>`
 
   scrollbar-width: thin;
   scrollbar-color: rgba(173, 179, 188, 1) rgba(241, 241, 241, 1);
+
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    margin-bottom: 0;
+    padding: 0;
+  `}
 `;
 
-const ModalFooter = styled.div`
+const ModalFooter = styled.div<{ $appearance: "default" | "client-create" }>`
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  margin: 10px 30px 20px 30px;
+  gap: 12px;
+  margin: 0;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #e3e9ef;
   flex-shrink: 0;
+
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    justify-content: flex-end;
+    gap: 12px;
+    margin: 0;
+    padding: 16px 34px 20px;
+    border-top: 1px solid #e3e9ef;
+  `}
 `;
 
-const CancelButton = styled.button`
-  padding: 10px 20px;
-  background-color: rgba(209, 213, 219, 1);
-  border: none;
-  border-radius: 10px;
+const CancelButton = styled.button<{ $appearance: "default" | "client-create" }>`
+  min-height: 40px;
+  padding: 8px 18px;
+  background: #fff;
+  border: 1px solid #aeb9c6;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
-  width: 136px;
+  font-size: 14px;
+  width: 116px;
   color: black;
 
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    width: 116px;
+    min-height: 40px;
+    padding: 8px 18px;
+    background: #fff;
+    border: 1px solid #aeb9c6;
+    border-radius: 8px;
+    font-size: 14px;
+  `}
+
   &:hover {
-    background-color: rgba(209, 213, 219, 0.8);
+    background: #f5f7f9;
   }
+
+  ${({ $appearance }) => $appearance === "client-create" && css`
+    &:hover { background: #f5f7f9; }
+  `}
 `;

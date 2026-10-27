@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import styled from "styled-components";
+import { CalendarDays, Check, Phone } from "lucide-react";
 import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
 import CustomInput from "../../ui/fields/CustomInput";
 import ModalInfoTitle from "../../ui/Text/ModalInfoTitle";
@@ -52,6 +54,126 @@ const emptyClient: Omit<Client, "id"> = {
   registrationAddress: "",
   actualAddress: "",
 };
+
+const CreateFormContent = styled.div`
+  padding: 6px 34px 24px;
+
+  @media (max-width: 600px) { padding: 4px 18px 20px; }
+`;
+
+const CreateSection = styled.section<{ $separated?: boolean }>`
+  margin-top: ${({ $separated }) => ($separated ? "18px" : "8px")};
+  padding-top: ${({ $separated }) => ($separated ? "18px" : "0")};
+  border-top: ${({ $separated }) => ($separated ? "1px solid #dfe6ed" : "0")};
+`;
+
+const CreateSectionTitle = styled.h3`
+  margin: 0 0 16px;
+  color: #07818a;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+`;
+
+const CreateFieldsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px 18px;
+
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+`;
+
+const CreateField = styled.label<{ $fullWidth?: boolean }>`
+  display: flex;
+  grid-column: ${({ $fullWidth }) => ($fullWidth ? "1 / -1" : "auto")};
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: #192438;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+`;
+
+const CreateInputShell = styled.div<{ $withIcon?: boolean; $iconRight?: boolean }>`
+  position: relative;
+  min-width: 0;
+
+  > svg {
+    position: absolute;
+    top: 20px;
+    left: ${({ $iconRight }) => ($iconRight ? "auto" : "13px")};
+    right: ${({ $iconRight }) => ($iconRight ? "13px" : "auto")};
+    z-index: 2;
+    color: #8290a3;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  > div {
+    display: block;
+    width: 100%;
+    margin: 0;
+    max-width: none;
+  }
+
+  input {
+    width: 100%;
+    max-width: none;
+    min-height: 40px;
+    padding: 7px ${({ $iconRight }) => ($iconRight ? "40px" : "12px")} 7px
+      ${({ $withIcon, $iconRight }) => ($withIcon && !$iconRight ? "40px" : "13px")};
+    color: #172235;
+    font-size: 14px;
+    background: #fff;
+    border-color: #c7d2de;
+    border-radius: 7px;
+  }
+
+  input::placeholder { color: #8b97a9; }
+`;
+
+const SameAddressLabel = styled.label`
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 15px;
+  color: #253044;
+  font-size: 14px;
+  line-height: 1.35;
+  cursor: pointer;
+`;
+
+const CheckboxVisual = styled.span<{ $checked: boolean }>`
+  display: grid;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  place-items: center;
+  color: #fff;
+  background: ${({ $checked }) => ($checked ? "#078891" : "#fff")};
+  border: 1px solid ${({ $checked }) => ($checked ? "#078891" : "#aebac7")};
+  border-radius: 5px;
+`;
+
+const HiddenCheckbox = styled.input`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+`;
+
+const CreateApiError = styled.div`
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  color: #b4232a;
+  font-size: 13px;
+  background: #fff0f1;
+  border-radius: 7px;
+`;
 
 const validateDate = (
   dateStr: string,
@@ -145,7 +267,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     actualAddress: "",
   },
   createTitle,
-  namePlaceholder = "ФИО клиента",
+  namePlaceholder = "Фамилия, имя, отчество",
 }) => {
   const [formData, setFormData] = useState<Omit<Client, "id">>(
     mode === "create"
@@ -244,12 +366,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [sameAsRegistration, setSameAsRegistration] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
       if (mode === "create") {
         setFormData(emptyClient);
         setIsEditingPassport(false);
+        setSameAsRegistration(true);
 
         setValidationErrors({
           fullName: false,
@@ -490,13 +614,24 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      if (mode === "create" && sameAsRegistration && name === "registrationAddress") {
+        next.actualAddress = value;
+      }
+      return next;
+    });
     setTouchedFields((prev) => ({
       ...prev,
       [name]: true,
+    }));
+  };
+
+  const handleSameAddressChange = (checked: boolean) => {
+    setSameAsRegistration(checked);
+    setFormData((prev) => ({
+      ...prev,
+      actualAddress: checked ? prev.registrationAddress : "",
     }));
   };
 
@@ -610,7 +745,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
   const getTitle = () => {
     switch (mode) {
       case "create":
-        return createTitle ?? "Создание";
+        return createTitle ?? "Новый клиент";
       case "edit":
         return "Редактирование";
       case "view":
@@ -620,19 +755,147 @@ const ClientModal: React.FC<ClientModalProps> = ({
     }
   };
 
+  const renderCreateContent = () => (
+    <CreateFormContent>
+      {apiError && <CreateApiError>{apiError}</CreateApiError>}
+
+      <CreateSection>
+        <CreateSectionTitle>Основная информация</CreateSectionTitle>
+        <CreateFieldsGrid>
+          <CreateField $fullWidth>
+            ФИО
+            <CreateInputShell>
+              <CustomInput
+                name="fullName"
+                inputType="fullname"
+                placeholder={namePlaceholder}
+                value={formData.fullName}
+                onChange={handleInputChange}
+                hasError={touchedFields.fullName && validationErrors.fullName}
+                errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
+              />
+            </CreateInputShell>
+          </CreateField>
+
+          <CreateField>
+            Телефон
+            <CreateInputShell $withIcon>
+              <Phone size={17} />
+              <PhoneModalInput
+                name="phone"
+                placeholder="8 (___) ___-__-__"
+                value={formData.phone}
+                onChange={handleInputChange}
+                hasError={touchedFields.phone && validationErrors.phone}
+                errorMessage={touchedFields.phone ? errorMessages.phone : undefined}
+              />
+            </CreateInputShell>
+          </CreateField>
+
+          <CreateField>
+            Дата рождения
+            <CreateInputShell $withIcon $iconRight>
+              <CalendarDays size={17} />
+              <CustomInput
+                name="birthdate"
+                inputType="date"
+                placeholder="дд.мм.гггг"
+                value={formData.birthdate.toString() || ""}
+                onChange={handleInputChange}
+                hasError={touchedFields.birthdate && validationErrors.birthdate}
+                errorMessage={touchedFields.birthdate ? errorMessages.birthdate : undefined}
+              />
+            </CreateInputShell>
+          </CreateField>
+        </CreateFieldsGrid>
+      </CreateSection>
+
+      <CreateSection $separated>
+        <CreateSectionTitle>Паспортные данные</CreateSectionTitle>
+        <CreateFieldsGrid>
+          <CreateField $fullWidth>
+            Серия и номер паспорта
+            <CreateInputShell>
+              <CustomInput
+                name="doc"
+                inputType="doc"
+                placeholder="0000 000000"
+                value={formData.doc}
+                onChange={handleInputChange}
+                hasError={touchedFields.doc && validationErrors.doc}
+                errorMessage={touchedFields.doc ? errorMessages.doc : undefined}
+              />
+            </CreateInputShell>
+          </CreateField>
+
+          <CreateField $fullWidth>
+            Адрес регистрации
+            <CreateInputShell>
+              <CustomInput
+                name="registrationAddress"
+                inputType="text"
+                placeholder="Город, улица, дом, квартира"
+                value={formData.registrationAddress}
+                onChange={handleInputChange}
+                hasError={touchedFields.registrationAddress && validationErrors.registrationAddress}
+                errorMessage={touchedFields.registrationAddress ? errorMessages.registrationAddress : undefined}
+              />
+            </CreateInputShell>
+          </CreateField>
+        </CreateFieldsGrid>
+
+        <SameAddressLabel>
+          <HiddenCheckbox
+            type="checkbox"
+            checked={sameAsRegistration}
+            onChange={(event) => handleSameAddressChange(event.target.checked)}
+          />
+          <CheckboxVisual $checked={sameAsRegistration}>
+            {sameAsRegistration && <Check size={17} strokeWidth={2.5} />}
+          </CheckboxVisual>
+          <span>Фактический адрес совпадает с регистрацией</span>
+        </SameAddressLabel>
+
+        {!sameAsRegistration && (
+          <CreateFieldsGrid style={{ marginTop: "15px" }}>
+            <CreateField $fullWidth>
+              Фактический адрес
+              <CreateInputShell>
+                <CustomInput
+                  name="actualAddress"
+                  inputType="text"
+                  placeholder="Город, улица, дом, квартира"
+                  value={formData.actualAddress || ""}
+                  onChange={handleInputChange}
+                />
+              </CreateInputShell>
+            </CreateField>
+          </CreateFieldsGrid>
+        )}
+      </CreateSection>
+    </CreateFormContent>
+  );
+
   if (!isOpen) return null;
 
   return (
     <BaseModal
       title={getTitle()}
-      onClose={onClose}
-      onCancel={onClose}
+      subtitle={mode === "create" ? "Заполните контактные и паспортные данные" : undefined}
+      appearance={mode === "create" ? "client-create" : "default"}
+      width={mode === "create" ? "680px" : undefined}
+      maxHeight={mode === "create" ? "calc(100vh - 32px)" : undefined}
+      cancelButtonText={mode === "create" ? "Отмена" : undefined}
+      saveButtonText={mode === "create" ? "Создать клиента" : undefined}
+      onClose={handleClose}
+      onCancel={handleClose}
       onSave={handleSubmit}
       isSaveDisabled={isSaveDisabled() || isSubmitting}
       isSubmitting={isSubmitting}
       mode={mode}
     >
-      <form onSubmit={handleSubmit}>
+      {mode === "create" ? renderCreateContent() : (
+      <div>
         <div
           style={{
             padding: "20px",
@@ -848,7 +1111,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
             </InputRow>
           )}
         </div>
-      </form>
+      </div>
+      )}
     </BaseModal>
   );
 };
