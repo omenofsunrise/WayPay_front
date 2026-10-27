@@ -119,13 +119,14 @@ const SessionsPage = () => {
 
     return (
       <SessionCard key={session.id} $isCurrent={session.isCurrentSession}>
-      <SessionMain>
-        <BrowserIcon $browser={device.browser} aria-hidden="true" />
-        <SessionInfo>
-          <DeviceHeading>
-            <DeviceName>{device.label}</DeviceName>
-            {session.isCurrentSession && <CurrentBadge>Текущая сессия</CurrentBadge>}
-          </DeviceHeading>
+        <SessionMain>
+          <SessionHeader>
+            <BrowserIcon $browser={device.browser} aria-hidden="true" />
+            <DeviceHeading>
+              <DeviceName>{device.label}</DeviceName>
+              {session.isCurrentSession && <CurrentBadge>Текущая сессия</CurrentBadge>}
+            </DeviceHeading>
+          </SessionHeader>
 
           <SessionDetails>
             <DetailRow>
@@ -145,16 +146,15 @@ const SessionsPage = () => {
               <span>Истекает: {formatDate(session.expiresAt)}</span>
             </DetailRow>
           </SessionDetails>
-        </SessionInfo>
-      </SessionMain>
+        </SessionMain>
 
-      <EndSessionButton
-        type="button"
-        onClick={() => void handleRevoke(session.isCurrentSession ? undefined : session.id)}
-        disabled={revokeLoading}
-      >
-        {session.isCurrentSession ? 'Завершить текущую сессию' : 'Завершить'}
-      </EndSessionButton>
+        <EndSessionButton
+          type="button"
+          onClick={() => void handleRevoke(session.isCurrentSession ? undefined : session.id)}
+          disabled={revokeLoading}
+        >
+          {session.isCurrentSession ? 'Завершить текущую сессию' : 'Завершить'}
+        </EndSessionButton>
       </SessionCard>
     );
   };
@@ -323,10 +323,14 @@ const getDevicePresentation = (deviceInfo: string): { label: string; browser: Br
 };
 
 const SessionsPageLayout = styled(PageLayout)`
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
   margin: 0;
   padding: 12px 0 32px;
   overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 
   @media (max-width: 768px) {
     padding: 12px 0 28px;
@@ -339,7 +343,13 @@ const HeaderContainer = styled.div`
   align-items: center;
   gap: 24px;
   width: 100%;
+  min-width: 0;
   margin-bottom: 20px;
+  box-sizing: border-box;
+
+  @media (max-width: 640px) {
+    flex-wrap: wrap;
+  }
 `;
 
 const TitleWrapper = styled.div`
@@ -384,14 +394,17 @@ const PinSection = styled.section`
   justify-content: space-between;
   gap: 24px;
   width: 100%;
+  max-width: 100%;
   padding: 18px 22px;
   margin-bottom: 20px;
   border: 1px solid #e2e8f0;
   border-radius: 15px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
 
   @media (max-width: 640px) {
+    flex-direction: column;
     align-items: flex-start;
     padding: 16px;
   }
@@ -438,6 +451,10 @@ const PinControl = styled.div`
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
+
+  @media (max-width: 640px) {
+    align-self: flex-end;
+  }
 `;
 
 const SwitchButton = styled.button<{ $checked: boolean }>`
@@ -481,6 +498,9 @@ const SessionsList = styled.div`
   flex-direction: column;
   gap: 16px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 `;
 
 const SessionCard = styled.article<{ $isCurrent?: boolean }>`
@@ -490,6 +510,8 @@ const SessionCard = styled.article<{ $isCurrent?: boolean }>`
   align-items: flex-start;
   gap: 24px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 188px;
   padding: 20px 22px 18px 24px;
   border: 1px solid #e3e8ef;
@@ -497,6 +519,7 @@ const SessionCard = styled.article<{ $isCurrent?: boolean }>`
   border-radius: 15px;
   background: #fff;
   box-shadow: 0 2px 9px rgba(15, 23, 42, 0.035);
+  box-sizing: border-box;
 
   @media (max-width: 720px) {
     flex-direction: column;
@@ -505,8 +528,17 @@ const SessionCard = styled.article<{ $isCurrent?: boolean }>`
 `;
 
 const SessionMain = styled.div`
+  flex: 1 1 auto;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+`;
+
+const SessionHeader = styled.div`
+  display: flex;
+  align-items: center;
   gap: 18px;
   min-width: 0;
 `;
@@ -536,22 +568,20 @@ const BrowserIcon = styled.div<{ $browser: BrowserKind }>`
   }
 `;
 
-const SessionInfo = styled.div`
-  min-width: 0;
-`;
-
 const DeviceHeading = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin: 1px 0 17px;
+  min-width: 0;
+  margin: 0;
 `;
 
 const DeviceName = styled.strong`
   color: #111827;
   font-size: 17px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 `;
 
 const CurrentBadge = styled.span`
@@ -575,6 +605,7 @@ const DetailRow = styled.div`
   gap: 10px;
   color: #707b8d;
   font-size: 13px;
+  overflow-wrap: anywhere;
 
   svg { flex: 0 0 auto; color: #707b8d; }
 `;
