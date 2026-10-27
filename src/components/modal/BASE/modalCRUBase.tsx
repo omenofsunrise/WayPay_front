@@ -28,6 +28,9 @@ interface ModalProps {
   maxHeight?: string;
   subtitle?: string;
   appearance?: "default" | "compact-form";
+  saveButtonStyle?: React.CSSProperties;
+  submittingText?: string;
+  hideCloseButton?: boolean;
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -42,13 +45,16 @@ const BaseModal: React.FC<ModalProps> = ({
   mode = "create",
   hideSaveButton = false,
   hideCanselButton = false,
-  cancelButtonText = "Отменить",
+  cancelButtonText = "Отмена",
   width = "562px",
   saveButtonText = "Сохранить",
   customLayout,
   maxHeight = "90vh",
   subtitle,
   appearance = "default",
+  saveButtonStyle,
+  submittingText = "Сохранение...",
+  hideCloseButton = false,
 }) => {
   const isViewMode = mode === "view";
 
@@ -152,14 +158,16 @@ const BaseModal: React.FC<ModalProps> = ({
         onWheel={handleModalScroll}
         onClick={(e) => e.stopPropagation()}
       >
-        <CloseButton
-          $appearance={appearance}
-          aria-label="Закрыть"
-          onClick={onClose}
-          type="button"
-        >
-          <CloseIcon aria-hidden="true" />
-        </CloseButton>
+        {!hideCloseButton && (
+          <CloseButton
+            $appearance={appearance}
+            aria-label="Закрыть"
+            onClick={onClose}
+            type="button"
+          >
+            <CloseIcon aria-hidden="true" />
+          </CloseButton>
+        )}
         <ModalHeader $appearance={appearance}>
           <div>
             <ModalTitle $appearance={appearance}>{title}</ModalTitle>
@@ -167,33 +175,36 @@ const BaseModal: React.FC<ModalProps> = ({
           </div>
         </ModalHeader>
         <div className="modal-body">{customLayout}</div>
-        <ModalForm onSubmit={onSave}>
+        <ModalForm as={onSave ? "form" : "div"} onSubmit={onSave}>
           <ModalContent ref={contentRef} isScrollable={isScrollable} $appearance={appearance}>
             {children}
           </ModalContent>
 
-          <ModalFooter $appearance={appearance}>
-            {!hideCanselButton && (
-              <CancelButton $appearance={appearance} onClick={handleCancel}>
-                {cancelButtonText}
-              </CancelButton>
-            )}
-            {!isViewMode && !hideSaveButton && (
-              <DarkCyanButton
-                style={{
-                  minWidth: appearance === "compact-form" ? "150px" : "128px",
-                  minHeight: "40px",
-                  padding: "8px 18px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                }}
-                type="submit"
-                disabled={isSaveDisabled || isSubmitting}
-              >
-                {isSubmitting ? "Сохранение..." : saveButtonText || "Сохранить"}
-              </DarkCyanButton>
-            )}
-          </ModalFooter>
+          {(!hideCanselButton || (!isViewMode && !hideSaveButton)) && (
+            <ModalFooter $appearance={appearance}>
+              {!hideCanselButton && (
+                <CancelButton $appearance={appearance} onClick={handleCancel}>
+                  {cancelButtonText}
+                </CancelButton>
+              )}
+              {!isViewMode && !hideSaveButton && (
+                <DarkCyanButton
+                  style={{
+                    minWidth: "150px",
+                    minHeight: "40px",
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    ...saveButtonStyle,
+                  }}
+                  type="submit"
+                  disabled={isSaveDisabled || isSubmitting}
+                >
+                  {isSubmitting ? submittingText : saveButtonText || "Сохранить"}
+                </DarkCyanButton>
+              )}
+            </ModalFooter>
+          )}
         </ModalForm>
       </ModalContainer>
     </ModalBackdrop>
@@ -272,7 +283,7 @@ export const ModalHeader = styled.div<{ $appearance?: "default" | "compact-form"
   align-items: center;
   text-align: left;
   margin: 0;
-  padding: 24px 28px 14px;
+  padding: 28px 34px 10px;
   flex-shrink: 0;
 
   ${({ $appearance }) => $appearance === "compact-form" && css`
@@ -285,7 +296,7 @@ export const ModalTitle = styled.h2<{ $appearance?: "default" | "compact-form" }
   margin: 0;
   padding: 0;
   color: #172235;
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 700;
   line-height: 1.25;
   text-align: left;
@@ -310,8 +321,8 @@ const ModalSubtitle = styled.p`
 
 const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   position: absolute;
-  top: 17px;
-  right: 20px;
+  top: 20px;
+  right: 24px;
   width: 32px;
   height: 32px;
   padding: 0;
@@ -373,7 +384,7 @@ const ModalContent = styled.div<{
   flex: 1;
   width: 100%;
   margin-bottom: 0;
-  padding: 0 24px;
+  padding: 0 34px;
   box-sizing: border-box;
   text-align: left;
   min-height: 0;
@@ -414,7 +425,7 @@ const ModalFooter = styled.div<{ $appearance: "default" | "compact-form" }>`
   align-items: center;
   gap: 12px;
   margin: 0;
-  padding: 16px 24px 20px;
+  padding: 16px 34px 20px;
   border-top: 1px solid #e3e9ef;
   flex-shrink: 0;
 

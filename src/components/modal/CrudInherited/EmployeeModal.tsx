@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { CircleAlert, X } from "lucide-react";
-import { type ModalMode } from "../BASE/modalCRUBase";
+import { CircleAlert } from "lucide-react";
+import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
 import Avatar from "../../Profile/Avatar";
@@ -391,27 +391,28 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <ModalBackdrop onMouseDown={onClose}>
-      <ModalDialog
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="employee-modal-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <CloseButton type="button" onClick={onClose} aria-label="Закрыть">
-          <X size={27} strokeWidth={1.8} />
-        </CloseButton>
-
-        <ModalHeader>
-          <ModalTitle id="employee-modal-title">{getTitle()}</ModalTitle>
-          <ModalSubtitle>
-            {mode === "create"
-              ? "Заполните личные данные и рабочие настройки"
-              : "Обновите личные данные и рабочие настройки"}
-          </ModalSubtitle>
-        </ModalHeader>
-
-        <EmployeeForm onSubmit={handleSubmit}>
+    <BaseModal
+      isOpen={isOpen}
+      title={getTitle()}
+      subtitle={
+        mode === "create"
+          ? "Заполните личные данные и рабочие настройки"
+          : mode === "edit"
+            ? "Обновите личные данные и рабочие настройки"
+            : "Личные данные и рабочие настройки сотрудника"
+      }
+      appearance="compact-form"
+      width="900px"
+      maxHeight="calc(100vh - 32px)"
+      onClose={onClose}
+      onCancel={onClose}
+      onSave={handleSubmit}
+      mode={mode}
+      cancelButtonText={mode === "view" ? "Закрыть" : "Отмена"}
+      saveButtonText={mode === "create" ? "Добавить сотрудника" : "Сохранить изменения"}
+      isSaveDisabled={isSaveDisabled()}
+      isSubmitting={isSubmitting}
+    >
           <ScrollableContent>
             <PhotoSection>
               <Avatar
@@ -577,166 +578,9 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
               </SubmitError>
             )}
           </ScrollableContent>
-
-          <ModalFooter>
-            <CancelButton type="button" onClick={onClose}>
-              {mode === "view" ? "Закрыть" : "Отмена"}
-            </CancelButton>
-            {mode !== "view" && (
-              <SaveButton
-                type="submit"
-                disabled={isSaveDisabled() || isSubmitting}
-              >
-                {isSubmitting
-                  ? "Сохранение..."
-                  : mode === "create"
-                  ? "Добавить сотрудника"
-                  : "Сохранить изменения"}
-              </SaveButton>
-            )}
-          </ModalFooter>
-        </EmployeeForm>
-      </ModalDialog>
-    </ModalBackdrop>
+    </BaseModal>
   );
 };
-
-const ModalBackdrop = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  overflow: hidden;
-  background: rgba(25, 35, 48, 0.48);
-  backdrop-filter: blur(3px);
-
-  @media (max-height: 1000px) {
-    padding: 12px;
-  }
-`;
-
-const ModalDialog = styled.div`
-  position: relative;
-  display: flex;
-  width: min(1040px, calc(100vw - 48px));
-  max-height: calc(100dvh - 48px);
-  margin: auto;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid #e1e6eb;
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 24px 70px rgba(27, 39, 51, 0.22);
-  text-align: left;
-
-  @media (max-width: 700px) {
-    width: calc(100vw - 24px);
-    border-radius: 12px;
-  }
-
-  @media (max-height: 1000px) {
-    max-height: calc(100dvh - 24px);
-  }
-`;
-
-const CloseButton = styled.button`
-  position: absolute;
-  top: 28px;
-  right: 30px;
-  z-index: 2;
-  display: grid;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: #526071;
-  cursor: pointer;
-
-  &:hover {
-    background: #f1f5f7;
-    color: #111827;
-  }
-
-  @media (max-height: 740px) {
-    top: 10px;
-    right: 18px;
-    width: 32px;
-    height: 32px;
-  }
-`;
-
-const ModalHeader = styled.header`
-  flex: 0 0 auto;
-  padding: 38px 74px 18px 42px;
-
-  @media (max-width: 700px) {
-    padding: 28px 60px 14px 24px;
-  }
-
-  @media (max-height: 1000px) {
-    padding: 22px 68px 10px 36px;
-  }
-
-  @media (max-height: 740px) {
-    padding: 12px 58px 4px 28px;
-  }
-`;
-
-const ModalTitle = styled.h2`
-  margin: 0;
-  color: #101522;
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-
-  @media (max-width: 700px) {
-    font-size: 24px;
-  }
-
-  @media (max-height: 1000px) {
-    font-size: 26px;
-  }
-
-  @media (max-height: 740px) {
-    font-size: 22px;
-  }
-`;
-
-const ModalSubtitle = styled.p`
-  margin: 8px 0 0;
-  color: #728095;
-  font-size: 18px;
-  line-height: 1.45;
-
-  @media (max-width: 700px) {
-    font-size: 15px;
-  }
-
-  @media (max-height: 1000px) {
-    margin-top: 4px;
-    font-size: 15px;
-  }
-
-  @media (max-height: 740px) {
-    margin-top: 2px;
-    font-size: 13px;
-  }
-`;
-
-const EmployeeForm = styled.form`
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-`;
 
 const ScrollableContent = styled.div`
   min-height: 0;
@@ -1051,93 +895,6 @@ const PercentSuffix = styled.span`
   @media (max-height: 740px) {
     right: 13px;
     font-size: 13px;
-  }
-`;
-
-const ModalFooter = styled.footer`
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
-  margin: 0 28px;
-  padding: 18px 14px 22px;
-  border-top: 1px solid #dbe2e8;
-
-  @media (max-width: 520px) {
-    margin: 0 12px;
-    padding: 14px 12px 18px;
-  }
-
-  @media (max-height: 1000px) {
-    padding: 10px 8px 12px;
-  }
-
-  @media (max-height: 740px) {
-    gap: 10px;
-    margin: 0 20px;
-    padding: 5px 8px 7px;
-  }
-`;
-
-const FooterButton = styled.button`
-  min-height: 50px;
-  padding: 0 30px;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-
-  @media (max-width: 520px) {
-    min-height: 46px;
-    padding: 0 18px;
-  }
-
-  @media (max-height: 1000px) {
-    min-height: 44px;
-    font-size: 15px;
-  }
-
-  @media (max-height: 740px) {
-    min-height: 34px;
-    padding: 0 18px;
-    border-radius: 7px;
-    font-size: 13px;
-  }
-`;
-
-const CancelButton = styled(FooterButton)`
-  border: 1px solid #8f9baa;
-  background: #ffffff;
-  color: #253044;
-
-  &:hover {
-    background: #f5f7f9;
-  }
-`;
-
-const SaveButton = styled(FooterButton)`
-  min-width: 220px;
-  border: 1px solid #008b98;
-  background: #008b98;
-  color: #ffffff;
-
-  &:hover:not(:disabled) {
-    background: #007783;
-  }
-
-  &:disabled {
-    border-color: #99ccd1;
-    background: #99ccd1;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 520px) {
-    min-width: 0;
-  }
-
-  @media (max-height: 740px) {
-    min-width: 170px;
   }
 `;
 

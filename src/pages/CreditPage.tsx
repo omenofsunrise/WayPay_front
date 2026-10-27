@@ -76,6 +76,7 @@ import {
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 import { getCreditGuarantors } from "../utils/creditGuarantors";
+import BaseModal from "../components/modal/BASE/modalCRUBase";
 
 type ShareOption = "contractData" | "paymentHistory" | "paymentSchedule";
 
@@ -118,10 +119,21 @@ const ShareOptionModal = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <ModalOverlay isOpen={isOpen} onClick={onClose}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
-        <ModalTitle>{modalTitle}</ModalTitle>
+    <BaseModal
+      isOpen={isOpen}
+      title={modalTitle}
+      subtitle="Выберите данные для отправки"
+      appearance="compact-form"
+      width="460px"
+      onClose={onClose}
+      onCancel={onClose}
+      hideSaveButton
+      hideCanselButton
+    >
+      <ShareModalContent>
         <PrintOptions>
           {options.map(
             (option) =>
@@ -136,8 +148,8 @@ const ShareOptionModal = ({
               )
           )}
         </PrintOptions>
-      </ModalContent>
-    </ModalOverlay>
+      </ShareModalContent>
+    </BaseModal>
   );
 };
 
@@ -3040,35 +3052,9 @@ const SelectedCountBadge = styled.div`
   margin-bottom: 15px;
 `;
 
-// Стили для модалки "Поделиться" (можно вынести в отдельный файл)
-const ModalOverlay = styled.div<{ isOpen: boolean }>`
-  display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+const ShareModalContent = styled.div`
+  padding: 6px 34px 28px;
   color: black;
-`;
-
-const ModalContent = styled.div`
-  background-color: white;
-  padding: 24px;
-  border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
-  color: black;
-`;
-
-const ModalTitle = styled.h3`
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 18px;
-  color: #333;
 `;
 
 const PrintOptions = styled.div`

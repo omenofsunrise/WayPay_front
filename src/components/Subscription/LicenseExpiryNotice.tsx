@@ -5,6 +5,7 @@ import type { CommonInfo, SubscriptionStatistic } from '../../api/types/company'
 import { useAuth } from '../../сontext/AuthContext';
 import SubscriptionBlock from './SubscriptionBlock';
 import SubscriptionPendingPage from './SubscriptionPending';
+import BaseModal from '../modal/BASE/modalCRUBase';
 
 const NOTICE_DAYS = [7, 3];
 const STORAGE_PREFIX = 'licenseExpiryNoticeDismissed';
@@ -109,21 +110,21 @@ const LicenseExpiryNotice: React.FC = () => {
   const hasPaymentUrl = authInfo?.employee?.paymentUrl && authInfo.employee.paymentUrl.trim() !== '';
 
   return (
-    <Overlay>
-      <Modal>
-        <CloseButton onClick={closeNotice} aria-label="Закрыть уведомление">
-          &times;
-        </CloseButton>
-
-        <Header>
-          <Eyebrow>Лицензия скоро закончится</Eyebrow>
-          <Title>До окончания подписки осталось {getDaysText(daysRemaining)}</Title>
-          <Description>
-            Лицензия компании активна до {formatLicenceDate(commonInfo.licenceDate)}.
-            Выберите удобный вариант оплаты, чтобы продлить доступ без перерыва.
-          </Description>
-        </Header>
-
+    <BaseModal
+      title={`До окончания подписки осталось ${getDaysText(daysRemaining)}`}
+      subtitle={`Лицензия компании активна до ${formatLicenceDate(commonInfo.licenceDate)}`}
+      appearance="compact-form"
+      width="720px"
+      maxHeight="calc(100vh - 32px)"
+      onClose={closeNotice}
+      onCancel={closeNotice}
+      hideSaveButton
+      hideCanselButton
+    >
+      <NoticeContent>
+        <Description>
+          Выберите удобный вариант оплаты, чтобы продлить доступ без перерыва.
+        </Description>
         <DetailsSection>
           <SectionTitle>Подробная информация</SectionTitle>
           <DetailsGrid>
@@ -187,67 +188,14 @@ const LicenseExpiryNotice: React.FC = () => {
         </PaymentSection>
 
         <SecondaryButton onClick={closeNotice}>Напомнить позже</SecondaryButton>
-      </Modal>
-    </Overlay>
+      </NoticeContent>
+    </BaseModal>
   );
 };
 
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(0, 0, 0, 0.45);
-`;
-
-const Modal = styled.div`
-  width: min(720px, 100%);
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
-  position: relative;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 28px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
-`;
-
-const CloseButton = styled.button`
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  border: none;
-  background: transparent;
-  color: #6b7280;
-  font-size: 28px;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    color: #111827;
-  }
-`;
-
-const Header = styled.div`
-  padding-right: 28px;
-  margin-bottom: 20px;
-`;
-
-const Eyebrow = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: #007d88;
-  margin-bottom: 8px;
-`;
-
-const Title = styled.h2`
-  margin: 0 0 10px 0;
-  color: #111827;
-  font-size: 24px;
-  line-height: 1.25;
-  font-weight: 700;
+const NoticeContent = styled.div`
+  padding: 6px 34px 28px;
+  text-align: left;
 `;
 
 const Description = styled.p`

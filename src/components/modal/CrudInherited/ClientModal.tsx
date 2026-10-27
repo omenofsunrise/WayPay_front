@@ -887,12 +887,18 @@ const ClientModal: React.FC<ClientModalProps> = ({
   return (
     <BaseModal
       title={getTitle()}
-      subtitle={mode === "create" ? "Заполните контактные и паспортные данные" : undefined}
-      appearance={mode === "create" ? "compact-form" : "default"}
-      width={mode === "create" ? "680px" : undefined}
-      maxHeight={mode === "create" ? "calc(100vh - 32px)" : undefined}
-      cancelButtonText={mode === "create" ? "Отмена" : undefined}
-      saveButtonText={mode === "create" ? "Создать клиента" : undefined}
+      subtitle={
+        mode === "create"
+          ? "Заполните контактные и паспортные данные"
+          : mode === "edit"
+            ? "Обновите контактные и паспортные данные"
+            : "Контактные и паспортные данные клиента"
+      }
+      appearance="compact-form"
+      width="680px"
+      maxHeight="calc(100vh - 32px)"
+      cancelButtonText={mode === "view" ? "Закрыть" : "Отмена"}
+      saveButtonText={mode === "create" ? "Создать клиента" : "Сохранить изменения"}
       onClose={handleClose}
       onCancel={handleClose}
       onSave={handleSubmit}

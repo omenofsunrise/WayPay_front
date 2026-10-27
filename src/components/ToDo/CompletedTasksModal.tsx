@@ -3,8 +3,8 @@ import styled from "styled-components";
 import type { Task } from "../../api/types/task";
 import TaskItem from "./TaskItem";
 import useTask from "../../api/hooks/useTask";
-import { Modal } from "react-bootstrap";
 import { createPortal } from "react-dom";
+import BaseModal from "../modal/BASE/modalCRUBase";
 
 interface CompletedTasksModalProps {
   isOpen: boolean;
@@ -71,62 +71,44 @@ const CompletedTasksModal = ({ isOpen, onClose }: CompletedTasksModalProps) => {
     }, [currentPage, hasMore, isLoading])
 
   const modalContent = (
-    <StyledOverlay show={isOpen} onClick={onClose}>
-      <StyledModalDialog onClick={e => e.stopPropagation()}>
-          <Modal.Title style={{textAlign: "center", fontSize: "20px" }}>Выполненные задачи</Modal.Title>
-        <Modal.Body>
-            <TasksList ref={listRef}>
-              {tasks.map(task => (
-                <TaskItem 
-                  key={task.id} 
-                  task={task} 
-                  onDragStart={() => {}} 
-                  onEdit={() => {}} 
-                  onDelete={() => {}} 
-                  disableContextMenu
-                />
-              ))}
-              {isLoading && <LoadingText>Загрузка...</LoadingText>}
-            </TasksList>
-        </Modal.Body>
-      </StyledModalDialog>
-    </StyledOverlay>
+    <BaseModal
+      isOpen={isOpen}
+      title="Выполненные задачи"
+      subtitle="История завершённых задач"
+      appearance="compact-form"
+      width="800px"
+      maxHeight="calc(100vh - 32px)"
+      onClose={onClose}
+      onCancel={onClose}
+      hideSaveButton
+      hideCanselButton
+    >
+      <TasksList ref={listRef}>
+        {tasks.map(task => (
+          <TaskItem
+            key={task.id}
+            task={task}
+            onDragStart={() => {}}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            disableContextMenu
+          />
+        ))}
+        {!isLoading && tasks.length === 0 && (
+          <EmptyState>Выполненных задач пока нет</EmptyState>
+        )}
+        {isLoading && <LoadingText>Загрузка...</LoadingText>}
+      </TasksList>
+    </BaseModal>
   );
 
   return createPortal(modalContent, document.body);
 };
 
-const StyledOverlay = styled.div<{ show: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1050;
-  display: ${({ show }) => show ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-`;
-
-const StyledModalDialog = styled.div`
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  width: 100%;
-  max-width: 800px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 20px;
-`;
-
 const TasksList = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 6px 34px 24px;
   max-height: 60vh;
   
   &::-webkit-scrollbar {

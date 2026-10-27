@@ -1,11 +1,7 @@
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import CustomTitle from "../ui/Text/CustomTitle";
-import ModalInfoTitle from "../ui/Text/ModalInfoTitle";
 import CustomInput from "../ui/fields/CustomInput";
-import DarkCyanButton from "../ui/Buttons/DarkCyanButton";
-import GrayButton from "../ui/Buttons/GrayButton";
 import Checkbox from "../ui/CheckBoxes/Checkbox";
 import CustomCalendar from "../ui/fields/CustomCalendar";
 import BankCardSelect from "../ui/fields/BankCardSelect";
@@ -14,6 +10,7 @@ import { useClientFeedbackPrompt } from "../../сontext/ClientFeedbackContext";
 import type { CreatePaymentResponse } from "../../api/types/payment";
 import { formatPhoneHref } from "../../utils/phoneUtils";
 import PhoneLink from "../ui/links/PhoneLink";
+import BaseModal from "./BASE/modalCRUBase";
 
 export interface NewPaymentModalProps {
   creditId: number;
@@ -35,36 +32,6 @@ export interface NewPaymentModalProps {
 }
 
 export const PRINT_RECEIPT_STORAGE_KEY = "new-payment-print-receipt-preference";
-
-// Вспомогательная функция для блокировки скролла
-const useLockBodyScroll = (isOpen: boolean) => {
-  useEffect(() => {
-    if (isOpen) {
-      // Сохраняем текущую позицию скролла
-      const scrollY = window.scrollY;
-      const body = document.body;
-
-      // Блокируем скролл
-      body.style.position = "fixed";
-      body.style.top = `-${scrollY}px`;
-      body.style.left = "0";
-      body.style.right = "0";
-      body.style.overflow = "hidden";
-
-      return () => {
-        // Восстанавливаем скролл
-        body.style.position = "";
-        body.style.top = "";
-        body.style.left = "";
-        body.style.right = "";
-        body.style.overflow = "";
-
-        // Восстанавливаем позицию скролла
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [isOpen]);
-};
 
 const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   creditId,
@@ -92,23 +59,6 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { denyPermission } = useAuth();
   const { promptClientFeedback } = useClientFeedbackPrompt();
-
-  // Блокируем скролл body при открытии модалки
-  useLockBodyScroll(isOpen);
-
-  // Обработчик клавиши Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
 
   // Загрузка предпочтений печати
   useEffect(() => {
@@ -172,7 +122,8 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
     setTotalAmount(validatedValue);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event?: React.FormEvent) => {
+    event?.preventDefault();
     if (!paymentDate || totalAmount <= 0 || !paymentMethod || isDebtPaid)
       return;
 
@@ -250,21 +201,40 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <ModalOverlay isOpen={isOpen}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
-        <ModalWrapper>
-          <CloseButton onClick={onClose}>&times;</CloseButton>
+  const canCreatePayment = denyPermission("FORBID_CREATING_PAYMENTS");
+  const isSaveDisabled =
+    isSubmitting ||
+    !paymentDate ||
+    totalAmount <= 0 ||
+    !paymentMethod ||
+    totalAmount > currentDebt ||
+    (paymentMethod === "card" && !selectedBankCardId);
 
-          <TitleField>
-            {denyPermission("FORBID_CREATING_PAYMENTS") ? (
-              <CustomTitle style={{ marginTop: 0 }}>Новый платёж</CustomTitle>
-            ) : (
-              <PermissionWarning>
-                У вас недостаточно прав для создания платежей
-              </PermissionWarning>
-            )}
-          </TitleField>
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      title="Новый платёж"
+      subtitle="Укажите сумму, дату и способ оплаты"
+      appearance="compact-form"
+      width="680px"
+      maxHeight="calc(100vh - 32px)"
+      onClose={onClose}
+      onCancel={onClose}
+      onSave={handleSubmit}
+      cancelButtonText={!canCreatePayment || isDebtPaid ? "Закрыть" : "Отмена"}
+      saveButtonText="Создать платёж"
+      hideSaveButton={!canCreatePayment || isDebtPaid}
+      isSaveDisabled={isSaveDisabled}
+      isSubmitting={isSubmitting}
+      submittingText="Создание..."
+    >
+      <ModalContent>
+        <ModalWrapper>
+          {!canCreatePayment && (
+            <PermissionWarning>
+              У вас недостаточно прав для создания платежей
+            </PermissionWarning>
+          )}
           {isDebtPaid ? (
             <DebtPaidMessage>
               <h3>Договор полностью погашен</h3>
@@ -275,9 +245,9 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             </DebtPaidMessage>
           ) : (
             <>
-              {denyPermission("FORBID_CREATING_PAYMENTS") && (
+              {canCreatePayment && (
                 <>
-                  <ModalInfoTitle>Сведения о договоре</ModalInfoTitle>
+                  <SectionTitle>Сведения о договоре</SectionTitle>
 
                   <FormRow>
                     <InputGroup>
@@ -308,9 +278,7 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
                     </InputGroup>
                   </FormRow>
 
-                  <ModalInfoTitle style={{ marginTop: "30px" }}>
-                    Сведения о платеже
-                  </ModalInfoTitle>
+                  <SectionTitle $separated>Сведения о платеже</SectionTitle>
 
                   <FormRow>
                     <InputGroup>
@@ -418,125 +386,30 @@ const NewPaymentModal: React.FC<NewPaymentModalProps> = ({
             </>
           )}
 
-          <ButtonContainer>
-            <GrayButton onClick={onClose} disabled={isSubmitting}>
-              {denyPermission("FORBID_CREATING_PAYMENTS")
-                ? "Отменить"
-                : "Закрыть"}
-            </GrayButton>
-            {!isDebtPaid && (
-              <DarkCyanButton
-                onClick={handleSubmit}
-                disabled={
-                  isSubmitting ||
-                  !paymentDate ||
-                  totalAmount <= 0 ||
-                  !paymentMethod ||
-                  totalAmount > currentDebt ||
-                  (paymentMethod === "card" && !selectedBankCardId)
-                }
-              >
-                {isSubmitting ? "Создание..." : "Создать платёж"}
-              </DarkCyanButton>
-            )}
-          </ButtonContainer>
         </ModalWrapper>
       </ModalContent>
-    </ModalOverlay>
+    </BaseModal>
   );
 };
 
-const ModalOverlay = styled.div<{ isOpen: boolean }>`
-  display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  overflow-y: auto; // Разрешаем скролл оверлея
-  padding: 20px; // Отступы для маленьких экранов
-  overflow: hidden; // Отключаем скролл для оверлея
-
-  // Отключаем скролл для самого оверлея на мобильных
-  @media (max-width: 768px) {
-    padding: 0;
-  }
-`;
-
 const ModalContent = styled.div`
-  background: white;
-  padding: 24px;
-  border-radius: 8px;
-  width: 600px;
-  max-width: 90vw; // Для адаптивности
-  max-height: 90vh;
-  overflow-y: auto;
-  margin: auto; // Центрирование
-  position: relative;
-
-  // Для плавного скролла на мобильных
-  -webkit-overflow-scrolling: touch;
-
-  // Скрываем стандартный скроллбар если нужно
-  scrollbar-width: thin;
-  scrollbar-color: #007d88 #f0f0f0;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #007d88;
-    border-radius: 3px;
-  }
-
-  // Убираем скроллбар на очень маленьких экранах
-  @media (max-width: 768px) {
-    width: 100%;
-    height: 100vh;
-    max-height: 100vh;
-    border-radius: 0;
-    padding: 16px;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-
-    scrollbar-width: none;
-  }
+  padding: 6px 34px 24px;
+  text-align: left;
 `;
 
 const ModalWrapper = styled.div`
-  margin: 20px;
+  width: 100%;
 `;
 
-const CloseButton = styled.button`
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  z-index: 1;
-
-  &:hover {
-    opacity: 0.7;
-  }
-`;
-
-const TitleField = styled.div`
-  margin-bottom: 20px;
-  position: relative;
+const SectionTitle = styled.h3<{ $separated?: boolean }>`
+  margin: ${({ $separated }) => ($separated ? "22px 0 16px" : "8px 0 16px")};
+  padding-top: ${({ $separated }) => ($separated ? "18px" : "0")};
+  color: #07818a;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: left;
+  border-top: ${({ $separated }) => ($separated ? "1px solid #dfe6ed" : "0")};
 `;
 
 const PermissionWarning = styled.div`
@@ -583,17 +456,6 @@ const InputLabel = styled.label`
   margin-bottom: 8px;
   font-weight: 500;
   text-align: left;
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 30px;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
 `;
 
 const PaymentMethodContainer = styled.div`

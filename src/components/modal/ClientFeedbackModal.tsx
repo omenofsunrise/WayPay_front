@@ -3,6 +3,7 @@ import styled from "styled-components";
 import useClientFeedback from "../../api/hooks/useClientFeedback";
 import { FEEDBACK_MARK_OPTIONS } from "../../api/types/clientFeedback";
 import type { FeedbackMark } from "../../api/types/clientFeedback";
+import BaseModal from "./BASE/modalCRUBase";
 
 interface ClientFeedbackModalProps {
   isOpen: boolean;
@@ -33,7 +34,8 @@ const ClientFeedbackModal: React.FC<ClientFeedbackModalProps> = ({
 
   if (!isOpen || !clientId) return null;
 
-  const handleSave = async () => {
+  const handleSave = async (event?: React.FormEvent) => {
+    event?.preventDefault();
     if (!mark) return;
     const ok = await createFeedback({
       clientId,
@@ -45,13 +47,22 @@ const ClientFeedbackModal: React.FC<ClientFeedbackModalProps> = ({
   };
 
   return (
-    <Overlay onClick={onClose}>
-      <Card onClick={(e) => e.stopPropagation()}>
-        <Header>
-          <Title>Как прошёл клиент?</Title>
-          <Close onClick={onClose}>×</Close>
-        </Header>
-        {clientName && <Subtitle>{clientName}</Subtitle>}
+    <BaseModal
+      isOpen={isOpen}
+      title="Как прошёл клиент?"
+      subtitle={clientName || "Оцените взаимодействие с клиентом"}
+      appearance="compact-form"
+      width="500px"
+      onClose={onClose}
+      onCancel={onClose}
+      onSave={handleSave}
+      cancelButtonText="Пропустить"
+      saveButtonText="Отправить"
+      isSaveDisabled={!mark || !stars}
+      isSubmitting={isSubmitting}
+      submittingText="Отправка…"
+    >
+      <Card>
         <Hint>
           Последний платёж по договору. Оцените клиента в пару кликов.
         </Hint>
@@ -90,72 +101,14 @@ const ClientFeedbackModal: React.FC<ClientFeedbackModalProps> = ({
           onChange={(e) => setComment(e.target.value)}
         />
 
-        <Actions>
-          <SkipButton type="button" onClick={onClose}>
-            Пропустить
-          </SkipButton>
-          <SaveButton
-            type="button"
-            onClick={handleSave}
-            disabled={!mark || !stars || isSubmitting}
-          >
-            {isSubmitting ? "Отправка…" : "Отправить"}
-          </SaveButton>
-        </Actions>
       </Card>
-    </Overlay>
+    </BaseModal>
   );
 };
 
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1200;
-`;
-
 const Card = styled.div`
-  background: #fff;
-  border-radius: 12px;
-  padding: 22px;
-  width: 440px;
-  max-width: 92vw;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const Title = styled.h3`
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
-`;
-
-const Close = styled.button`
-  background: none;
-  border: none;
-  font-size: 26px;
-  line-height: 1;
-  color: #9ca3af;
-  cursor: pointer;
-  &:hover {
-    color: #111827;
-  }
-`;
-
-const Subtitle = styled.div`
-  margin-top: 4px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #007d88;
+  padding: 6px 34px 24px;
+  text-align: left;
 `;
 
 const Hint = styled.div`
@@ -220,44 +173,6 @@ const CommentField = styled.textarea`
   &:focus {
     outline: none;
     border-color: #007d88;
-  }
-`;
-
-const Actions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-`;
-
-const SkipButton = styled.button`
-  padding: 9px 16px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #374151;
-  font-size: 14px;
-  cursor: pointer;
-  &:hover {
-    background: #f3f4f6;
-  }
-`;
-
-const SaveButton = styled.button`
-  padding: 9px 18px;
-  border-radius: 8px;
-  border: none;
-  background: #007d88;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  &:hover:not(:disabled) {
-    background: #005f66;
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 `;
 

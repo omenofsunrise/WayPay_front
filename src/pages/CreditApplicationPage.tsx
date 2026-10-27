@@ -18,6 +18,7 @@ import Tabs from '../components/ui/fields/Tabs';
 import useChat from '../api/hooks/useChat';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/ui/Layouts/PageLayout';
+import BaseModal from '../components/modal/BASE/modalCRUBase';
 
 const InputWrapper = styled.div`
   flex: 1;
@@ -518,40 +519,9 @@ const Toast = styled.div<{ type: 'success' | 'error' | 'warning' }>`
   }
 `;
 
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-`;
-
-const ModalTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #111827;
-`;
-
-const ModalButtons = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-  justify-content: flex-end;
+const RejectModalContent = styled.div`
+  padding: 6px 34px 24px;
+  text-align: left;
 `;
 
 const TextArea = styled.textarea`
@@ -1725,10 +1695,22 @@ const CreditApplicationPage: React.FC = () => {
 )}
 
       {rejectModalOpen && (
-        <ModalOverlay onClick={() => setRejectModalOpen(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>Отклонение заявки</ModalTitle>
-            
+        <BaseModal
+          title="Отклонение заявки"
+          subtitle="Укажите причину и при необходимости добавьте комментарий"
+          appearance="compact-form"
+          width="540px"
+          onClose={() => !isRejecting && setRejectModalOpen(false)}
+          onCancel={() => !isRejecting && setRejectModalOpen(false)}
+          onSave={(event) => {
+            event.preventDefault();
+            void handleConfirmReject();
+          }}
+          saveButtonText="Отклонить"
+          isSubmitting={isRejecting}
+          submittingText="Отклонение..."
+        >
+          <RejectModalContent>
             <Select
               value={rejectReason}
               onChange={(e) => setRejectReason(Number(e.target.value) as RejectReason)}
@@ -1744,25 +1726,8 @@ const CreditApplicationPage: React.FC = () => {
               value={rejectComment}
               onChange={(e) => setRejectComment(e.target.value)}
             />
-            
-            <ModalButtons>
-              <ActionButton
-                variant="danger"
-                onClick={() => setRejectModalOpen(false)}
-                disabled={isRejecting}
-              >
-                Отмена
-              </ActionButton>
-              <ActionButton
-                variant="primary"
-                onClick={handleConfirmReject}
-                disabled={isRejecting}
-              >
-                {isRejecting ? 'Отклонение...' : 'Отклонить'}
-              </ActionButton>
-            </ModalButtons>
-          </ModalContent>
-        </ModalOverlay>
+          </RejectModalContent>
+        </BaseModal>
       )}
     </PageLayout>
   );

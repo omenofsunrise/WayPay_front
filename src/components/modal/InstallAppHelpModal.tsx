@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import styled from "styled-components";
+import BaseModal from "./BASE/modalCRUBase";
 
 interface InstallAppHelpModalProps {
   isOpen: boolean;
@@ -74,33 +74,28 @@ const browserContent: Record<
 };
 
 const InstallAppHelpModal = ({ isOpen, onClose }: InstallAppHelpModalProps) => {
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const browser = browserContent[detectBrowser()];
   const isSecure = window.isSecureContext;
 
   return (
-    <Overlay onClick={onClose} role="presentation">
-      <Modal
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="install-app-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <CloseButton type="button" onClick={onClose} aria-label="Закрыть">
-          ×
-        </CloseButton>
+    <BaseModal
+      isOpen={isOpen}
+      title="Установка WayPay"
+      subtitle={`Инструкция для ${browser.title}`}
+      appearance="compact-form"
+      width="520px"
+      onClose={onClose}
+      onCancel={onClose}
+      onSave={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      hideCanselButton
+      saveButtonText="Понятно"
+    >
+      <Content>
         <Icon aria-hidden="true">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
             <path
@@ -112,66 +107,28 @@ const InstallAppHelpModal = ({ isOpen, onClose }: InstallAppHelpModalProps) => {
             />
           </svg>
         </Icon>
-        <Title id="install-app-title">Установка WayPay</Title>
         {!isSecure && (
           <Warning role="alert">
             Автоматическая установка недоступна, потому что сайт открыт по HTTP.
             После подключения корректного HTTPS установка будет открываться одной кнопкой.
           </Warning>
         )}
-        <BrowserTitle>Инструкция для {browser.title}</BrowserTitle>
+        <BrowserTitle>Как установить приложение</BrowserTitle>
         <Steps>
           {browser.steps.map((step) => (
             <li key={step}>{step}</li>
           ))}
         </Steps>
-        <DoneButton type="button" onClick={onClose}>
-          Понятно
-        </DoneButton>
-      </Modal>
-    </Overlay>
+      </Content>
+    </BaseModal>
   );
 };
 
 export default InstallAppHelpModal;
 
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.48);
-`;
-
-const Modal = styled.div`
-  position: relative;
-  width: min(480px, 100%);
-  padding: 28px;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
-`;
-
-const CloseButton = styled.button`
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #6b7280;
-  font-size: 25px;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    background: #f3f4f6;
-    color: #111827;
-  }
+const Content = styled.div`
+  padding: 6px 34px 24px;
+  text-align: left;
 `;
 
 const Icon = styled.div`
@@ -182,12 +139,6 @@ const Icon = styled.div`
   place-items: center;
   background: rgba(0, 139, 139, 0.1);
   color: #007d88;
-`;
-
-const Title = styled.h2`
-  margin: 18px 0 8px;
-  color: #111827;
-  font-size: 24px;
 `;
 
 const Warning = styled.div`
@@ -216,23 +167,5 @@ const Steps = styled.ol`
 
   li + li {
     margin-top: 7px;
-  }
-`;
-
-const DoneButton = styled.button`
-  width: 100%;
-  min-height: 42px;
-  margin-top: 24px;
-  border: 0;
-  border-radius: 9px;
-  background: #008b8b;
-  color: #fff;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover {
-    background: #007d88;
   }
 `;

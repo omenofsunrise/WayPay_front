@@ -7,13 +7,13 @@ import {
   Lock,
   MapPin,
   Monitor,
-  X,
 } from 'react-feather';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import type { AuthSession } from '../../api/types/auth';
 import { formatDate } from '../../utils/dateFormatter';
 import PageLayout from '../../components/ui/Layouts/PageLayout';
 import PinCodeModal from '../../components/modal/PinCodeModal';
+import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import EmployeeService from '../../api/services/employeeService';
 
 const SessionsPage = () => {
@@ -215,47 +215,29 @@ const SessionsPage = () => {
       ) : null}
 
       {isDisableConfirmOpen && (
-        <ModalOverlay
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !pinBusy) {
-              setIsDisableConfirmOpen(false);
-            }
+        <BaseModal
+          title="Отключить ПИН-код?"
+          subtitle="ПИН-код больше не будет запрашиваться при входе и после простоя."
+          appearance="compact-form"
+          width="560px"
+          onClose={() => !pinBusy && setIsDisableConfirmOpen(false)}
+          onCancel={() => !pinBusy && setIsDisableConfirmOpen(false)}
+          onSave={(event) => {
+            event.preventDefault();
+            void handleDisableConfirm();
           }}
+          saveButtonText="Отключить ПИН-код"
+          isSubmitting={pinBusy}
+          submittingText="Отключение..."
         >
-          <DisableModal role="dialog" aria-modal="true" aria-labelledby="disable-pin-title">
-            <CloseButton
-              type="button"
-              aria-label="Закрыть"
-              onClick={() => setIsDisableConfirmOpen(false)}
-              disabled={pinBusy}
-            >
-              <X size={25} />
-            </CloseButton>
-
+          <DisableContent>
             <ModalIcon><Lock size={24} /></ModalIcon>
-            <ModalTitle id="disable-pin-title">Отключить ПИН-код?</ModalTitle>
-            <ModalDescription>
-              ПИН-код больше не будет запрашиваться при входе<br />и после простоя.
-            </ModalDescription>
             <WarningBox>
               <AlertTriangle size={20} />
               <span>Не отключайте защиту на общем устройстве.</span>
             </WarningBox>
-            <ModalActions>
-              <CancelButton
-                type="button"
-                onClick={() => setIsDisableConfirmOpen(false)}
-                disabled={pinBusy}
-              >
-                Отмена
-              </CancelButton>
-              <ConfirmButton type="button" onClick={() => void handleDisableConfirm()} disabled={pinBusy}>
-                {pinBusy ? 'Отключение...' : 'Отключить ПИН-код'}
-              </ConfirmButton>
-            </ModalActions>
-          </DisableModal>
-        </ModalOverlay>
+          </DisableContent>
+        </BaseModal>
       )}
 
       <PinCodeModal
@@ -665,44 +647,9 @@ const EmptyMessage = styled.div`
   text-align: center;
 `;
 
-const ModalOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.52);
-  backdrop-filter: blur(3px);
-`;
-
-const DisableModal = styled.div`
-  position: relative;
-  width: min(560px, 100%);
-  padding: 30px;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
-
-  @media (max-width: 600px) { padding: 24px 20px; }
-`;
-
-const CloseButton = styled.button`
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: #475569;
-  cursor: pointer;
-
-  &:hover:not(:disabled) { background: #f1f5f9; }
+const DisableContent = styled.div`
+  padding: 6px 34px 24px;
+  text-align: left;
 `;
 
 const ModalIcon = styled.div`
@@ -714,26 +661,6 @@ const ModalIcon = styled.div`
   border-radius: 50%;
   background: #e3f6f7;
   color: #008b95;
-`;
-
-const ModalTitle = styled.h2`
-  width: 100%;
-  margin: 0 0 10px;
-  color: #111827;
-  font-size: 28px;
-  line-height: 1.2;
-  text-align: left;
-
-  @media (max-width: 600px) { font-size: 25px; }
-`;
-
-const ModalDescription = styled.p`
-  width: 100%;
-  margin: 0;
-  color: #798396;
-  font-size: 16px;
-  line-height: 1.55;
-  text-align: left;
 `;
 
 const WarningBox = styled.div`
@@ -748,40 +675,6 @@ const WarningBox = styled.div`
   font-size: 14px;
 
   svg { flex: 0 0 auto; color: #d97706; }
-`;
-
-const ModalActions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 26px;
-
-  @media (max-width: 480px) { flex-direction: column-reverse; }
-`;
-
-const CancelButton = styled.button`
-  padding: 11px 20px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: #fff;
-  color: #172033;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) { background: #f8fafc; }
-`;
-
-const ConfirmButton = styled.button`
-  padding: 11px 20px;
-  border: 0;
-  border-radius: 10px;
-  background: #008b95;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) { background: #00747c; }
-  &:disabled { cursor: wait; opacity: 0.65; }
 `;
 
 export default SessionsPage;
