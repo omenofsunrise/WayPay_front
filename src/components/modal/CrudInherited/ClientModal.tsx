@@ -888,7 +888,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     <BaseModal
       title={getTitle()}
       subtitle={mode === "create" ? "Заполните контактные и паспортные данные" : undefined}
-      appearance={mode === "create" ? "client-create" : "default"}
+      appearance={mode === "create" ? "compact-form" : "default"}
       width={mode === "create" ? "680px" : undefined}
       maxHeight={mode === "create" ? "calc(100vh - 32px)" : undefined}
       cancelButtonText={mode === "create" ? "Отмена" : undefined}

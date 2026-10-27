@@ -27,7 +27,7 @@ interface ModalProps {
   customLayout?: React.ReactNode;
   maxHeight?: string;
   subtitle?: string;
-  appearance?: "default" | "client-create";
+  appearance?: "default" | "compact-form";
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -174,7 +174,7 @@ const BaseModal: React.FC<ModalProps> = ({
             {!isViewMode && !hideSaveButton && (
               <DarkCyanButton
                 style={{
-                  minWidth: appearance === "client-create" ? "150px" : "128px",
+                  minWidth: appearance === "compact-form" ? "150px" : "128px",
                   minHeight: "40px",
                   padding: "8px 18px",
                   borderRadius: "8px",
@@ -213,7 +213,7 @@ const ModalBackdrop = styled.div`
 const ModalContainer = styled.div<{
   width: string;
   maxHeight: string;
-  $appearance: "default" | "client-create";
+  $appearance: "default" | "compact-form";
 }>`
   width: ${(props) => props.width};
   max-width: calc(100vw - 32px);
@@ -229,7 +229,7 @@ const ModalContainer = styled.div<{
   margin: 0;
   overflow: hidden;
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     padding: 0;
     background: #fff;
     border: 0;
@@ -257,7 +257,7 @@ const ModalForm = styled.form`
   overflow: hidden;
 `;
 
-export const ModalHeader = styled.div<{ $appearance?: "default" | "client-create" }>`
+export const ModalHeader = styled.div<{ $appearance?: "default" | "compact-form" }>`
   display: flex;
   width: 100%;
   box-sizing: border-box;
@@ -268,13 +268,13 @@ export const ModalHeader = styled.div<{ $appearance?: "default" | "client-create
   padding: 24px 28px 14px;
   flex-shrink: 0;
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     justify-content: flex-start;
     padding: 28px 34px 10px;
   `}
 `;
 
-export const ModalTitle = styled.h2<{ $appearance?: "default" | "client-create" }>`
+export const ModalTitle = styled.h2<{ $appearance?: "default" | "compact-form" }>`
   margin: 0;
   padding: 0;
   color: #172235;
@@ -283,7 +283,7 @@ export const ModalTitle = styled.h2<{ $appearance?: "default" | "client-create" 
   line-height: 1.25;
   text-align: left;
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     margin: 0;
     padding: 0;
     color: #172235;
@@ -301,7 +301,7 @@ const ModalSubtitle = styled.p`
   text-align: left;
 `;
 
-const CloseButton = styled.button<{ $appearance: "default" | "client-create" }>`
+const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   position: absolute;
   top: 17px;
   right: 20px;
@@ -320,7 +320,7 @@ const CloseButton = styled.button<{ $appearance: "default" | "client-create" }>`
   z-index: 1;
   transition: background-color 0.15s, color 0.15s;
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     top: 20px;
     right: 24px;
     font-size: 26px;
@@ -339,7 +339,7 @@ const CloseButton = styled.button<{ $appearance: "default" | "client-create" }>`
 
 const ModalContent = styled.div<{
   isScrollable: boolean;
-  $appearance: "default" | "client-create";
+  $appearance: "default" | "compact-form";
 }>`
   flex: 1;
   width: 100%;
@@ -371,13 +371,13 @@ const ModalContent = styled.div<{
   scrollbar-width: thin;
   scrollbar-color: rgba(173, 179, 188, 1) rgba(241, 241, 241, 1);
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     margin-bottom: 0;
     padding: 0;
   `}
 `;
 
-const ModalFooter = styled.div<{ $appearance: "default" | "client-create" }>`
+const ModalFooter = styled.div<{ $appearance: "default" | "compact-form" }>`
   display: flex;
   width: 100%;
   box-sizing: border-box;
@@ -389,7 +389,7 @@ const ModalFooter = styled.div<{ $appearance: "default" | "client-create" }>`
   border-top: 1px solid #e3e9ef;
   flex-shrink: 0;
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     justify-content: flex-end;
     gap: 12px;
     margin: 0;
@@ -398,7 +398,7 @@ const ModalFooter = styled.div<{ $appearance: "default" | "client-create" }>`
   `}
 `;
 
-const CancelButton = styled.button<{ $appearance: "default" | "client-create" }>`
+const CancelButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   min-height: 40px;
   padding: 8px 18px;
   background: #fff;
@@ -409,7 +409,7 @@ const CancelButton = styled.button<{ $appearance: "default" | "client-create" }>
   width: 116px;
   color: black;
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     width: 116px;
     min-height: 40px;
     padding: 8px 18px;
@@ -423,7 +423,7 @@ const CancelButton = styled.button<{ $appearance: "default" | "client-create" }>
     background: #f5f7f9;
   }
 
-  ${({ $appearance }) => $appearance === "client-create" && css`
+  ${({ $appearance }) => $appearance === "compact-form" && css`
     &:hover { background: #f5f7f9; }
   `}
 `;

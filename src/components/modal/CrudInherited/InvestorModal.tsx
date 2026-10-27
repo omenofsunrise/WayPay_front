@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { Phone } from 'lucide-react';
 import BaseModal, { type ModalMode } from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
-import ModalInfoTitle from '../../ui/Text/ModalInfoTitle';
 import PhoneModalInput from '../../ui/fields/PhoneModalInput';
-import { InputContainer, InputLabel, InputRow } from '../../Containers/InputComponents';
 import type { Investor } from '../../../api/types/investor';
 import { formatMoney, parseMoney } from '../../../utils/formatPrice';
 import { useAuth } from '../../../сontext/AuthContext';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
-import PhoneLink from '../../ui/links/PhoneLink';
 import { extractErrorMessage } from '../../../api/utils/errorMessage';
 
 type InvestorModalProps = {
@@ -30,6 +29,121 @@ const emptyInvestor: Omit<Investor, 'id'> = {
   isBlocked: false,
   currentIncome: 0
 };
+
+const InvestorFormContent = styled.div`
+  padding: 6px 34px 24px;
+  text-align: left;
+
+  @media (max-width: 600px) { padding: 4px 18px 20px; }
+`;
+
+const FormSection = styled.section<{ $separated?: boolean }>`
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: ${({ $separated }) => ($separated ? '18px' : '8px')};
+  padding-top: ${({ $separated }) => ($separated ? '18px' : '0')};
+  border-top: ${({ $separated }) => ($separated ? '1px solid #dfe6ed' : '0')};
+`;
+
+const SectionTitle = styled.h3`
+  margin: 0 0 16px;
+  color: #07818a;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: left;
+`;
+
+const FieldsGrid = styled.div`
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px 18px;
+
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+`;
+
+const FormField = styled.label<{ $fullWidth?: boolean }>`
+  display: flex;
+  grid-column: ${({ $fullWidth }) => ($fullWidth ? '1 / -1' : 'auto')};
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: #192438;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+`;
+
+const InputShell = styled.div<{ $withIcon?: boolean }>`
+  position: relative;
+  min-width: 0;
+
+  > svg {
+    position: absolute;
+    top: 20px;
+    left: 13px;
+    z-index: 2;
+    color: #8290a3;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  > div {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  input {
+    width: 100%;
+    max-width: none;
+    min-height: 40px;
+    padding: 7px 12px 7px ${({ $withIcon }) => ($withIcon ? '40px' : '13px')};
+    color: #172235;
+    font-size: 14px;
+    background: #fff;
+    border-color: #c7d2de;
+    border-radius: 7px;
+  }
+
+  input::placeholder { color: #8b97a9; }
+`;
+
+const PoolWarning = styled.div`
+  margin-bottom: 15px;
+  padding: 10px 12px;
+  color: #8a5a08;
+  font-size: 13px;
+  line-height: 1.4;
+  background: #fff7df;
+  border: 1px solid #f4daa0;
+  border-radius: 7px;
+`;
+
+const ApiError = styled.div`
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  color: #b4232a;
+  font-size: 13px;
+  background: #fff0f1;
+  border-radius: 7px;
+`;
+
+const ViewPhoneLink = styled.a`
+  display: flex;
+  min-height: 40px;
+  padding: 0 13px 0 40px;
+  box-sizing: border-box;
+  align-items: center;
+  color: #087d86;
+  text-decoration: none;
+  background: #f6f8fa;
+  border: 1px solid #d6dee7;
+  border-radius: 7px;
+`;
 
 const InvestorModal: React.FC<InvestorModalProps> = ({
   mode,
@@ -355,11 +469,27 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
     }
   };
 
+  const getSubtitle = () => {
+    if (mode === 'view') return 'Информация об инвесторе и его финансовых показателях';
+    if (mode === 'create-pool' || mode === 'edit-pool') {
+      return 'Заполните данные инвестора для инвестиционного пула';
+    }
+    return formData.isCompany
+      ? 'Заполните данные компании и финансовые условия'
+      : 'Заполните контактные данные и финансовые условия';
+  };
+
   if (!isOpen) return null;
 
   return (
     <BaseModal
       title={getTitle()}
+      subtitle={getSubtitle()}
+      appearance="compact-form"
+      width="620px"
+      maxHeight="calc(100vh - 32px)"
+      cancelButtonText={mode === 'view' ? 'Закрыть' : 'Отмена'}
+      saveButtonText={mode === 'create' || mode === 'create-pool' ? 'Создать инвестора' : 'Сохранить'}
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
@@ -367,152 +497,137 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
       isSubmitting={isSubmitting}
       mode={mode}
     >
-      <form onSubmit={handleSubmit}>
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {apiError && (
-            <div style={{ color: 'red', marginBottom: '15px' }}>
-              {apiError}
-            </div>
-          )}
-          
-          <ModalInfoTitle>Основная информация</ModalInfoTitle>
-            {mode === 'create-pool' && !authInfo?.employee?.poolV2 && (
-                <div style={{ 
-                  backgroundColor: "#fff3cd", 
-                  color: "#856404",
-                  padding: "12px 16px",
-                  borderRadius: "4px",
-                  marginBottom: "20px",
-                  border: "1px solid #ffeeba",
-                  fontSize: "14px"
-                }}>
-                  ⚠️ Рекомендуется сначала сделать реинвестицию, 
-                  а затем добавлять новую инвестицию
-                </div>
-            )}
+      <InvestorFormContent>
+        {apiError && <ApiError>{apiError}</ApiError>}
 
-          {(mode !== 'create-pool' && mode !== 'edit-pool') && (
-              <>                
-              <InputRow>
-                <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
-                <InputContainer >
+        <FormSection>
+          <SectionTitle>Основная информация</SectionTitle>
+          {mode === 'create-pool' && !authInfo?.employee?.poolV2 && (
+            <PoolWarning>
+              Рекомендуется сначала сделать реинвестицию, а затем добавлять новую инвестицию.
+            </PoolWarning>
+          )}
+
+          <FieldsGrid>
+            {mode !== 'create-pool' && mode !== 'edit-pool' && (
+              <FormField $fullWidth>
+                {formData.isCompany ? 'Название компании' : 'Никнейм'}
+                <InputShell>
                   <CustomInput
                     name="nickname"
                     inputType="text"
-                    placeholder={formData.isCompany ? "Название компании" : "Никнейм"}
+                    placeholder={formData.isCompany ? 'Название компании' : 'Никнейм инвестора'}
                     value={formData.nickname}
                     onChange={handleInputChange}
                     disabled={mode === 'view'}
                     hasError={touchedFields.nickname && validationErrors.nickname}
                     errorMessage={touchedFields.nickname ? errorMessages.nickname : undefined}
                   />
-                </InputContainer>
-              </InputRow>
-            </>
-          )}
-          
-          {(hasRole("директор") || hasRole("суперадмин")) && (
-            <InputRow>
-              <InputLabel>{formData.isCompany ? 'В лице:' : 'ФИО:'}</InputLabel>
-              <InputContainer>
-                <CustomInput
-                  name="fullName"
-                  inputType="fullname"
-                  placeholder= "ФИО"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  disabled={mode === 'view'}
-                  hasError={touchedFields.fullName && validationErrors.fullName}
-                  errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
-                />
-              </InputContainer>
-            </InputRow>
-          )}
+                </InputShell>
+              </FormField>
+            )}
 
-          <InputRow>
-            <InputLabel>Телефон:</InputLabel>
-            <InputContainer>
-              {mode === 'view' ? (
-                <PhoneLink href={formatPhoneHref(formData.phoneNumber)}>
-                  {formData.phoneNumber}
-                </PhoneLink>
-              ) : (
-                <PhoneModalInput
-                  name="phoneNumber"
-                  placeholder="Телефон"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                  disabled={mode === 'view'}
-                  hasError={touchedFields.phoneNumber && validationErrors.phoneNumber}
-                  errorMessage={touchedFields.phoneNumber ? errorMessages.phoneNumber : undefined}
-                />
-              )}
-            </InputContainer>
-          </InputRow>
-          
-          <ModalInfoTitle>Финансовая информация</ModalInfoTitle>
-        
-          <InputRow>
-            <InputLabel>Доля инвестора (%):</InputLabel>
-            <InputContainer >
-              <CustomInput
-                name="investorPie"
-                inputType="percents"
-                placeholder="0-100"
-                value={formData.investorPie.toString()}
-                onChange={handleNumberChange}
-                disabled={mode === 'view'}
-                hasError={touchedFields.investorPie && validationErrors.investorPie}
-                errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
-              />
-            </InputContainer>
-          </InputRow>
-
-          {(mode === 'create' || mode === 'create-pool') && (
-            <InputRow>
-              <InputLabel>Инвестиция:</InputLabel>
-              <InputContainer>
-                <CustomInput
-                  name="investmentAmount"
-                  inputType="rubles"
-                  placeholder="Сумма"
-                  onChange={handleInputChange}
-                  hasError={touchedFields.investmentAmount && validationErrors.investmentAmount}
-                  errorMessage={touchedFields.investmentAmount ? errorMessages.investmentAmount : undefined}
-                />
-              </InputContainer>
-            </InputRow>
-          )}
-
-          {(mode === 'view') && (
-            <InputRow>
-              <InputLabel>Касса:</InputLabel>
-              <InputContainer>
-                <CustomInput
-                  name="balance"
-                  inputType="rubles"
-                  value={formatMoney(formData.balance.toString())}
-                  disabled={true}
-                />
-              </InputContainer>
-            </InputRow>
-          )}
-
-          {(mode === 'view') && (
-            <InputRow>
-                <InputLabel>Заблокирован:</InputLabel>
-                <InputContainer>
+            {(hasRole('директор') || hasRole('суперадмин')) && (
+              <FormField>
+                {formData.isCompany ? 'В лице' : 'ФИО'}
+                <InputShell>
                   <CustomInput
-                    name="isBlocked"
-                    value={formData.isBlocked ? "Да" : "Нет"}
-                    disabled={true}
+                    name="fullName"
+                    inputType="fullname"
+                    placeholder="Фамилия, имя, отчество"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    disabled={mode === 'view'}
+                    hasError={touchedFields.fullName && validationErrors.fullName}
+                    errorMessage={touchedFields.fullName ? errorMessages.fullName : undefined}
                   />
-                </InputContainer>
-            </InputRow>
-          )}
+                </InputShell>
+              </FormField>
+            )}
 
-        </div>
-      </form>
+            <FormField $fullWidth={!(hasRole('директор') || hasRole('суперадмин'))}>
+              Телефон
+              <InputShell $withIcon>
+                <Phone size={17} />
+                {mode === 'view' ? (
+                  <ViewPhoneLink href={formatPhoneHref(formData.phoneNumber)}>
+                    {formData.phoneNumber || 'Не указан'}
+                  </ViewPhoneLink>
+                ) : (
+                  <PhoneModalInput
+                    name="phoneNumber"
+                    placeholder="8 (___) ___-__-__"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    hasError={touchedFields.phoneNumber && validationErrors.phoneNumber}
+                    errorMessage={touchedFields.phoneNumber ? errorMessages.phoneNumber : undefined}
+                  />
+                )}
+              </InputShell>
+            </FormField>
+          </FieldsGrid>
+        </FormSection>
+
+        <FormSection $separated>
+          <SectionTitle>Финансовая информация</SectionTitle>
+          <FieldsGrid>
+            <FormField>
+              Доля инвестора (%)
+              <InputShell>
+                <CustomInput
+                  name="investorPie"
+                  inputType="percents"
+                  placeholder="0–100"
+                  value={formData.investorPie.toString()}
+                  onChange={handleNumberChange}
+                  disabled={mode === 'view'}
+                  hasError={touchedFields.investorPie && validationErrors.investorPie}
+                  errorMessage={touchedFields.investorPie ? errorMessages.investorPie : undefined}
+                />
+              </InputShell>
+            </FormField>
+
+            {(mode === 'create' || mode === 'create-pool') && (
+              <FormField>
+                Сумма инвестиции
+                <InputShell>
+                  <CustomInput
+                    name="investmentAmount"
+                    inputType="rubles"
+                    placeholder="0 ₽"
+                    value={formData.investmentAmount ? formatMoney(formData.investmentAmount.toString()) : ''}
+                    onChange={handleInputChange}
+                    hasError={touchedFields.investmentAmount && validationErrors.investmentAmount}
+                    errorMessage={touchedFields.investmentAmount ? errorMessages.investmentAmount : undefined}
+                  />
+                </InputShell>
+              </FormField>
+            )}
+
+            {mode === 'view' && (
+              <>
+                <FormField>
+                  Касса
+                  <InputShell>
+                    <CustomInput
+                      name="balance"
+                      inputType="rubles"
+                      value={formatMoney(formData.balance.toString())}
+                      disabled
+                    />
+                  </InputShell>
+                </FormField>
+                <FormField>
+                  Заблокирован
+                  <InputShell>
+                    <CustomInput name="isBlocked" value={formData.isBlocked ? 'Да' : 'Нет'} disabled />
+                  </InputShell>
+                </FormField>
+              </>
+            )}
+          </FieldsGrid>
+        </FormSection>
+      </InvestorFormContent>
     </BaseModal>
   );
 };
