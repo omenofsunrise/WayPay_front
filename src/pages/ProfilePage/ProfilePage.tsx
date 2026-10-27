@@ -8,8 +8,12 @@ import Tabs from "../../components/ui/fields/Tabs";
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState<string>(() => {
     const savedTab = localStorage.getItem("profileActiveTab");
-    if (savedTab === "Аккаунты" || savedTab === "Активные сессии") {
-      return "Аккаунт и безопасность";
+    if (
+      savedTab === "Аккаунты" ||
+      savedTab === "Активные сессии" ||
+      savedTab === "Аккаунт и безопасность"
+    ) {
+      return "Настройки";
     }
     return savedTab || "Мой профиль";
   });
@@ -19,14 +23,14 @@ const ProfilePage = () => {
 
   const tabs: Tab[] = [
     { id: "Мой профиль", label: "Мой профиль" },
-    { id: "Аккаунт и безопасность", label: "Аккаунт и безопасность" },
+    { id: "Настройки", label: "Настройки" },
   ];
 
   const renderTabContent = () => {
     switch (activeTab) {
       case "Мой профиль":
         return <EmployeeProfilePage />;
-      case "Аккаунт и безопасность":
+      case "Настройки":
         return <SessionsPage />;
       default:
         return <EmployeeProfilePage />;

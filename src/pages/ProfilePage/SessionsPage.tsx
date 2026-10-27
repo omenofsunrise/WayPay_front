@@ -181,7 +181,7 @@ const SessionsPage = () => {
   return (
     <SessionsPageLayout>
       <HeaderContainer>
-        <PageTitle>Аккаунт и безопасность</PageTitle>
+        <PageTitle>Настройки</PageTitle>
         <PageSubtitle>Управляйте аккаунтами, защитой входа и устройствами</PageSubtitle>
       </HeaderContainer>
 
