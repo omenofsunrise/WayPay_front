@@ -38,7 +38,6 @@ import AboutPage from "./pages/AboutPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import InvestorsPoolPage from "./pages/InvestorsPoolPage";
 import { DesktopOnlyContent } from "./components/DesktopOnly";
-import MobileAppsPage from "./pages/MobileAppsPage";
 import CreditApplicationPage from "./pages/CreditApplicationPage";
 import PublicClientPage from "./pages/PublicClientPage";
 import CreditPrintPage from "./pages/CreditPrintPage";
@@ -792,15 +791,6 @@ function App() {
                   element={
                     <MainLayout>
                       <PrivacyPolicyPage />
-                    </MainLayout>
-                  }
-                />
-
-                <Route
-                  path="mobile-apps"
-                  element={
-                    <MainLayout>
-                      <MobileAppsPage />
                     </MainLayout>
                   }
                 />

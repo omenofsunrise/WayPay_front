@@ -6,7 +6,6 @@ import contractsIcon from "../../../assets/ui/MenuItems/credits.svg";
 import clientsIcon from "../../../assets/ui/MenuItems/clients.svg";
 import paymentsIcon from "../../../assets/ui/MenuItems/payments.svg";
 import investorsIcon from "../../../assets/ui/MenuItems/investors.svg";
-import referencesIcon from "../../../assets/ui/MenuItems/catalogs.svg";
 import financeIcon from "../../../assets/ui/MenuItems/finance.svg";
 import profileIcon from "../../../assets/ui/MenuItems/profile.svg";
 import blackCatalogIcon from "../../../assets/ui/MenuItems/oldclients.svg";
@@ -77,10 +76,6 @@ const menuItemsMap: Record<
     subItems: { "/investors-pool": "investors-pool" },
   },
   "/black-catalog": { mainItem: "black-catalog" },
-  "/mobile-apps": {
-    mainItem: "references",
-    subItems: { "/mobile-apps": "mobile-apps" },
-  },
   "/finance": { mainItem: "finance" },
   "/profile": { mainItem: "profile" },
   "/settings": { mainItem: "settings" },
@@ -193,7 +188,6 @@ const SideMenu = () => {
       !isPoolV2 &&
       (hasRole("админ") || hasRole("директор") || hasRole("суперадмин")),
     "black-catalog": () => true,
-    "mobile-apps": () => true,
     finance: () => hasPermission("MANAGE_ACCOUNTING", true),
     profile: () => true,
     settings: () => true,
@@ -338,7 +332,6 @@ const SideMenu = () => {
       investors: "Инвесторы",
       "investors-pool": "Пулы инвесторов",
       "investors-report": "Отчёт для инвестора",
-      "mobile-apps": "Мобильные приложения",
     };
 
     return labels[subItemKey] || subItemKey;
@@ -404,7 +397,6 @@ const SideMenu = () => {
     "clients",
     "payments",
     "investors",
-    "references",
     "finance",
     "black-catalog",
     "settings",
@@ -814,60 +806,6 @@ const SideMenu = () => {
               )}
             </DraggableRow>
           )}
-
-          {
-            <DraggableRow {...dragProps("references")}>
-              <MenuItem
-                onClick={(e) => {
-                  if (collapsed) {
-                    handleCollapsedMenuClick(e, "references", true);
-                  } else {
-                    handleMainMenuItemClick("references", undefined, true);
-                  }
-                }}
-                $collapsed={collapsed}
-                $selected={selectedSideMenuItem === "mobile-apps"}
-              >
-                <Icon
-                  src={referencesIcon}
-                  $collapsed={collapsed}
-                  $selected={selectedSideMenuItem === "mobile-apps"}
-                />
-                {!collapsed && (
-                  <>
-                    <MenuItemText>Справочники</MenuItemText>
-                    <ExpandArrow
-                      width="14"
-                      height="8"
-                      viewBox="0 0 14 8"
-                      fill="none"
-                      $expanded={expandedItem === "references"}
-                    >
-                      <path
-                        d="M1 1.32422L7 7.32422L13 1.32422"
-                        stroke="#50555C"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </ExpandArrow>
-                  </>
-                )}
-              </MenuItem>
-              {!collapsed && expandedItem === "references" && (
-                <SubMenu>
-                  <SubMenuLine />
-                  <SubMenuItem
-                    onClick={() =>
-                      handleSubMenuItemClick("mobile-apps", "/mobile-apps")
-                    }
-                    $selected={selectedSideMenuItem === "mobile-apps"}
-                  >
-                    Мобильные приложения
-                  </SubMenuItem>
-                </SubMenu>
-              )}
-            </DraggableRow>
-          }
 
           {hasPermission("MANAGE_ACCOUNTING", true) && (
             <DraggableRow {...dragProps("finance")}>
