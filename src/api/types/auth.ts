@@ -37,6 +37,8 @@ export interface AuthCustomRole {
 export interface AuthInfo {
   type: UserType;
   hasPin: boolean;
+  /** Сотрудник отключил пин-код — не требовать его установку и не блокировать по простою. */
+  pinDisabled?: boolean;
   employee: {
     id: number;
     fullName: string;

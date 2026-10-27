@@ -8,8 +8,13 @@ const PIN_LENGTH = 5;
 interface PinCodeModalProps {
   isOpen: boolean;
   onSuccess: (pin?: string) => void;
-  mode: 'setup' | 'verify';
+  /** confirm — подтвердить действие текущим пином: пин уходит в onConfirm. */
+  mode: 'setup' | 'verify' | 'confirm';
   onMaxAttempts?: () => void;
+  onConfirm?: (pin: string) => Promise<void>;
+  onCancel?: () => void;
+  title?: string;
+  description?: string;
   tokenId?: string;
   maxAttempts?: number;
   currentAttempts?: number;
@@ -22,7 +27,11 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
   onMaxAttempts,
   tokenId,
   maxAttempts = 3,
-  currentAttempts = 0
+  currentAttempts = 0,
+  onConfirm,
+  onCancel,
+  title,
+  description,
 }) => {
   const [pin, setPin] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -48,7 +57,10 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
 
     setIsLoading(true);
     try {
-      if (mode === 'setup') {
+      if (mode === 'confirm') {
+        await onConfirm?.(pin);
+        onSuccess(pin);
+      } else if (mode === 'setup') {
         await apiClient.post('/Auth/setup-pin', { pinCode: pin });
         onSuccess();
       } else {
@@ -67,6 +79,12 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
         onSuccess(pin);
       }
     } catch (err) {
+      if (mode === 'confirm') {
+        // Попытки считает бэкенд; здесь только показываем его ответ.
+        const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+        setError(data?.message || 'Не удалось подтвердить пин-код');
+        return;
+      }
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
       
@@ -147,9 +165,10 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
       <ModalContainer>
         <ModalContent>
           <Title>
-            {mode === 'setup' ? 'Установите пин-код' : 'Введите пин-код'}
+            {title ?? (mode === 'setup' ? 'Установите пин-код' : 'Введите пин-код')}
           </Title>
-          {mode === 'setup' && (
+          {description && <Description>{description}</Description>}
+          {mode === 'setup' && !description && (
             <Description>
               Для безопасности вашего аккаунта установите 5-значный пин-код. Он потребуется для подтверждения важных операций.
             </Description>
@@ -192,12 +211,32 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
                 ? (mode === 'setup' ? 'Сохранение...' : 'Проверка...')
                 : (mode === 'setup' ? 'Подтвердить' : 'Продолжить')}
             </SubmitButton>
+            {onCancel && (
+              <CancelButton type="button" onClick={onCancel} disabled={isLoading}>
+                Отмена
+              </CancelButton>
+            )}
           </PinForm>
         </ModalContent>
       </ModalContainer>
     </ModalOverlay>
   );
 };
+
+const CancelButton = styled.button`
+  margin-top: 8px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: #50555c;
+  font-size: 15px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+`;
 
 const ModalOverlay = styled.div`
   position: fixed;

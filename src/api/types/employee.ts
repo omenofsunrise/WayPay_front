@@ -60,6 +60,8 @@ export interface EmployeeFilterRequest extends PaginationParams {
 
 export interface AuthInfoResponse {
   type: "employee";
+  hasPin?: boolean;
+  pinDisabled?: boolean;
   employee: Employee;
 }
 

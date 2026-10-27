@@ -273,7 +273,7 @@ function App() {
       sessionStorage.removeItem("lastActivity");
       if (authInfo?.hasPin && !showPinModal) {
         setShowPinModal(true);
-      } else if (authInfo && !authInfo.hasPin) {
+      } else if (authInfo && !authInfo.hasPin && !authInfo.pinDisabled) {
         window.location.reload();
       }
     };
@@ -387,7 +387,7 @@ function App() {
     return <DesktopOnlyContent />;
   }
 
-  if (isAuthenticated && authInfo?.hasPin === false) {
+  if (isAuthenticated && authInfo?.hasPin === false && !authInfo.pinDisabled) {
     return (
       <PinCodeModal
         isOpen={true}
