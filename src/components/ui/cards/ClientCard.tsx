@@ -155,10 +155,14 @@ const MenuButton = styled.button`
 const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  width: 100%;
+  width: calc(100% - 64px);
   margin-top: 16px;
 
-  @media (max-width: 1050px) { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 16px; }
+  @media (max-width: 1050px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    row-gap: 16px;
+  }
   @media (max-width: 760px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @media (max-width: 480px) { grid-template-columns: 1fr; row-gap: 16px; }
 `;
