@@ -704,19 +704,23 @@ const ModalIcon = styled.div`
 `;
 
 const ModalTitle = styled.h2`
+  width: 100%;
   margin: 0 0 10px;
   color: #111827;
   font-size: 28px;
   line-height: 1.2;
+  text-align: left;
 
   @media (max-width: 600px) { font-size: 25px; }
 `;
 
 const ModalDescription = styled.p`
+  width: 100%;
   margin: 0;
   color: #798396;
   font-size: 16px;
   line-height: 1.55;
+  text-align: left;
 `;
 
 const WarningBox = styled.div`
