@@ -275,6 +275,7 @@ const SessionsPage = () => {
         <BaseModal
           title="Отключить ПИН-код?"
           subtitle="ПИН-код больше не будет запрашиваться при входе и после простоя."
+          headerIcon={<Lock size={24} />}
           appearance="compact-form"
           width="560px"
           onClose={() => !pinBusy && setIsDisableConfirmOpen(false)}
@@ -288,7 +289,6 @@ const SessionsPage = () => {
           submittingText="Отключение..."
         >
           <DisableContent>
-            <ModalIcon><Lock size={24} /></ModalIcon>
             <WarningBox>
               <AlertTriangle size={20} />
               <span>Не отключайте защиту на общем устройстве.</span>
@@ -811,17 +811,6 @@ const EmptyMessage = styled.div`
 const DisableContent = styled.div`
   padding: 6px 34px 24px;
   text-align: left;
-`;
-
-const ModalIcon = styled.div`
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: 60px;
-  margin-bottom: 20px;
-  border-radius: 50%;
-  background: #e3f6f7;
-  color: #008b95;
 `;
 
 const WarningBox = styled.div`

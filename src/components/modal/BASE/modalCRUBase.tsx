@@ -31,6 +31,7 @@ interface ModalProps {
   saveButtonStyle?: React.CSSProperties;
   submittingText?: string;
   hideCloseButton?: boolean;
+  headerIcon?: ReactNode;
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -55,6 +56,7 @@ const BaseModal: React.FC<ModalProps> = ({
   saveButtonStyle,
   submittingText = "Сохранение...",
   hideCloseButton = false,
+  headerIcon,
 }) => {
   const isViewMode = mode === "view";
 
@@ -168,7 +170,8 @@ const BaseModal: React.FC<ModalProps> = ({
             <CloseIcon aria-hidden="true" />
           </CloseButton>
         )}
-        <ModalHeader $appearance={appearance}>
+        <ModalHeader $appearance={appearance} $hasIcon={Boolean(headerIcon)}>
+          {headerIcon && <ModalHeaderIcon>{headerIcon}</ModalHeaderIcon>}
           <div>
             <ModalTitle $appearance={appearance}>{title}</ModalTitle>
             {subtitle && <ModalSubtitle>{subtitle}</ModalSubtitle>}
@@ -275,12 +278,17 @@ const ModalForm = styled.form`
   overflow: hidden;
 `;
 
-export const ModalHeader = styled.div<{ $appearance?: "default" | "compact-form" }>`
+export const ModalHeader = styled.div<{
+  $appearance?: "default" | "compact-form";
+  $hasIcon?: boolean;
+}>`
   display: flex;
+  flex-direction: ${({ $hasIcon }) => $hasIcon ? "column" : "row"};
   width: 100%;
   box-sizing: border-box;
   justify-content: flex-start;
-  align-items: center;
+  align-items: ${({ $hasIcon }) => $hasIcon ? "flex-start" : "center"};
+  gap: ${({ $hasIcon }) => $hasIcon ? "18px" : "0"};
   text-align: left;
   margin: 0;
   padding: 28px 34px 10px;
@@ -290,6 +298,17 @@ export const ModalHeader = styled.div<{ $appearance?: "default" | "compact-form"
     justify-content: flex-start;
     padding: 28px 34px 10px;
   `}
+`;
+
+const ModalHeaderIcon = styled.div`
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #e3f6f7;
+  color: #008b95;
+  flex: 0 0 auto;
 `;
 
 export const ModalTitle = styled.h2<{ $appearance?: "default" | "compact-form" }>`
