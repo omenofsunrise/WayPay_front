@@ -1,5 +1,6 @@
 import React, { type ReactNode, useEffect, useRef, useState } from "react";
 import styled, { css } from "styled-components";
+import { X } from "lucide-react";
 import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
 
 export type ModalMode =
@@ -152,7 +153,14 @@ const BaseModal: React.FC<ModalProps> = ({
         onWheel={handleModalScroll}
         onClick={(e) => e.stopPropagation()}
       >
-        <CloseButton $appearance={appearance} onClick={onClose}>&times;</CloseButton>
+        <CloseButton
+          $appearance={appearance}
+          aria-label="Закрыть"
+          onClick={onClose}
+          type="button"
+        >
+          <X size={20} strokeWidth={2} />
+        </CloseButton>
         <ModalHeader $appearance={appearance}>
           <div>
             <ModalTitle $appearance={appearance}>{title}</ModalTitle>
@@ -313,8 +321,6 @@ const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   background: none;
   border: none;
   border-radius: 8px;
-  font-size: 20px;
-  line-height: 1;
   cursor: pointer;
   color: #6b7280;
   z-index: 1;
@@ -323,8 +329,6 @@ const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
   ${({ $appearance }) => $appearance === "compact-form" && css`
     top: 20px;
     right: 24px;
-    font-size: 26px;
-    font-weight: 300;
   `}
 
   &:hover {
