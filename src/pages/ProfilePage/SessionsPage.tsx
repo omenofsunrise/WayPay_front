@@ -178,8 +178,8 @@ const SessionsPage = () => {
               <Lock size={24} />
             </PinIcon>
             <PinText>
-              <strong>Вход по ПИН-коду</strong>
-              <span>Запрашивать при входе и после простоя</span>
+              <PinTitle>Вход по ПИН-коду</PinTitle>
+              <PinDescription>Запрашивать при входе и после простоя</PinDescription>
             </PinText>
           </PinSectionMain>
 
@@ -412,9 +412,8 @@ const PinSection = styled.section`
 
 const PinSectionMain = styled.div`
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 16px;
   min-width: 0;
 `;
 
@@ -436,17 +435,28 @@ const PinText = styled.div`
   gap: 6px;
   min-width: 0;
   text-align: left;
+`;
 
-  strong {
-    color: #111827;
-    font-size: 18px;
-    line-height: 1.2;
-  }
+const PinTitle = styled.div`
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+`;
 
-  span {
-    color: #7a8495;
-    font-size: 14px;
-  }
+const PinDescription = styled.div`
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #7a8495;
+  font-size: 14px;
+  text-align: left;
 `;
 
 const PinControl = styled.div`
