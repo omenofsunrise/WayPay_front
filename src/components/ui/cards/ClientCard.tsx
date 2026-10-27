@@ -169,6 +169,7 @@ const InfoItem = styled.div`
   grid-template-rows: auto auto;
   min-width: 0;
   padding: 0 15px;
+  text-align: left;
   border-left: 1px solid #e3e9ef;
 
   &:first-child { padding-left: 0; border-left: 0; }
@@ -197,6 +198,7 @@ const InfoLabel = styled.span`
   color: #7c889b;
   font-size: 12px;
   line-height: 1.35;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
@@ -209,6 +211,7 @@ const InfoValue = styled.span`
   font-size: 14px;
   font-weight: 500;
   line-height: 1.35;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
