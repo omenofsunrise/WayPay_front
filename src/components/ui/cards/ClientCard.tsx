@@ -156,9 +156,9 @@ const InfoGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   width: 100%;
-  margin-top: 20px;
+  margin-top: 16px;
 
-  @media (max-width: 1280px) { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 20px; }
+  @media (max-width: 1050px) { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 16px; }
   @media (max-width: 760px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @media (max-width: 480px) { grid-template-columns: 1fr; row-gap: 16px; }
 `;
@@ -172,7 +172,7 @@ const InfoItem = styled.div`
   border-left: 1px solid #e3e9ef;
 
   &:first-child { padding-left: 0; border-left: 0; }
-  @media (max-width: 1280px) { &:nth-child(4) { padding-left: 0; border-left: 0; } }
+  @media (max-width: 1050px) { &:nth-child(4) { padding-left: 0; border-left: 0; } }
   @media (max-width: 760px) {
     &:nth-child(odd) { padding-left: 0; border-left: 0; }
     &:nth-child(4) { padding-left: 15px; border-left: 1px solid #e3e9ef; }
@@ -220,8 +220,8 @@ const ContactLink = styled.a`
 `;
 
 const Section = styled.section`
-  margin-top: 20px;
-  padding-top: 15px;
+  margin-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid #e4eaf0;
 `;
 
