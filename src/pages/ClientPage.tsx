@@ -17,6 +17,9 @@ import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import Pagination from "../components/ui/fields/CustomPagination";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import { TitleContainer } from "./BlackCatalog";
+import FloatingContextMenu, {
+  DANGER_COLOR,
+} from "../components/modal/FloatingContextMenu";
 
 const PAGE_SIZE = 20;
 
@@ -101,40 +104,6 @@ const ResetButton = styled.button`
   &:hover {
     color: #374151;
   }
-`;
-
-const ContextMenu = styled.div<{ x: number; y: number }>`
-  position: fixed;
-  background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1001;
-  min-width: 160px;
-  padding: 4px 0;
-  left: ${(props) => props.x}px;
-  top: ${(props) => props.y}px;
-`;
-
-const MenuItem = styled.div<{ danger?: boolean }>`
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: ${(props) => (props.danger ? "#ff4d4f" : "#333")};
-
-  &:hover {
-    background-color: #f5f5f5;
-  }
-`;
-
-const Backdrop = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
 `;
 
 export const StyledCountInfo = styled(CountInfoTitle)`
@@ -380,19 +349,6 @@ const ClientPage = () => {
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (contextMenu) {
-        closeContextMenu();
-      }
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
-  }, [contextMenu]);
 
   const handlePhoneFilterChange = (value: string) => {
     setPhoneFilter(value);
@@ -690,30 +646,34 @@ const ClientPage = () => {
           />
 
           {contextMenu && (
-            <>
-              <Backdrop onClick={closeContextMenu} />
-              <ContextMenu x={contextMenu.x} y={contextMenu.y}>
-                <MenuItem onClick={() => handleContextMenuAction("edit")}>
-                  Редактировать клиента
-                </MenuItem>
-                {(!contextMenu.client?.blacklist || hasRole("суперадмин")) && (
-                  <MenuItem
-                    danger={!contextMenu.client?.blacklist}
-                    onClick={() => handleContextMenuAction("blacklist")}
-                  >
-                    {contextMenu.client?.blacklist
-                      ? "Убрать из чёрного списка"
-                      : "Добавить в чёрный список"}
-                  </MenuItem>
-                )}
-                <MenuItem
-                  danger
-                  onClick={() => handleContextMenuAction("delete")}
-                >
-                  Удалить клиента
-                </MenuItem>
-              </ContextMenu>
-            </>
+            <FloatingContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              onClose={closeContextMenu}
+              items={[
+                {
+                  label: "Редактировать клиента",
+                  action: () => handleContextMenuAction("edit"),
+                },
+                ...(!contextMenu.client?.blacklist || hasRole("суперадмин")
+                  ? [
+                      {
+                        label: contextMenu.client?.blacklist
+                          ? "Убрать из чёрного списка"
+                          : "Добавить в чёрный список",
+                        color: contextMenu.client?.blacklist ? undefined : DANGER_COLOR,
+                        action: () => handleContextMenuAction("blacklist"),
+                      },
+                    ]
+                  : []),
+                {
+                  label: "Удалить клиента",
+                  color: DANGER_COLOR,
+                  dividerBefore: true,
+                  action: () => handleContextMenuAction("delete"),
+                },
+              ]}
+            />
           )}
         </>
       )}
