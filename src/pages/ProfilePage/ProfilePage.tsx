@@ -2,36 +2,31 @@ import PageLayout from "../../components/ui/Layouts/PageLayout";
 import EmployeeProfilePage from "./EmployeeProfilePage";
 import SessionsPage from "./SessionsPage";
 import { useEffect, useState } from "react";
-import { useAuth } from "../../сontext/AuthContext";
 import type { Tab } from "../../components/ui/fields/Tabs";
 import Tabs from "../../components/ui/fields/Tabs";
-import QRCodeAuth from "../../components/WhatsAppLogin";
-import EmployeeWhatsAppPage from "./EmployeeWhatsAppPage";
-import AccountSwitcher from "./AccountSwitcher";
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState<string>(() => {
-    return localStorage.getItem("profileActiveTab") || "Мой профиль";
+    const savedTab = localStorage.getItem("profileActiveTab");
+    if (savedTab === "Аккаунты" || savedTab === "Активные сессии") {
+      return "Аккаунт и безопасность";
+    }
+    return savedTab || "Мой профиль";
   });
-  const { authInfo } = useAuth();
-
   useEffect(() => {
     localStorage.setItem("profileActiveTab", activeTab);
   }, [activeTab]);
 
   const tabs: Tab[] = [
     { id: "Мой профиль", label: "Мой профиль" },
-    { id: "Аккаунты", label: "Аккаунты" },
-    { id: "Активные сессии", label: "Активные сессии" },
+    { id: "Аккаунт и безопасность", label: "Аккаунт и безопасность" },
   ];
 
   const renderTabContent = () => {
     switch (activeTab) {
       case "Мой профиль":
         return <EmployeeProfilePage />;
-      case "Аккаунты":
-        return <AccountSwitcher />;
-      case "Активные сессии":
+      case "Аккаунт и безопасность":
         return <SessionsPage />;
       default:
         return <EmployeeProfilePage />;

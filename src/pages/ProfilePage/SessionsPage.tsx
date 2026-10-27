@@ -7,6 +7,8 @@ import {
   Lock,
   MapPin,
   Monitor,
+  RefreshCw,
+  Shield,
 } from 'react-feather';
 import { useEmployee } from '../../api/hooks/useEmployee';
 import type { AuthSession } from '../../api/types/auth';
@@ -15,6 +17,7 @@ import PageLayout from '../../components/ui/Layouts/PageLayout';
 import PinCodeModal from '../../components/modal/PinCodeModal';
 import BaseModal from '../../components/modal/BASE/modalCRUBase';
 import EmployeeService from '../../api/services/employeeService';
+import AccountSwitcher from './AccountSwitcher';
 
 const SessionsPage = () => {
   const {
@@ -31,7 +34,9 @@ const SessionsPage = () => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [isDisableConfirmOpen, setIsDisableConfirmOpen] = useState(false);
   const [isPinConfirmOpen, setIsPinConfirmOpen] = useState(false);
+  const [isChangePinOpen, setIsChangePinOpen] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
+  const [revokeOthersBusy, setRevokeOthersBusy] = useState(false);
 
   const pinDisabled = authInfo?.pinDisabled === true;
 
@@ -108,9 +113,26 @@ const SessionsPage = () => {
   const handleRevoke = async (sessionId?: number) => {
     try {
       await revokeSession(sessionId);
+      if (sessionId === undefined) {
+        window.location.href = '/auth';
+        return;
+      }
       await loadSessions();
     } catch {
       setLocalError('Не удалось завершить сессию');
+    }
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    setRevokeOthersBusy(true);
+    setLocalError(null);
+    try {
+      await EmployeeService.revokeAllSessions();
+      await loadSessions();
+    } catch {
+      setLocalError('Не удалось завершить другие сессии');
+    } finally {
+      setRevokeOthersBusy(false);
     }
   };
 
@@ -119,34 +141,32 @@ const SessionsPage = () => {
 
     return (
       <SessionCard key={session.id} $isCurrent={session.isCurrentSession}>
-        <SessionMain>
-          <SessionHeader>
-            <BrowserIcon $browser={device.browser} aria-hidden="true" />
-            <DeviceHeading>
-              <DeviceName>{device.label}</DeviceName>
-              {session.isCurrentSession && <CurrentBadge>Текущая сессия</CurrentBadge>}
-            </DeviceHeading>
-          </SessionHeader>
+        <SessionHeader>
+          <BrowserIcon $browser={device.browser} aria-hidden="true" />
+          <DeviceHeading>
+            <DeviceName>{device.label}</DeviceName>
+            {session.isCurrentSession && <CurrentBadge>Текущая сессия</CurrentBadge>}
+          </DeviceHeading>
+        </SessionHeader>
 
-          <SessionDetails>
-            <DetailRow>
-              <MapPin size={17} />
-              <span>IP: {session.ipAddress || 'Не определён'}</span>
-            </DetailRow>
-            <DetailRow>
-              <Clock size={17} />
-              <span>Создана: {formatDate(session.createdAt)}</span>
-            </DetailRow>
-            <DetailRow>
-              <Clock size={17} />
-              <span>Последняя активность: {formatDate(session.lastUsedAt)}</span>
-            </DetailRow>
-            <DetailRow>
-              <Monitor size={17} />
-              <span>Истекает: {formatDate(session.expiresAt)}</span>
-            </DetailRow>
-          </SessionDetails>
-        </SessionMain>
+        <SessionDetails>
+          <DetailRow>
+            <MapPin size={16} />
+            <span>IP: {session.ipAddress || 'Не определён'}</span>
+          </DetailRow>
+          <DetailRow>
+            <Clock size={16} />
+            <span>Создана: {formatDate(session.createdAt)}</span>
+          </DetailRow>
+          <DetailRow>
+            <Clock size={16} />
+            <span>Активность: {session.isCurrentSession ? 'сейчас' : formatDate(session.lastUsedAt)}</span>
+          </DetailRow>
+          <DetailRow>
+            <Monitor size={16} />
+            <span>Истекает: {formatDate(session.expiresAt)}</span>
+          </DetailRow>
+        </SessionDetails>
 
         <EndSessionButton
           type="button"
@@ -162,57 +182,94 @@ const SessionsPage = () => {
   return (
     <SessionsPageLayout>
       <HeaderContainer>
-        <TitleWrapper>
-          <PageTitle>Активные сессии</PageTitle>
-          <PageSubtitle>Управление активными сессиями вашего аккаунта</PageSubtitle>
-        </TitleWrapper>
-        <RefreshButton type="button" onClick={() => void loadSessions()} disabled={sessionsLoading}>
-          Обновить
-        </RefreshButton>
+        <PageTitle>Аккаунт и безопасность</PageTitle>
+        <PageSubtitle>Управляйте аккаунтами, защитой входа и устройствами</PageSubtitle>
       </HeaderContainer>
 
-      {authInfo && (
-        <PinSection>
-          <PinSectionMain>
-            <PinIcon $disabled={pinDisabled}>
-              <Lock size={24} />
-            </PinIcon>
-            <PinText>
-              <PinTitle>Вход по ПИН-коду</PinTitle>
-              <PinDescription>Запрашивать при входе и после простоя</PinDescription>
-            </PinText>
-          </PinSectionMain>
+      <TopGrid>
+        <AccountSwitcher />
 
-          <PinControl>
-            <SwitchButton
-              type="button"
-              role="switch"
-              aria-checked={!pinDisabled}
-              aria-label={pinDisabled ? 'Включить ПИН-код' : 'Отключить ПИН-код'}
-              $checked={!pinDisabled}
-              onClick={() => void handlePinToggle()}
-              disabled={pinBusy}
-            >
-              <SwitchThumb $checked={!pinDisabled} />
-            </SwitchButton>
-            <PinStatus>{pinDisabled ? 'Отключён' : 'Включён'}</PinStatus>
-          </PinControl>
-        </PinSection>
-      )}
+        <SecurityCard>
+          <SecurityHeader>
+            <SecurityIcon><Shield size={24} /></SecurityIcon>
+            <SecurityTitle>Защита входа</SecurityTitle>
+          </SecurityHeader>
 
-      {sessionsError || localError || revokeError ? (
-        <ErrorMessage>{sessionsError || localError || revokeError}</ErrorMessage>
-      ) : null}
+          {authInfo && (
+            <PinSection>
+              <PinSectionMain>
+                <PinText>
+                  <PinTitle>Вход по ПИН-коду</PinTitle>
+                  <PinDescription>Запрашивать при входе и после простоя</PinDescription>
+                  <PinStatus $disabled={pinDisabled}>
+                    {pinDisabled ? 'Отключён' : 'Включён'}
+                  </PinStatus>
+                </PinText>
+              </PinSectionMain>
 
-      {sessionsLoading ? (
-        <LoaderWrapper><Loader /></LoaderWrapper>
-      ) : sessions ? (
-        <SessionsList>
-          {sessions.length > 0
-            ? sessions.map(renderSessionRow)
-            : <EmptyMessage>Нет активных сессий</EmptyMessage>}
-        </SessionsList>
-      ) : null}
+              <PinControl>
+                <SwitchButton
+                  type="button"
+                  role="switch"
+                  aria-checked={!pinDisabled}
+                  aria-label={pinDisabled ? 'Включить ПИН-код' : 'Отключить ПИН-код'}
+                  $checked={!pinDisabled}
+                  onClick={() => void handlePinToggle()}
+                  disabled={pinBusy}
+                >
+                  <SwitchThumb $checked={!pinDisabled} />
+                </SwitchButton>
+              </PinControl>
+            </PinSection>
+          )}
+
+          {authInfo?.hasPin && !pinDisabled && (
+            <ChangePinButton type="button" onClick={() => setIsChangePinOpen(true)}>
+              Изменить ПИН-код
+            </ChangePinButton>
+          )}
+        </SecurityCard>
+      </TopGrid>
+
+      <SessionsPanel>
+        <SessionsPanelHeader>
+          <div>
+            <SessionsTitleRow>
+              <SessionsTitle>Активные сессии</SessionsTitle>
+              <SessionsCount>{sessions?.length ?? 0}</SessionsCount>
+            </SessionsTitleRow>
+            <SessionsSubtitle>Устройства, на которых выполнен вход</SessionsSubtitle>
+          </div>
+          <RefreshButton type="button" onClick={() => void loadSessions()} disabled={sessionsLoading}>
+            <RefreshCw size={17} />
+            Обновить
+          </RefreshButton>
+        </SessionsPanelHeader>
+
+        {sessionsError || localError || revokeError ? (
+          <ErrorMessage>{sessionsError || localError || revokeError}</ErrorMessage>
+        ) : null}
+
+        {sessionsLoading ? (
+          <LoaderWrapper><Loader /></LoaderWrapper>
+        ) : sessions ? (
+          <SessionsList>
+            {sessions.length > 0
+              ? sessions.map(renderSessionRow)
+              : <EmptyMessage>Нет активных сессий</EmptyMessage>}
+          </SessionsList>
+        ) : null}
+
+        {sessions && sessions.filter((session) => !session.isCurrentSession).length > 0 && (
+          <RevokeOthersButton
+            type="button"
+            onClick={() => void handleRevokeOtherSessions()}
+            disabled={revokeOthersBusy}
+          >
+            {revokeOthersBusy ? 'Завершение...' : 'Завершить другие сессии'}
+          </RevokeOthersButton>
+        )}
+      </SessionsPanel>
 
       {isDisableConfirmOpen && (
         <BaseModal
@@ -248,6 +305,18 @@ const SessionsPage = () => {
         onConfirm={handleDisablePin}
         onSuccess={() => setIsPinConfirmOpen(false)}
         onCancel={() => setIsPinConfirmOpen(false)}
+      />
+
+      <PinCodeModal
+        isOpen={isChangePinOpen}
+        mode="setup"
+        title="Изменить ПИН-код"
+        description="Введите новый 5-значный ПИН-код."
+        onSuccess={() => {
+          setIsChangePinOpen(false);
+          window.location.reload();
+        }}
+        onCancel={() => setIsChangePinOpen(false)}
       />
     </SessionsPageLayout>
   );
@@ -305,39 +374,25 @@ const getDevicePresentation = (deviceInfo: string): { label: string; browser: Br
 };
 
 const SessionsPageLayout = styled(PageLayout)`
-  width: auto;
+  width: 100%;
   max-width: 100%;
   min-width: 0;
   margin: 0;
-  padding: 12px 0 32px;
-  overflow-y: auto;
+  padding: 10px 0 32px;
   overflow-x: hidden;
   box-sizing: border-box;
+  text-align: left;
 
   @media (max-width: 768px) {
-    padding: 12px 0 28px;
+    padding: 8px 0 24px;
   }
 `;
 
 const HeaderContainer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  text-align: left;
-  gap: 24px;
   width: 100%;
   min-width: 0;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   box-sizing: border-box;
-
-  @media (max-width: 640px) {
-    flex-wrap: wrap;
-  }
-`;
-
-const TitleWrapper = styled.div`
-  width: 100%;
-  min-width: 0;
   text-align: left;
 `;
 
@@ -352,8 +407,8 @@ const PageTitle = styled.h1`
 `;
 
 const PageSubtitle = styled.p`
-  margin: 4px 0 0;
-  color: #007d88;
+  margin: 7px 0 0;
+  color: #7a8495;
   font-size: 15px;
 
   @media (max-width: 640px) {
@@ -361,58 +416,66 @@ const PageSubtitle = styled.p`
   }
 `;
 
-const RefreshButton = styled.button`
-  min-width: 108px;
-  padding: 9px 18px;
-  border: 0;
-  border-radius: 10px;
-  background: #e2e5e9;
-  color: #182033;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) { background: #d7dce2; }
-  &:disabled { cursor: wait; opacity: 0.65; }
-`;
-
-const PinSection = styled.section`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+const TopGrid = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr);
+  gap: 20px;
   width: 100%;
-  max-width: 100%;
-  padding: 18px 22px;
-  margin-bottom: 20px;
-  border: 1px solid #e2e8f0;
-  border-radius: 15px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
-  box-sizing: border-box;
+  margin-bottom: 22px;
 
-  @media (max-width: 640px) {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 16px;
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
   }
 `;
 
-const PinSectionMain = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
+const SecurityCard = styled.section`
   min-width: 0;
+  padding: 24px;
+  border: 1px solid #dfe6ed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.035);
+  box-sizing: border-box;
 `;
 
-const PinIcon = styled.div<{ $disabled: boolean }>`
-  flex: 0 0 auto;
+const SecurityHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e3e9ef;
+`;
+
+const SecurityIcon = styled.div`
   display: grid;
   place-items: center;
-  width: 50px;
-  height: 50px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: ${({ $disabled }) => $disabled ? '#f1f5f9' : '#e3f6f7'};
-  color: ${({ $disabled }) => $disabled ? '#94a3b8' : '#007d88'};
+  background: #e5f5f6;
+  color: #007d88;
+`;
+
+const SecurityTitle = styled.h2`
+  margin: 0;
+  color: #172033;
+  font-size: 22px;
+`;
+
+const PinSection = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  padding: 24px 0;
+  border-bottom: 1px solid #e3e9ef;
+  box-sizing: border-box;
+`;
+
+const PinSectionMain = styled.div`
+  flex: 1;
+  min-width: 0;
 `;
 
 const PinText = styled.div`
@@ -430,7 +493,7 @@ const PinTitle = styled.div`
   margin: 0;
   padding: 0;
   color: #111827;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.2;
   text-align: left;
@@ -449,12 +512,7 @@ const PinDescription = styled.div`
 const PinControl = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
   flex: 0 0 auto;
-
-  @media (max-width: 640px) {
-    align-self: flex-end;
-  }
 `;
 
 const SwitchButton = styled.button<{ $checked: boolean }>`
@@ -488,15 +546,103 @@ const SwitchThumb = styled.span<{ $checked: boolean }>`
   transition: left 0.2s ease;
 `;
 
-const PinStatus = styled.span`
-  color: #172033;
+const PinStatus = styled.span<{ $disabled: boolean }>`
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: ${({ $disabled }) => $disabled ? '#f1f5f9' : '#e5f5f6'};
+  color: ${({ $disabled }) => $disabled ? '#7a8495' : '#007d88'};
+  font-size: 12px;
+  font-weight: 700;
+`;
+
+const ChangePinButton = styled.button`
+  margin-top: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #007d88;
   font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover { color: #006871; }
+`;
+
+const SessionsPanel = styled.section`
+  width: 100%;
+  padding: 24px;
+  border: 1px solid #dfe6ed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.035);
+  box-sizing: border-box;
+`;
+
+const SessionsPanelHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e3e9ef;
+
+  @media (max-width: 560px) {
+    flex-direction: column;
+  }
+`;
+
+const SessionsTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const SessionsTitle = styled.h2`
+  margin: 0;
+  color: #172033;
+  font-size: 22px;
+`;
+
+const SessionsCount = styled.span`
+  min-width: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e5f5f6;
+  color: #007d88;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+`;
+
+const SessionsSubtitle = styled.p`
+  margin: 6px 0 0;
+  color: #7a8495;
+  font-size: 14px;
+`;
+
+const RefreshButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 108px;
+  padding: 9px 16px;
+  border: 1px solid #ccd6e0;
+  border-radius: 9px;
+  background: #fff;
+  color: #253247;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { border-color: #007d88; color: #007d88; }
+  &:disabled { cursor: wait; opacity: 0.65; }
 `;
 
 const SessionsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -504,36 +650,28 @@ const SessionsList = styled.div`
 `;
 
 const SessionCard = styled.article<{ $isCurrent?: boolean }>`
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: minmax(210px, 1.2fr) minmax(420px, 2.5fr) auto;
+  align-items: center;
+  gap: 22px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: 188px;
-  padding: 20px 22px 18px 24px;
-  border: 1px solid #e3e8ef;
-  border-left: 4px solid ${({ $isCurrent }) => $isCurrent ? '#008b95' : '#e3e8ef'};
-  border-radius: 15px;
-  background: #fff;
-  box-shadow: 0 2px 9px rgba(15, 23, 42, 0.035);
+  padding: 16px 0;
+  border-bottom: 1px solid #e3e9ef;
+  background: ${({ $isCurrent }) => $isCurrent ? '#fbfefe' : '#fff'};
   box-sizing: border-box;
 
-  @media (max-width: 720px) {
-    flex-direction: column;
-    padding: 18px 16px;
-  }
-`;
+  &:last-child { border-bottom: 0; }
 
-const SessionMain = styled.div`
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  min-width: 0;
+  @media (max-width: 1120px) {
+    grid-template-columns: minmax(210px, 1fr) minmax(300px, 1.5fr) auto;
+  }
+
+  @media (max-width: 820px) {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
 `;
 
 const SessionHeader = styled.div`
@@ -594,9 +732,13 @@ const CurrentBadge = styled.span`
 `;
 
 const SessionDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const DetailRow = styled.div`
@@ -614,17 +756,31 @@ const EndSessionButton = styled.button`
   flex: 0 0 auto;
   min-width: 124px;
   padding: 10px 16px;
-  border: 0;
-  border-radius: 10px;
-  background: #00838d;
-  color: #fff;
+  border: 1px solid #ccd6e0;
+  border-radius: 9px;
+  background: #fff;
+  color: #253247;
   font-size: 14px;
   cursor: pointer;
 
-  &:hover:not(:disabled) { background: #006f77; }
+  &:hover:not(:disabled) { border-color: #007d88; color: #007d88; }
   &:disabled { cursor: wait; opacity: 0.65; }
 
-  @media (max-width: 720px) { align-self: flex-end; }
+  @media (max-width: 820px) { justify-self: end; }
+`;
+
+const RevokeOthersButton = styled.button`
+  margin-top: 4px;
+  padding: 14px 0 2px;
+  border: 0;
+  background: transparent;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { color: #dc2626; }
+  &:disabled { cursor: wait; opacity: 0.6; }
 `;
 
 const LoaderWrapper = styled.div`

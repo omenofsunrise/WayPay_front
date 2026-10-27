@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
+import { Check, MoreVertical, Plus } from "react-feather";
 import {
   authStorage,
   MAX_ACCOUNTS,
@@ -40,11 +41,11 @@ const AccountSwitcher = () => {
 
   return (
     <Wrapper>
-      <Title>Аккаунты</Title>
-      <Hint>
-        Можно войти в несколько аккаунтов (до {MAX_ACCOUNTS}) и переключаться
-        между ними без выхода из основного.
-      </Hint>
+      <SectionHeader>
+        <Title>Аккаунты</Title>
+        <CountBadge>{accounts.length} из {MAX_ACCOUNTS}</CountBadge>
+      </SectionHeader>
+      <Hint>Переключайтесь без повторного входа</Hint>
 
       <List>
         {accounts.map((acc) => {
@@ -64,15 +65,22 @@ const AccountSwitcher = () => {
                     : "Нажмите, чтобы переключиться"}
                 </Sub>
               </Info>
-              {isActive && <ActiveBadge>активный</ActiveBadge>}
+              {isActive && (
+                <ActiveBadge>
+                  <Check size={16} />
+                  Текущий
+                </ActiveBadge>
+              )}
               <Remove
+                type="button"
                 title="Удалить аккаунт с устройства"
+                aria-label={`Удалить аккаунт ${acc.label || "Аккаунт"} с устройства`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRemove(acc.id);
                 }}
               >
-                ×
+                <MoreVertical size={20} />
               </Remove>
             </Card>
           );
@@ -84,29 +92,54 @@ const AccountSwitcher = () => {
         onClick={handleAdd}
         disabled={accounts.length >= MAX_ACCOUNTS}
       >
-        + Добавить аккаунт
+        <Plus size={20} />
+        Добавить аккаунт
       </AddButton>
-      {accounts.length >= MAX_ACCOUNTS && (
-        <LimitHint>Достигнут лимит в {MAX_ACCOUNTS} аккаунта.</LimitHint>
-      )}
+      <LimitHint>
+        {accounts.length >= MAX_ACCOUNTS
+          ? `Достигнут лимит в ${MAX_ACCOUNTS} аккаунта.`
+          : `Доступно ещё ${MAX_ACCOUNTS - accounts.length} аккаунта`}
+      </LimitHint>
     </Wrapper>
   );
 };
 
 const Wrapper = styled.div`
-  max-width: 560px;
-  padding: 8px 4px;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #dfe6ed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.035);
+  box-sizing: border-box;
+  text-align: left;
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
 `;
 
 const Title = styled.h2`
-  margin: 0 0 6px;
-  font-size: 20px;
-  color: #111827;
+  margin: 0;
+  color: #172033;
+  font-size: 22px;
+  line-height: 1.2;
+`;
+
+const CountBadge = styled.span`
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #e5f5f6;
+  color: #007d88;
+  font-size: 13px;
+  font-weight: 700;
 `;
 
 const Hint = styled.p`
-  margin: 0 0 16px;
-  color: #6b7280;
+  margin: 6px 0 20px;
+  color: #7a8495;
   font-size: 14px;
 `;
 
@@ -120,9 +153,9 @@ const Card = styled.div<{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid ${(p) => (p.$active ? "#007d88" : "#e5e7eb")};
-  background: ${(p) => (p.$active ? "#f0f9fa" : "#fff")};
+  padding: 16px 18px;
+  border: 1px solid ${(p) => (p.$active ? "#cfe8ea" : "#e5e7eb")};
+  background: ${(p) => (p.$active ? "#fbfefe" : "#fff")};
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -133,8 +166,8 @@ const Card = styled.div<{ $active: boolean }>`
 `;
 
 const Avatar = styled.div`
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: #007d88;
   color: #fff;
@@ -142,7 +175,7 @@ const Avatar = styled.div`
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 20px;
   flex-shrink: 0;
 `;
 
@@ -152,7 +185,7 @@ const Info = styled.div`
 `;
 
 const Name = styled.div`
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
   font-size: 15px;
 `;
@@ -163,20 +196,24 @@ const Sub = styled.div`
 `;
 
 const ActiveBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
   color: #007d88;
   background: #d7f0f1;
-  padding: 3px 10px;
-  border-radius: 999px;
+  padding: 7px 12px;
+  border-radius: 10px;
   flex-shrink: 0;
 `;
 
 const Remove = styled.button`
   background: none;
   border: none;
-  font-size: 22px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 6px;
   color: #9ca3af;
   cursor: pointer;
   flex-shrink: 0;
@@ -186,6 +223,10 @@ const Remove = styled.button`
 `;
 
 const AddButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin-top: 16px;
   padding: 11px 18px;
   border: 1px dashed #007d88;
@@ -195,7 +236,7 @@ const AddButton = styled.button`
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  width: 100%;
+  width: auto;
   transition: all 0.15s ease;
   &:hover:not(:disabled) {
     background: #f0f9fa;
@@ -207,7 +248,7 @@ const AddButton = styled.button`
 `;
 
 const LimitHint = styled.div`
-  margin-top: 8px;
+  margin-top: 10px;
   color: #9ca3af;
   font-size: 13px;
 `;
