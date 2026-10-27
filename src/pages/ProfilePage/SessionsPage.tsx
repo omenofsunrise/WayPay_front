@@ -9,6 +9,8 @@ import PageLayout from '../../components/ui/Layouts/PageLayout';
 import CustomTitle from '../../components/ui/Text/CustomTitle';
 import ModalInfoTitle from '../../components/ui/Text/ModalInfoTitle';
 import GrayButton from '../../components/ui/Buttons/GrayButton';
+import PinCodeModal from '../../components/modal/PinCodeModal';
+import EmployeeService from '../../api/services/employeeService';
 
 const SessionsPage = () => {
   const { 
@@ -19,10 +21,47 @@ const SessionsPage = () => {
     revokeSession,
     revokeLoading,
     revokeError,
-    revokeAllSessions
+    revokeAllSessions,
+    authInfo
   } = useEmployee();
 
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isPinConfirmOpen, setIsPinConfirmOpen] = useState(false);
+  const [pinBusy, setPinBusy] = useState(false);
+
+  const pinDisabled = authInfo?.pinDisabled === true;
+
+  // После смены настройки перезагружаем страницу: так приложение заново
+  // прочитает /Auth/info и при включении сразу попросит задать пин.
+  const handleDisablePin = async (pin?: string) => {
+    await EmployeeService.disablePin(pin);
+    window.location.reload();
+  };
+
+  const handleDisableClick = async () => {
+    if (authInfo?.hasPin) {
+      setIsPinConfirmOpen(true);
+      return;
+    }
+    setPinBusy(true);
+    try {
+      await handleDisablePin();
+    } catch {
+      setLocalError('Не удалось отключить пин-код');
+      setPinBusy(false);
+    }
+  };
+
+  const handleEnableClick = async () => {
+    setPinBusy(true);
+    try {
+      await EmployeeService.enablePin();
+      window.location.reload();
+    } catch {
+      setLocalError('Не удалось включить пин-код');
+      setPinBusy(false);
+    }
+  };
 
   const loadSessions = useCallback(async () => {
     try {
@@ -110,6 +149,38 @@ const SessionsPage = () => {
         </ButtonGroup>
       </HeaderContainer>
 
+      {authInfo && (
+        <PinSection>
+          <PinText>
+            <strong>Пин-код</strong>
+            <span>
+              {pinDisabled
+                ? 'Отключён: при входе и после простоя пин-код не спрашивается.'
+                : 'Включён: пин-код спрашивается при входе и после простоя.'}
+            </span>
+          </PinText>
+          {pinDisabled ? (
+            <DarkCyanButton onClick={handleEnableClick} disabled={pinBusy}>
+              Включить пин-код
+            </DarkCyanButton>
+          ) : (
+            <GrayButton onClick={handleDisableClick} disabled={pinBusy}>
+              Отключить пин-код
+            </GrayButton>
+          )}
+        </PinSection>
+      )}
+
+      <PinCodeModal
+        isOpen={isPinConfirmOpen}
+        mode="confirm"
+        title="Отключение пин-кода"
+        description="Введите текущий пин-код, чтобы отключить его. Пин-код перестанет спрашиваться во всех ваших сессиях."
+        onConfirm={handleDisablePin}
+        onSuccess={() => setIsPinConfirmOpen(false)}
+        onCancel={() => setIsPinConfirmOpen(false)}
+      />
+
       {sessionsLoading && <LoaderWrapper><Loader /></LoaderWrapper>}
       
       {sessionsError || localError || revokeError ? (
@@ -131,6 +202,31 @@ const SessionsPage = () => {
   );
 };
 
+
+const PinSection = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+`;
+
+const PinText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #50555c;
+
+  strong {
+    color: #1a202c;
+    font-size: 16px;
+  }
+`;
 
 const HeaderContainer = styled.div`
   display: flex;
