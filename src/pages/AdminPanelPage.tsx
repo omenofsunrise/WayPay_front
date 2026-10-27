@@ -1283,9 +1283,13 @@ const AdminPanelPage = () => {
             company.id.toString(),
             company.name,
             company.chief,
-            <PhoneLink href={formatPhoneHref(company.phone)}>
-              {company.phone}
-            </PhoneLink>,
+            company.phone ? (
+              <PhoneLink href={formatPhoneHref(company.phone)}>
+                {company.phone}
+              </PhoneLink>
+            ) : (
+              "Не указан"
+            ),
             formatMoney((company.balance ?? 0).toString()),
           ];
           if (!salesMode) {
@@ -1297,9 +1301,13 @@ const AdminPanelPage = () => {
           company.id.toString(),
           company.name,
           company.chief,
-          <PhoneLink href={formatPhoneHref(company.phone)}>
-            {company.phone}
-          </PhoneLink>,
+          company.phone ? (
+            <PhoneLink href={formatPhoneHref(company.phone)}>
+              {company.phone}
+            </PhoneLink>
+          ) : (
+            "Не указан"
+          ),
           company.licenceDate ? formatDate(company.licenceDate) : "Нет данных",
           company.createdCreditsCount,
           company.totalCredits,
