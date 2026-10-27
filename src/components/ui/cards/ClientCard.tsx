@@ -4,6 +4,7 @@ import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV, 
 import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import CreditBriefModal from '../../modal/CrudInherited/CreditBrief';
+import FloatingContextMenu, { DANGER_COLOR } from '../../modal/FloatingContextMenu';
 
 const Card = styled.div`
   background: white;
@@ -292,40 +293,6 @@ const MenuButton = styled.button`
   }
 `;
 
-const ContextMenu = styled.div<{ $isVisible: boolean }>`
-  position: absolute;
-  top: 70px;
-  right: 90px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 8px 0;
-  z-index: 100;
-  display: ${props => props.$isVisible ? 'block' : 'none'};
-  min-width: 150px;
-`;
-
-const MenuItem = styled.button<{ $danger?: boolean }>`
-  width: 100%;
-  text-align: left;
-  padding: 10px 16px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: ${props => props.$danger ? '#DC2626' : '#333'};
-  transition: background-color 0.2s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  &:disabled {
-    cursor: wait;
-    opacity: 0.6;
-  }
-`;
-
 const BlacklistBadge = styled.div`
   position: absolute;
   top: 15px;
@@ -391,10 +358,10 @@ const ClientCard: React.FC<ClientCardProps> = ({
   showMenu = true,
 }) => {
   const { createPrivateChat } = useChat();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Где открыто меню «⋮» (null — закрыто).
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
   const [selectedContractModal, setSelectedContractModal] = useState<number | null>(null);
   const [isNameCopied, setIsNameCopied] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const copyResetTimer = useRef<number | null>(null);
 
   React.useEffect(() => {
@@ -416,19 +383,6 @@ const ClientCard: React.FC<ClientCardProps> = ({
     }
   };
   
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   if (!client) {
     return (
       <Card>
@@ -478,27 +432,14 @@ const ClientCard: React.FC<ClientCardProps> = ({
     }
   };
 
-  const handleMenuClick = (e: React.MouseEvent) => {
+  const handleMenuClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMenuOpen(false);
-    onEdit(client);
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMenuOpen(false);
-    onDelete(client);
-  };
-
-  const handleBlacklistClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMenuOpen(false);
-    onBlacklistChange(client, client.blacklist !== true);
+    if (menuAt) {
+      setMenuAt(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMenuAt({ x: rect.left, y: rect.bottom });
   };
 
   const handleCardClick = () => {
@@ -578,25 +519,39 @@ const ClientCard: React.FC<ClientCardProps> = ({
           
           {showMenu && (
             <>
-              <MenuButton onClick={handleMenuClick}>
+              <MenuButton
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={handleMenuClick}
+              >
                 <FaEllipsisV size={16} />
               </MenuButton>
 
-              <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
-                <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
-                {(!isBlacklisted || canRemoveFromBlacklist) && (
-                  <MenuItem
-                    $danger={!isBlacklisted}
-                    disabled={isBlacklistUpdating}
-                    onClick={handleBlacklistClick}
-                  >
-                    {isBlacklisted
-                      ? 'Убрать из чёрного списка'
-                      : 'Добавить в чёрный список'}
-                  </MenuItem>
-                )}
-                <MenuItem $danger onClick={handleDeleteClick}>Удалить</MenuItem>
-              </ContextMenu>
+              {menuAt && (
+                <FloatingContextMenu
+                  x={menuAt.x}
+                  y={menuAt.y}
+                  onClose={() => setMenuAt(null)}
+                  items={[
+                    { label: 'Редактировать', action: () => onEdit(client) },
+                    ...(!isBlacklisted || canRemoveFromBlacklist
+                      ? [{
+                          label: isBlacklisted
+                            ? 'Убрать из чёрного списка'
+                            : 'Добавить в чёрный список',
+                          color: isBlacklisted ? undefined : DANGER_COLOR,
+                          disabled: isBlacklistUpdating,
+                          action: () => onBlacklistChange(client, client.blacklist !== true),
+                        }]
+                      : []),
+                    {
+                      label: 'Удалить',
+                      color: DANGER_COLOR,
+                      dividerBefore: true,
+                      action: () => onDelete(client),
+                    },
+                  ]}
+                />
+              )}
             </>
           )}
 

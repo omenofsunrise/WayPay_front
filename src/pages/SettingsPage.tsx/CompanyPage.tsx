@@ -9,6 +9,9 @@ import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
 import ToggleSwitch from "../../components/ui/Toggles/ToggleSwitch";
 import companyService from "../../api/services/companyService";
 import { useAuth } from "../../сontext/AuthContext";
+import FloatingContextMenu, {
+  DANGER_COLOR,
+} from "../../components/modal/FloatingContextMenu";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -75,18 +78,6 @@ const EditIconSvg = () => (
       d="M13 3l4 4L6 18H2v-4L13 3z"
       stroke="currentColor"
       strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const TrashIconSvg = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path
-      d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"
-      stroke="currentColor"
-      strokeWidth="1.3"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -848,24 +839,23 @@ const CompanyPage = () => {
       </CompanyCard>
 
       {showContextMenu && (
-        <>
-          <ContextMenuBackdrop onClick={() => setShowContextMenu(false)} />
-          <ContextMenu
-            style={{ left: menuPosition.x - 200, top: menuPosition.y }}
-          >
-            <ContextMenuItem
-              onClick={() => {
-                document.getElementById("logo-upload")?.click();
-                setShowContextMenu(false);
-              }}
-            >
-              <EditIconSvg /> Изменить логотип
-            </ContextMenuItem>
-            <ContextMenuItem $danger onClick={handleRemoveLogo}>
-              <TrashIconSvg /> Удалить логотип
-            </ContextMenuItem>
-          </ContextMenu>
-        </>
+        <FloatingContextMenu
+          x={menuPosition.x}
+          y={menuPosition.y}
+          onClose={() => setShowContextMenu(false)}
+          items={[
+            {
+              label: "Изменить логотип",
+              action: () => document.getElementById("logo-upload")?.click(),
+            },
+            {
+              label: "Удалить логотип",
+              color: DANGER_COLOR,
+              dividerBefore: true,
+              action: () => void handleRemoveLogo(),
+            },
+          ]}
+        />
       )}
 
       <ToastContainer>
@@ -1215,36 +1205,5 @@ const CardFooter = styled.footer`
   }
 `;
 
-const ContextMenuBackdrop = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-`;
-
-const ContextMenu = styled.div`
-  position: fixed;
-  background: white;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1001;
-  min-width: 180px;
-  padding: 4px 0;
-  border: 1px solid #e5e7eb;
-`;
-
-const ContextMenuItem = styled.div<{ $danger?: boolean }>`
-  padding: 9px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  color: ${(p) => (p.$danger ? "#ef4444" : "#374151")};
-  transition: background 0.15s;
-
-  &:hover {
-    background: #f9fafb;
-  }
-`;
 
 export default CompanyPage;
