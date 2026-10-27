@@ -250,6 +250,7 @@ const ModalContainer = styled.div<{
 
 const ModalForm = styled.form`
   display: flex;
+  width: 100%;
   flex-direction: column;
   flex: 1;
   min-height: 0;
@@ -258,8 +259,11 @@ const ModalForm = styled.form`
 
 export const ModalHeader = styled.div<{ $appearance?: "default" | "client-create" }>`
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   justify-content: flex-start;
   align-items: center;
+  text-align: left;
   margin: 0;
   padding: 24px 28px 14px;
   flex-shrink: 0;
@@ -277,6 +281,7 @@ export const ModalTitle = styled.h2<{ $appearance?: "default" | "client-create" 
   font-size: 22px;
   font-weight: 700;
   line-height: 1.25;
+  text-align: left;
 
   ${({ $appearance }) => $appearance === "client-create" && css`
     margin: 0;
@@ -293,6 +298,7 @@ const ModalSubtitle = styled.p`
   color: #7b8799;
   font-size: 14px;
   line-height: 1.4;
+  text-align: left;
 `;
 
 const CloseButton = styled.button<{ $appearance: "default" | "client-create" }>`
@@ -336,9 +342,11 @@ const ModalContent = styled.div<{
   $appearance: "default" | "client-create";
 }>`
   flex: 1;
+  width: 100%;
   margin-bottom: 0;
   padding: 0 24px;
   box-sizing: border-box;
+  text-align: left;
   min-height: 0;
   overflow-y: ${(props) => (props.isScrollable ? "auto" : "visible")};
 
@@ -371,6 +379,8 @@ const ModalContent = styled.div<{
 
 const ModalFooter = styled.div<{ $appearance: "default" | "client-create" }>`
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   justify-content: flex-end;
   align-items: center;
   gap: 12px;

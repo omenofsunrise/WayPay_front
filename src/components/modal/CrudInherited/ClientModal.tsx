@@ -57,11 +57,14 @@ const emptyClient: Omit<Client, "id"> = {
 
 const CreateFormContent = styled.div`
   padding: 6px 34px 24px;
+  text-align: left;
 
   @media (max-width: 600px) { padding: 4px 18px 20px; }
 `;
 
 const CreateSection = styled.section<{ $separated?: boolean }>`
+  width: 100%;
+  box-sizing: border-box;
   margin-top: ${({ $separated }) => ($separated ? "18px" : "8px")};
   padding-top: ${({ $separated }) => ($separated ? "18px" : "0")};
   border-top: ${({ $separated }) => ($separated ? "1px solid #dfe6ed" : "0")};
@@ -73,10 +76,12 @@ const CreateSectionTitle = styled.h3`
   font-size: 18px;
   font-weight: 700;
   line-height: 1.3;
+  text-align: left;
 `;
 
 const CreateFieldsGrid = styled.div`
   display: grid;
+  width: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px 18px;
 
@@ -93,6 +98,7 @@ const CreateField = styled.label<{ $fullWidth?: boolean }>`
   font-size: 14px;
   font-weight: 500;
   line-height: 1.3;
+  text-align: left;
 `;
 
 const CreateInputShell = styled.div<{ $withIcon?: boolean; $iconRight?: boolean }>`
