@@ -1,5 +1,9 @@
 import React from 'react';
-import FloatingContextMenu, { DANGER_COLOR } from '../../modal/FloatingContextMenu';
+import FloatingContextMenu, {
+  DANGER_COLOR,
+  PRIMARY_COLOR,
+  SECONDARY_COLOR,
+} from '../../modal/FloatingContextMenu';
 import type { ContextMenuItem } from '../../modal/ContextMenu';
 
 interface MessageContextMenuProps {
@@ -25,10 +29,10 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   if (!contextMenu) return null;
 
   const items: ContextMenuItem[] = [
-    { label: 'Сделать заметку', action: onMakeNote },
+    { label: 'Сделать заметку', color: PRIMARY_COLOR, action: onMakeNote },
   ];
   if (messageType === 'text') {
-    items.push({ label: 'Копировать', action: onCopy });
+    items.push({ label: 'Копировать', color: SECONDARY_COLOR, action: onCopy });
   }
   if (canDelete) {
     items.push({

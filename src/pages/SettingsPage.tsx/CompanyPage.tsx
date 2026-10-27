@@ -11,6 +11,7 @@ import companyService from "../../api/services/companyService";
 import { useAuth } from "../../сontext/AuthContext";
 import FloatingContextMenu, {
   DANGER_COLOR,
+  PRIMARY_COLOR,
 } from "../../components/modal/FloatingContextMenu";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -846,6 +847,7 @@ const CompanyPage = () => {
           items={[
             {
               label: "Изменить логотип",
+              color: PRIMARY_COLOR,
               action: () => document.getElementById("logo-upload")?.click(),
             },
             {

@@ -4,7 +4,11 @@ import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV, 
 import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import CreditBriefModal from '../../modal/CrudInherited/CreditBrief';
-import FloatingContextMenu, { DANGER_COLOR } from '../../modal/FloatingContextMenu';
+import FloatingContextMenu, {
+  DANGER_COLOR,
+  PRIMARY_COLOR,
+  SUCCESS_COLOR,
+} from '../../modal/FloatingContextMenu';
 
 const Card = styled.div`
   background: white;
@@ -532,13 +536,13 @@ const ClientCard: React.FC<ClientCardProps> = ({
                   y={menuAt.y}
                   onClose={() => setMenuAt(null)}
                   items={[
-                    { label: 'Редактировать', action: () => onEdit(client) },
+                    { label: 'Редактировать', color: PRIMARY_COLOR, action: () => onEdit(client) },
                     ...(!isBlacklisted || canRemoveFromBlacklist
                       ? [{
                           label: isBlacklisted
                             ? 'Убрать из чёрного списка'
                             : 'Добавить в чёрный список',
-                          color: isBlacklisted ? undefined : DANGER_COLOR,
+                          color: isBlacklisted ? SUCCESS_COLOR : DANGER_COLOR,
                           disabled: isBlacklistUpdating,
                           action: () => onBlacklistChange(client, client.blacklist !== true),
                         }]

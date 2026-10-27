@@ -4,7 +4,14 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import ContextMenu, { type ContextMenuItem } from "./ContextMenu";
 
-/** Цвет опасного пункта: ContextMenu подсвечивает его красным фоном. */
+// Цвета пунктов — те же, что в таблице «Управление лицензиями».
+/** Главное действие: редактировать, изменить. */
+export const PRIMARY_COLOR = "#007D88";
+/** Второстепенное действие: копировать и т.п. */
+export const SECONDARY_COLOR = "#6B7280";
+/** Возвращающее действие: убрать из чёрного списка. */
+export const SUCCESS_COLOR = "#10B981";
+/** Опасное действие: ContextMenu подсвечивает его красным фоном. */
 export const DANGER_COLOR = "#EF4444";
 
 interface FloatingContextMenuProps {

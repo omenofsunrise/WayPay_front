@@ -1,5 +1,8 @@
 import type { Task } from "../../api/types/task";
-import FloatingContextMenu, { DANGER_COLOR } from "../modal/FloatingContextMenu";
+import FloatingContextMenu, {
+  DANGER_COLOR,
+  PRIMARY_COLOR,
+} from "../modal/FloatingContextMenu";
 
 interface TaskContextMenuProps {
   task: Task;
@@ -32,7 +35,7 @@ const TaskContextMenu = ({
       y={position.y}
       onClose={onClose}
       items={[
-        { label: "Изменить", action: onEdit },
+        { label: "Изменить", color: PRIMARY_COLOR, action: onEdit },
         {
           label: "Удалить",
           color: DANGER_COLOR,

@@ -19,6 +19,8 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import { TitleContainer } from "./BlackCatalog";
 import FloatingContextMenu, {
   DANGER_COLOR,
+  PRIMARY_COLOR,
+  SUCCESS_COLOR,
 } from "../components/modal/FloatingContextMenu";
 
 const PAGE_SIZE = 20;
@@ -653,6 +655,7 @@ const ClientPage = () => {
               items={[
                 {
                   label: "Редактировать клиента",
+                  color: PRIMARY_COLOR,
                   action: () => handleContextMenuAction("edit"),
                 },
                 ...(!contextMenu.client?.blacklist || hasRole("суперадмин")
@@ -661,7 +664,7 @@ const ClientPage = () => {
                         label: contextMenu.client?.blacklist
                           ? "Убрать из чёрного списка"
                           : "Добавить в чёрный список",
-                        color: contextMenu.client?.blacklist ? undefined : DANGER_COLOR,
+                        color: contextMenu.client?.blacklist ? SUCCESS_COLOR : DANGER_COLOR,
                         action: () => handleContextMenuAction("blacklist"),
                       },
                     ]
