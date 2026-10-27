@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Clock,
   Loader,
-  Lock,
   MapPin,
   Monitor,
   RefreshCw,
@@ -275,7 +274,6 @@ const SessionsPage = () => {
         <BaseModal
           title="Отключить ПИН-код?"
           subtitle="ПИН-код больше не будет запрашиваться при входе и после простоя."
-          headerIcon={<Lock size={24} />}
           appearance="compact-form"
           width="560px"
           onClose={() => !pinBusy && setIsDisableConfirmOpen(false)}
