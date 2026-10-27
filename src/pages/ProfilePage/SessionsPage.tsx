@@ -412,8 +412,9 @@ const PinSection = styled.section`
 
 const PinSectionMain = styled.div`
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
   min-width: 0;
 `;
 
