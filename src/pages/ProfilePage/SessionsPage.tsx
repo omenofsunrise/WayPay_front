@@ -323,6 +323,7 @@ const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  text-align: left;
   gap: 24px;
   width: 100%;
   min-width: 0;
@@ -335,15 +336,19 @@ const HeaderContainer = styled.div`
 `;
 
 const TitleWrapper = styled.div`
+  width: 100%;
   min-width: 0;
+  text-align: left;
 `;
 
 const PageTitle = styled.h1`
   margin: 0;
+  width: 100%;
   color: #0f172a;
   font-size: clamp(24px, 1.8vw, 32px);
   font-weight: 700;
   line-height: 1.16;
+  text-align: left;
 `;
 
 const PageSubtitle = styled.p`
