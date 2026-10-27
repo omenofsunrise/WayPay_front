@@ -96,17 +96,6 @@ const InstallAppHelpModal = ({ isOpen, onClose }: InstallAppHelpModalProps) => {
       saveButtonText="Понятно"
     >
       <Content>
-        <Icon aria-hidden="true">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M8 17L12 21L16 17M12 4V20M5 4H19C20.1046 4 21 4.89543 21 6V14C21 15.1046 20.1046 16 19 16H18M6 16H5C3.89543 16 3 15.1046 3 14V6C3 4.89543 3.89543 4 5 4Z"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Icon>
         {!isSecure && (
           <Warning role="alert">
             Автоматическая установка недоступна, потому что сайт открыт по HTTP.
@@ -131,18 +120,8 @@ const Content = styled.div`
   text-align: left;
 `;
 
-const Icon = styled.div`
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 139, 139, 0.1);
-  color: #007d88;
-`;
-
 const Warning = styled.div`
-  margin: 16px 0;
+  margin: 8px 0 18px;
   padding: 12px 14px;
   border: 1px solid #fcd34d;
   border-radius: 10px;
