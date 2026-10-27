@@ -1,22 +1,19 @@
 import { useState, useCallback, useEffect } from "react";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../components/ui/fields/CustomInput";
-import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
-import CustomTitle from "../components/ui/Text/CustomTitle";
 import ClientModal from "../components/modal/CrudInherited/ClientModal";
 import useClients from "../api/hooks/useClient";
 import type { ClientForm } from "../api/types/client";
 import PhoneModalInput from "../components/ui/fields/PhoneModalInput";
-import { Container } from "react-bootstrap";
 import styled from "styled-components";
+import { Phone, Plus, Search, X } from "lucide-react";
 import ClientCard from "../components/ui/cards/ClientCard";
 import ClientDossier from "../components/ui/Dossiers/ClientDossier";
 import { useAuth } from "../сontext/AuthContext";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import Pagination from "../components/ui/fields/CustomPagination";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
-import { TitleContainer } from "./BlackCatalog";
 import FloatingContextMenu, {
   DANGER_COLOR,
   PRIMARY_COLOR,
@@ -63,12 +60,6 @@ const EmptyStateText = styled.p`
   line-height: 1.5;
 `;
 
-const ClientFilterField = styled(FilterField)`
-  flex-shrink: 0;
-  padding: 16px 0;
-  background-color: rgba(249, 250, 250, 1);
-`;
-
 const ClientsPageLayout = styled(PageLayout)`
   height: calc(100vh - var(--header-height, 56px));
   overflow: hidden;
@@ -108,8 +99,219 @@ const ResetButton = styled.button`
   }
 `;
 
-export const StyledCountInfo = styled(CountInfoTitle)`
-  margin-left: auto;
+const PageHeader = styled.header`
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0 14px;
+
+  @media (max-width: 640px) {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+`;
+
+const HeadingBlock = styled.div`
+  min-width: 0;
+`;
+
+const HeadingRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const PageTitle = styled.h1`
+  margin: 0;
+  color: #101827;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+`;
+
+const HeaderCountBadge = styled.span`
+  display: inline-grid;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  place-items: center;
+  color: #4b596b;
+  font-size: 14px;
+  font-weight: 650;
+  background: #e8eef4;
+  border-radius: 999px;
+`;
+
+const PageSubtitle = styled.p`
+  margin: 6px 0 0;
+  color: #778497;
+  font-size: 14px;
+  line-height: 1.4;
+`;
+
+const AddClientButton = styled.button`
+  display: inline-flex;
+  min-height: 46px;
+  padding: 0 22px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #078891;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: 0 4px 12px rgba(0, 125, 136, 0.18);
+  cursor: pointer;
+
+  &:hover { background: #007d88; }
+  &:focus-visible { outline: 2px solid rgba(0, 125, 136, 0.42); outline-offset: 2px; }
+
+  @media (max-width: 640px) { width: 100%; }
+`;
+
+const SearchPanel = styled.section`
+  display: grid;
+  grid-template-columns: minmax(230px, 1.15fr) minmax(230px, 1.15fr) 112px auto minmax(180px, 1fr);
+  flex-shrink: 0;
+  gap: 14px;
+  align-items: center;
+  margin: 0 0 18px;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid #e8edf2;
+  border-radius: 13px;
+  box-shadow: 0 5px 18px rgba(25, 46, 74, 0.05);
+
+  @media (max-width: 1150px) {
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) 112px auto;
+  }
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SearchField = styled.div<{ $hasClearButton?: boolean }>`
+  position: relative;
+  min-width: 0;
+
+  > svg {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    z-index: 1;
+    color: #65748a;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  > div {
+    display: block;
+    width: 100%;
+    margin: 0;
+  }
+
+  input {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+    padding: 8px ${({ $hasClearButton }) => ($hasClearButton ? "42px" : "14px")} 8px 44px;
+    color: #172133;
+    font-size: 14px;
+    background: #fff;
+    border: 1px solid #ced8e2;
+    border-radius: 8px;
+  }
+
+  input::placeholder { color: #8a96a8; }
+`;
+
+const ClearSearchButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  color: #718096;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+
+  &:hover { color: #263548; background: #f0f4f7; }
+`;
+
+const SearchButton = styled.button`
+  min-height: 44px;
+  padding: 0 22px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  background: #078891;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: #007d88; }
+  &:disabled { cursor: not-allowed; opacity: 0.55; }
+  &:focus-visible { outline: 2px solid rgba(0, 125, 136, 0.42); outline-offset: 2px; }
+`;
+
+const PanelResetButton = styled.button`
+  min-height: 44px;
+  padding: 0 8px;
+  color: #087d86;
+  font-size: 14px;
+  font-weight: 550;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+
+  &:hover { color: #055f67; }
+`;
+
+const ResultSummary = styled.div<{ $visible: boolean }>`
+  min-height: 36px;
+  padding-left: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: #68768a;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  border-left: 1px solid #e4e9ef;
+  visibility: ${({ $visible }) => ($visible ? "visible" : "hidden")};
+
+  @media (max-width: 1150px) {
+    grid-column: 1 / -1;
+    min-height: auto;
+    padding: 12px 0 0;
+    justify-content: flex-start;
+    border-top: 1px solid #e4e9ef;
+    border-left: 0;
+  }
+
+  @media (max-width: 520px) { justify-content: center; }
 `;
 
 interface Client {
@@ -129,6 +331,15 @@ interface Client {
   blacklist?: boolean;
   employeeId?: number;
 }
+
+const getClientWord = (count: number) => {
+  const lastTwoDigits = count % 100;
+  const lastDigit = count % 10;
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return "клиентов";
+  if (lastDigit === 1) return "клиент";
+  if (lastDigit >= 2 && lastDigit <= 4) return "клиента";
+  return "клиентов";
+};
 
 const ClientPage = () => {
   const [nameFilter, setNameFilter] = useState("");
@@ -570,32 +781,42 @@ const ClientPage = () => {
         </ClientListScrollArea>
       ) : (
         <>
-          <TitleContainer>
-            <TitleContainer style={{ maxWidth: "100px" }}>
-              <CustomTitle>Клиенты</CustomTitle>
-              {clientsData && clientsData.items.length > 0 && (
-                <ClientCount>({clientsData.totalItemsCount})</ClientCount>
-              )}
-            </TitleContainer>
-            <StyledCountInfo total={clientsData?.totalItemsCount} />
-          </TitleContainer>
+          <PageHeader>
+            <HeadingBlock>
+              <HeadingRow>
+                <PageTitle>Клиенты</PageTitle>
+                <HeaderCountBadge>{totalClientsCount}</HeaderCountBadge>
+              </HeadingRow>
+              <PageSubtitle>Управление клиентами и договорами</PageSubtitle>
+            </HeadingBlock>
+            <AddClientButton onClick={handleCreateClient} type="button">
+              <Plus size={20} />
+              Добавить клиента
+            </AddClientButton>
+          </PageHeader>
 
-          <ClientFilterField>
-            <Container
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                width: "50vw",
-                gap: "15px",
-              }}
-            >
+          <SearchPanel>
+            <SearchField $hasClearButton={Boolean(nameFilter)}>
+              <Search size={19} />
               <CustomInput
                 inputType="fullname"
-                placeholder="ФИО клиента (минимум 5 символов)"
+                placeholder="ФИО клиента"
                 value={nameFilter}
                 onChange={(e) => handleFilterChange(e.target.value)}
                 onKeyPress={handleKeyPress}
               />
+              {nameFilter && (
+                <ClearSearchButton
+                  aria-label="Очистить ФИО"
+                  onClick={() => handleFilterChange("")}
+                  type="button"
+                >
+                  <X size={17} />
+                </ClearSearchButton>
+              )}
+            </SearchField>
+            <SearchField>
+              <Phone size={18} />
               <PhoneModalInput
                 placeholder="Телефон (полный номер)"
                 value={phoneFilter}
@@ -603,26 +824,27 @@ const ClientPage = () => {
                 onKeyPress={handleKeyPress}
                 name="phone"
               />
-              <ResetButton onClick={resetFilters}>Сбросить фильтры</ResetButton>
-              <DarkCyanButton
-                onClick={handleSearch}
-                disabled={
-                  !(
-                    nameFilter.trim().length >= 5 ||
-                    phoneFilter.trim().replace(/\D/g, "").length >= 11
-                  )
-                }
-              >
-                Поиск
-              </DarkCyanButton>
-            </Container>
-            <DarkCyanButton
-              style={{ width: "25vw", marginLeft: "auto" }}
-              onClick={handleCreateClient}
+            </SearchField>
+            <SearchButton
+              onClick={handleSearch}
+              disabled={
+                !(
+                  nameFilter.trim().length >= 5 ||
+                  phoneFilter.trim().replace(/\D/g, "").length >= 11
+                )
+              }
+              type="button"
             >
-              + Добавить
-            </DarkCyanButton>
-          </ClientFilterField>
+              Найти
+            </SearchButton>
+            <PanelResetButton onClick={resetFilters} type="button">
+              Сбросить
+            </PanelResetButton>
+            <ResultSummary $visible={hasSearched}>
+              Найдено: {clientsData?.totalItemsCount || 0}{" "}
+              {getClientWord(clientsData?.totalItemsCount || 0)}
+            </ResultSummary>
+          </SearchPanel>
 
           <ClientListScrollArea>{renderContent()}</ClientListScrollArea>
 
