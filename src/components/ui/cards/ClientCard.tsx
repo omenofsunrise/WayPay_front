@@ -171,6 +171,7 @@ const InfoItem = styled.div`
   display: grid;
   grid-template-columns: 21px minmax(0, 1fr);
   grid-template-rows: auto auto;
+  column-gap: 6px;
   min-width: 0;
   padding: 0 15px;
   text-align: left;
