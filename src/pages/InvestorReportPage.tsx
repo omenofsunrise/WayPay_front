@@ -1829,6 +1829,7 @@ const InvestorProfileHeader = styled.div`
   border-bottom: 1px solid #e3e9ef;
   color: #64748b;
   font-size: 13px;
+  text-align: left;
 `;
 
 const BreadcrumbButton = styled.button`
@@ -1849,9 +1850,11 @@ const BreadcrumbSeparator = styled.span`
 const InvestorIdentityRow = styled.div`
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   margin-top: 12px;
   padding-bottom: 14px;
+  text-align: left;
 
   @media (max-width: 760px) {
     flex-wrap: wrap;
@@ -1873,6 +1876,7 @@ const InvestorAvatar = styled.div`
 const InvestorIdentity = styled.div`
   flex: 1;
   min-width: 180px;
+  text-align: left;
 `;
 
 const InvestorName = styled.div`
