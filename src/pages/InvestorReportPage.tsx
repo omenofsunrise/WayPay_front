@@ -42,7 +42,6 @@ import { useAuth } from "../сontext/AuthContext";
 import useInvestorContribution from "../api/hooks/useInvestorContribution";
 import type { InvestorContribution } from "../api/types/investorContribution";
 import GrayButton from "../components/ui/Buttons/GrayButton";
-import { FaLock, FaUnlock } from "react-icons/fa";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import {
   InputContainer,
@@ -389,40 +388,8 @@ const InvestorReportPage = ({
     contributionsData?.items.map((contribution: InvestorContribution) => [
       formatDate(contribution.date.toString()),
       formatMoney(contribution.amount.toString()),
-      <ContributionActions>
-        {!contribution.confirmed && (
-          <DarkCyanButton
-            onClick={() => handleEditInvestment(contribution)}
-            disabled={isContributionsLoading}
-          >
-            Редактирование
-          </DarkCyanButton>
-        )}
-        <GrayButton
-          style={{ marginRight: 0 }}
-          onClick={() => handleContributionAction(contribution.id, "reject")}
-          disabled={isContributionsLoading}
-        >
-          Удалить
-        </GrayButton>
-        <LockToggleButton
-          type="button"
-          onClick={() =>
-            !contribution.confirmed &&
-            handleContributionAction(contribution.id, "confirm")
-          }
-          disabled={isContributionsLoading || contribution.confirmed}
-          $locked={contribution.confirmed}
-          title={
-            contribution.confirmed
-              ? "Инвестиция закрыта — редактирование запрещено"
-              : "Закрыть инвестицию (после этого её нельзя будет редактировать)"
-          }
-          aria-label={contribution.confirmed ? "Закрыто" : "Закрыть инвестицию"}
-        >
-          {contribution.confirmed ? <FaLock /> : <FaUnlock />}
-        </LockToggleButton>
-      </ContributionActions>,
+      contribution.id,
+      contribution.confirmed ? "confirmed" : "pending",
     ]) || [];
 
   const generatePdf = async (
@@ -1485,7 +1452,7 @@ const InvestorReportPage = ({
                   columns={[
                     { name: "Дата выплаты", align: "left", width: "14%" },
                     { name: "Выплатил", align: "left", width: "30%" },
-                    { name: "Сумма", align: "left", width: "18%" },
+                    { name: "Сумма", align: "right", width: "18%" },
                     { name: "Статус", align: "left", width: "22%" },
                     { name: "", align: "center", width: "12%" },
                     { name: "ID", isHidden: true },
@@ -1515,13 +1482,13 @@ const InvestorReportPage = ({
               <>
                 <CustomTable
                   columns={[
-                    { name: "Дата договора", isSortable: true },
-                    { name: "Клиент", align: "left" },
-                    { name: "Телефон", align: "left" },
-                    { name: "Начислено", isSortable: true, align: "left" },
-                    { name: "Уплачено", align: "left" },
-                    { name: "Остаток", align: "left" },
-                    { name: "Долг", align: "left" },
+                    { name: "Дата договора", align: "left", width: "14%" },
+                    { name: "Клиент", align: "left", width: "20%" },
+                    { name: "Телефон", align: "left", width: "16%" },
+                    { name: "Начислено", align: "right", width: "13%" },
+                    { name: "Уплачено", align: "right", width: "13%" },
+                    { name: "Остаток", align: "right", width: "12%" },
+                    { name: "Долг", align: "right", width: "12%" },
                     { name: "Долг", align: "left", isHidden: true },
                     { name: "Долг", align: "left", isHidden: true },
                   ]}
@@ -1543,16 +1510,46 @@ const InvestorReportPage = ({
               <>
                 <CustomTable
                   columns={[
-                    { name: "Дата", isSortable: true },
+                    { name: "Дата", align: "left", width: "40%" },
                     {
-                      name: "Сумма инвестиции, руб",
-                      isSortable: true,
-                      align: "left",
+                      name: "Сумма инвестиции",
+                      align: "right",
+                      width: "55%",
                     },
-                    { name: "Действия", align: "center" },
+                    { name: "ID", isHidden: true },
+                    { name: "Статус", isHidden: true },
                   ]}
                   data={contributionsTableData}
                   isLoading={isContributionsLoading}
+                  showContextMenuButton
+                  contextMenuActions={(rowData) => {
+                    const contribution = contributionsData?.items.find(
+                      (item) => item.id === Number(rowData[2])
+                    );
+                    const isPending = rowData[3] === "pending";
+
+                    return [
+                      {
+                        label: "Редактировать",
+                        action: () =>
+                          contribution && handleEditInvestment(contribution),
+                        shouldShow: () => isPending,
+                      },
+                      {
+                        label: "Закрыть инвестицию",
+                        action: () =>
+                          handleContributionAction(Number(rowData[2]), "confirm"),
+                        shouldShow: () => isPending,
+                        color: "#007d88",
+                      },
+                      {
+                        label: "Удалить инвестицию",
+                        action: () =>
+                          handleContributionAction(Number(rowData[2]), "reject"),
+                        color: "#dc2626",
+                      },
+                    ];
+                  }}
                 />
                 <PaginationLayout>
                   <CountInfoTitle total={contributionsData?.totalCount || 0} />
@@ -1769,44 +1766,6 @@ const PayoutConfirmButton = styled.button`
   }
 `;
 
-const ContributionActions = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 20px;
-`;
-
-const LockToggleButton = styled.button<{ $locked: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid
-    ${({ $locked }) =>
-      $locked ? "rgba(107, 114, 128, 0.4)" : "rgba(0, 125, 136, 1)"};
-  background: ${({ $locked }) =>
-    $locked ? "rgba(243, 244, 246, 1)" : "rgba(0, 125, 136, 0.08)"};
-  color: ${({ $locked }) => ($locked ? "#6b7280" : "rgba(0, 125, 136, 1)")};
-  cursor: ${({ $locked }) => ($locked ? "default" : "pointer")};
-  transition: all 0.15s ease;
-  padding: 0;
-  flex-shrink: 0;
-
-  svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  &:hover:not(:disabled) {
-    background: rgba(0, 125, 136, 0.15);
-  }
-
-  &:disabled {
-    opacity: ${({ $locked }) => ($locked ? 1 : 0.5)};
-  }
-`;
-
 const ContentContainer = styled.div`
   margin-top: 0px;
   padding: 0;
@@ -1843,18 +1802,56 @@ const OperationsHeader = styled.div`
 `;
 
 const OperationsTableContent = styled.div`
+  table {
+    table-layout: fixed;
+  }
+
+  table th,
+  table td {
+    border-right: 0;
+  }
+
   table th {
-    padding: 8px 10px;
-    background: #f8fafc;
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 500;
+    height: 48px;
+    padding: 10px 16px;
+    background: #f8fafb;
+    color: #526074;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  table tbody tr {
+    height: 68px;
+    box-shadow: none !important;
   }
 
   table td {
-    padding: 7px 10px;
-    color: #253247;
-    font-size: 13px;
+    padding: 8px 16px;
+    border-right: 0;
+    color: #26344c;
+    font-size: 15px;
+  }
+
+  table thead th:last-child {
+    padding: 0;
+  }
+
+  table tbody td:last-child {
+    padding: 0 10px 0 4px;
+  }
+
+  table tbody tr::after {
+    left: 0;
+    width: 100%;
+    background: #e6ebf0;
+  }
+
+  @media (max-width: 800px) {
+    table th,
+    table td {
+      padding-right: 9px;
+      padding-left: 9px;
+    }
   }
 `;
 
