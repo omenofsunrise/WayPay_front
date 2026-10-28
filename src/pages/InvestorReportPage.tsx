@@ -1366,7 +1366,9 @@ const InvestorReportPage = ({
             )}
           </OperationsHeader>
 
-          <OperationsTableContent>
+          <OperationsTableContent
+            $compactColumns={!isDeletedView && operationsTab === "credits"}
+          >
           {isDeletedView ? (
           <>
             <TabsContainer>
@@ -1482,13 +1484,13 @@ const InvestorReportPage = ({
               <>
                 <CustomTable
                   columns={[
-                    { name: "Дата договора", align: "left", width: "14%" },
-                    { name: "Клиент", align: "left", width: "20%" },
-                    { name: "Телефон", align: "left", width: "16%" },
+                    { name: "Дата договора", align: "left", width: "13%" },
+                    { name: "Клиент", align: "left", width: "18%" },
+                    { name: "Телефон", align: "left", width: "17%" },
                     { name: "Начислено", align: "right", width: "13%" },
                     { name: "Уплачено", align: "right", width: "13%" },
-                    { name: "Остаток", align: "right", width: "12%" },
-                    { name: "Долг", align: "right", width: "12%" },
+                    { name: "Остаток", align: "right", width: "13%" },
+                    { name: "Долг", align: "right", width: "13%" },
                     { name: "Долг", align: "left", isHidden: true },
                     { name: "Долг", align: "left", isHidden: true },
                   ]}
@@ -1801,7 +1803,7 @@ const OperationsHeader = styled.div`
   }
 `;
 
-const OperationsTableContent = styled.div`
+const OperationsTableContent = styled.div<{ $compactColumns: boolean }>`
   table {
     table-layout: fixed;
   }
@@ -1813,10 +1815,11 @@ const OperationsTableContent = styled.div`
 
   table th {
     height: 48px;
-    padding: 10px 20px;
+    padding: ${({ $compactColumns }) =>
+      $compactColumns ? "9px 10px" : "10px 20px"};
     background: #f8fafb;
     color: #526074;
-    font-size: 15px;
+    font-size: ${({ $compactColumns }) => ($compactColumns ? "13px" : "15px")};
     font-weight: 600;
   }
 
@@ -1826,10 +1829,11 @@ const OperationsTableContent = styled.div`
   }
 
   table td {
-    padding: 8px 20px;
+    padding: ${({ $compactColumns }) =>
+      $compactColumns ? "8px 10px" : "8px 20px"};
     border-right: 0;
     color: #26344c;
-    font-size: 15px;
+    font-size: ${({ $compactColumns }) => ($compactColumns ? "13px" : "15px")};
   }
 
   table thead th:last-child {
@@ -1838,7 +1842,7 @@ const OperationsTableContent = styled.div`
 
   table thead th:first-child,
   table tbody td:first-child {
-    padding-left: 18px;
+    padding-left: ${({ $compactColumns }) => ($compactColumns ? "12px" : "18px")};
   }
 
   table tbody td:last-child {
