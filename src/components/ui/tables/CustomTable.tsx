@@ -10,6 +10,7 @@ export interface Column {
   isSortable?: boolean;
   align?: Alignment;
   isHidden?: boolean;
+  width?: string;
 }
 
 export interface TableAction {
@@ -59,6 +60,7 @@ interface CreditsTableProps {
   multiSelect?: boolean;
   selectableRows?: number[];
   showContextMenuButton?: boolean;
+  contextMenuButtonActionLimit?: number;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({
@@ -79,6 +81,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   multiSelect = false,
   selectableRows,
   showContextMenuButton = false,
+  contextMenuButtonActionLimit,
 }) => {
   const [internalSelectedRows, setInternalSelectedRows] = useState<number[]>(
     []
@@ -87,6 +90,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     x: number;
     y: number;
     rowIndex: number | null;
+    openedFromButton?: boolean;
   } | null>(null);
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(
     null
@@ -244,6 +248,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       x: clientX,
       y: clientY,
       rowIndex,
+      openedFromButton: false,
     });
   };
 
@@ -260,6 +265,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       x: rect.right,
       y: rect.bottom + 4,
       rowIndex,
+      openedFromButton: true,
     });
   };
 
@@ -402,7 +408,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     const rowData = data[contextMenu.rowIndex];
     if (!rowData) return null;
 
-    const filteredActions = (
+    const availableActions = (
       typeof contextMenuActions === "function"
         ? contextMenuActions(rowData)
         : contextMenuActions
@@ -411,6 +417,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         typeof action === "object" &&
         (typeof action.shouldShow !== "function" || action.shouldShow(rowData))
     );
+
+    const filteredActions =
+      contextMenu.openedFromButton && contextMenuButtonActionLimit
+        ? availableActions.slice(0, contextMenuButtonActionLimit)
+        : availableActions;
 
     if (filteredActions.length === 0) return null;
 
@@ -530,6 +541,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                         $align={column.align || "center"}
                         $isFirst={index === 0 && !multiSelect}
                         $isLast={index === columns.length - 1}
+                        $width={column.width}
                       >
                         <HeaderContent $align={column.align || "center"}>
                           {column.name}
@@ -687,6 +699,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                               $align={columns[cellIndex]?.align || "center"}
                               $isFirst={cellIndex === 0 && !multiSelect}
                               $isLast={cellIndex === row.length - 1}
+                              $width={columns[cellIndex]?.width}
                               $isTotalsCell={isTotalsRow}
                               $isBeforeTotals={
                                 isTotalsRow &&
@@ -847,7 +860,9 @@ const HeaderCell = styled.th<{
   $align?: Alignment;
   $isFirst?: boolean;
   $isLast?: boolean;
+  $width?: string;
 }>`
+  width: ${({ $width }) => $width || "auto"};
   padding: 16px;
   padding-left: ${({ $isFirst }) => ($isFirst ? "16px" : "16px")};
   padding-right: ${({ $isLast }) => ($isLast ? "16px" : "16px")};
@@ -879,8 +894,8 @@ const HeaderContent = styled.div<{ $align?: Alignment }>`
 `;
 
 const ActionsHeaderCell = styled.th`
-  width: 52px;
-  min-width: 52px;
+  width: 5%;
+  min-width: 48px;
   padding: 0;
   background: #ffffff;
 `;
@@ -896,7 +911,9 @@ const BodyCell = styled.td<{
   $isLast?: boolean;
   $isTotalsCell?: boolean;
   $isBeforeTotals?: boolean;
+  $width?: string;
 }>`
+  width: ${({ $width }) => $width || "auto"};
   padding: 5px;
   padding-left: ${({ $isFirst }) => ($isFirst ? "12px" : "12px")};
   padding-right: ${({ $isLast }) => ($isLast ? "12px" : "12px")};
@@ -907,8 +924,8 @@ const BodyCell = styled.td<{
 `;
 
 const ActionsBodyCell = styled.td`
-  width: 52px;
-  min-width: 52px;
+  width: 5%;
+  min-width: 48px;
   padding: 0 10px 0 4px;
   text-align: right;
   vertical-align: middle;

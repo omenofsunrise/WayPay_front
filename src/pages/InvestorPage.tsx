@@ -378,7 +378,7 @@ const InvestorPage = ({
 
     const selectedRowIndex = investorsData?.items?.findIndex(i => i.id === selectedInvestorId) ?? -1;
 
-    const tableData = investorsData?.items?.map(investor => {
+    const tableData = investorsData?.items?.map((investor, investorIndex) => {
         if (!investor || investor.id === undefined || investor.id === null) {
             return canEdit
                 ? ['', '', '', '', formatMoney('0'), formatMoney('0'), 'false']
@@ -388,20 +388,21 @@ const InvestorPage = ({
         return [
             investor.id.toString(),
             <InvestorIdentityCell>
-                <InvestorListAvatar>
+                <InvestorListAvatar $tone={investorIndex % 5}>
                     {(investor.nickname || investor.fullName || 'И').trim().charAt(0).toUpperCase()}
                 </InvestorListAvatar>
                 <div>
                     {onOpenReport ? (
                         <InvestorReportLink
                             type="button"
+                            $selected={investor.id === selectedInvestorId}
                             onClick={(event) => {
                                 event.stopPropagation();
                                 onOpenReport(investor.id);
                             }}
                         >
                             {investor.nickname || investor.fullName || `Инвестор ${investor.id}`}
-                            <span aria-hidden="true">›</span>
+                            {investor.id === selectedInvestorId && <span aria-hidden="true">›</span>}
                         </InvestorReportLink>
                     ) : investor.nickname || ''}
                     {investor.fullName && investor.fullName !== investor.nickname && (
@@ -409,7 +410,7 @@ const InvestorPage = ({
                     )}
                 </div>
             </InvestorIdentityCell>,
-            ...(canEdit? [investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : ''] : []),
+            ...(canEdit? [investor.phoneNumber ? <InvestorPhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</InvestorPhoneLink> : ''] : []),
             ...(canEdit? [`${investor.investorPie || 0} %`] : []),
             ...(canEdit? [formatMoney((investor.investmentAmount || 0).toString()) || ''] : []),
             formatMoney((investor.balance || 0).toString()),
@@ -639,17 +640,17 @@ const InvestorPage = ({
 
     const columns: Column[] = [
         { name: "id", isHidden: true },
-        { name: "Инвестор", align: "left", isSortable: true },
+        { name: "Инвестор", align: "left", isSortable: true, width: canEdit ? "31%" : "60%" },
         ...(canEdit)
-            ? [{ name: "Телефон", align: "left" } as Column]
+            ? [{ name: "Телефон", align: "left", width: "19%" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Доля", isSortable: true, align: "right" } as Column]
+            ? [{ name: "Доля", isSortable: true, align: "right", width: "12%" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Инвестиции", isSortable: true, align: "right" } as Column]
+            ? [{ name: "Инвестиции", isSortable: true, align: "right", width: "18%" } as Column]
             : [],
-        { name: "Касса", isSortable: true, align: "right" },
+        { name: "Касса", isSortable: true, align: "right", width: canEdit ? "15%" : "35%" },
         { name: "isBlocked", isHidden: true },
     ];
 
@@ -723,6 +724,7 @@ const InvestorPage = ({
                         onSort={handleSort}
                         sortConfig={sortConfig}
                         showContextMenuButton
+                        contextMenuButtonActionLimit={3}
                     />
                     
                     <InvestorPaginationLayout>
@@ -876,21 +878,32 @@ const InvestorListLayout = styled(PageLayout)<{ $embedded: boolean }>`
     }
 
     table thead th {
-        padding: 10px 14px;
+        height: 40px;
+        padding: 10px 16px;
         background: #f8fafc;
         color: #596579;
-        font-size: 12px;
-        font-weight: 500;
+        font-size: 13px;
+        font-weight: 600;
     }
 
     table tbody tr {
-        height: 58px;
+        height: 68px;
+        box-shadow: none !important;
     }
 
     table tbody td {
-        padding: 6px 14px;
+        padding: 8px 16px;
         border-right: 0;
-        font-size: 14px;
+        color: #26344c;
+        font-size: 15px;
+    }
+
+    table thead th:last-child {
+        padding: 0;
+    }
+
+    table tbody td:last-child {
+        padding: 0 10px 0 4px;
     }
 
     table tbody tr::after {
@@ -899,7 +912,7 @@ const InvestorListLayout = styled(PageLayout)<{ $embedded: boolean }>`
         background: #e6ebf0;
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 800px) {
         table thead th,
         table tbody td {
             padding-right: 9px;
@@ -995,14 +1008,14 @@ const InvestorPaginationLayout = styled.div`
 
 `;
 
-const InvestorReportLink = styled.button`
+const InvestorReportLink = styled.button<{ $selected: boolean }>`
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 0;
     border: 0;
     background: transparent;
-    color: inherit;
+    color: ${({ $selected }) => ($selected ? '#007d88' : '#172033')};
     font: inherit;
     font-weight: 600;
     cursor: pointer;
@@ -1025,26 +1038,38 @@ const ToolbarSpacer = styled.div`
 const InvestorIdentityCell = styled.div`
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     min-width: 0;
 `;
 
-const InvestorListAvatar = styled.div`
+const avatarTones = [
+    { background: '#ddf5f5', color: '#087d88' },
+    { background: '#ececfc', color: '#4a60a2' },
+    { background: '#e4f6ee', color: '#2f8b6b' },
+    { background: '#fff0e3', color: '#8f5734' },
+    { background: '#e3edff', color: '#365fa3' },
+];
+
+const InvestorListAvatar = styled.div<{ $tone: number }>`
     display: grid;
     place-items: center;
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
     border-radius: 50%;
-    background: #dff5f5;
-    color: #007d88;
-    font-size: 14px;
+    background: ${({ $tone }) => avatarTones[$tone]?.background || avatarTones[0].background};
+    color: ${({ $tone }) => avatarTones[$tone]?.color || avatarTones[0].color};
+    font-size: 15px;
     font-weight: 700;
 `;
 
 const InvestorFullName = styled.div`
-    margin-top: 3px;
+    margin-top: 2px;
     color: #718096;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 400;
+`;
+
+const InvestorPhoneLink = styled(PhoneLink)`
+    color: #26344c;
 `;
