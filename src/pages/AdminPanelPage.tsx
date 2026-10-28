@@ -38,6 +38,7 @@ import UserSelect from "../components/ui/fields/UserSelect";
 import CreditApplicationCompaniesManager from "../components/CreditApplicationCompaniesManager";
 import BroadcastCampaignsManager from "../components/AdminPanel/BroadcastCampaignsManager";
 import BlacklistPlusUsersManager from "../components/AdminPanel/BlacklistPlusUsersManager";
+import TelegramCollectorManager from "../components/AdminPanel/TelegramCollectorManager";
 import CustomTextArea from "../components/ui/fields/CustomTextArea";
 import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Tabs from "../components/ui/fields/Tabs";
@@ -862,6 +863,7 @@ const AdminPanelPage = () => {
     | "notifications"
     | "broadcast"
     | "blacklist-plus"
+    | "telegram-blacklist"
   >("companies");
 
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
@@ -1627,6 +1629,11 @@ const AdminPanelPage = () => {
       label: "ЧС+",
       content: <BlacklistPlusUsersManager />,
     },
+    {
+      id: "telegram-blacklist",
+      label: "Telegram → ЧС+",
+      content: <TelegramCollectorManager />,
+    },
   ];
 
   const addButton =
@@ -1717,6 +1724,7 @@ const AdminPanelPage = () => {
               | "credit-applications"
               | "broadcast"
               | "blacklist-plus"
+              | "telegram-blacklist"
           );
           setCurrentPage(1);
           setNameFilter("");
