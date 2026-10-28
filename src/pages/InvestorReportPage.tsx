@@ -29,7 +29,6 @@ import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import { useInvestorPayout } from "../api/hooks/useInvestorPayout";
 import type { InvestorPayout, PayoutSource } from "../api/types/investorPayout";
 import PayoutModal from "../components/modal/PayoutModal";
-import ViewButton from "../components/ui/Buttons/ViewButton";
 import InvestorModal from "../components/modal/CrudInherited/InvestorModal";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -59,13 +58,28 @@ import investorContributionService from "../api/services/investorContributionSer
 
 const DELETED_OPTION_VALUE = "deleted";
 
-const InvestorReportPage = () => {
+type InvestorReportPageProps = {
+  initialInvestorId?: number | "deleted" | null;
+  embedded?: boolean;
+  onBack?: () => void;
+  autoOpenPayout?: boolean;
+  onPayoutOpened?: () => void;
+};
+
+const InvestorReportPage = ({
+  initialInvestorId,
+  embedded = false,
+  onBack,
+  autoOpenPayout = false,
+  onPayoutOpened,
+}: InvestorReportPageProps) => {
   const {
     getInvestors,
     currentInvestor,
     getInvestorById,
     getInvestorReport,
     updateInvestment,
+    updateInvestor,
     getDeletedInfo,
   } = useInvestor();
   const {
@@ -83,7 +97,13 @@ const InvestorReportPage = () => {
   } = useCredit();
   const { hasRole } = useAuth();
   const [investors, setInvestors] = useState<Investor[]>([]);
-  const [selectedInvestorId, setSelectedInvestorId] = useState<string>("");
+  const [selectedInvestorId, setSelectedInvestorId] = useState<string>(
+    initialInvestorId === "deleted"
+      ? DELETED_OPTION_VALUE
+      : initialInvestorId
+        ? initialInvestorId.toString()
+        : ""
+  );
   const [report, setReport] = useState<InvestorReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
@@ -136,6 +156,16 @@ const InvestorReportPage = () => {
 
   const isDeletedView = selectedInvestorId === DELETED_OPTION_VALUE;
 
+  useEffect(() => {
+    if (initialInvestorId) {
+      setSelectedInvestorId(
+        initialInvestorId === "deleted"
+          ? DELETED_OPTION_VALUE
+          : initialInvestorId.toString()
+      );
+    }
+  }, [initialInvestorId]);
+
   const fetchDeletedInfo = useCallback(async () => {
     setIsDeletedLoading(true);
     try {
@@ -153,11 +183,13 @@ const InvestorReportPage = () => {
         const result = await getInvestors();
         if (result?.items) {
           setInvestors(result.items);
-          const companyInvestor = result.items.find(
-            (investor) => investor.isCompany
-          );
-          if (companyInvestor) {
-            setSelectedInvestorId(companyInvestor.id.toString());
+          if (!initialInvestorId) {
+            const companyInvestor = result.items.find(
+              (investor) => investor.isCompany
+            );
+            if (companyInvestor) {
+              setSelectedInvestorId(companyInvestor.id.toString());
+            }
           }
         }
       } finally {
@@ -165,9 +197,25 @@ const InvestorReportPage = () => {
       }
     };
     fetchInvestors();
-  }, [getInvestors]);
+  }, [getInvestors, initialInvestorId]);
+
+  const handleUpdateInvestor = async (investorData: Partial<Investor>) => {
+    if (!currentInvestor) return false;
+    const updated = await updateInvestor(currentInvestor.id, investorData);
+    if (!updated) return false;
+    await getInvestorById(currentInvestor.id);
+    setIsViewInvestorModalOpen(false);
+    return true;
+  };
 
   const isSuperUser = hasRole("директор") || hasRole("суперадмин");
+
+  useEffect(() => {
+    if (autoOpenPayout && report && currentInvestor) {
+      setIsPayoutModalOpen(true);
+      onPayoutOpened?.();
+    }
+  }, [autoOpenPayout, currentInvestor, onPayoutOpened, report]);
 
   useEffect(() => {
     if (!selectedInvestorId) return;
@@ -1172,7 +1220,8 @@ const InvestorReportPage = () => {
   return (
     <PageLayout>
       <TitleField>
-        <CustomTitle>Отчёт для инвесторов</CustomTitle>
+        {!embedded && <CustomTitle>Отчёт для инвесторов</CustomTitle>}
+        {embedded && <ReportToolbarSpacer />}
         {isSuperUser && !isDeletedView && (
           <>
             <ExportButton
@@ -1194,13 +1243,59 @@ const InvestorReportPage = () => {
       </TitleField>
 
       <ContentContainer>
-        {report && !isDeletedView && (
-          <CreationDate>
-            Инвестор создан {formatDate(report.createdAt)}
-          </CreationDate>
+        {embedded && isDeletedView && (
+          <DeletedReportHeader>
+            <BreadcrumbButton type="button" onClick={onBack}>Инвесторы</BreadcrumbButton>
+            <BreadcrumbSeparator>/</BreadcrumbSeparator>
+            <strong>Удалённые инвесторы</strong>
+          </DeletedReportHeader>
+        )}
+        {embedded && !isDeletedView && currentInvestor && (
+          <InvestorProfileHeader>
+            <BreadcrumbButton type="button" onClick={onBack}>
+              Инвесторы
+            </BreadcrumbButton>
+            <BreadcrumbSeparator>/</BreadcrumbSeparator>
+            <span>{currentInvestor.nickname || currentInvestor.fullName}</span>
+
+            <InvestorIdentityRow>
+              <InvestorAvatar>
+                {(currentInvestor.nickname || currentInvestor.fullName || "И")
+                  .trim()
+                  .charAt(0)
+                  .toUpperCase()}
+              </InvestorAvatar>
+              <InvestorIdentity>
+                <InvestorName>
+                  {currentInvestor.nickname || currentInvestor.fullName || `Инвестор ${currentInvestor.id}`}
+                </InvestorName>
+                <InvestorMeta>
+                  {[currentInvestor.fullName, currentInvestor.phoneNumber]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </InvestorMeta>
+                {report && <InvestorMeta>Создан {formatDate(report.createdAt)}</InvestorMeta>}
+              </InvestorIdentity>
+              {isSuperUser && (
+                <EditInvestorButton
+                  type="button"
+                  onClick={() => setIsViewInvestorModalOpen(true)}
+                >
+                  Редактировать
+                </EditInvestorButton>
+              )}
+              <DarkCyanButton onClick={() => setIsPayoutModalOpen(true)}>
+                Выплатить
+              </DarkCyanButton>
+            </InvestorIdentityRow>
+          </InvestorProfileHeader>
         )}
 
-        <InvestorInfoContainer>
+        {!embedded && report && !isDeletedView && (
+          <CreationDate>Инвестор создан {formatDate(report.createdAt)}</CreationDate>
+        )}
+
+        {!embedded && <InvestorInfoContainer>
           <SelectWithViewWrapper>
             <SelectWrapper>
               <CustomSelect
@@ -1213,10 +1308,13 @@ const InvestorReportPage = () => {
               />
             </SelectWrapper>
             {isSuperUser && !isDeletedView && (
-              <ViewButton
+              <EditInvestorButton
+                type="button"
                 onClick={() => setIsViewInvestorModalOpen(true)}
                 disabled={!selectedInvestorId}
-              />
+              >
+                Редактировать
+              </EditInvestorButton>
             )}
           </SelectWithViewWrapper>
           {!isDeletedView && (
@@ -1227,7 +1325,7 @@ const InvestorReportPage = () => {
               Выплатить инвестору
             </DarkCyanButton>
           )}
-        </InvestorInfoContainer>
+        </InvestorInfoContainer>}
 
         {!isDeletedView && (
           <TabsContainer>
@@ -1487,10 +1585,10 @@ const InvestorReportPage = () => {
         />
 
         <InvestorModal
-          mode="view"
+          mode="edit"
           isOpen={isViewInvestorModalOpen}
           onClose={() => setIsViewInvestorModalOpen(false)}
-          onSubmit={async () => false}
+          onSubmit={handleUpdateInvestor}
           initialData={
             currentInvestor
               ? {
@@ -1611,6 +1709,95 @@ const LockToggleButton = styled.button<{ $locked: boolean }>`
 const ContentContainer = styled.div`
   margin-top: 0px;
   padding: 0;
+`;
+
+const ReportToolbarSpacer = styled.div`
+  margin-left: auto;
+`;
+
+const DeletedReportHeader = styled.div`
+  padding: 12px 0 20px;
+  border-bottom: 1px solid #e3e9ef;
+  color: #64748b;
+  font-size: 13px;
+
+  strong { color: #172033; }
+`;
+
+const InvestorProfileHeader = styled.div`
+  padding: 12px 0 20px;
+  border-bottom: 1px solid #e3e9ef;
+  color: #64748b;
+  font-size: 13px;
+`;
+
+const BreadcrumbButton = styled.button`
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover { color: #007d88; }
+`;
+
+const BreadcrumbSeparator = styled.span`
+  margin: 0 8px;
+`;
+
+const InvestorIdentityRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+
+  @media (max-width: 760px) {
+    flex-wrap: wrap;
+  }
+`;
+
+const InvestorAvatar = styled.div`
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #dff5f5;
+  color: #007d88;
+  font-size: 20px;
+  font-weight: 700;
+`;
+
+const InvestorIdentity = styled.div`
+  flex: 1;
+  min-width: 180px;
+`;
+
+const InvestorName = styled.div`
+  color: #172033;
+  font-size: 23px;
+  font-weight: 700;
+`;
+
+const InvestorMeta = styled.div`
+  margin-top: 3px;
+  color: #718096;
+  font-size: 13px;
+`;
+
+const EditInvestorButton = styled.button`
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #253247;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { border-color: #007d88; color: #007d88; }
+  &:disabled { cursor: not-allowed; opacity: 0.5; }
 `;
 
 const CreationDate = styled.div`

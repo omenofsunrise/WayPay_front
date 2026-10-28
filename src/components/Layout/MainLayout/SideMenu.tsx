@@ -60,21 +60,10 @@ const menuItemsMap: Record<
     mainItem: "payments",
     subItems: { "/payments": "payments-journal" },
   },
-  "/investors": {
-    mainItem: "investors",
-    subItems: { "/investors": "investors" },
-  },
-  "/investors-v2": {
-    mainItem: "investors",
-  },
-  "/investors-report": {
-    mainItem: "investors",
-    subItems: { "/investors-report": "investors-report" },
-  },
-  "/investors-pool": {
-    mainItem: "investors",
-    subItems: { "/investors-pool": "investors-pool" },
-  },
+  "/investors": { mainItem: "investors" },
+  "/investors-v2": { mainItem: "investors" },
+  "/investors-report": { mainItem: "investors" },
+  "/investors-pool": { mainItem: "investors" },
   "/black-catalog": { mainItem: "black-catalog" },
   "/finance": { mainItem: "finance" },
   "/profile": { mainItem: "profile" },
@@ -149,7 +138,6 @@ const SideMenu = () => {
   };
 
   const employee = authInfo?.employee;
-  const isPoolV2 = Boolean(employee?.poolV2);
   const licenceDate = commonInfo?.licenceDate ?? new Date();
   const currentDate = formatDate(licenceDate);
   const daysUntilExpiry = getDaysUntilExpiry(licenceDate);
@@ -181,12 +169,6 @@ const SideMenu = () => {
     "payments-journal": () => true,
     investors: () =>
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
-    "investors-pool": () =>
-      !isPoolV2 &&
-      (hasRole("админ") || hasRole("директор") || hasRole("суперадмин")),
-    "investors-report": () =>
-      !isPoolV2 &&
-      (hasRole("админ") || hasRole("директор") || hasRole("суперадмин")),
     "black-catalog": () => true,
     finance: () => hasPermission("MANAGE_ACCOUNTING", true),
     profile: () => true,
@@ -330,8 +312,6 @@ const SideMenu = () => {
       "payments-calendar": "Календарь",
       "payments-journal": "Журнал",
       investors: "Инвесторы",
-      "investors-pool": "Пулы инвесторов",
-      "investors-report": "Отчёт для инвестора",
     };
 
     return labels[subItemKey] || subItemKey;
@@ -702,108 +682,24 @@ const SideMenu = () => {
             hasRole("директор") ||
             hasRole("суперадмин")) && (
             <DraggableRow {...dragProps("investors")}>
-              {isPoolV2 ? (
-                <MenuItem
-                  onClick={(e) => {
-                    if (collapsed) {
-                      handleCollapsedMenuClick(e, "investors", false);
-                    } else {
-                      handleMenuItemClick("investors", "/investors-v2");
-                    }
-                  }}
+              <MenuItem
+                onClick={(e) => {
+                  if (collapsed) {
+                    handleCollapsedMenuClick(e, "investors", false);
+                  } else {
+                    handleMenuItemClick("investors", "/investors");
+                  }
+                }}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "investors"}
+              >
+                <Icon
+                  src={investorsIcon}
                   $collapsed={collapsed}
                   $selected={selectedSideMenuItem === "investors"}
-                >
-                  <Icon
-                    src={investorsIcon}
-                    $collapsed={collapsed}
-                    $selected={selectedSideMenuItem === "investors"}
-                  />
-                  {!collapsed && <MenuItemText>Инвесторы</MenuItemText>}
-                </MenuItem>
-              ) : (
-                <>
-                  <MenuItem
-                    onClick={(e) => {
-                      if (collapsed) {
-                        handleCollapsedMenuClick(e, "investors", true);
-                      } else {
-                        handleMainMenuItemClick("investors", undefined, true);
-                      }
-                    }}
-                    $collapsed={collapsed}
-                    $selected={
-                      selectedSideMenuItem === "investors" ||
-                      selectedSideMenuItem === "investors-pool" ||
-                      selectedSideMenuItem === "investors-report"
-                    }
-                  >
-                    <Icon
-                      src={investorsIcon}
-                      $collapsed={collapsed}
-                      $selected={
-                        selectedSideMenuItem === "investors" ||
-                        selectedSideMenuItem === "investors-pool" ||
-                        selectedSideMenuItem === "investors-report"
-                      }
-                    />
-                    {!collapsed && (
-                      <>
-                        <MenuItemText>Инвесторы</MenuItemText>
-                        <ExpandArrow
-                          width="14"
-                          height="8"
-                          viewBox="0 0 14 8"
-                          fill="none"
-                          $expanded={expandedItem === "investors"}
-                        >
-                          <path
-                            d="M1 1.32422L7 7.32422L13 1.32422"
-                            stroke="#50555C"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </ExpandArrow>
-                      </>
-                    )}
-                  </MenuItem>
-                  {!collapsed && expandedItem === "investors" && (
-                    <SubMenu>
-                      <SubMenuLine />
-                      <SubMenuItem
-                        onClick={() =>
-                          handleSubMenuItemClick("investors", "/investors")
-                        }
-                        $selected={selectedSideMenuItem === "investors"}
-                      >
-                        Инвесторы
-                      </SubMenuItem>
-                      <SubMenuItem
-                        onClick={() =>
-                          handleSubMenuItemClick(
-                            "investors-report",
-                            "/investors-report"
-                          )
-                        }
-                        $selected={selectedSideMenuItem === "investors-report"}
-                      >
-                        Отчёт для инвестора
-                      </SubMenuItem>
-                      <SubMenuItem
-                        onClick={() =>
-                          handleSubMenuItemClick(
-                            "investors-pool",
-                            "/investors-pool"
-                          )
-                        }
-                        $selected={selectedSideMenuItem === "investors-pool"}
-                      >
-                        Пулы инвесторов
-                      </SubMenuItem>
-                    </SubMenu>
-                  )}
-                </>
-              )}
+                />
+                {!collapsed && <MenuItemText>Инвесторы</MenuItemText>}
+              </MenuItem>
             </DraggableRow>
           )}
 

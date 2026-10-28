@@ -61,10 +61,12 @@ import InvestorCashPositionModal from "../components/modal/InvestorCashPositionM
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
+  embedded?: boolean;
 };
 
 const InvestorsPoolPage = ({
   enableReinvestments = true,
+  embedded = false,
 }: InvestorsPoolPageProps) => {
   const { authInfo, hasRole } = useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
@@ -1829,7 +1831,8 @@ const InvestorsPoolPage = ({
   return (
     <PageLayout>
       <TitleField>
-        <CustomTitle>Пулы инвесторов</CustomTitle>
+        {!embedded && <CustomTitle>Пулы инвесторов</CustomTitle>}
+        {embedded && <div style={{ marginLeft: "auto" }} />}
         <ExportButton onClick={exportPoolToPdf} />
         <ExportButton
           children={"Поделиться"}
