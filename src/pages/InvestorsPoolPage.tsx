@@ -1747,34 +1747,34 @@ const InvestorsPoolPage = ({
         <IconContainer>
           <Icon src={investmentSvg} alt="Investment" />
         </IconContainer>
+        <ReportLabel>Инвестиции</ReportLabel>
         <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
-        <ReportLabel>Инвестиция</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={activeCreditsSvg} alt="Active credits" />
         </IconContainer>
-        <ReportValue>{report.activeCreditsAmount}</ReportValue>
         <ReportLabel>Незакрытые договоры</ReportLabel>
+        <ReportValue>{report.activeCreditsAmount}</ReportValue>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={balanceSvg} alt="Balance" />
         </IconContainer>
-        <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
         <ReportLabel>Касса</ReportLabel>
+        <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={debtSvg} alt="Debt" />
         </IconContainer>
+        <ReportLabel>Просрочки</ReportLabel>
         <ReportValue $tone="warning">
           {formatMoney(report.delinquencyAmount.toString())}
         </ReportValue>
-        <ReportLabel>Просрочки</ReportLabel>
       </ReportCard>
     </>
   );
@@ -1785,10 +1785,10 @@ const InvestorsPoolPage = ({
         <IconContainer>
           <Icon src={commonIncomeSvg} alt="Total income" />
         </IconContainer>
+        <ReportLabel>Общий доход</ReportLabel>
         <ReportValue>
           {formatMoney(report.allSelfIncome.toString())}
         </ReportValue>
-        <ReportLabel>Общий доход</ReportLabel>
       </ReportCard>
     </>
   );
@@ -1799,30 +1799,30 @@ const InvestorsPoolPage = ({
         <IconContainer>
           <Icon src={investorIncomeScg} alt="Investor income" />
         </IconContainer>
+        <ReportLabel>Текущий доход пула</ReportLabel>
         <ReportValue>
           {formatMoney(report.investorPaymentIncome?.toString() || "0")}
         </ReportValue>
-        <ReportLabel>Текущий доход пула</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={selfIncomeSvg} alt="Self income" />
         </IconContainer>
+        <ReportLabel>Текущий собственный доход</ReportLabel>
         <ReportValue>
           {formatMoney(report.selfPaymentIncome?.toString() || "0")}
         </ReportValue>
-        <ReportLabel>Текущий собственный доход</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={paymentIncomeSvg} alt="paymentIncome" />
         </IconContainer>
+        <ReportLabel>Текущий доход</ReportLabel>
         <ReportValue>
           {formatMoney(report.paymentIncome.toString())}
         </ReportValue>
-        <ReportLabel>Текущий доход</ReportLabel>
       </ReportCard>
     </>
   );
@@ -2760,6 +2760,7 @@ const ReportDataContainer = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   width: 100%;
+  margin-bottom: 0;
 `;
 
 const ReportCard = styled.div`
