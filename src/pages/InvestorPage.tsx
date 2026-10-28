@@ -5,10 +5,7 @@ import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
 import CustomTable, { type Column, type RowStyle, type TableAction } from "../components/ui/tables/CustomTable";
-import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
-import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
-import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import InvestorModal from '../components/modal/CrudInherited/InvestorModal';
@@ -459,22 +456,43 @@ const InvestorPage = ({
         const actions: TableAction[] = [
             ...(onOpenReport ? [{
                 label: 'Открыть отчёт',
+                icon: <ReportActionIcon />,
                 action: () => investor && onOpenReport(investor.id),
-                color: '#007D88'
-            }] : []),
-            {
-                label: 'Печать договора',
-                action: (rowData) => {
-                    const [id] = rowData;
-                    const investor = investorsData?.items.find(i => i.id === Number(id));
-                    if (investor) {
-                        setInvestorForPrint(investor);
-                        setIsPrintModalOpen(true);
-                    }
-                },
-                color: '#3B82F6'
-            }
+                color: '#1f2937'
+            }] : [])
         ];
+
+        if (canEdit && !isRemoved) {
+            actions.push({
+                label: 'Редактировать',
+                icon: <EditActionIcon />,
+                action: () => investor && handleEditInvestor(investor),
+                color: '#1f2937'
+            });
+            if (onOpenReport) {
+                actions.push({
+                    label: 'Выплатить инвестору',
+                    icon: <PayoutActionIcon />,
+                    action: () => investor && onOpenReport(investor.id, "payout"),
+                    color: '#1f2937'
+                });
+            }
+        }
+
+        actions.push({
+            label: 'Печать договора',
+            icon: <PrintActionIcon />,
+            action: (rowData) => {
+                const [id] = rowData;
+                const investor = investorsData?.items.find(i => i.id === Number(id));
+                if (investor) {
+                    setInvestorForPrint(investor);
+                    setIsPrintModalOpen(true);
+                }
+            },
+            color: '#1f2937',
+            dividerBefore: actions.length > 0
+        });
 
         if (isRemoved) return actions;
 
@@ -499,18 +517,6 @@ const InvestorPage = ({
         }
 
         if (canEdit) {
-            actions.push({
-                label: 'Редактировать',
-                action: () => investor && handleEditInvestor(investor),
-                color: '#2563EB'
-            });
-            if (onOpenReport) {
-                actions.push({
-                    label: 'Выплатить инвестору',
-                    action: () => investor && onOpenReport(investor.id, "payout"),
-                    color: '#007D88'
-                });
-            }
             if (isBlocked) {
                 actions.push(
                     {
@@ -638,38 +644,34 @@ const InvestorPage = ({
             ? [{ name: "Телефон", align: "left" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Доля инвестора", isSortable: true, align: "right" } as Column]
+            ? [{ name: "Доля", isSortable: true, align: "right" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Инвестиция", isSortable: true, align: "right" } as Column]
+            ? [{ name: "Инвестиции", isSortable: true, align: "right" } as Column]
             : [],
         { name: "Касса", isSortable: true, align: "right" },
         { name: "isBlocked", isHidden: true },
     ];
 
     return (
-        <PageLayout ref={containerRef}>
-            <TitleField>
+        <InvestorListLayout ref={containerRef} $embedded={embedded}>
+            <InvestorToolbar $embedded={embedded}>
                 {!embedded && <CustomTitle>Инвесторы</CustomTitle>}
                 {embedded && <ToolbarSpacer />}
-                {embedded && onOpenDeletedReport && canEdit && (
-                    <ExportButton icon={null} onClick={onOpenDeletedReport}>
-                        Удалённые
+                {!embedded && (
+                    <ExportButton
+                        icon={<PrintIcon />}
+                        onClick={() => {
+                            if (!investorForPrint) {
+                                alert('Пожалуйста, выберите инвестора из таблицы (клик по строке)');
+                                return;
+                            }
+                            setIsPrintModalOpen(true);
+                        }}
+                    >
+                        Печать
                     </ExportButton>
                 )}
-                {/* Кнопка печати добавлена слева от экспорта */}
-                <ExportButton 
-                    icon={<PrintIcon />} 
-                    onClick={() => {
-                        if (!investorForPrint) {
-                            alert('Пожалуйста, выберите инвестора из таблицы (клик по строке)');
-                            return;
-                        }
-                        setIsPrintModalOpen(true);
-                    }}
-                >
-                    Печать
-                </ExportButton>
                 <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
@@ -685,15 +687,15 @@ const InvestorPage = ({
                         + Добавить инвестора
                     </DarkCyanButton>
                 )}
-            </TitleField>
+            </InvestorToolbar>
             
-            <FilterField>
-                <CustomInput
-                    inputType="text"
+            <InvestorFilterField>
+                <SearchIcon aria-hidden="true" />
+                <InvestorSearchInput
+                    type="text"
                     placeholder="Поиск по имени или телефону"
                     value={nameFilter}
                     onChange={(event) => handleFilterChange(event.target.value)}
-                    style={{ flex: 1 }}
                 />
                 {canEdit && !embedded && (
                     <DarkCyanButton 
@@ -703,7 +705,7 @@ const InvestorPage = ({
                         + Новый инвестор
                     </DarkCyanButton>
                 )}
-            </FilterField>
+            </InvestorFilterField>
             
             {isLoading && <div>Загрузка...</div>}
             {error && <div>Ошибка: {error}</div>}
@@ -720,9 +722,10 @@ const InvestorPage = ({
                         contextMenuActions={(rowData) => tableActions(rowData)}
                         onSort={handleSort}
                         sortConfig={sortConfig}
+                        showContextMenuButton
                     />
                     
-                    <PaginationLayout>
+                    <InvestorPaginationLayout>
                         <CountInfoTitle 
                             total={investorsData?.totalCount || 0} 
                         />
@@ -733,7 +736,7 @@ const InvestorPage = ({
                             onChange={setCurrentPage}
                             itemsPerPage={itemsPerPage}
                         />
-                    </PaginationLayout>
+                    </InvestorPaginationLayout>
                 </>
             )}
             
@@ -813,11 +816,184 @@ const InvestorPage = ({
                 }}
                 onChanged={loadInvestors}
             />
-        </PageLayout>
+        </InvestorListLayout>
     );
 };
 
 export default InvestorPage;
+
+const ReportActionIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 3h7l4 4v14H7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M14 3v5h4M10 12h5M10 16h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+);
+
+const EditActionIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="m5 16-1 4 4-1L19 8l-3-3L5 16Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="m14.5 6.5 3 3" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+);
+
+const PayoutActionIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <ellipse cx="12" cy="6" rx="7" ry="3" stroke="currentColor" strokeWidth="1.7" />
+        <path d="M5 6v5c0 1.66 3.13 3 7 3s7-1.34 7-3V6M5 11v5c0 1.66 3.13 3 7 3s7-1.34 7-3v-5" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+);
+
+const PrintActionIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M7 14h10v7H7z" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+);
+
+const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+        <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+);
+
+const InvestorListLayout = styled(PageLayout)<{ $embedded: boolean }>`
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    margin: ${({ $embedded }) => ($embedded ? '0' : '0 20px')};
+    background: transparent;
+    color: #172033;
+    font-size: 14px;
+
+    table {
+        table-layout: fixed;
+    }
+
+    table th,
+    table td {
+        border-right: 0;
+    }
+
+    table thead th {
+        padding: 10px 14px;
+        background: #f8fafc;
+        color: #596579;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    table tbody tr {
+        height: 58px;
+    }
+
+    table tbody td {
+        padding: 6px 14px;
+        border-right: 0;
+        font-size: 14px;
+    }
+
+    table tbody tr::after {
+        left: 0;
+        width: 100%;
+        background: #e6ebf0;
+    }
+
+    @media (max-width: 1100px) {
+        table thead th,
+        table tbody td {
+            padding-right: 9px;
+            padding-left: 9px;
+        }
+    }
+`;
+
+const InvestorToolbar = styled.div<{ $embedded: boolean }>`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    ${({ $embedded }) => $embedded && `
+        position: absolute;
+        top: -94px;
+        right: 0;
+        z-index: 2;
+    `}
+
+    > button {
+        height: 38px;
+        margin: 0;
+        border: 1px solid #d7e0e8;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    > button:last-of-type {
+        min-width: 164px;
+        border-color: #007d88;
+    }
+`;
+
+const InvestorFilterField = styled.div`
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin: 0 0 16px;
+
+    > svg {
+        position: absolute;
+        left: 15px;
+        z-index: 1;
+        width: 19px;
+        height: 19px;
+        color: #718096;
+        pointer-events: none;
+    }
+`;
+
+const InvestorSearchInput = styled.input`
+    width: 100%;
+    height: 42px;
+    padding: 0 16px 0 44px;
+    border: 1px solid #d9e1e8;
+    border-radius: 8px;
+    background: #fff;
+    color: #172033;
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+        color: #8792a3;
+    }
+
+    &:focus {
+        border-color: #007d88;
+        box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.08);
+    }
+`;
+
+const InvestorPaginationLayout = styled.div`
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 54px;
+    margin-top: 10px;
+
+    p {
+        margin: 0;
+        color: #526074;
+        font-size: 13px;
+        font-weight: 400;
+    }
+
+    > div:last-child {
+        margin-top: 0;
+        margin-left: auto;
+        gap: 6px;
+    }
+
+`;
 
 const InvestorReportLink = styled.button`
     display: inline-flex;

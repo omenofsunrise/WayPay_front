@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ContextMenu, { type ContextMenuItem } from "../../modal/ContextMenu";
 
@@ -13,7 +13,8 @@ export interface Column {
 }
 
 export interface TableAction {
-  label: string;
+  label: ReactNode;
+  icon?: ReactNode;
   action: (rowData: any[], rowIndex: number) => void;
   color?: string;
   disabled?: boolean;
@@ -57,6 +58,7 @@ interface CreditsTableProps {
   isLoading?: boolean;
   multiSelect?: boolean;
   selectableRows?: number[];
+  showContextMenuButton?: boolean;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({
@@ -76,6 +78,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   isLoading,
   multiSelect = false,
   selectableRows,
+  showContextMenuButton = false,
 }) => {
   const [internalSelectedRows, setInternalSelectedRows] = useState<number[]>(
     []
@@ -240,6 +243,22 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     setContextMenu({
       x: clientX,
       y: clientY,
+      rowIndex,
+    });
+  };
+
+  const showContextMenuFromButton = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    rowIndex: number
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    selectRowForContextMenu(rowIndex);
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    setContextMenu({
+      x: rect.right,
+      y: rect.bottom + 4,
       rowIndex,
     });
   };
@@ -416,7 +435,12 @@ const CustomTable: React.FC<CreditsTableProps> = ({
           y={0}
           items={filteredActions.map((action, index) => {
             const menuItem: ContextMenuItem = {
-              label: action.label,
+              label: action.icon ? (
+                <TableActionLabel>
+                  <TableActionIcon>{action.icon}</TableActionIcon>
+                  <span>{action.label}</span>
+                </TableActionLabel>
+              ) : action.label,
               color: action.color,
               disabled: action.disabled,
               dividerBefore: action.dividerBefore,
@@ -547,6 +571,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                       </HeaderCell>
                     )
                 )}
+                {showContextMenuButton && <ActionsHeaderCell aria-hidden="true" />}
               </TableRow>
             </TableHeader>
             <TableBody $fixedHeight={fixedHeight}>
@@ -672,6 +697,19 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                               {cell}
                             </BodyCell>
                           )
+                      )}
+                      {showContextMenuButton && (
+                        <ActionsBodyCell onClick={(event) => event.stopPropagation()}>
+                          <RowActionsButton
+                            type="button"
+                            aria-label="Действия с записью"
+                            onClick={(event) => showContextMenuFromButton(event, rowIndex)}
+                          >
+                            <span />
+                            <span />
+                            <span />
+                          </RowActionsButton>
+                        </ActionsBodyCell>
                       )}
                     </TableRow>
                   );
@@ -840,6 +878,13 @@ const HeaderContent = styled.div<{ $align?: Alignment }>`
   width: 100%;
 `;
 
+const ActionsHeaderCell = styled.th`
+  width: 52px;
+  min-width: 52px;
+  padding: 0;
+  background: #ffffff;
+`;
+
 const SortIcon = styled(motion.span)<{ $direction: "asc" | "desc" }>`
   display: inline-flex;
   align-items: center;
@@ -859,6 +904,63 @@ const BodyCell = styled.td<{
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) =>
     $isBeforeTotals || $isTotalsCell ? "none" : "0.5px solid #D1D5DB"};
+`;
+
+const ActionsBodyCell = styled.td`
+  width: 52px;
+  min-width: 52px;
+  padding: 0 10px 0 4px;
+  text-align: right;
+  vertical-align: middle;
+  border-right: 0;
+`;
+
+const RowActionsButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+
+  span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #334155;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: #d7e0e8;
+    background: #ffffff;
+    outline: none;
+  }
+`;
+
+const TableActionLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+`;
+
+const TableActionIcon = styled.span`
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `;
 
 const CheckboxContainer = styled.div`
