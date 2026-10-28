@@ -115,6 +115,7 @@ const InvestorsContainer = styled.div`
 `;
 
 const SectionHeader = styled.div`
+  text-align: left;
   padding: 26px 24px 0;
   border: 1px solid #e3e9ef;
   border-bottom: 0;
@@ -140,11 +141,13 @@ const SectionHeader = styled.div`
 `;
 
 const SectionTitle = styled.h1`
+  width: fit-content;
   margin: 0;
   color: #111827;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
   line-height: 1.2;
+  text-align: left;
 `;
 
 const SectionContent = styled.div`

@@ -922,8 +922,8 @@ const InvestorListLayout = styled(PageLayout)<{ $embedded: boolean }>`
 const InvestorToolbar = styled.div<{ $embedded: boolean }>`
     display: flex;
     align-items: center;
-    gap: 14px;
-    min-height: 46px;
+    gap: 10px;
+    min-height: 38px;
     ${({ $embedded }) => $embedded && `
         position: absolute;
         top: -130px;
@@ -932,19 +932,19 @@ const InvestorToolbar = styled.div<{ $embedded: boolean }>`
     `}
 
     > button {
-        height: 46px;
+        height: 38px;
         margin: 0;
         border: 1px solid #d7e0e8;
         border-radius: 8px;
-        font-size: 15px;
+        font-size: 14px;
     }
 
     > button:first-of-type {
-        min-width: 124px;
+        min-width: 104px;
     }
 
     > button:last-of-type {
-        min-width: 210px;
+        min-width: 172px;
         border-color: #007d88;
     }
 `;
