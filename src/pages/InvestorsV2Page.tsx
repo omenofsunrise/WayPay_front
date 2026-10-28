@@ -74,6 +74,7 @@ const InvestorsV2Page = () => {
           ]}
           activeTab={activeTab}
           onChange={handleTabChange}
+          fontSize={16}
         />
       </SectionHeader>
 
@@ -114,22 +115,34 @@ const InvestorsContainer = styled.div`
 `;
 
 const SectionHeader = styled.div`
-  padding: 22px 20px 0;
+  padding: 26px 24px 0;
   border: 1px solid #e3e9ef;
   border-bottom: 0;
   border-radius: 14px 14px 0 0;
   background: #fff;
 
   > div:last-child {
-    margin-top: 10px;
+    margin-top: 18px;
     margin-bottom: 0;
+  }
+
+  > div:last-child ul {
+    gap: 26px;
+  }
+
+  > div:last-child li {
+    padding: 14px 8px 16px;
+  }
+
+  > div:last-child li > div {
+    height: 3px;
   }
 `;
 
 const SectionTitle = styled.h1`
   margin: 0;
   color: #111827;
-  font-size: 30px;
+  font-size: 36px;
   font-weight: 700;
   line-height: 1.2;
 `;
@@ -137,7 +150,7 @@ const SectionTitle = styled.h1`
 const SectionContent = styled.div`
   flex: 1;
   min-width: 0;
-  padding: 18px 20px 24px;
+  padding: 22px 24px 24px;
   border: 1px solid #e3e9ef;
   border-radius: 0 0 14px 14px;
   background: #fff;

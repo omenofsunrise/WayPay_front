@@ -682,7 +682,6 @@ const InvestorPage = ({
                 </ExportButton>
                 {embedded && canEdit && (
                     <DarkCyanButton
-                        style={{ marginLeft: "12px" }}
                         onClick={handleCreateInvestor}
                     >
                         + Добавить инвестора
@@ -923,25 +922,29 @@ const InvestorListLayout = styled(PageLayout)<{ $embedded: boolean }>`
 const InvestorToolbar = styled.div<{ $embedded: boolean }>`
     display: flex;
     align-items: center;
-    gap: 10px;
-    min-height: 40px;
+    gap: 14px;
+    min-height: 46px;
     ${({ $embedded }) => $embedded && `
         position: absolute;
-        top: -94px;
+        top: -130px;
         right: 0;
         z-index: 2;
     `}
 
     > button {
-        height: 38px;
+        height: 46px;
         margin: 0;
         border: 1px solid #d7e0e8;
         border-radius: 8px;
-        font-size: 14px;
+        font-size: 15px;
+    }
+
+    > button:first-of-type {
+        min-width: 124px;
     }
 
     > button:last-of-type {
-        min-width: 164px;
+        min-width: 210px;
         border-color: #007d88;
     }
 `;
@@ -955,10 +958,10 @@ const InvestorFilterField = styled.div`
 
     > svg {
         position: absolute;
-        left: 15px;
+        left: 18px;
         z-index: 1;
-        width: 19px;
-        height: 19px;
+        width: 20px;
+        height: 20px;
         color: #718096;
         pointer-events: none;
     }
@@ -966,13 +969,14 @@ const InvestorFilterField = styled.div`
 
 const InvestorSearchInput = styled.input`
     width: 100%;
-    height: 42px;
-    padding: 0 16px 0 44px;
+    height: 52px;
+    padding: 0 18px 0 52px;
     border: 1px solid #d9e1e8;
     border-radius: 8px;
     background: #fff;
     color: #172033;
     font: inherit;
+    font-size: 15px;
     outline: none;
 
     &::placeholder {
