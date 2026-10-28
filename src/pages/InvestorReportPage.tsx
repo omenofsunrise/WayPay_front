@@ -1813,7 +1813,7 @@ const OperationsTableContent = styled.div`
 
   table th {
     height: 48px;
-    padding: 10px 16px;
+    padding: 10px 20px;
     background: #f8fafb;
     color: #526074;
     font-size: 15px;
@@ -1826,7 +1826,7 @@ const OperationsTableContent = styled.div`
   }
 
   table td {
-    padding: 8px 16px;
+    padding: 8px 20px;
     border-right: 0;
     color: #26344c;
     font-size: 15px;
@@ -1834,6 +1834,11 @@ const OperationsTableContent = styled.div`
 
   table thead th:last-child {
     padding: 0;
+  }
+
+  table thead th:first-child,
+  table tbody td:first-child {
+    padding-left: 18px;
   }
 
   table tbody td:last-child {
