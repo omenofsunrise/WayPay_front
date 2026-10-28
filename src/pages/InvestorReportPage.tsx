@@ -42,6 +42,7 @@ import { useAuth } from "../сontext/AuthContext";
 import useInvestorContribution from "../api/hooks/useInvestorContribution";
 import type { InvestorContribution } from "../api/types/investorContribution";
 import GrayButton from "../components/ui/Buttons/GrayButton";
+import { FaLock, FaUnlock } from "react-icons/fa";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import {
   InputContainer,
@@ -388,8 +389,40 @@ const InvestorReportPage = ({
     contributionsData?.items.map((contribution: InvestorContribution) => [
       formatDate(contribution.date.toString()),
       formatMoney(contribution.amount.toString()),
-      contribution.id,
-      contribution.confirmed ? "confirmed" : "pending",
+      <ContributionActions>
+        {!contribution.confirmed && (
+          <DarkCyanButton
+            onClick={() => handleEditInvestment(contribution)}
+            disabled={isContributionsLoading}
+          >
+            Редактирование
+          </DarkCyanButton>
+        )}
+        <GrayButton
+          style={{ marginRight: 0 }}
+          onClick={() => handleContributionAction(contribution.id, "reject")}
+          disabled={isContributionsLoading}
+        >
+          Удалить
+        </GrayButton>
+        <LockToggleButton
+          type="button"
+          onClick={() =>
+            !contribution.confirmed &&
+            handleContributionAction(contribution.id, "confirm")
+          }
+          disabled={isContributionsLoading || contribution.confirmed}
+          $locked={contribution.confirmed}
+          title={
+            contribution.confirmed
+              ? "Инвестиция закрыта — редактирование запрещено"
+              : "Закрыть инвестицию (после этого её нельзя будет редактировать)"
+          }
+          aria-label={contribution.confirmed ? "Закрыто" : "Закрыть инвестицию"}
+        >
+          {contribution.confirmed ? <FaLock /> : <FaUnlock />}
+        </LockToggleButton>
+      </ContributionActions>,
     ]) || [];
 
   const generatePdf = async (
@@ -1512,46 +1545,16 @@ const InvestorReportPage = ({
               <>
                 <CustomTable
                   columns={[
-                    { name: "Дата", align: "left", width: "40%" },
+                    { name: "Дата", align: "left", width: "25%" },
                     {
                       name: "Сумма инвестиции",
-                      align: "right",
-                      width: "55%",
+                      align: "left",
+                      width: "25%",
                     },
-                    { name: "ID", isHidden: true },
-                    { name: "Статус", isHidden: true },
+                    { name: "Действия", align: "right", width: "50%" },
                   ]}
                   data={contributionsTableData}
                   isLoading={isContributionsLoading}
-                  showContextMenuButton
-                  contextMenuActions={(rowData) => {
-                    const contribution = contributionsData?.items.find(
-                      (item) => item.id === Number(rowData[2])
-                    );
-                    const isPending = rowData[3] === "pending";
-
-                    return [
-                      {
-                        label: "Редактировать",
-                        action: () =>
-                          contribution && handleEditInvestment(contribution),
-                        shouldShow: () => isPending,
-                      },
-                      {
-                        label: "Закрыть инвестицию",
-                        action: () =>
-                          handleContributionAction(Number(rowData[2]), "confirm"),
-                        shouldShow: () => isPending,
-                        color: "#007d88",
-                      },
-                      {
-                        label: "Удалить инвестицию",
-                        action: () =>
-                          handleContributionAction(Number(rowData[2]), "reject"),
-                        color: "#dc2626",
-                      },
-                    ];
-                  }}
                 />
                 <PaginationLayout>
                   <CountInfoTitle total={contributionsData?.totalCount || 0} />
@@ -1765,6 +1768,49 @@ const PayoutConfirmButton = styled.button`
   &:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+`;
+
+const ContributionActions = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+
+  > button {
+    min-height: 34px;
+    margin: 0;
+    font-size: 13px;
+  }
+`;
+
+const LockToggleButton = styled.button<{ $locked: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  padding: 0;
+  border: 1px solid
+    ${({ $locked }) => ($locked ? "#cbd5e1" : "#007d88")};
+  border-radius: 8px;
+  background: ${({ $locked }) => ($locked ? "#f1f5f9" : "#f0f9fa")};
+  color: ${({ $locked }) => ($locked ? "#64748b" : "#007d88")};
+  cursor: ${({ $locked }) => ($locked ? "default" : "pointer")};
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover:not(:disabled) {
+    background: #e0f3f4;
+  }
+
+  &:disabled {
+    opacity: 1;
   }
 `;
 
