@@ -1453,8 +1453,8 @@ const InvestorReportPage = ({
                     { name: "Дата выплаты", align: "left", width: "14%" },
                     { name: "Выплатил", align: "left", width: "26%" },
                     { name: "Сумма", align: "left", width: "18%" },
-                    { name: "Статус", align: "left", width: "26%" },
-                    { name: "", align: "center", width: "11%" },
+                    { name: "Статус", align: "left", width: "22%" },
+                    { name: "", align: "left", width: "15%" },
                     { name: "ID", isHidden: true },
                   ]}
                   data={payoutTableData}
@@ -1842,7 +1842,7 @@ const OperationsTableContent = styled.div`
   }
 
   table tbody td:last-child {
-    padding: 0 10px 0 4px;
+    padding: 0 24px 0 4px;
   }
 
   table tbody tr::after {
