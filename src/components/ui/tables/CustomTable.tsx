@@ -8,7 +8,9 @@ type Alignment = "left" | "center" | "right";
 export interface Column {
   name: string;
   isSortable?: boolean;
+  hideSortIcon?: boolean;
   align?: Alignment;
+  headerAlign?: Alignment;
   isHidden?: boolean;
   width?: string;
 }
@@ -528,14 +530,14 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                         $isSortable={column.isSortable}
                         $isActive={sortConfig?.key === index}
                         onClick={() => handleSort(index)}
-                        $align={column.align || "center"}
+                        $align={column.headerAlign || column.align || "center"}
                         $isFirst={index === 0 && !multiSelect}
                         $isLast={index === columns.length - 1}
                         $width={column.width}
                       >
-                        <HeaderContent $align={column.align || "center"}>
+                        <HeaderContent $align={column.headerAlign || column.align || "center"}>
                           {column.name}
-                          {column.isSortable && (
+                          {column.isSortable && !column.hideSortIcon && (
                             <SortIcon
                               $direction={
                                 sortConfig?.key === index

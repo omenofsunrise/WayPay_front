@@ -640,17 +640,17 @@ const InvestorPage = ({
 
     const columns: Column[] = [
         { name: "id", isHidden: true },
-        { name: "Инвестор", align: "left", isSortable: true, width: canEdit ? "31%" : "60%" },
+        { name: "Инвестор", align: "left", headerAlign: "left", isSortable: true, hideSortIcon: true, width: canEdit ? "31%" : "60%" },
         ...(canEdit)
-            ? [{ name: "Телефон", align: "left", width: "19%" } as Column]
+            ? [{ name: "Телефон", align: "left", headerAlign: "center", width: "19%" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Доля", isSortable: true, align: "right", width: "12%" } as Column]
+            ? [{ name: "Доля", isSortable: true, hideSortIcon: true, align: "right", headerAlign: "center", width: "12%" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Инвестиции", isSortable: true, align: "right", width: "18%" } as Column]
+            ? [{ name: "Инвестиции", isSortable: true, hideSortIcon: true, align: "right", headerAlign: "center", width: "18%" } as Column]
             : [],
-        { name: "Касса", isSortable: true, align: "right", width: canEdit ? "15%" : "35%" },
+        { name: "Касса", isSortable: true, hideSortIcon: true, align: "right", headerAlign: "center", width: canEdit ? "15%" : "35%" },
         { name: "isBlocked", isHidden: true },
     ];
 
@@ -877,11 +877,11 @@ const InvestorListLayout = styled(PageLayout)<{ $embedded: boolean }>`
     }
 
     table thead th {
-        height: 40px;
+        height: 48px;
         padding: 10px 16px;
-        background: #f8fafc;
-        color: #596579;
-        font-size: 13px;
+        background: #f8fafb;
+        color: #526074;
+        font-size: 15px;
         font-weight: 600;
     }
 
