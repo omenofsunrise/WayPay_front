@@ -42,7 +42,6 @@ import { useAuth } from "../сontext/AuthContext";
 import useInvestorContribution from "../api/hooks/useInvestorContribution";
 import type { InvestorContribution } from "../api/types/investorContribution";
 import GrayButton from "../components/ui/Buttons/GrayButton";
-import { getInvestorPayouts } from "../api/services/investorPayoutService";
 import { FaLock, FaUnlock } from "react-icons/fa";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import {
@@ -379,7 +378,7 @@ const InvestorReportPage = ({
     try {
       await makePayoutAction(id, action);
       if (selectedInvestorId) {
-        getInvestorPayouts(Number(selectedInvestorId));
+        await fetchPayouts(Number(selectedInvestorId));
       }
     } catch (error) {
       console.error("Contribution action error:", error);
@@ -981,25 +980,22 @@ const InvestorReportPage = ({
     formatDate(payout.payoutDate),
     payout.employeeFullName,
     formatMoney(payout.amount.toString()),
-    payout.confirmed ? (
-      <ConfirmedBadge></ConfirmedBadge>
-    ) : (
-      <ActionButtons>
-        <DarkCyanButton
-          style={{ margin: "0 auto" }}
+    <PayoutStatusBadge $confirmed={payout.confirmed}>
+      <PayoutStatusIcon aria-hidden="true">
+        {payout.confirmed ? "✓" : "◷"}
+      </PayoutStatusIcon>
+      {payout.confirmed ? "Подтверждено" : "Ожидает подтверждения"}
+    </PayoutStatusBadge>,
+    payout.confirmed ? null : (
+        <PayoutConfirmButton
+          type="button"
           onClick={() => handlePayoutAction(payout.id, "confirm")}
           disabled={isContributionsLoading}
         >
           Подтвердить
-        </DarkCyanButton>
-        <GrayButton
-          onClick={() => handlePayoutAction(payout.id, "reject")}
-          disabled={isContributionsLoading}
-        >
-          Удалить
-        </GrayButton>
-      </ActionButtons>
+        </PayoutConfirmButton>
     ),
+    payout.id,
   ]);
 
   const creditsTableData =
@@ -1398,6 +1394,7 @@ const InvestorReportPage = ({
             )}
           </OperationsHeader>
 
+          <OperationsTableContent>
           {isDeletedView ? (
           <>
             <TabsContainer>
@@ -1468,7 +1465,7 @@ const InvestorReportPage = ({
             <TabsContainer>
               <Tabs<"payouts" | "credits" | "contributions">
                 tabs={[
-                  { id: "payouts", label: "История выплат" },
+                  { id: "payouts", label: "Выплаты" },
                   { id: "credits", label: "Договоры" },
                   { id: "contributions", label: "История инвестиций" },
                 ]}
@@ -1481,13 +1478,23 @@ const InvestorReportPage = ({
               <>
                 <CustomTable
                   columns={[
-                    { name: "Дата выплаты", isSortable: true },
-                    { name: "Выплатил", align: "left" },
-                    { name: "Выплата, руб", isSortable: true, align: "left" },
-                    { name: "Действия", align: "center" },
+                    { name: "Дата выплаты", align: "left", width: "14%" },
+                    { name: "Выплатил", align: "left", width: "30%" },
+                    { name: "Сумма", align: "left", width: "18%" },
+                    { name: "Статус", align: "left", width: "22%" },
+                    { name: "", align: "center", width: "12%" },
+                    { name: "ID", isHidden: true },
                   ]}
                   data={payoutTableData}
                   isLoading={isPayoutsLoading}
+                  showContextMenuButton
+                  contextMenuActions={(rowData) => [
+                    {
+                      label: "Удалить выплату",
+                      action: () => handleDeletePayout(Number(rowData[5])),
+                      color: "#dc2626",
+                    },
+                  ]}
                 />
                 <PaginationLayout>
                   <CountInfoTitle total={payouts?.length || 0} />
@@ -1555,6 +1562,7 @@ const InvestorReportPage = ({
             )}
           </>
           )}
+          </OperationsTableContent>
         </OperationsCard>
 
         {/* Модальное окно редактирования инвестиции */}
@@ -1709,11 +1717,51 @@ const RejectButton = styled.button`
   }
 `;
 
-const ConfirmedBadge = styled.span`
-  padding: 6px 12px;
-  border-radius: 6px;
+const PayoutStatusBadge = styled.span<{ $confirmed: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: ${({ $confirmed }) => ($confirmed ? "#dcf7f0" : "#fff3df")};
+  color: ${({ $confirmed }) => ($confirmed ? "#087f6a" : "#b96700")};
   font-size: 12px;
   font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+`;
+
+const PayoutStatusIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 1;
+`;
+
+const PayoutConfirmButton = styled.button`
+  min-height: 30px;
+  padding: 5px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #253247;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: #007d88;
+    color: #007d88;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 `;
 
 const ContributionActions = styled.div`
@@ -1786,6 +1834,22 @@ const OperationsHeader = styled.div`
     font-size: 18px;
     font-weight: 700;
     line-height: 36px;
+  }
+`;
+
+const OperationsTableContent = styled.div`
+  table th {
+    padding: 8px 10px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  table td {
+    padding: 7px 10px;
+    color: #253247;
+    font-size: 13px;
   }
 `;
 
