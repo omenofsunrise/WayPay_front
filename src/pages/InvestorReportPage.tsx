@@ -1760,12 +1760,9 @@ const ContentContainer = styled.div`
 `;
 
 const OperationsCard = styled.section`
-  position: relative;
-  margin: 0 -25px -25px;
-  padding: 18px 24px 20px;
-  border: 1px solid #e3e9ef;
-  border-radius: 14px;
-  background: #fff;
+  margin: 18px 0 0;
+  padding: 18px 0 0;
+  border-top: 1px solid #e3e9ef;
 
   ${TabsContainer} {
     margin: 14px 0 12px;
