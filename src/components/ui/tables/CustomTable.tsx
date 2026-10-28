@@ -962,7 +962,7 @@ const TableActionIcon = styled.span`
   height: 16px;
   align-items: center;
   justify-content: center;
-  color: #64748b;
+  color: inherit;
 
   svg {
     width: 16px;

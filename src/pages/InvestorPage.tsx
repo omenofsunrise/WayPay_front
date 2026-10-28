@@ -459,7 +459,7 @@ const InvestorPage = ({
                 label: 'Открыть отчёт',
                 icon: <ReportActionIcon />,
                 action: () => investor && onOpenReport(investor.id),
-                color: '#1f2937'
+                color: '#007D88'
             }] : [])
         ];
 
@@ -468,14 +468,14 @@ const InvestorPage = ({
                 label: 'Редактировать',
                 icon: <EditActionIcon />,
                 action: () => investor && handleEditInvestor(investor),
-                color: '#1f2937'
+                color: '#2563EB'
             });
             if (onOpenReport) {
                 actions.push({
                     label: 'Выплатить инвестору',
                     icon: <PayoutActionIcon />,
                     action: () => investor && onOpenReport(investor.id, "payout"),
-                    color: '#1f2937'
+                    color: '#007D88'
                 });
             }
         }
@@ -491,7 +491,7 @@ const InvestorPage = ({
                     setIsPrintModalOpen(true);
                 }
             },
-            color: '#1f2937',
+            color: '#3B82F6',
             dividerBefore: actions.length > 0
         });
 
