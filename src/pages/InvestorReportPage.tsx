@@ -1545,13 +1545,13 @@ const InvestorReportPage = ({
               <>
                 <CustomTable
                   columns={[
-                    { name: "Дата", align: "left", width: "25%" },
+                    { name: "Дата", align: "left", width: "22%" },
                     {
                       name: "Сумма инвестиции",
                       align: "left",
-                      width: "25%",
+                      width: "22%",
                     },
-                    { name: "Действия", align: "right", width: "50%" },
+                    { name: "Действия", align: "left", width: "56%" },
                   ]}
                   data={contributionsTableData}
                   isLoading={isContributionsLoading}
@@ -1774,7 +1774,7 @@ const PayoutConfirmButton = styled.button`
 const ContributionActions = styled.div`
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
   width: 100%;
 
