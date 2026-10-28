@@ -640,17 +640,17 @@ const InvestorPage = ({
 
     const columns: Column[] = [
         { name: "id", isHidden: true },
-        { name: "Инвестор", align: "left", headerAlign: "left", isSortable: true, hideSortIcon: true, width: canEdit ? "31%" : "60%" },
+        { name: "Инвестор", align: "left", headerAlign: "left", width: canEdit ? "31%" : "60%" },
         ...(canEdit)
             ? [{ name: "Телефон", align: "left", headerAlign: "center", width: "19%" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Доля", isSortable: true, hideSortIcon: true, align: "right", headerAlign: "center", width: "12%" } as Column]
+            ? [{ name: "Доля", align: "right", headerAlign: "center", width: "12%" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Инвестиции", isSortable: true, hideSortIcon: true, align: "right", headerAlign: "center", width: "18%" } as Column]
+            ? [{ name: "Инвестиции", align: "right", headerAlign: "center", width: "18%" } as Column]
             : [],
-        { name: "Касса", isSortable: true, hideSortIcon: true, align: "right", headerAlign: "center", width: canEdit ? "15%" : "35%" },
+        { name: "Касса", align: "right", headerAlign: "center", width: canEdit ? "15%" : "35%" },
         { name: "isBlocked", isHidden: true },
     ];
 
