@@ -1775,12 +1775,17 @@ const OperationsHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 36px;
 
   h1 {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    margin: 0;
     color: #172033;
     font-size: 18px;
     font-weight: 700;
-    line-height: 1.35;
+    line-height: 36px;
   }
 `;
 
@@ -1789,7 +1794,8 @@ const HistoryExportButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 36px;
+  height: 36px;
+  margin: 0;
   padding: 7px 13px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
