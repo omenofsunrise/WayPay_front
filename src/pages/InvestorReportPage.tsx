@@ -981,8 +981,13 @@ const InvestorReportPage = ({
     payout.employeeFullName,
     formatMoney(payout.amount.toString()),
     <PayoutStatusBadge $confirmed={payout.confirmed}>
-      <PayoutStatusIcon aria-hidden="true">
-        {payout.confirmed ? "✓" : "◷"}
+      <PayoutStatusIcon viewBox="0 0 14 14" aria-hidden="true">
+        <circle cx="7" cy="7" r="5.5" />
+        {payout.confirmed ? (
+          <path d="m4.5 7.1 1.6 1.6 3.5-3.6" />
+        ) : (
+          <path d="M7 3.8v3.4l2.2 1.3" />
+        )}
       </PayoutStatusIcon>
       {payout.confirmed ? "Подтверждено" : "Ожидает подтверждения"}
     </PayoutStatusBadge>,
@@ -1731,16 +1736,16 @@ const PayoutStatusBadge = styled.span<{ $confirmed: boolean }>`
   white-space: nowrap;
 `;
 
-const PayoutStatusIcon = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+const PayoutStatusIcon = styled.svg`
+  display: block;
   width: 14px;
   height: 14px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 9px;
-  line-height: 1;
+  flex: 0 0 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 `;
 
 const PayoutConfirmButton = styled.button`
