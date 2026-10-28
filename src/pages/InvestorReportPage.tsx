@@ -1451,10 +1451,10 @@ const InvestorReportPage = ({
                 <CustomTable
                   columns={[
                     { name: "Дата выплаты", align: "left", width: "14%" },
-                    { name: "Выплатил", align: "left", width: "30%" },
-                    { name: "Сумма", align: "right", width: "18%" },
-                    { name: "Статус", align: "left", width: "22%" },
-                    { name: "", align: "center", width: "12%" },
+                    { name: "Выплатил", align: "left", width: "26%" },
+                    { name: "Сумма", align: "left", width: "18%" },
+                    { name: "Статус", align: "left", width: "26%" },
+                    { name: "", align: "center", width: "11%" },
                     { name: "ID", isHidden: true },
                   ]}
                   data={payoutTableData}
