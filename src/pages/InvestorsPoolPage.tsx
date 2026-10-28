@@ -39,7 +39,6 @@ import Pagination from "../components/ui/fields/CustomPagination";
 import Tabs from "../components/ui/fields/Tabs";
 import useInvestorPool from "../api/hooks/useInvestorPool";
 import EditButton from "../components/ui/Buttons/EditButton";
-import AddButton from "../components/ui/Buttons/AddButton";
 import DeleteButton from "../components/ui/Buttons/DeleteButton";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import GrayButton from "../components/ui/Buttons/GrayButton";
@@ -1772,10 +1771,10 @@ const InvestorsPoolPage = ({
         <IconContainer>
           <Icon src={debtSvg} alt="Debt" />
         </IconContainer>
-        <ReportValue>
+        <ReportValue $tone="warning">
           {formatMoney(report.delinquencyAmount.toString())}
         </ReportValue>
-        <ReportLabel>Просрочки руб.</ReportLabel>
+        <ReportLabel>Просрочки</ReportLabel>
       </ReportCard>
     </>
   );
@@ -1828,76 +1827,127 @@ const InvestorsPoolPage = ({
     </>
   );
 
+  const currentPool = pools.find(
+    (pool) => pool.id === Number(selectedPoolId)
+  );
+  const poolInitials = (currentPool?.name || "П")
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.charAt(0))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const openEditPoolModal = () => {
+    setNewPoolName(currentPool?.name || "");
+    setNewPoolPie(currentPool?.pie || 0);
+    setIsEditPoolModalOpen(true);
+  };
+
   return (
     <PageLayout>
-      <TitleField>
-        {!embedded && <CustomTitle>Пулы инвесторов</CustomTitle>}
-        {embedded && <div style={{ marginLeft: "auto" }} />}
-        <ExportButton onClick={exportPoolToPdf} />
-        <ExportButton
-          children={"Поделиться"}
-          icon={<ShareIcon />}
-          onClick={handleShareClick}
-          disabled={!report}
-        />
-      </TitleField>
+      {!embedded && (
+        <TitleField>
+          <CustomTitle>Пулы инвесторов</CustomTitle>
+          <ExportButton onClick={exportPoolToPdf} />
+          <ExportButton
+            children={"Поделиться"}
+            icon={<ShareIcon />}
+            onClick={handleShareClick}
+            disabled={!report}
+          />
+        </TitleField>
+      )}
 
       <ContentContainer>
         <PoolTabsContainer>
-          <PoolTabsHeader>
-            <PoolTabsList>
-              {pools.map((pool) => (
-                <PoolTabItem
-                  key={pool.id}
-                  $isActive={selectedPoolId === pool.id.toString()}
-                  onClick={() => {
-                    setSelectedPoolId(pool.id.toString());
+          {currentPool && (
+            <>
+              <PoolBreadcrumb>
+                <span>Пулы инвесторов</span>
+                <b>/</b>
+                <strong>{currentPool.name}</strong>
+              </PoolBreadcrumb>
+
+              <PoolIdentityRow>
+                <PoolAvatar>{poolInitials}</PoolAvatar>
+                <PoolIdentity>
+                  <PoolName>{currentPool.name}</PoolName>
+                  <PoolCreated>
+                    Создан {formatDate(currentPool.createdAt.toString())}
+                  </PoolCreated>
+                </PoolIdentity>
+
+                <PoolSwitcher
+                  value=""
+                  aria-label="Сменить пул"
+                  onChange={(event) => {
+                    setSelectedPoolId(event.target.value);
                     setSelectedInvestorForFilter(null);
                     setSearchValue("");
                   }}
                 >
-                  {pool.name}
-                  {selectedPoolId === pool.id.toString() && (
-                    <ActiveTabIndicator />
-                  )}
+                  <option value="" disabled>
+                    Сменить пул
+                  </option>
+                  {pools.map((pool) => (
+                    <option key={pool.id} value={pool.id.toString()}>
+                      {pool.name}
+                    </option>
+                  ))}
+                </PoolSwitcher>
 
-                  <PoolActions>
-                    <EditButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const currentPool = pools.find(
-                          (pool) => pool.id === Number(selectedPoolId)
-                        );
-                        setNewPoolName(currentPool?.name || "");
-                        setNewPoolPie(currentPool?.pie || 0);
-                        setIsEditPoolModalOpen(true);
-                      }}
-                    />
-                    <DeleteButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm(`Удалить пул "${pool.name}"?`)) {
-                          setSelectedPoolId(pool.id.toString());
-                          handleDeletePool();
-                        }
-                      }}
-                    />
-                  </PoolActions>
-                </PoolTabItem>
-              ))}
-            </PoolTabsList>
-            <AddButton
-              onClick={() => setIsCreatePoolModalOpen(true)}
-              tooltip="Добавить пул"
-            />
-          </PoolTabsHeader>
+                <PoolHeaderActions>
+                  <PoolSecondaryButton type="button" onClick={openEditPoolModal}>
+                    <PoolButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                    </PoolButtonIcon>
+                    Редактировать
+                  </PoolSecondaryButton>
+                  <PoolPrimaryButton type="button" onClick={handleAddInvestor}>
+                    <span aria-hidden="true">+</span>
+                    Добавить инвестора
+                  </PoolPrimaryButton>
+                  <PoolMoreMenu>
+                    <PoolMoreButton aria-label="Другие действия">
+                      <span />
+                      <span />
+                      <span />
+                    </PoolMoreButton>
+                    <PoolMoreDropdown>
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatePoolModalOpen(true)}
+                      >
+                        Создать пул
+                      </button>
+                      <button type="button" onClick={exportPoolToPdf}>
+                        Экспортировать отчёт
+                      </button>
+                      <button type="button" onClick={handleShareClick}>
+                        Поделиться
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => {
+                          if (window.confirm(`Удалить пул "${currentPool.name}"?`)) {
+                            handleDeletePool();
+                          }
+                        }}
+                      >
+                        Удалить пул
+                      </button>
+                    </PoolMoreDropdown>
+                  </PoolMoreMenu>
+                </PoolHeaderActions>
+              </PoolIdentityRow>
+            </>
+          )}
 
           {report && (
             <>
-              <CreationDate>
-                Пул создан {formatDate(report.createdAt)}
-              </CreationDate>
-
               <TabsContainer>
                 <Tabs<"general" | "expected" | "current">
                   tabs={dataTabs}
@@ -1935,19 +1985,13 @@ const InvestorsPoolPage = ({
                 }
               }}
               addButton={
-                activeTab === "investors" && pools.length > 0 ? (
-                  <div style={{ display: "flex", gap: "20px" }}>
-                    {enableReinvestments && (
-                      <DarkCyanButton
-                        children="Реинвестировать"
-                        onClick={handleReinvest}
-                      />
-                    )}
-                    <AddButton
-                      onClick={handleAddInvestor}
-                      tooltip="Добавить инвестора"
-                    />
-                  </div>
+                activeTab === "investors" &&
+                pools.length > 0 &&
+                enableReinvestments ? (
+                  <DarkCyanButton
+                    children="Реинвестировать"
+                    onClick={handleReinvest}
+                  />
                 ) : null
               }
             />
@@ -2500,68 +2544,210 @@ const PoolTabsContainer = styled.div`
   margin-bottom: 24px;
 `;
 
-const PoolTabItem = styled.li<{ $isActive: boolean }>`
-  position: relative;
-  padding: 12px 0;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: ${(props) => (props.$isActive ? "600" : "400")};
-  color: ${(props) =>
-    props.$isActive ? "rgba(0, 125, 136, 1)" : "rgba(107, 114, 128, 1)"};
-  transition: all 0.2s ease;
+const PoolBreadcrumb = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 12px;
+  color: #64748b;
+  font-size: 13px;
+  text-align: left;
 
-  &:hover {
-    color: rgba(0, 125, 136, 0.8);
+  b {
+    font-weight: 400;
+  }
+
+  strong {
+    color: #253247;
+    font-weight: 500;
   }
 `;
 
-const ActiveTabIndicator = styled.div`
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: rgba(0, 125, 136, 1);
-  border-radius: 2px 2px 0 0;
-`;
-
-const PoolTabsHeader = styled.div`
+const PoolIdentityRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 16px;
-  border-bottom: 1px solid rgba(209, 213, 219, 1);
-  padding-bottom: 8px;
+  gap: 14px;
+  min-width: 0;
+  text-align: left;
 `;
 
-const PoolTabsList = styled.ul`
-  display: flex;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  gap: 24px;
-  flex: 1;
+const PoolAvatar = styled.div`
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 50%;
+  background: #ddf5f5;
+  color: #087d88;
+  font-size: 18px;
+  font-weight: 700;
 `;
 
-const PoolActions = styled.div`
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
+const PoolIdentity = styled.div`
+  min-width: 145px;
+`;
 
-  ${PoolTabItem}:hover & {
-    opacity: 1;
+const PoolName = styled.div`
+  overflow: hidden;
+  color: #172033;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const PoolCreated = styled.div`
+  margin-top: 4px;
+  color: #718096;
+  font-size: 12px;
+`;
+
+const PoolSwitcher = styled.select`
+  height: 38px;
+  min-width: 126px;
+  margin-left: 4px;
+  padding: 0 34px 0 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #253247;
+  font-size: 13px;
+  cursor: pointer;
+`;
+
+const PoolHeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+`;
+
+const PoolButtonIcon = styled.svg`
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+`;
+
+const PoolSecondaryButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #253247;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #007d88;
+    color: #007d88;
+  }
+`;
+
+const PoolPrimaryButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #007d88;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+
+  span {
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
   }
 
-  ${PoolTabItem}[$isActive="true"] & {
-    opacity: 1;
+  &:hover {
+    background: #0096a3;
+  }
+`;
+
+const PoolMoreMenu = styled.details`
+  position: relative;
+`;
+
+const PoolMoreButton = styled.summary`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+`;
+
+const PoolMoreDropdown = styled.div`
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid #e3e9ef;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #253247;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #f0f9fa;
+    color: #007d88;
+  }
+
+  button.danger {
+    color: #dc2626;
   }
 `;
 
 const TabsContainer = styled.div`
-  margin: 30px 0 20px;
+  margin: 16px 0 12px;
 `;
 
 const ContentContainer = styled.div`
@@ -2569,64 +2755,57 @@ const ContentContainer = styled.div`
   padding: 0;
 `;
 
-const CreationDate = styled.div`
-  font-size: 14px;
-  color: black;
-  font-weight: 400;
-  margin-bottom: 24px;
-  text-align: left;
-  margin-left: 0;
-  padding-left: 0;
-`;
-
 const ReportDataContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 12px;
   width: 100%;
 `;
 
 const ReportCard = styled.div`
-  background-color: white;
-  border: 1px solid rgba(209, 213, 219, 1);
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  min-height: 74px;
+  padding: 12px 14px;
+  background-color: #fff;
+  border: 1px solid #e3e9ef;
   border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: left;
-  position: relative;
-  padding-bottom: 20px;
-  max-width: 600px;
 `;
 
 const IconContainer = styled.div`
-  position: absolute;
-  top: 25px;
-  left: 25px;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
 `;
 
 const Icon = styled.img`
-  width: 50px;
-  height: 50px;
+  width: 34px;
+  height: 34px;
 `;
 
 const ReportLabel = styled.span`
-  font-size: 15px;
-  color: black;
-  margin: 7px 0px 0px;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  color: #718096;
+  font-size: 12px;
+  line-height: 1.3;
   text-align: left;
-  width: 100%;
-  padding-left: 25px;
 `;
 
-const ReportValue = styled.span`
+const ReportValue = styled.span<{ $tone?: "warning" }>`
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  margin-top: 3px;
   font-size: 20px;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: ${({ $tone }) => ($tone === "warning" ? "#d97706" : "#111827")};
   text-align: left;
-  margin: 90px 0 0;
-  width: 100%;
-  padding-left: 25px;
 `;
 
 const ActionButtons = styled.div`
