@@ -60,7 +60,6 @@ interface CreditsTableProps {
   multiSelect?: boolean;
   selectableRows?: number[];
   showContextMenuButton?: boolean;
-  contextMenuButtonActionLimit?: number;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({
@@ -81,7 +80,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   multiSelect = false,
   selectableRows,
   showContextMenuButton = false,
-  contextMenuButtonActionLimit,
 }) => {
   const [internalSelectedRows, setInternalSelectedRows] = useState<number[]>(
     []
@@ -90,7 +88,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     x: number;
     y: number;
     rowIndex: number | null;
-    openedFromButton?: boolean;
   } | null>(null);
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(
     null
@@ -248,7 +245,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       x: clientX,
       y: clientY,
       rowIndex,
-      openedFromButton: false,
     });
   };
 
@@ -265,7 +261,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       x: rect.right,
       y: rect.bottom + 4,
       rowIndex,
-      openedFromButton: true,
     });
   };
 
@@ -408,7 +403,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     const rowData = data[contextMenu.rowIndex];
     if (!rowData) return null;
 
-    const availableActions = (
+    const filteredActions = (
       typeof contextMenuActions === "function"
         ? contextMenuActions(rowData)
         : contextMenuActions
@@ -417,11 +412,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
         typeof action === "object" &&
         (typeof action.shouldShow !== "function" || action.shouldShow(rowData))
     );
-
-    const filteredActions =
-      contextMenu.openedFromButton && contextMenuButtonActionLimit
-        ? availableActions.slice(0, contextMenuButtonActionLimit)
-        : availableActions;
 
     if (filteredActions.length === 0) return null;
 

@@ -724,7 +724,6 @@ const InvestorPage = ({
                         onSort={handleSort}
                         sortConfig={sortConfig}
                         showContextMenuButton
-                        contextMenuButtonActionLimit={3}
                     />
                     
                     <InvestorPaginationLayout>
