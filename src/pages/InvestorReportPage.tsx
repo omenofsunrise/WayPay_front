@@ -1819,7 +1819,7 @@ const OperationsTableContent = styled.div<{ $compactColumns: boolean }>`
       $compactColumns ? "9px 10px" : "10px 20px"};
     background: #f8fafb;
     color: #526074;
-    font-size: ${({ $compactColumns }) => ($compactColumns ? "13px" : "15px")};
+    font-size: 15px;
     font-weight: 600;
   }
 
@@ -1833,7 +1833,7 @@ const OperationsTableContent = styled.div<{ $compactColumns: boolean }>`
       $compactColumns ? "8px 10px" : "8px 20px"};
     border-right: 0;
     color: #26344c;
-    font-size: ${({ $compactColumns }) => ($compactColumns ? "13px" : "15px")};
+    font-size: 15px;
   }
 
   table thead th:last-child {
