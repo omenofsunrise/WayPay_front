@@ -1486,11 +1486,11 @@ const InvestorReportPage = ({
                   columns={[
                     { name: "Дата договора", align: "left", width: "13%" },
                     { name: "Клиент", align: "left", width: "18%" },
-                    { name: "Телефон", align: "left", width: "17%" },
-                    { name: "Начислено", align: "right", width: "13%" },
-                    { name: "Уплачено", align: "right", width: "13%" },
-                    { name: "Остаток", align: "right", width: "13%" },
-                    { name: "Долг", align: "right", width: "13%" },
+                    { name: "Телефон", align: "left", width: "14%" },
+                    { name: "Начислено", align: "left", width: "14%" },
+                    { name: "Уплачено", align: "left", width: "14%" },
+                    { name: "Остаток", align: "left", width: "14%" },
+                    { name: "Долг", align: "left", width: "13%" },
                     { name: "Долг", align: "left", isHidden: true },
                     { name: "Долг", align: "left", isHidden: true },
                   ]}
