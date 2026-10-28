@@ -1046,7 +1046,7 @@ const InvestorReportPage = ({
           <Icon src={investmentSvg} alt="Investment" />
         </IconContainer>
         <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
-        <ReportLabel>Инвестиция</ReportLabel>
+        <ReportLabel>Инвестиции</ReportLabel>
       </ReportCard>
 
       <ReportCard>
@@ -1085,10 +1085,10 @@ const InvestorReportPage = ({
         <IconContainer>
           <Icon src={debtSvg} alt="Debt" />
         </IconContainer>
-        <ReportValue>
+        <ReportValue $tone="warning">
           {formatMoney(report.delinquencyAmount.toString())}
         </ReportValue>
-        <ReportLabel>Просрочки руб.</ReportLabel>
+        <ReportLabel>Просрочки</ReportLabel>
       </ReportCard>
     </>
   );
@@ -1219,28 +1219,29 @@ const InvestorReportPage = ({
 
   return (
     <PageLayout>
-      <TitleField>
-        {!embedded && <CustomTitle>Отчёт для инвесторов</CustomTitle>}
-        {embedded && <ReportToolbarSpacer />}
-        {isSuperUser && !isDeletedView && (
-          <>
-            <ExportButton
-              onClick={() =>
-                report &&
-                currentInvestor &&
-                exportToPdf(report, currentInvestor, payouts)
-              }
-              disabled={!report}
-            />
-            <ExportButton
-              children={"Поделиться"}
-              icon={<ShareIcon />}
-              onClick={handleShareClick}
-              disabled={!report}
-            />
-          </>
-        )}
-      </TitleField>
+      {!embedded && (
+        <TitleField>
+          <CustomTitle>Отчёт для инвесторов</CustomTitle>
+          {isSuperUser && !isDeletedView && (
+            <>
+              <ExportButton
+                onClick={() =>
+                  report &&
+                  currentInvestor &&
+                  exportToPdf(report, currentInvestor, payouts)
+                }
+                disabled={!report}
+              />
+              <ExportButton
+                children={"Поделиться"}
+                icon={<ShareIcon />}
+                onClick={handleShareClick}
+                disabled={!report}
+              />
+            </>
+          )}
+        </TitleField>
+      )}
 
       <ContentContainer>
         {embedded && isDeletedView && (
@@ -1281,12 +1282,42 @@ const InvestorReportPage = ({
                   type="button"
                   onClick={() => setIsViewInvestorModalOpen(true)}
                 >
+                  <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                  </ButtonIcon>
                   Редактировать
                 </EditInvestorButton>
               )}
               <DarkCyanButton onClick={() => setIsPayoutModalOpen(true)}>
+                <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                  <ellipse cx="12" cy="5" rx="8" ry="3" />
+                  <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+                  <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+                </ButtonIcon>
                 Выплатить
               </DarkCyanButton>
+              {isSuperUser && (
+                <ReportActionsMenu>
+                  <ReportMoreButton type="button" aria-label="Другие действия">
+                    <span />
+                    <span />
+                    <span />
+                  </ReportMoreButton>
+                  <ReportActionsDropdown>
+                    <button
+                      type="button"
+                      disabled={!report}
+                      onClick={(event) => {
+                        handleShareClick();
+                        event.currentTarget.closest("details")?.removeAttribute("open");
+                      }}
+                    >
+                      Поделиться
+                    </button>
+                  </ReportActionsDropdown>
+                </ReportActionsMenu>
+              )}
             </InvestorIdentityRow>
           </InvestorProfileHeader>
         )}
@@ -1352,6 +1383,19 @@ const InvestorReportPage = ({
         <OperationsCard>
           <OperationsHeader>
             <ModalInfoTitle>История операций</ModalInfoTitle>
+            {isSuperUser && report && currentInvestor && !isDeletedView && (
+              <HistoryExportButton
+                type="button"
+                onClick={() => exportToPdf(report, currentInvestor, payouts)}
+              >
+                <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M14 3h7v7" />
+                  <path d="m10 14 11-11" />
+                  <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+                </ButtonIcon>
+                Экспорт
+              </HistoryExportButton>
+            )}
           </OperationsHeader>
 
           {isDeletedView ? (
@@ -1615,7 +1659,7 @@ const InvestorReportPage = ({
 };
 
 const TabsContainer = styled.div`
-  margin: 30px 0 20px;
+  margin: 16px 0 12px;
 `;
 
 const ActionButtons = styled.div`
@@ -1751,8 +1795,24 @@ const OperationsHeader = styled.div`
   }
 `;
 
-const ReportToolbarSpacer = styled.div`
-  margin-left: auto;
+const HistoryExportButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #253247;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #007d88;
+    color: #007d88;
+  }
 `;
 
 const DeletedReportHeader = styled.div`
@@ -1765,7 +1825,7 @@ const DeletedReportHeader = styled.div`
 `;
 
 const InvestorProfileHeader = styled.div`
-  padding: 12px 0 20px;
+  padding: 0 0 0;
   border-bottom: 1px solid #e3e9ef;
   color: #64748b;
   font-size: 13px;
@@ -1789,8 +1849,9 @@ const BreadcrumbSeparator = styled.span`
 const InvestorIdentityRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 18px;
+  gap: 12px;
+  margin-top: 12px;
+  padding-bottom: 14px;
 
   @media (max-width: 760px) {
     flex-wrap: wrap;
@@ -1800,12 +1861,12 @@ const InvestorIdentityRow = styled.div`
 const InvestorAvatar = styled.div`
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: #dff5f5;
   color: #007d88;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
 `;
 
@@ -1816,7 +1877,7 @@ const InvestorIdentity = styled.div`
 
 const InvestorName = styled.div`
   color: #172033;
-  font-size: 23px;
+  font-size: 20px;
   font-weight: 700;
 `;
 
@@ -1827,6 +1888,10 @@ const InvestorMeta = styled.div`
 `;
 
 const EditInvestorButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 40px;
   padding: 8px 16px;
   border: 1px solid #cbd5e1;
@@ -1838,6 +1903,89 @@ const EditInvestorButton = styled.button`
 
   &:hover:not(:disabled) { border-color: #007d88; color: #007d88; }
   &:disabled { cursor: not-allowed; opacity: 0.5; }
+`;
+
+const ButtonIcon = styled.svg`
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+`;
+
+const ReportActionsMenu = styled.details`
+  position: relative;
+
+  &[open] > summary {
+    border-color: #007d88;
+    color: #007d88;
+  }
+`;
+
+const ReportMoreButton = styled.summary`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+`;
+
+const ReportActionsDropdown = styled.div`
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid #e3e9ef;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #253247;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  button:hover:not(:disabled) {
+    background: #f0f9fa;
+    color: #007d88;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 `;
 
 const CreationDate = styled.div`
@@ -1873,51 +2021,55 @@ const SelectWrapper = styled.div`
 const ReportDataContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 12px;
   width: 100%;
-  margin-bottom: 32px;
+  margin-bottom: 0;
 `;
 
 const ReportCard = styled.div`
-  background-color: white;
-  border: 1px solid rgba(209, 213, 219, 1);
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  min-height: 74px;
+  padding: 12px 14px;
+  background-color: #fff;
+  border: 1px solid #e3e9ef;
   border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: left;
-  position: relative;
-  padding-bottom: 20px;
 `;
 
 const IconContainer = styled.div`
-  position: absolute;
-  top: 25px;
-  left: 25px;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
 `;
 
 const Icon = styled.img`
-  width: 50px;
-  height: 50px;
+  width: 34px;
+  height: 34px;
 `;
 
 const ReportLabel = styled.span`
-  font-size: 15px;
-  color: black;
-  margin: 7px 0px 0px;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  color: #718096;
+  font-size: 12px;
+  line-height: 1.3;
   text-align: left;
-  width: 100%;
-  padding-left: 25px;
 `;
 
-const ReportValue = styled.span`
+const ReportValue = styled.span<{ $tone?: "warning" }>`
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  margin-top: 3px;
   font-size: 20px;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: ${({ $tone }) => ($tone === "warning" ? "#d97706" : "#111827")};
   text-align: left;
-  margin: 90px 0 0;
-  width: 100%;
-  padding-left: 25px;
 `;
 
 const ShareIcon = () => (
