@@ -1349,9 +1349,12 @@ const InvestorReportPage = ({
           </ReportDataContainer>
         )}
 
-        <ModalInfoTitle>История операций</ModalInfoTitle>
+        <OperationsCard>
+          <OperationsHeader>
+            <ModalInfoTitle>История операций</ModalInfoTitle>
+          </OperationsHeader>
 
-        {isDeletedView ? (
+          {isDeletedView ? (
           <>
             <TabsContainer>
               <Tabs<"payouts" | "contributions">
@@ -1416,7 +1419,7 @@ const InvestorReportPage = ({
               </>
             )}
           </>
-        ) : (
+          ) : (
           <>
             <TabsContainer>
               <Tabs<"payouts" | "credits" | "contributions">
@@ -1507,7 +1510,8 @@ const InvestorReportPage = ({
               </>
             )}
           </>
-        )}
+          )}
+        </OperationsCard>
 
         {/* Модальное окно редактирования инвестиции */}
         {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
@@ -1709,6 +1713,42 @@ const LockToggleButton = styled.button<{ $locked: boolean }>`
 const ContentContainer = styled.div`
   margin-top: 0px;
   padding: 0;
+`;
+
+const OperationsCard = styled.section`
+  position: relative;
+  margin: 20px -25px -25px;
+  padding: 18px 24px 20px;
+  border: 1px solid #e3e9ef;
+  border-radius: 14px;
+  background: #fff;
+
+  &::before {
+    content: "";
+    position: absolute;
+    right: -1px;
+    bottom: 100%;
+    left: -1px;
+    height: 20px;
+    background: rgba(249, 250, 250, 1);
+  }
+
+  ${TabsContainer} {
+    margin: 14px 0 12px;
+  }
+`;
+
+const OperationsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  h1 {
+    color: #172033;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
 `;
 
 const ReportToolbarSpacer = styled.div`
