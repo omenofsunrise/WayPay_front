@@ -1761,7 +1761,7 @@ const ContentContainer = styled.div`
 
 const OperationsCard = styled.section`
   position: relative;
-  margin: 20px -25px -25px;
+  margin: 8px -25px -25px;
   padding: 18px 24px 20px;
   border: 1px solid #e3e9ef;
   border-radius: 14px;
@@ -1773,7 +1773,7 @@ const OperationsCard = styled.section`
     right: -1px;
     bottom: 100%;
     left: -1px;
-    height: 20px;
+    height: 8px;
     background: rgba(249, 250, 250, 1);
   }
 
