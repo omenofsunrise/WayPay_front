@@ -1031,20 +1031,25 @@ const InvestorsPoolPage = ({
       (item) => item.id === Number(rowData[0])
     );
 
-    if (!contribution || contribution.confirmed) return [];
+    if (!contribution) return [];
 
-    return [
+    const actions: TableAction[] = [
       {
         label: "Редактировать",
         action: () => handleEditInvestment(contribution),
         color: "#2563EB",
       },
-      {
+    ];
+
+    if (!contribution.confirmed) {
+      actions.push({
         label: "Удалить",
         action: () => handleContributionAction(contribution.id, "reject"),
         color: "#EF4444",
-      },
-    ];
+      });
+    }
+
+    return actions;
   };
 
   const contributionsTableData = contributionItems.map(
@@ -1053,9 +1058,21 @@ const InvestorsPoolPage = ({
         formatExactDate(new Date(contribution.date)),
         contribution.investorNickname || "-",
         formatMoney(contribution.amount.toString()),
-        contribution.confirmed ? (
-          <ConfirmedBadge>Подтверждено</ConfirmedBadge>
-        ) : (
+        <ContributionStatusBadge $confirmed={contribution.confirmed}>
+          {contribution.confirmed ? (
+            <StatusCheckIcon viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="6" />
+              <path d="m5.2 8 1.8 1.8 3.8-4" />
+            </StatusCheckIcon>
+          ) : (
+            <StatusClockIcon viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="6" />
+              <path d="M8 4.8V8l2.2 1.4" />
+            </StatusClockIcon>
+          )}
+          {contribution.confirmed ? "Подтверждено" : "Ожидает подтверждения"}
+        </ContributionStatusBadge>,
+        contribution.confirmed ? null : (
           <ContributionActionCell>
             <ContributionConfirmButton
               type="button"
@@ -2280,25 +2297,20 @@ const InvestorsPoolPage = ({
             <CustomTable
               columns={[
                 { name: "id", isHidden: true },
-                { name: "Дата и время", isSortable: true, width: "23%" },
-                { name: "Инвестор", align: "left", width: "29%" },
+                { name: "Дата и время", isSortable: true, width: "15%" },
+                { name: "Инвестор", align: "left", width: "26%" },
                 { name: "Сумма", align: "right", width: "18%" },
                 {
-                  name: "Действия",
-                  align: "right",
-                  headerAlign: "right",
-                  width: "25%",
+                  name: "Статус",
+                  align: "left",
+                  width: "22%",
                 },
+                { name: "", align: "center", width: "14%" },
               ]}
               data={contributionsTableData}
               contextMenuActions={contributionActions}
               isLoading={isContributionsLoading}
-              showContextMenuButton={(rowData) => {
-                const contribution = contributionItems.find(
-                  (item) => item.id === Number(rowData[0])
-                );
-                return Boolean(contribution && !contribution.confirmed);
-              }}
+              showContextMenuButton
             />
             <PaginationLayout>
               <CountInfoTitle
@@ -2951,18 +2963,33 @@ const ContributionConfirmButton = styled.button`
   }
 `;
 
-const ConfirmedBadge = styled.span`
+const ContributionStatusBadge = styled.span<{ $confirmed: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   min-height: 28px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #ddf7ef;
-  color: #087f68;
+  background: ${({ $confirmed }) => ($confirmed ? "#ddf7ef" : "#fff1d7")};
+  color: ${({ $confirmed }) => ($confirmed ? "#087f68" : "#c96a00")};
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 `;
+
+const StatusCheckIcon = styled.svg`
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+`;
+
+const StatusClockIcon = styled(StatusCheckIcon)``;
 
 const PoolOperationsCard = styled.section`
   margin-top: 12px;
