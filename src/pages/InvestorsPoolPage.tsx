@@ -810,7 +810,9 @@ const InvestorsPoolPage = ({
       ),
       createDoubleClickCell(
         investor.pieInPool !== null && investor.pieInPool !== undefined
-          ? `${investor.pieInPool}%`
+          ? `${Number(investor.pieInPool).toLocaleString("ru-RU", {
+              maximumFractionDigits: 2,
+            })} %`
           : "-"
       ),
       createDoubleClickCell(
@@ -2189,12 +2191,12 @@ const InvestorsPoolPage = ({
                   { name: "Инвестор", align: "left", width: "21%" },
                   { name: "Телефон", align: "left", width: "14%" },
                   { name: "Инвестиции", align: "left", width: "13%" },
-                  { name: "Доля", align: "left", width: "8%" },
-                  { name: "Текущий доход", align: "right", width: "17%" },
+                  { name: "Доля", align: "left", width: "10%" },
+                  { name: "Текущий доход", align: "left", width: "15%" },
                   {
                     name: "Действия",
                     align: "left",
-                    headerAlign: "right",
+                    headerAlign: "center",
                     width: "22%",
                   },
                 ]}
