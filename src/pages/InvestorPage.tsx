@@ -386,9 +386,14 @@ const InvestorPage = ({
                     {(investor.nickname || investor.fullName || 'И').trim().charAt(0).toUpperCase()}
                 </InvestorListAvatar>
                 <div>
-                    <InvestorListName>
-                        {investor.nickname || investor.fullName || `Инвестор ${investor.id}`}
-                    </InvestorListName>
+                    <InvestorNameRow>
+                        <InvestorListName>
+                            {investor.nickname || investor.fullName || `Инвестор ${investor.id}`}
+                        </InvestorListName>
+                        {investor.id === selectedInvestorId && (
+                            <SelectedInvestorBadge>Выбран</SelectedInvestorBadge>
+                        )}
+                    </InvestorNameRow>
                     {investor.fullName && investor.fullName !== investor.nickname && (
                         <InvestorFullName>{investor.fullName}</InvestorFullName>
                     )}
@@ -995,11 +1000,29 @@ const InvestorPaginationLayout = styled.div`
 `;
 
 const InvestorListName = styled.div`
-    overflow: hidden;
-    color: #172033;
+  overflow: hidden;
+  color: #172033;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const InvestorNameRow = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+`;
+
+const SelectedInvestorBadge = styled.span`
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #dff6f7;
+    color: #007d88;
+    font-size: 11px;
     font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.2;
 `;
 
 const ToolbarSpacer = styled.div`
