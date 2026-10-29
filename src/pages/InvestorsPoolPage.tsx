@@ -39,10 +39,8 @@ import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import Pagination from "../components/ui/fields/CustomPagination";
 import Tabs from "../components/ui/fields/Tabs";
 import useInvestorPool from "../api/hooks/useInvestorPool";
-import EditButton from "../components/ui/Buttons/EditButton";
 import DeleteButton from "../components/ui/Buttons/DeleteButton";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
-import GrayButton from "../components/ui/Buttons/GrayButton";
 import type { InvestorPool, Reinvestment } from "../api/types/investorPool";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import {
@@ -1025,37 +1023,53 @@ const InvestorsPoolPage = ({
     }
   };
 
-  const contributionsTableData =
-    (filteredContributions?.items || contributionsData?.items || []).map(
+  const contributionItems =
+    filteredContributions?.items || contributionsData?.items || [];
+
+  const contributionActions = (rowData: any[]): TableAction[] => {
+    const contribution = contributionItems.find(
+      (item) => item.id === Number(rowData[0])
+    );
+
+    if (!contribution || contribution.confirmed) return [];
+
+    return [
+      {
+        label: "Редактировать",
+        action: () => handleEditInvestment(contribution),
+        color: "#2563EB",
+      },
+      {
+        label: "Удалить",
+        action: () => handleContributionAction(contribution.id, "reject"),
+        color: "#EF4444",
+      },
+    ];
+  };
+
+  const contributionsTableData = contributionItems.map(
       (contribution: InvestorContribution) => [
+        contribution.id.toString(),
         formatExactDate(new Date(contribution.date)),
         contribution.investorNickname || "-",
         formatMoney(contribution.amount.toString()),
         contribution.confirmed ? (
           <ConfirmedBadge>Подтверждено</ConfirmedBadge>
         ) : (
-          <ActionButtons>
-            <DarkCyanButton
+          <ContributionActionCell>
+            <ContributionConfirmButton
+              type="button"
               onClick={() =>
                 handleContributionAction(contribution.id, "confirm")
               }
               disabled={isContributionsLoading}
             >
               Подтвердить
-            </DarkCyanButton>
-            <GrayButton
-              onClick={() =>
-                handleContributionAction(contribution.id, "reject")
-              }
-              disabled={isContributionsLoading}
-            >
-              Удалить
-            </GrayButton>
-            <EditButton onClick={() => handleEditInvestment(contribution)} />
-          </ActionButtons>
+            </ContributionConfirmButton>
+          </ContributionActionCell>
         ),
       ]
-    ) || [];
+    );
 
   const handleCreatePool = async () => {
     if (!newPoolName.trim()) return;
@@ -2265,13 +2279,26 @@ const InvestorsPoolPage = ({
           <>
             <CustomTable
               columns={[
-                { name: "Дата и время", isSortable: true, width: "25%" },
-                { name: "Инвестор", align: "left", width: "30%" },
-                { name: "Сумма", align: "right", width: "20%" },
-                { name: "Действия", align: "center", width: "25%" },
+                { name: "id", isHidden: true },
+                { name: "Дата и время", isSortable: true, width: "23%" },
+                { name: "Инвестор", align: "left", width: "29%" },
+                { name: "Сумма", align: "right", width: "18%" },
+                {
+                  name: "Действия",
+                  align: "right",
+                  headerAlign: "right",
+                  width: "25%",
+                },
               ]}
               data={contributionsTableData}
+              contextMenuActions={contributionActions}
               isLoading={isContributionsLoading}
+              showContextMenuButton={(rowData) => {
+                const contribution = contributionItems.find(
+                  (item) => item.id === Number(rowData[0])
+                );
+                return Boolean(contribution && !contribution.confirmed);
+              }}
             />
             <PaginationLayout>
               <CountInfoTitle
@@ -2892,18 +2919,49 @@ const ReportValue = styled.span<{ $tone?: "warning" }>`
   text-align: left;
 `;
 
-const ActionButtons = styled.div`
+const ContributionActionCell = styled.div`
   display: flex;
-  gap: 8px;
-  justify-content: center;
   align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  margin-right: -6px;
+`;
+
+const ContributionConfirmButton = styled.button`
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #a9bbc9;
+  border-radius: 7px;
+  background: #fff;
+  color: #253247;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: #007d88;
+    color: #007d88;
+    background: #f0f9fa;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
 `;
 
 const ConfirmedBadge = styled.span`
-  padding: 6px 12px;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ddf7ef;
+  color: #087f68;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 `;
 
 const PoolOperationsCard = styled.section`

@@ -60,7 +60,7 @@ interface CreditsTableProps {
   isLoading?: boolean;
   multiSelect?: boolean;
   selectableRows?: number[];
-  showContextMenuButton?: boolean;
+  showContextMenuButton?: boolean | ((rowData: any[]) => boolean);
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({
@@ -574,7 +574,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                       </HeaderCell>
                     )
                 )}
-                {showContextMenuButton && <ActionsHeaderCell aria-hidden="true" />}
+                {Boolean(showContextMenuButton) && <ActionsHeaderCell aria-hidden="true" />}
               </TableRow>
             </TableHeader>
             <TableBody $fixedHeight={fixedHeight}>
@@ -702,7 +702,9 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                             </BodyCell>
                           )
                       )}
-                      {showContextMenuButton && (
+                      {(typeof showContextMenuButton === "function"
+                        ? showContextMenuButton(row)
+                        : showContextMenuButton) && (
                         <ActionsBodyCell onClick={(event) => event.stopPropagation()}>
                           <RowActionsButton
                             type="button"
