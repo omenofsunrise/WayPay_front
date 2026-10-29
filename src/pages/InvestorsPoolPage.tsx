@@ -819,17 +819,20 @@ const InvestorsPoolPage = ({
           : "-"
       ),
       canManageInvestor ? (
-        <PoolInvestmentButton
-          type="button"
-          onClick={() => handleAddInvestment([investor.id.toString()])}
-        >
-          Новая инвестиция
-        </PoolInvestmentButton>
-      ) : null,
-      canManageInvestor ? (
-        <PoolPayoutButton type="button" onClick={() => handlePayoutClick(investor)}>
-          Выплатить
-        </PoolPayoutButton>
+        <PoolInlineActions>
+          <PoolInvestmentButton
+            type="button"
+            onClick={() => handleAddInvestment([investor.id.toString()])}
+          >
+            Новая инвестиция
+          </PoolInvestmentButton>
+          <PoolPayoutButton
+            type="button"
+            onClick={() => handlePayoutClick(investor)}
+          >
+            Выплатить
+          </PoolPayoutButton>
+        </PoolInlineActions>
       ) : null,
     ];
   });
@@ -2183,13 +2186,12 @@ const InvestorsPoolPage = ({
               <CustomTable
                 columns={[
                   { name: "id", isHidden: true },
-                  { name: "Инвестор", align: "left", width: "24%" },
-                  { name: "Телефон", align: "left", width: "17%" },
-                  { name: "Инвестиции", align: "left", width: "14%" },
-                  { name: "Доля", align: "left", width: "9%" },
-                  { name: "Текущий доход", align: "left", width: "12%" },
-                  { name: "Действия", align: "left", width: "12%" },
-                  { name: "", align: "left", width: "7%" },
+                  { name: "Инвестор", align: "left", width: "22%" },
+                  { name: "Телефон", align: "left", width: "15%" },
+                  { name: "Инвестиции", align: "left", width: "13%" },
+                  { name: "Доля", align: "left", width: "8%" },
+                  { name: "Текущий доход", align: "left", width: "13%" },
+                  { name: "Действия", align: "left", width: "24%" },
                 ]}
                 data={investorsTableData}
                 contextMenuActions={investorActions}
@@ -3112,9 +3114,17 @@ const PoolInvestorAvatar = styled.div<{ $tone: number }>`
   font-weight: 700;
 `;
 
+const PoolInlineActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  white-space: nowrap;
+`;
+
 const PoolInvestmentButton = styled.button`
   height: 34px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 1px solid #cbd5e1;
   border-radius: 7px;
   background: #fff;
