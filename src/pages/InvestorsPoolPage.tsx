@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import styled from "styled-components";
 import { RefreshCw } from "lucide-react";
@@ -143,6 +143,8 @@ const InvestorsPoolPage = ({
   const [currentInvestor, setCurrentInvestor] = useState<Investor | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("");
   const [selectedPoolId, setSelectedPoolId] = useState<string>("");
+  const [isPoolSwitcherOpen, setIsPoolSwitcherOpen] = useState(false);
+  const poolSwitcherRef = useRef<HTMLDivElement>(null);
   const [report, setReport] = useState<InvestorReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
@@ -211,6 +213,30 @@ const InvestorsPoolPage = ({
     items: Reinvestment[];
     totalCount: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (!isPoolSwitcherOpen) return;
+
+    const closePoolSwitcher = (event: MouseEvent) => {
+      if (!poolSwitcherRef.current?.contains(event.target as Node)) {
+        setIsPoolSwitcherOpen(false);
+      }
+    };
+
+    const closePoolSwitcherByEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsPoolSwitcherOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closePoolSwitcher);
+    document.addEventListener("keydown", closePoolSwitcherByEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closePoolSwitcher);
+      document.removeEventListener("keydown", closePoolSwitcherByEscape);
+    };
+  }, [isPoolSwitcherOpen]);
 
   useEffect(() => {
     if (selectedPoolId && activeTab === "credits") {
@@ -1897,6 +1923,27 @@ const InvestorsPoolPage = ({
     setIsEditPoolModalOpen(true);
   };
 
+  const handlePoolChange = (poolId: string) => {
+    setIsPoolSwitcherOpen(false);
+
+    if (poolId === selectedPoolId) return;
+
+    setSelectedPoolId(poolId);
+    setSelectedInvestorForFilter(null);
+    setSearchValue("");
+    setParticipantSearch("");
+    setCreditsPage(1);
+    setPayoutsPage(1);
+    setContributionsPage(1);
+    setInvestorsPage(1);
+    setReinvestmentsPage(1);
+    setFilteredCredits(null);
+    setFilteredContributions(null);
+    setFilteredPayouts([]);
+    setFilteredReinvestments(null);
+    setReport(null);
+  };
+
   return (
     <PageLayout>
       {!embedded && (
@@ -1931,23 +1978,45 @@ const InvestorsPoolPage = ({
                   </PoolCreated>
                 </PoolIdentity>
 
-                <PoolSwitcher
-                  value=""
-                  aria-label="Сменить пул"
-                  onChange={(event) => {
-                    setSelectedPoolId(event.target.value);
-                    setSelectedInvestorForFilter(null);
-                    setSearchValue("");
-                  }}
-                >
-                  <option value="" disabled>
+                <PoolSwitcher ref={poolSwitcherRef}>
+                  <PoolSwitcherButton
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={isPoolSwitcherOpen}
+                    onClick={() => setIsPoolSwitcherOpen((isOpen) => !isOpen)}
+                  >
                     Сменить пул
-                  </option>
-                  {pools.map((pool) => (
-                    <option key={pool.id} value={pool.id.toString()}>
-                      {pool.name}
-                    </option>
-                  ))}
+                    <PoolSwitcherChevron
+                      viewBox="0 0 20 20"
+                      aria-hidden="true"
+                      $isOpen={isPoolSwitcherOpen}
+                    >
+                      <path d="m6 8 4 4 4-4" />
+                    </PoolSwitcherChevron>
+                  </PoolSwitcherButton>
+
+                  {isPoolSwitcherOpen && (
+                    <PoolSwitcherMenu role="menu">
+                      {pools.map((pool) => {
+                        const poolId = pool.id.toString();
+                        const isActive = poolId === selectedPoolId;
+
+                        return (
+                          <PoolSwitcherOption
+                            key={pool.id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={isActive}
+                            $isActive={isActive}
+                            onClick={() => handlePoolChange(poolId)}
+                          >
+                            <span>{pool.name}</span>
+                            {isActive && <b aria-hidden="true">✓</b>}
+                          </PoolSwitcherOption>
+                        );
+                      })}
+                    </PoolSwitcherMenu>
+                  )}
                 </PoolSwitcher>
 
                 <PoolHeaderActions>
@@ -2716,17 +2785,91 @@ const PoolCreated = styled.div`
   font-size: 12px;
 `;
 
-const PoolSwitcher = styled.select`
-  height: 38px;
+const PoolSwitcher = styled.div`
+  position: relative;
   min-width: 126px;
   margin-left: 4px;
-  padding: 0 34px 0 13px;
+`;
+
+const PoolSwitcherButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 13px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #fff;
   color: #253247;
   font-size: 13px;
   cursor: pointer;
+
+  &:hover,
+  &[aria-expanded="true"] {
+    border-color: #8bbfc4;
+    background: #f7fbfb;
+  }
+`;
+
+const PoolSwitcherChevron = styled.svg<{ $isOpen: boolean }>`
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(${({ $isOpen }) => ($isOpen ? "180deg" : "0")});
+  transition: transform 0.15s ease;
+`;
+
+const PoolSwitcherMenu = styled.div`
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 210px;
+  max-width: 320px;
+  padding: 6px;
+  border: 1px solid #d7e0e8;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+`;
+
+const PoolSwitcherOption = styled.button<{ $isActive: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: ${({ $isActive }) => ($isActive ? "#e7f7f7" : "transparent")};
+  color: ${({ $isActive }) => ($isActive ? "#007d88" : "#253247")};
+  font-size: 13px;
+  font-weight: ${({ $isActive }) => ($isActive ? 600 : 400)};
+  text-align: left;
+  cursor: pointer;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  b {
+    font-size: 14px;
+  }
+
+  &:hover {
+    background: #f0f9fa;
+    color: #007d88;
+  }
 `;
 
 const PoolHeaderActions = styled.div`
