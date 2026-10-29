@@ -2904,29 +2904,38 @@ const PoolOperationsCard = styled.section`
   }
 
   table thead th {
-    height: 38px;
-    padding: 8px 12px;
+    height: 48px;
+    padding: 10px 16px;
     background: #f8fafb;
     color: #526074;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
   }
 
   table tbody tr {
-    height: 48px;
+    height: 68px;
     box-shadow: none !important;
   }
 
   table tbody td {
-    padding: 6px 12px;
+    padding: 8px 16px;
+    border-right: 0;
     color: #26344c;
-    font-size: 13px;
+    font-size: 15px;
   }
 
   table tbody tr::after {
     left: 0;
     width: 100%;
     background: #e6ebf0;
+  }
+
+  @media (max-width: 1100px) {
+    table thead th,
+    table tbody td {
+      padding-right: 9px;
+      padding-left: 9px;
+    }
   }
 `;
 
