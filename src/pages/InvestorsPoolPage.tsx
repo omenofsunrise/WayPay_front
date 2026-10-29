@@ -2153,22 +2153,28 @@ const InvestorsPoolPage = ({
             {isCreditsLoading ? (
               <div>Загрузка договоров...</div>
             ) : (
-              <CustomTable
-                columns={[
-                  { name: "№" },
-                  { name: "Дата договора" },
-                  { name: "Клиент", align: "left" },
-                  { name: "Телефон", align: "left" },
-                  { name: "Начислено", align: "left" },
-                  { name: "Уплачено", align: "left" },
-                  { name: "Остаток", align: "left" },
-                  { name: "Долг", align: "left" },
-                  { name: "Отложенный доход", align: "left" },
-                ]}
-                data={creditsTableData}
-                isLoading={isCreditsLoading}
-                rowStyles={rowStyles}
-              />
+              <PoolCreditsTable>
+                <CustomTable
+                  columns={[
+                    { name: "№", width: "8%" },
+                    { name: "Дата договора", width: "10%" },
+                    { name: "Клиент", align: "left", width: "12%" },
+                    { name: "Телефон", align: "left", width: "12%" },
+                    { name: "Начислено", align: "left", width: "10%" },
+                    { name: "Уплачено", align: "left", width: "10%" },
+                    { name: "Остаток", align: "left", width: "10%" },
+                    { name: "Долг", align: "left", width: "10%" },
+                    {
+                      name: "Отложенный доход",
+                      align: "left",
+                      width: "18%",
+                    },
+                  ]}
+                  data={creditsTableData}
+                  isLoading={isCreditsLoading}
+                  rowStyles={rowStyles}
+                />
+              </PoolCreditsTable>
             )}
             <PaginationLayout>
               <CountInfoTitle total={data?.totalCount || 0} />
@@ -3024,6 +3030,19 @@ const PoolSearchIcon = styled.svg`
 const PoolInvestorCount = styled.span`
   color: #526074;
   font-size: 13px;
+`;
+
+const PoolCreditsTable = styled.div`
+  width: 100%;
+  min-width: 0;
+
+  table {
+    width: 100%;
+  }
+
+  a[href^="tel:"] {
+    white-space: nowrap;
+  }
 `;
 
 const PoolInvestorTable = styled.div`
