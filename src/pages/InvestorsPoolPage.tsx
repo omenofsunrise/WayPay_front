@@ -3117,8 +3117,11 @@ const PoolInvestorAvatar = styled.div<{ $tone: number }>`
 const PoolInlineActions = styled.div`
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
+  width: 100%;
   min-width: 0;
+  margin-right: -6px;
   white-space: nowrap;
 `;
 
