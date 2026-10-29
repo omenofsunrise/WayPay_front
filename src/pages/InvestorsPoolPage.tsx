@@ -200,6 +200,7 @@ const InvestorsPoolPage = ({
   const [isInvestorCreditsLoading, setIsInvestorCreditsLoading] =
     useState(false);
   const [searchValue, setSearchValue] = useState<string>("");
+  const [participantSearch, setParticipantSearch] = useState("");
   const [reinvestmentsPage, setReinvestmentsPage] = useState(1);
   const [reinvestmentsData, setReinvestmentsData] = useState<{
     items: Reinvestment[];
@@ -750,7 +751,16 @@ const InvestorsPoolPage = ({
     }
   };
 
-  const investorsTableData = investors.map((investor: Investor) => {
+  const visibleInvestors = investors.filter((investor) => {
+    const query = participantSearch.trim().toLowerCase();
+    if (!query) return true;
+
+    return [investor.nickname, investor.fullName, investor.phoneNumber]
+      .filter(Boolean)
+      .some((value) => value!.toLowerCase().includes(query));
+  });
+
+  const investorsTableData = visibleInvestors.map((investor: Investor, index) => {
     const canManageInvestor = !(isPoolV2 && investor.isRemoved);
     const createDoubleClickCell = (content: React.ReactNode) => (
       <DoubleClickCell
@@ -762,7 +772,17 @@ const InvestorsPoolPage = ({
 
     return [
       investor.id.toString(),
-      createDoubleClickCell(investor.fullName ?? "-"),
+      createDoubleClickCell(
+        <PoolInvestorIdentityCell>
+          <PoolInvestorAvatar $tone={index % 5}>
+            {(investor.nickname || investor.fullName || "И")
+              .trim()
+              .charAt(0)
+              .toUpperCase()}
+          </PoolInvestorAvatar>
+          <span>{investor.fullName || investor.nickname || "-"}</span>
+        </PoolInvestorIdentityCell>
+      ),
       createDoubleClickCell(
         investor.phoneNumber ? (
           <PhoneLink
@@ -790,19 +810,18 @@ const InvestorsPoolPage = ({
           ? formatMoney(investor.currentIncome.toString())
           : "-"
       ),
-      canManageInvestor ? <EditButton onClick={() => handleEditInvestor(investor)} /> : null,
-      canManageInvestor ? <DeleteButton onClick={() => handleDeleteInvestor(investor)} /> : null,
       canManageInvestor ? (
-        <DarkCyanButton
+        <PoolInvestmentButton
+          type="button"
           onClick={() => handleAddInvestment([investor.id.toString()])}
         >
           Новая инвестиция
-        </DarkCyanButton>
+        </PoolInvestmentButton>
       ) : null,
       canManageInvestor ? (
-        <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
+        <PoolPayoutButton type="button" onClick={() => handlePayoutClick(investor)}>
           Выплатить
-        </DarkCyanButton>
+        </PoolPayoutButton>
       ) : null,
     ];
   });
@@ -1965,8 +1984,24 @@ const InvestorsPoolPage = ({
           )}
         </PoolTabsContainer>
 
+        <PoolOperationsCard>
+        <PoolOperationsHeader>
+          <h2>Участники и операции</h2>
+          {enableReinvestments && (
+            <ReinvestButton type="button" onClick={handleReinvest}>
+              <ReinvestIcon viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 7v5h-5" />
+                <path d="M4 17v-5h5" />
+                <path d="M6.1 8.4A7 7 0 0 1 18.5 6L20 7" />
+                <path d="M17.9 15.6A7 7 0 0 1 5.5 18L4 17" />
+              </ReinvestIcon>
+              Реинвестировать
+            </ReinvestButton>
+          )}
+        </PoolOperationsHeader>
+
         <TabsHeaderContainer>
-          <TabsContainer style={{ marginBottom: 0, flex: 1 }}>
+          <TabsContainer style={{ margin: 0, flex: 1 }}>
             <Tabs<
               | "payouts"
               | "credits"
@@ -1984,24 +2019,14 @@ const InvestorsPoolPage = ({
                   setSearchValue("");
                 }
               }}
-              addButton={
-                activeTab === "investors" &&
-                pools.length > 0 &&
-                enableReinvestments ? (
-                  <DarkCyanButton
-                    children="Реинвестировать"
-                    onClick={handleReinvest}
-                  />
-                ) : null
-              }
             />
           </TabsContainer>
 
-          <SearchContainer>
-            {(activeTab === "credits" ||
-              activeTab === "contributions" ||
-              activeTab === "payouts" ||
-              activeTab === "reinvestments") && (
+          {(activeTab === "credits" ||
+            activeTab === "contributions" ||
+            activeTab === "payouts" ||
+            activeTab === "reinvestments") && (
+            <SearchContainer>
               <div
                 style={{
                   display: "flex",
@@ -2021,9 +2046,32 @@ const InvestorsPoolPage = ({
                   hasError={false}
                 />
               </div>
-            )}
-          </SearchContainer>
+            </SearchContainer>
+          )}
         </TabsHeaderContainer>
+
+        {activeTab === "investors" && (
+          <PoolInvestorToolbar>
+            <PoolInvestorSearchField>
+              <PoolSearchIcon viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="m16 16 4 4" />
+              </PoolSearchIcon>
+              <input
+                type="text"
+                value={participantSearch}
+                onChange={(event) => setParticipantSearch(event.target.value)}
+                placeholder="Найти инвестора"
+              />
+            </PoolInvestorSearchField>
+            <PoolInvestorCount>
+              {participantSearch
+                ? visibleInvestors.length
+                : investorsData?.totalCount || investors.length}{" "}
+              инвестора
+            </PoolInvestorCount>
+          </PoolInvestorToolbar>
+        )}
 
         {activeTab === "payouts" && (
           <>
@@ -2131,19 +2179,19 @@ const InvestorsPoolPage = ({
             <CustomTable
               columns={[
                 { name: "id", isHidden: true },
-                { name: "ФИО", align: "left" },
-                { name: "Телефон", align: "left" },
-                { name: "Инвестиция", align: "right" },
-                { name: "Доля", align: "right" },
-                { name: "Текущий доход", align: "right" },
-                { name: "", align: "center" },
-                { name: "", align: "center" },
-                { name: "", align: "center" },
+                { name: "Инвестор", align: "left", width: "24%" },
+                { name: "Телефон", align: "left", width: "17%" },
+                { name: "Инвестиции", align: "left", width: "14%" },
+                { name: "Доля", align: "left", width: "9%" },
+                { name: "Текущий доход", align: "left", width: "12%" },
+                { name: "Действия", align: "left", width: "12%" },
+                { name: "", align: "left", width: "7%" },
               ]}
               data={investorsTableData}
               contextMenuActions={investorActions}
               rowStyles={investorsRowStyles}
               isLoading={isLoading}
+              showContextMenuButton
             />
             <PaginationLayout>
               <CountInfoTitle total={investorsData?.totalCount || 0} />
@@ -2212,6 +2260,7 @@ const InvestorsPoolPage = ({
             </PaginationLayout>
           </>
         )}
+        </PoolOperationsCard>
 
         {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
           <BaseModal
@@ -2541,7 +2590,7 @@ const CreditsCount = styled.div`
 `;
 
 const PoolTabsContainer = styled.div`
-  margin-bottom: 24px;
+  margin-bottom: 0;
 `;
 
 const PoolBreadcrumb = styled.div`
@@ -2823,6 +2872,208 @@ const ConfirmedBadge = styled.span`
   font-weight: 500;
 `;
 
+const PoolOperationsCard = styled.section`
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid #e3e9ef;
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+
+  table {
+    table-layout: fixed;
+  }
+
+  table th,
+  table td {
+    border-right: 0;
+  }
+
+  table thead th {
+    height: 38px;
+    padding: 8px 12px;
+    background: #f8fafb;
+    color: #526074;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  table tbody tr {
+    height: 48px;
+    box-shadow: none !important;
+  }
+
+  table tbody td {
+    padding: 6px 12px;
+    color: #26344c;
+    font-size: 13px;
+  }
+
+  table tbody tr::after {
+    left: 0;
+    width: 100%;
+    background: #e6ebf0;
+  }
+`;
+
+const PoolOperationsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 38px;
+
+  h2 {
+    margin: 0;
+    color: #172033;
+    font-size: 18px;
+    font-weight: 700;
+  }
+`;
+
+const ReinvestButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #56aeb6;
+  border-radius: 8px;
+  background: #fff;
+  color: #007d88;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: #f0f9fa;
+  }
+`;
+
+const ReinvestIcon = styled.svg`
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+`;
+
+const PoolInvestorToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+`;
+
+const PoolInvestorSearchField = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(470px, 55%);
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #94a3b8;
+
+  input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #253247;
+    font-size: 13px;
+  }
+
+  input::placeholder {
+    color: #94a3b8;
+  }
+`;
+
+const PoolSearchIcon = styled.svg`
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+`;
+
+const PoolInvestorCount = styled.span`
+  color: #526074;
+  font-size: 13px;
+`;
+
+const poolAvatarTones = [
+  { background: "#ddf5f5", color: "#087d88" },
+  { background: "#e3edff", color: "#365fa3" },
+  { background: "#ececfc", color: "#6847a4" },
+  { background: "#ffe9ed", color: "#b44863" },
+  { background: "#e4f6ee", color: "#2f8b6b" },
+];
+
+const PoolInvestorIdentityCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+
+  span {
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`;
+
+const PoolInvestorAvatar = styled.div<{ $tone: number }>`
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  background: ${({ $tone }) => poolAvatarTones[$tone].background};
+  color: ${({ $tone }) => poolAvatarTones[$tone].color};
+  font-size: 12px;
+  font-weight: 700;
+`;
+
+const PoolInvestmentButton = styled.button`
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #253247;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #007d88;
+    color: #007d88;
+  }
+`;
+
+const PoolPayoutButton = styled.button`
+  padding: 5px 4px;
+  border: 0;
+  background: transparent;
+  color: #007d88;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 const ShareIcon = () => (
   <svg
     width="14"
@@ -2865,7 +3116,7 @@ const TabsHeaderContainer = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin: 30px 0 20px;
+  margin: 8px 0 10px;
   width: 100%;
 `;
 
