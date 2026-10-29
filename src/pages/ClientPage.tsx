@@ -19,6 +19,7 @@ import FloatingContextMenu, {
   PRIMARY_COLOR,
   SUCCESS_COLOR,
 } from "../components/modal/FloatingContextMenu";
+import WayPayButton from "../components/ui/Buttons/WayPayButton";
 
 const PAGE_SIZE = 20;
 
@@ -153,26 +154,7 @@ const PageSubtitle = styled.p`
   line-height: 1.4;
 `;
 
-const AddClientButton = styled.button`
-  display: inline-flex;
-  min-height: 38px;
-  padding: 0 17px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  background: #078891;
-  border: 0;
-  border-radius: 9px;
-  box-shadow: 0 4px 12px rgba(0, 125, 136, 0.18);
-  cursor: pointer;
-
-  &:hover { background: #007d88; }
-  &:focus-visible { outline: 2px solid rgba(0, 125, 136, 0.42); outline-offset: 2px; }
-
+const AddClientButton = styled(WayPayButton)`
   @media (max-width: 640px) { width: 100%; }
 `;
 
@@ -789,8 +771,10 @@ const ClientPage = () => {
               </HeadingRow>
               <PageSubtitle>Управление клиентами и договорами</PageSubtitle>
             </HeadingBlock>
-            <AddClientButton onClick={handleCreateClient} type="button">
-              <Plus size={18} />
+            <AddClientButton
+              icon={<Plus size={18} />}
+              onClick={handleCreateClient}
+            >
               Добавить клиента
             </AddClientButton>
           </PageHeader>

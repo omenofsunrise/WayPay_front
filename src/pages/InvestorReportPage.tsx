@@ -55,6 +55,9 @@ import type { DeletedInvestorInfo } from "../api/types/deletedInvestor";
 import { deleteInvestorPayout } from "../api/services/investorPayoutService";
 import investorContributionService from "../api/services/investorContributionService";
 import ConfirmationStatusBadge from "../components/ui/ConfirmationStatusBadge";
+import WayPayButton from "../components/ui/Buttons/WayPayButton";
+import WayPayIconButton from "../components/ui/Buttons/WayPayIconButton";
+import WayPayMoreMenu from "../components/ui/Buttons/WayPayMoreMenu";
 
 const DELETED_OPTION_VALUE = "deleted";
 
@@ -406,23 +409,22 @@ const InvestorReportPage = ({
         >
           Удалить
         </GrayButton>
-        <LockToggleButton
-          type="button"
+        <WayPayIconButton
+          icon={contribution.confirmed ? <FaLock /> : <FaUnlock />}
+          label={contribution.confirmed ? "Закрыто" : "Закрыть инвестицию"}
+          size="small"
+          active={!contribution.confirmed}
           onClick={() =>
             !contribution.confirmed &&
             handleContributionAction(contribution.id, "confirm")
           }
           disabled={isContributionsLoading || contribution.confirmed}
-          $locked={contribution.confirmed}
           title={
             contribution.confirmed
               ? "Инвестиция закрыта — редактирование запрещено"
               : "Закрыть инвестицию (после этого её нельзя будет редактировать)"
           }
-          aria-label={contribution.confirmed ? "Закрыто" : "Закрыть инвестицию"}
-        >
-          {contribution.confirmed ? <FaLock /> : <FaUnlock />}
-        </LockToggleButton>
+        />
       </ContributionActions>,
     ]) || [];
 
@@ -983,13 +985,14 @@ const InvestorReportPage = ({
     formatMoney(payout.amount.toString()),
     <ConfirmationStatusBadge confirmed={payout.confirmed} />,
     payout.confirmed ? null : (
-        <PayoutConfirmButton
-          type="button"
+        <WayPayButton
+          variant="secondary"
+          size="small"
           onClick={() => handlePayoutAction(payout.id, "confirm")}
           disabled={isContributionsLoading}
         >
           Подтвердить
-        </PayoutConfirmButton>
+        </WayPayButton>
     ),
     payout.id,
   ]);
@@ -1238,16 +1241,16 @@ const InvestorReportPage = ({
       <ContentContainer>
         {embedded && isDeletedView && (
           <DeletedReportHeader>
-            <BreadcrumbButton type="button" onClick={onBack}>Инвесторы</BreadcrumbButton>
+            <WayPayButton variant="ghost" size="small" onClick={onBack}>Инвесторы</WayPayButton>
             <BreadcrumbSeparator>/</BreadcrumbSeparator>
             <strong>Удалённые инвесторы</strong>
           </DeletedReportHeader>
         )}
         {embedded && !isDeletedView && currentInvestor && (
           <InvestorProfileHeader>
-            <BreadcrumbButton type="button" onClick={onBack}>
+            <WayPayButton variant="ghost" size="small" onClick={onBack}>
               Инвесторы
-            </BreadcrumbButton>
+            </WayPayButton>
             <BreadcrumbSeparator>/</BreadcrumbSeparator>
             <span>{currentInvestor.nickname || currentInvestor.fullName}</span>
 
@@ -1270,16 +1273,18 @@ const InvestorReportPage = ({
                 {report && <InvestorMeta>Создан {formatDate(report.createdAt)}</InvestorMeta>}
               </InvestorIdentity>
               {isSuperUser && (
-                <EditInvestorButton
-                  type="button"
+                <WayPayButton
+                  variant="secondary"
+                  icon={
+                    <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                    </ButtonIcon>
+                  }
                   onClick={() => setIsViewInvestorModalOpen(true)}
                 >
-                  <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
-                  </ButtonIcon>
                   Редактировать
-                </EditInvestorButton>
+                </WayPayButton>
               )}
               <DarkCyanButton onClick={() => setIsPayoutModalOpen(true)}>
                 <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
@@ -1290,25 +1295,15 @@ const InvestorReportPage = ({
                 Выплатить
               </DarkCyanButton>
               {isSuperUser && (
-                <ReportActionsMenu>
-                  <ReportMoreButton type="button" aria-label="Другие действия">
-                    <span />
-                    <span />
-                    <span />
-                  </ReportMoreButton>
-                  <ReportActionsDropdown>
-                    <button
-                      type="button"
-                      disabled={!report}
-                      onClick={(event) => {
-                        handleShareClick();
-                        event.currentTarget.closest("details")?.removeAttribute("open");
-                      }}
-                    >
-                      Поделиться
-                    </button>
-                  </ReportActionsDropdown>
-                </ReportActionsMenu>
+                <WayPayMoreMenu
+                  items={[
+                    {
+                      label: "Поделиться",
+                      disabled: !report,
+                      onClick: handleShareClick,
+                    },
+                  ]}
+                />
               )}
             </InvestorIdentityRow>
           </InvestorProfileHeader>
@@ -1331,13 +1326,13 @@ const InvestorReportPage = ({
               />
             </SelectWrapper>
             {isSuperUser && !isDeletedView && (
-              <EditInvestorButton
-                type="button"
+              <WayPayButton
+                variant="secondary"
                 onClick={() => setIsViewInvestorModalOpen(true)}
                 disabled={!selectedInvestorId}
               >
                 Редактировать
-              </EditInvestorButton>
+              </WayPayButton>
             )}
           </SelectWithViewWrapper>
           {!isDeletedView && (
@@ -1376,17 +1371,19 @@ const InvestorReportPage = ({
           <OperationsHeader>
             <ModalInfoTitle>История операций</ModalInfoTitle>
             {isSuperUser && report && currentInvestor && !isDeletedView && (
-              <HistoryExportButton
-                type="button"
+              <WayPayButton
+                variant="secondary"
+                icon={
+                  <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 3h7v7" />
+                    <path d="m10 14 11-11" />
+                    <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+                  </ButtonIcon>
+                }
                 onClick={() => exportToPdf(report, currentInvestor, payouts)}
               >
-                <ButtonIcon viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M14 3h7v7" />
-                  <path d="m10 14 11-11" />
-                  <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
-                </ButtonIcon>
                 Экспорт
-              </HistoryExportButton>
+              </WayPayButton>
             )}
           </OperationsHeader>
 
@@ -1675,67 +1672,6 @@ const ActionButtons = styled.div`
   align-items: center;
 `;
 
-const ConfirmButton = styled.button`
-  background: rgba(37, 203, 161, 1);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover:not(:disabled) {
-    background: rgba(29, 163, 129, 1);
-  }
-
-  &:disabled {
-    background: rgba(37, 203, 161, 0.5);
-    cursor: not-allowed;
-  }
-`;
-
-const RejectButton = styled.button`
-  background: rgba(239, 68, 68, 1);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover:not(:disabled) {
-    background: rgba(220, 38, 38, 1);
-  }
-
-  &:disabled {
-    background: rgba(239, 68, 68, 0.5);
-    cursor: not-allowed;
-  }
-`;
-
-const PayoutConfirmButton = styled.button`
-  min-height: 30px;
-  padding: 5px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 7px;
-  background: #fff;
-  color: #253247;
-  font-size: 12px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    border-color: #007d88;
-    color: #007d88;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-`;
-
 const ContributionActions = styled.div`
   display: inline-flex;
   align-items: center;
@@ -1747,35 +1683,6 @@ const ContributionActions = styled.div`
     min-height: 34px;
     margin: 0;
     font-size: 13px;
-  }
-`;
-
-const LockToggleButton = styled.button<{ $locked: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  padding: 0;
-  border: 1px solid
-    ${({ $locked }) => ($locked ? "#cbd5e1" : "#007d88")};
-  border-radius: 8px;
-  background: ${({ $locked }) => ($locked ? "#f1f5f9" : "#f0f9fa")};
-  color: ${({ $locked }) => ($locked ? "#64748b" : "#007d88")};
-  cursor: ${({ $locked }) => ($locked ? "default" : "pointer")};
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  &:hover:not(:disabled) {
-    background: #e0f3f4;
-  }
-
-  &:disabled {
-    opacity: 1;
   }
 `;
 
@@ -1875,27 +1782,6 @@ const OperationsTableContent = styled.div<{ $compactColumns: boolean }>`
   }
 `;
 
-const HistoryExportButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  height: 36px;
-  margin: 0;
-  padding: 7px 13px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #253247;
-  font-size: 13px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #007d88;
-    color: #007d88;
-  }
-`;
-
 const DeletedReportHeader = styled.div`
   padding: 12px 0 20px;
   border-bottom: 1px solid #e3e9ef;
@@ -1911,17 +1797,6 @@ const InvestorProfileHeader = styled.div`
   color: #64748b;
   font-size: 13px;
   text-align: left;
-`;
-
-const BreadcrumbButton = styled.button`
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #64748b;
-  font: inherit;
-  cursor: pointer;
-
-  &:hover { color: #007d88; }
 `;
 
 const BreadcrumbSeparator = styled.span`
@@ -1972,24 +1847,6 @@ const InvestorMeta = styled.div`
   font-size: 13px;
 `;
 
-const EditInvestorButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 8px 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #253247;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) { border-color: #007d88; color: #007d88; }
-  &:disabled { cursor: not-allowed; opacity: 0.5; }
-`;
-
 const ButtonIcon = styled.svg`
   width: 16px;
   height: 16px;
@@ -1999,78 +1856,6 @@ const ButtonIcon = styled.svg`
   stroke-linecap: round;
   stroke-linejoin: round;
   flex: 0 0 auto;
-`;
-
-const ReportActionsMenu = styled.details`
-  position: relative;
-
-  &[open] > summary {
-    border-color: #007d88;
-    color: #007d88;
-  }
-`;
-
-const ReportMoreButton = styled.summary`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #475569;
-  cursor: pointer;
-  list-style: none;
-
-  &::-webkit-details-marker {
-    display: none;
-  }
-
-  span {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-`;
-
-const ReportActionsDropdown = styled.div`
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 190px;
-  padding: 6px;
-  border: 1px solid #e3e9ef;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
-
-  button {
-    display: block;
-    width: 100%;
-    padding: 9px 10px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: #253247;
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  button:hover:not(:disabled) {
-    background: #f0f9fa;
-    color: #007d88;
-  }
-
-  button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
 `;
 
 const CreationDate = styled.div`

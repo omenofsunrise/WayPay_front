@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import apiClient, { API_BASE_URL } from '../../api/client';
 import { authStorage } from '../../api/utils/auth-storage';
 import BaseModal from './BASE/modalCRUBase';
+import WayPayButton from '../ui/Buttons/WayPayButton';
 
 const PIN_LENGTH = 5;
 
@@ -205,8 +206,10 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
 
             {error && <ErrorText>{error}</ErrorText>}
 
-            <SubmitButton
+            <WayPayButton
               type="submit"
+              size="large"
+              fullWidth
               disabled={
                 isLoading ||
                 pin.length !== PIN_LENGTH ||
@@ -216,32 +219,22 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
               {isLoading
                 ? (mode === 'setup' ? 'Сохранение...' : 'Проверка...')
                 : (mode === 'setup' ? 'Подтвердить' : 'Продолжить')}
-            </SubmitButton>
+            </WayPayButton>
             {onCancel && (
-              <CancelButton type="button" onClick={onCancel} disabled={isLoading}>
+              <WayPayButton
+                variant="ghost"
+                fullWidth
+                onClick={onCancel}
+                disabled={isLoading}
+              >
                 Отмена
-              </CancelButton>
+              </WayPayButton>
             )}
           </PinForm>
         </ModalContent>
     </BaseModal>
   );
 };
-
-const CancelButton = styled.button`
-  margin-top: 8px;
-  width: 100%;
-  padding: 10px;
-  border: none;
-  background: transparent;
-  color: #50555c;
-  font-size: 15px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    text-decoration: underline;
-  }
-`;
 
 const ModalContent = styled.div`
   display: flex;
@@ -303,27 +296,6 @@ const ErrorText = styled.div`
   font-size: 14px;
   margin-bottom: 15px;
   text-align: center;
-`;
-
-const SubmitButton = styled.button`
-  background: linear-gradient(90deg, rgba(0, 125, 136, 1) 0%, rgba(37, 203, 161, 1) 100%);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  
-  &:hover {
-    opacity: 0.9;
-  }
-  
-  &:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
 `;
 
 export default PinCodeModal;

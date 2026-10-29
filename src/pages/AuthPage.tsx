@@ -7,6 +7,7 @@ import CustomPhoneInput from "../components/ui/fields/PhoneInput";
 import AuthCallModal from "../components/modal/AuthCallModal";
 import AuthWhatsAppModal from "../components/modal/AuthWhatsAppModal";
 import PinCodeModal from "../components/modal/PinCodeModal";
+import WayPayButton from "../components/ui/Buttons/WayPayButton";
 
 type AuthWay = "CallCheck" | "WhatsAppCode";
 
@@ -229,7 +230,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             </MethodOption>
           </MethodToggle>
 
-          <SubmitButton type="submit" disabled={isLoading}>
+          <WayPayButton type="submit" size="large" fullWidth disabled={isLoading}>
             {isLoading ? (
               <Loader>
                 <LoaderCircle />
@@ -239,7 +240,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             ) : (
               "Войти"
             )}
-          </SubmitButton>
+          </WayPayButton>
         </AuthForm>
         <InfoText>
           Хотите получить доступ к нашим продуктам?
@@ -410,44 +411,6 @@ const MethodOption = styled.button<{ $active?: boolean }>`
 
   &:hover {
     color: rgba(0, 125, 136, 1);
-  }
-`;
-
-const SubmitButton = styled.button`
-  background: linear-gradient(
-    90deg,
-    rgba(0, 125, 136, 1) 0%,
-    rgba(37, 203, 161, 1) 100%
-  );
-  color: white;
-  border: none;
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 125, 136, 0.3);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    background: linear-gradient(
-      90deg,
-      rgba(0, 125, 136, 0.5) 0%,
-      rgba(37, 203, 161, 0.5) 100%
-    );
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
   }
 `;
 

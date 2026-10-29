@@ -1,6 +1,8 @@
 import React, { type ReactNode, useEffect, useRef, useState } from "react";
 import styled, { css } from "styled-components";
 import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
+import WayPayButton from "../../ui/Buttons/WayPayButton";
+import WayPayIconButton from "../../ui/Buttons/WayPayIconButton";
 
 export type ModalMode =
   | "create"
@@ -161,12 +163,12 @@ const BaseModal: React.FC<ModalProps> = ({
         {!hideCloseButton && (
           <CloseButton
             $appearance={appearance}
-            aria-label="Закрыть"
+            icon={<CloseIcon aria-hidden="true" />}
+            label="Закрыть"
+            variant="ghost"
+            size="small"
             onClick={onClose}
-            type="button"
-          >
-            <CloseIcon aria-hidden="true" />
-          </CloseButton>
+          />
         )}
         <ModalHeader $appearance={appearance}>
           <div>
@@ -183,9 +185,14 @@ const BaseModal: React.FC<ModalProps> = ({
           {(!hideCanselButton || (!isViewMode && !hideSaveButton)) && (
             <ModalFooter $appearance={appearance}>
               {!hideCanselButton && (
-                <CancelButton $appearance={appearance} onClick={handleCancel}>
+                <WayPayButton
+                  variant="secondary"
+                  size="large"
+                  style={{ width: "116px" }}
+                  onClick={handleCancel}
+                >
                   {cancelButtonText}
-                </CancelButton>
+                </WayPayButton>
               )}
               {!isViewMode && !hideSaveButton && (
                 <DarkCyanButton
@@ -319,25 +326,14 @@ const ModalSubtitle = styled.p`
   text-align: left;
 `;
 
-const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
+const CloseButton = styled(WayPayIconButton)<{ $appearance: "default" | "compact-form" }>`
   position: absolute;
   top: 20px;
   right: 24px;
   width: 32px;
   height: 32px;
-  padding: 0;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
   color: #6b7280;
   z-index: 10;
-  opacity: 1;
-  transition: background-color 0.15s, color 0.15s;
 
   ${({ $appearance }) => $appearance === "compact-form" && css`
     top: 20px;
@@ -349,9 +345,6 @@ const CloseButton = styled.button<{ $appearance: "default" | "compact-form" }>`
     color: #111827;
   }
 
-  &:active {
-    background-color: #e5e7eb;
-  }
 `;
 
 const CloseIcon = styled.span`
@@ -435,35 +428,5 @@ const ModalFooter = styled.div<{ $appearance: "default" | "compact-form" }>`
     margin: 0;
     padding: 16px 34px 20px;
     border-top: 1px solid #e3e9ef;
-  `}
-`;
-
-const CancelButton = styled.button<{ $appearance: "default" | "compact-form" }>`
-  min-height: 40px;
-  padding: 8px 18px;
-  background: #fff;
-  border: 1px solid #aeb9c6;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  width: 116px;
-  color: black;
-
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    width: 116px;
-    min-height: 40px;
-    padding: 8px 18px;
-    background: #fff;
-    border: 1px solid #aeb9c6;
-    border-radius: 8px;
-    font-size: 14px;
-  `}
-
-  &:hover {
-    background: #f5f7f9;
-  }
-
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    &:hover { background: #f5f7f9; }
   `}
 `;

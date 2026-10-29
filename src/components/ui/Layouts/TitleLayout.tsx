@@ -9,6 +9,7 @@ const TitleField = styled.div`
     font-weight: 600;
     margin-top: 0px;
     align-items: center;
+    gap: 10px;
 `;
 
-export default TitleField; 
+export default TitleField;

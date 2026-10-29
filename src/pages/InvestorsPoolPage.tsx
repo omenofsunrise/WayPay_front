@@ -57,6 +57,8 @@ import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { useAuth } from "../сontext/AuthContext";
 import InvestorCashPositionModal from "../components/modal/InvestorCashPositionModal";
 import ConfirmationStatusBadge from "../components/ui/ConfirmationStatusBadge";
+import WayPayButton from "../components/ui/Buttons/WayPayButton";
+import WayPayMoreMenu from "../components/ui/Buttons/WayPayMoreMenu";
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
@@ -1090,15 +1092,16 @@ const InvestorsPoolPage = ({
         ) : null,
         contribution.confirmed ? null : (
           <ContributionActionCell>
-            <ContributionConfirmButton
-              type="button"
+            <WayPayButton
+              variant="secondary"
+              size="small"
               onClick={() =>
                 handleContributionAction(contribution.id, "confirm")
               }
               disabled={isContributionsLoading}
             >
               Подтвердить
-            </ContributionConfirmButton>
+            </WayPayButton>
           </ContributionActionCell>
         ),
       ]
@@ -1980,7 +1983,7 @@ const InvestorsPoolPage = ({
 
                 <PoolSwitcher ref={poolSwitcherRef}>
                   <PoolSwitcherButton
-                    type="button"
+                    variant="secondary"
                     aria-haspopup="menu"
                     aria-expanded={isPoolSwitcherOpen}
                     onClick={() => setIsPoolSwitcherOpen((isOpen) => !isOpen)}
@@ -2020,49 +2023,50 @@ const InvestorsPoolPage = ({
                 </PoolSwitcher>
 
                 <PoolHeaderActions>
-                  <PoolSecondaryButton type="button" onClick={openEditPoolModal}>
-                    <PoolButtonIcon viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
-                    </PoolButtonIcon>
+                  <WayPayButton
+                    variant="secondary"
+                    icon={
+                      <PoolButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                      </PoolButtonIcon>
+                    }
+                    onClick={openEditPoolModal}
+                  >
                     Редактировать
-                  </PoolSecondaryButton>
-                  <PoolPrimaryButton type="button" onClick={handleAddInvestor}>
-                    <span aria-hidden="true">+</span>
+                  </WayPayButton>
+                  <WayPayButton
+                    icon={
+                      <PoolButtonIcon viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" />
+                      </PoolButtonIcon>
+                    }
+                    onClick={handleAddInvestor}
+                  >
                     Добавить инвестора
-                  </PoolPrimaryButton>
-                  <PoolMoreMenu>
-                    <PoolMoreButton aria-label="Другие действия">
-                      <span />
-                      <span />
-                      <span />
-                    </PoolMoreButton>
-                    <PoolMoreDropdown>
-                      <button
-                        type="button"
-                        onClick={() => setIsCreatePoolModalOpen(true)}
-                      >
-                        Создать пул
-                      </button>
-                      <button type="button" onClick={exportPoolToPdf}>
-                        Экспортировать отчёт
-                      </button>
-                      <button type="button" onClick={handleShareClick}>
-                        Поделиться
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        onClick={() => {
+                  </WayPayButton>
+                  <WayPayMoreMenu
+                    items={[
+                      {
+                        label: "Создать пул",
+                        onClick: () => setIsCreatePoolModalOpen(true),
+                      },
+                      {
+                        label: "Экспортировать отчёт",
+                        onClick: exportPoolToPdf,
+                      },
+                      { label: "Поделиться", onClick: handleShareClick },
+                      {
+                        label: "Удалить пул",
+                        tone: "danger",
+                        onClick: () => {
                           if (window.confirm(`Удалить пул "${currentPool.name}"?`)) {
                             handleDeletePool();
                           }
-                        }}
-                      >
-                        Удалить пул
-                      </button>
-                    </PoolMoreDropdown>
-                  </PoolMoreMenu>
+                        },
+                      },
+                    ]}
+                  />
                 </PoolHeaderActions>
               </PoolIdentityRow>
             </>
@@ -2091,10 +2095,13 @@ const InvestorsPoolPage = ({
         <PoolOperationsHeader>
           <h2>Участники и операции</h2>
           {enableReinvestments && (
-            <ReinvestButton type="button" onClick={handleReinvest}>
-              <RefreshCw size={17} strokeWidth={1.8} aria-hidden="true" />
+            <WayPayButton
+              variant="secondary"
+              icon={<RefreshCw size={17} strokeWidth={1.8} aria-hidden="true" />}
+              onClick={handleReinvest}
+            >
               Реинвестировать
-            </ReinvestButton>
+            </WayPayButton>
           )}
         </PoolOperationsHeader>
 
@@ -2791,7 +2798,7 @@ const PoolSwitcher = styled.div`
   margin-left: 4px;
 `;
 
-const PoolSwitcherButton = styled.button`
+const PoolSwitcherButton = styled(WayPayButton)`
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -2890,117 +2897,6 @@ const PoolButtonIcon = styled.svg`
   stroke-linejoin: round;
 `;
 
-const PoolSecondaryButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #253247;
-  font-size: 13px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #007d88;
-    color: #007d88;
-  }
-`;
-
-const PoolPrimaryButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 8px;
-  background: #007d88;
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-
-  span {
-    font-size: 22px;
-    font-weight: 300;
-    line-height: 1;
-  }
-
-  &:hover {
-    background: #0096a3;
-  }
-`;
-
-const PoolMoreMenu = styled.details`
-  position: relative;
-`;
-
-const PoolMoreButton = styled.summary`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #475569;
-  cursor: pointer;
-  list-style: none;
-
-  &::-webkit-details-marker {
-    display: none;
-  }
-
-  span {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-`;
-
-const PoolMoreDropdown = styled.div`
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 190px;
-  padding: 6px;
-  border: 1px solid #e3e9ef;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
-
-  button {
-    display: block;
-    width: 100%;
-    padding: 9px 10px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: #253247;
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  button:hover {
-    background: #f0f9fa;
-    color: #007d88;
-  }
-
-  button.danger {
-    color: #dc2626;
-  }
-`;
-
 const TabsContainer = styled.div`
   margin: 16px 0 12px;
 `;
@@ -3072,30 +2968,6 @@ const ContributionActionCell = styled.div`
   margin-right: -6px;
 `;
 
-const ContributionConfirmButton = styled.button`
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid #a9bbc9;
-  border-radius: 7px;
-  background: #fff;
-  color: #253247;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    border-color: #007d88;
-    color: #007d88;
-    background: #f0f9fa;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-  }
-`;
-
 const PoolOperationsCard = styled.section`
   margin-top: 12px;
   padding: 16px;
@@ -3161,29 +3033,6 @@ const PoolOperationsHeader = styled.div`
     color: #172033;
     font-size: 18px;
     font-weight: 700;
-  }
-`;
-
-const ReinvestButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  height: 36px;
-  padding: 0 14px;
-  border: 1px solid #56aeb6;
-  border-radius: 8px;
-  background: #fff;
-  color: #007d88;
-  font-size: 13px;
-  cursor: pointer;
-
-  &:hover {
-    background: #f0f9fa;
-  }
-
-  svg {
-    flex: 0 0 auto;
   }
 `;
 
