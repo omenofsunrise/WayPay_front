@@ -177,7 +177,7 @@ const InvestorPage = ({
         const params: InvestorParams = {
             page: currentPage,
             pageSize: itemsPerPage,
-            name: nameFilter || undefined
+            search: nameFilter.trim() || undefined
         };
 
         if (sortConfig.key !== null) {
@@ -223,7 +223,7 @@ const InvestorPage = ({
                     const params: InvestorParams = {
                         page,
                         pageSize,
-                        name: nameFilter || undefined,
+                        search: nameFilter.trim() || undefined,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
@@ -334,13 +334,6 @@ const InvestorPage = ({
         }
     };
 
-    const handleRowDoubleClick = (rowData: any[]) => {
-        const investor = investorsData?.items.find(i => i.id === Number(rowData[0]));
-        if (investor) {
-            onOpenReport?.(investor.id);
-        }
-    };
-
     const handlePrintContract = async (option: string, investor: Investor) => {
         try {
             if (option === 'investorContract') {
@@ -367,12 +360,13 @@ const InvestorPage = ({
     const handleRowClick = (rowData: any[], rowIndex: number) => {
         const [id] = rowData;
         const investorId = Number(id);
-        setSelectedInvestorId(investorId === selectedInvestorId ? null : investorId);
+        setSelectedInvestorId(investorId);
         
         // Устанавливаем инвестора для печати при клике на строке
         const investor = investorsData?.items.find(i => i.id === investorId);
         if (investor) {
             setInvestorForPrint(investor);
+            onOpenReport?.(investor.id);
         }
     };
 
@@ -398,6 +392,8 @@ const InvestorPage = ({
                             $selected={investor.id === selectedInvestorId}
                             onClick={(event) => {
                                 event.stopPropagation();
+                                setSelectedInvestorId(investor.id);
+                                setInvestorForPrint(investor);
                                 onOpenReport(investor.id);
                             }}
                         >
@@ -716,7 +712,6 @@ const InvestorPage = ({
                         columns={columns} 
                         data={tableData}
                         rowStyles={rowStyles}
-                        onRowDoubleClick={handleRowDoubleClick}
                         onRowClick={handleRowClick}
                         selectedRow={selectedRowIndex >= 0 ? selectedRowIndex : null}
                         contextMenuActions={(rowData) => tableActions(rowData)}

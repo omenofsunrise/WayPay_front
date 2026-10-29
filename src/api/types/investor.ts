@@ -18,7 +18,7 @@ export interface Investor {
 }
 
 export interface InvestorParams extends PaginationParams {
-  name?: string;
+  search?: string;
   poolId?: number;
   sortBy?: string;
   sortDirection?: "asc" | "desc";

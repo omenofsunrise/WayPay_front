@@ -110,7 +110,7 @@ const InvestorSelect = ({
       try {
         const params: InvestorParams = {
           pageSize: 20,
-          name: value
+          search: value.trim() || undefined
         };
 
         if (poolId) {
