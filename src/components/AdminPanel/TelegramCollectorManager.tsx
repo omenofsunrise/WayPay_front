@@ -4,7 +4,14 @@ import telegramCollectorService from "../../api/services/telegramCollectorServic
 import type { CollectorStatus } from "../../api/types/telegramCollector";
 import AccountsPanel from "./TelegramCollector/AccountsPanel";
 import CandidatesPanel from "./TelegramCollector/CandidatesPanel";
-import { Badge, ErrorMessage, getErrorMessage, Muted } from "./TelegramCollector/ui";
+import {
+  Badge,
+  ErrorMessage,
+  getErrorMessage,
+  Muted,
+  SecondaryButton,
+  SuccessMessage,
+} from "./TelegramCollector/ui";
 
 type View = "candidates" | "accounts";
 
@@ -16,6 +23,8 @@ const TelegramCollectorManager = () => {
   const [view, setView] = useState<View>("candidates");
   const [status, setStatus] = useState<CollectorStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -34,9 +43,24 @@ const TelegramCollectorManager = () => {
 
   const pending = status?.candidates.Pending ?? 0;
 
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    setError(null);
+    setNotice(null);
+    try {
+      setNotice(await telegramCollectorService.retryFailed());
+      await loadStatus();
+    } catch (retryError) {
+      setError(getErrorMessage(retryError));
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   return (
     <Container>
       {error && <ErrorMessage>{error}</ErrorMessage>}
+      {notice && <SuccessMessage>{notice}</SuccessMessage>}
 
       {status && (
         <StatusBar>
@@ -51,6 +75,14 @@ const TelegramCollectorManager = () => {
           </Badge>
           {!status.blacklistCreatorConfigured && (
             <Badge $tone="amber">Не задан системный аккаунт ЧС+ — добавлять не от кого</Badge>
+          )}
+          {status.enabled && !status.alertsConfigured && (
+            <Badge $tone="amber">Алерты в Telegram не настроены</Badge>
+          )}
+          {status.failedPending > 0 && (
+            <SecondaryButton disabled={isRetrying} onClick={handleRetry}>
+              {isRetrying ? "Отправка…" : `Повторить разбор (${status.failedPending})`}
+            </SecondaryButton>
           )}
           <Muted>
             За сутки разобрано: {status.processedLastDay}

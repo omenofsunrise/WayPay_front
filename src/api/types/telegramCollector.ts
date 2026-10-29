@@ -26,6 +26,9 @@ export interface CollectorStatus {
   queueLength: number;
   processedLastDay: number;
   failedLastDay: number;
+  /** Сколько сообщений нейросеть не разобрала — ждут повтора. */
+  failedPending: number;
+  alertsConfigured: boolean;
   candidates: Record<CandidateStatus, number>;
 }
 

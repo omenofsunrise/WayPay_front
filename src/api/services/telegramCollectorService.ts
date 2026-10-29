@@ -19,6 +19,12 @@ class TelegramCollectorService {
     return data;
   }
 
+  /** Снова разобрать сообщения, на которых нейросеть ответила ошибкой. */
+  async retryFailed(): Promise<string> {
+    const { data } = await apiClient.post<{ message: string }>(`${BASE}/retry-failed`);
+    return data.message;
+  }
+
   async getAccounts(): Promise<CollectorAccount[]> {
     const { data } = await apiClient.get<CollectorAccount[]>(`${BASE}/accounts`);
     return data;
