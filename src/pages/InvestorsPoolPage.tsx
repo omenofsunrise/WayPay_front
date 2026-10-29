@@ -2968,20 +2968,21 @@ const ContributionStatusBadge = styled.span<{ $confirmed: boolean }>`
   align-items: center;
   justify-content: center;
   gap: 5px;
-  min-height: 28px;
-  padding: 4px 10px;
+  height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
   background: ${({ $confirmed }) => ($confirmed ? "#ddf7ef" : "#fff1d7")};
-  color: ${({ $confirmed }) => ($confirmed ? "#087f68" : "#c96a00")};
+  color: ${({ $confirmed }) => ($confirmed ? "#087f68" : "#cf6b00")};
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 1;
   white-space: nowrap;
 `;
 
 const StatusCheckIcon = styled.svg`
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.4;
