@@ -2186,11 +2186,11 @@ const InvestorsPoolPage = ({
               <CustomTable
                 columns={[
                   { name: "id", isHidden: true },
-                  { name: "Инвестор", align: "left", width: "22%" },
-                  { name: "Телефон", align: "left", width: "15%" },
+                  { name: "Инвестор", align: "left", width: "21%" },
+                  { name: "Телефон", align: "left", width: "14%" },
                   { name: "Инвестиции", align: "left", width: "13%" },
                   { name: "Доля", align: "left", width: "8%" },
-                  { name: "Текущий доход", align: "left", width: "15%" },
+                  { name: "Текущий доход", align: "left", width: "17%" },
                   {
                     name: "Действия",
                     align: "left",
@@ -3032,6 +3032,7 @@ const PoolInvestorTable = styled.div`
     color: #526074;
     font-size: 15px;
     font-weight: 600;
+    white-space: nowrap;
   }
 
   table tbody tr {
