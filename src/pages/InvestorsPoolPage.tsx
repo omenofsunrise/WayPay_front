@@ -2190,7 +2190,7 @@ const InvestorsPoolPage = ({
                   { name: "Телефон", align: "left", width: "14%" },
                   { name: "Инвестиции", align: "left", width: "13%" },
                   { name: "Доля", align: "left", width: "8%" },
-                  { name: "Текущий доход", align: "left", width: "17%" },
+                  { name: "Текущий доход", align: "right", width: "17%" },
                   {
                     name: "Действия",
                     align: "left",
