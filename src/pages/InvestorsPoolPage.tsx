@@ -2191,7 +2191,12 @@ const InvestorsPoolPage = ({
                   { name: "Инвестиции", align: "left", width: "13%" },
                   { name: "Доля", align: "left", width: "8%" },
                   { name: "Текущий доход", align: "left", width: "15%" },
-                  { name: "Действия", align: "left", width: "22%" },
+                  {
+                    name: "Действия",
+                    align: "left",
+                    headerAlign: "right",
+                    width: "22%",
+                  },
                 ]}
                 data={investorsTableData}
                 contextMenuActions={investorActions}
