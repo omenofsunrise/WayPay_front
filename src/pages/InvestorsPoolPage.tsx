@@ -2085,11 +2085,16 @@ const InvestorsPoolPage = ({
           <>
             <CustomTable
               columns={[
-                { name: "Дата выплаты", isSortable: true },
-                { name: "Выплатил", align: "left" },
-                { name: "Инвестор", align: "left" },
-                { name: "Выплата, руб", isSortable: true, align: "left" },
-                { name: "", align: "center" },
+                { name: "Дата выплаты", isSortable: true, width: "15%" },
+                { name: "Выплатил", align: "left", width: "25%" },
+                { name: "Инвестор", align: "left", width: "25%" },
+                {
+                  name: "Выплата, руб",
+                  isSortable: true,
+                  align: "left",
+                  width: "25%",
+                },
+                { name: "", align: "center", width: "10%" },
               ]}
               data={filteredPayouts.map((payout: InvestorPayout) => [
                 formatDate(payout.payoutDate),
@@ -2118,10 +2123,19 @@ const InvestorsPoolPage = ({
           <>
             <CustomTable
               columns={[
-                { name: "ID", isSortable: true },
-                { name: "Дата и время реинвестиции", isSortable: true },
-                { name: "Инвестор", align: "left" },
-                { name: "Сумма", align: "right", isSortable: true },
+                { name: "ID", isSortable: true, width: "10%" },
+                {
+                  name: "Дата и время реинвестиции",
+                  isSortable: true,
+                  width: "30%",
+                },
+                { name: "Инвестор", align: "left", width: "35%" },
+                {
+                  name: "Сумма",
+                  align: "right",
+                  isSortable: true,
+                  width: "25%",
+                },
               ]}
               data={getReinvestmentTableData()}
               isLoading={isReinvestmentsLoading}
@@ -2251,10 +2265,10 @@ const InvestorsPoolPage = ({
           <>
             <CustomTable
               columns={[
-                { name: "Дата и время", isSortable: true },
-                { name: "Инвестор", align: "left" },
-                { name: "Сумма", align: "right" },
-                { name: "Действия", align: "center" },
+                { name: "Дата и время", isSortable: true, width: "25%" },
+                { name: "Инвестор", align: "left", width: "30%" },
+                { name: "Сумма", align: "right", width: "20%" },
+                { name: "Действия", align: "center", width: "25%" },
               ]}
               data={contributionsTableData}
               isLoading={isContributionsLoading}
