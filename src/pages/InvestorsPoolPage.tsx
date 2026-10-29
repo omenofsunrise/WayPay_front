@@ -56,6 +56,7 @@ import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { useAuth } from "../сontext/AuthContext";
 import InvestorCashPositionModal from "../components/modal/InvestorCashPositionModal";
+import ConfirmationStatusBadge from "../components/ui/ConfirmationStatusBadge";
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
@@ -1058,20 +1059,9 @@ const InvestorsPoolPage = ({
         formatExactDate(new Date(contribution.date)),
         contribution.investorNickname || "-",
         formatMoney(contribution.amount.toString()),
-        <ContributionStatusBadge $confirmed={contribution.confirmed}>
-          {contribution.confirmed ? (
-            <StatusCheckIcon viewBox="0 0 16 16" aria-hidden="true">
-              <circle cx="8" cy="8" r="6" />
-              <path d="m5.2 8 1.8 1.8 3.8-4" />
-            </StatusCheckIcon>
-          ) : (
-            <StatusClockIcon viewBox="0 0 16 16" aria-hidden="true">
-              <circle cx="8" cy="8" r="6" />
-              <path d="M8 4.8V8l2.2 1.4" />
-            </StatusClockIcon>
-          )}
-          {contribution.confirmed ? "Подтверждено" : "Ожидает подтверждения"}
-        </ContributionStatusBadge>,
+        contribution.confirmed ? (
+          <ConfirmationStatusBadge confirmed />
+        ) : null,
         contribution.confirmed ? null : (
           <ContributionActionCell>
             <ContributionConfirmButton
@@ -2962,35 +2952,6 @@ const ContributionConfirmButton = styled.button`
     opacity: 0.55;
   }
 `;
-
-const ContributionStatusBadge = styled.span<{ $confirmed: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: ${({ $confirmed }) => ($confirmed ? "#ddf7ef" : "#fff1d7")};
-  color: ${({ $confirmed }) => ($confirmed ? "#087f68" : "#cf6b00")};
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-`;
-
-const StatusCheckIcon = styled.svg`
-  width: 13px;
-  height: 13px;
-  flex: 0 0 13px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-`;
-
-const StatusClockIcon = styled(StatusCheckIcon)``;
 
 const PoolOperationsCard = styled.section`
   margin-top: 12px;

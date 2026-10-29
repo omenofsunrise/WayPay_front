@@ -54,6 +54,7 @@ import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import type { DeletedInvestorInfo } from "../api/types/deletedInvestor";
 import { deleteInvestorPayout } from "../api/services/investorPayoutService";
 import investorContributionService from "../api/services/investorContributionService";
+import ConfirmationStatusBadge from "../components/ui/ConfirmationStatusBadge";
 
 const DELETED_OPTION_VALUE = "deleted";
 
@@ -980,17 +981,7 @@ const InvestorReportPage = ({
     formatDate(payout.payoutDate),
     payout.employeeFullName,
     formatMoney(payout.amount.toString()),
-    <PayoutStatusBadge $confirmed={payout.confirmed}>
-      <PayoutStatusIcon viewBox="0 0 14 14" aria-hidden="true">
-        <circle cx="7" cy="7" r="5.5" />
-        {payout.confirmed ? (
-          <path d="m4.5 7.1 1.6 1.6 3.5-3.6" />
-        ) : (
-          <path d="M7 3.8v3.4l2.2 1.3" />
-        )}
-      </PayoutStatusIcon>
-      {payout.confirmed ? "Подтверждено" : "Ожидает подтверждения"}
-    </PayoutStatusBadge>,
+    <ConfirmationStatusBadge confirmed={payout.confirmed} />,
     payout.confirmed ? null : (
         <PayoutConfirmButton
           type="button"
@@ -1722,32 +1713,6 @@ const RejectButton = styled.button`
     background: rgba(239, 68, 68, 0.5);
     cursor: not-allowed;
   }
-`;
-
-const PayoutStatusBadge = styled.span<{ $confirmed: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: ${({ $confirmed }) => ($confirmed ? "#dcf7f0" : "#fff3df")};
-  color: ${({ $confirmed }) => ($confirmed ? "#087f6a" : "#b96700")};
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-`;
-
-const PayoutStatusIcon = styled.svg`
-  display: block;
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.35;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 `;
 
 const PayoutConfirmButton = styled.button`
