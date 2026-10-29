@@ -386,21 +386,9 @@ const InvestorPage = ({
                     {(investor.nickname || investor.fullName || 'И').trim().charAt(0).toUpperCase()}
                 </InvestorListAvatar>
                 <div>
-                    {onOpenReport ? (
-                        <InvestorReportLink
-                            type="button"
-                            $selected={investor.id === selectedInvestorId}
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                setSelectedInvestorId(investor.id);
-                                setInvestorForPrint(investor);
-                                onOpenReport(investor.id);
-                            }}
-                        >
-                            {investor.nickname || investor.fullName || `Инвестор ${investor.id}`}
-                            {investor.id === selectedInvestorId && <span aria-hidden="true">›</span>}
-                        </InvestorReportLink>
-                    ) : investor.nickname || ''}
+                    <InvestorListName>
+                        {investor.nickname || investor.fullName || `Инвестор ${investor.id}`}
+                    </InvestorListName>
                     {investor.fullName && investor.fullName !== investor.nickname && (
                         <InvestorFullName>{investor.fullName}</InvestorFullName>
                     )}
@@ -1006,27 +994,12 @@ const InvestorPaginationLayout = styled.div`
 
 `;
 
-const InvestorReportLink = styled.button<{ $selected: boolean }>`
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: ${({ $selected }) => ($selected ? '#007d88' : '#172033')};
-    font: inherit;
+const InvestorListName = styled.div`
+    overflow: hidden;
+    color: #172033;
     font-weight: 600;
-    cursor: pointer;
-
-    span {
-        color: #007d88;
-        font-size: 20px;
-        line-height: 1;
-    }
-
-    &:hover {
-        color: #007d88;
-    }
+    text-overflow: ellipsis;
+    white-space: nowrap;
 `;
 
 const ToolbarSpacer = styled.div`
