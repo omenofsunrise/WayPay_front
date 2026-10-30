@@ -372,7 +372,7 @@ const InvestorPage = ({
 
     const selectedRowIndex = investorsData?.items?.findIndex(i => i.id === selectedInvestorId) ?? -1;
 
-    const tableData = investorsData?.items?.map((investor, investorIndex) => {
+    const tableData = investorsData?.items?.map((investor) => {
         if (!investor || investor.id === undefined || investor.id === null) {
             return canEdit
                 ? ['', '', '', '', formatMoney('0'), formatMoney('0'), 'false']
@@ -382,9 +382,6 @@ const InvestorPage = ({
         return [
             investor.id.toString(),
             <InvestorIdentityCell>
-                <InvestorListAvatar $tone={investorIndex % 5}>
-                    {(investor.nickname || investor.fullName || 'И').trim().charAt(0).toUpperCase()}
-                </InvestorListAvatar>
                 <div>
                     <InvestorNameRow>
                         <InvestorListName>
@@ -1034,27 +1031,6 @@ const InvestorIdentityCell = styled.div`
     align-items: center;
     gap: 16px;
     min-width: 0;
-`;
-
-const avatarTones = [
-    { background: '#ddf5f5', color: '#087d88' },
-    { background: '#ececfc', color: '#4a60a2' },
-    { background: '#e4f6ee', color: '#2f8b6b' },
-    { background: '#fff0e3', color: '#8f5734' },
-    { background: '#e3edff', color: '#365fa3' },
-];
-
-const InvestorListAvatar = styled.div<{ $tone: number }>`
-    display: grid;
-    place-items: center;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
-    border-radius: 50%;
-    background: ${({ $tone }) => avatarTones[$tone]?.background || avatarTones[0].background};
-    color: ${({ $tone }) => avatarTones[$tone]?.color || avatarTones[0].color};
-    font-size: 15px;
-    font-weight: 700;
 `;
 
 const InvestorFullName = styled.div`
