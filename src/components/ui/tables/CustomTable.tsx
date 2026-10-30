@@ -61,6 +61,7 @@ interface CreditsTableProps {
   multiSelect?: boolean;
   selectableRows?: number[];
   showContextMenuButton?: boolean | ((rowData: any[]) => boolean);
+  triggerRowClickOnContextMenu?: boolean;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({
@@ -81,6 +82,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   multiSelect = false,
   selectableRows,
   showContextMenuButton = false,
+  triggerRowClickOnContextMenu = true,
 }) => {
   const [internalSelectedRows, setInternalSelectedRows] = useState<number[]>(
     []
@@ -213,7 +215,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       onMultiSelectChange(newSelectedRows);
     }
 
-    if (onRowClick) {
+    if (onRowClick && triggerRowClickOnContextMenu) {
       onRowClick(data[rowIndex], rowIndex);
     }
   };

@@ -708,6 +708,7 @@ const InvestorPage = ({
                         onSort={handleSort}
                         sortConfig={sortConfig}
                         showContextMenuButton
+                        triggerRowClickOnContextMenu={false}
                     />
                     
                     <InvestorPaginationLayout>
