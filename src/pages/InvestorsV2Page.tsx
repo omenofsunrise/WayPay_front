@@ -80,29 +80,27 @@ const InvestorsV2Page = () => {
 
       <SectionContent>
         {activeTab === "investors" ? (
-          <InvestorPage
-            embedded
-            onOpenReport={handleOpenReport}
-            onOpenDeletedReport={handleOpenDeletedReport}
-          />
+          selectedInvestorId ? (
+            <InvestorReportPage
+              embedded
+              initialInvestorId={selectedInvestorId}
+              onBack={handleBackToInvestors}
+              autoOpenPayout={searchParams.get("action") === "payout"}
+              onPayoutOpened={() =>
+                setSearchParams({ investorId: selectedInvestorId.toString() })
+              }
+            />
+          ) : (
+            <InvestorPage
+              embedded
+              onOpenReport={handleOpenReport}
+              onOpenDeletedReport={handleOpenDeletedReport}
+            />
+          )
         ) : (
           <InvestorsPoolPage embedded enableReinvestments={!isPoolV2} />
         )}
       </SectionContent>
-
-      {activeTab === "investors" && selectedInvestorId && (
-        <InlineReportContent>
-          <InvestorReportPage
-            embedded
-            initialInvestorId={selectedInvestorId}
-            onBack={handleBackToInvestors}
-            autoOpenPayout={searchParams.get("action") === "payout"}
-            onPayoutOpened={() =>
-              setSearchParams({ investorId: selectedInvestorId.toString() })
-            }
-          />
-        </InlineReportContent>
-      )}
     </InvestorsContainer>
   );
 };
@@ -121,7 +119,6 @@ const SectionHeader = styled.div`
   padding: 26px 24px 0;
   border: 1px solid #e3e9ef;
   border-bottom: 0;
-  border-radius: 14px 14px 0 0;
   background: #fff;
 
   > div:last-child {
@@ -157,22 +154,6 @@ const SectionContent = styled.div`
   min-width: 0;
   padding: 22px 24px 24px;
   border: 1px solid #e3e9ef;
-  border-radius: 0 0 14px 14px;
-  background: #fff;
-
-  > div {
-    width: 100%;
-    margin: 0;
-    background: transparent;
-  }
-`;
-
-const InlineReportContent = styled.div`
-  min-width: 0;
-  margin-top: 20px;
-  padding: 22px 24px 24px;
-  border: 1px solid #e3e9ef;
-  border-radius: 14px;
   background: #fff;
 
   > div {
