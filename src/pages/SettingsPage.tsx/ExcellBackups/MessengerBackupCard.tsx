@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import styled from "styled-components";
 
 import type {
@@ -7,32 +8,84 @@ import type {
 } from "../../../api/types/excellBackup";
 import DarkCyanButton from "../../../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../../../components/ui/fields/CustomInput";
+import { normalizeContact, validateContact } from "./contactValidation";
 
 interface MessengerMeta {
   label: string;
   icon: string;
   placeholder: string;
   hint: string;
+  instruction: ReactNode;
 }
+
+const TelegramInstructions = () => (
+  <InstructionDetails>
+    <InstructionSummary>Как узнать свой Telegram ID</InstructionSummary>
+    <InstructionBody>
+      <ol>
+        <li>
+          Откройте Telegram и найдите бота <code>@WayPay_Crm_bot</code>.
+        </li>
+        <li>Нажмите «/start» и дождитесь ответа.</li>
+        <li>
+          Бот пришлёт ваш числовой ID — например, <code>899491283</code>.
+        </li>
+        <li>Скопируйте это число и вставьте в поле выше.</li>
+      </ol>
+      <p>
+        ID состоит только из цифр. Ник (@username), телефон и ссылка на профиль
+        не подходят.
+      </p>
+    </InstructionBody>
+  </InstructionDetails>
+);
+
+const WhatsAppInstructions = () => (
+  <InstructionBlock>
+    <p>
+      Укажите номер в международном формате: код страны и номер, только цифры.
+    </p>
+    <p>
+      Например: <code>79999999999</code> (7 — код России).
+    </p>
+    <p>
+      Номера в национальном формате (начинаются с 8) не подходят — замените 8
+      на 7.
+    </p>
+  </InstructionBlock>
+);
+
+const EmailInstructions = () => (
+  <InstructionBlock>
+    <p>Укажите email, на который будут приходить выгрузки.</p>
+    <p>
+      Например: <code>ivane_mymail@yandex.ru</code> или{" "}
+      <code>backups@company.ru</code>.
+    </p>
+  </InstructionBlock>
+);
 
 const MESSENGER_META: Record<Messenger, MessengerMeta> = {
   Telegram: {
     label: "Telegram",
     icon: "✈️",
-    placeholder: "@username или +7 999 123-45-67",
-    hint: "Например: @ivan_petrov или +7 999 123-45-67",
+    placeholder: "899491283",
+    hint: "Числовой Telegram ID — только цифры, без @ и пробелов",
+    instruction: <TelegramInstructions />,
   },
   WhatsApp: {
     label: "WhatsApp",
     icon: "💬",
-    placeholder: "+7 999 123-45-67",
-    hint: "Номер телефона в международном формате, например: +7 999 123-45-67",
+    placeholder: "79999999999",
+    hint: "Международный формат без + и пробелов: код страны + номер",
+    instruction: <WhatsAppInstructions />,
   },
   Email: {
     label: "Почта",
     icon: "✉️",
-    placeholder: "name@example.com",
-    hint: "Email-адрес, например: backups@company.ru",
+    placeholder: "ivane_mymail@yandex.ru",
+    hint: "Email, на который будут приходить выгрузки",
+    instruction: <EmailInstructions />,
   },
 };
 
@@ -65,17 +118,30 @@ const MessengerBackupCard = ({
   }, [subscription]);
 
   const showInput = isEditing || !isConfigured;
+  const validate = validateContact[messenger];
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleChange = (value: string) => {
+    setContact(value);
+    if (localError) setLocalError(null);
+  };
+
+  const handleBlur = () => {
+    const trimmed = contact.trim();
+    if (!trimmed) return; // пустое поле не «ругаем» на blur, только на submit
+    setLocalError(validate(trimmed));
+  };
+
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = contact.trim();
-    if (!trimmed) {
-      setLocalError("Укажите контакт");
+    const validationError = validate(trimmed);
+    if (validationError) {
+      setLocalError(validationError);
       return;
     }
     setLocalError(null);
     try {
-      await onSave(trimmed);
+      await onSave(normalizeContact(messenger, trimmed));
       setIsEditing(false);
     } catch {
       // ошибка уже показана тостом в родителе — остаёмся в режиме ввода
@@ -103,17 +169,19 @@ const MessengerBackupCard = ({
       <Divider />
 
       {showInput ? (
-        <Form onSubmit={handleSave}>
+        <Form onSubmit={handleSave} noValidate>
           <Label>Контакт</Label>
           <CustomInput
             inputType="text"
             value={contact}
-            onChange={(e) => setContact(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
             placeholder={meta.placeholder}
             autoFocus={!isConfigured}
           />
           <HintText>{meta.hint}</HintText>
           {localError && <ErrorText>{localError}</ErrorText>}
+          {meta.instruction}
           <Actions>
             <DarkCyanButton
               type="submit"
@@ -160,6 +228,8 @@ const MessengerBackupCard = ({
     </Card>
   );
 };
+
+/* ---------- styled ---------- */
 
 const Card = styled.div`
   background: #fff;
@@ -241,6 +311,7 @@ const ErrorText = styled.div`
   background: rgba(239, 68, 68, 0.08);
   color: #b71c1c;
   font-size: 13px;
+  line-height: 1.45;
 `;
 
 const Actions = styled.div`
@@ -304,6 +375,90 @@ const ContactValue = styled.span`
   font-weight: 600;
   color: #111827;
   word-break: break-all;
+`;
+
+/* ---------- instructions ---------- */
+
+const codeBase = `
+  code {
+    background: #eef2ff;
+    color: #1e3a8a;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+`;
+
+const InstructionBlock = styled.div`
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.55;
+
+  p {
+    margin: 0 0 6px;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+  ${codeBase}
+`;
+
+const InstructionDetails = styled.details`
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.55;
+  overflow: hidden;
+`;
+
+const InstructionSummary = styled.summary`
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #1f2937;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::before {
+    content: "▸";
+    display: inline-block;
+    color: #6b7280;
+    transition: transform 0.15s ease;
+  }
+
+  details[open] > &::before {
+    transform: rotate(90deg);
+  }
+`;
+
+const InstructionBody = styled.div`
+  padding: 10px 14px 14px;
+  border-top: 1px solid #e5e7eb;
+
+  ol {
+    margin: 0 0 8px;
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 4px;
+  }
+  p {
+    margin: 0;
+  }
+  ${codeBase}
 `;
 
 export default MessengerBackupCard;
