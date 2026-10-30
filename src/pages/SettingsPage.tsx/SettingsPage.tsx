@@ -12,7 +12,7 @@ import SenderPage from "./SenderPage";
 import AboutPage from "../AboutPage";
 import WhatsAppSettingsPage from "./WhatsAppSettingsPage";
 import ActionLogPage from "./ActionLogPage";
-import ExcellBackupPage from "./ExcellBackupPage";
+import ExcellBackupPage from "./ExcellBackups/ExcellBackupPage";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState<string>(() => {
