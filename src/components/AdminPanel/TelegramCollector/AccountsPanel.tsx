@@ -12,7 +12,9 @@ import BaseModal from "../../modal/BASE/modalCRUBase";
 import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
+import PhoneModalInput from "../../ui/fields/PhoneModalInput";
 import ToggleSwitch from "../../ui/Toggles/ToggleSwitch";
+import { formatPhoneForSearch as formatPhone } from "../../../utils/phoneUtils";
 import {
   Actions,
   Badge,
@@ -100,12 +102,12 @@ const AccountsPanel = ({ canConnect, onChanged }: Props) => {
   };
 
   const handleLogout = async (account: CollectorAccount) => {
-    if (!window.confirm(`Отключить аккаунт ${account.phone}? Сборщик перестанет читать его чаты.`)) return;
+    if (!window.confirm(`Отключить аккаунт ${formatPhone(account.phone)}? Сборщик перестанет читать его чаты.`)) return;
     setBusyId(account.id);
     setError(null);
     try {
       await telegramCollectorService.logout(account.id);
-      setSuccess(`Аккаунт ${account.phone} отключён`);
+      setSuccess(`Аккаунт ${formatPhone(account.phone)} отключён`);
       await load();
       onChanged();
     } catch (logoutError) {
@@ -144,9 +146,9 @@ const AccountsPanel = ({ canConnect, onChanged }: Props) => {
           <Card key={account.id}>
             <CardHeader>
               <div>
-                <Title>{account.displayName || account.phone}</Title>
+                <Title>{account.displayName || formatPhone(account.phone)}</Title>
                 <Muted>
-                  {account.phone}
+                  {formatPhone(account.phone)}
                   {account.connectedAt ? ` · подключён ${formatDateTime(account.connectedAt)}` : ""}
                 </Muted>
               </div>
@@ -260,13 +262,16 @@ interface LoginProps {
 const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
   const [step, setStep] = useState<LoginStep | "Phone">("Phone");
   const [accountId, setAccountId] = useState<number | null>(null);
-  const [phone, setPhone] = useState(initialPhone);
+  const [phone, setPhone] = useState(() => formatPhone(initialPhone));
   const [value, setValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const phoneComplete = phone.replace(/\D/g, "").length === 11;
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (step === "Phone" && !phoneComplete) return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -292,16 +297,17 @@ const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
       onCancel={onClose}
       onSave={handleSubmit}
       isSubmitting={isSubmitting}
+      isSaveDisabled={step === "Phone" && !phoneComplete}
       saveButtonText={step === "Phone" ? "Получить код" : "Войти"}
     >
       <ModalForm>
         {step === "Phone" && (
           <Field>
             <Label>Номер телефона аккаунта</Label>
-            <CustomInput
-              autoFocus
+            <PhoneModalInput
+              name="phone"
               value={phone}
-              placeholder="+7 928 123-45-67"
+              placeholder="8 (XXX) XXX-XX-XX"
               onChange={(e) => setPhone(e.target.value)}
             />
             <Hint>Telegram пришлёт код в приложение на этом аккаунте (не по SMS).</Hint>
@@ -420,7 +426,7 @@ const ChatsModal = ({ account, onClose }: ChatsProps) => {
 
   return (
     <BaseModal
-      title={`Чаты: ${account.displayName || account.phone}`}
+      title={`Чаты: ${account.displayName || formatPhone(account.phone)}`}
       onClose={onClose}
       onCancel={onClose}
       hideSaveButton
