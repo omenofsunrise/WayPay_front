@@ -293,7 +293,6 @@ const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
       onSave={handleSubmit}
       isSubmitting={isSubmitting}
       saveButtonText={step === "Phone" ? "Получить код" : "Войти"}
-      submittingText="Подождите…"
     >
       <ModalForm>
         {step === "Phone" && (
