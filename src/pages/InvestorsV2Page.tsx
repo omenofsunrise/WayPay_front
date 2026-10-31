@@ -117,8 +117,6 @@ const InvestorsContainer = styled.div`
 const SectionHeader = styled.div`
   text-align: left;
   padding: 26px 24px 0;
-  border: 1px solid #e3e9ef;
-  border-bottom: 0;
   background: #fff;
 
   > div:last-child {
@@ -153,7 +151,6 @@ const SectionContent = styled.div`
   flex: 1;
   min-width: 0;
   padding: 22px 24px 24px;
-  border: 1px solid #e3e9ef;
   background: #fff;
 
   > div {
