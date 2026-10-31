@@ -21,7 +21,6 @@ import useCompany from "../../../api/hooks/useCompany";
 import React from "react";
 import type { CommonInfo } from "../../../api/types/company";
 import { formatDate, getLicenseDateColor } from "../../../utils/dateFormatter";
-import { usePwaInstall } from "../../../hooks/usePwaInstall";
 import InstallAppHelpModal from "../../modal/InstallAppHelpModal";
 
 type CollapsibleProps = {
@@ -90,24 +89,10 @@ const SideMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasRole, hasPermission, denyPermission, authInfo } = useAuth();
-  const { canInstall, isInstalled, install } = usePwaInstall();
-  const [isInstalling, setIsInstalling] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
 
-  const handleInstallApp = async () => {
-    if (isInstalling) return;
-
-    if (!canInstall) {
-      setShowInstallHelp(true);
-      return;
-    }
-
-    setIsInstalling(true);
-    try {
-      await install();
-    } finally {
-      setIsInstalling(false);
-    }
+  const handleInstallApp = () => {
+    setShowInstallHelp(true);
   };
 
   React.useEffect(() => {
@@ -794,35 +779,30 @@ const SideMenu = () => {
         </ScrollableMenuContent>
       </MenuList>
 
-      {!isInstalled && (
-        <InstallAppButton
-          type="button"
-          onClick={handleInstallApp}
-          disabled={isInstalling}
-          $collapsed={collapsed}
-          title="Установить WayPay на компьютер"
-          aria-label="Установить WayPay на компьютер"
+      <InstallAppButton
+        type="button"
+        onClick={handleInstallApp}
+        $collapsed={collapsed}
+        title="Установить приложение WayPay"
+        aria-label="Установить приложение WayPay"
+      >
+        <svg
+          width="21"
+          height="21"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
         >
-          <svg
-            width="21"
-            height="21"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M8 17L12 21L16 17M12 4V20M5 4H19C20.1046 4 21 4.89543 21 6V14C21 15.1046 20.1046 16 19 16H18M6 16H5C3.89543 16 3 15.1046 3 14V6C3 4.89543 3.89543 4 5 4Z"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {!collapsed && (
-            <span>{isInstalling ? "Установка..." : "Установить приложение"}</span>
-          )}
-        </InstallAppButton>
-      )}
+          <path
+            d="M8 17L12 21L16 17M12 4V20M5 4H19C20.1046 4 21 4.89543 21 6V14C21 15.1046 20.1046 16 19 16H18M6 16H5C3.89543 16 3 15.1046 3 14V6C3 4.89543 3.89543 4 5 4Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        {!collapsed && <span>Установить приложение</span>}
+      </InstallAppButton>
 
       {/* Блок с профилем - теперь всегда в самом низу */}
       {employee &&
