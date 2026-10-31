@@ -6,6 +6,8 @@ import type {
   CollectorAccountStatus,
   CollectorChat,
   CollectorMarkAsRead,
+  CodeVia,
+  LoginResult,
   LoginStep,
 } from "../../../api/types/telegramCollector";
 import BaseModal from "../../modal/BASE/modalCRUBase";
@@ -259,6 +261,35 @@ interface LoginProps {
   onDone: () => void;
 }
 
+const SENT_VIA_HINT: Record<CodeVia, string> = {
+  App: "Код отправлен в приложение Telegram на этом аккаунте: чат «Telegram» с синей галочкой. Это не SMS.",
+  Sms: "Код отправлен по SMS на этот номер.",
+  Call: "Telegram позвонит на этот номер и продиктует код.",
+  MissedCall: "Telegram сделает звонок на этот номер: код — последние цифры номера, с которого звонят.",
+  Email: "Код отправлен на почту, привязанную к аккаунту.",
+  Other: "Telegram отправил код.",
+};
+
+const RESEND_LABEL: Record<CodeVia, string> = {
+  App: "Отправить код ещё раз",
+  Sms: "Отправить код по SMS",
+  Call: "Позвонить с кодом",
+  MissedCall: "Прислать код звонком",
+  Email: "Отправить код на почту",
+  Other: "Отправить код другим способом",
+};
+
+type Delivery = { sentVia: CodeVia; nextVia: CodeVia | null; resendAt: number };
+
+const toDelivery = (result: LoginResult): Delivery | null =>
+  result.step === "Code" && result.codeSentVia
+    ? {
+        sentVia: result.codeSentVia,
+        nextVia: result.nextCodeVia ?? null,
+        resendAt: Date.now() + (result.resendInSeconds ?? 0) * 1000,
+      }
+    : null;
+
 const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
   const [step, setStep] = useState<LoginStep | "Phone">("Phone");
   const [accountId, setAccountId] = useState<number | null>(null);
@@ -266,6 +297,39 @@ const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
   const [value, setValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<Delivery | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Обратный отсчёт до кнопки «Отправить по SMS».
+  useEffect(() => {
+    if (!delivery?.nextVia || delivery.resendAt <= Date.now()) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [delivery]);
+
+  const resendWait = delivery ? Math.max(0, Math.ceil((delivery.resendAt - now) / 1000)) : 0;
+
+  const applyResult = (result: LoginResult) => {
+    setAccountId(result.accountId);
+    setDelivery(toDelivery(result));
+    setNow(Date.now());
+    if (result.step === "Done") onDone();
+    else setStep(result.step);
+  };
+
+  const handleResend = async () => {
+    if (accountId == null) return;
+    setIsResending(true);
+    setError(null);
+    try {
+      applyResult(await telegramCollectorService.resendCode(accountId));
+    } catch (resendError) {
+      setError(getErrorMessage(resendError));
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const phoneComplete = phone.replace(/\D/g, "").length === 11;
 
@@ -279,10 +343,8 @@ const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
         step === "Phone"
           ? await telegramCollectorService.startLogin(phone)
           : await telegramCollectorService.continueLogin(accountId!, value);
-      setAccountId(result.accountId);
       setValue("");
-      if (result.step === "Done") onDone();
-      else setStep(result.step);
+      applyResult(result);
     } catch (loginError) {
       setError(getErrorMessage(loginError));
     } finally {
@@ -323,7 +385,22 @@ const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
               placeholder="12345"
               onChange={(e) => setValue(e.target.value)}
             />
-            <Hint>Код пришёл в чат «Telegram» в приложении. Не пересылайте его никому.</Hint>
+            <Hint>
+              {delivery ? SENT_VIA_HINT[delivery.sentVia] : "Код пришёл в чат «Telegram» в приложении."} Не
+              пересылайте код никому.
+            </Hint>
+            {delivery?.nextVia && (
+              <ResendRow>
+                <DarkCyanButton
+                  type="button"
+                  disabled={isResending || isSubmitting || resendWait > 0}
+                  onClick={handleResend}
+                >
+                  {isResending ? "Отправляем…" : RESEND_LABEL[delivery.nextVia]}
+                </DarkCyanButton>
+                {resendWait > 0 && <Hint>Не пришёл код? Кнопка станет доступна через {resendWait} с</Hint>}
+              </ResendRow>
+            )}
           </Field>
         )}
         {step === "Password" && (
@@ -343,6 +420,20 @@ const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
     </BaseModal>
   );
 };
+
+const ResendRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+
+  button {
+    width: auto;
+    padding: 0 16px;
+    min-height: 34px;
+  }
+`;
 
 // ==================== Чаты аккаунта ====================
 

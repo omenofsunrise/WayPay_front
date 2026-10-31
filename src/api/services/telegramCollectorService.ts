@@ -45,6 +45,14 @@ class TelegramCollectorService {
     return data;
   }
 
+  /** Код не пришёл: Telegram пришлёт его следующим способом (SMS, звонок). */
+  async resendCode(accountId: number): Promise<LoginResult> {
+    const { data } = await apiClient.post<LoginResult>(
+      `${BASE}/accounts/${accountId}/login/resend`
+    );
+    return data;
+  }
+
   async logout(accountId: number): Promise<void> {
     await apiClient.post(`${BASE}/accounts/${accountId}/logout`);
   }
