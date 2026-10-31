@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import styled from "styled-components";
+import { FaTelegramPlane, FaWhatsapp } from "react-icons/fa";
+import { Check, ChevronRight, Mail, Pencil } from "lucide-react";
 
 import type {
   ExcellBackupSubscription,
@@ -102,7 +104,7 @@ const MessengerBackupCard = ({
           <span>{meta.label}</span>
         </MessengerTitle>
         <StatusBadge $active={isConfigured}>
-          {isConfigured && <CheckIcon />}
+          {isConfigured && <Check aria-hidden="true" />}
           {isConfigured ? "Подключён" : "Не подключён"}
         </StatusBadge>
       </CardHeader>
@@ -142,7 +144,7 @@ const MessengerBackupCard = ({
         {messenger === "Telegram" && (
           <InstructionDetails>
             <InstructionSummary>
-              <ChevronIcon />
+              <ChevronRight aria-hidden="true" />
               Как узнать Telegram ID
             </InstructionSummary>
             <InstructionBody>
@@ -180,7 +182,7 @@ const MessengerBackupCard = ({
             <WayPayButton
               type="button"
               variant="secondary"
-              icon={<EditIcon />}
+              icon={<Pencil size={15} aria-hidden="true" />}
               disabled={isSaving}
               onClick={() => setIsEditing(true)}
             >
@@ -216,49 +218,15 @@ const formatContact = (messenger: Messenger, value: string) => {
 
 const MessengerGlyph = ({ messenger }: { messenger: Messenger }) => {
   if (messenger === "Telegram") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M21 4 3.8 10.7c-1.2.5-1.2 1.2-.2 1.5l4.4 1.4 1.7 5.1c.2.7.1 1 .9 1 .6 0 .9-.3 1.2-.6l2.1-2 4.4 3.2c.8.5 1.4.3 1.6-.8L22.8 5c.3-1.4-.5-1.9-1.8-1Z" />
-        <path d="m8 13.6 10.4-6.5c.5-.3 1-.1.6.3l-8.6 7.8-.3 3.5" />
-      </svg>
-    );
+    return <FaTelegramPlane aria-hidden="true" />;
   }
 
   if (messenger === "WhatsApp") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M20.5 11.8a8.5 8.5 0 0 1-12.6 7.5L3 20.6l1.3-4.7a8.5 8.5 0 1 1 16.2-4.1Z" />
-        <path d="M8.2 7.7c.2-.5.5-.5.8-.5h.5c.2 0 .4 0 .5.4l.8 1.9c.1.3.1.5-.1.7l-.6.8c-.2.2-.1.4 0 .6.7 1.2 1.6 2.1 2.8 2.8.2.1.4.2.6 0l.9-1.1c.2-.2.4-.3.7-.2l2 .9c.3.1.5.3.5.5 0 .3-.2 1.5-.9 2.1-.6.6-1.4.9-2.4.7-1-.2-2.2-.6-3.8-1.6-2.3-1.5-3.8-3.7-4.2-4.4-.4-.7-1.1-2.6 0-3.9Z" />
-      </svg>
-    );
+    return <FaWhatsapp aria-hidden="true" />;
   }
 
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m4 7 8 6 8-6" />
-    </svg>
-  );
+  return <Mail aria-hidden="true" />;
 };
-
-const CheckIcon = () => (
-  <svg viewBox="0 0 16 16" aria-hidden="true">
-    <path d="m3 8 3 3 7-7" />
-  </svg>
-);
-
-const ChevronIcon = () => (
-  <svg viewBox="0 0 16 16" aria-hidden="true">
-    <path d="m6 3 5 5-5 5" />
-  </svg>
-);
-
-const EditIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 20h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 const Card = styled.div`
   min-width: 0;
@@ -302,13 +270,15 @@ const MessengerIcon = styled.span<{ $messenger: Messenger }>`
     $messenger === "WhatsApp" ? "#e6f8ef" : "#e8f7f8"};
   color: ${({ $messenger }) =>
     $messenger === "WhatsApp" ? "#12a968" : "#008b98"};
+  line-height: 0;
 
   svg {
     width: 24px;
     height: 24px;
-    fill: ${({ $messenger }) => ($messenger === "Telegram" ? "currentColor" : "none")};
-    stroke: currentColor;
-    stroke-width: 1.8;
+    display: block;
+    fill: ${({ $messenger }) => ($messenger === "Email" ? "none" : "currentColor")};
+    stroke: ${({ $messenger }) => ($messenger === "Email" ? "currentColor" : "none")};
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
@@ -326,6 +296,7 @@ const StatusBadge = styled.span<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  line-height: 1;
 
   svg {
     width: 14px;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
+import { FileSpreadsheet, Info, Moon } from "lucide-react";
 import BaseModal from "../../../components/modal/BASE/modalCRUBase";
 import useExcellBackupSubscription from "../../../api/hooks/useExcellBackupSubscription";
 import type {
@@ -133,7 +134,7 @@ const ExcellBackupPage = () => {
     <BackupPage>
       <PageHeader>
         <PageIcon>
-          <ExcelFileIcon />
+          <FileSpreadsheet aria-hidden="true" />
         </PageIcon>
         <div>
           <PageTitle>Excel-бэкапы</PageTitle>
@@ -144,7 +145,7 @@ const ExcellBackupPage = () => {
       </PageHeader>
 
       <InfoBanner>
-        <InfoIcon />
+        <Info aria-hidden="true" />
         <span>
           Достаточно подключить один канал. Можно использовать несколько
           одновременно.
@@ -177,7 +178,7 @@ const ExcellBackupPage = () => {
       )}
 
       <ScheduleNote>
-        <MoonIcon />
+        <Moon aria-hidden="true" />
         Автоматическая отправка каждую ночь.
       </ScheduleNote>
 
@@ -213,27 +214,6 @@ const ExcellBackupPage = () => {
   );
 };
 
-const ExcelFileIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M6 2.8h8l4 4V21H6Z" />
-    <path d="M14 2.8V7h4" />
-    <path d="m8.7 11 4.6 6M13.3 11l-4.6 6" />
-  </svg>
-);
-
-const InfoIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 11v6M12 7.5h.01" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />
-  </svg>
-);
-
 const BackupPage = styled.section`
   width: 100%;
   padding: 26px 0 24px;
@@ -256,10 +236,12 @@ const PageIcon = styled.div`
   border-radius: 10px;
   background: #e8f7f8;
   color: #008b98;
+  line-height: 0;
 
   svg {
     width: 29px;
     height: 29px;
+    display: block;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.7;
