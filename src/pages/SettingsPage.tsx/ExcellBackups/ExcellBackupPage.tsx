@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
-import PageLayout from "../../../components/ui/Layouts/PageLayout";
-import TitleField from "../../../components/ui/Layouts/TitleLayout";
-import CustomTitle from "../../../components/ui/Text/CustomTitle";
 import BaseModal from "../../../components/modal/BASE/modalCRUBase";
 import useExcellBackupSubscription from "../../../api/hooks/useExcellBackupSubscription";
 import type {
@@ -19,70 +16,6 @@ import {
 import { extractErrorMessage } from "../../../api/utils/errorMessage";
 import MessengerBackupCard from "./MessengerBackupCard";
 
-const ToastContainer = styled.div`
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1100;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
-const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
-  padding: 14px 20px;
-  border-radius: 8px;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.3s ease-out;
-  min-width: 280px;
-  max-width: 420px;
-  background: ${(p) =>
-    p.$type === "success"
-      ? "#10b981"
-      : p.$type === "error"
-      ? "#ef4444"
-      : "#f59e0b"};
-
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-`;
-
-const Hint = styled.p`
-  margin: 8px 0 0;
-  color: #6b7280;
-  font-size: 14px;
-  line-height: 1.6;
-  max-width: 720px;
-`;
-
-const CardsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 20px;
-  margin-top: 24px;
-`;
-
-const ConfirmText = styled.p`
-  padding: 16px 30px;
-  font-size: 15px;
-  color: #374151;
-  line-height: 1.5;
-`;
-
 const ExcellBackupPage = () => {
   const {
     subscriptions,
@@ -98,29 +31,28 @@ const ExcellBackupPage = () => {
   const [toasts, setToasts] = useState<
     { id: number; type: "success" | "error" | "warning"; message: string }[]
   >([]);
+  const [confirmMessenger, setConfirmMessenger] = useState<Messenger | null>(
+    null
+  );
+  const [confirmSubmitting, setConfirmSubmitting] = useState(false);
 
   const addToast = useCallback(
     (type: "success" | "error" | "warning", message: string) => {
       const id = Date.now() + Math.random();
-      setToasts((prev) => [...prev, { id, type, message }]);
-      setTimeout(
-        () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+      setToasts((current) => [...current, { id, type, message }]);
+      window.setTimeout(
+        () => setToasts((current) => current.filter((toast) => toast.id !== id)),
         4000
       );
     },
     []
   );
 
-  const [confirmMessenger, setConfirmMessenger] = useState<Messenger | null>(
-    null
-  );
-  const [confirmSubmitting, setConfirmSubmitting] = useState(false);
-
   const loadSubscriptions = useCallback(async () => {
     try {
       await fetchAll();
     } catch {
-      // ошибка показывается через `error`
+      // Хук возвращает текст ошибки для отображения на странице.
     }
   }, [fetchAll]);
 
@@ -128,14 +60,18 @@ const ExcellBackupPage = () => {
     loadSubscriptions();
   }, [loadSubscriptions]);
 
-  // Ищем подписку под конкретный мессенджер, если она включает Credits.
-  // Всё, что не Credits, фронт игнорирует — пользователь об этом не знает.
   const findCreditsSub = (
     messenger: Messenger
   ): ExcellBackupSubscription | null =>
     subscriptions.find(
-      (s) => s.messenger === messenger && hasItem(s.items, BACKUP_ITEM.Credits)
+      (subscription) =>
+        subscription.messenger === messenger &&
+        hasItem(subscription.items, BACKUP_ITEM.Credits)
     ) ?? null;
+
+  const connectedCount = MESSENGER_OPTIONS.filter((messenger) =>
+    findCreditsSub(messenger.value)
+  ).length;
 
   const handleSave = async (messenger: Messenger, contact: string) => {
     const payload: ExcellBackupSubscriptionPayload = {
@@ -151,40 +87,41 @@ const ExcellBackupPage = () => {
         addToast("success", `${messengerLabel(messenger)}: контакт обновлён`);
       } else {
         await createSubscription(payload);
-        addToast(
-          "success",
-          `${messengerLabel(messenger)}: подписка подключена`
-        );
+        addToast("success", `${messengerLabel(messenger)}: канал подключён`);
       }
-    } catch (e) {
-      addToast("error", extractErrorMessage(e, "Не удалось сохранить подписку"));
-      throw e; // пробрасываем, чтобы карточка осталась в режиме редактирования
+    } catch (requestError) {
+      addToast(
+        "error",
+        extractErrorMessage(requestError, "Не удалось сохранить подписку")
+      );
+      throw requestError;
     }
   };
 
   const requestDelete = (messenger: Messenger) => {
-    if (!findCreditsSub(messenger)) return;
-    setConfirmMessenger(messenger);
+    if (findCreditsSub(messenger)) setConfirmMessenger(messenger);
   };
 
   const handleConfirmDelete = async () => {
     if (!confirmMessenger) return;
-    const sub = findCreditsSub(confirmMessenger);
-    if (!sub) {
+    const subscription = findCreditsSub(confirmMessenger);
+
+    if (!subscription) {
       setConfirmMessenger(null);
       return;
     }
+
     setConfirmSubmitting(true);
     try {
-      await deleteSubscription(sub.id);
+      await deleteSubscription(subscription.id);
       addToast(
         "success",
-        `${messengerLabel(confirmMessenger)}: подписка отключена`
+        `${messengerLabel(confirmMessenger)}: канал отключён`
       );
-    } catch (e) {
+    } catch (requestError) {
       addToast(
         "error",
-        extractErrorMessage(e, "Не удалось отключить подписку")
+        extractErrorMessage(requestError, "Не удалось отключить подписку")
       );
     } finally {
       setConfirmSubmitting(false);
@@ -193,42 +130,64 @@ const ExcellBackupPage = () => {
   };
 
   return (
-    <PageLayout>
-      <TitleField style={{ marginTop: 0 }}>
-        <CustomTitle style={{ marginTop: 0 }}>Excel-бэкапы</CustomTitle>
-      </TitleField>
+    <BackupPage>
+      <PageHeader>
+        <PageIcon>
+          <ExcelFileIcon />
+        </PageIcon>
+        <div>
+          <PageTitle>Excel-бэкапы</PageTitle>
+          <PageSubtitle>
+            Получайте резервную копию в Excel автоматически каждую ночь.
+          </PageSubtitle>
+        </div>
+      </PageHeader>
 
-      <Hint>
-        Настройте контакт в любом удобном мессенджере — и выгрузка в Excel
-        будет приходить автоматически каждую ночь. Достаточно указать один
-        контакт для любого из каналов.
-      </Hint>
+      <InfoBanner>
+        <InfoIcon />
+        <span>
+          Достаточно подключить один канал. Можно использовать несколько
+          одновременно.
+        </span>
+      </InfoBanner>
 
-      {loading && <div>Загрузка...</div>}
-      {error && <div>Ошибка: {error}</div>}
+      <ChannelsHeader>
+        <ChannelsTitle>Каналы получения</ChannelsTitle>
+        <ConnectedCount>
+          Подключено: {connectedCount} из {MESSENGER_OPTIONS.length}
+        </ConnectedCount>
+      </ChannelsHeader>
+
+      {loading && <StateMessage>Загрузка каналов...</StateMessage>}
+      {error && <StateMessage $error>Ошибка: {error}</StateMessage>}
 
       {!loading && !error && (
         <CardsGrid>
-          {MESSENGER_OPTIONS.map((m) => (
+          {MESSENGER_OPTIONS.map((messenger) => (
             <MessengerBackupCard
-              key={m.value}
-              messenger={m.value}
-              subscription={findCreditsSub(m.value)}
+              key={messenger.value}
+              messenger={messenger.value}
+              subscription={findCreditsSub(messenger.value)}
               isSaving={saving}
-              onSave={(contact) => handleSave(m.value, contact)}
-              onDelete={() => requestDelete(m.value)}
+              onSave={(contact) => handleSave(messenger.value, contact)}
+              onDelete={() => requestDelete(messenger.value)}
             />
           ))}
         </CardsGrid>
       )}
+
+      <ScheduleNote>
+        <MoonIcon />
+        Автоматическая отправка каждую ночь.
+      </ScheduleNote>
 
       {confirmMessenger && (
         <BaseModal
           title="Отключить подписку?"
           onClose={() => setConfirmMessenger(null)}
           onCancel={() => setConfirmMessenger(null)}
-          onSave={(e) => {
-            e.preventDefault();
+          onSave={(event) => {
+            event.preventDefault();
             handleConfirmDelete();
           }}
           isSubmitting={confirmSubmitting}
@@ -243,15 +202,208 @@ const ExcellBackupPage = () => {
       )}
 
       <ToastContainer>
-        {toasts.map((t) => (
-          <Toast key={t.id} $type={t.type}>
-            {t.type === "success" ? "✓ " : t.type === "error" ? "✕ " : "⚠ "}
-            {t.message}
+        {toasts.map((toast) => (
+          <Toast key={toast.id} $type={toast.type}>
+            {toast.type === "success" ? "✓" : toast.type === "error" ? "✕" : "⚠"}
+            <span>{toast.message}</span>
           </Toast>
         ))}
       </ToastContainer>
-    </PageLayout>
+    </BackupPage>
   );
 };
+
+const ExcelFileIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M6 2.8h8l4 4V21H6Z" />
+    <path d="M14 2.8V7h4" />
+    <path d="m8.7 11 4.6 6M13.3 11l-4.6 6" />
+  </svg>
+);
+
+const InfoIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v6M12 7.5h.01" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />
+  </svg>
+);
+
+const BackupPage = styled.section`
+  width: 100%;
+  padding: 26px 0 24px;
+  color: #172033;
+  text-align: left;
+`;
+
+const PageHeader = styled.header`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const PageIcon = styled.div`
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #e8f7f8;
+  color: #008b98;
+
+  svg {
+    width: 29px;
+    height: 29px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+`;
+
+const PageTitle = styled.h1`
+  margin: 0;
+  color: #111827;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+`;
+
+const PageSubtitle = styled.p`
+  margin: 6px 0 0;
+  color: #718096;
+  font-size: 15px;
+  line-height: 1.45;
+`;
+
+const InfoBanner = styled.div`
+  min-height: 48px;
+  margin-top: 26px;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  border: 1px solid #d8edef;
+  border-radius: 8px;
+  background: #edf9fa;
+  color: #687893;
+  font-size: 13px;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    fill: none;
+    stroke: #008b98;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+`;
+
+const ChannelsHeader = styled.div`
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+`;
+
+const ChannelsTitle = styled.h2`
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 700;
+`;
+
+const ConnectedCount = styled.span`
+  color: #7a869d;
+  font-size: 13px;
+`;
+
+const CardsGrid = styled.div`
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StateMessage = styled.div<{ $error?: boolean }>`
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid ${({ $error }) => ($error ? "#fecaca" : "#dfe6ec")};
+  border-radius: 8px;
+  background: ${({ $error }) => ($error ? "#fff1f2" : "#fff")};
+  color: ${({ $error }) => ($error ? "#b42318" : "#667085")};
+  font-size: 13px;
+`;
+
+const ScheduleNote = styled.div`
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #718096;
+  font-size: 13px;
+
+  svg {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+`;
+
+const ConfirmText = styled.p`
+  margin: 0;
+  padding: 18px 30px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.5;
+`;
+
+const ToastContainer = styled.div`
+  position: fixed;
+  z-index: 1100;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
+  min-width: 260px;
+  max-width: 390px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 8px;
+  background: ${({ $type }) =>
+    $type === "success" ? "#0f9f84" : $type === "error" ? "#dc2626" : "#d97706"};
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+  color: #fff;
+  font-size: 13px;
+`;
 
 export default ExcellBackupPage;

@@ -1,91 +1,39 @@
 import { useEffect, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import styled from "styled-components";
 
 import type {
   ExcellBackupSubscription,
   Messenger,
 } from "../../../api/types/excellBackup";
-import DarkCyanButton from "../../../components/ui/Buttons/DarkCyanButton";
-import CustomInput from "../../../components/ui/fields/CustomInput";
+import WayPayButton from "../../../components/ui/Buttons/WayPayButton";
 import { normalizeContact, validateContact } from "./contactValidation";
 
 interface MessengerMeta {
   label: string;
-  icon: string;
+  fieldLabel: string;
   placeholder: string;
   hint: string;
-  instruction: ReactNode;
 }
-
-const TelegramInstructions = () => (
-  <InstructionDetails>
-    <InstructionSummary>Как узнать свой Telegram ID</InstructionSummary>
-    <InstructionBody>
-      <ol>
-        <li>
-          Откройте Telegram и найдите бота <code>@WayPay_Crm_bot</code>.
-        </li>
-        <li>Нажмите «/start» и дождитесь ответа.</li>
-        <li>
-          Бот пришлёт ваш числовой ID — например, <code>899491283</code>.
-        </li>
-        <li>Скопируйте это число и вставьте в поле выше.</li>
-      </ol>
-      <p>
-        ID состоит только из цифр. Ник (@username), телефон и ссылка на профиль
-        не подходят.
-      </p>
-    </InstructionBody>
-  </InstructionDetails>
-);
-
-const WhatsAppInstructions = () => (
-  <InstructionBlock>
-    <p>
-      Укажите номер в международном формате: код страны и номер, только цифры.
-    </p>
-    <p>
-      Например: <code>79999999999</code> (7 — код России).
-    </p>
-    <p>
-      Номера в национальном формате (начинаются с 8) не подходят — замените 8
-      на 7.
-    </p>
-  </InstructionBlock>
-);
-
-const EmailInstructions = () => (
-  <InstructionBlock>
-    <p>Укажите email, на который будут приходить выгрузки.</p>
-    <p>
-      Например: <code>ivane_mymail@yandex.ru</code> или{" "}
-      <code>backups@company.ru</code>.
-    </p>
-  </InstructionBlock>
-);
 
 const MESSENGER_META: Record<Messenger, MessengerMeta> = {
   Telegram: {
     label: "Telegram",
-    icon: "✈️",
+    fieldLabel: "Telegram ID",
     placeholder: "899491283",
-    hint: "Числовой Telegram ID — только цифры, без @ и пробелов",
-    instruction: <TelegramInstructions />,
+    hint: "Только цифры, без @ и пробелов",
   },
   WhatsApp: {
     label: "WhatsApp",
-    icon: "💬",
-    placeholder: "79999999999",
-    hint: "Международный формат без + и пробелов: код страны + номер",
-    instruction: <WhatsAppInstructions />,
+    fieldLabel: "Номер телефона",
+    placeholder: "+7 (999) 999-99-99",
+    hint: "Резервная копия придёт в WhatsApp.",
   },
   Email: {
     label: "Почта",
-    icon: "✉️",
-    placeholder: "ivane_mymail@yandex.ru",
-    hint: "Email, на который будут приходить выгрузки",
-    instruction: <EmailInstructions />,
+    fieldLabel: "Электронная почта",
+    placeholder: "mail@company.ru",
+    hint: "Резервная копия придёт на этот адрес.",
   },
 };
 
@@ -105,8 +53,7 @@ const MessengerBackupCard = ({
   onDelete,
 }: Props) => {
   const meta = MESSENGER_META[messenger];
-  const isConfigured = !!subscription;
-
+  const isConfigured = Boolean(subscription);
   const [isEditing, setIsEditing] = useState(false);
   const [contact, setContact] = useState(subscription?.contact ?? "");
   const [localError, setLocalError] = useState<string | null>(null);
@@ -117,34 +64,25 @@ const MessengerBackupCard = ({
     setLocalError(null);
   }, [subscription]);
 
-  const showInput = isEditing || !isConfigured;
   const validate = validateContact[messenger];
+  const showInput = isEditing || !isConfigured;
 
-  const handleChange = (value: string) => {
-    setContact(value);
-    if (localError) setLocalError(null);
-  };
-
-  const handleBlur = () => {
-    const trimmed = contact.trim();
-    if (!trimmed) return; // пустое поле не «ругаем» на blur, только на submit
-    setLocalError(validate(trimmed));
-  };
-
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (event: FormEvent) => {
+    event.preventDefault();
     const trimmed = contact.trim();
     const validationError = validate(trimmed);
+
     if (validationError) {
       setLocalError(validationError);
       return;
     }
+
     setLocalError(null);
     try {
       await onSave(normalizeContact(messenger, trimmed));
       setIsEditing(false);
     } catch {
-      // ошибка уже показана тостом в родителе — остаёмся в режиме ввода
+      // Родитель показывает ошибку через toast. Оставляем форму открытой.
     }
   };
 
@@ -155,310 +93,407 @@ const MessengerBackupCard = ({
   };
 
   return (
-    <Card>
-      <Header>
-        <MessengerName>
-          <Icon>{meta.icon}</Icon>
-          {meta.label}
-        </MessengerName>
+    <Card as="form" onSubmit={handleSave} noValidate>
+      <CardHeader>
+        <MessengerTitle>
+          <MessengerIcon $messenger={messenger}>
+            <MessengerGlyph messenger={messenger} />
+          </MessengerIcon>
+          <span>{meta.label}</span>
+        </MessengerTitle>
         <StatusBadge $active={isConfigured}>
-          {isConfigured ? "Активно" : "Не настроено"}
+          {isConfigured && <CheckIcon />}
+          {isConfigured ? "Подключён" : "Не подключён"}
         </StatusBadge>
-      </Header>
+      </CardHeader>
 
       <Divider />
 
-      {showInput ? (
-        <Form onSubmit={handleSave} noValidate>
-          <Label>Контакт</Label>
-          <CustomInput
-            inputType="text"
+      <CardBody>
+        <FieldLabel htmlFor={`backup-contact-${messenger}`}>
+          {meta.fieldLabel}
+        </FieldLabel>
+
+        {showInput ? (
+          <ContactInput
+            id={`backup-contact-${messenger}`}
             value={contact}
-            onChange={(e) => handleChange(e.target.value)}
-            onBlur={handleBlur}
+            onChange={(event) => {
+              setContact(event.target.value);
+              if (localError) setLocalError(null);
+            }}
+            onBlur={() => {
+              const trimmed = contact.trim();
+              if (trimmed) setLocalError(validate(trimmed));
+            }}
             placeholder={meta.placeholder}
-            autoFocus={!isConfigured}
+            inputMode={messenger === "Email" ? "email" : "text"}
+            autoComplete={messenger === "Email" ? "email" : "off"}
+            $hasError={Boolean(localError)}
+            autoFocus={isEditing}
           />
-          <HintText>{meta.hint}</HintText>
-          {localError && <ErrorText>{localError}</ErrorText>}
-          {meta.instruction}
-          <Actions>
-            <DarkCyanButton
+        ) : (
+          <ContactValue>{formatContact(messenger, subscription!.contact)}</ContactValue>
+        )}
+
+        <HintText>{meta.hint}</HintText>
+        {localError && <ErrorText>{localError}</ErrorText>}
+
+        {messenger === "Telegram" && (
+          <InstructionDetails>
+            <InstructionSummary>
+              <ChevronIcon />
+              Как узнать Telegram ID
+            </InstructionSummary>
+            <InstructionBody>
+              Откройте в Telegram бота <code>@WayPay_Crm_bot</code>, нажмите
+              «/start» и вставьте полученный числовой ID в поле выше.
+            </InstructionBody>
+          </InstructionDetails>
+        )}
+      </CardBody>
+
+      <CardActions $single={!isConfigured}>
+        {showInput ? (
+          <>
+            <WayPayButton
               type="submit"
-              disabled={isSaving}
-              style={{ width: "auto", padding: "10px 20px" }}
+              variant="primary"
+              loading={isSaving}
+              fullWidth={!isConfigured}
             >
-              {isSaving
-                ? "Сохранение..."
-                : isConfigured
-                ? "Сохранить"
-                : "Подключить"}
-            </DarkCyanButton>
+              {isConfigured ? "Сохранить" : `Подключить ${meta.label}`}
+            </WayPayButton>
             {isConfigured && (
-              <SecondaryButton
+              <WayPayButton
                 type="button"
-                onClick={handleCancel}
+                variant="secondary"
                 disabled={isSaving}
+                onClick={handleCancel}
               >
                 Отмена
-              </SecondaryButton>
+              </WayPayButton>
             )}
-          </Actions>
-        </Form>
-      ) : (
-        <ViewMode>
-          <ContactRow>
-            <ContactLabel>Контакт:</ContactLabel>
-            <ContactValue>{subscription!.contact}</ContactValue>
-          </ContactRow>
-          <Actions>
-            <SecondaryButton
+          </>
+        ) : (
+          <>
+            <WayPayButton
               type="button"
-              onClick={() => setIsEditing(true)}
+              variant="secondary"
+              icon={<EditIcon />}
               disabled={isSaving}
+              onClick={() => setIsEditing(true)}
             >
               Изменить
-            </SecondaryButton>
-            <DangerButton type="button" onClick={onDelete} disabled={isSaving}>
+            </WayPayButton>
+            <DisconnectButton
+              type="button"
+              disabled={isSaving}
+              onClick={onDelete}
+            >
               Отключить
-            </DangerButton>
-          </Actions>
-        </ViewMode>
-      )}
+            </DisconnectButton>
+          </>
+        )}
+      </CardActions>
     </Card>
   );
 };
 
-/* ---------- styled ---------- */
+const formatContact = (messenger: Messenger, value: string) => {
+  if (messenger !== "WhatsApp") return value;
+
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("7")) {
+    return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(
+      7,
+      9
+    )}-${digits.slice(9, 11)}`;
+  }
+
+  return value.startsWith("+") ? value : `+${value}`;
+};
+
+const MessengerGlyph = ({ messenger }: { messenger: Messenger }) => {
+  if (messenger === "Telegram") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 4 3.8 10.7c-1.2.5-1.2 1.2-.2 1.5l4.4 1.4 1.7 5.1c.2.7.1 1 .9 1 .6 0 .9-.3 1.2-.6l2.1-2 4.4 3.2c.8.5 1.4.3 1.6-.8L22.8 5c.3-1.4-.5-1.9-1.8-1Z" />
+        <path d="m8 13.6 10.4-6.5c.5-.3 1-.1.6.3l-8.6 7.8-.3 3.5" />
+      </svg>
+    );
+  }
+
+  if (messenger === "WhatsApp") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20.5 11.8a8.5 8.5 0 0 1-12.6 7.5L3 20.6l1.3-4.7a8.5 8.5 0 1 1 16.2-4.1Z" />
+        <path d="M8.2 7.7c.2-.5.5-.5.8-.5h.5c.2 0 .4 0 .5.4l.8 1.9c.1.3.1.5-.1.7l-.6.8c-.2.2-.1.4 0 .6.7 1.2 1.6 2.1 2.8 2.8.2.1.4.2.6 0l.9-1.1c.2-.2.4-.3.7-.2l2 .9c.3.1.5.3.5.5 0 .3-.2 1.5-.9 2.1-.6.6-1.4.9-2.4.7-1-.2-2.2-.6-3.8-1.6-2.3-1.5-3.8-3.7-4.2-4.4-.4-.7-1.1-2.6 0-3.9Z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m4 7 8 6 8-6" />
+    </svg>
+  );
+};
+
+const CheckIcon = () => (
+  <svg viewBox="0 0 16 16" aria-hidden="true">
+    <path d="m3 8 3 3 7-7" />
+  </svg>
+);
+
+const ChevronIcon = () => (
+  <svg viewBox="0 0 16 16" aria-hidden="true">
+    <path d="m6 3 5 5-5 5" />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 20h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 const Card = styled.div`
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 20px;
+  min-width: 0;
+  min-height: 360px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-
-  &:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-    border-color: #d1d5db;
-  }
+  border: 1px solid #dfe6ec;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
 `;
 
-const Header = styled.div`
+const CardHeader = styled.div`
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 `;
 
-const MessengerName = styled.h3`
+const MessengerTitle = styled.h3`
+  min-width: 0;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 600;
+  gap: 12px;
   color: #111827;
+  font-size: 17px;
+  font-weight: 700;
 `;
 
-const Icon = styled.span`
-  font-size: 22px;
-  line-height: 1;
+const MessengerIcon = styled.span<{ $messenger: Messenger }>`
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: ${({ $messenger }) =>
+    $messenger === "WhatsApp" ? "#e6f8ef" : "#e8f7f8"};
+  color: ${({ $messenger }) =>
+    $messenger === "WhatsApp" ? "#12a968" : "#008b98"};
+
+  svg {
+    width: 24px;
+    height: 24px;
+    fill: ${({ $messenger }) => ($messenger === "Telegram" ? "currentColor" : "none")};
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 `;
 
-const StatusBadge = styled.span<{ $active?: boolean }>`
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
+const StatusBadge = styled.span<{ $active: boolean }>`
+  min-height: 32px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border-radius: 999px;
-  background: ${(p) => (p.$active ? "rgba(16, 185, 129, 0.12)" : "#f3f4f6")};
-  color: ${(p) => (p.$active ? "#047857" : "#6b7280")};
+  background: ${({ $active }) => ($active ? "#e5f7f3" : "#f2f4f7")};
+  color: ${({ $active }) => ($active ? "#00877f" : "#7b8496")};
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 `;
 
-const Divider = styled.hr`
-  border: none;
-  border-top: 1px solid #f1f5f9;
-  margin: 0;
+const Divider = styled.div`
+  height: 1px;
+  margin: 14px 0 18px;
+  background: #e4e9ee;
 `;
 
-const Form = styled.form`
+const CardBody = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: stretch;
 `;
 
-const Label = styled.label`
+const FieldLabel = styled.label`
+  margin-bottom: 8px;
+  color: #5f6f89;
   font-size: 13px;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 500;
+`;
+
+const ContactInput = styled.input<{ $hasError: boolean }>`
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  border: 1px solid ${({ $hasError }) => ($hasError ? "#dc2626" : "#cbd5df")};
+  border-radius: 7px;
+  outline: none;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+
+  &:focus {
+    border-color: #008b98;
+    box-shadow: 0 0 0 2px rgba(0, 139, 152, 0.09);
+  }
+
+  &::placeholder {
+    color: #9aa4b6;
+  }
+`;
+
+const ContactValue = styled.div`
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border: 1px solid #d2dae3;
+  border-radius: 7px;
+  background: #fff;
+  color: #172033;
+  font-size: 14px;
+  word-break: break-word;
 `;
 
 const HintText = styled.p`
-  margin: 0;
-  font-size: 12.5px;
-  color: #6b7280;
-  line-height: 1.5;
-`;
-
-const ErrorText = styled.div`
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(239, 68, 68, 0.08);
-  color: #b71c1c;
-  font-size: 13px;
+  min-height: 18px;
+  margin: 8px 0 0;
+  color: #8a95a9;
+  font-size: 12px;
   line-height: 1.45;
 `;
 
-const Actions = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-`;
-
-const SecondaryButton = styled.button`
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-
-  &:hover:not(:disabled) {
-    background: #f9fafb;
-    border-color: #9ca3af;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const DangerButton = styled(SecondaryButton)`
-  color: #b91c1c;
-  border-color: #fecaca;
-
-  &:hover:not(:disabled) {
-    background: #fef2f2;
-    border-color: #f87171;
-  }
-`;
-
-const ViewMode = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const ContactRow = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
-const ContactLabel = styled.span`
-  font-size: 13px;
-  color: #6b7280;
-`;
-
-const ContactValue = styled.span`
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-  word-break: break-all;
-`;
-
-/* ---------- instructions ---------- */
-
-const codeBase = `
-  code {
-    background: #eef2ff;
-    color: #1e3a8a;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 12.5px;
-  }
-`;
-
-const InstructionBlock = styled.div`
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  font-size: 13px;
-  color: #4b5563;
-  line-height: 1.55;
-
-  p {
-    margin: 0 0 6px;
-  }
-  p:last-child {
-    margin-bottom: 0;
-  }
-  ${codeBase}
+const ErrorText = styled.div`
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #fff1f2;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.4;
 `;
 
 const InstructionDetails = styled.details`
-  border-radius: 10px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  font-size: 13px;
-  color: #4b5563;
-  line-height: 1.55;
-  overflow: hidden;
+  margin-top: 10px;
+  color: #008792;
+  font-size: 12px;
 `;
 
 const InstructionSummary = styled.summary`
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #1f2937;
-  user-select: none;
-  list-style: none;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
 
   &::-webkit-details-marker {
     display: none;
   }
 
-  &::before {
-    content: "▸";
-    display: inline-block;
-    color: #6b7280;
+  svg {
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
     transition: transform 0.15s ease;
   }
 
-  details[open] > &::before {
+  details[open] & svg {
     transform: rotate(90deg);
   }
 `;
 
 const InstructionBody = styled.div`
-  padding: 10px 14px 14px;
-  border-top: 1px solid #e5e7eb;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: #f7fafb;
+  color: #667085;
+  line-height: 1.45;
 
-  ol {
-    margin: 0 0 8px;
-    padding-left: 20px;
+  code {
+    color: #007d88;
   }
-  li {
-    margin-bottom: 4px;
+`;
+
+const CardActions = styled.div<{ $single: boolean }>`
+  min-height: 58px;
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: ${({ $single }) => ($single ? "stretch" : "space-between")};
+  gap: 10px;
+  border-top: 1px solid #e4e9ee;
+
+  > button:first-child {
+    ${({ $single }) => ($single ? "flex: 1;" : "min-width: 118px;")}
   }
-  p {
-    margin: 0;
+`;
+
+const DisconnectButton = styled.button`
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #dc2626;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #fff1f2;
   }
-  ${codeBase}
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
 `;
 
 export default MessengerBackupCard;
