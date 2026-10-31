@@ -483,6 +483,8 @@ const HISTORY_OPTIONS = [
   { value: 7, label: "7 дней" },
   { value: 30, label: "30 дней" },
   { value: 90, label: "90 дней" },
+  { value: 365, label: "1 год" },
+  { value: 3650, label: "Вся история (до 10 лет)" },
 ];
 
 const PEER_LABEL = { User: "личный", Chat: "группа", Channel: "канал / супергруппа" } as const;
