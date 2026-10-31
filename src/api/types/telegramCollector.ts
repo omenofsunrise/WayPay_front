@@ -63,9 +63,18 @@ export interface CollectorChat {
   lastMessageId: number;
 }
 
+/** Как Telegram отправил код входа. */
+export type CodeVia = "App" | "Sms" | "Call" | "MissedCall" | "Email" | "Other";
+
 export interface LoginResult {
   accountId: number;
   step: LoginStep;
+  /** Только на шаге Code: куда ушёл код. */
+  codeSentVia?: CodeVia | null;
+  /** Следующий способ, если код не пришёл; null — другого нет. */
+  nextCodeVia?: CodeVia | null;
+  /** Через сколько секунд можно запросить код следующим способом. */
+  resendInSeconds?: number | null;
 }
 
 export interface BlacklistCandidate {
