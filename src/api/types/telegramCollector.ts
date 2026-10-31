@@ -77,6 +77,19 @@ export interface LoginResult {
   resendInSeconds?: number | null;
 }
 
+/** Waiting — ждём сканирования, Password — нужен облачный пароль, Checking — проверяем пароль. */
+export type QrLoginStatus = "Waiting" | "Password" | "Checking" | "Done" | "Failed" | "Expired" | "Cancelled";
+
+export interface QrLoginState {
+  qrId: string;
+  status: QrLoginStatus;
+  /** tg://login?token=… — содержимое QR-кода, только пока ждём сканирования. */
+  url: string | null;
+  error: string | null;
+  accountId: number | null;
+  expiresInSeconds: number;
+}
+
 export interface BlacklistCandidate {
   id: number;
   accountId: number;

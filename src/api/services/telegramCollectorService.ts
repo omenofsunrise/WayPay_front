@@ -9,6 +9,7 @@ import type {
   CollectorChat,
   CollectorStatus,
   LoginResult,
+  QrLoginState,
 } from "../types/telegramCollector";
 
 const BASE = "/TelegramCollector";
@@ -51,6 +52,26 @@ class TelegramCollectorService {
       `${BASE}/accounts/${accountId}/login/resend`
     );
     return data;
+  }
+
+  /** Вход по QR-коду: код из Telegram не нужен. */
+  async startQrLogin(): Promise<QrLoginState> {
+    const { data } = await apiClient.post<QrLoginState>(`${BASE}/accounts/login/qr`);
+    return data;
+  }
+
+  async getQrLogin(qrId: string): Promise<QrLoginState> {
+    const { data } = await apiClient.get<QrLoginState>(`${BASE}/accounts/login/qr/${qrId}`);
+    return data;
+  }
+
+  async submitQrPassword(qrId: string, value: string): Promise<QrLoginState> {
+    const { data } = await apiClient.post<QrLoginState>(`${BASE}/accounts/login/qr/${qrId}/password`, { value });
+    return data;
+  }
+
+  async cancelQrLogin(qrId: string): Promise<void> {
+    await apiClient.post(`${BASE}/accounts/login/qr/${qrId}/cancel`);
   }
 
   async logout(accountId: number): Promise<void> {
