@@ -15,6 +15,7 @@ import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
 import PhoneModalInput from "../../ui/fields/PhoneModalInput";
+import QrLoginModal from "./QrLoginModal";
 import ToggleSwitch from "../../ui/Toggles/ToggleSwitch";
 import { formatPhoneForSearch as formatPhone } from "../../../utils/phoneUtils";
 import {
@@ -66,6 +67,7 @@ const AccountsPanel = ({ canConnect, onChanged }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loginPhone, setLoginPhone] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
   const [chatsAccount, setChatsAccount] = useState<CollectorAccount | null>(null);
 
   const load = useCallback(async () => {
@@ -119,6 +121,13 @@ const AccountsPanel = ({ canConnect, onChanged }: Props) => {
     }
   };
 
+  const handleQrDone = useCallback(async () => {
+    setQrOpen(false);
+    setSuccess("Аккаунт подключён по QR-коду. Отметьте чаты, которые нужно читать.");
+    await load();
+    onChanged();
+  }, [load, onChanged]);
+
   return (
     <Column>
       <Toolbar>
@@ -130,6 +139,9 @@ const AccountsPanel = ({ canConnect, onChanged }: Props) => {
           <DarkCyanButton disabled={!canConnect} onClick={() => setLoginPhone("")}>
             + Подключить аккаунт
           </DarkCyanButton>
+          <SecondaryButton type="button" disabled={!canConnect} onClick={() => setQrOpen(true)}>
+            Подключить по QR-коду
+          </SecondaryButton>
         </ConnectButton>
       </Toolbar>
 
@@ -231,6 +243,10 @@ const AccountsPanel = ({ canConnect, onChanged }: Props) => {
         <LoginModal
           initialPhone={loginPhone}
           onClose={() => setLoginPhone(null)}
+          onSwitchToQr={() => {
+            setLoginPhone(null);
+            setQrOpen(true);
+          }}
           onDone={async () => {
             setLoginPhone(null);
             setSuccess("Аккаунт подключён. Отметьте чаты, которые нужно читать.");
@@ -239,6 +255,8 @@ const AccountsPanel = ({ canConnect, onChanged }: Props) => {
           }}
         />
       )}
+
+      {qrOpen && <QrLoginModal onClose={() => setQrOpen(false)} onDone={handleQrDone} />}
 
       {chatsAccount && (
         <ChatsModal
@@ -259,6 +277,7 @@ interface LoginProps {
   initialPhone: string;
   onClose: () => void;
   onDone: () => void;
+  onSwitchToQr: () => void;
 }
 
 const SENT_VIA_HINT: Record<CodeVia, string> = {
@@ -290,7 +309,7 @@ const toDelivery = (result: LoginResult): Delivery | null =>
       }
     : null;
 
-const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
+const LoginModal = ({ initialPhone, onClose, onDone, onSwitchToQr }: LoginProps) => {
   const [step, setStep] = useState<LoginStep | "Phone">("Phone");
   const [accountId, setAccountId] = useState<number | null>(null);
   const [phone, setPhone] = useState(() => formatPhone(initialPhone));
@@ -416,10 +435,33 @@ const LoginModal = ({ initialPhone, onClose, onDone }: LoginProps) => {
           </Field>
         )}
         {error && <ErrorMessage>{error}</ErrorMessage>}
+        {step !== "Password" && (
+          <QrSwitch>
+            Код не приходит?{" "}
+            <button type="button" onClick={onSwitchToQr}>
+              Войти по QR-коду
+            </button>
+          </QrSwitch>
+        )}
       </ModalForm>
     </BaseModal>
   );
 };
+
+const QrSwitch = styled.div`
+  color: #667085;
+  font-size: 13px;
+
+  button {
+    padding: 0;
+    border: none;
+    background: none;
+    color: rgba(0, 125, 136, 1);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+`;
 
 const ResendRow = styled.div`
   display: flex;
@@ -578,6 +620,10 @@ const ChatsModal = ({ account, onClose }: ChatsProps) => {
 };
 
 const ConnectButton = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
   button {
     width: auto;
     padding: 0 18px;
