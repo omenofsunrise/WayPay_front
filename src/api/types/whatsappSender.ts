@@ -24,6 +24,13 @@ export interface WhatsAppSender {
   type: WhatsAppSenderType;
   eventDays: number;
   pattern: string;
+  bots?: WhatsAppSenderBot[];
+}
+
+export interface WhatsAppSenderBot {
+  id: number;
+  isActive: boolean;
+  name: string;
 }
 
 // PATCH /api/WhatsAppSender/{senderId} принимает массив id ботов: number[]
