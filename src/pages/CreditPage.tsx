@@ -1862,7 +1862,8 @@ const CreditPage = () => {
           creditAcceptance &&
           hasPermission("MANAGE_ACCOUNTING", true) &&
           credit &&
-          !credit.hasCounterApproved
+          !credit.hasCounterApproved &&
+          (credit.investorId || credit.poolId)
         );
       },
     },
