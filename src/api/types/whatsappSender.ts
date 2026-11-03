@@ -23,6 +23,7 @@ export interface WhatsAppSender {
   id: number;
   type: WhatsAppSenderType;
   eventDays: number;
+  isActive: boolean;
   pattern: string;
   bots?: WhatsAppSenderBot[];
 }
