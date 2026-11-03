@@ -34,6 +34,11 @@ class WhatsAppSenderService {
     await apiClient.patch(`/WhatsAppSender/${senderId}`, botIds);
   }
 
+  // Включить/выключить рассылку (включить можно только при активном боте)
+  async setSenderActive(senderId: number, active: boolean): Promise<void> {
+    await apiClient.patch(`/WhatsAppSender/${senderId}/active`, { active });
+  }
+
   // 3) Отчёты
   async getReport(date?: string): Promise<SenderReport> {
     const response = await apiClient.get<SenderReport>(

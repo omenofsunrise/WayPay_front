@@ -110,6 +110,7 @@ const WhatsAppSendersPage: React.FC = () => {
     updateSender,
     deleteSender,
     setSenderBots,
+    setSenderActive,
   } = useWhatsAppSender();
 
   const [edit, setEdit] = useState<EditState>(emptyEdit);
@@ -247,6 +248,19 @@ const WhatsAppSendersPage: React.FC = () => {
     });
   };
 
+  const handleToggleActive = async (sender: WhatsAppSender) => {
+    const message = await setSenderActive(sender.id, !sender.isActive);
+    if (message === null) {
+      await loadSenders();
+      addToast(
+        "success",
+        sender.isActive ? "Рассылка отключена" : "Рассылка включена"
+      );
+    } else {
+      addToast("error", message);
+    }
+  };
+
   // ── Боты ──────────────────────────────────────────────────────────────────
 
   const openBots = async (sender: WhatsAppSender) => {
@@ -337,6 +351,7 @@ const WhatsAppSendersPage: React.FC = () => {
             <Card key={sender.id}>
               <CardTop>
                 <TypeBadge>{describeDays(sender.eventDays)}</TypeBadge>
+                <SenderId>{sender.isActive ? "Включена" : "Отключена"}</SenderId>
                 <SenderId>#{sender.id}</SenderId>
               </CardTop>
               <CardBody>
@@ -347,6 +362,9 @@ const WhatsAppSendersPage: React.FC = () => {
                 </CardPreview>
               </CardBody>
               <CardActions>
+                <SmallBtn onClick={() => handleToggleActive(sender)}>
+                  {sender.isActive ? "Отключить" : "Включить"}
+                </SmallBtn>
                 <SmallBtn onClick={() => openBots(sender)}>Боты</SmallBtn>
                 <SmallBtn onClick={() => openEdit(sender)}>Изменить</SmallBtn>
                 <SmallBtnDanger onClick={() => handleDelete(sender)}>

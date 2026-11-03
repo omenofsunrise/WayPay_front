@@ -86,6 +86,20 @@ const useWhatsAppSender = () => {
     []
   );
 
+  // Возвращает null при успехе, иначе текст ошибки (бэкенд отвечает 422 с причиной)
+  const setSenderActive = useCallback(
+    async (senderId: number, active: boolean): Promise<string | null> => {
+      try {
+        await whatsappSenderService.setSenderActive(senderId, active);
+        return null;
+      } catch (err) {
+        const data = (err as { response?: { data?: unknown } }).response?.data;
+        return typeof data === "string" && data ? data : errorMessage(err);
+      }
+    },
+    []
+  );
+
   const getReport = useCallback(
     async (date?: string): Promise<SenderReport | null> => {
       try {
@@ -121,6 +135,7 @@ const useWhatsAppSender = () => {
     updateSender,
     deleteSender,
     setSenderBots,
+    setSenderActive,
     getReport,
     getReportDetails,
   };
