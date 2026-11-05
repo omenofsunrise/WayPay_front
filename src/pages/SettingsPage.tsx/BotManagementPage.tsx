@@ -59,8 +59,6 @@ const EVENT_OPTIONS: BotEventType[] = [
   "CreatedCredit",
   "CreatedPayment",
   "ClientBirthdate",
-  "ComingPayment",
-  "OverduePayment",
 ];
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

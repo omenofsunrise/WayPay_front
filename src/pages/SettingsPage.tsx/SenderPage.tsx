@@ -5,18 +5,10 @@ import TitleField from "../../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import ModalInfoTitle from "../../components/ui/Text/ModalInfoTitle";
 import DarkCyanButton from "../../components/ui/Buttons/DarkCyanButton";
-import BaseModal from "../../components/modal/BASE/modalCRUBase";
 import CustomTextArea from "../../components/ui/fields/CustomTextArea";
 import useSender from "../../api/hooks/useSender";
 import { TextPatternType } from "../../api/types/sender";
-import type {
-  CreateSenderSetting,
-  SenderSettingResponse,
-} from "../../api/types/sender";
 import DefaultContainer from "../../components/ui/containers/defaultContainer";
-import AddSenderScheduleModal from "../../components/modal/AddSenderScheduleModal";
-import { describeSenderSetting } from "../../api/utils/senderSchedule";
-import DeleteButton from "../../components/ui/Buttons/DeleteButton";
 
 // ─── Toast & Confirm ──────────────────────────────────────────────────────────
 
@@ -60,13 +52,6 @@ const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
       opacity: 1;
     }
   }
-`;
-
-const ConfirmText = styled.p`
-  padding: 16px 30px;
-  font-size: 15px;
-  color: #374151;
-  line-height: 1.5;
 `;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -277,15 +262,9 @@ const SenderPage = () => {
     error,
     GetMyCompanySenderInfo,
     SetSenderTextPattern,
-    CreateNewSenderSetting,
-    DeleteSenderSetting,
   } = useSender();
 
   const [settings, setSettings] = useState<SenderSettings>(initialSettings);
-  const [scheduleSettings, setScheduleSettings] = useState<
-    SenderSettingResponse[]
-  >([]);
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [toasts, setToasts] = useState<
     { id: number; type: "success" | "error" | "warning"; message: string }[]
   >([]);
@@ -301,37 +280,6 @@ const SenderPage = () => {
     },
     []
   );
-
-  const [confirmState, setConfirmState] = useState<{
-    isOpen: boolean;
-    message: string;
-    onConfirm: () => void;
-    isSubmitting: boolean;
-  }>({ isOpen: false, message: "", onConfirm: () => {}, isSubmitting: false });
-
-  const openConfirm = (msg: string, onConfirm: () => void) =>
-    setConfirmState({
-      isOpen: true,
-      message: msg,
-      onConfirm,
-      isSubmitting: false,
-    });
-
-  const closeConfirm = () =>
-    setConfirmState((prev) => ({
-      ...prev,
-      isOpen: false,
-      isSubmitting: false,
-    }));
-
-  const handleConfirm = async () => {
-    setConfirmState((prev) => ({ ...prev, isSubmitting: true }));
-    try {
-      await confirmState.onConfirm();
-    } finally {
-      closeConfirm();
-    }
-  };
 
   const [changedFlags, setChangedFlags] = useState<
     Record<TemplateKey, boolean>
@@ -363,7 +311,6 @@ const SenderPage = () => {
         shareCreditsText: data.shareCreditsContent?.toString() || "",
         sharePaymentsText: data.sharePaymentsContent?.toString() || "",
       });
-      setScheduleSettings(data.senderSettingResponses ?? []);
       setChangedFlags({
         upcomingPaymentText: false,
         overduePaymentText: false,
@@ -393,24 +340,6 @@ const SenderPage = () => {
       console.error("Error saving text pattern:", e);
       addToast("error", "Не удалось сохранить шаблон");
     }
-  };
-
-  const handleAddSchedule = async (setting: CreateSenderSetting) => {
-    await CreateNewSenderSetting(setting);
-    await loadSenderData();
-    setIsScheduleModalOpen(false);
-  };
-
-  const handleDeleteSchedule = (id: number) => {
-    openConfirm("Удалить это расписание рассылки?", async () => {
-      try {
-        await DeleteSenderSetting(id);
-        await loadSenderData();
-        addToast("success", "Расписание удалено");
-      } catch {
-        addToast("error", "Не удалось удалить расписание");
-      }
-    });
   };
 
   const insertVariable = (key: TemplateKey, variable: string) => {
@@ -451,46 +380,6 @@ const SenderPage = () => {
       </TitleField>
 
       {error && <ErrorBanner>{error}</ErrorBanner>}
-
-      <ScheduleSection>
-        <DefaultContainer>
-          <ScheduleHeader>
-            <ModalInfoTitle>Расписание рассылок</ModalInfoTitle>
-            <DarkCyanButton
-              onClick={() => setIsScheduleModalOpen(true)}
-              disabled={isLoading}
-            >
-              + Добавить рассылку
-            </DarkCyanButton>
-          </ScheduleHeader>
-
-          <ScheduleHint>
-            Выберите, когда отправлять сообщения клиентам: заранее, в день
-            платежа или после просрочки.
-          </ScheduleHint>
-
-          {scheduleSettings.length === 0 ? (
-            <EmptySchedule>
-              Рассылки ещё не настроены. Нажмите «Добавить рассылку».
-            </EmptySchedule>
-          ) : (
-            <ScheduleList>
-              {scheduleSettings.map((setting) => (
-                <ScheduleChip key={setting.id}>
-                  <ScheduleChipText>
-                    {describeSenderSetting(setting)}
-                  </ScheduleChipText>
-                  <DeleteButton
-                    size={28}
-                    tooltip="Удалить рассылку"
-                    onClick={() => handleDeleteSchedule(setting.id)}
-                  />
-                </ScheduleChip>
-              ))}
-            </ScheduleList>
-          )}
-        </DefaultContainer>
-      </ScheduleSection>
 
       <PageContainer>
         {templateConfigs.map((config) => (
@@ -544,30 +433,6 @@ const SenderPage = () => {
         ))}
       </PageContainer>
 
-      <AddSenderScheduleModal
-        isOpen={isScheduleModalOpen}
-        existing={scheduleSettings}
-        onClose={() => setIsScheduleModalOpen(false)}
-        onConfirm={handleAddSchedule}
-      />
-
-      {confirmState.isOpen && (
-        <BaseModal
-          title="Подтверждение"
-          onClose={closeConfirm}
-          onCancel={closeConfirm}
-          onSave={(e) => {
-            e.preventDefault();
-            handleConfirm();
-          }}
-          isSubmitting={confirmState.isSubmitting}
-          saveButtonText="Удалить"
-          width="400px"
-        >
-          <ConfirmText>{confirmState.message}</ConfirmText>
-        </BaseModal>
-      )}
-
       <ToastContainer>
         {toasts.map((t) => (
           <Toast key={t.id} $type={t.type}>
@@ -595,61 +460,6 @@ const ErrorBanner = styled.div`
 const SaveButton = styled(DarkCyanButton)`
   min-width: 100px;
   flex-shrink: 0;
-`;
-
-const ScheduleSection = styled.div`
-  padding: 24px 16px 0;
-`;
-
-const ScheduleHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-
-  h2 {
-    margin: 0;
-  }
-`;
-
-const ScheduleHint = styled.div`
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 16px;
-`;
-
-const EmptySchedule = styled.div`
-  font-size: 14px;
-  color: #9ca3af;
-  padding: 16px;
-  background-color: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 8px;
-`;
-
-const ScheduleList = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-`;
-
-const ScheduleChip = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px 6px 14px;
-  background-color: rgba(0, 125, 136, 0.08);
-  border: 1px solid rgba(0, 125, 136, 0.25);
-  border-radius: 20px;
-`;
-
-const ScheduleChipText = styled.span`
-  font-size: 13px;
-  font-weight: 500;
-  color: #007d88;
-  white-space: nowrap;
 `;
 
 const PageContainer = styled.div`
