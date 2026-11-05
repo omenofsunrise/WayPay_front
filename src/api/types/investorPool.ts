@@ -1,6 +1,7 @@
 import type { PaginationParams } from './common';
 
 export interface InvestorPool {
+  pie: number;
   id: number;
   name: string;
   createdAt: Date;

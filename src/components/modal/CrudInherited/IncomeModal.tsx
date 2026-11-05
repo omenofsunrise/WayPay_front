@@ -20,6 +20,8 @@ interface SelectedEntity {
   isCompany?: boolean;
   investorPie?: number;
   pie?: number;
+  companyCurrentIncome?: number;
+  selfCurrentIncome?: number;
 }
 
 interface IncomeModalProps {
@@ -196,6 +198,39 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     }
   }, [show, newIncome.amount, newIncome.companyShare, selectedEntity, setNewIncome]);
 
+  const getIncomeSourceBalance = (
+    entity: SelectedEntity | null,
+    companyShare: number,
+  ): number | undefined => {
+    if (!entity) return undefined;
+
+    const safeCompanyShare = Math.max(0, Math.min(100, companyShare));
+    const investorShare = 100 - safeCompanyShare;
+
+    const selfCurrentIncome = nonNegative(entity.selfCurrentIncome);
+    const companyCurrentIncome = nonNegative(entity.companyCurrentIncome);
+
+    // Обратная совместимость: если разбивки по доходам нет — используем общий currentIncome
+    if (selfCurrentIncome === undefined && companyCurrentIncome === undefined) {
+      return entity.currentIncome;
+    }
+
+    // Сколько максимум можно распределить, чтобы лимиты обеих сторон не были превышены:
+    //   X * companyShare/100  <= companyCurrentIncome
+    //   X * investorShare/100 <= selfCurrentIncome
+    const limits: number[] = [];
+
+    if (safeCompanyShare > 0) {
+      limits.push(((companyCurrentIncome ?? 0) * 100) / safeCompanyShare);
+    }
+    if (investorShare > 0) {
+      limits.push(((selfCurrentIncome ?? 0) * 100) / investorShare);
+    }
+
+    if (limits.length === 0) return 0;
+    return Math.floor(Math.min(...limits));
+  };
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
@@ -262,13 +297,12 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
     setNewIncome(prev => ({ ...prev, companyShare: percentage }));
   };
 
-  // Баланс и лимит по источнику — нормализуем отрицательные значения к 0
   const totalBalance = nonNegative(selectedEntity?.balance);
 
   const rawSourceBalance = isInvestor
     ? newIncome.payoutSource === PayoutSource.Investment
       ? selectedEntity?.investmentAmount ?? selectedEntity?.balance
-      : selectedEntity?.currentIncome ?? selectedEntity?.balance
+      : getIncomeSourceBalance(selectedEntity, newIncome.companyShare ?? 100)
     : undefined;
 
   const sourceBalance = nonNegative(rawSourceBalance);

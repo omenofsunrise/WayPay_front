@@ -364,13 +364,13 @@ const CreditPage = () => {
     headerHeight: 300,
     paginationHeight: 60,
   });
-  const pageSizeRef = useRef(responsivePageSize);
   // В постраничном режиме показываем ровно столько договоров, сколько помещается
   // на экран, чтобы листать страницами без прокрутки. В режиме ленты грузим
   // более крупными пачками, чтобы бесконечный скролл не дёргался.
   const itemsPerPage = isListMode
     ? Math.max(responsivePageSize, 20)
     : responsivePageSize;
+  const previousItemsPerPageRef = useRef(itemsPerPage);
   const { authInfo, hasPermission, hasRole, denyPermission, forbiddenRole } =
     useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
@@ -436,9 +436,18 @@ const CreditPage = () => {
   } = useObjectTypes();
 
   useEffect(() => {
-    pageSizeRef.current = responsivePageSize;
+    const previousItemsPerPage = previousItemsPerPageRef.current;
+    previousItemsPerPageRef.current = itemsPerPage;
     setIsPageSizeReady(true);
-  }, [responsivePageSize]);
+
+    // Skip/Take должны использовать один размер страницы. Если высота окна
+    // изменилась, прежний номер страницы относится уже к другим границам и
+    // крайний договор может повториться на соседней странице.
+    if (previousItemsPerPage !== itemsPerPage) {
+      abortControllerRef.current?.abort();
+      setCurrentPage(1);
+    }
+  }, [itemsPerPage, setCurrentPage]);
 
   const shouldShowMyCreditsTab =
     hasRole("директор") ||
@@ -1394,6 +1403,7 @@ const CreditPage = () => {
     contractNumber,
     selectedInvestmentSource,
     isListMode,
+    itemsPerPage,
   ]);
 
   // Очистка при размонтировании
@@ -1442,6 +1452,7 @@ const CreditPage = () => {
     activeTab,
     filters,
     sortConfig,
+    itemsPerPage,
   ]);
 
   useEffect(() => {
@@ -1867,7 +1878,8 @@ const CreditPage = () => {
           creditAcceptance &&
           hasPermission("MANAGE_ACCOUNTING", true) &&
           credit &&
-          !credit.hasCounterApproved
+          !credit.hasCounterApproved &&
+          (credit.investorId || credit.poolId)
         );
       },
     },

@@ -63,9 +63,31 @@ export interface CollectorChat {
   lastMessageId: number;
 }
 
+/** Как Telegram отправил код входа. */
+export type CodeVia = "App" | "Sms" | "Call" | "MissedCall" | "Email" | "Other";
+
 export interface LoginResult {
   accountId: number;
   step: LoginStep;
+  /** Только на шаге Code: куда ушёл код. */
+  codeSentVia?: CodeVia | null;
+  /** Следующий способ, если код не пришёл; null — другого нет. */
+  nextCodeVia?: CodeVia | null;
+  /** Через сколько секунд можно запросить код следующим способом. */
+  resendInSeconds?: number | null;
+}
+
+/** Waiting — ждём сканирования, Password — нужен облачный пароль, Checking — проверяем пароль. */
+export type QrLoginStatus = "Waiting" | "Password" | "Checking" | "Done" | "Failed" | "Expired" | "Cancelled";
+
+export interface QrLoginState {
+  qrId: string;
+  status: QrLoginStatus;
+  /** tg://login?token=… — содержимое QR-кода, только пока ждём сканирования. */
+  url: string | null;
+  error: string | null;
+  accountId: number | null;
+  expiresInSeconds: number;
 }
 
 export interface BlacklistCandidate {

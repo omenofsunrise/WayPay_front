@@ -250,7 +250,12 @@ const WhatsAppSendersPage: React.FC = () => {
   // ── Боты ──────────────────────────────────────────────────────────────────
 
   const openBots = async (sender: WhatsAppSender) => {
-    setBotsState({ isOpen: true, sender, selected: new Set(), saving: false });
+    setBotsState({
+      isOpen: true,
+      sender,
+      selected: new Set(sender.bots?.map((bot) => bot.id) ?? []),
+      saving: false,
+    });
     if (channels.length === 0) await loadAllBots();
   };
 
@@ -272,6 +277,7 @@ const WhatsAppSendersPage: React.FC = () => {
     );
     setBotsState((p) => ({ ...p, saving: false }));
     if (ok) {
+      await loadSenders();
       setBotsState({
         isOpen: false,
         sender: null,

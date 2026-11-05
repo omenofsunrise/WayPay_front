@@ -76,6 +76,8 @@ interface SelectedEntity {
   isCompany?: boolean;
   currentIncome?: number;
   investmentAmount?: number;
+  companyCurrentIncome?: number;
+  selfCurrentIncome?: number;
 }
 
 const BudgetPage = () => {
