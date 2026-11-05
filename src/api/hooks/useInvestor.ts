@@ -41,6 +41,20 @@ const useInvestor = () => {
     }
   }, []);
 
+  const updateReinvestment = async (id: number, newValue: number): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await investorService.updateReinvestment(id, newValue);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const createInvestor = async (investor: Omit<Investor, 'id'>): Promise<Investor | null> => {
     setIsLoading(true);
     setError(null);
@@ -249,7 +263,8 @@ const useInvestor = () => {
     clearInvestor,
     getInvestorAgreement,
     updateInvestment,
-    getDeletedInfo
+    getDeletedInfo,
+    updateReinvestment
   };
 };
 

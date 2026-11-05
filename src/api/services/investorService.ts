@@ -113,6 +113,12 @@ class ProductService {
     return response.data;
   }
 
+  async updateReinvestment(id: number, newValue: number): Promise<void> {
+    await apiClient.put(`/Investor/reinvestment/${id}`, null, {
+      params: { newValue },
+    });
+  }
+
   async getCashPositionHistory(
     investorId: number,
     page = 1

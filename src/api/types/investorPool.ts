@@ -32,5 +32,6 @@ export interface Reinvestment {
   investorId: number;
   date: Date;
   amount: number;
+  maxAmount: number;
   investorNickname: string;
 }

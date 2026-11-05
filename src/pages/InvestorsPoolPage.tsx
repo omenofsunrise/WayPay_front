@@ -81,7 +81,8 @@ const InvestorsPoolPage = ({
     updateInvestor,
     addInvestment,
     updateInvestment,
-    blockInvestor
+    blockInvestor,
+    updateReinvestment
   } = useInvestor();
 
   const {
@@ -171,6 +172,10 @@ const InvestorsPoolPage = ({
   const [payoutAmount, setPayoutAmount] = useState<string>("");
   const [selectedInvestorForPayout, setSelectedInvestorForPayout] =
     useState<Investor | null>(null);
+  const [isEditReinvestmentModalOpen, setIsEditReinvestmentModalOpen] = useState(false);
+  const [selectedReinvestmentForEdit, setSelectedReinvestmentForEdit] =
+    useState<Reinvestment | null>(null);
+  const [editReinvestmentAmount, setEditReinvestmentAmount] = useState("");
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [investmentDate, setInvestmentDate] = useState(() => {
@@ -1050,6 +1055,80 @@ const InvestorsPoolPage = ({
         console.error("Error reloading data:", error);
       }
     }
+  };
+
+  const reinvestmentItems =
+    filteredReinvestments?.items || reinvestmentsData?.items || [];
+
+  const reloadReinvestments = async () => {
+    if (!selectedPoolId) return;
+    const reinvestments = await getReinvestments(
+      Number(selectedPoolId),
+      { page: reinvestmentsPage, pageSize: pageSize },
+      selectedInvestorForFilter?.id || 0
+    );
+    if (selectedInvestorForFilter?.id) {
+      setFilteredReinvestments(reinvestments);
+    } else {
+      setReinvestmentsData(reinvestments);
+      setFilteredReinvestments(null);
+    }
+  };
+
+  const reinvestmentActions = (rowData: any[]): TableAction[] => {
+    const reinvestment = reinvestmentItems.find(
+      (item) => item.id === Number(rowData[0])
+    );
+    if (!reinvestment) return [];
+
+    return [
+      {
+        label: "Редактировать",
+        action: () => handleEditReinvestment(reinvestment),
+        color: "#2563EB",
+      },
+    ];
+  };
+
+  const handleEditReinvestment = (reinvestment: Reinvestment) => {
+    setSelectedReinvestmentForEdit(reinvestment);
+    setEditReinvestmentAmount(reinvestment.amount.toString());
+    setIsEditReinvestmentModalOpen(true);
+  };
+
+  const closeEditReinvestmentModal = () => {
+    setIsEditReinvestmentModalOpen(false);
+    setSelectedReinvestmentForEdit(null);
+    setEditReinvestmentAmount("");
+  };
+
+  const editReinvestmentValue = parseMoney(editReinvestmentAmount);
+  const isEditReinvestmentTooBig =
+    !!selectedReinvestmentForEdit &&
+    !isNaN(editReinvestmentValue) &&
+    editReinvestmentValue > selectedReinvestmentForEdit.maxAmount;
+  const isEditReinvestmentInvalid =
+    !editReinvestmentAmount ||
+    isNaN(editReinvestmentValue) ||
+    editReinvestmentValue <= 0 ||
+    isEditReinvestmentTooBig;
+
+  const handleUpdateReinvestment = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!selectedReinvestmentForEdit || isEditReinvestmentInvalid) return;
+
+    const ok = await updateReinvestment(
+      selectedReinvestmentForEdit.id,
+      editReinvestmentValue
+    );
+    if (!ok) {
+      alert("Произошла ошибка при обновлении реинвестиции");
+      return;
+    }
+
+    closeEditReinvestmentModal();
+    await reloadReinvestments();
+    await reloadData();
   };
 
   const contributionItems =
@@ -2236,6 +2315,8 @@ const InvestorsPoolPage = ({
               ]}
               data={getReinvestmentTableData()}
               isLoading={isReinvestmentsLoading}
+              contextMenuActions={reinvestmentActions}
+              showContextMenuButton
             />
             <PaginationLayout>
               <CountInfoTitle
@@ -2400,6 +2481,36 @@ const InvestorsPoolPage = ({
           </>
         )}
         </PoolOperationsCard>
+
+        {isEditReinvestmentModalOpen && selectedReinvestmentForEdit && (
+          <BaseModal
+            title="Редактирование реинвестиции"
+            onClose={closeEditReinvestmentModal}
+            onCancel={closeEditReinvestmentModal}
+            onSave={handleUpdateReinvestment}
+            isSaveDisabled={isEditReinvestmentInvalid}
+            mode="edit"
+          >
+            <form onSubmit={handleUpdateReinvestment} style={{ padding: "20px" }}>
+              <InputRow>
+                <InputLabel>Сумма реинвестиции:</InputLabel>
+                <InputContainer>
+                  <CustomInput
+                    name="reinvestmentAmount"
+                    inputType="rubles"
+                    placeholder="Сумма"
+                    value={editReinvestmentAmount}
+                    onChange={(e) => setEditReinvestmentAmount(e.target.value)}
+                  />
+                </InputContainer>
+              </InputRow>
+              <ReinvestmentHint $error={isEditReinvestmentTooBig}>
+                Максимальная сумма:{" "}
+                {formatMoney(selectedReinvestmentForEdit.maxAmount.toString())}
+              </ReinvestmentHint>
+            </form>
+          </BaseModal>
+        )}
 
         {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
           <BaseModal
@@ -2912,6 +3023,13 @@ const ReportDataContainer = styled.div`
   gap: 12px;
   width: 100%;
   margin-bottom: 0;
+`;
+
+const ReinvestmentHint = styled.div<{ $error?: boolean }>`
+  margin-top: 8px;
+  font-size: 13px;
+  text-align: left;
+  color: ${({ $error }) => ($error ? "#EF4444" : "#718096")};
 `;
 
 const ReportCard = styled.div`
