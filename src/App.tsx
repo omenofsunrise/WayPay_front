@@ -171,6 +171,37 @@ function App() {
     };
   }, [updateActivity]);
 
+  // Фиксируем присутствие сотрудника и реальные действия в системе.
+  // Heartbeat нужен, чтобы отличать открытый, но давно заброшенный экран.
+  useEffect(() => {
+    if (!isAuthenticated || !authInfo || authInfo.type !== "employee") return;
+
+    let lastInteractionSent = 0;
+    const sendActivity = (eventType: string) => {
+      const now = Date.now();
+      if (eventType !== "heartbeat" && now - lastInteractionSent < 15_000) {
+        return;
+      }
+      if (eventType !== "heartbeat") lastInteractionSent = now;
+      void apiClient.post("/UserActivity/ping", {
+        eventType,
+        path: window.location.pathname,
+      });
+    };
+
+    sendActivity("session");
+    const heartbeat = window.setInterval(() => sendActivity("heartbeat"), 60_000);
+    const handleInteraction = () => sendActivity("interaction");
+    window.addEventListener("click", handleInteraction, { passive: true });
+    window.addEventListener("keydown", handleInteraction, { passive: true });
+
+    return () => {
+      window.clearInterval(heartbeat);
+      window.removeEventListener("click", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
+    };
+  }, [isAuthenticated, authInfo]);
+
   useEffect(() => {
     const checkInactivity = () => {
       if (!isAuthenticated || !authInfo?.hasPin || showPinModal) return;
