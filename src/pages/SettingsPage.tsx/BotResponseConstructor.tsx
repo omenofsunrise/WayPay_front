@@ -216,6 +216,7 @@ const BotResponseConstructor = ({
               {visibleTemplates.map((template) => (
                 <TemplateCard
                   key={template.id}
+                  type="button"
                   onClick={() => applyTemplate(template)}
                   disabled={disabled}
                   title={template.description}
@@ -256,6 +257,7 @@ const BotResponseConstructor = ({
                 return (
                   <LoopCard
                     key={loop.type}
+                    type="button"
                     onClick={() => insertLoop(loop)}
                     disabled={disabled || !canInsert}
                     $accent={accent}
@@ -421,6 +423,7 @@ const BotResponseConstructor = ({
                     {group.variables.map((v) => (
                       <VarButton
                         key={v.key}
+                        type="button"
                         onClick={() => insertVariable(v.key)}
                         disabled={disabled}
                         $accent={accent}
