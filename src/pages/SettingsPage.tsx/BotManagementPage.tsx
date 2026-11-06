@@ -600,9 +600,11 @@ const BotManagementPage: React.FC = () => {
                 <CardHeader>
                   <CardTitleRow>
                     <RuleName>{rule.name || "Без названия"}</RuleName>
-                    <TypeBadge $kind={rule.botType}>
-                      {BOT_TYPE_LABEL[rule.botType]}
-                    </TypeBadge>
+                    {BOT_TYPE_LABEL[rule.botType] && (
+                      <TypeBadge $kind={rule.botType}>
+                        {BOT_TYPE_LABEL[rule.botType]}
+                      </TypeBadge>
+                    )}
                     <StatusBadge $isActive={rule.isActive}>
                       {rule.isActive ? "Активно" : "Отключено"}
                     </StatusBadge>
@@ -1236,6 +1238,7 @@ const KeywordsLabel = styled.div`
   font-weight: 500;
   color: #6b7280;
   margin-bottom: 10px;
+  text-align: left;
 `;
 
 const KeywordsList = styled.div`
