@@ -60,6 +60,8 @@ export interface AuthInfo {
     creditAcceptance?: boolean;
     paymentAcceptance?: boolean;
     incrementCreditName?: boolean;
+    showCreditName?: boolean;
+    showCreditType?: boolean;
     currentNameNumber?: number;
     /** Шаг округления сумм при оформлении, 0..100. Ноль — не округлять. */
     roundingStep?: number;
