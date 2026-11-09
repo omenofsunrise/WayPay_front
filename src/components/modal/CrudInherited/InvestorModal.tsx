@@ -376,21 +376,6 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
           )}
           
           <ModalInfoTitle>Основная информация</ModalInfoTitle>
-            {mode === 'create-pool' && !authInfo?.employee?.poolV2 && (
-                <div style={{ 
-                  backgroundColor: "#fff3cd", 
-                  color: "#856404",
-                  padding: "12px 16px",
-                  borderRadius: "4px",
-                  marginBottom: "20px",
-                  border: "1px solid #ffeeba",
-                  fontSize: "14px"
-                }}>
-                  ⚠️ Рекомендуется сначала сделать реинвестицию, 
-                  а затем добавлять новую инвестицию
-                </div>
-            )}
-
           {(mode !== 'create-pool' && mode !== 'edit-pool') && (
               <>                
               <InputRow>

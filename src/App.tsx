@@ -112,7 +112,7 @@ const InvestorsPoolRoute = () => {
   return authInfo.employee.poolV2 ? (
     <Navigate to="/investors-v2" replace />
   ) : (
-    <InvestorsPoolPage />
+    <InvestorsPoolPage enableReinvestments={!authInfo.employee.poolVEx}/>
   );
 };
 
