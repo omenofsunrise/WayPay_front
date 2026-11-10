@@ -16,7 +16,7 @@ import CreditControlPage from "./pages/CreditControlPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import InvestorsV2Page from "./pages/InvestorsV2Page";
 import BudgetPage from "./pages/FinancePage/BudgetPage";
-import { AuthProvider } from "./сontext/AuthContext";
+import { AuthProvider, useAuth } from "./сontext/AuthContext";
 import AdminPanelPage from "./pages/AdminPanelPage";
 import AdminWhatsAppChatPage from "./pages/AdminWhatsAppChatPage";
 import ToDoListPage from "./pages/ToDoListPage";
@@ -63,6 +63,8 @@ import BotManagementPage from "./pages/SettingsPage.tsx/BotManagementPage";
 import WhatsAppSendersPage from "./pages/SettingsPage.tsx/WhatsAppSendersPage";
 import ReceptionPage from "./pages/ReceptionPage";
 import PaymentPendingPage from "./pages/PaymentPendingPage";
+import InvestorPage from "./pages/InvestorPage";
+import InvestorsPoolPage from "./pages/InvestorsPoolPage";
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
@@ -70,6 +72,45 @@ const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
 type PinResolver = {
   resolve: (pin: string) => void;
   reject: (error: Error) => void;
+};
+
+const AppLoader = () => (
+  <div className="app-loading">
+    <div className="spinner"></div>
+  </div>
+);
+
+const InvestorsRoute = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <Navigate to="/investors-v2" replace />
+  ) : (
+    <InvestorPage />
+  );
+};
+
+const InvestorsV2Route = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <InvestorsV2Page />
+  ) : (
+    <Navigate to="/investors" replace />
+  );
+};
+
+const InvestorsPoolRoute = () => {
+  const { authInfo, isLoading } = useAuth();
+
+  if (isLoading || !authInfo) return <AppLoader />;
+  return authInfo.employee.poolV2 ? (
+    <Navigate to="/investors-v2" replace />
+  ) : (
+    <InvestorsPoolPage enableReinvestments={!authInfo.employee.poolVEx}/>
+  );
 };
 
 const isMobileDevice = (): boolean => {

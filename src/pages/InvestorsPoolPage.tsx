@@ -59,6 +59,7 @@ import InvestorCashPositionModal from "../components/modal/InvestorCashPositionM
 import ConfirmationStatusBadge from "../components/ui/ConfirmationStatusBadge";
 import WayPayButton from "../components/ui/Buttons/WayPayButton";
 import WayPayMoreMenu from "../components/ui/Buttons/WayPayMoreMenu";
+import EditButton from "../components/ui/Buttons/EditButton";
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
@@ -71,6 +72,7 @@ const InvestorsPoolPage = ({
 }: InvestorsPoolPageProps) => {
   const { authInfo, hasRole } = useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
+  const isPoolVex = authInfo?.employee?.poolVEx ?? false;
   const canManageCashPosition =
     hasRole("директор") || hasRole("суперадмин");
   const {
@@ -803,7 +805,7 @@ const InvestorsPoolPage = ({
       </DoubleClickCell>
     );
 
-    return [
+    const row: React.ReactNode[] = [
       investor.id.toString(),
       createDoubleClickCell(
         <PoolInvestorIdentityCell>
@@ -869,6 +871,39 @@ const InvestorsPoolPage = ({
         </PoolInlineActions>
       ) : null,
     ];
+
+    if (isPoolVex) {
+      row.push(
+        createDoubleClickCell(
+          investor.currentMonthShare
+            ? investor.currentMonthShare.toString() + '%'
+            : "-"
+        )
+      );
+    }
+
+    row.push(
+      canManageInvestor ? (
+        <EditButton onClick={() => handleEditInvestor(investor)} />
+      ) : null,
+      canManageInvestor ? (
+        <DeleteButton onClick={() => handleDeleteInvestor(investor)} />
+      ) : null,
+      canManageInvestor ? (
+        <DarkCyanButton
+          onClick={() => handleAddInvestment([investor.id.toString()])}
+        >
+          Новая инвестиция
+        </DarkCyanButton>
+      ) : null,
+      canManageInvestor ? (
+        <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
+          Выплатить
+        </DarkCyanButton>
+      ) : null
+    );
+
+    return row;
   });
 
   const handleAddInvestment = (rowData: any[]) => {
@@ -2197,7 +2232,6 @@ const InvestorsPoolPage = ({
               activeTab={activeTab}
               onChange={(tabId) => {
                 setActiveTab(tabId);
-                // При переключении вкладок сбрасываем фильтр
                 if (tabId !== "credits") {
                   setSelectedInvestorForFilter(null);
                   setSearchValue("");
@@ -2405,6 +2439,26 @@ const InvestorsPoolPage = ({
                 showContextMenuButton
               />
             </PoolInvestorTable>
+            <CustomTable
+              columns={[
+                { name: "id", isHidden: true },
+                { name: "ФИО", align: "left" },
+                { name: "Телефон", align: "left" },
+                { name: "Инвестиция", align: "right" },
+                { name: "Доля", align: "right" },
+                { name: "Текущий доход", align: "right" },
+                ...(isPoolVex
+                  ? [{ name: "Прибыль за текущий месяц", align: "right" as const }]
+                  : []),
+                { name: "", align: "center" },
+                { name: "", align: "center" },
+                { name: "", align: "center" },
+              ]}
+              data={investorsTableData}
+              contextMenuActions={investorActions}
+              rowStyles={investorsRowStyles}
+              isLoading={isLoading}
+            />
             <PaginationLayout>
               <CountInfoTitle total={investorsData?.totalCount || 0} />
               <Pagination
@@ -2725,23 +2779,6 @@ const InvestorsPoolPage = ({
             mode="edit"
           >
             <form onSubmit={handleSubmitInvestment} style={{ padding: "20px" }}>
-              {enableReinvestments && (
-                <div
-                  style={{
-                    backgroundColor: "#fff3cd",
-                    color: "#856404",
-                    padding: "12px 16px",
-                    borderRadius: "4px",
-                    marginBottom: "20px",
-                    border: "1px solid #ffeeba",
-                    fontSize: "14px",
-                  }}
-                >
-                  ⚠️ Рекомендуется сначала сделать реинвестицию, а затем
-                  добавлять новую инвестицию
-                </div>
-              )}
-
               <InputRow>
                 <InputLabel>Сумма инвестиции:</InputLabel>
                 <InputContainer>

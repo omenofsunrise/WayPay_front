@@ -513,6 +513,20 @@ const InvestorModal: React.FC<InvestorModalProps> = ({
               <FormField $fullWidth>
                 {formData.isCompany ? 'Название компании' : 'Никнейм'}
                 <InputShell>
+      <form onSubmit={handleSubmit}>
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          {apiError && (
+            <div style={{ color: 'red', marginBottom: '15px' }}>
+              {apiError}
+            </div>
+          )}
+          
+          <ModalInfoTitle>Основная информация</ModalInfoTitle>
+          {(mode !== 'create-pool' && mode !== 'edit-pool') && (
+              <>                
+              <InputRow>
+                <InputLabel>{formData.isCompany ? 'Название компании:' : 'Никнейм:'}</InputLabel>
+                <InputContainer >
                   <CustomInput
                     name="nickname"
                     inputType="text"
