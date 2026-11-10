@@ -16,6 +16,7 @@ export interface Investor {
   isBlocked: boolean;
   isRemoved?: boolean;
   poolId?: number;
+  currentMonthShare?: number;
   isCompanyPool?: boolean;
 }
 

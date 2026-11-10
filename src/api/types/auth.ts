@@ -53,6 +53,7 @@ export interface AuthInfo {
     status?: string;
     transactionStatus?: string;
     poolV2?: boolean;
+    poolVEx?: boolean;
     // Подтверждение договоров включено. Выключено — кнопки подтверждения
     // прячутся везде, и из аналитики уходит счётчик неподтверждённых.
     creditAcceptance?: boolean;

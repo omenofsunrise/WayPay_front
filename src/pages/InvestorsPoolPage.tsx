@@ -68,6 +68,7 @@ const InvestorsPoolPage = ({
 }: InvestorsPoolPageProps) => {
   const { authInfo, hasRole } = useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
+  const isPoolVex = authInfo?.employee?.poolVEx ?? false;
   const canManageCashPosition =
     hasRole("директор") || hasRole("суперадмин");
   const {
@@ -759,7 +760,7 @@ const InvestorsPoolPage = ({
       </DoubleClickCell>
     );
 
-    return [
+    const row: React.ReactNode[] = [
       investor.id.toString(),
       createDoubleClickCell(investor.fullName ?? "-"),
       createDoubleClickCell(
@@ -789,8 +790,25 @@ const InvestorsPoolPage = ({
           ? formatMoney(investor.currentIncome.toString())
           : "-"
       ),
-      canManageInvestor ? <EditButton onClick={() => handleEditInvestor(investor)} /> : null,
-      canManageInvestor ? <DeleteButton onClick={() => handleDeleteInvestor(investor)} /> : null,
+    ];
+
+    if (isPoolVex) {
+      row.push(
+        createDoubleClickCell(
+          investor.currentMonthShare
+            ? investor.currentMonthShare.toString() + '%'
+            : "-"
+        )
+      );
+    }
+
+    row.push(
+      canManageInvestor ? (
+        <EditButton onClick={() => handleEditInvestor(investor)} />
+      ) : null,
+      canManageInvestor ? (
+        <DeleteButton onClick={() => handleDeleteInvestor(investor)} />
+      ) : null,
       canManageInvestor ? (
         <DarkCyanButton
           onClick={() => handleAddInvestment([investor.id.toString()])}
@@ -802,8 +820,10 @@ const InvestorsPoolPage = ({
         <DarkCyanButton onClick={() => handlePayoutClick(investor)}>
           Выплатить
         </DarkCyanButton>
-      ) : null,
-    ];
+      ) : null
+    );
+
+    return row;
   });
 
   const handleAddInvestment = (rowData: any[]) => {
@@ -2088,6 +2108,9 @@ const InvestorsPoolPage = ({
                 { name: "Инвестиция", align: "right" },
                 { name: "Доля", align: "right" },
                 { name: "Текущий доход", align: "right" },
+                ...(isPoolVex
+                  ? [{ name: "Прибыль за текущий месяц", align: "right" as const }]
+                  : []),
                 { name: "", align: "center" },
                 { name: "", align: "center" },
                 { name: "", align: "center" },
