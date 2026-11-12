@@ -362,7 +362,7 @@ const PaymentIncomePage = () => {
         <PaymentTotals>
           {showTotalIncome && (
             <TableTitle>
-              Всего доход:{" "}
+              Доход (факт):{" "}
               {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
             </TableTitle>
           )}
