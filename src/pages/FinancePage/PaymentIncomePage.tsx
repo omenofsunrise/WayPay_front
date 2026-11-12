@@ -58,6 +58,15 @@ const PaymentIncomePage = () => {
   const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(
     null
   );
+  const [incomePart, setIncomePart] = useState<
+    "total" | "company" | "investor"
+  >("total");
+
+  const incomePartOptions = [
+    { value: "total", label: "Доход: общий" },
+    { value: "company", label: "Доход: компания" },
+    { value: "investor", label: "Доход: инвестор" },
+  ];
 
   const months = [
     { value: "1", label: "Январь" },
@@ -323,6 +332,18 @@ const PaymentIncomePage = () => {
 
   const tableData = formatPaymentsData(paymentsData?.items);
 
+  const expectedIncomeByPart = {
+    total: paymentsData?.expectedIncome,
+    company: paymentsData?.expectedCompanyIncome,
+    investor: paymentsData?.expectedInvestorIncome,
+  }[incomePart];
+
+  const expectedIncomeLabel = {
+    total: "Ожидаемый доход",
+    company: "Ожидаемый доход компании",
+    investor: "Ожидаемый доход инвестора",
+  }[incomePart];
+
   const tableActions = [
     {
       label: "Подтвердить",
@@ -380,8 +401,8 @@ const PaymentIncomePage = () => {
           )}
           {showTotalIncome && (
             <TableTitle>
-              Ожидаемый доход:{" "}
-              {formatMoney(paymentsData?.expectedIncome?.toString() || "0")}
+              {expectedIncomeLabel}:{" "}
+              {formatMoney(expectedIncomeByPart?.toString() || "0")}
             </TableTitle>
           )}
         </PaymentTotals>
@@ -440,6 +461,13 @@ const PaymentIncomePage = () => {
           onInvestorSelect={(investor) => {
             // handleInvestorChange(investor.name, investor.id);
           }}
+        />
+        <CustomSelect<"total" | "company" | "investor">
+          placeholder="Часть дохода"
+          value={incomePart}
+          onChange={(event) => setIncomePart(event.target.value)}
+          options={incomePartOptions}
+          style={{ flex: "0 1 210px" }}
         />
       </FilterField>
 
