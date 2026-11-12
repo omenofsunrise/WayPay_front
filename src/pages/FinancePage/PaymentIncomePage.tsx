@@ -63,9 +63,9 @@ const PaymentIncomePage = () => {
   >("total");
 
   const incomePartOptions = [
-    { value: "total", label: "Доход: общий" },
-    { value: "company", label: "Доход: компания" },
-    { value: "investor", label: "Доход: инвестор" },
+    { value: "total", label: "Прибыль: общая" },
+    { value: "company", label: "Прибыль: компании" },
+    { value: "investor", label: "Прибыль: инвестора" },
   ];
 
   const months = [
@@ -339,9 +339,9 @@ const PaymentIncomePage = () => {
   }[incomePart];
 
   const expectedIncomeLabel = {
-    total: "Ожидаемый доход",
-    company: "Ожидаемый доход компании",
-    investor: "Ожидаемый доход инвестора",
+    total: "Ожидаемая прибыль",
+    company: "Ожидаемая прибыль компании",
+    investor: "Ожидаемая прибыль инвестора",
   }[incomePart];
 
   const tableActions = [
@@ -383,19 +383,19 @@ const PaymentIncomePage = () => {
         <PaymentTotals>
           {showTotalIncome && (
             <TableTitle>
-              Доход (факт):{" "}
+              Прибыль:{" "}
               {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
             </TableTitle>
           )}
           {showTotalPayouts && (
             <TableTitle>
-              Всего выплат:{" "}
+              Доход:{" "}
               {formatMoney(paymentsData?.totalPayments?.toString() || "0")}
             </TableTitle>
           )}
           {showTotalPayouts && (
             <TableTitle>
-              К выплате за месяц:{" "}
+              Ожидаемый доход:{" "}
               {formatMoney(paymentsData?.expectedPayments?.toString() || "0")}
             </TableTitle>
           )}
