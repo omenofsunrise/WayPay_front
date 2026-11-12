@@ -19,6 +19,16 @@ import { useAuth } from "../../сontext/AuthContext";
 import CustomSelect from "../../components/ui/fields/CustomSelect";
 import InvestorSelect from "../../components/ui/fields/InvestorSelect";
 import { TableTitle } from "./BudgetPage";
+import styled from "styled-components";
+
+const PaymentTotals = styled.div`
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px 28px;
+`;
 
 const PaymentIncomePage = () => {
   const currentDate = new Date();
@@ -342,25 +352,39 @@ const PaymentIncomePage = () => {
 
   return (
     <PageLayout>
-      <TitleField style={{ gap: "35px" }}>
+      <TitleField style={{ gap: "35px", flexWrap: "wrap" }}>
         <CustomTitle>Доходы по платежам</CustomTitle>
         {/* <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
                     exportProgress={exportProgress}
                 /> */}
-        {showTotalIncome && (
-          <TableTitle>
-            Всего доход:{" "}
-            {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
-          </TableTitle>
-        )}
-        {showTotalPayouts && (
-          <TableTitle>
-            Всего выплат:{" "}
-            {formatMoney(paymentsData?.totalPayments?.toString() || "0")}
-          </TableTitle>
-        )}
+        <PaymentTotals>
+          {showTotalIncome && (
+            <TableTitle>
+              Всего доход:{" "}
+              {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
+            </TableTitle>
+          )}
+          {showTotalPayouts && (
+            <TableTitle>
+              Всего выплат:{" "}
+              {formatMoney(paymentsData?.totalPayments?.toString() || "0")}
+            </TableTitle>
+          )}
+          {showTotalPayouts && (
+            <TableTitle>
+              К выплате за месяц:{" "}
+              {formatMoney(paymentsData?.expectedPayments?.toString() || "0")}
+            </TableTitle>
+          )}
+          {showTotalIncome && (
+            <TableTitle>
+              Ожидаемый доход:{" "}
+              {formatMoney(paymentsData?.expectedIncome?.toString() || "0")}
+            </TableTitle>
+          )}
+        </PaymentTotals>
       </TitleField>
 
       <FilterField>
