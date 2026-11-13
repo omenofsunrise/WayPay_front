@@ -819,7 +819,6 @@ const CompanyPage = () => {
                 <SettingIcon><PaymentApprovalIcon /></SettingIcon>
                 <SettingText>
                   <SettingName>Имя договора</SettingName>
-                  <SettingHint>Показывать поле имени при создании договора</SettingHint>
                 </SettingText>
               </SettingContent>
               <SettingControl>
@@ -837,7 +836,6 @@ const CompanyPage = () => {
                 <SettingIcon><PaymentApprovalIcon /></SettingIcon>
                 <SettingText>
                   <SettingName>Тип договора</SettingName>
-                  <SettingHint>Показывать выбор типа при создании договора</SettingHint>
                 </SettingText>
               </SettingContent>
               <SettingControl>
@@ -1029,6 +1027,7 @@ const SettingIcon = styled.div`
 
 const SettingText = styled.div`
   min-width: 0;
+  text-align: left;
 `;
 
 const SettingName = styled.div`
