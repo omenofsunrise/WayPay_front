@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, FileText, Trash2, Upload } from "lucide-react";
+import { Download, FileText, Sparkles, Trash2, Upload } from "lucide-react";
 import { saveAs } from "file-saver";
 import styled from "styled-components";
 import contractTemplateService from "../api/services/contractTemplateService";
@@ -13,21 +13,17 @@ interface Props {
 const ContractTemplatesSettings = ({ onMessage }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
-  const [variables, setVariables] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      contractTemplateService.getAll(),
-      contractTemplateService.getVariables(),
-    ])
-      .then(([templateList, variableList]) => {
+    contractTemplateService
+      .getAll()
+      .then((templateList) => {
         if (!active) return;
         setTemplates(templateList);
-        setVariables(variableList);
       })
       .catch((error) => {
         if (active) onMessage("error", extractErrorMessage(error));
@@ -51,7 +47,13 @@ const ContractTemplatesSettings = ({ onMessage }: Props) => {
       setName("");
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
-      onMessage("success", "Шаблон договора загружен");
+      const detectedCount = template.detectedVariables?.length ?? 0;
+      onMessage(
+        "success",
+        detectedCount > 0
+          ? `Шаблон готов: ИИ распознал ${detectedCount} полей`
+          : "Шаблон договора подготовлен и загружен"
+      );
     } catch (error) {
       onMessage("error", extractErrorMessage(error));
     } finally {
@@ -83,7 +85,7 @@ const ContractTemplatesSettings = ({ onMessage }: Props) => {
       <Header>
         <div>
           <h3>Шаблоны договоров</h3>
-          <p>Загрузите DOCX и вставьте в него переменные в фигурных скобках.</p>
+          <p>Загрузите обычный DOCX — ИИ сам найдёт поля и подготовит шаблон.</p>
         </div>
       </Header>
 
@@ -105,25 +107,20 @@ const ContractTemplatesSettings = ({ onMessage }: Props) => {
           />
         </FilePicker>
         <PrimaryButton type="button" disabled={loading} onClick={upload}>
-          {loading ? "Загрузка..." : "Загрузить"}
+          {loading ? "ИИ обрабатывает..." : "Загрузить и подготовить"}
         </PrimaryButton>
       </UploadRow>
 
-      <VariableBox>
-        <strong>Переменные</strong>
-        <VariableList>
-          {variables.map((variable) => (
-            <Variable
-              key={variable}
-              type="button"
-              title="Скопировать"
-              onClick={() => void navigator.clipboard.writeText(`{${variable}}`)}
-            >
-              {`{${variable}}`}
-            </Variable>
-          ))}
-        </VariableList>
-      </VariableBox>
+      <AiInfo>
+        <Sparkles size={20} />
+        <div>
+          <strong>Ничего настраивать вручную не нужно</strong>
+          <span>
+            ИИ распознает ФИО, даты, суммы, реквизиты и другие изменяемые данные.
+            Текст и оформление договора сохранятся.
+          </span>
+        </div>
+      </AiInfo>
 
       <TemplateList>
         {templates.length === 0 ? (
@@ -183,16 +180,12 @@ const PrimaryButton = styled.button`
   background: #168b96; cursor: pointer; font: inherit;
   &:disabled { opacity: .6; cursor: default; }
 `;
-const VariableBox = styled.div`
-  margin-top: 16px; padding: 14px; border-radius: 10px; background: #f8fafb;
+const AiInfo = styled.div`
+  display: flex; align-items: flex-start; gap: 11px; margin-top: 16px; padding: 14px;
+  border: 1px solid #cfe6e8; border-radius: 10px; color: #087b86; background: #eff9f9;
+  div { display: flex; flex-direction: column; gap: 4px; }
   strong { color: #344054; font-size: 13px; }
-`;
-const VariableList = styled.div`
-  display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px;
-`;
-const Variable = styled.button`
-  padding: 5px 8px; border: 1px solid #cfe6e8; border-radius: 6px;
-  color: #087b86; background: #eff9f9; cursor: pointer; font-family: monospace;
+  span { color: #667085; font-size: 12px; line-height: 1.45; }
 `;
 const TemplateList = styled.div`
   display: flex; flex-direction: column; gap: 10px; margin-top: 16px;

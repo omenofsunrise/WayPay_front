@@ -25,7 +25,7 @@ const contractTemplateService = {
     form.append("file", file);
     const response = await apiClient.post<ContractTemplate>(basePath, form, {
       headers: { "Content-Type": "multipart/form-data" },
-      timeout: 30000,
+      timeout: 180000,
     });
     return response.data;
   },
