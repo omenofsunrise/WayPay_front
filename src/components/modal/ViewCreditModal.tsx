@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import styled from "styled-components";
+import { saveAs } from "file-saver";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import EntityHistory from "../ui/EntityHistory";
 import { useAuth } from "../../сontext/AuthContext";
@@ -79,6 +80,10 @@ import PhoneAndroidOutlinedIcon from "@mui/icons-material/PhoneAndroidOutlined";
 import clientService from "../../api/services/clientService";
 import guarantorService from "../../api/services/guarantorService";
 import ContactsEditor from "../ui/ContactsEditor";
+import PrintOptionModal from "./PrintOptionModal";
+import contractTemplateService from "../../api/services/contractTemplateService";
+import type { ContractTemplate } from "../../api/types/contractTemplate";
+import { extractErrorMessage } from "../../api/utils/errorMessage";
 
 interface ViewCreditModalProps {
   id: number;
@@ -315,8 +320,62 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     toggleTerminated,
   } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
+  const [isPrintOptionModalOpen, setIsPrintOptionModalOpen] = useState(false);
+  const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
   const [copiedName, setCopiedName] = useState<string | null>(null);
   const copyNameTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let active = true;
+    contractTemplateService
+      .getAll()
+      .then((templates) => {
+        if (active) setContractTemplates(templates);
+      })
+      .catch((error) => {
+        console.error("Не удалось загрузить шаблоны договоров", error);
+        if (active) setContractTemplates([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
+
+  const handlePrintOptionSelect = useCallback(
+    async (option: string) => {
+      if (!creditData) return;
+
+      if (option === "standard-page") {
+        window.open(`/credits/${creditData.id}/print`, "_blank");
+        setIsPrintOptionModalOpen(false);
+        return;
+      }
+
+      if (!option.startsWith("custom-template:")) return;
+
+      const templateId = Number(option.split(":")[1]);
+      const template = contractTemplates.find((item) => item.id === templateId);
+      if (!template || !Number.isFinite(templateId)) return;
+
+      try {
+        const document = await contractTemplateService.generate(
+          templateId,
+          creditData.id
+        );
+        const safeName = template.name.replace(/[\\/:*?"<>|]/g, "_");
+        saveAs(document, `${safeName}_договор_${creditData.id}.docx`);
+      } catch (error) {
+        console.error("Ошибка формирования договора", error);
+        alert(extractErrorMessage(error, "Не удалось сформировать договор"));
+      } finally {
+        setIsPrintOptionModalOpen(false);
+      }
+    },
+    [contractTemplates, creditData]
+  );
 
   useEffect(
     () => () => {
@@ -1789,10 +1848,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       {creditData && (
                         <PrintCreditButton
                           type="button"
-                          title="Открыть страницу печати договора"
-                          onClick={() =>
-                            window.open(`/credits/${id}/print`, "_blank")
-                          }
+                          title="Выбрать документ для печати"
+                          onClick={() => setIsPrintOptionModalOpen(true)}
                         >
                           Печать
                         </PrintCreditButton>
@@ -2460,6 +2517,25 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           </ModalWrapper>
         </ModalContent>
       </ModalOverlay>
+
+      <PrintOptionModal
+        isOpen={isPrintOptionModalOpen}
+        onClose={() => setIsPrintOptionModalOpen(false)}
+        onSelect={handlePrintOptionSelect}
+        selectedCredit={creditData}
+        printOptions={[
+          {
+            key: "standard-page",
+            label: "Стандартная печатная форма",
+            enabled: true,
+          },
+          ...contractTemplates.map((template) => ({
+            key: `custom-template:${template.id}`,
+            label: template.name,
+            enabled: true,
+          })),
+        ]}
+      />
 
       <NewPaymentModal
         isOpen={isPaymentModalOpen}
