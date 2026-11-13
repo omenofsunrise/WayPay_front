@@ -77,6 +77,9 @@ import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
 import { getCreditGuarantors } from "../utils/creditGuarantors";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
+import contractTemplateService from "../api/services/contractTemplateService";
+import type { ContractTemplate } from "../api/types/contractTemplate";
+import { saveAs } from "file-saver";
 
 type ShareOption = "contractData" | "paymentHistory" | "paymentSchedule";
 
@@ -377,6 +380,7 @@ const CreditPage = () => {
   const paymentMethodEnabled =
     authInfo?.employee?.paymentMethodEnabled ?? false;
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isClientLinkModalOpen, setIsClientLinkModalOpen] = useState(false);
@@ -421,6 +425,14 @@ const CreditPage = () => {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectedCreditForPrint, setSelectedCreditForPrint] =
     useState<Credit | null>(null);
+
+  useEffect(() => {
+    if (!isPrintModalOpen) return;
+    contractTemplateService
+      .getAll()
+      .then(setContractTemplates)
+      .catch((error) => console.error("Не удалось загрузить шаблоны договоров", error));
+  }, [isPrintModalOpen]);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] =
     useState(false);
   // Пачка договоров, для которых сейчас выбирается источник финансирования.
@@ -1197,10 +1209,28 @@ const CreditPage = () => {
     navigate(`/new-credit/${id}`);
   };
 
-  const handlePrintOptionSelect = async (
-    option: "sale" | "saleSinglePage" | "schedules" | "guaranteeConsent"
-  ) => {
+  const handlePrintOptionSelect = async (option: string) => {
     if (!selectedCreditForPrint) return;
+
+    if (option.startsWith("custom-template:")) {
+      const templateId = Number(option.split(":")[1]);
+      const template = contractTemplates.find((item) => item.id === templateId);
+      if (!template || !Number.isFinite(templateId)) return;
+      try {
+        const document = await contractTemplateService.generate(
+          templateId,
+          selectedCreditForPrint.id
+        );
+        const safeName = template.name.replace(/[\\/:*?"<>|]/g, "_");
+        saveAs(document, `${safeName}_договор_${selectedCreditForPrint.name}.docx`);
+      } catch (error) {
+        console.error("Ошибка формирования договора", error);
+        alert(extractErrorMessage(error, "Не удалось сформировать договор"));
+      } finally {
+        setIsPrintModalOpen(false);
+      }
+      return;
+    }
 
     const docxGenerator = new DocxGenerator(getDocsData);
 
@@ -2666,6 +2696,17 @@ const CreditPage = () => {
         onClose={() => setIsPrintModalOpen(false)}
         onSelect={handlePrintOptionSelect}
         selectedCredit={selectedCreditForPrint}
+        printOptions={[
+          { key: "sale", label: "Договор купли-продажи", enabled: true },
+          { key: "saleSinglePage", label: "Договор купли-продажи (одностраничный)", enabled: true },
+          { key: "guaranteeConsent", label: "Договор поручительства", enabled: true },
+          { key: "schedules", label: "График платежей", enabled: true },
+          ...contractTemplates.map((template) => ({
+            key: `custom-template:${template.id}`,
+            label: template.name,
+            enabled: true,
+          })),
+        ]}
       />
 
       {/* Новая модалка для кнопки "Поделиться" */}

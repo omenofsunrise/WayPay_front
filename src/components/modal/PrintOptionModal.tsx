@@ -13,7 +13,7 @@ export interface PrintOption {
 export interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: 'sale' | 'saleSinglePage' | 'schedules' | 'guaranteeConsent' | 'paymentConfirmation' | 'investorContract') => void;
+  onSelect: (option: string) => void;
   selectedCredit?: Credit | null;
   selectedPayment?: Payment | null;
   selectedInvestor?: Investor | null;
