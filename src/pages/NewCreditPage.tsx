@@ -1339,30 +1339,34 @@ const NewCreditPage = () => {
               </TopField>
             ) : null}
 
-            <TopField $basis="360px">
-              <CompactField>
-                <DescriptionOutlinedIcon fontSize="small" />
-                <CustomInput
-                  inputType="text"
-                  placeholder="Имя договора"
-                  value={creditName}
-                  onChange={(e) => setCreditName(e.target.value)}
-                />
-              </CompactField>
-            </TopField>
+            {authInfo?.employee.showCreditName !== false && (
+              <TopField $basis="360px">
+                <CompactField>
+                  <DescriptionOutlinedIcon fontSize="small" />
+                  <CustomInput
+                    inputType="text"
+                    placeholder="Имя договора"
+                    value={creditName}
+                    onChange={(e) => setCreditName(e.target.value)}
+                  />
+                </CompactField>
+              </TopField>
+            )}
 
-            <TopField $basis="390px">
-              <CompactField>
-                <Inventory2OutlinedIcon fontSize="small" />
-                <ObjectTypeSelect
-                  value={objectTypeName}
-                  onChange={handleObjectTypeNameChange}
-                  onObjectTypeSelect={handleObjectTypeSelect}
-                  placeholder="Выберите тип договора"
-                  entityType="credit"
-                />
-              </CompactField>
-            </TopField>
+            {authInfo?.employee.showCreditType !== false && (
+              <TopField $basis="390px">
+                <CompactField>
+                  <Inventory2OutlinedIcon fontSize="small" />
+                  <ObjectTypeSelect
+                    value={objectTypeName}
+                    onChange={handleObjectTypeNameChange}
+                    onObjectTypeSelect={handleObjectTypeSelect}
+                    placeholder="Выберите тип договора"
+                    entityType="credit"
+                  />
+                </CompactField>
+              </TopField>
+            )}
 
             <TopDebtSetting $active={inDebt}>
               <Checkbox

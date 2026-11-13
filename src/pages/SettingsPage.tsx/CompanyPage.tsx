@@ -193,6 +193,8 @@ const CompanyPage = () => {
   const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
   const paymentAcceptance = authInfo?.employee.paymentAcceptance ?? true;
   const incrementCredits = authInfo?.employee.incrementCreditName ?? false;
+  const showCreditName = authInfo?.employee.showCreditName ?? true;
+  const showCreditType = authInfo?.employee.showCreditType ?? true;
   const [isSavingSetting, setIsSavingSetting] = useState(false);
 
   // Шаг округления меняет только директор компании, поэтому остальным поле
@@ -413,6 +415,23 @@ const CompanyPage = () => {
       } catch (error) {
         console.error("Не удалось изменить настройку:", error);
         addToast("error", "Не удалось изменить настройку");
+      } finally {
+        setIsSavingSetting(false);
+      }
+    },
+    [addToast, refresh]
+  );
+
+  const handleCreditFieldVisibility = useCallback(
+    async (setting: "show_credit_name" | "show_credit_type", checked: boolean) => {
+      setIsSavingSetting(true);
+      try {
+        await companyService.updateSettings(setting, checked ? "on" : "off");
+        await refresh();
+        addToast("success", checked ? "Поле включено" : "Поле скрыто");
+      } catch (error) {
+        console.error("Не удалось изменить видимость поля:", error);
+        addToast("error", "Не удалось изменить видимость поля");
       } finally {
         setIsSavingSetting(false);
       }
@@ -793,6 +812,42 @@ const CompanyPage = () => {
                 </SettingControl>
               </SettingsSection>
             )}
+
+            <SettingsSection>
+              <SettingContent>
+                <SettingIcon><PaymentApprovalIcon /></SettingIcon>
+                <SettingText>
+                  <SettingName>Имя договора</SettingName>
+                  <SettingHint>Показывать поле имени при создании договора</SettingHint>
+                </SettingText>
+              </SettingContent>
+              <SettingControl>
+                <ToggleSwitch
+                  checked={showCreditName}
+                  onChange={(checked) => handleCreditFieldVisibility("show_credit_name", checked)}
+                  disabled={isSavingSetting}
+                />
+                <SettingStatus $enabled={showCreditName}>{showCreditName ? "Включено" : "Выключено"}</SettingStatus>
+              </SettingControl>
+            </SettingsSection>
+
+            <SettingsSection>
+              <SettingContent>
+                <SettingIcon><PaymentApprovalIcon /></SettingIcon>
+                <SettingText>
+                  <SettingName>Тип договора</SettingName>
+                  <SettingHint>Показывать выбор типа при создании договора</SettingHint>
+                </SettingText>
+              </SettingContent>
+              <SettingControl>
+                <ToggleSwitch
+                  checked={showCreditType}
+                  onChange={(checked) => handleCreditFieldVisibility("show_credit_type", checked)}
+                  disabled={isSavingSetting}
+                />
+                <SettingStatus $enabled={showCreditType}>{showCreditType ? "Включено" : "Выключено"}</SettingStatus>
+              </SettingControl>
+            </SettingsSection>
 
             {canEditRoundingStep && (
               <SettingsSection>

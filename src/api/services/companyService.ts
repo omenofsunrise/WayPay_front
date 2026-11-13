@@ -27,6 +27,8 @@ class CompanyService {
       | "credit_acceptence"
       | "payment_acceptence"
       | "increment_credit_name"
+      | "show_credit_name"
+      | "show_credit_type"
       | "action_log",
     action: "on" | "off" | "set",
     value?: number
