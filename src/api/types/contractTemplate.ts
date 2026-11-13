@@ -4,6 +4,7 @@ export interface ContractTemplate {
   fileName: string;
   createdAt: string;
   updatedAt: string;
+  detectedVariables?: string[];
 }
 
 export interface ContractTemplateVariables {
