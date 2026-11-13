@@ -13,6 +13,7 @@ import FloatingContextMenu, {
   DANGER_COLOR,
   PRIMARY_COLOR,
 } from "../../components/modal/FloatingContextMenu";
+import ContractTemplatesSettings from "../../components/ContractTemplatesSettings";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -881,6 +882,8 @@ const CompanyPage = () => {
             )}
           </SettingsList>
         </AdditionalSettings>
+
+        <ContractTemplatesSettings onMessage={addToast} />
 
         <CardFooter>
           <ButtonsContainer>
