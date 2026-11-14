@@ -122,6 +122,22 @@ const borderStyle = (style?: ExcelJS.BorderStyle) => ({
   mediumDashDotDot: "11", slantDashDot: "12", thick: "13",
 }[style ?? ""] ?? "1");
 
+const safeCellText = (cell: ExcelJS.Cell) => {
+  try {
+    return cell.text ?? "";
+  } catch {
+    const value = cell.value;
+    if (value == null) return "";
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+    if (value instanceof Date) return value.toLocaleDateString("ru-RU");
+    if ("result" in value) return value.result == null ? "" : String(value.result);
+    if ("richText" in value) return value.richText.map((part) => part.text ?? "").join("");
+    if ("text" in value) return value.text ?? "";
+    if ("error" in value) return value.error ?? "";
+    return "";
+  }
+};
+
 const excelValue = (cell: ExcelJS.Cell): Cell["v"] => {
   const value = cell.value;
   if (value == null) return undefined;
@@ -131,12 +147,12 @@ const excelValue = (cell: ExcelJS.Cell): Cell["v"] => {
     const result = value.result;
     if (result instanceof Date) return (result.getTime() - Date.UTC(1899, 11, 30)) / 86_400_000;
     if (typeof result === "string" || typeof result === "number" || typeof result === "boolean") return result;
-    return cell.text;
+    return result == null ? undefined : safeCellText(cell);
   }
   if ("richText" in value) return value.richText.map((part) => part.text).join("");
   if ("text" in value) return value.text;
   if ("error" in value) return value.error;
-  return cell.text;
+  return safeCellText(cell);
 };
 
 const xlsxToSheets = async (buffer: ArrayBuffer): Promise<Sheet[]> => {
@@ -165,7 +181,7 @@ const xlsxToSheets = async (buffer: ArrayBuffer): Promise<Sheet[]> => {
           const vertical = source.alignment?.vertical;
           data[r][c] = {
             v: value,
-            m: source.text,
+            m: safeCellText(source),
             ...(formula && { f: `=${formula.replace(/^=/, "")}` }),
             ...(fill && { bg: fill }),
             ...(fontColor && { fc: fontColor }),
