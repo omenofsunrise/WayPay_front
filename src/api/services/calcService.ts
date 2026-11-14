@@ -3,6 +3,9 @@ import type {
   CalcMetric,
   CalcMetricDefinition,
   CalcMetricQuery,
+  CalcMetricOptions,
+  CalcMetricSeries,
+  CalcMetricSeriesQuery,
   CalcSheetSummary,
   SaveCalcSheetRequest,
 } from "../types/calc";
@@ -26,8 +29,14 @@ const calcService = {
   async catalog(): Promise<CalcMetricDefinition[]> {
     return (await apiClient.get<CalcMetricDefinition[]>("/calc/metrics/catalog")).data;
   },
+  async options(): Promise<CalcMetricOptions> {
+    return (await apiClient.get<CalcMetricOptions>("/calc/metrics/options")).data;
+  },
   async metric(query: CalcMetricQuery): Promise<CalcMetric> {
     return (await apiClient.get<CalcMetric>("/calc/metrics", { params: query })).data;
+  },
+  async metricSeries(query: CalcMetricSeriesQuery): Promise<CalcMetricSeries> {
+    return (await apiClient.get<CalcMetricSeries>("/calc/metrics/series", { params: query })).data;
   },
 };
 
