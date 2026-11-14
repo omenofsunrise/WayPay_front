@@ -7,7 +7,9 @@ import * as XLSX from "xlsx";
 import calcService from "../../api/services/calcService";
 import type {
   CalcMetricDefinition,
+  CalcMetricOptions,
   CalcMetricQuery,
+  CalcMetricSeries,
   CalcSheetSummary,
 } from "../../api/types/calc";
 
@@ -16,6 +18,9 @@ type MetricBinding = CalcMetricQuery & {
   row: number;
   column: number;
   label: string;
+  mode?: "value" | "series";
+  groupBy?: "day" | "month";
+  rowCount?: number;
 };
 
 type CalcDocument = { version: 1; sheets: Sheet[]; bindings: MetricBinding[] };
@@ -47,17 +52,41 @@ const parseDocument = (content: string): CalcDocument => {
   };
 };
 
-const cellDisplay = (cell: Cell | null | undefined) => cell?.f ? `=${cell.f}` : cell?.v ?? "";
-
 const sheetToXlsx = (sheet: Sheet) => {
-  const ws = XLSX.utils.aoa_to_sheet((sheet.data ?? []).map((row) =>
-    (row ?? []).map((cell) => cellDisplay(cell))
-  ));
+  const ws: XLSX.WorkSheet = {};
+  let maxRow = 0;
+  let maxColumn = 0;
+  (sheet.data ?? []).forEach((row, r) => (row ?? []).forEach((cell, c) => {
+    if (!cell || (cell.v == null && !cell.f)) return;
+    maxRow = Math.max(maxRow, r);
+    maxColumn = Math.max(maxColumn, c);
+    const value = cell.v;
+    const target: XLSX.CellObject = {
+      v: value as never,
+      t: typeof value === "number" ? "n" : typeof value === "boolean" ? "b" : "s",
+    };
+    if (cell.f) target.f = cell.f.replace(/^=/, "");
+    ws[XLSX.utils.encode_cell({ r, c })] = target;
+  }));
+  ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: maxColumn } });
+  const merges = Object.values(sheet.config?.merge ?? {}).map((merge) => ({
+    s: { r: merge.r, c: merge.c },
+    e: { r: merge.r + merge.rs - 1, c: merge.c + merge.cs - 1 },
+  }));
+  if (merges.length) ws["!merges"] = merges;
+  const columnWidths = sheet.config?.columnlen ?? {};
+  if (Object.keys(columnWidths).length) {
+    ws["!cols"] = Array.from({ length: maxColumn + 1 }, (_, c) => ({ wpx: columnWidths[String(c)] }));
+  }
+  const rowHeights = sheet.config?.rowlen ?? {};
+  if (Object.keys(rowHeights).length) {
+    ws["!rows"] = Array.from({ length: maxRow + 1 }, (_, r) => ({ hpx: rowHeights[String(r)] }));
+  }
   return ws;
 };
 
 const xlsxToSheets = (buffer: ArrayBuffer): Sheet[] => {
-  const book = XLSX.read(buffer, { type: "array", cellFormula: true });
+  const book = XLSX.read(buffer, { type: "array", cellFormula: true, cellStyles: true });
   return book.SheetNames.map((name, index) => {
     const ws = book.Sheets[name];
     const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]!) : { s: { r: 0, c: 0 }, e: { r: 99, c: 25 } };
@@ -66,10 +95,32 @@ const xlsxToSheets = (buffer: ArrayBuffer): Sheet[] => {
       data[row] = [];
       for (let column = range.s.c; column <= range.e.c; column += 1) {
         const source = ws[XLSX.utils.encode_cell({ r: row, c: column })];
-        data[row][column] = source ? { v: source.v, m: String(source.w ?? source.v ?? ""), f: source.f } : null;
+        if (!source) {
+          data[row][column] = null;
+          continue;
+        }
+        const style = typeof source.s === "object" && source.s ? source.s as any : undefined;
+        data[row][column] = {
+          v: source.v,
+          m: String(source.w ?? source.v ?? ""),
+          f: source.f ? `=${source.f.replace(/^=/, "")}` : undefined,
+          ...(style?.fill?.fgColor?.rgb && { bg: `#${String(style.fill.fgColor.rgb).slice(-6)}` }),
+          ...(style?.font?.color?.rgb && { fc: `#${String(style.font.color.rgb).slice(-6)}` }),
+          ...(style?.font?.bold && { bl: 1 }),
+          ...(style?.font?.italic && { it: 1 }),
+        };
       }
     }
-    return { id: createSheetId(), name, order: index, status: index === 0 ? 1 : 0, data };
+    const merge = Object.fromEntries((ws["!merges"] ?? []).map((item) => {
+      const value = { r: item.s.r, c: item.s.c, rs: item.e.r - item.s.r + 1, cs: item.e.c - item.s.c + 1 };
+      return [`${value.r}_${value.c}`, value];
+    }));
+    const columnlen = Object.fromEntries((ws["!cols"] ?? []).map((item, c) => [String(c), item.wpx ?? (item.wch ? item.wch * 8 : undefined)]).filter(([, value]) => value));
+    const rowlen = Object.fromEntries((ws["!rows"] ?? []).map((item, r) => [String(r), item.hpx ?? item.hpt]).filter(([, value]) => value));
+    return {
+      id: createSheetId(), name, order: index, status: index === 0 ? 1 : 0, data,
+      config: { merge, columnlen, rowlen },
+    };
   });
 };
 
@@ -81,6 +132,7 @@ export default function CalcPage() {
   const [bindings, setBindings] = useState<MetricBinding[]>([]);
   const [savedSheets, setSavedSheets] = useState<CalcSheetSummary[]>([]);
   const [metrics, setMetrics] = useState<CalcMetricDefinition[]>([]);
+  const [metricOptions, setMetricOptions] = useState<CalcMetricOptions>({ pools: [], investors: [] });
   const [currentId, setCurrentId] = useState<number>();
   const [canEdit, setCanEdit] = useState(true);
   const [name, setName] = useState("Новая таблица");
@@ -90,6 +142,8 @@ export default function CalcPage() {
   const [to, setTo] = useState("");
   const [poolId, setPoolId] = useState("");
   const [investorId, setInvestorId] = useState("");
+  const [insertMode, setInsertMode] = useState<"value" | "series">("value");
+  const [groupBy, setGroupBy] = useState<"day" | "month">("month");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -98,7 +152,7 @@ export default function CalcPage() {
   const reloadList = async () => setSavedSheets(await calcService.list());
 
   useEffect(() => {
-    Promise.all([reloadList(), calcService.catalog().then((items) => {
+    Promise.all([reloadList(), calcService.options().then(setMetricOptions), calcService.catalog().then((items) => {
       setMetrics(items);
       setMetricCode(items[0]?.code ?? "");
     })]).catch(() => setMessage("Не удалось загрузить данные конструктора"));
@@ -155,23 +209,59 @@ export default function CalcPage() {
     ...(investorId && { investorId: Number(investorId) }),
   });
 
+  const writeSeries = (series: CalcMetricSeries, sheetId: string, row: number, column: number) => {
+    const values = [
+      ["Период", `${series.name}, ${series.unit}`],
+      ...series.points.map((point) => [point.label, point.value]),
+    ];
+    updatingMetricsRef.current = true;
+    workbookRef.current?.setCellValuesByRange(values, {
+      row: [row, row + values.length - 1],
+      column: [column, column + 1],
+    }, { id: sheetId });
+    workbookRef.current?.setCellFormatByRange("bl", 1, {
+      row: [row, row], column: [column, column + 1],
+    }, { id: sheetId });
+    workbookRef.current?.setCellFormatByRange("bg", "#eaf8f8", {
+      row: [row, row], column: [column, column + 1],
+    }, { id: sheetId });
+    updatingMetricsRef.current = false;
+    return values.length;
+  };
+
   const insertMetric = async () => {
     const selection = workbookRef.current?.getSelection()?.[0];
     const activeSheet = workbookRef.current?.getSheet();
     if (!selection || !activeSheet?.id) return setMessage("Сначала выберите ячейку");
-    if (selectedMetric?.requiresInvestor && !investorId) return setMessage("Для этого показателя укажите ID инвестора");
+    if (selectedMetric?.requiresInvestor && !investorId) return setMessage("Для этого показателя выберите инвестора");
+    if (insertMode === "series" && (!from || !to)) return setMessage("Для отчёта укажите даты начала и окончания");
     setBusy(true);
     try {
-      const metric = await calcService.metric(metricQuery());
       const row = selection.row[0];
       const column = selection.column[0];
-      updatingMetricsRef.current = true;
-      workbookRef.current?.setCellValue(row, column, metric.value, { id: activeSheet.id });
-      updatingMetricsRef.current = false;
-      const binding: MetricBinding = { ...metricQuery(), sheetId: activeSheet.id, row, column, label: metric.name };
+      let binding: MetricBinding;
+      if (insertMode === "series") {
+        const series = await calcService.metricSeries({
+          ...metricQuery(), from, to, groupBy,
+        });
+        const rowCount = writeSeries(series, activeSheet.id, row, column);
+        binding = {
+          ...metricQuery(), from, to, groupBy, mode: "series", rowCount,
+          sheetId: activeSheet.id, row, column, label: series.name,
+        };
+      } else {
+        const metric = await calcService.metric(metricQuery());
+        updatingMetricsRef.current = true;
+        workbookRef.current?.setCellValue(row, column, metric.value, { id: activeSheet.id });
+        updatingMetricsRef.current = false;
+        binding = {
+          ...metricQuery(), mode: "value", sheetId: activeSheet.id,
+          row, column, label: metric.name, rowCount: 1,
+        };
+      }
       setBindings((old) => [...old.filter((x) => !(x.sheetId === binding.sheetId && x.row === row && x.column === column)), binding]);
       setSheets(workbookRef.current?.getAllSheets() ?? sheets);
-      setMessage(`${metric.name} добавлен в выбранную ячейку`);
+      setMessage(insertMode === "series" ? `${binding.label}: отчёт сформирован` : `${binding.label} добавлен в выбранную ячейку`);
     } catch (error: any) { setMessage(error?.response?.data ?? "Не удалось получить показатель"); }
     finally { setBusy(false); }
   };
@@ -180,11 +270,19 @@ export default function CalcPage() {
     setBusy(true);
     try {
       for (const binding of bindings) {
-        const { sheetId, row, column, label: _label, ...query } = binding;
-        const metric = await calcService.metric(query);
-        updatingMetricsRef.current = true;
-        workbookRef.current?.setCellValue(row, column, metric.value, { id: sheetId });
-        updatingMetricsRef.current = false;
+        const { sheetId, row, column, label: _label, mode, groupBy: bindingGroup, rowCount: _rowCount, ...query } = binding;
+        if (mode === "series" && query.from && query.to) {
+          const series = await calcService.metricSeries({
+            ...query, from: query.from, to: query.to, groupBy: bindingGroup ?? "month",
+          });
+          const rowCount = writeSeries(series, sheetId, row, column);
+          setBindings((old) => old.map((item) => item === binding ? { ...item, rowCount } : item));
+        } else {
+          const metric = await calcService.metric(query);
+          updatingMetricsRef.current = true;
+          workbookRef.current?.setCellValue(row, column, metric.value, { id: sheetId });
+          updatingMetricsRef.current = false;
+        }
       }
       setSheets(workbookRef.current?.getAllSheets() ?? sheets);
       setMessage(`Обновлено показателей: ${bindings.length}`);
@@ -240,7 +338,14 @@ export default function CalcPage() {
           beforeUpdateCell: (row, column) => {
             if (updatingMetricsRef.current) return true;
             const sheetId = workbookRef.current?.getSheet()?.id;
-            const managed = bindings.some((x) => x.sheetId === sheetId && x.row === row && x.column === column);
+            const managed = bindings.some((x) => {
+              if (x.sheetId !== sheetId) return false;
+              if (x.mode === "series") {
+                return row >= x.row && row < x.row + (x.rowCount ?? 1) &&
+                  column >= x.column && column <= x.column + 1;
+              }
+              return x.row === row && x.column === column;
+            });
             if (managed) setMessage("Ячейка связана с показателем WayPay. Удалите привязку, чтобы изменить её вручную");
             return !managed;
           },
@@ -251,12 +356,18 @@ export default function CalcPage() {
         <Hint>Выберите ячейку и показатель. Значение придёт с сервера и сможет обновляться.</Hint>
         <Label>Показатель</Label>
         <Select value={metricCode} onChange={(e) => setMetricCode(e.target.value)}>{metrics.map((item) => <option key={item.code} value={item.code}>{item.name}, {item.unit}</option>)}</Select>
+        <Label>Результат</Label>
+        <Select value={insertMode} onChange={(e) => setInsertMode(e.target.value as "value" | "series")}>
+          <option value="value">Одно значение</option>
+          <option value="series">Отчёт по периодам</option>
+        </Select>
+        {insertMode === "series" && <><Label>Группировка</Label><Select value={groupBy} onChange={(e) => setGroupBy(e.target.value as "day" | "month")}><option value="month">По месяцам</option><option value="day">По дням</option></Select></>}
         <TwoColumns><div><Label>С</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div><div><Label>По</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div></TwoColumns>
-        <Label>ID пула (необязательно)</Label><Input type="number" value={poolId} onChange={(e) => setPoolId(e.target.value)} />
-        <Label>ID инвестора {selectedMetric?.requiresInvestor ? "*" : "(необязательно)"}</Label><Input type="number" value={investorId} onChange={(e) => setInvestorId(e.target.value)} />
-        <PrimaryButton onClick={insertMetric} disabled={busy || !canEdit}>Вставить в ячейку</PrimaryButton>
+        <Label>Пул (необязательно)</Label><Select value={poolId} onChange={(e) => { setPoolId(e.target.value); setInvestorId(""); }}><option value="">Вся компания</option>{metricOptions.pools.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
+        <Label>Инвестор {selectedMetric?.requiresInvestor ? "*" : "(необязательно)"}</Label><Select value={investorId} onChange={(e) => setInvestorId(e.target.value)}><option value="">Все инвесторы</option>{metricOptions.investors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
+        <PrimaryButton onClick={insertMetric} disabled={busy || !canEdit}>{insertMode === "series" ? "Сформировать отчёт" : "Вставить в ячейку"}</PrimaryButton>
         <Button onClick={refreshMetrics} disabled={busy || !bindings.length}>Обновить все ({bindings.length})</Button>
-        <BindingList>{bindings.map((binding, index) => <Binding key={`${binding.sheetId}-${binding.row}-${binding.column}`}><span>{binding.label}<small>R{binding.row + 1}C{binding.column + 1}</small></span>{canEdit && <button onClick={() => setBindings((old) => old.filter((_, i) => i !== index))}>×</button>}</Binding>)}</BindingList>
+        <BindingList>{bindings.map((binding, index) => <Binding key={`${binding.sheetId}-${binding.row}-${binding.column}`}><span>{binding.label}<small>{binding.mode === "series" ? `Отчёт · ${binding.groupBy === "day" ? "по дням" : "по месяцам"}` : "Значение"} · R{binding.row + 1}C{binding.column + 1}</small></span>{canEdit && <button onClick={() => setBindings((old) => old.filter((_, i) => i !== index))}>×</button>}</Binding>)}</BindingList>
       </Panel>
     </Workspace>
   </Page>;

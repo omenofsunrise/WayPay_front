@@ -33,3 +33,31 @@ export type CalcMetricQuery = {
   poolId?: number;
   investorId?: number;
 };
+
+export type CalcMetricSeriesPoint = {
+  label: string;
+  from: string;
+  to: string;
+  value: number;
+};
+
+export type CalcMetricSeries = {
+  code: string;
+  name: string;
+  unit: string;
+  groupBy: "day" | "month";
+  points: CalcMetricSeriesPoint[];
+  calculatedAt: string;
+};
+
+export type CalcMetricSeriesQuery = CalcMetricQuery & {
+  from: string;
+  to: string;
+  groupBy: "day" | "month";
+};
+
+export type CalcMetricOption = { id: number; name: string };
+export type CalcMetricOptions = {
+  pools: CalcMetricOption[];
+  investors: CalcMetricOption[];
+};
