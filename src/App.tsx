@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import AuthPage from "./pages/AuthPage";
 import CreditPage from "./pages/CreditPage";
 import MainLayout from "./components/Layout/MainLayout/MainLayout";
@@ -65,6 +65,7 @@ import ReceptionPage from "./pages/ReceptionPage";
 import PaymentPendingPage from "./pages/PaymentPendingPage";
 import InvestorPage from "./pages/InvestorPage";
 import InvestorsPoolPage from "./pages/InvestorsPoolPage";
+const CalcPage = lazy(() => import("./pages/CalcPage"));
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
@@ -703,6 +704,17 @@ function App() {
                   element={
                     <MainLayout>
                       <FinancePage />
+                    </MainLayout>
+                  }
+                />
+
+                <Route
+                  path="calc"
+                  element={
+                    <MainLayout>
+                      <Suspense fallback={<AppLoader />}>
+                        <CalcPage />
+                      </Suspense>
                     </MainLayout>
                   }
                 />

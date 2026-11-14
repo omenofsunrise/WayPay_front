@@ -66,6 +66,7 @@ const menuItemsMap: Record<
   "/investors-pool": { mainItem: "investors" },
   "/black-catalog": { mainItem: "black-catalog" },
   "/finance": { mainItem: "finance" },
+  "/calc": { mainItem: "calc" },
   "/profile": { mainItem: "profile" },
   "/settings": { mainItem: "settings" },
 };
@@ -171,6 +172,7 @@ const SideMenu = () => {
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
     "black-catalog": () => true,
     finance: () => hasPermission("MANAGE_ACCOUNTING", true),
+    calc: () => true,
     profile: () => true,
     settings: () => true,
     admin: () => hasRole("суперадмин"),
@@ -378,6 +380,7 @@ const SideMenu = () => {
     "payments",
     "investors",
     "finance",
+    "calc",
     "black-catalog",
     "settings",
     "admin",
@@ -725,6 +728,27 @@ const SideMenu = () => {
               </MenuItem>
             </DraggableRow>
           )}
+
+          <DraggableRow {...dragProps("calc")}>
+            <MenuItem
+              onClick={(e) => {
+                if (collapsed) {
+                  handleCollapsedMenuClick(e, "calc", false);
+                } else {
+                  handleMenuItemClick("calc", "/calc");
+                }
+              }}
+              $collapsed={collapsed}
+              $selected={selectedSideMenuItem === "calc"}
+            >
+              <Icon
+                src={financeIcon}
+                $collapsed={collapsed}
+                $selected={selectedSideMenuItem === "calc"}
+              />
+              {!collapsed && <MenuItemText>Конструктор</MenuItemText>}
+            </MenuItem>
+          </DraggableRow>
 
           <DraggableRow {...dragProps("black-catalog")}>
             <MenuItem
