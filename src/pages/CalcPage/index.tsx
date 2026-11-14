@@ -20,8 +20,15 @@ type MetricBinding = CalcMetricQuery & {
 
 type CalcDocument = { version: 1; sheets: Sheet[]; bindings: MetricBinding[] };
 
+const createSheetId = () => {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `sheet-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
 const emptySheets = (): Sheet[] => [{
-  id: crypto.randomUUID(),
+  id: createSheetId(),
   name: "Лист 1",
   order: 0,
   status: 1,
@@ -62,7 +69,7 @@ const xlsxToSheets = (buffer: ArrayBuffer): Sheet[] => {
         data[row][column] = source ? { v: source.v, m: String(source.w ?? source.v ?? ""), f: source.f } : null;
       }
     }
-    return { id: crypto.randomUUID(), name, order: index, status: index === 0 ? 1 : 0, data };
+    return { id: createSheetId(), name, order: index, status: index === 0 ? 1 : 0, data };
   });
 };
 
