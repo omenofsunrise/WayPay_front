@@ -90,9 +90,11 @@ const xlsxToSheets = (buffer: ArrayBuffer): Sheet[] => {
   return book.SheetNames.map((name, index) => {
     const ws = book.Sheets[name];
     const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]!) : { s: { r: 0, c: 0 }, e: { r: 99, c: 25 } };
-    const data: (Cell | null)[][] = [];
+    const data: (Cell | null)[][] = Array.from(
+      { length: range.e.r + 1 },
+      () => Array.from({ length: range.e.c + 1 }, () => null),
+    );
     for (let row = range.s.r; row <= range.e.r; row += 1) {
-      data[row] = [];
       for (let column = range.s.c; column <= range.e.c; column += 1) {
         const source = ws[XLSX.utils.encode_cell({ r: row, c: column })];
         if (!source) {
@@ -129,6 +131,7 @@ export default function CalcPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const updatingMetricsRef = useRef(false);
   const [sheets, setSheets] = useState<Sheet[]>(emptySheets);
+  const [workbookVersion, setWorkbookVersion] = useState(0);
   const [bindings, setBindings] = useState<MetricBinding[]>([]);
   const [savedSheets, setSavedSheets] = useState<CalcSheetSummary[]>([]);
   const [metrics, setMetrics] = useState<CalcMetricDefinition[]>([]);
@@ -185,7 +188,7 @@ export default function CalcPage() {
       setCanEdit(result.canEdit);
       setBindings(document.bindings);
       setSheets(document.sheets);
-      workbookRef.current?.updateSheet(document.sheets);
+      setWorkbookVersion((version) => version + 1);
       setMessage(result.canEdit ? "Таблица открыта" : "Открыт общий документ — только просмотр");
     } catch { setMessage("Не удалось открыть таблицу"); }
     finally { setBusy(false); }
@@ -199,7 +202,7 @@ export default function CalcPage() {
     setCanEdit(true);
     setBindings([]);
     setSheets(next);
-    workbookRef.current?.updateSheet(next);
+    setWorkbookVersion((version) => version + 1);
   };
 
   const metricQuery = (): CalcMetricQuery => ({
@@ -303,7 +306,7 @@ export default function CalcPage() {
     const next = xlsxToSheets(await file.arrayBuffer());
     setSheets(next);
     setBindings([]);
-    workbookRef.current?.updateSheet(next);
+    setWorkbookVersion((version) => version + 1);
     setMessage("Excel импортирован. Привязки показателей нужно добавить заново");
   };
 
@@ -315,7 +318,11 @@ export default function CalcPage() {
         <Button onClick={() => fileRef.current?.click()}>Импорт XLSX</Button>
         <Button onClick={exportXlsx}>Экспорт XLSX</Button>
         <PrimaryButton onClick={save} disabled={busy || !canEdit}>{busy ? "Подождите…" : "Сохранить"}</PrimaryButton>
-        <input ref={fileRef} hidden type="file" accept=".xlsx,.xls" onChange={(e) => importXlsx(e.target.files?.[0])} />
+        <input ref={fileRef} hidden type="file" accept=".xlsx,.xls" onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = "";
+          void importXlsx(file);
+        }} />
       </Actions>
     </Header>
     {message && <Notice>{message}</Notice>}
@@ -329,6 +336,7 @@ export default function CalcPage() {
     </DocumentBar>
     <Workspace>
       <GridCard><Workbook
+        key={workbookVersion}
         ref={workbookRef}
         data={sheets}
         onChange={setSheets}
