@@ -4,6 +4,7 @@ import { Workbook, type WorkbookInstance } from "@fortune-sheet/react";
 import type { Cell, CellWithRowAndCol, Sheet } from "@fortune-sheet/core";
 import "@fortune-sheet/react/dist/index.css";
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import calcService from "../../api/services/calcService";
 import type {
   CalcMetricDefinition,
@@ -94,43 +95,127 @@ const sheetToXlsx = (sheet: Sheet) => {
   return ws;
 };
 
-const xlsxToSheets = (buffer: ArrayBuffer): Sheet[] => {
-  const book = XLSX.read(buffer, { type: "array", cellFormula: true, cellStyles: true });
-  return book.SheetNames.map((name, index) => {
-    const ws = book.Sheets[name];
-    const range = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]!) : { s: { r: 0, c: 0 }, e: { r: 99, c: 25 } };
+const themeColors = ["#ffffff", "#000000", "#e7e6e6", "#44546a", "#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47"];
+
+const applyTint = (hex: string, tint = 0) => {
+  if (!tint) return hex;
+  const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16));
+  const adjusted = channels.map((channel) => Math.round(tint > 0
+    ? channel + (255 - channel) * tint
+    : channel * (1 + tint)));
+  return `#${adjusted.map((channel) => Math.max(0, Math.min(255, channel)).toString(16).padStart(2, "0")).join("")}`;
+};
+
+const excelColor = (color: ExcelJS.Color | undefined, fallback?: string) => {
+  if (!color) return fallback;
+  const base = color.argb
+    ? `#${color.argb.slice(-6)}`
+    : color.theme != null
+      ? themeColors[color.theme] ?? fallback
+      : fallback;
+  return base ? applyTint(base, color.tint ?? 0) : fallback;
+};
+
+const borderStyle = (style?: ExcelJS.BorderStyle) => ({
+  thin: "1", hair: "2", dotted: "3", dashed: "4", dashDot: "5", dashDotDot: "6",
+  double: "7", medium: "8", mediumDashed: "9", mediumDashDot: "10",
+  mediumDashDotDot: "11", slantDashDot: "12", thick: "13",
+}[style ?? ""] ?? "1");
+
+const excelValue = (cell: ExcelJS.Cell): Cell["v"] => {
+  const value = cell.value;
+  if (value == null) return undefined;
+  if (value instanceof Date) return (value.getTime() - Date.UTC(1899, 11, 30)) / 86_400_000;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if ("result" in value) {
+    const result = value.result;
+    if (result instanceof Date) return (result.getTime() - Date.UTC(1899, 11, 30)) / 86_400_000;
+    if (typeof result === "string" || typeof result === "number" || typeof result === "boolean") return result;
+    return cell.text;
+  }
+  if ("richText" in value) return value.richText.map((part) => part.text).join("");
+  if ("text" in value) return value.text;
+  if ("error" in value) return value.error;
+  return cell.text;
+};
+
+const xlsxToSheets = async (buffer: ArrayBuffer): Promise<Sheet[]> => {
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(buffer as any);
+  return book.worksheets.map((worksheet, index) => {
+    const maxRow = Math.max(worksheet.rowCount, 1);
+    const maxColumn = Math.max(worksheet.columnCount, 1);
     const data: (Cell | null)[][] = Array.from(
-      { length: range.e.r + 1 },
-      () => Array.from({ length: range.e.c + 1 }, () => null),
+      { length: maxRow },
+      () => Array.from({ length: maxColumn }, () => null),
     );
-    for (let row = range.s.r; row <= range.e.r; row += 1) {
-      for (let column = range.s.c; column <= range.e.c; column += 1) {
-        const source = ws[XLSX.utils.encode_cell({ r: row, c: column })];
-        if (!source) {
-          data[row][column] = null;
-          continue;
+    const borderInfo: any[] = [];
+    worksheet.eachRow({ includeEmpty: true }, (sourceRow, rowNumber) => {
+      sourceRow.eachCell({ includeEmpty: true }, (source, columnNumber) => {
+        const r = rowNumber - 1;
+        const c = columnNumber - 1;
+        const fill = source.fill?.type === "pattern" && source.fill.pattern !== "none"
+          ? excelColor(source.fill.fgColor) : undefined;
+        const fontColor = excelColor(source.font?.color);
+        const formula = source.formula;
+        const value = excelValue(source);
+        const hasStyle = source.styleId > 0 || fill || fontColor || source.border;
+        if (value != null || formula || hasStyle) {
+          const horizontal = source.alignment?.horizontal;
+          const vertical = source.alignment?.vertical;
+          data[r][c] = {
+            v: value,
+            m: source.text,
+            ...(formula && { f: `=${formula.replace(/^=/, "")}` }),
+            ...(fill && { bg: fill }),
+            ...(fontColor && { fc: fontColor }),
+            ...(source.font?.name && { ff: source.font.name }),
+            ...(source.font?.size && { fs: source.font.size }),
+            ...(source.font?.bold && { bl: 1 }),
+            ...(source.font?.italic && { it: 1 }),
+            ...(source.font?.underline && { un: 1 }),
+            ...(source.font?.strike && { cl: 1 }),
+            ...(horizontal && { ht: horizontal === "center" || horizontal === "centerContinuous" ? 0 : horizontal === "right" ? 2 : 1 }),
+            ...(vertical && { vt: vertical === "middle" ? 0 : vertical === "top" ? 1 : 2 }),
+            ...(source.alignment?.wrapText && { tb: "2" }),
+            ...(typeof source.alignment?.textRotation === "number" && { rt: source.alignment.textRotation }),
+            ...(source.numFmt && { ct: { fa: source.numFmt, t: typeof value === "number" ? "n" : "s" } }),
+          };
         }
-        const style = typeof source.s === "object" && source.s ? source.s as any : undefined;
-        data[row][column] = {
-          v: source.v,
-          m: String(source.w ?? source.v ?? ""),
-          f: source.f ? `=${source.f.replace(/^=/, "")}` : undefined,
-          ...(style?.fill?.fgColor?.rgb && { bg: `#${String(style.fill.fgColor.rgb).slice(-6)}` }),
-          ...(style?.font?.color?.rgb && { fc: `#${String(style.font.color.rgb).slice(-6)}` }),
-          ...(style?.font?.bold && { bl: 1 }),
-          ...(style?.font?.italic && { it: 1 }),
-        };
-      }
-    }
-    const merge = Object.fromEntries((ws["!merges"] ?? []).map((item) => {
-      const value = { r: item.s.r, c: item.s.c, rs: item.e.r - item.s.r + 1, cs: item.e.c - item.s.c + 1 };
+        (["left", "right", "top", "bottom"] as const).forEach((side) => {
+          const border = source.border?.[side];
+          if (!border?.style) return;
+          borderInfo.push({
+            rangeType: "range", borderType: `border-${side}`,
+            color: excelColor(border.color, "#000000"), style: borderStyle(border.style),
+            range: [{ row: [r, r], column: [c, c] }],
+          });
+        });
+      });
+    });
+    const merges = worksheet.model.merges ?? [];
+    const merge = Object.fromEntries(merges.map((address) => {
+      const range = XLSX.utils.decode_range(address);
+      const value = { r: range.s.r, c: range.s.c, rs: range.e.r - range.s.r + 1, cs: range.e.c - range.s.c + 1 };
       return [`${value.r}_${value.c}`, value];
     }));
-    const columnlen = Object.fromEntries((ws["!cols"] ?? []).map((item, c) => [String(c), item.wpx ?? (item.wch ? item.wch * 8 : undefined)]).filter(([, value]) => value));
-    const rowlen = Object.fromEntries((ws["!rows"] ?? []).map((item, r) => [String(r), item.hpx ?? item.hpt]).filter(([, value]) => value));
+    const rowlen: Record<string, number> = {};
+    const rowhidden: Record<string, number> = {};
+    worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+      if (row.height) rowlen[String(rowNumber - 1)] = row.height * 96 / 72;
+      if (row.hidden) rowhidden[String(rowNumber - 1)] = 0;
+    });
+    const columnlen: Record<string, number> = {};
+    const colhidden: Record<string, number> = {};
+    worksheet.columns.forEach((column, columnIndex) => {
+      if (column.width) columnlen[String(columnIndex)] = Math.max(12, column.width * 7 + 5);
+      if (column.hidden) colhidden[String(columnIndex)] = 0;
+    });
     return {
-      id: createSheetId(), name, order: index, status: index === 0 ? 1 : 0, data,
-      config: { merge, columnlen, rowlen },
+      id: createSheetId(), name: worksheet.name, order: index, status: index === 0 ? 1 : 0,
+      row: Math.max(maxRow + 10, 100), column: Math.max(maxColumn + 5, 26), data,
+      config: { merge, columnlen, rowlen, rowhidden, colhidden, borderInfo },
+      showGridLines: worksheet.properties.showGridLines !== false,
     };
   });
 };
@@ -313,7 +398,7 @@ export default function CalcPage() {
 
   const importXlsx = async (file?: File) => {
     if (!file) return;
-    const next = xlsxToSheets(await file.arrayBuffer());
+    const next = await xlsxToSheets(await file.arrayBuffer());
     const importedCells = next.reduce((total, sheet) => total +
       (sheet.data ?? []).reduce((sheetTotal, row) => sheetTotal +
         (row ?? []).filter(Boolean).length, 0), 0);
