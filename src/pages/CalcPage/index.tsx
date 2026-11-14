@@ -182,14 +182,17 @@ const xlsxToSheets = async (buffer: ArrayBuffer): Promise<Sheet[]> => {
             ...(source.numFmt && { ct: { fa: source.numFmt, t: typeof value === "number" ? "n" : "s" } }),
           };
         }
+        const borders: Record<string, { color: string; style: string }> = {};
         (["left", "right", "top", "bottom"] as const).forEach((side) => {
           const border = source.border?.[side];
           if (!border?.style) return;
-          borderInfo.push({
-            rangeType: "range", borderType: `border-${side}`,
-            color: excelColor(border.color, "#000000"), style: borderStyle(border.style),
-            range: [{ row: [r, r], column: [c, c] }],
-          });
+          borders[side[0]] = {
+            color: excelColor(border.color, "#000000")!,
+            style: borderStyle(border.style),
+          };
+        });
+        if (Object.keys(borders).length) borderInfo.push({
+          rangeType: "cell", value: { row_index: r, col_index: c, ...borders },
         });
       });
     });
@@ -398,18 +401,27 @@ export default function CalcPage() {
 
   const importXlsx = async (file?: File) => {
     if (!file) return;
-    const next = await xlsxToSheets(await file.arrayBuffer());
-    const importedCells = next.reduce((total, sheet) => total +
-      (sheet.data ?? []).reduce((sheetTotal, row) => sheetTotal +
-        (row ?? []).filter(Boolean).length, 0), 0);
-    if (!importedCells) {
-      setMessage("В Excel-файле не найдено заполненных ячеек");
-      return;
+    setBusy(true);
+    setMessage("Импортируем Excel…");
+    try {
+      const next = await xlsxToSheets(await file.arrayBuffer());
+      const importedCells = next.reduce((total, sheet) => total +
+        (sheet.data ?? []).reduce((sheetTotal, row) => sheetTotal +
+          (row ?? []).filter(Boolean).length, 0), 0);
+      if (!importedCells) {
+        setMessage("В Excel-файле не найдено заполненных ячеек");
+        return;
+      }
+      setSheets(next);
+      setBindings([]);
+      setWorkbookVersion((version) => version + 1);
+      setMessage(`Excel импортирован: ${next.length} листов, ${importedCells} заполненных ячеек`);
+    } catch (error) {
+      const details = error instanceof Error ? error.message : "неизвестная ошибка";
+      setMessage(`Не удалось импортировать Excel: ${details}`);
+    } finally {
+      setBusy(false);
     }
-    setSheets(next);
-    setBindings([]);
-    setWorkbookVersion((version) => version + 1);
-    setMessage(`Excel импортирован: ${next.length} листов, ${importedCells} заполненных ячеек`);
   };
 
   return <Page>
