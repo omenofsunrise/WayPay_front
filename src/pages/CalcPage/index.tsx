@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import { Workbook, type WorkbookInstance } from "@fortune-sheet/react";
-import type { Cell, Sheet } from "@fortune-sheet/core";
+import type { Cell, CellWithRowAndCol, Sheet } from "@fortune-sheet/core";
 import "@fortune-sheet/react/dist/index.css";
 import * as XLSX from "xlsx";
 import calcService from "../../api/services/calcService";
@@ -51,6 +51,15 @@ const parseDocument = (content: string): CalcDocument => {
     bindings: Array.isArray(parsed.bindings) ? parsed.bindings : [],
   };
 };
+
+const prepareSheetsForWorkbook = (sourceSheets: Sheet[]): Sheet[] => sourceSheets.map((sheet) => {
+  if (!sheet.data) return sheet;
+  const celldata: CellWithRowAndCol[] = [];
+  sheet.data.forEach((row, r) => row?.forEach((cell, c) => {
+    if (cell) celldata.push({ r, c, v: cell });
+  }));
+  return { ...sheet, data: undefined, celldata };
+});
 
 const sheetToXlsx = (sheet: Sheet) => {
   const ws: XLSX.WorkSheet = {};
@@ -151,6 +160,7 @@ export default function CalcPage() {
   const [message, setMessage] = useState("");
 
   const selectedMetric = useMemo(() => metrics.find((x) => x.code === metricCode), [metrics, metricCode]);
+  const workbookSheets = useMemo(() => prepareSheetsForWorkbook(sheets), [sheets]);
 
   const reloadList = async () => setSavedSheets(await calcService.list());
 
@@ -304,10 +314,17 @@ export default function CalcPage() {
   const importXlsx = async (file?: File) => {
     if (!file) return;
     const next = xlsxToSheets(await file.arrayBuffer());
+    const importedCells = next.reduce((total, sheet) => total +
+      (sheet.data ?? []).reduce((sheetTotal, row) => sheetTotal +
+        (row ?? []).filter(Boolean).length, 0), 0);
+    if (!importedCells) {
+      setMessage("В Excel-файле не найдено заполненных ячеек");
+      return;
+    }
     setSheets(next);
     setBindings([]);
     setWorkbookVersion((version) => version + 1);
-    setMessage("Excel импортирован. Привязки показателей нужно добавить заново");
+    setMessage(`Excel импортирован: ${next.length} листов, ${importedCells} заполненных ячеек`);
   };
 
   return <Page>
@@ -338,7 +355,7 @@ export default function CalcPage() {
       <GridCard><Workbook
         key={workbookVersion}
         ref={workbookRef}
-        data={sheets}
+        data={workbookSheets}
         onChange={setSheets}
         lang="ru"
         allowEdit={canEdit}
