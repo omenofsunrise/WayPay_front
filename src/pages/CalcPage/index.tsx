@@ -4,7 +4,6 @@ import { Workbook, type WorkbookInstance } from "@fortune-sheet/react";
 import type { Cell, CellWithRowAndCol, Sheet } from "@fortune-sheet/core";
 import "@fortune-sheet/react/dist/index.css";
 import * as XLSX from "xlsx";
-import XLSXRuntime from "xlsx";
 import ExcelJS from "exceljs";
 import calcService from "../../api/services/calcService";
 import type {
@@ -171,7 +170,7 @@ const excelValue = (cell: ExcelJS.Cell): Cell["v"] => {
 const formattedCellText = (cell: ExcelJS.Cell, value: Cell["v"]) => {
   if (typeof value === "number" && cell.numFmt) {
     try {
-      return XLSXRuntime.SSF.format(cell.numFmt, value);
+      return XLSX.SSF.format(cell.numFmt, value);
     } catch {
       // Unsupported custom formats fall back to ExcelJS' textual value.
     }
