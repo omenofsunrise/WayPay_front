@@ -1,8 +1,3 @@
-import { useState } from "react";
-import { Check, Copy, Download, MonitorDown, Smartphone } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
-import { usePwaInstall } from "../../hooks/usePwaInstall";
-import BaseModal from "./BASE/modalCRUBase";
 import { useEffect } from "react";
 import styled from "styled-components";
 
@@ -11,39 +6,7 @@ interface InstallAppHelpModalProps {
   onClose: () => void;
 }
 
-interface MobileApp {
-  id: string;
-  title: string;
-  subtitle: string;
-  url: string;
-  store: string;
-}
-
 type BrowserName = "chrome" | "edge" | "yandex" | "opera" | "safari" | "other";
-
-const MOBILE_APPS: MobileApp[] = [
-  {
-    id: "client",
-    title: "WayPay — клиент",
-    subtitle: "Для клиентов · Android",
-    url: "https://www.rustore.ru/catalog/app/com.waypay.waypay_client",
-    store: "RuStore",
-  },
-  {
-    id: "employee",
-    title: "WayPay Mobile",
-    subtitle: "Для сотрудников · Android",
-    url: "https://www.rustore.ru/catalog/app/com.example.waypay_mobile",
-    store: "RuStore",
-  },
-  {
-    id: "ios",
-    title: "WayPay для iOS",
-    subtitle: "Для iPhone и iPad",
-    url: "https://apps.apple.com/app/id6752306977",
-    store: "App Store",
-  },
-];
 
 const detectBrowser = (): BrowserName => {
   const userAgent = navigator.userAgent;
@@ -111,9 +74,6 @@ const browserContent: Record<
 };
 
 const InstallAppHelpModal = ({ isOpen, onClose }: InstallAppHelpModalProps) => {
-  const { canInstall, isInstalled, install } = usePwaInstall();
-  const [isInstalling, setIsInstalling] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   useEffect(() => {
     if (!isOpen) return;
 
@@ -129,35 +89,6 @@ const InstallAppHelpModal = ({ isOpen, onClose }: InstallAppHelpModalProps) => {
 
   const browser = browserContent[detectBrowser()];
   const isSecure = window.isSecureContext;
-
-  const handleInstall = async () => {
-    if (!canInstall || isInstalling) return;
-    setIsInstalling(true);
-    try {
-      await install();
-    } finally {
-      setIsInstalling(false);
-    }
-  };
-
-  const handleCopy = async (app: MobileApp) => {
-    try {
-      await navigator.clipboard.writeText(app.url);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = app.url;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
-
-    setCopiedId(app.id);
-    window.setTimeout(
-      () => setCopiedId((currentId) => (currentId === app.id ? null : currentId)),
-      1800
-    );
-  };
 
   return (
     <Overlay onClick={onClose} role="presentation">
@@ -203,109 +134,6 @@ const InstallAppHelpModal = ({ isOpen, onClose }: InstallAppHelpModalProps) => {
 };
 
 export default InstallAppHelpModal;
-
-const Content = styled.div`
-  padding: 10px 34px 30px;
-  color: #172235;
-  text-align: left;
-`;
-
-const DesktopSection = styled.section`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 18px;
-  border: 1px solid #dce5eb;
-  border-radius: 10px;
-  background: #f8fbfc;
-`;
-
-const DesktopInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-`;
-
-const SectionIcon = styled.div`
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
-  border-radius: 10px;
-  background: #e1f5f6;
-  color: #008693;
-`;
-
-const SectionTitle = styled.h3`
-  margin: 0;
-  color: #172235;
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.35;
-`;
-
-const SectionDescription = styled.p`
-  margin: 3px 0 0;
-  color: #7b8799;
-  font-size: 13px;
-  line-height: 1.45;
-`;
-
-const InstallButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 210px;
-  height: 42px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 8px;
-  background: #008693;
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: #007681;
-  }
-
-  &:disabled {
-    cursor: default;
-    opacity: 0.65;
-  }
-`;
-
-const InstalledBadge = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 14px;
-  border-radius: 999px;
-  background: #e2f7f1;
-  color: #087f70;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-`;
-
-const ManualInstall = styled.div`
-  margin-top: 12px;
-  padding: 14px 18px;
-  border: 1px solid #e5eaf0;
-  border-radius: 10px;
-`;
-
-const ManualTitle = styled.h4`
-  margin: 0 0 7px;
-  font-size: 14px;
-  font-weight: 600;
-`;
 
 const Overlay = styled.div`
   position: fixed;
@@ -381,119 +209,6 @@ const BrowserTitle = styled.h3`
 
 const Steps = styled.ol`
   margin: 0;
-  padding-left: 20px;
-  color: #596579;
-  font-size: 13px;
-  line-height: 1.45;
-
-  li + li {
-    margin-top: 3px;
-  }
-`;
-
-const MobileHeading = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 24px 0 12px;
-  color: #008693;
-`;
-
-const CardsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-
-  @media (max-width: 760px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const AppCard = styled.article`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid #dce5eb;
-  border-radius: 10px;
-  background: #fff;
-`;
-
-const AppHeader = styled.div`
-  width: 100%;
-  min-height: 46px;
-  text-align: left;
-`;
-
-const AppTitle = styled.h4`
-  margin: 0;
-  color: #172235;
-  font-size: 15px;
-  font-weight: 700;
-`;
-
-const AppSubtitle = styled.p`
-  margin: 3px 0 0;
-  color: #7b8799;
-  font-size: 12px;
-`;
-
-const QrCode = styled.div`
-  margin: 12px 0 14px;
-  padding: 7px;
-  border: 1px solid #edf0f3;
-  border-radius: 8px;
-  background: #fff;
-  line-height: 0;
-`;
-
-const AppActions = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  width: 100%;
-  margin-top: auto;
-`;
-
-const StoreButton = styled.a`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 38px;
-  padding: 0 10px;
-  border-radius: 7px;
-  background: #008693;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-
-  &:hover {
-    background: #007681;
-  }
-`;
-
-const CopyButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid #cfd9e2;
-  border-radius: 7px;
-  background: #fff;
-  color: #526074;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #008693;
-    color: #008693;
   padding-left: 22px;
   color: #4b5563;
   font-size: 14px;

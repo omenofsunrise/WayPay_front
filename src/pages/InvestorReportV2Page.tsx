@@ -34,7 +34,6 @@ import {
 import CustomInput from "../components/ui/fields/CustomInput";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { FaLock, FaUnlock } from "react-icons/fa";
-import WayPayIconButton from "../components/ui/Buttons/WayPayIconButton";
 import investorService from "../api/services/investorService";
 import CustomSelect from "../components/ui/fields/CustomSelect";
 import InvestorModal from "../components/modal/CrudInherited/InvestorModal";
@@ -431,15 +430,16 @@ const InvestorReportV2Page = () => {
         >
           Удалить
         </GrayButton>
-        <WayPayIconButton
-          icon={c.confirmed ? <FaLock /> : <FaUnlock />}
-          label={c.confirmed ? "Закрыто" : "Закрыть инвестицию"}
-          active={!c.confirmed}
+        <LockToggleButton
+          type="button"
           onClick={() =>
             !c.confirmed && handleContributionAction(c.id, "confirm")
           }
           disabled={isContributionsLoading || c.confirmed}
-        />
+          $locked={c.confirmed}
+        >
+          {c.confirmed ? <FaLock /> : <FaUnlock />}
+        </LockToggleButton>
       </ContributionActions> : "—",
     ]) ?? [];
 
@@ -885,6 +885,35 @@ const ContributionActions = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 20px;
+`;
+
+const LockToggleButton = styled.button<{ $locked: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid
+    ${({ $locked }) =>
+      $locked ? "rgba(107, 114, 128, 0.4)" : "rgba(0, 125, 136, 1)"};
+  background: ${({ $locked }) =>
+    $locked ? "rgba(243, 244, 246, 1)" : "rgba(0, 125, 136, 0.08)"};
+  color: ${({ $locked }) => ($locked ? "#6b7280" : "rgba(0, 125, 136, 1)")};
+  cursor: ${({ $locked }) => ($locked ? "default" : "pointer")};
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+  &:hover:not(:disabled) {
+    background: rgba(0, 125, 136, 0.15);
+  }
+  &:disabled {
+    opacity: ${({ $locked }) => ($locked ? 1 : 0.5)};
+  }
 `;
 
 export default InvestorReportV2Page;

@@ -1,25 +1,22 @@
 import { useState, useCallback, useEffect } from "react";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import CustomInput from "../components/ui/fields/CustomInput";
+import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
+import CustomTitle from "../components/ui/Text/CustomTitle";
 import ClientModal from "../components/modal/CrudInherited/ClientModal";
 import useClients from "../api/hooks/useClient";
 import type { ClientForm } from "../api/types/client";
 import PhoneModalInput from "../components/ui/fields/PhoneModalInput";
+import { Container } from "react-bootstrap";
 import styled from "styled-components";
-import { Phone, Plus, Search, X } from "lucide-react";
 import ClientCard from "../components/ui/cards/ClientCard";
 import ClientDossier from "../components/ui/Dossiers/ClientDossier";
 import { useAuth } from "../сontext/AuthContext";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import Pagination from "../components/ui/fields/CustomPagination";
 import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
-import FloatingContextMenu, {
-  DANGER_COLOR,
-  PRIMARY_COLOR,
-  SUCCESS_COLOR,
-} from "../components/modal/FloatingContextMenu";
-import WayPayButton from "../components/ui/Buttons/WayPayButton";
+import { TitleContainer } from "./BlackCatalog";
 
 const PAGE_SIZE = 20;
 
@@ -61,6 +58,12 @@ const EmptyStateText = styled.p`
   line-height: 1.5;
 `;
 
+const ClientFilterField = styled(FilterField)`
+  flex-shrink: 0;
+  padding: 16px 0;
+  background-color: rgba(249, 250, 250, 1);
+`;
+
 const ClientsPageLayout = styled(PageLayout)`
   height: calc(100vh - var(--header-height, 56px));
   overflow: hidden;
@@ -100,200 +103,42 @@ const ResetButton = styled.button`
   }
 `;
 
-const PageHeader = styled.header`
-  display: flex;
-  flex-shrink: 0;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 10px 0 12px;
-
-  @media (max-width: 640px) {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-  }
+const ContextMenu = styled.div<{ x: number; y: number }>`
+  position: fixed;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  min-width: 160px;
+  padding: 4px 0;
+  left: ${(props) => props.x}px;
+  top: ${(props) => props.y}px;
 `;
 
-const HeadingBlock = styled.div`
-  min-width: 0;
-`;
-
-const HeadingRow = styled.div`
+const MenuItem = styled.div<{ danger?: boolean }>`
+  padding: 8px 16px;
   display: flex;
   align-items: center;
-  gap: 9px;
-`;
-
-const PageTitle = styled.h1`
-  margin: 0;
-  color: #101827;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.15;
-`;
-
-const HeaderCountBadge = styled.span`
-  display: inline-grid;
-  min-width: 28px;
-  height: 25px;
-  padding: 0 8px;
-  box-sizing: border-box;
-  place-items: center;
-  color: #4b596b;
-  font-size: 12px;
-  font-weight: 650;
-  background: #e8eef4;
-  border-radius: 999px;
-`;
-
-const PageSubtitle = styled.p`
-  margin: 4px 0 0;
-  color: #778497;
-  font-size: 13px;
-  line-height: 1.4;
-`;
-
-const AddClientButton = styled(WayPayButton)`
-  @media (max-width: 640px) { width: 100%; }
-`;
-
-const SearchPanel = styled.section`
-  display: grid;
-  grid-template-columns: minmax(230px, 1.15fr) minmax(230px, 1.15fr) 112px auto minmax(180px, 1fr);
-  flex-shrink: 0;
-  gap: 10px;
-  align-items: center;
-  margin: 0 0 14px;
-  padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #e8edf2;
-  border-radius: 10px;
-  box-shadow: 0 5px 18px rgba(25, 46, 74, 0.05);
-
-  @media (max-width: 1150px) {
-    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) 112px auto;
-  }
-
-  @media (max-width: 760px) {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  @media (max-width: 520px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const SearchField = styled.div<{ $hasClearButton?: boolean }>`
-  position: relative;
-  min-width: 0;
-
-  > svg {
-    position: absolute;
-    top: 50%;
-    left: 12px;
-    z-index: 1;
-    color: #65748a;
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
-
-  > div {
-    display: block;
-    width: 100%;
-    margin: 0;
-  }
-
-  input {
-    width: 100%;
-    max-width: none;
-    min-height: 38px;
-    padding: 6px ${({ $hasClearButton }) => ($hasClearButton ? "38px" : "12px")} 6px 38px;
-    color: #172133;
-    font-size: 13px;
-    background: #fff;
-    border: 1px solid #ced8e2;
-    border-radius: 7px;
-  }
-
-  input::placeholder { color: #8a96a8; }
-`;
-
-const ClearSearchButton = styled.button`
-  position: absolute;
-  top: 50%;
-  right: 7px;
-  z-index: 2;
-  display: grid;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  place-items: center;
-  color: #718096;
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  transform: translateY(-50%);
+  gap: 8px;
   cursor: pointer;
+  color: ${(props) => (props.danger ? "#ff4d4f" : "#333")};
 
-  &:hover { color: #263548; background: #f0f4f7; }
-`;
-
-const SearchButton = styled.button`
-  min-height: 38px;
-  padding: 0 18px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  background: #078891;
-  border: 0;
-  border-radius: 7px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) { background: #007d88; }
-  &:disabled { cursor: not-allowed; opacity: 0.55; }
-  &:focus-visible { outline: 2px solid rgba(0, 125, 136, 0.42); outline-offset: 2px; }
-`;
-
-const PanelResetButton = styled.button`
-  min-height: 38px;
-  padding: 0 6px;
-  color: #087d86;
-  font-size: 13px;
-  font-weight: 550;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  white-space: nowrap;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-
-  &:hover { color: #055f67; }
-`;
-
-const ResultSummary = styled.div<{ $visible: boolean }>`
-  min-height: 32px;
-  padding-left: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  color: #68768a;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  border-left: 1px solid #e4e9ef;
-  visibility: ${({ $visible }) => ($visible ? "visible" : "hidden")};
-
-  @media (max-width: 1150px) {
-    grid-column: 1 / -1;
-    min-height: auto;
-    padding: 9px 0 0;
-    justify-content: flex-start;
-    border-top: 1px solid #e4e9ef;
-    border-left: 0;
+  &:hover {
+    background-color: #f5f5f5;
   }
+`;
 
-  @media (max-width: 520px) { justify-content: center; }
+const Backdrop = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+`;
+
+export const StyledCountInfo = styled(CountInfoTitle)`
+  margin-left: auto;
 `;
 
 interface Client {
@@ -310,18 +155,7 @@ interface Client {
   creditIds?: string[];
   creditRestTerms?: string[];
   hasPassportPhoto?: boolean;
-  blacklist?: boolean;
-  employeeId?: number;
 }
-
-const getClientWord = (count: number) => {
-  const lastTwoDigits = count % 100;
-  const lastDigit = count % 10;
-  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return "клиентов";
-  if (lastDigit === 1) return "клиент";
-  if (lastDigit >= 2 && lastDigit <= 4) return "клиента";
-  return "клиентов";
-};
 
 const ClientPage = () => {
   const [nameFilter, setNameFilter] = useState("");
@@ -345,8 +179,7 @@ const ClientPage = () => {
     null
   );
   const [longPressClient, setLongPressClient] = useState<Client | null>(null);
-  const [blacklistUpdatingIds, setBlacklistUpdatingIds] = useState<Set<number>>(new Set());
-  const { hasRole } = useAuth();
+  const { hasRole, authInfo } = useAuth();
 
   // Добавляем состояние для общего количества клиентов
   const [totalClientsCount, setTotalClientsCount] = useState<number>(0);
@@ -366,7 +199,6 @@ const ClientPage = () => {
     updateClient,
     deleteClient,
     checkClientCredits,
-    setClientBlacklist,
   } = useClients();
 
   // Загружаем общее количество клиентов при инициализации
@@ -489,29 +321,6 @@ const ClientPage = () => {
     client: Client | null;
   } | null>(null);
 
-  const handleBlacklistChange = useCallback(async (client: Client, blacklist: boolean) => {
-    const action = blacklist ? "добавить в чёрный список" : "убрать из чёрного списка";
-    if (!window.confirm(`Вы уверены, что хотите ${action} клиента ${client.fullName}?`)) {
-      return;
-    }
-
-    setBlacklistUpdatingIds(prev => new Set(prev).add(client.id));
-    try {
-      await setClientBlacklist(client.id, blacklist);
-      setSelectedClientDossier(prev => prev?.id === client.id
-        ? { ...prev, blacklist }
-        : prev);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Не удалось изменить чёрный список");
-    } finally {
-      setBlacklistUpdatingIds(prev => {
-        const next = new Set(prev);
-        next.delete(client.id);
-        return next;
-      });
-    }
-  }, [setClientBlacklist]);
-
   const handleCardRightClick = useCallback(
     (e: React.MouseEvent, client: Client) => {
       e.preventDefault();
@@ -525,25 +334,36 @@ const ClientPage = () => {
   );
 
   const handleContextMenuAction = useCallback(
-    (action: "edit" | "delete" | "blacklist") => {
+    (action: "edit" | "delete") => {
       if (!contextMenu?.client) return;
 
       if (action === "edit") {
         handleEditClient(contextMenu.client);
       } else if (action === "delete") {
         handleDeleteClient(contextMenu.client);
-      } else if (action === "blacklist") {
-        void handleBlacklistChange(contextMenu.client, contextMenu.client.blacklist !== true);
       }
 
       setContextMenu(null);
     },
-    [contextMenu, handleBlacklistChange]
+    [contextMenu]
   );
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [contextMenu]);
 
   const handlePhoneFilterChange = (value: string) => {
     setPhoneFilter(value);
@@ -721,9 +541,6 @@ const ClientPage = () => {
             onDelete={handleDeleteClient}
             onRightClick={handleCardRightClick}
             onOpenDossier={handleOpenDossier}
-            onBlacklistChange={handleBlacklistChange}
-            canRemoveFromBlacklist={hasRole("суперадмин")}
-            isBlacklistUpdating={blacklistUpdatingIds.has(client.id)}
             onMouseDown={() => handleCardMouseDown(client)}
             onMouseUp={handleCardMouseUp}
             onMouseLeave={handleCardMouseUp}
@@ -763,44 +580,32 @@ const ClientPage = () => {
         </ClientListScrollArea>
       ) : (
         <>
-          <PageHeader>
-            <HeadingBlock>
-              <HeadingRow>
-                <PageTitle>Клиенты</PageTitle>
-                <HeaderCountBadge>{totalClientsCount}</HeaderCountBadge>
-              </HeadingRow>
-              <PageSubtitle>Управление клиентами и договорами</PageSubtitle>
-            </HeadingBlock>
-            <AddClientButton
-              icon={<Plus size={18} />}
-              onClick={handleCreateClient}
-            >
-              Добавить клиента
-            </AddClientButton>
-          </PageHeader>
+          <TitleContainer>
+            <TitleContainer style={{ maxWidth: "100px" }}>
+              <CustomTitle>Клиенты</CustomTitle>
+              {clientsData && clientsData.items.length > 0 && (
+                <ClientCount>({clientsData.totalItemsCount})</ClientCount>
+              )}
+            </TitleContainer>
+            <StyledCountInfo total={clientsData?.totalItemsCount} />
+          </TitleContainer>
 
-          <SearchPanel>
-            <SearchField $hasClearButton={Boolean(nameFilter)}>
-              <Search size={16} />
+          <ClientFilterField>
+            <Container
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                width: "50vw",
+                gap: "15px",
+              }}
+            >
               <CustomInput
                 inputType="fullname"
-                placeholder="ФИО клиента"
+                placeholder="ФИО клиента (минимум 5 символов)"
                 value={nameFilter}
                 onChange={(e) => handleFilterChange(e.target.value)}
                 onKeyPress={handleKeyPress}
               />
-              {nameFilter && (
-                <ClearSearchButton
-                  aria-label="Очистить ФИО"
-                  onClick={() => handleFilterChange("")}
-                  type="button"
-                >
-                  <X size={15} />
-                </ClearSearchButton>
-              )}
-            </SearchField>
-            <SearchField>
-              <Phone size={16} />
               <PhoneModalInput
                 placeholder="Телефон (полный номер)"
                 value={phoneFilter}
@@ -808,27 +613,26 @@ const ClientPage = () => {
                 onKeyPress={handleKeyPress}
                 name="phone"
               />
-            </SearchField>
-            <SearchButton
-              onClick={handleSearch}
-              disabled={
-                !(
-                  nameFilter.trim().length >= 5 ||
-                  phoneFilter.trim().replace(/\D/g, "").length >= 11
-                )
-              }
-              type="button"
+              <ResetButton onClick={resetFilters}>Сбросить фильтры</ResetButton>
+              <DarkCyanButton
+                onClick={handleSearch}
+                disabled={
+                  !(
+                    nameFilter.trim().length >= 5 ||
+                    phoneFilter.trim().replace(/\D/g, "").length >= 11
+                  )
+                }
+              >
+                Поиск
+              </DarkCyanButton>
+            </Container>
+            <DarkCyanButton
+              style={{ width: "25vw", marginLeft: "auto" }}
+              onClick={handleCreateClient}
             >
-              Найти
-            </SearchButton>
-            <PanelResetButton onClick={resetFilters} type="button">
-              Сбросить
-            </PanelResetButton>
-            <ResultSummary $visible={hasSearched}>
-              Найдено: {clientsData?.totalItemsCount || 0}{" "}
-              {getClientWord(clientsData?.totalItemsCount || 0)}
-            </ResultSummary>
-          </SearchPanel>
+              + Добавить
+            </DarkCyanButton>
+          </ClientFilterField>
 
           <ClientListScrollArea>{renderContent()}</ClientListScrollArea>
 
@@ -854,35 +658,20 @@ const ClientPage = () => {
           />
 
           {contextMenu && (
-            <FloatingContextMenu
-              x={contextMenu.x}
-              y={contextMenu.y}
-              onClose={closeContextMenu}
-              items={[
-                {
-                  label: "Редактировать клиента",
-                  color: PRIMARY_COLOR,
-                  action: () => handleContextMenuAction("edit"),
-                },
-                ...(!contextMenu.client?.blacklist || hasRole("суперадмин")
-                  ? [
-                      {
-                        label: contextMenu.client?.blacklist
-                          ? "Убрать из чёрного списка"
-                          : "Добавить в чёрный список",
-                        color: contextMenu.client?.blacklist ? SUCCESS_COLOR : DANGER_COLOR,
-                        action: () => handleContextMenuAction("blacklist"),
-                      },
-                    ]
-                  : []),
-                {
-                  label: "Удалить клиента",
-                  color: DANGER_COLOR,
-                  dividerBefore: true,
-                  action: () => handleContextMenuAction("delete"),
-                },
-              ]}
-            />
+            <>
+              <Backdrop onClick={closeContextMenu} />
+              <ContextMenu x={contextMenu.x} y={contextMenu.y}>
+                <MenuItem onClick={() => handleContextMenuAction("edit")}>
+                  Редактировать клиента
+                </MenuItem>
+                <MenuItem
+                  danger
+                  onClick={() => handleContextMenuAction("delete")}
+                >
+                  Удалить клиента
+                </MenuItem>
+              </ContextMenu>
+            </>
           )}
         </>
       )}

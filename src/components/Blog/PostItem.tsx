@@ -11,7 +11,6 @@ import { LikeButton, CommentButton, ShareButton } from '../ui/Buttons/SocialButt
 import useChat from '../../api/hooks/useChat';
 import Checkbox from '../ui/CheckBoxes/Checkbox';
 import type { Chat } from '../../api/types/chat';
-import BaseModal from '../modal/BASE/modalCRUBase';
 
 interface PostItemProps {
   post: BlogPost;
@@ -279,17 +278,7 @@ const PostItem: React.FC<PostItemProps> = ({
       )}
 
       {isShareModalOpen && (
-        <BaseModal
-          title="Поделиться постом"
-          subtitle="Выберите чаты для отправки публикации"
-          appearance="compact-form"
-          width="540px"
-          maxHeight="calc(100vh - 32px)"
-          onClose={() => setIsShareModalOpen(false)}
-          onCancel={() => setIsShareModalOpen(false)}
-          hideSaveButton
-          hideCanselButton
-        >
+        <ShareModalOverlay>
           <ShareModalContainer>
             {shareSuccess ? (
               <SuccessMessage>
@@ -303,6 +292,16 @@ const PostItem: React.FC<PostItemProps> = ({
               </SuccessMessage>
             ) : (
               <>
+                <ShareModalHeader>
+                  <ShareModalTitle>Поделиться постом</ShareModalTitle>
+                  <CloseButton onClick={() => setIsShareModalOpen(false)}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 6L6 18" stroke="#50555C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M6 6L18 18" stroke="#50555C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </CloseButton>
+                </ShareModalHeader>
+                
                 <ShareTextArea
                   placeholder="Добавьте сообщение к посту (необязательно)"
                   value={shareText}
@@ -363,7 +362,7 @@ const PostItem: React.FC<PostItemProps> = ({
               </>
             )}
           </ShareModalContainer>
-        </BaseModal>
+        </ShareModalOverlay>
       )}
     </PostItemContainer>
   );
@@ -391,12 +390,58 @@ const ShareTextArea = styled.textarea`
   }
 `;
 
-const ShareModalContainer = styled.div`
+const ShareModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  padding: 6px 18px 20px;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ShareModalContainer = styled.div`
+  background-color: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
   flex-direction: column;
-  min-height: 0;
   overflow: hidden;
+`;
+
+const ShareModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+`;
+
+const ShareModalTitle = styled.h3`
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
 `;
 
 const SearchInput = styled.input`

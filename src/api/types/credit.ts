@@ -11,48 +11,7 @@ export const NOTEABLE_TYPES = {
   CLIENT: "Client" as GuarantorType,
 };
 
-/** Максимум поручителей в одном договоре (то же ограничение на бэкенде). */
-export const MAX_CREDIT_GUARANTORS = 10;
-
-/**
- * Поручитель договора в ответе API. id — id клиента для "Client"
- * и id записи поручителя для "Guarantor".
- */
-export interface CreditGuarantor {
-  position: number;
-  guarantorType: GuarantorType;
-  id: number;
-  clientId?: number | null;
-  guarantorId?: number | null;
-  fullname?: string | null;
-  phone?: string | null;
-  birthdate?: string | Date | null;
-  address?: string | null;
-  contacts?: ClientContact[] | null;
-}
-
-/** Поручитель в запросе на создание или изменение договора. */
-export interface CreditGuarantorRequest {
-  /** Клиент-поручитель. */
-  clientId?: number | null;
-  /** Уже привязанный к договору отдельный поручитель (правка без пересоздания). */
-  guarantorId?: number | null;
-  /** Данные отдельного поручителя (не клиента). */
-  guarantor?: {
-    fullName: string;
-    phone: string;
-    birthdate?: Date | string | null;
-    address?: string | null;
-    doc?: string | null;
-  } | null;
-  /** Только в ответе create-request: для показа в форме. */
-  fullname?: string | null;
-  phone?: string | null;
-}
-
 export interface Credit {
-  /** Все поручители по порядку; поля guarantor* — первый из них. */
-  guarantors?: CreditGuarantor[];
   guarantorFullname?: string;
   guarantorPhone?: string;
   guarantorBirthdate?: string | Date;
@@ -107,11 +66,7 @@ export interface CreateCreditRequest {
   name: string;
   creditTypeId: number;
 
-  /** Все поручители по порядку, не больше MAX_CREDIT_GUARANTORS. */
-  guarantors?: CreditGuarantorRequest[];
-
-  /** Старый формат с одним поручителем — бэкенд ещё принимает. */
-  GuarantorClientId?: number | null;
+  GuarantorClientId: number;
   guarantor?: {
     fullName: string;
     phone: string;
@@ -185,9 +140,6 @@ export interface CreditDocs {
   guarantorDocIssueDate?: string;
   guarantorPhone?: string;
   guarantorAddress?: string;
-  /** Все поручители для печати; поля guarantor* — первый из них. */
-  guarantors?: CreditDocsGuarantor[];
-  hasGuarantors?: boolean;
 
   city?: string;
   chief?: string;
@@ -254,16 +206,4 @@ export interface CreditListResponse {
   id: number;
   status: string;
   creditDate: Date;
-}
-
-/** Поручитель в данных для печати договора (credit/spa). */
-export interface CreditDocsGuarantor {
-  number: number;
-  name?: string | null;
-  birthdate?: string | null;
-  passportSeries?: string | null;
-  passportNumber?: string | null;
-  docIssueDate?: string | null;
-  phone?: string | null;
-  address?: string | null;
 }

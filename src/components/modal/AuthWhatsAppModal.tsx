@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import BaseModal from './BASE/modalCRUBase';
 
 interface AuthWhatsAppModalProps {
     isOpen: boolean;
@@ -43,22 +42,9 @@ const AuthWhatsAppModal: React.FC<AuthWhatsAppModalProps> = ({
     };
 
     return (
-        <BaseModal
-            isOpen={isOpen}
-            title="Подтверждение по WhatsApp"
-            subtitle="Введите код, отправленный на ваш номер"
-            appearance="compact-form"
-            width="500px"
-            onClose={onClose}
-            onCancel={onClose}
-            onSave={handleSubmit}
-            saveButtonText="Подтвердить"
-            cancelButtonText="Отмена"
-            isSaveDisabled={!code}
-            isSubmitting={isVerifying}
-            submittingText="Проверка…"
-        >
-            <ModalContent>
+        <ModalOverlay onMouseDown={onClose}>
+            <ModalContent onMouseDown={(e) => e.stopPropagation()}>
+                <ModalTitle>Подтверждение по WhatsApp</ModalTitle>
                 <ModalText>
                     Мы отправили код в WhatsApp на номер:
                 </ModalText>
@@ -67,7 +53,7 @@ const AuthWhatsAppModal: React.FC<AuthWhatsAppModalProps> = ({
                     Введите полученный код, чтобы завершить авторизацию.
                 </ModalText>
 
-                <Form>
+                <Form onSubmit={handleSubmit}>
                     <CodeInput
                         ref={inputRef}
                         type="text"
@@ -81,15 +67,42 @@ const AuthWhatsAppModal: React.FC<AuthWhatsAppModalProps> = ({
 
                     {error && <ErrorText>{error}</ErrorText>}
 
+                    <SubmitButton type="submit" disabled={!code || isVerifying}>
+                        {isVerifying ? 'Проверка…' : 'Подтвердить'}
+                    </SubmitButton>
                 </Form>
             </ModalContent>
-        </BaseModal>
+        </ModalOverlay>
     );
 };
 
+const ModalOverlay = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+`;
+
 const ModalContent = styled.div`
-    padding: 6px 34px 24px;
-    text-align: left;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+`;
+
+const ModalTitle = styled.h2`
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: #333;
 `;
 
 const ModalText = styled.p`
@@ -104,7 +117,7 @@ const PhoneNumber = styled.div`
     color: rgba(0, 125, 136, 1);
 `;
 
-const Form = styled.div`
+const Form = styled.form`
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -135,6 +148,28 @@ const CodeInput = styled.input`
 const ErrorText = styled.div`
     color: #e74c3c;
     font-size: 14px;
+`;
+
+const SubmitButton = styled.button`
+    background: linear-gradient(90deg, rgba(0, 125, 136, 1) 0%, rgba(37, 203, 161, 1) 100%);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 125, 136, 0.3);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 `;
 
 export default AuthWhatsAppModal;

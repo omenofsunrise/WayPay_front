@@ -24,7 +24,6 @@ import { EditOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import { formatMoney } from "../../utils/formatPrice";
 import { formatPhoneHref } from "../../utils/phoneUtils";
-import { extractErrorMessage } from "../../api/utils/errorMessage";
 
 interface FinanceProfilePageProps {
   onViewEmployee: (id: number) => void;
@@ -374,9 +373,7 @@ const FinanceProfilePage = ({ onViewEmployee }: FinanceProfilePageProps) => {
       setIsModalOpen(false);
     } catch (err) {
       console.error("Ошибка при сохранении сотрудника:", err);
-      message.error(
-        extractErrorMessage(err, "Не удалось сохранить данные сотрудника")
-      );
+      message.error("Не удалось сохранить данные сотрудника");
       loadEmployees();
       throw err;
     }

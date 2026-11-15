@@ -37,8 +37,6 @@ export interface AuthCustomRole {
 export interface AuthInfo {
   type: UserType;
   hasPin: boolean;
-  /** Сотрудник отключил пин-код — не требовать его установку и не блокировать по простою. */
-  pinDisabled?: boolean;
   employee: {
     id: number;
     fullName: string;
@@ -61,8 +59,6 @@ export interface AuthInfo {
     creditAcceptance?: boolean;
     paymentAcceptance?: boolean;
     incrementCreditName?: boolean;
-    showCreditName?: boolean;
-    showCreditType?: boolean;
     currentNameNumber?: number;
     /** Шаг округления сумм при оформлении, 0..100. Ноль — не округлять. */
     roundingStep?: number;

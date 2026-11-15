@@ -1,30 +1,62 @@
-import type { MouseEvent } from "react";
-import WayPayIconButton from "./WayPayIconButton";
+import React from 'react';
+import styled from 'styled-components';
 
 interface EditButtonProps {
-  onClick: (event: MouseEvent) => void;
+  onClick: (e: React.MouseEvent) => void;
   tooltip?: string;
   size?: number;
 }
 
-const EditIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 20h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+const EditButton: React.FC<EditButtonProps> = ({ onClick, tooltip, size = 32 }) => {
+  return (
+    <EditButtonContainer 
+      onClick={onClick}
+      size={size}
+      title={tooltip}
+    >
+      <svg 
+        width={size * 0.5} 
+        height={size * 0.5} 
+        viewBox="0 0 17 17" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path 
+          d="M0.625 13.0931V16.3744H3.90625L13.5837 6.69687L10.3025 3.41562L0.625 13.0931ZM16.7337 3.54687L13.4525 0.265625L11.2387 2.48812L14.52 5.76937L16.7337 3.54687Z" 
+          fill="#50555C"
+        />
+      </svg>
+    </EditButtonContainer>
+  );
+};
 
-const EditButton = ({
-  onClick,
-  tooltip = "Редактировать",
-  size = 32,
-}: EditButtonProps) => (
-  <WayPayIconButton
-    icon={<EditIcon />}
-    label={tooltip}
-    onClick={onClick}
-    style={{ width: size, minWidth: size, height: size, minHeight: size }}
-  />
-);
+const EditButtonContainer = styled.button<{ size: number }>`
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  box-sizing: border-box;
+
+  &:hover {
+    transform: scale(1.05);
+    outline: none;
+    border-color: transparent;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  svg {
+    transition: transform 0.2s ease;
+  }
+
+  &:hover svg {
+    transform: scale(1.1);
+  }
+`;
 
 export default EditButton;

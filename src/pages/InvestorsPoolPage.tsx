@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import styled from "styled-components";
-import { RefreshCw } from "lucide-react";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import PageLayout from "../components/ui/Layouts/PageLayout";
 import TitleField from "../components/ui/Layouts/TitleLayout";
@@ -39,8 +38,11 @@ import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import Pagination from "../components/ui/fields/CustomPagination";
 import Tabs from "../components/ui/fields/Tabs";
 import useInvestorPool from "../api/hooks/useInvestorPool";
+import EditButton from "../components/ui/Buttons/EditButton";
+import AddButton from "../components/ui/Buttons/AddButton";
 import DeleteButton from "../components/ui/Buttons/DeleteButton";
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
+import GrayButton from "../components/ui/Buttons/GrayButton";
 import type { InvestorPool, Reinvestment } from "../api/types/investorPool";
 import BaseModal from "../components/modal/BASE/modalCRUBase";
 import {
@@ -56,19 +58,13 @@ import InvestorSelect from "../components/ui/fields/InvestorSelect";
 import CustomCalendar from "../components/ui/fields/CustomCalendar";
 import { useAuth } from "../сontext/AuthContext";
 import InvestorCashPositionModal from "../components/modal/InvestorCashPositionModal";
-import ConfirmationStatusBadge from "../components/ui/ConfirmationStatusBadge";
-import WayPayButton from "../components/ui/Buttons/WayPayButton";
-import WayPayMoreMenu from "../components/ui/Buttons/WayPayMoreMenu";
-import EditButton from "../components/ui/Buttons/EditButton";
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
-  embedded?: boolean;
 };
 
 const InvestorsPoolPage = ({
   enableReinvestments = true,
-  embedded = false,
 }: InvestorsPoolPageProps) => {
   const { authInfo, hasRole } = useAuth();
   const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
@@ -83,8 +79,7 @@ const InvestorsPoolPage = ({
     updateInvestor,
     addInvestment,
     updateInvestment,
-    blockInvestor,
-    updateReinvestment
+    blockInvestor
   } = useInvestor();
 
   const {
@@ -148,8 +143,6 @@ const InvestorsPoolPage = ({
   const [currentInvestor, setCurrentInvestor] = useState<Investor | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("");
   const [selectedPoolId, setSelectedPoolId] = useState<string>("");
-  const [isPoolSwitcherOpen, setIsPoolSwitcherOpen] = useState(false);
-  const poolSwitcherRef = useRef<HTMLDivElement>(null);
   const [report, setReport] = useState<InvestorReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
@@ -174,10 +167,6 @@ const InvestorsPoolPage = ({
   const [payoutAmount, setPayoutAmount] = useState<string>("");
   const [selectedInvestorForPayout, setSelectedInvestorForPayout] =
     useState<Investor | null>(null);
-  const [isEditReinvestmentModalOpen, setIsEditReinvestmentModalOpen] = useState(false);
-  const [selectedReinvestmentForEdit, setSelectedReinvestmentForEdit] =
-    useState<Reinvestment | null>(null);
-  const [editReinvestmentAmount, setEditReinvestmentAmount] = useState("");
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [investmentAmount, setInvestmentAmount] = useState("");
   const [investmentDate, setInvestmentDate] = useState(() => {
@@ -211,7 +200,6 @@ const InvestorsPoolPage = ({
   const [isInvestorCreditsLoading, setIsInvestorCreditsLoading] =
     useState(false);
   const [searchValue, setSearchValue] = useState<string>("");
-  const [participantSearch, setParticipantSearch] = useState("");
   const [reinvestmentsPage, setReinvestmentsPage] = useState(1);
   const [reinvestmentsData, setReinvestmentsData] = useState<{
     items: Reinvestment[];
@@ -222,30 +210,6 @@ const InvestorsPoolPage = ({
     items: Reinvestment[];
     totalCount: number;
   } | null>(null);
-
-  useEffect(() => {
-    if (!isPoolSwitcherOpen) return;
-
-    const closePoolSwitcher = (event: MouseEvent) => {
-      if (!poolSwitcherRef.current?.contains(event.target as Node)) {
-        setIsPoolSwitcherOpen(false);
-      }
-    };
-
-    const closePoolSwitcherByEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsPoolSwitcherOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", closePoolSwitcher);
-    document.addEventListener("keydown", closePoolSwitcherByEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", closePoolSwitcher);
-      document.removeEventListener("keydown", closePoolSwitcherByEscape);
-    };
-  }, [isPoolSwitcherOpen]);
 
   useEffect(() => {
     if (selectedPoolId && activeTab === "credits") {
@@ -786,16 +750,7 @@ const InvestorsPoolPage = ({
     }
   };
 
-  const visibleInvestors = investors.filter((investor) => {
-    const query = participantSearch.trim().toLowerCase();
-    if (!query) return true;
-
-    return [investor.nickname, investor.fullName, investor.phoneNumber]
-      .filter(Boolean)
-      .some((value) => value!.toLowerCase().includes(query));
-  });
-
-  const investorsTableData = visibleInvestors.map((investor: Investor, index) => {
+  const investorsTableData = investors.map((investor: Investor) => {
     const canManageInvestor = !(isPoolV2 && investor.isRemoved);
     const createDoubleClickCell = (content: React.ReactNode) => (
       <DoubleClickCell
@@ -807,24 +762,7 @@ const InvestorsPoolPage = ({
 
     const row: React.ReactNode[] = [
       investor.id.toString(),
-      createDoubleClickCell(
-        <PoolInvestorIdentityCell>
-          <PoolInvestorAvatar $tone={index % 5}>
-            {(investor.nickname || investor.fullName || "И")
-              .trim()
-              .charAt(0)
-              .toUpperCase()}
-          </PoolInvestorAvatar>
-          <div>
-            <PoolInvestorName>
-              {investor.nickname || investor.fullName || `Инвестор ${investor.id}`}
-            </PoolInvestorName>
-            {investor.fullName && investor.fullName !== investor.nickname && (
-              <PoolInvestorFullName>{investor.fullName}</PoolInvestorFullName>
-            )}
-          </div>
-        </PoolInvestorIdentityCell>
-      ),
+      createDoubleClickCell(investor.fullName ?? "-"),
       createDoubleClickCell(
         investor.phoneNumber ? (
           <PhoneLink
@@ -844,9 +782,7 @@ const InvestorsPoolPage = ({
       ),
       createDoubleClickCell(
         investor.pieInPool !== null && investor.pieInPool !== undefined
-          ? `${Number(investor.pieInPool).toLocaleString("ru-RU", {
-              maximumFractionDigits: 2,
-            })} %`
+          ? `${investor.pieInPool}%`
           : "-"
       ),
       createDoubleClickCell(
@@ -854,22 +790,6 @@ const InvestorsPoolPage = ({
           ? formatMoney(investor.currentIncome.toString())
           : "-"
       ),
-      canManageInvestor ? (
-        <PoolInlineActions>
-          <PoolInvestmentButton
-            type="button"
-            onClick={() => handleAddInvestment([investor.id.toString()])}
-          >
-            Новая инвестиция
-          </PoolInvestmentButton>
-          <PoolPayoutButton
-            type="button"
-            onClick={() => handlePayoutClick(investor)}
-          >
-            Выплатить
-          </PoolPayoutButton>
-        </PoolInlineActions>
-      ) : null,
     ];
 
     if (isPoolVex) {
@@ -1092,134 +1012,37 @@ const InvestorsPoolPage = ({
     }
   };
 
-  const reinvestmentItems =
-    filteredReinvestments?.items || reinvestmentsData?.items || [];
-
-  const reloadReinvestments = async () => {
-    if (!selectedPoolId) return;
-    const reinvestments = await getReinvestments(
-      Number(selectedPoolId),
-      { page: reinvestmentsPage, pageSize: pageSize },
-      selectedInvestorForFilter?.id || 0
-    );
-    if (selectedInvestorForFilter?.id) {
-      setFilteredReinvestments(reinvestments);
-    } else {
-      setReinvestmentsData(reinvestments);
-      setFilteredReinvestments(null);
-    }
-  };
-
-  const reinvestmentActions = (rowData: any[]): TableAction[] => {
-    const reinvestment = reinvestmentItems.find(
-      (item) => item.id === Number(rowData[0])
-    );
-    if (!reinvestment) return [];
-
-    return [
-      {
-        label: "Редактировать",
-        action: () => handleEditReinvestment(reinvestment),
-        color: "#2563EB",
-      },
-    ];
-  };
-
-  const handleEditReinvestment = (reinvestment: Reinvestment) => {
-    setSelectedReinvestmentForEdit(reinvestment);
-    setEditReinvestmentAmount(reinvestment.amount.toString());
-    setIsEditReinvestmentModalOpen(true);
-  };
-
-  const closeEditReinvestmentModal = () => {
-    setIsEditReinvestmentModalOpen(false);
-    setSelectedReinvestmentForEdit(null);
-    setEditReinvestmentAmount("");
-  };
-
-  const editReinvestmentValue = parseMoney(editReinvestmentAmount);
-  const isEditReinvestmentTooBig =
-    !!selectedReinvestmentForEdit &&
-    !isNaN(editReinvestmentValue) &&
-    editReinvestmentValue > selectedReinvestmentForEdit.maxAmount;
-  const isEditReinvestmentInvalid =
-    !editReinvestmentAmount ||
-    isNaN(editReinvestmentValue) ||
-    editReinvestmentValue <= 0 ||
-    isEditReinvestmentTooBig;
-
-  const handleUpdateReinvestment = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!selectedReinvestmentForEdit || isEditReinvestmentInvalid) return;
-
-    const ok = await updateReinvestment(
-      selectedReinvestmentForEdit.id,
-      editReinvestmentValue
-    );
-    if (!ok) {
-      alert("Произошла ошибка при обновлении реинвестиции");
-      return;
-    }
-
-    closeEditReinvestmentModal();
-    await reloadReinvestments();
-    await reloadData();
-  };
-
-  const contributionItems =
-    filteredContributions?.items || contributionsData?.items || [];
-
-  const contributionActions = (rowData: any[]): TableAction[] => {
-    const contribution = contributionItems.find(
-      (item) => item.id === Number(rowData[0])
-    );
-
-    if (!contribution) return [];
-
-    const actions: TableAction[] = [
-      {
-        label: "Редактировать",
-        action: () => handleEditInvestment(contribution),
-        color: "#2563EB",
-      },
-    ];
-
-    if (!contribution.confirmed) {
-      actions.push({
-        label: "Удалить",
-        action: () => handleContributionAction(contribution.id, "reject"),
-        color: "#EF4444",
-      });
-    }
-
-    return actions;
-  };
-
-  const contributionsTableData = contributionItems.map(
+  const contributionsTableData =
+    (filteredContributions?.items || contributionsData?.items || []).map(
       (contribution: InvestorContribution) => [
-        contribution.id.toString(),
         formatExactDate(new Date(contribution.date)),
         contribution.investorNickname || "-",
         formatMoney(contribution.amount.toString()),
         contribution.confirmed ? (
-          <ConfirmationStatusBadge confirmed />
-        ) : null,
-        contribution.confirmed ? null : (
-          <ContributionActionCell>
-            <WayPayButton
-              variant="secondary"
-              size="small"
+          <ConfirmedBadge>Подтверждено</ConfirmedBadge>
+        ) : (
+          <ActionButtons>
+            <DarkCyanButton
               onClick={() =>
                 handleContributionAction(contribution.id, "confirm")
               }
               disabled={isContributionsLoading}
             >
               Подтвердить
-            </WayPayButton>
-          </ContributionActionCell>
+            </DarkCyanButton>
+            <GrayButton
+              onClick={() =>
+                handleContributionAction(contribution.id, "reject")
+              }
+              disabled={isContributionsLoading}
+            >
+              Удалить
+            </GrayButton>
+            <EditButton onClick={() => handleEditInvestment(contribution)} />
+          </ActionButtons>
         ),
       ]
-    );
+    ) || [];
 
   const handleCreatePool = async () => {
     if (!newPoolName.trim()) return;
@@ -1611,7 +1434,7 @@ const InvestorsPoolPage = ({
     }
   };
 
-  const investorsRowStyles = visibleInvestors.reduce(
+  const investorsRowStyles = investors.reduce(
     (styles, investor, index) => {
       if (isPoolV2 && investor.isRemoved) {
         styles[index] = {
@@ -1943,34 +1766,34 @@ const InvestorsPoolPage = ({
         <IconContainer>
           <Icon src={investmentSvg} alt="Investment" />
         </IconContainer>
-        <ReportLabel>Инвестиции</ReportLabel>
         <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
+        <ReportLabel>Инвестиция</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={activeCreditsSvg} alt="Active credits" />
         </IconContainer>
-        <ReportLabel>Незакрытые договоры</ReportLabel>
         <ReportValue>{report.activeCreditsAmount}</ReportValue>
+        <ReportLabel>Незакрытые договоры</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={balanceSvg} alt="Balance" />
         </IconContainer>
-        <ReportLabel>Касса</ReportLabel>
         <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+        <ReportLabel>Касса</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={debtSvg} alt="Debt" />
         </IconContainer>
-        <ReportLabel>Просрочки</ReportLabel>
-        <ReportValue $tone="warning">
+        <ReportValue>
           {formatMoney(report.delinquencyAmount.toString())}
         </ReportValue>
+        <ReportLabel>Просрочки руб.</ReportLabel>
       </ReportCard>
     </>
   );
@@ -1981,10 +1804,10 @@ const InvestorsPoolPage = ({
         <IconContainer>
           <Icon src={commonIncomeSvg} alt="Total income" />
         </IconContainer>
-        <ReportLabel>Общий доход</ReportLabel>
         <ReportValue>
           {formatMoney(report.allSelfIncome.toString())}
         </ReportValue>
+        <ReportLabel>Общий доход</ReportLabel>
       </ReportCard>
     </>
   );
@@ -1995,199 +1818,103 @@ const InvestorsPoolPage = ({
         <IconContainer>
           <Icon src={investorIncomeScg} alt="Investor income" />
         </IconContainer>
-        <ReportLabel>Текущий доход пула</ReportLabel>
         <ReportValue>
           {formatMoney(report.investorPaymentIncome?.toString() || "0")}
         </ReportValue>
+        <ReportLabel>Текущий доход пула</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={selfIncomeSvg} alt="Self income" />
         </IconContainer>
-        <ReportLabel>Текущий собственный доход</ReportLabel>
         <ReportValue>
           {formatMoney(report.selfPaymentIncome?.toString() || "0")}
         </ReportValue>
+        <ReportLabel>Текущий собственный доход</ReportLabel>
       </ReportCard>
 
       <ReportCard>
         <IconContainer>
           <Icon src={paymentIncomeSvg} alt="paymentIncome" />
         </IconContainer>
-        <ReportLabel>Текущий доход</ReportLabel>
         <ReportValue>
           {formatMoney(report.paymentIncome.toString())}
         </ReportValue>
+        <ReportLabel>Текущий доход</ReportLabel>
       </ReportCard>
     </>
   );
 
-  const currentPool = pools.find(
-    (pool) => pool.id === Number(selectedPoolId)
-  );
-  const poolInitials = (currentPool?.name || "П")
-    .trim()
-    .split(/\s+/)
-    .map((part) => part.charAt(0))
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  const openEditPoolModal = () => {
-    setNewPoolName(currentPool?.name || "");
-    setNewPoolPie(currentPool?.pie || 0);
-    setIsEditPoolModalOpen(true);
-  };
-
-  const handlePoolChange = (poolId: string) => {
-    setIsPoolSwitcherOpen(false);
-
-    if (poolId === selectedPoolId) return;
-
-    setSelectedPoolId(poolId);
-    setSelectedInvestorForFilter(null);
-    setSearchValue("");
-    setParticipantSearch("");
-    setCreditsPage(1);
-    setPayoutsPage(1);
-    setContributionsPage(1);
-    setInvestorsPage(1);
-    setReinvestmentsPage(1);
-    setFilteredCredits(null);
-    setFilteredContributions(null);
-    setFilteredPayouts([]);
-    setFilteredReinvestments(null);
-    setReport(null);
-  };
-
   return (
     <PageLayout>
-      {!embedded && (
-        <TitleField>
-          <CustomTitle>Пулы инвесторов</CustomTitle>
-          <ExportButton onClick={exportPoolToPdf} />
-          <ExportButton
-            children={"Поделиться"}
-            icon={<ShareIcon />}
-            onClick={handleShareClick}
-            disabled={!report}
-          />
-        </TitleField>
-      )}
+      <TitleField>
+        <CustomTitle>Пулы инвесторов</CustomTitle>
+        <ExportButton onClick={exportPoolToPdf} />
+        <ExportButton
+          children={"Поделиться"}
+          icon={<ShareIcon />}
+          onClick={handleShareClick}
+          disabled={!report}
+        />
+      </TitleField>
 
       <ContentContainer>
         <PoolTabsContainer>
-          {currentPool && (
-            <>
-              <PoolBreadcrumb>
-                <span>Пулы инвесторов</span>
-                <b>/</b>
-                <strong>{currentPool.name}</strong>
-              </PoolBreadcrumb>
-
-              <PoolIdentityRow>
-                <PoolAvatar>{poolInitials}</PoolAvatar>
-                <PoolIdentity>
-                  <PoolName>{currentPool.name}</PoolName>
-                  <PoolCreated>
-                    Создан {formatDate(currentPool.createdAt.toString())}
-                  </PoolCreated>
-                </PoolIdentity>
-
-                <PoolSwitcher ref={poolSwitcherRef}>
-                  <PoolSwitcherButton
-                    variant="secondary"
-                    aria-haspopup="menu"
-                    aria-expanded={isPoolSwitcherOpen}
-                    onClick={() => setIsPoolSwitcherOpen((isOpen) => !isOpen)}
-                  >
-                    Сменить пул
-                    <PoolSwitcherChevron
-                      viewBox="0 0 20 20"
-                      aria-hidden="true"
-                      $isOpen={isPoolSwitcherOpen}
-                    >
-                      <path d="m6 8 4 4 4-4" />
-                    </PoolSwitcherChevron>
-                  </PoolSwitcherButton>
-
-                  {isPoolSwitcherOpen && (
-                    <PoolSwitcherMenu role="menu">
-                      {pools.map((pool) => {
-                        const poolId = pool.id.toString();
-                        const isActive = poolId === selectedPoolId;
-
-                        return (
-                          <PoolSwitcherOption
-                            key={pool.id}
-                            type="button"
-                            role="menuitemradio"
-                            aria-checked={isActive}
-                            $isActive={isActive}
-                            onClick={() => handlePoolChange(poolId)}
-                          >
-                            <span>{pool.name}</span>
-                            {isActive && <b aria-hidden="true">✓</b>}
-                          </PoolSwitcherOption>
-                        );
-                      })}
-                    </PoolSwitcherMenu>
+          <PoolTabsHeader>
+            <PoolTabsList>
+              {pools.map((pool) => (
+                <PoolTabItem
+                  key={pool.id}
+                  $isActive={selectedPoolId === pool.id.toString()}
+                  onClick={() => {
+                    setSelectedPoolId(pool.id.toString());
+                    setSelectedInvestorForFilter(null);
+                    setSearchValue("");
+                  }}
+                >
+                  {pool.name}
+                  {selectedPoolId === pool.id.toString() && (
+                    <ActiveTabIndicator />
                   )}
-                </PoolSwitcher>
 
-                <PoolHeaderActions>
-                  <WayPayButton
-                    variant="secondary"
-                    icon={
-                      <PoolButtonIcon viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
-                      </PoolButtonIcon>
-                    }
-                    onClick={openEditPoolModal}
-                  >
-                    Редактировать
-                  </WayPayButton>
-                  <WayPayButton
-                    icon={
-                      <PoolButtonIcon viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 5v14M5 12h14" />
-                      </PoolButtonIcon>
-                    }
-                    onClick={handleAddInvestor}
-                  >
-                    Добавить инвестора
-                  </WayPayButton>
-                  <WayPayMoreMenu
-                    items={[
-                      {
-                        label: "Создать пул",
-                        onClick: () => setIsCreatePoolModalOpen(true),
-                      },
-                      {
-                        label: "Экспортировать отчёт",
-                        onClick: exportPoolToPdf,
-                      },
-                      { label: "Поделиться", onClick: handleShareClick },
-                      {
-                        label: "Удалить пул",
-                        tone: "danger",
-                        onClick: () => {
-                          if (window.confirm(`Удалить пул "${currentPool.name}"?`)) {
-                            handleDeletePool();
-                          }
-                        },
-                      },
-                    ]}
-                  />
-                </PoolHeaderActions>
-              </PoolIdentityRow>
-            </>
-          )}
+                  <PoolActions>
+                    <EditButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const currentPool = pools.find(
+                          (pool) => pool.id === Number(selectedPoolId)
+                        );
+                        setNewPoolName(currentPool?.name || "");
+                        setNewPoolPie(currentPool?.pie || 0);
+                        setIsEditPoolModalOpen(true);
+                      }}
+                    />
+                    <DeleteButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Удалить пул "${pool.name}"?`)) {
+                          setSelectedPoolId(pool.id.toString());
+                          handleDeletePool();
+                        }
+                      }}
+                    />
+                  </PoolActions>
+                </PoolTabItem>
+              ))}
+            </PoolTabsList>
+            <AddButton
+              onClick={() => setIsCreatePoolModalOpen(true)}
+              tooltip="Добавить пул"
+            />
+          </PoolTabsHeader>
 
           {report && (
             <>
+              <CreationDate>
+                Пул создан {formatDate(report.createdAt)}
+              </CreationDate>
+
               <TabsContainer>
                 <Tabs<"general" | "expected" | "current">
                   tabs={dataTabs}
@@ -2205,22 +1932,8 @@ const InvestorsPoolPage = ({
           )}
         </PoolTabsContainer>
 
-        <PoolOperationsCard>
-        <PoolOperationsHeader>
-          <h2>Участники и операции</h2>
-          {enableReinvestments && (
-            <WayPayButton
-              variant="secondary"
-              icon={<RefreshCw size={17} strokeWidth={1.8} aria-hidden="true" />}
-              onClick={handleReinvest}
-            >
-              Реинвестировать
-            </WayPayButton>
-          )}
-        </PoolOperationsHeader>
-
         <TabsHeaderContainer>
-          <TabsContainer style={{ margin: 0, flex: 1 }}>
+          <TabsContainer style={{ marginBottom: 0, flex: 1 }}>
             <Tabs<
               | "payouts"
               | "credits"
@@ -2237,14 +1950,30 @@ const InvestorsPoolPage = ({
                   setSearchValue("");
                 }
               }}
+              addButton={
+                activeTab === "investors" && pools.length > 0 ? (
+                  <div style={{ display: "flex", gap: "20px" }}>
+                    {enableReinvestments && (
+                      <DarkCyanButton
+                        children="Реинвестировать"
+                        onClick={handleReinvest}
+                      />
+                    )}
+                    <AddButton
+                      onClick={handleAddInvestor}
+                      tooltip="Добавить инвестора"
+                    />
+                  </div>
+                ) : null
+              }
             />
           </TabsContainer>
 
-          {(activeTab === "credits" ||
-            activeTab === "contributions" ||
-            activeTab === "payouts" ||
-            activeTab === "reinvestments") && (
-            <SearchContainer>
+          <SearchContainer>
+            {(activeTab === "credits" ||
+              activeTab === "contributions" ||
+              activeTab === "payouts" ||
+              activeTab === "reinvestments") && (
               <div
                 style={{
                   display: "flex",
@@ -2264,47 +1993,19 @@ const InvestorsPoolPage = ({
                   hasError={false}
                 />
               </div>
-            </SearchContainer>
-          )}
+            )}
+          </SearchContainer>
         </TabsHeaderContainer>
-
-        {activeTab === "investors" && (
-          <PoolInvestorToolbar>
-            <PoolInvestorSearchField>
-              <PoolSearchIcon viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="11" cy="11" r="6.5" />
-                <path d="m16 16 4 4" />
-              </PoolSearchIcon>
-              <input
-                type="text"
-                value={participantSearch}
-                onChange={(event) => setParticipantSearch(event.target.value)}
-                placeholder="Найти инвестора"
-              />
-            </PoolInvestorSearchField>
-            <PoolInvestorCount>
-              {participantSearch
-                ? visibleInvestors.length
-                : investorsData?.totalCount || investors.length}{" "}
-              инвестора
-            </PoolInvestorCount>
-          </PoolInvestorToolbar>
-        )}
 
         {activeTab === "payouts" && (
           <>
             <CustomTable
               columns={[
-                { name: "Дата выплаты", isSortable: true, width: "15%" },
-                { name: "Выплатил", align: "left", width: "25%" },
-                { name: "Инвестор", align: "left", width: "25%" },
-                {
-                  name: "Выплата, руб",
-                  isSortable: true,
-                  align: "left",
-                  width: "25%",
-                },
-                { name: "", align: "center", width: "10%" },
+                { name: "Дата выплаты", isSortable: true },
+                { name: "Выплатил", align: "left" },
+                { name: "Инвестор", align: "left" },
+                { name: "Выплата, руб", isSortable: true, align: "left" },
+                { name: "", align: "center" },
               ]}
               data={filteredPayouts.map((payout: InvestorPayout) => [
                 formatDate(payout.payoutDate),
@@ -2333,24 +2034,13 @@ const InvestorsPoolPage = ({
           <>
             <CustomTable
               columns={[
-                { name: "ID", isSortable: true, width: "10%" },
-                {
-                  name: "Дата и время реинвестиции",
-                  isSortable: true,
-                  width: "30%",
-                },
-                { name: "Инвестор", align: "left", width: "35%" },
-                {
-                  name: "Сумма",
-                  align: "right",
-                  isSortable: true,
-                  width: "25%",
-                },
+                { name: "ID", isSortable: true },
+                { name: "Дата и время реинвестиции", isSortable: true },
+                { name: "Инвестор", align: "left" },
+                { name: "Сумма", align: "right", isSortable: true },
               ]}
               data={getReinvestmentTableData()}
               isLoading={isReinvestmentsLoading}
-              contextMenuActions={reinvestmentActions}
-              showContextMenuButton
             />
             <PaginationLayout>
               <CountInfoTitle
@@ -2379,28 +2069,22 @@ const InvestorsPoolPage = ({
             {isCreditsLoading ? (
               <div>Загрузка договоров...</div>
             ) : (
-              <PoolCreditsTable>
-                <CustomTable
-                  columns={[
-                    { name: "№", width: "8%" },
-                    { name: "Дата договора", width: "10%" },
-                    { name: "Клиент", align: "left", width: "12%" },
-                    { name: "Телефон", align: "left", width: "12%" },
-                    { name: "Начислено", align: "left", width: "10%" },
-                    { name: "Уплачено", align: "left", width: "10%" },
-                    { name: "Остаток", align: "left", width: "10%" },
-                    { name: "Долг", align: "left", width: "10%" },
-                    {
-                      name: "Отложенный доход",
-                      align: "left",
-                      width: "18%",
-                    },
-                  ]}
-                  data={creditsTableData}
-                  isLoading={isCreditsLoading}
-                  rowStyles={rowStyles}
-                />
-              </PoolCreditsTable>
+              <CustomTable
+                columns={[
+                  { name: "№" },
+                  { name: "Дата договора" },
+                  { name: "Клиент", align: "left" },
+                  { name: "Телефон", align: "left" },
+                  { name: "Начислено", align: "left" },
+                  { name: "Уплачено", align: "left" },
+                  { name: "Остаток", align: "left" },
+                  { name: "Долг", align: "left" },
+                  { name: "Отложенный доход", align: "left" },
+                ]}
+                data={creditsTableData}
+                isLoading={isCreditsLoading}
+                rowStyles={rowStyles}
+              />
             )}
             <PaginationLayout>
               <CountInfoTitle total={data?.totalCount || 0} />
@@ -2416,29 +2100,6 @@ const InvestorsPoolPage = ({
 
         {activeTab === "investors" && (
           <>
-            <PoolInvestorTable>
-              <CustomTable
-                columns={[
-                  { name: "id", isHidden: true },
-                  { name: "Инвестор", align: "left", width: "21%" },
-                  { name: "Телефон", align: "left", width: "14%" },
-                  { name: "Инвестиции", align: "left", width: "13%" },
-                  { name: "Доля", align: "left", width: "10%" },
-                  { name: "Текущий доход", align: "left", width: "15%" },
-                  {
-                    name: "Действия",
-                    align: "left",
-                    headerAlign: "center",
-                    width: "22%",
-                  },
-                ]}
-                data={investorsTableData}
-                contextMenuActions={investorActions}
-                rowStyles={investorsRowStyles}
-                isLoading={isLoading}
-                showContextMenuButton
-              />
-            </PoolInvestorTable>
             <CustomTable
               columns={[
                 { name: "id", isHidden: true },
@@ -2497,21 +2158,13 @@ const InvestorsPoolPage = ({
           <>
             <CustomTable
               columns={[
-                { name: "id", isHidden: true },
-                { name: "Дата и время", isSortable: true, width: "15%" },
-                { name: "Инвестор", align: "left", width: "26%" },
-                { name: "Сумма", align: "right", width: "18%" },
-                {
-                  name: "Статус",
-                  align: "left",
-                  width: "22%",
-                },
-                { name: "", align: "center", width: "14%" },
+                { name: "Дата и время", isSortable: true },
+                { name: "Инвестор", align: "left" },
+                { name: "Сумма", align: "right" },
+                { name: "Действия", align: "center" },
               ]}
               data={contributionsTableData}
-              contextMenuActions={contributionActions}
               isLoading={isContributionsLoading}
-              showContextMenuButton
             />
             <PaginationLayout>
               <CountInfoTitle
@@ -2533,37 +2186,6 @@ const InvestorsPoolPage = ({
               />
             </PaginationLayout>
           </>
-        )}
-        </PoolOperationsCard>
-
-        {isEditReinvestmentModalOpen && selectedReinvestmentForEdit && (
-          <BaseModal
-            title="Редактирование реинвестиции"
-            onClose={closeEditReinvestmentModal}
-            onCancel={closeEditReinvestmentModal}
-            onSave={handleUpdateReinvestment}
-            isSaveDisabled={isEditReinvestmentInvalid}
-            mode="edit"
-          >
-            <form onSubmit={handleUpdateReinvestment} style={{ padding: "20px" }}>
-              <InputRow>
-                <InputLabel>Сумма реинвестиции:</InputLabel>
-                <InputContainer>
-                  <CustomInput
-                    name="reinvestmentAmount"
-                    inputType="rubles"
-                    placeholder="Сумма"
-                    value={editReinvestmentAmount}
-                    onChange={(e) => setEditReinvestmentAmount(e.target.value)}
-                  />
-                </InputContainer>
-              </InputRow>
-              <ReinvestmentHint $error={isEditReinvestmentTooBig}>
-                Максимальная сумма:{" "}
-                {formatMoney(selectedReinvestmentForEdit.maxAmount.toString())}
-              </ReinvestmentHint>
-            </form>
-          </BaseModal>
         )}
 
         {isEditInvestmentModalOpen && selectedInvestmentForEdit && (
@@ -2877,176 +2499,71 @@ const CreditsCount = styled.div`
 `;
 
 const PoolTabsContainer = styled.div`
-  margin-bottom: 0;
+  margin-bottom: 24px;
 `;
 
-const PoolBreadcrumb = styled.div`
+const PoolTabItem = styled.li<{ $isActive: boolean }>`
+  position: relative;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: ${(props) => (props.$isActive ? "600" : "400")};
+  color: ${(props) =>
+    props.$isActive ? "rgba(0, 125, 136, 1)" : "rgba(107, 114, 128, 1)"};
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
-  color: #64748b;
-  font-size: 13px;
-  text-align: left;
-
-  b {
-    font-weight: 400;
-  }
-
-  strong {
-    color: #253247;
-    font-weight: 500;
-  }
-`;
-
-const PoolIdentityRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-  text-align: left;
-`;
-
-const PoolAvatar = styled.div`
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
-  border-radius: 50%;
-  background: #ddf5f5;
-  color: #087d88;
-  font-size: 18px;
-  font-weight: 700;
-`;
-
-const PoolIdentity = styled.div`
-  min-width: 145px;
-`;
-
-const PoolName = styled.div`
-  overflow: hidden;
-  color: #172033;
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const PoolCreated = styled.div`
-  margin-top: 4px;
-  color: #718096;
-  font-size: 12px;
-`;
-
-const PoolSwitcher = styled.div`
-  position: relative;
-  min-width: 126px;
-  margin-left: 4px;
-`;
-
-const PoolSwitcherButton = styled(WayPayButton)`
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  height: 38px;
-  padding: 0 12px 0 13px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #253247;
-  font-size: 13px;
-  cursor: pointer;
-
-  &:hover,
-  &[aria-expanded="true"] {
-    border-color: #8bbfc4;
-    background: #f7fbfb;
-  }
-`;
-
-const PoolSwitcherChevron = styled.svg<{ $isOpen: boolean }>`
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transform: rotate(${({ $isOpen }) => ($isOpen ? "180deg" : "0")});
-  transition: transform 0.15s ease;
-`;
-
-const PoolSwitcherMenu = styled.div`
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 210px;
-  max-width: 320px;
-  padding: 6px;
-  border: 1px solid #d7e0e8;
-  border-radius: 9px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
-`;
-
-const PoolSwitcherOption = styled.button<{ $isActive: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  width: 100%;
-  padding: 9px 10px;
-  border: 0;
-  border-radius: 6px;
-  background: ${({ $isActive }) => ($isActive ? "#e7f7f7" : "transparent")};
-  color: ${({ $isActive }) => ($isActive ? "#007d88" : "#253247")};
-  font-size: 13px;
-  font-weight: ${({ $isActive }) => ($isActive ? 600 : 400)};
-  text-align: left;
-  cursor: pointer;
-
-  span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  b {
-    font-size: 14px;
-  }
 
   &:hover {
-    background: #f0f9fa;
-    color: #007d88;
+    color: rgba(0, 125, 136, 0.8);
   }
 `;
 
-const PoolHeaderActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: auto;
+const ActiveTabIndicator = styled.div`
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: rgba(0, 125, 136, 1);
+  border-radius: 2px 2px 0 0;
 `;
 
-const PoolButtonIcon = styled.svg`
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+const PoolTabsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid rgba(209, 213, 219, 1);
+  padding-bottom: 8px;
+`;
+
+const PoolTabsList = styled.ul`
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 24px;
+  flex: 1;
+`;
+
+const PoolActions = styled.div`
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+
+  ${PoolTabItem}:hover & {
+    opacity: 1;
+  }
+
+  ${PoolTabItem}[$isActive="true"] & {
+    opacity: 1;
+  }
 `;
 
 const TabsContainer = styled.div`
-  margin: 16px 0 12px;
+  margin: 30px 0 20px;
 `;
 
 const ContentContainer = styled.div`
@@ -3054,349 +2571,78 @@ const ContentContainer = styled.div`
   padding: 0;
 `;
 
+const CreationDate = styled.div`
+  font-size: 14px;
+  color: black;
+  font-weight: 400;
+  margin-bottom: 24px;
+  text-align: left;
+  margin-left: 0;
+  padding-left: 0;
+`;
+
 const ReportDataContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  margin-bottom: 0;
-`;
-
-const ReinvestmentHint = styled.div<{ $error?: boolean }>`
-  margin-top: 8px;
-  font-size: 13px;
-  text-align: left;
-  color: ${({ $error }) => ($error ? "#EF4444" : "#718096")};
 `;
 
 const ReportCard = styled.div`
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  column-gap: 10px;
-  align-items: center;
-  min-height: 74px;
-  padding: 12px 14px;
-  background-color: #fff;
-  border: 1px solid #e3e9ef;
+  background-color: white;
+  border: 1px solid rgba(209, 213, 219, 1);
   border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: left;
+  position: relative;
+  padding-bottom: 20px;
+  max-width: 600px;
 `;
 
 const IconContainer = styled.div`
-  grid-column: 1;
-  grid-row: 1 / span 2;
-  display: grid;
-  place-items: center;
+  position: absolute;
+  top: 25px;
+  left: 25px;
 `;
 
 const Icon = styled.img`
-  width: 34px;
-  height: 34px;
+  width: 50px;
+  height: 50px;
 `;
 
 const ReportLabel = styled.span`
-  grid-column: 2;
-  grid-row: 1;
-  align-self: end;
-  color: #718096;
-  font-size: 12px;
-  line-height: 1.3;
-  text-align: left;
-`;
-
-const ReportValue = styled.span<{ $tone?: "warning" }>`
-  grid-column: 2;
-  grid-row: 2;
-  align-self: start;
-  margin-top: 3px;
-  font-size: 20px;
-  font-weight: 700;
-  color: ${({ $tone }) => ($tone === "warning" ? "#d97706" : "#111827")};
-  text-align: left;
-`;
-
-const ContributionActionCell = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  width: 100%;
-  margin-right: -6px;
-`;
-
-const PoolOperationsCard = styled.section`
-  margin-top: 12px;
-  padding: 16px;
-  border: 1px solid #e3e9ef;
-  border-radius: 10px;
-  background: #fff;
-  text-align: left;
-
-  table {
-    table-layout: fixed;
-  }
-
-  table th,
-  table td {
-    border-right: 0;
-  }
-
-  table thead th {
-    height: 48px;
-    padding: 10px 16px;
-    background: #f8fafb;
-    color: #526074;
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  table tbody tr {
-    height: 68px;
-    box-shadow: none !important;
-  }
-
-  table tbody td {
-    padding: 8px 16px;
-    border-right: 0;
-    color: #26344c;
-    font-size: 15px;
-  }
-
-  table tbody tr::after {
-    left: 0;
-    width: 100%;
-    background: #e6ebf0;
-  }
-
-  @media (max-width: 1100px) {
-    table thead th,
-    table tbody td {
-      padding-right: 9px;
-      padding-left: 9px;
-    }
-  }
-`;
-
-const PoolOperationsHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 38px;
-
-  h2 {
-    margin: 0;
-    color: #172033;
-    font-size: 18px;
-    font-weight: 700;
-  }
-`;
-
-const PoolInvestorToolbar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-`;
-
-const PoolInvestorSearchField = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: min(470px, 55%);
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid #d7e0e8;
-  border-radius: 8px;
-  background: #fff;
-  color: #94a3b8;
-
-  input {
-    width: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: #253247;
-    font-size: 13px;
-  }
-
-  input::placeholder {
-    color: #94a3b8;
-  }
-`;
-
-const PoolSearchIcon = styled.svg`
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-`;
-
-const PoolInvestorCount = styled.span`
-  color: #526074;
-  font-size: 13px;
-`;
-
-const PoolCreditsTable = styled.div`
-  width: 100%;
-  min-width: 0;
-
-  table {
-    width: 100%;
-  }
-
-  a[href^="tel:"] {
-    white-space: nowrap;
-  }
-`;
-
-const PoolInvestorTable = styled.div`
-  table {
-    table-layout: fixed;
-  }
-
-  table th,
-  table td {
-    border-right: 0;
-  }
-
-  table thead th {
-    height: 48px;
-    padding: 10px 16px;
-    background: #f8fafb;
-    color: #526074;
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  table tbody tr {
-    height: 68px;
-    box-shadow: none !important;
-  }
-
-  table tbody td {
-    padding: 8px 16px;
-    border-right: 0;
-    color: #26344c;
-    font-size: 15px;
-  }
-
-  table thead th:last-child {
-    padding: 0;
-  }
-
-  table tbody td:last-child {
-    padding: 0 10px 0 4px;
-  }
-
-  table tbody tr::after {
-    left: 0;
-    width: 100%;
-    background: #e6ebf0;
-  }
-
-  @media (max-width: 1100px) {
-    table thead th,
-    table tbody td {
-      padding-right: 9px;
-      padding-left: 9px;
-    }
-  }
-`;
-
-const poolAvatarTones = [
-  { background: "#ddf5f5", color: "#087d88" },
-  { background: "#e3edff", color: "#365fa3" },
-  { background: "#ececfc", color: "#6847a4" },
-  { background: "#ffe9ed", color: "#b44863" },
-  { background: "#e4f6ee", color: "#2f8b6b" },
-];
-
-const PoolInvestorIdentityCell = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-
-  > div:last-child {
-    min-width: 0;
-  }
-`;
-
-const PoolInvestorName = styled.div`
-  overflow: hidden;
-  color: #172033;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const PoolInvestorFullName = styled.div`
-  margin-top: 2px;
-  overflow: hidden;
-  color: #718096;
-  font-size: 13px;
-  font-weight: 400;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const PoolInvestorAvatar = styled.div<{ $tone: number }>`
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  border-radius: 50%;
-  background: ${({ $tone }) => poolAvatarTones[$tone].background};
-  color: ${({ $tone }) => poolAvatarTones[$tone].color};
   font-size: 15px;
-  font-weight: 700;
-`;
-
-const PoolInlineActions = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  color: black;
+  margin: 7px 0px 0px;
+  text-align: left;
   width: 100%;
-  min-width: 0;
-  margin-right: -6px;
-  white-space: nowrap;
+  padding-left: 25px;
 `;
 
-const PoolInvestmentButton = styled.button`
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 7px;
-  background: #fff;
-  color: #253247;
-  font-size: 13px;
-  white-space: nowrap;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #007d88;
-    color: #007d88;
-  }
+const ReportValue = styled.span`
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  text-align: left;
+  margin: 90px 0 0;
+  width: 100%;
+  padding-left: 25px;
 `;
 
-const PoolPayoutButton = styled.button`
-  padding: 5px 4px;
-  border: 0;
-  background: transparent;
-  color: #007d88;
-  font-size: 13px;
-  cursor: pointer;
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+`;
 
-  &:hover {
-    text-decoration: underline;
-  }
+const ConfirmedBadge = styled.span`
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
 `;
 
 const ShareIcon = () => (
@@ -3441,7 +2687,7 @@ const TabsHeaderContainer = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin: 8px 0 10px;
+  margin: 30px 0 20px;
   width: 100%;
 `;
 

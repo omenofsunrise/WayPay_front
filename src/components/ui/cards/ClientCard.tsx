@@ -1,42 +1,55 @@
 import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
-import {
-  AlertTriangle, CalendarDays, ChevronRight, FileText, House, IdCard,
-  Link2, MapPin, MessageCircle, MoreVertical, Phone,
-} from 'lucide-react';
+import { FaWhatsapp, FaPhone, FaBirthdayCake, FaIdCard, FaComment, FaEllipsisV, FaExclamationTriangle } from 'react-icons/fa';
+import useChat from '../../../api/hooks/useChat';
 import { formatPhoneHref } from '../../../utils/phoneUtils';
 import CreditBriefModal from '../../modal/CrudInherited/CreditBrief';
-import FloatingContextMenu, {
-  DANGER_COLOR, PRIMARY_COLOR, SUCCESS_COLOR,
-} from '../../modal/FloatingContextMenu';
 
-const Card = styled.article<{ $isBlacklisted?: boolean }>`
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-  margin: 0 0 14px;
-  padding: 18px 22px 20px;
-  color: #111827;
-  background: #fff;
-  border: 1px solid #e5eaf0;
+const Card = styled.div`
+  background: white;
   border-radius: 12px;
-  box-shadow: 0 5px 18px rgba(25, 46, 74, 0.06);
+  border: 1px solid rgba(209, 213, 219, 1);
+  padding: 20px;
+  margin: 0;
+  margin-bottom: 16px;
   cursor: pointer;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 4px;
-    background: ${({ $isBlacklisted }) => ($isBlacklisted ? '#ff5b61' : 'transparent')};
-  }
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
 
   &:hover {
-    border-color: #d7e0e9;
-    box-shadow: 0 9px 25px rgba(25, 46, 74, 0.1);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const CardContent = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+`;
+
+const CardTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 50px; /* Для кнопки сообщения */
+`;
+
+const CardTitleText = styled.span<{ $hasBlacklistBadge?: boolean }>`
+  display: inline-block;
+  cursor: copy;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(0, 125, 136, 0.08);
   }
 
   &:focus-visible {
@@ -44,283 +57,292 @@ const Card = styled.article<{ $isBlacklisted?: boolean }>`
     outline-offset: 2px;
   }
 
-  @media (max-width: 720px) { padding: 16px; }
+  ${props => props.$hasBlacklistBadge && `
+    margin-left: 170px; /* Отступ для бейджа */
+  `}
 `;
 
-const Header = styled.header`
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  padding-right: 42px;
-`;
-
-const Avatar = styled.div`
-  display: grid;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  margin-right: 16px;
-  color: #087c86;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background: #e5f5f7;
-  border-radius: 50%;
-
-  @media (max-width: 520px) {
-    flex-basis: 40px;
-    width: 40px;
-    height: 40px;
-    margin-right: 12px;
-    font-size: 15px;
-  }
-`;
-
-const NameRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  min-width: 0;
-  gap: 8px 12px;
-`;
-
-const NameButton = styled.button`
-  min-width: 0;
-  padding: 0;
-  overflow: hidden;
-  color: #0d1525;
-  font: inherit;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
-  cursor: copy;
-
-  &:hover { color: #007d88; }
-  &:focus-visible { outline: 2px solid rgba(0, 125, 136, 0.45); outline-offset: 3px; }
-  @media (max-width: 720px) { max-width: 100%; font-size: 17px; }
-`;
-
-const BlacklistBadge = styled.span`
+const TitleNameGroup = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 9px;
-  color: #e5484d;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1;
-  white-space: nowrap;
-  background: #ffeaeb;
-  border-radius: 7px;
+  gap: 10px;
+  min-width: 0;
 `;
 
 const CopiedBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 5px 9px;
-  color: #0f766e;
+  padding: 2px 8px;
   font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  background: #e7f7f4;
+  font-weight: 500;
+  color: #0f766e;
+  background-color: rgba(0, 125, 136, 0.12);
   border-radius: 999px;
-`;
+  white-space: nowrap;
+  animation: copiedBadgeIn 180ms ease-out;
 
-const MenuButton = styled.button`
-  position: absolute;
-  top: 18px;
-  right: 16px;
-  display: grid;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  place-items: center;
-  color: #526071;
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
-
-  &:hover, &:focus-visible { color: #182235; background: #f1f5f7; outline: none; }
-  @media (max-width: 520px) { top: 15px; right: 12px; }
+  @keyframes copiedBadgeIn {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 `;
 
 const InfoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  width: calc(100% - 64px);
-  margin-top: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  width: 100%;
 
-  @media (max-width: 1050px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: 100%;
-    row-gap: 16px;
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
   }
-  @media (max-width: 760px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 480px) { grid-template-columns: 1fr; row-gap: 16px; }
 `;
 
 const InfoItem = styled.div`
-  display: grid;
-  grid-template-columns: 21px minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  column-gap: 6px;
-  min-width: 0;
-  padding: 0 15px;
-  text-align: left;
-  border-left: 1px solid #e3e9ef;
-
-  &:first-child { padding-left: 0; border-left: 0; }
-  @media (max-width: 1050px) { &:nth-child(4) { padding-left: 0; border-left: 0; } }
-  @media (max-width: 760px) {
-    &:nth-child(odd) { padding-left: 0; border-left: 0; }
-    &:nth-child(4) { padding-left: 15px; border-left: 1px solid #e3e9ef; }
-  }
-  @media (max-width: 480px) {
-    padding: 0;
-    border-left: 0;
-    &:nth-child(4) { padding-left: 0; border-left: 0; }
-  }
-`;
-
-const InfoIcon = styled.span`
-  grid-row: 1 / 3;
-  align-self: start;
-  margin-top: 1px;
-  color: #67758a;
+  display: flex;
+  flex-direction: column;
+  min-height: 50px;
 `;
 
 const InfoLabel = styled.span`
-  min-width: 0;
-  overflow: hidden;
-  color: #7c889b;
   font-size: 12px;
-  line-height: 1.35;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const InfoValue = styled.span`
-  min-width: 0;
-  margin-top: 4px;
-  overflow: hidden;
-  color: #222c3c;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.35;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const ContactLink = styled.a`
-  color: inherit;
-  text-decoration: none;
-  &:hover { color: #007d88; text-decoration: underline; }
-`;
-
-const Section = styled.section`
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #e4eaf0;
-`;
-
-const SectionHeader = styled.div`
+  color: rgba(107, 114, 128, 1);
+  margin-bottom: 6px;
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-bottom: 11px;
+  gap: 6px;
 `;
 
-const SectionTitle = styled.h4`
-  margin: 0;
-  color: #1c2738;
+const InfoValue = styled.span<{ $highlight?: boolean; $warning?: boolean }>`
   font-size: 14px;
-  font-weight: 650;
-`;
-
-const CountBadge = styled.span`
-  display: inline-grid;
-  min-width: 24px;
-  height: 22px;
-  padding: 0 7px;
-  box-sizing: border-box;
-  place-items: center;
-  color: #344154;
-  font-size: 12px;
-  font-weight: 650;
-  background: #edf3f8;
-  border-radius: 999px;
-`;
-
-const TileGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 420px));
-  gap: 10px 12px;
-  @media (max-width: 650px) { grid-template-columns: 1fr; }
-`;
-
-const DetailTile = styled.button`
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  min-width: 0;
-  min-height: 56px;
-  padding: 8px 12px;
+  font-weight: ${props => props.$highlight ? '600' : '400'};
+  color: ${props => {
+    if (props.$warning) return '#EF4444';
+    if (props.$highlight) return '#007D88';
+    return '#111827';
+  }};
+  min-height: 20px;
+  display: flex;
   align-items: center;
-  color: #172133;
-  text-align: left;
-  background: #fff;
-  border: 1px solid #dce5ed;
-  border-radius: 9px;
-  cursor: pointer;
-  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+`;
 
-  &:hover, &:focus-visible {
-    background: #f9fcfc;
-    border-color: #77b8bd;
-    box-shadow: 0 4px 12px rgba(31, 64, 80, 0.08);
-    outline: none;
+const ContractsSection = styled.div`
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(229, 231, 235, 1);
+`;
+
+const ContractsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+`;
+
+const ContractCard = styled.div<{ $isClickable?: boolean }>`
+  background: rgba(254, 226, 226, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  cursor: ${props => props.$isClickable ? 'pointer' : 'default'};
+  
+  &:hover {
+    ${props => props.$isClickable && `
+      background: rgba(0, 125, 136, 0.1);
+      border-color: #007D88;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    `}
   }
-  @media (max-width: 420px) { grid-template-columns: 28px minmax(0, 1fr) auto; }
 `;
 
-const TileIcon = styled.span`display: inline-flex; color: #07848c;`;
-const TileMain = styled.span`
-  min-width: 0;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-const TileAside = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: 10px;
-`;
-const TermBadge = styled.span`
-  padding: 6px 9px;
-  color: #a86615;
-  font-size: 12px;
+const ContractNumber = styled.span`
   font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  background: #fff2d5;
-  border-radius: 999px;
-  @media (max-width: 460px) { display: none; }
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 4px;
 `;
-const EmptyContent = styled.div`color: #6b7280;`;
 
-export interface GuarantorRef { id: number; fullname: string; creditId: number; }
+const ContractTerm = styled.span`
+  font-size: 13px;
+  color: #EF4444;
+  font-weight: 600;
+`;
+
+const GuarantorCard = styled.div<{ $isClickable?: boolean }>`
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.35);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  cursor: ${props => props.$isClickable ? 'pointer' : 'default'};
+
+  &:hover {
+    ${props => props.$isClickable && `
+      background: rgba(245, 166, 35, 0.2);
+      border-color: #F5A623;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    `}
+  }
+`;
+
+const GuarantorName = styled.span`
+  font-size: 13px;
+  color: #B26A00;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const ContractViewBadge = styled.span`
+  font-size: 11px;
+  color: #007D88;
+  background: rgba(0, 125, 136, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: normal;
+`;
+
+const IconWrapper = styled.span`
+  color: rgba(107, 114, 128, 0.8);
+  display: flex;
+  align-items: center;
+`;
+
+const WhatsAppLink = styled.a`
+  color: rgba(75, 85, 99, 1);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #25D366;
+  }
+`;
+
+const PhoneLink = styled.a`
+  color: rgba(75, 85, 99, 1);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    color: #007D88;
+  }
+`;
+
+const MessageButton = styled.button`
+  background: rgba(0, 125, 136, 1);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  position: absolute;
+  top: 20px;
+  right: 20px;
+
+  &:hover {
+    background: rgba(0, 100, 110, 1);
+    transform: scale(1.05);
+  }
+`;
+
+const ContractsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+`;
+
+const MenuButton = styled.button`
+  background: transparent;
+  color: rgba(107, 114, 128, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: absolute;
+  top: 15px;
+  right: 90px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+
+const ContextMenu = styled.div<{ $isVisible: boolean }>`
+  position: absolute;
+  top: 70px;
+  right: 90px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  z-index: 100;
+  display: ${props => props.$isVisible ? 'block' : 'none'};
+  min-width: 150px;
+`;
+
+const MenuItem = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+
+const BlacklistBadge = styled.div`
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  color: #EF4444;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.5);
+  z-index: 10;
+`;
+
+export interface GuarantorRef {
+  id: number;
+  fullname: string;
+  creditId: number;
+}
 
 export interface Client {
   id: number;
@@ -340,174 +362,363 @@ export interface Client {
   guarantors?: GuarantorRef[] | null;
 }
 
-interface ClientCardProps extends Pick<
-  React.HTMLAttributes<HTMLElement>,
-  'onMouseDown' | 'onMouseUp' | 'onMouseLeave' | 'onTouchStart' | 'onTouchEnd' | 'onTouchCancel'
-> {
+interface ClientCardProps {
   client: Client | null;
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
   onRightClick: (e: React.MouseEvent, client: Client) => void;
   onOpenDossier: (client: Client) => void;
-  onBlacklistChange: (client: Client, blacklist: boolean) => void;
-  canRemoveFromBlacklist?: boolean;
-  isBlacklistUpdating?: boolean;
   showMenu?: boolean;
 }
 
-const getInitials = (name: string): string => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts.length === 0 ? '—' : parts.slice(0, 2).map((part) => part[0]).join('').toUpperCase();
-};
-
-const formatPhone = (phone: string | null | undefined): string => {
-  if (!phone) return 'Не указан';
-  const cleaned = phone.replace(/\D/g, '');
-  return cleaned.length === 11
-    ? cleaned.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 ($2) $3-$4-$5')
-    : phone;
-};
-
-const formatDate = (date: Date | null): string => {
-  if (!date) return 'Не указана';
-  const value = new Date(date);
-  return Number.isNaN(value.getTime()) ? 'Не указана' : value.toLocaleDateString('ru-RU');
-};
-
-const ClientCard: React.FC<ClientCardProps> = ({
-  client, onEdit, onDelete, onRightClick, onOpenDossier, onBlacklistChange,
-  canRemoveFromBlacklist = false, isBlacklistUpdating = false, showMenu = true,
-  onMouseDown, onMouseUp, onMouseLeave, onTouchStart, onTouchEnd, onTouchCancel,
+const ClientCard: React.FC<ClientCardProps> = ({ 
+  client, 
+  onEdit, 
+  onDelete, 
+  onRightClick,
+  onOpenDossier,
+  showMenu = true,
 }) => {
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const { createPrivateChat } = useChat();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedContractModal, setSelectedContractModal] = useState<number | null>(null);
   const [isNameCopied, setIsNameCopied] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const copyResetTimer = useRef<number | null>(null);
 
-  React.useEffect(() => () => {
-    if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
+  React.useEffect(() => {
+    return () => {
+      if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
+    };
   }, []);
 
-  if (!client) return <Card><EmptyContent>Данные клиента недоступны</EmptyContent></Card>;
-
-  const isBlacklisted = client.blacklist === true;
-  const creditIds = client.creditIds ?? [];
-  const creditRestTerms = client.creditRestTerms ?? [];
-  const guarantors = client.guarantors ?? [];
-
-  const copyName = async (event: React.SyntheticEvent) => {
-    event.stopPropagation();
-    if (!client.fullName) return;
+  const handleCopyName = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!client?.fullName) return;
     try {
       await navigator.clipboard.writeText(client.fullName);
       setIsNameCopied(true);
       if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
       copyResetTimer.current = window.setTimeout(() => setIsNameCopied(false), 1500);
-    } catch (error) { console.error('Не удалось скопировать ФИО:', error); }
+    } catch (err) {
+      console.error('Не удалось скопировать ФИО:', err);
+    }
+  };
+  
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  if (!client) {
+    return (
+      <Card>
+        <CardContent>
+          <CardTitle>Клиент не найден</CardTitle>
+          <InfoValue>Данные клиента недоступны</InfoValue>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formatPhone = (phone: string | null | undefined): string => {
+    if (!phone) return 'Не указан';
+    
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '$1 ($2) $3-$4-$5');
+    }
+    return phone;
   };
 
-  const openContract = (event: React.MouseEvent, creditId: string | number) => {
-    event.stopPropagation();
-    const id = Number(creditId);
-    if (Number.isInteger(id) && id > 0) setSelectedContractModal(id);
+  const handleMessageClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const chat = await createPrivateChat(client.id, 'client');
+      
+      if (chat?.id) {
+        window.open(`/chat/${chat.id}`, '_blank');
+      }
+    } catch (error) {
+      console.error('Ошибка при создании чата:', error);
+    }
   };
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    if (menuAt) return setMenuAt(null);
-    const rect = event.currentTarget.getBoundingClientRect();
-    setMenuAt({ x: rect.right, y: rect.bottom });
+  const formatDate = (date: Date | null): string => {
+    if (!date) return 'Не указана';
+    
+    try {
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) {
+        return 'Неверная дата';
+      }
+      return dateObj.toLocaleDateString('ru-RU');
+    } catch {
+      return 'Ошибка даты';
+    }
+  };
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    onEdit(client);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    onDelete(client);
+  };
+
+  const handleCardClick = () => {
+    onOpenDossier(client);
+  };
+
+  const handleRightClick = (e: React.MouseEvent) => {
+    onRightClick(e, client);
+  };
+
+  // Обработчик клика по бейджу договора
+  const handleContractClick = (e: React.MouseEvent, creditId: string) => {
+    e.stopPropagation(); // Предотвращаем открытие досье клиента
+    const id = parseInt(creditId);
+    if (!isNaN(id)) {
+      setSelectedContractModal(id);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedContractModal(null);
+  };
+
+  const hasContracts = client.creditIds && client.creditIds.length > 0;
+  const safeCreditIds = client.creditIds || [];
+  const safeCreditRestTerms = client.creditRestTerms || [];
+  const isBlacklisted = client.blacklist === true;
+  const guarantors = client.guarantors || [];
+  const hasGuarantors = guarantors.length > 0;
+
+  const handleGuarantorClick = (e: React.MouseEvent, creditId: number) => {
+    e.stopPropagation();
+    if (!isNaN(creditId) && creditId > 0) {
+      setSelectedContractModal(creditId);
+    }
   };
 
   return (
     <>
-      <Card
-        $isBlacklisted={isBlacklisted}
-        onClick={() => onOpenDossier(client)}
-        onContextMenu={(event) => onRightClick(event, client)}
-        onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseLeave}
-        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={onTouchCancel}
-        onKeyDown={(event) => {
-          if (event.currentTarget === event.target && (event.key === 'Enter' || event.key === ' ')) {
-            event.preventDefault();
-            onOpenDossier(client);
-          }
-        }}
-        tabIndex={0}
+      <Card 
+        key={client.id} 
+        onClick={handleCardClick}
+        onContextMenu={handleRightClick}
+        style={isBlacklisted ? { 
+          borderColor: '#EF4444',
+          background: 'linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)'
+        } : {}}
       >
-        <Header>
-          <Avatar aria-hidden="true">{getInitials(client.fullName)}</Avatar>
-          <NameRow>
-            <NameButton onClick={copyName} title="Скопировать ФИО" type="button">
-              {client.fullName || 'Не указано'}
-            </NameButton>
-            {isBlacklisted && <BlacklistBadge><AlertTriangle size={13} strokeWidth={2.4} />Чёрный список</BlacklistBadge>}
-            {isNameCopied && <CopiedBadge>Скопировано</CopiedBadge>}
-          </NameRow>
-        </Header>
+        {isBlacklisted && (
+          <BlacklistBadge>
+            <FaExclamationTriangle size={14} />
+            Чёрный список
+          </BlacklistBadge>
+        )}
+        
+        <CardContent>
+          <CardTitle>
+            <TitleNameGroup>
+              <CardTitleText
+                $hasBlacklistBadge={isBlacklisted}
+                onClick={handleCopyName}
+                title="Скопировать ФИО"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCopyName(e as unknown as React.MouseEvent);
+                  }
+                }}
+              >
+                {client.fullName || 'Не указано'}
+              </CardTitleText>
+              {isNameCopied && <CopiedBadge>Скопировано</CopiedBadge>}
+            </TitleNameGroup>
+          </CardTitle>
+          
+          {showMenu && (
+            <>
+              <MenuButton onClick={handleMenuClick}>
+                <FaEllipsisV size={16} />
+              </MenuButton>
 
-        {showMenu && <>
-          <MenuButton aria-label="Действия с клиентом" onMouseDown={(event) => event.stopPropagation()} onClick={handleMenuClick} type="button">
-            <MoreVertical size={20} />
-          </MenuButton>
-          {menuAt && <FloatingContextMenu
-            x={menuAt.x} y={menuAt.y} onClose={() => setMenuAt(null)}
-            items={[
-              { label: 'Редактировать', color: PRIMARY_COLOR, action: () => onEdit(client) },
-              ...(!isBlacklisted || canRemoveFromBlacklist ? [{
-                label: isBlacklisted ? 'Убрать из чёрного списка' : 'Добавить в чёрный список',
-                color: isBlacklisted ? SUCCESS_COLOR : DANGER_COLOR,
-                disabled: isBlacklistUpdating,
-                action: () => onBlacklistChange(client, !isBlacklisted),
-              }] : []),
-              { label: 'Удалить', color: DANGER_COLOR, dividerBefore: true, action: () => onDelete(client) },
-            ]}
-          />}
-        </>}
+              <ContextMenu $isVisible={isMenuOpen} ref={menuRef}>
+                <MenuItem onClick={handleEditClick}>Редактировать</MenuItem>
+                <MenuItem onClick={handleDeleteClick}>Удалить</MenuItem>
+              </ContextMenu>
+            </>
+          )}
 
-        <InfoGrid>
-          <InfoItem><InfoIcon><IdCard size={16} /></InfoIcon><InfoLabel>ID клиента</InfoLabel><InfoValue>{client.id}</InfoValue></InfoItem>
-          <InfoItem>
-            <InfoIcon><Phone size={15} /></InfoIcon><InfoLabel>Телефон</InfoLabel>
-            <InfoValue>{client.phone ? <ContactLink href={formatPhoneHref(client.phone)} onClick={(event) => event.stopPropagation()}>{formatPhone(client.phone)}</ContactLink> : 'Не указан'}</InfoValue>
-          </InfoItem>
-          <InfoItem>
-            <InfoIcon><MessageCircle size={16} /></InfoIcon><InfoLabel>WhatsApp</InfoLabel>
-            <InfoValue>{client.secondPhone ? <ContactLink href={`https://wa.me/${client.secondPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>{formatPhone(client.secondPhone)}</ContactLink> : 'Не указан'}</InfoValue>
-          </InfoItem>
-          <InfoItem><InfoIcon><CalendarDays size={16} /></InfoIcon><InfoLabel>Дата рождения</InfoLabel><InfoValue>{formatDate(client.birthdate)}</InfoValue></InfoItem>
-          <InfoItem><InfoIcon><MapPin size={16} /></InfoIcon><InfoLabel>Адрес регистрации</InfoLabel><InfoValue title={client.registrationAddress || undefined}>{client.registrationAddress || 'Не указан'}</InfoValue></InfoItem>
-          <InfoItem><InfoIcon><House size={16} /></InfoIcon><InfoLabel>Фактический адрес</InfoLabel><InfoValue title={client.actualAddress || undefined}>{client.actualAddress || 'Не указан'}</InfoValue></InfoItem>
-        </InfoGrid>
+          {/* <MessageButton onClick={handleMessageClick}>
+            <FaComment size={30} />
+          </MessageButton> */}
+          
+          <InfoGrid>
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaIdCard size={12} /></IconWrapper>
+                ID клиента
+              </InfoLabel>
+              <InfoValue>
+                {client.id || 'Не указан'}
+              </InfoValue>
+            </InfoItem>
+            
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaPhone size={12} /></IconWrapper>
+                Телефон
+              </InfoLabel>
+              <InfoValue>
+                {client.phone ? (
+                  <PhoneLink 
+                    href={formatPhoneHref(client.phone)} 
+                    onClick={(e) => e.stopPropagation()}
+                    style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
+                  >
+                    {formatPhone(client.phone)}
+                  </PhoneLink>
+                ) : (
+                  'Не указан'
+                )}
+              </InfoValue>
+            </InfoItem>
+            
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaWhatsapp size={13} /></IconWrapper>
+                WhatsApp
+              </InfoLabel>
+              <InfoValue>
+                {client.secondPhone ? (
+                  <WhatsAppLink 
+                    href={`https://wa.me/${client.secondPhone.replace(/\D/g, '')}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={isBlacklisted ? { color: '#EF4444', fontWeight: 'bold' } : {}}
+                  >
+                    {formatPhone(client.secondPhone)}
+                  </WhatsAppLink>
+                ) : (
+                  'Не указан'
+                )}
+              </InfoValue>
+            </InfoItem>
+            
+            <InfoItem>
+              <InfoLabel>
+                <IconWrapper><FaBirthdayCake size={12} /></IconWrapper>
+                Дата рождения
+              </InfoLabel>
+              <InfoValue>{formatDate(client.birthdate)}</InfoValue>
+            </InfoItem>
+            
+            <InfoItem>
+              <InfoLabel>Адрес регистрации</InfoLabel>
+              <InfoValue>{client.registrationAddress || 'Не указан'}</InfoValue>
+            </InfoItem>
 
-        {creditIds.length > 0 && <Section>
-          <SectionHeader><SectionTitle>Договоры</SectionTitle><CountBadge>{creditIds.length}</CountBadge></SectionHeader>
-          <TileGrid>{creditIds.map((contractId, index) => {
-            const months = Number.parseInt(creditRestTerms[index] ?? '0', 10) || 0;
-            return <DetailTile key={`${contractId}-${index}`} onClick={(event) => openContract(event, contractId)} type="button">
-              <TileIcon><FileText size={20} /></TileIcon>
-              <TileMain>№ {contractId || 'Без номера'}</TileMain>
-              <TileAside><TermBadge>Осталось {months} мес.</TermBadge><ChevronRight size={18} /></TileAside>
-            </DetailTile>;
-          })}</TileGrid>
-        </Section>}
+            <InfoItem>
+              <InfoLabel>Фактический адрес</InfoLabel>
+              <InfoValue>{client.actualAddress || 'Не указан'}</InfoValue>
+            </InfoItem>
+          </InfoGrid>
+          
+          {hasContracts && (
+            <ContractsSection>
+              <ContractsHeader>
+                <InfoLabel>Договоры</InfoLabel>
+              </ContractsHeader>
 
-        {guarantors.length > 0 && <Section>
-          <SectionHeader><SectionTitle>Поручительства</SectionTitle><CountBadge>{guarantors.length}</CountBadge></SectionHeader>
-          <TileGrid>{guarantors.map((guarantor) => <DetailTile
-            key={`${guarantor.creditId}-${guarantor.id}`}
-            onClick={(event) => openContract(event, guarantor.creditId)}
-            title={guarantor.fullname || undefined}
-            type="button"
-          >
-            <TileIcon><Link2 size={19} /></TileIcon>
-            <TileMain>Договор № {guarantor.creditId || 'Без номера'}</TileMain>
-            <ChevronRight size={18} />
-          </DetailTile>)}</TileGrid>
-        </Section>}
+              <ContractsGrid>
+                {safeCreditIds.map((contractId, index) => {
+                  const restTerm = safeCreditRestTerms[index] || '0';
+                  const months = parseInt(restTerm) || 0;
+                  const isUrgent = months > 0 && months < 3;
+
+                  return (
+                    <ContractCard
+                      key={index}
+                      $isClickable={true}
+                      onClick={(e) => handleContractClick(e, contractId)}
+                      style={isBlacklisted ? {
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        borderColor: '#EF4444'
+                      } : {}}
+                    >
+                      <ContractNumber>
+                        {contractId || 'Без номера'}
+                      </ContractNumber>
+                      <ContractTerm>
+                        Остаток: {months} мес.
+                      </ContractTerm>
+                    </ContractCard>
+                  );
+                })}
+              </ContractsGrid>
+            </ContractsSection>
+          )}
+
+          {hasGuarantors && (
+            <ContractsSection>
+              <ContractsHeader>
+                <InfoLabel>Поручители по договорам</InfoLabel>
+              </ContractsHeader>
+
+              <ContractsGrid>
+                {guarantors.map((g) => (
+                  <GuarantorCard
+                    key={`${g.creditId}-${g.id}`}
+                    $isClickable={true}
+                    onClick={(e) => handleGuarantorClick(e, g.creditId)}
+                  >
+                    <ContractNumber>
+                      №{g.creditId || 'Без номера'}
+                    </ContractNumber>
+                    {g.fullname && (
+                      <GuarantorName title={`ФИО поручителя: ${g.fullname}`}>
+                        {g.fullname}
+                      </GuarantorName>
+                    )}
+                  </GuarantorCard>
+                ))}
+              </ContractsGrid>
+            </ContractsSection>
+          )}
+        </CardContent>
       </Card>
 
-      {selectedContractModal && <CreditBriefModal creditId={selectedContractModal} onClose={() => setSelectedContractModal(null)} />}
+      {/* Модальное окно с расписанием платежей */}
+      {selectedContractModal && (
+        <CreditBriefModal
+          creditId={selectedContractModal}
+          onClose={handleCloseModal}
+        />
+      )}
     </>
   );
 };

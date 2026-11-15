@@ -13,10 +13,9 @@ interface PhoneUtilsContextValue {
 
 const PhoneUtilsContext = createContext<PhoneUtilsContextValue | null>(null);
 
-const sanitizeDigits = (raw?: string | null): string =>
-  (raw ?? "").replace(/\D+/g, "");
+const sanitizeDigits = (raw: string): string => raw.replace(/\D+/g, "");
 
-export const normalizePhone = (raw?: string | null): string => {
+export const normalizePhone = (raw: string): string => {
   const digits = sanitizeDigits(raw);
   if (!digits) return "";
 
@@ -65,7 +64,7 @@ export const formatPhoneForSearch = (raw: string): string => {
 export const maskSearchPhone = (value: string): string => {
   if (!value) return value;
   // есть буквы или иные символы -> это название компании, не форматируем
-  if (/[^\d\s()+-]/.test(value)) return value;
+  if (/[^\d\s()+\-]/.test(value)) return value;
 
   const digits = sanitizeDigits(value);
   if (!digits) return value; // одна пунктуация без цифр
@@ -81,7 +80,7 @@ export const maskSearchPhone = (value: string): string => {
   return out;
 };
 
-export const formatPhoneHref = (raw?: string | null): string => {
+export const formatPhoneHref = (raw: string): string => {
   const normalized = normalizePhone(raw);
   return normalized
     ? `tel:${sanitizeDigits(normalized).replace(/^/, "+")}`

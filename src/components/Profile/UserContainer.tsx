@@ -3,8 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import EmployeeModal from "../modal/CrudInherited/EmployeeModal";
 import { useEmployee } from "../../api/hooks/useEmployee";
+import { FILE_BASE_URL } from "../../api/client";
 import { getInitials, generateAvatar } from "../../utils/avatarUtils";
-import { getFileUrl } from "../../utils/fileUrl";
 import type { Employee } from "../../api/types/employee";
 import { formatPhoneHref } from "../../utils/phoneUtils";
 import PhoneLink from "../ui/links/PhoneLink";
@@ -16,13 +16,12 @@ interface UserContainerProps {
 }
 
 const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit = true }: UserContainerProps) => {
-    const { loading, error, updateEmployee, updateEmployeePhoto, refresh, deletePhoto } = useEmployee();
+    const { authInfo, loading, error, updateEmployee, updateEmployeePhoto, refresh, deletePhoto } = useEmployee();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const [isViewingPhoto, setIsViewingPhoto] = useState(false);
     const [isDefaultAvatar, setIsDefaultAvatar] = useState(true);
-    const [photoVersion, setPhotoVersion] = useState(() => Date.now());
     const fileInputRef = useRef<HTMLInputElement>(null);
     const avatarRef = useRef<HTMLImageElement>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -33,7 +32,6 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
     useEffect(() => {
         if (employee?.photoPath) {
             setIsDefaultAvatar(false);
-            setPhotoVersion(Date.now());
         } else {
             setIsDefaultAvatar(true);
         }
@@ -61,9 +59,8 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
     };
 
     const handleModalClose = async () => {
-        const result = await refresh();
+        let result = await refresh();
         if (employee) employee.photoPath = result.employee.photoPath;
-        setPhotoVersion(Date.now());
         setIsModalOpen(false);
     };
 
@@ -72,7 +69,6 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
         address: string;
         role: string;
         phone: string;
-        secondPhone: string;
         minSurcharge: number;
     }) => {        
         if (!employee?.id) return;
@@ -85,20 +81,14 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
                 phone: updatedData.phone,
                 secondPhone: updatedData.secondPhone ?? "",
             });
-            // Объект сотрудника пришёл от страницы, а refresh() обновляет
-            // другую копию данных. Без этих строк модалка открывалась со
-            // старыми номерами до перезагрузки страницы.
             if (employee) {
                 employee.fullName = result.fullName;
                 employee.address = result.address;
-                employee.phone = result.phone;
-                employee.secondPhone = result.secondPhone ?? null;
             }
             setIsModalOpen(false);
             await refresh();
         } catch (err) {
             console.error("Failed to update employee:", err);
-            throw err;
         }
     };
 
@@ -176,10 +166,9 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
         
         if (e.target.files && e.target.files.length > 0) {
             try {
-                const result = await updateEmployeePhoto(employee.id, e.target.files[0]);
+                let result = await updateEmployeePhoto(employee.id, e.target.files[0]);
                 if (employee) employee.photoPath = result.photoPath;
                 setIsDefaultAvatar(false);
-                setPhotoVersion(Date.now());
             } catch (err) {
                 console.error("Failed to update photo:", err);
             } finally {
@@ -203,7 +192,7 @@ const UserContainer = ({ employee: propEmployee, isCurrentUser = true, allowEdit
     }
     
     const avatarSrc = employee?.photoPath 
-        ? getFileUrl(employee.photoPath, photoVersion) || generateAvatar(getInitials(employee.fullName), 100)
+        ? `${FILE_BASE_URL}${employee.photoPath}?${Date.now()}`
         : generateAvatar(getInitials(employee?.fullName || ''), 100);
         
     return (

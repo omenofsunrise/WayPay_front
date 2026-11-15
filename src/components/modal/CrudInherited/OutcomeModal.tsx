@@ -1,72 +1,6 @@
 import React from 'react';
 import BaseModal from '../BASE/modalCRUBase';
 import CustomInput from '../../ui/fields/CustomInput';
-import styled from 'styled-components';
-
-const FinanceFormContent = styled.div`
-    padding: 6px 34px 24px;
-    text-align: left;
-
-    @media (max-width: 600px) {
-        padding: 4px 18px 20px;
-    }
-`;
-
-const FinanceSection = styled.section`
-    width: 100%;
-    margin-top: 8px;
-    box-sizing: border-box;
-`;
-
-const FinanceSectionTitle = styled.h3`
-    margin: 0 0 16px;
-    color: #07818a;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.3;
-    text-align: left;
-`;
-
-const FinanceFields = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-`;
-
-const FinanceField = styled.label`
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 7px;
-    color: #192438;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.3;
-    text-align: left;
-`;
-
-const FinanceControl = styled.div`
-    min-width: 0;
-
-    > div {
-        width: 100%;
-        max-width: none;
-        margin: 0;
-    }
-
-    input {
-        width: 100%;
-        max-width: none;
-        min-height: 40px;
-        padding: 7px 13px;
-        box-sizing: border-box;
-        color: #172235;
-        font-size: 14px;
-        background: #fff;
-        border-color: #c7d2de;
-        border-radius: 7px;
-    }
-`;
 
 interface OutcomeModalProps {
     show: boolean;
@@ -149,48 +83,26 @@ const OutcomeModal: React.FC<OutcomeModalProps> = ({
     return (
         <BaseModal
             title="Добавить расход"
-            subtitle="Укажите сумму и назначение операции"
-            appearance="compact-form"
-            width="680px"
-            maxHeight="calc(100vh - 32px)"
-            cancelButtonText="Отмена"
-            saveButtonText="Добавить расход"
             onClose={onClose}
             onCancel={onClose}
             onSave={handleSave}
             isSaveDisabled={!newOutcome.amount}
         >
-            <FinanceFormContent>
-                <FinanceSection>
-                    <FinanceSectionTitle>Основная информация</FinanceSectionTitle>
-                    <FinanceFields>
-                        <FinanceField>
-                            Сумма
-                            <FinanceControl>
-                                <CustomInput
-                                    type="text"
-                                    value={displayAmount}
-                                    onChange={handleAmountChange}
-                                    placeholder="Введите сумму"
-                                    inputType="text"
-                                    required
-                                />
-                            </FinanceControl>
-                        </FinanceField>
-
-                        <FinanceField>
-                            Комментарий
-                            <FinanceControl>
-                                <CustomInput
-                                    value={newOutcome.comment}
-                                    onChange={(e) => setNewOutcome({...newOutcome, comment: e.target.value})}
-                                    placeholder="Введите комментарий"
-                                />
-                            </FinanceControl>
-                        </FinanceField>
-                    </FinanceFields>
-                </FinanceSection>
-            </FinanceFormContent>
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
+                <CustomInput
+                    type="text"
+                    value={displayAmount}
+                    onChange={handleAmountChange}
+                    placeholder="Введите сумму"
+                    inputType="text" // Используем обычный текст вместо rubles
+                    required
+                />
+                <CustomInput
+                    value={newOutcome.comment}
+                    onChange={(e) => setNewOutcome({...newOutcome, comment: e.target.value})}
+                    placeholder="Введите комментарий"
+                />
+            </div>
         </BaseModal>
     );
 };

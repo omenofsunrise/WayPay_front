@@ -1,22 +1,14 @@
 import styled from "styled-components";
 
 const TitleField = styled.div`
-  display: flex;
-  flex-direction: row;
-  text-align: left;
-  font-size: 30px;
-  color: black;
-  font-weight: 600;
-  margin-top: 0;
-  padding: 16px 0;
-  box-sizing: border-box;
-  align-items: center;
-  gap: 10px;
-
-  > h1 {
-    margin-top: 0;
-    margin-bottom: 0;
-  }
+    display: flex;
+    flex-direction: row;
+    text-align: left;
+    font-size: 30px;
+    color: black;
+    font-weight: 600;
+    margin-top: 0px;
+    align-items: center;
 `;
 
-export default TitleField;
+export default TitleField; 

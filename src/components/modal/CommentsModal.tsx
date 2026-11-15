@@ -11,7 +11,6 @@ import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import PhotoViewerModal from './PhotoViewerModal';
 import { LikeButton } from '../ui/Buttons/SocialButtons';
 import FileItem from '../Blog/FileItem';
-import BaseModal from './BASE/modalCRUBase';
 
 interface CommentsModalProps {
   post: BlogPost;
@@ -358,18 +357,13 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
 
   return (
     <>
-      <BaseModal
-        title="Комментарии"
-        subtitle="Обсуждение публикации"
-        appearance="compact-form"
-        width="680px"
-        maxHeight="calc(100vh - 32px)"
-        onClose={onClose}
-        onCancel={onClose}
-        hideSaveButton
-        hideCanselButton
-      >
-        <ModalContent>
+      <ModalOverlay onClick={onClose}>
+        <ModalContent onClick={(e) => e.stopPropagation()}>
+          <ModalHeader>
+            <ModalTitle>Комментарии</ModalTitle>
+            <CloseButton onClick={onClose}>×</CloseButton>
+          </ModalHeader>
+          
           <CommentsList ref={commentsListRef}>
             {isLoading && cachedComments.length === 0 ? (
               <LoadingText>Загрузка комментариев...</LoadingText>
@@ -464,7 +458,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
             )}
           </NewCommentForm>
         </ModalContent>
-      </BaseModal>
+      </ModalOverlay>
 
       {isViewerOpen && (
         <PhotoViewerModal
@@ -478,12 +472,36 @@ const CommentsModal: React.FC<CommentsModalProps> = ({ post, onClose, onCommentA
 };
 
 
-const ModalContent = styled.div`
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  min-height: 0;
-  height: min(680px, calc(100vh - 145px));
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
   flex-direction: column;
   overflow: hidden;
+`;
+
+const ModalHeader = styled.div`
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const CancelEditButton = styled.button`
@@ -508,6 +526,21 @@ const SaveIcon = styled.span`
   mask-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.8333 5L7.49996 13.3333L4.16663 10' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   mask-repeat: no-repeat;
   mask-position: center;
+`;
+
+const ModalTitle = styled.h3`
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
 `;
 
 const CommentsList = styled.div`

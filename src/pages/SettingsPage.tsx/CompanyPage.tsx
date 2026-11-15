@@ -9,11 +9,6 @@ import PhoneModalInput from "../../components/ui/fields/PhoneModalInput";
 import ToggleSwitch from "../../components/ui/Toggles/ToggleSwitch";
 import companyService from "../../api/services/companyService";
 import { useAuth } from "../../сontext/AuthContext";
-import FloatingContextMenu, {
-  DANGER_COLOR,
-  PRIMARY_COLOR,
-} from "../../components/modal/FloatingContextMenu";
-import ContractTemplatesSettings from "../../components/ContractTemplatesSettings";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +75,18 @@ const EditIconSvg = () => (
       d="M13 3l4 4L6 18H2v-4L13 3z"
       stroke="currentColor"
       strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const TrashIconSvg = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"
+      stroke="currentColor"
+      strokeWidth="1.3"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -194,8 +201,6 @@ const CompanyPage = () => {
   const creditAcceptance = authInfo?.employee.creditAcceptance ?? true;
   const paymentAcceptance = authInfo?.employee.paymentAcceptance ?? true;
   const incrementCredits = authInfo?.employee.incrementCreditName ?? false;
-  const showCreditName = authInfo?.employee.showCreditName ?? true;
-  const showCreditType = authInfo?.employee.showCreditType ?? true;
   const [isSavingSetting, setIsSavingSetting] = useState(false);
 
   // Шаг округления меняет только директор компании, поэтому остальным поле
@@ -416,23 +421,6 @@ const CompanyPage = () => {
       } catch (error) {
         console.error("Не удалось изменить настройку:", error);
         addToast("error", "Не удалось изменить настройку");
-      } finally {
-        setIsSavingSetting(false);
-      }
-    },
-    [addToast, refresh]
-  );
-
-  const handleCreditFieldVisibility = useCallback(
-    async (setting: "show_credit_name" | "show_credit_type", checked: boolean) => {
-      setIsSavingSetting(true);
-      try {
-        await companyService.updateSettings(setting, checked ? "on" : "off");
-        await refresh();
-        addToast("success", checked ? "Поле включено" : "Поле скрыто");
-      } catch (error) {
-        console.error("Не удалось изменить видимость поля:", error);
-        addToast("error", "Не удалось изменить видимость поля");
       } finally {
         setIsSavingSetting(false);
       }
@@ -814,42 +802,6 @@ const CompanyPage = () => {
               </SettingsSection>
             )}
 
-            <SettingsSection>
-              <SettingContent>
-                <SettingIcon><PaymentApprovalIcon /></SettingIcon>
-                <SettingText>
-                  <SettingName>Имя договора</SettingName>
-                  <SettingHint>Показывать поле имени при создании договора</SettingHint>
-                </SettingText>
-              </SettingContent>
-              <SettingControl>
-                <ToggleSwitch
-                  checked={showCreditName}
-                  onChange={(checked) => handleCreditFieldVisibility("show_credit_name", checked)}
-                  disabled={isSavingSetting}
-                />
-                <SettingStatus $enabled={showCreditName}>{showCreditName ? "Включено" : "Выключено"}</SettingStatus>
-              </SettingControl>
-            </SettingsSection>
-
-            <SettingsSection>
-              <SettingContent>
-                <SettingIcon><PaymentApprovalIcon /></SettingIcon>
-                <SettingText>
-                  <SettingName>Тип договора</SettingName>
-                  <SettingHint>Показывать выбор типа при создании договора</SettingHint>
-                </SettingText>
-              </SettingContent>
-              <SettingControl>
-                <ToggleSwitch
-                  checked={showCreditType}
-                  onChange={(checked) => handleCreditFieldVisibility("show_credit_type", checked)}
-                  disabled={isSavingSetting}
-                />
-                <SettingStatus $enabled={showCreditType}>{showCreditType ? "Включено" : "Выключено"}</SettingStatus>
-              </SettingControl>
-            </SettingsSection>
-
             {canEditRoundingStep && (
               <SettingsSection>
                 <SettingContent>
@@ -883,8 +835,6 @@ const CompanyPage = () => {
           </SettingsList>
         </AdditionalSettings>
 
-        <ContractTemplatesSettings onMessage={addToast} />
-
         <CardFooter>
           <ButtonsContainer>
             <GrayButton width="120px" onClick={handleReset}>
@@ -898,24 +848,24 @@ const CompanyPage = () => {
       </CompanyCard>
 
       {showContextMenu && (
-        <FloatingContextMenu
-          x={menuPosition.x}
-          y={menuPosition.y}
-          onClose={() => setShowContextMenu(false)}
-          items={[
-            {
-              label: "Изменить логотип",
-              color: PRIMARY_COLOR,
-              action: () => document.getElementById("logo-upload")?.click(),
-            },
-            {
-              label: "Удалить логотип",
-              color: DANGER_COLOR,
-              dividerBefore: true,
-              action: () => void handleRemoveLogo(),
-            },
-          ]}
-        />
+        <>
+          <ContextMenuBackdrop onClick={() => setShowContextMenu(false)} />
+          <ContextMenu
+            style={{ left: menuPosition.x - 200, top: menuPosition.y }}
+          >
+            <ContextMenuItem
+              onClick={() => {
+                document.getElementById("logo-upload")?.click();
+                setShowContextMenu(false);
+              }}
+            >
+              <EditIconSvg /> Изменить логотип
+            </ContextMenuItem>
+            <ContextMenuItem $danger onClick={handleRemoveLogo}>
+              <TrashIconSvg /> Удалить логотип
+            </ContextMenuItem>
+          </ContextMenu>
+        </>
       )}
 
       <ToastContainer>
@@ -1265,5 +1215,36 @@ const CardFooter = styled.footer`
   }
 `;
 
+const ContextMenuBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+`;
+
+const ContextMenu = styled.div`
+  position: fixed;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  min-width: 180px;
+  padding: 4px 0;
+  border: 1px solid #e5e7eb;
+`;
+
+const ContextMenuItem = styled.div<{ $danger?: boolean }>`
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: ${(p) => (p.$danger ? "#ef4444" : "#374151")};
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f9fafb;
+  }
+`;
 
 export default CompanyPage;

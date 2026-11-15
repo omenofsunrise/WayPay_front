@@ -10,7 +10,6 @@ import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
 import usePaymentPending from "../api/hooks/usePaymentPending";
 import { formatMoney } from "../utils/formatPrice";
 import { formatDate } from "../utils/dateFormatter";
-import WayPayButton from "../components/ui/Buttons/WayPayButton";
 
 const PAGE_SIZE = 10;
 
@@ -80,21 +79,18 @@ const PaymentPendingPage = () => {
     item.notes || "—",
     item.isTransferred ? "Переведён" : "Ожидает",
     <Actions key={`actions-${item.id}`}>
-      <WayPayButton
-        size="small"
+      <ConfirmButton
         disabled={processingId === item.id || item.isTransferred}
         onClick={() => handleConfirm(item.id)}
       >
         Подтвердить
-      </WayPayButton>
-      <WayPayButton
-        variant="danger"
-        size="small"
+      </ConfirmButton>
+      <RejectButton
         disabled={processingId === item.id}
         onClick={() => handleReject(item.id)}
       >
         Отклонить
-      </WayPayButton>
+      </RejectButton>
     </Actions>,
   ]);
 
@@ -186,6 +182,40 @@ const Actions = styled.div`
   display: flex;
   gap: 8px;
   justify-content: center;
+`;
+
+const BaseActionButton = styled.button`
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ConfirmButton = styled(BaseActionButton)`
+  background-color: #007d88;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background-color: #006670;
+  }
+`;
+
+const RejectButton = styled(BaseActionButton)`
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+
+  &:hover:not(:disabled) {
+    background-color: #fecaca;
+  }
 `;
 
 const EmptyState = styled.div`

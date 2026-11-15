@@ -1,8 +1,6 @@
 import React, { type ReactNode, useEffect, useRef, useState } from "react";
-import styled, { css } from "styled-components";
+import styled from "styled-components";
 import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
-import WayPayButton from "../../ui/Buttons/WayPayButton";
-import WayPayIconButton from "../../ui/Buttons/WayPayIconButton";
 
 export type ModalMode =
   | "create"
@@ -28,11 +26,6 @@ interface ModalProps {
   saveButtonText?: string;
   customLayout?: React.ReactNode;
   maxHeight?: string;
-  subtitle?: string;
-  appearance?: "default" | "compact-form";
-  saveButtonStyle?: React.CSSProperties;
-  submittingText?: string;
-  hideCloseButton?: boolean;
 }
 
 const BaseModal: React.FC<ModalProps> = ({
@@ -47,16 +40,11 @@ const BaseModal: React.FC<ModalProps> = ({
   mode = "create",
   hideSaveButton = false,
   hideCanselButton = false,
-  cancelButtonText = "Отмена",
+  cancelButtonText = "Отменить",
   width = "562px",
   saveButtonText = "Сохранить",
   customLayout,
   maxHeight = "90vh",
-  subtitle,
-  appearance = "default",
-  saveButtonStyle,
-  submittingText = "Сохранение...",
-  hideCloseButton = false,
 }) => {
   const isViewMode = mode === "view";
 
@@ -155,63 +143,41 @@ const BaseModal: React.FC<ModalProps> = ({
       <ModalContainer
         width={width}
         maxHeight={maxHeight}
-        $appearance={appearance}
         ref={modalRef}
         onWheel={handleModalScroll}
         onClick={(e) => e.stopPropagation()}
       >
-        {!hideCloseButton && (
-          <CloseButton
-            $appearance={appearance}
-            icon={<CloseIcon aria-hidden="true" />}
-            label="Закрыть"
-            variant="ghost"
-            size="small"
-            onClick={onClose}
-          />
-        )}
-        <ModalHeader $appearance={appearance}>
-          <div>
-            <ModalTitle $appearance={appearance}>{title}</ModalTitle>
-            {subtitle && <ModalSubtitle>{subtitle}</ModalSubtitle>}
-          </div>
+        <CloseButton onClick={onClose}>&times;</CloseButton>
+        <ModalHeader>
+          <ModalTitle>{title}</ModalTitle>
         </ModalHeader>
         <div className="modal-body">{customLayout}</div>
-        <ModalForm as={onSave ? "form" : "div"} onSubmit={onSave}>
-          <ModalContent ref={contentRef} isScrollable={isScrollable} $appearance={appearance}>
+        <ModalForm onSubmit={onSave}>
+          <ModalContent ref={contentRef} isScrollable={isScrollable}>
             {children}
           </ModalContent>
 
-          {(!hideCanselButton || (!isViewMode && !hideSaveButton)) && (
-            <ModalFooter $appearance={appearance}>
-              {!hideCanselButton && (
-                <WayPayButton
-                  variant="secondary"
-                  size="large"
-                  style={{ width: "116px" }}
-                  onClick={handleCancel}
-                >
-                  {cancelButtonText}
-                </WayPayButton>
-              )}
-              {!isViewMode && !hideSaveButton && (
-                <DarkCyanButton
-                  style={{
-                    minWidth: "150px",
-                    minHeight: "40px",
-                    padding: "8px 18px",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    ...saveButtonStyle,
-                  }}
-                  type="submit"
-                  disabled={isSaveDisabled || isSubmitting}
-                >
-                  {isSubmitting ? submittingText : saveButtonText || "Сохранить"}
-                </DarkCyanButton>
-              )}
-            </ModalFooter>
-          )}
+          <ModalFooter>
+            {!hideCanselButton && (
+              <CancelButton onClick={handleCancel}>
+                {cancelButtonText}
+              </CancelButton>
+            )}
+            {!isViewMode && !hideSaveButton && (
+              <DarkCyanButton
+                style={{
+                  minWidth: "136px",
+                  padding: "10px 20px",
+                  borderRadius: "10px",
+                  fontSize: "16px",
+                }}
+                type="submit"
+                disabled={isSaveDisabled || isSubmitting}
+              >
+                {isSubmitting ? "Сохранение..." : saveButtonText || "Сохранить"}
+              </DarkCyanButton>
+            )}
+          </ModalFooter>
         </ModalForm>
       </ModalContainer>
     </ModalBackdrop>
@@ -235,151 +201,88 @@ const ModalBackdrop = styled.div`
   overflow: hidden;
 `;
 
-const ModalContainer = styled.div<{
-  width: string;
-  maxHeight: string;
-  $appearance: "default" | "compact-form";
-}>`
+const ModalContainer = styled.div<{ width: string; maxHeight: string }>`
   width: ${(props) => props.width};
   max-width: calc(100vw - 32px);
   max-height: ${(props) => props.maxHeight};
-  background: #fff;
-  border: 0;
-  border-radius: 12px;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
+  background-color: rgba(249, 250, 250, 1);
+  border: 1px solid rgba(173, 179, 188, 1);
+  border-radius: 5px;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25), 0 0 25px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding: 24px;
   position: relative;
   margin: 0;
   overflow: hidden;
-
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    padding: 0;
-    background: #fff;
-    border: 0;
-    border-radius: 14px;
-    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
-  `}
 
   @media (max-height: 768px) {
     max-height: 95vh;
   }
 
   @media (max-width: 600px) {
-    padding: 0;
-    border-radius: 10px;
+    padding: 16px;
+    border-radius: 8px;
     max-height: 95vh;
   }
 `;
 
 const ModalForm = styled.form`
   display: flex;
-  width: 100%;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 `;
 
-export const ModalHeader = styled.div<{ $appearance?: "default" | "compact-form" }>`
+export const ModalHeader = styled.div`
   display: flex;
-  width: 100%;
-  box-sizing: border-box;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
-  text-align: left;
-  margin: 0;
-  padding: 28px 34px 10px;
+  margin-top: 0;
   flex-shrink: 0;
-
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    justify-content: flex-start;
-    padding: 28px 34px 10px;
-  `}
 `;
 
-export const ModalTitle = styled.h2<{ $appearance?: "default" | "compact-form" }>`
-  margin: 0;
-  padding: 0;
-  color: #172235;
-  font-size: 25px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-align: left;
-
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    margin: 0;
-    padding: 0;
-    color: #172235;
-    font-size: 25px;
-    font-weight: 700;
-    line-height: 1.2;
-  `}
+export const ModalTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 600;
+  color: #000;
+  margin: 0 40px 0 0;
+  padding-left: 4px;
 `;
 
-const ModalSubtitle = styled.p`
-  margin: 5px 0 0;
-  color: #7b8799;
-  font-size: 14px;
-  line-height: 1.4;
-  text-align: left;
-`;
-
-const CloseButton = styled(WayPayIconButton)<{ $appearance: "default" | "compact-form" }>`
+const CloseButton = styled.button`
   position: absolute;
-  top: 20px;
-  right: 24px;
+  top: 12px;
+  right: 12px;
   width: 32px;
   height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
   color: #6b7280;
-  z-index: 10;
-
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    top: 20px;
-    right: 24px;
-  `}
+  z-index: 1;
+  transition: background-color 0.15s, color 0.15s;
 
   &:hover {
     background-color: #f3f4f6;
     color: #111827;
   }
 
-`;
-
-const CloseIcon = styled.span`
-  position: relative;
-  display: block;
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-
-  &::before,
-  &::after {
-    content: "";
-    position: absolute;
-    top: 8px;
-    left: 0;
-    width: 18px;
-    height: 2px;
-    background: currentColor;
-    border-radius: 2px;
+  &:active {
+    background-color: #e5e7eb;
   }
-
-  &::before { transform: rotate(45deg); }
-  &::after { transform: rotate(-45deg); }
 `;
 
-const ModalContent = styled.div<{
-  isScrollable: boolean;
-  $appearance: "default" | "compact-form";
-}>`
+const ModalContent = styled.div<{ isScrollable: boolean }>`
   flex: 1;
-  width: 100%;
-  margin-bottom: 0;
-  padding: 0 34px;
-  box-sizing: border-box;
-  text-align: left;
+  margin-bottom: 20px;
   min-height: 0;
   overflow-y: ${(props) => (props.isScrollable ? "auto" : "visible")};
 
@@ -403,30 +306,27 @@ const ModalContent = styled.div<{
 
   scrollbar-width: thin;
   scrollbar-color: rgba(173, 179, 188, 1) rgba(241, 241, 241, 1);
-
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    margin-bottom: 0;
-    padding: 0;
-  `}
 `;
 
-const ModalFooter = styled.div<{ $appearance: "default" | "compact-form" }>`
+const ModalFooter = styled.div`
   display: flex;
-  width: 100%;
-  box-sizing: border-box;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin: 0;
-  padding: 16px 34px 20px;
-  border-top: 1px solid #e3e9ef;
+  margin: 10px 30px 20px 30px;
   flex-shrink: 0;
+`;
 
-  ${({ $appearance }) => $appearance === "compact-form" && css`
-    justify-content: flex-end;
-    gap: 12px;
-    margin: 0;
-    padding: 16px 34px 20px;
-    border-top: 1px solid #e3e9ef;
-  `}
+const CancelButton = styled.button`
+  padding: 10px 20px;
+  background-color: rgba(209, 213, 219, 1);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 136px;
+  color: black;
+
+  &:hover {
+    background-color: rgba(209, 213, 219, 0.8);
+  }
 `;

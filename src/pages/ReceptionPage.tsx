@@ -5,7 +5,6 @@ import usePartnerPlace from "../api/hooks/usePartnerPlace";
 import type { Credit } from "../api/types/credit";
 import type { PaymentPending } from "../api/types/paymentPending";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
-import { getCreditGuarantors, guarantorNames } from "../utils/creditGuarantors";
 
 const ReceptionPage = () => {
   const {
@@ -92,11 +91,8 @@ const ReceptionPage = () => {
         <ContractNumber>Договор № {credit.name}</ContractNumber>
         <ClientName>{credit.clientFullName}</ClientName>
         {credit.clientPhone && <MutedText>{credit.clientPhone}</MutedText>}
-        {guarantorNames(credit) && (
-          <MutedText>
-            {getCreditGuarantors(credit).length > 1 ? "Поручители" : "Поручитель"}:{" "}
-            {guarantorNames(credit)}
-          </MutedText>
+        {credit.guarantorFullname && (
+          <MutedText>Поручитель: {credit.guarantorFullname}</MutedText>
         )}
       </ContractMain>
       <ContractAmounts>
@@ -124,12 +120,9 @@ const ReceptionPage = () => {
           {selectedCredit.clientPhone && (
             <MutedText>{selectedCredit.clientPhone}</MutedText>
           )}
-          {guarantorNames(selectedCredit) && (
+          {selectedCredit.guarantorFullname && (
             <MutedText>
-              {getCreditGuarantors(selectedCredit).length > 1
-                ? "Поручители"
-                : "Поручитель"}
-              : {guarantorNames(selectedCredit)}
+              Поручитель: {selectedCredit.guarantorFullname}
             </MutedText>
           )}
           <DetailAmounts>

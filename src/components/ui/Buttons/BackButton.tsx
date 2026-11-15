@@ -1,24 +1,59 @@
-import type { ReactNode } from "react";
-import WayPayButton from "./WayPayButton";
+import styled from "styled-components";
 
 interface BackButtonProps {
-  children: ReactNode;
+  children: React.ReactNode;
   onClick?: () => void;
 }
 
-const BackIcon = () => (
-  <svg width="18" height="14" viewBox="0 0 21 13" fill="none" aria-hidden="true">
-    <path
-      d="M6.178.978.656 6.5l5.522 5.522.928-.929L3.169 7.156h17.143V5.844H3.169l3.937-3.938L6.178.978Z"
-      fill="currentColor"
-    />
-  </svg>
-);
+const BackButton = styled.button<BackButtonProps>`
+  color: black;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  margin: 25px;
 
-const BackButton = ({ children, onClick }: BackButtonProps) => (
-  <WayPayButton variant="ghost" icon={<BackIcon />} onClick={onClick}>
-    {children}
-  </WayPayButton>
-);
+  &:hover {
+    opacity: 0.8;
+  }
 
-export default BackButton;
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(0, 125, 136, 1);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+`;
+
+const BackButtonComponent: React.FC<BackButtonProps> = ({
+  children,
+  onClick,
+}) => {
+  return (
+    <BackButton onClick={onClick}>
+      <svg
+        width="21"
+        height="13"
+        viewBox="0 0 21 13"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M6.17798 0.978109L0.65625 6.4998L6.17798 12.0215L7.10604 11.0934L3.16862 7.156L20.3124 7.156V5.84351L3.16874 5.84351L7.10604 1.90621L6.17798 0.978109Z"
+          fill="#50555C"
+        />
+      </svg>
+      {children}
+    </BackButton>
+  );
+};
+
+export default BackButtonComponent;

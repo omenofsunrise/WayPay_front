@@ -6,7 +6,6 @@ import React, {
   useState,
 } from "react";
 import styled from "styled-components";
-import { saveAs } from "file-saver";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import EntityHistory from "../ui/EntityHistory";
 import { useAuth } from "../../сontext/AuthContext";
@@ -18,15 +17,7 @@ import CustomTable from "../ui/tables/CustomTable";
 import useNotes from "../../api/hooks/useNote";
 import { formatDate } from "../../utils/dateFormatter";
 import useCredit from "../../api/hooks/useCredit";
-import type {
-  Credit,
-  CreditGuarantor,
-  CreditListResponse,
-} from "../../api/types/credit";
-import {
-  getCreditGuarantors,
-  guarantorKey,
-} from "../../utils/creditGuarantors";
+import type { Credit, CreditListResponse } from "../../api/types/credit";
 import Tabs from "../ui/fields/Tabs";
 import { formatMoney } from "../../utils/formatPrice";
 import type {
@@ -80,10 +71,6 @@ import PhoneAndroidOutlinedIcon from "@mui/icons-material/PhoneAndroidOutlined";
 import clientService from "../../api/services/clientService";
 import guarantorService from "../../api/services/guarantorService";
 import ContactsEditor from "../ui/ContactsEditor";
-import PrintOptionModal from "./PrintOptionModal";
-import contractTemplateService from "../../api/services/contractTemplateService";
-import type { ContractTemplate } from "../../api/types/contractTemplate";
-import { extractErrorMessage } from "../../api/utils/errorMessage";
 
 interface ViewCreditModalProps {
   id: number;
@@ -204,7 +191,6 @@ const normalizeCreditDetails = (credit: Credit): Credit => {
   };
 };
 
-
 // Эндпоинт /Credit/{id} (одиночный) часто не содержит вычисляемых полей —
 // просрочки (debt, debtDays) и данных поручителя, — которые есть в списке /Credit
 // (именно их видно в таблицах «Договора» и «Контроль договоров»). Подмешиваем их.
@@ -217,9 +203,6 @@ const mergeListComputedFields = (
     primary != null && primary !== 0 ? primary : fallback ?? primary;
   return {
     ...credit,
-    guarantors: credit.guarantors?.length
-      ? credit.guarantors
-      : listCredit.guarantors,
     guarantorFullname: credit.guarantorFullname || listCredit.guarantorFullname,
     guarantorPhone: credit.guarantorPhone || listCredit.guarantorPhone,
     guarantorAddress: credit.guarantorAddress || listCredit.guarantorAddress,
@@ -320,62 +303,8 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     toggleTerminated,
   } = useCredit();
   const [creditData, setCreditData] = useState<Credit | null>(null);
-  const [isPrintOptionModalOpen, setIsPrintOptionModalOpen] = useState(false);
-  const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
   const [copiedName, setCopiedName] = useState<string | null>(null);
   const copyNameTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let active = true;
-    contractTemplateService
-      .getAll()
-      .then((templates) => {
-        if (active) setContractTemplates(templates);
-      })
-      .catch((error) => {
-        console.error("Не удалось загрузить шаблоны договоров", error);
-        if (active) setContractTemplates([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [isOpen]);
-
-  const handlePrintOptionSelect = useCallback(
-    async (option: string) => {
-      if (!creditData) return;
-
-      if (option === "standard-page") {
-        window.open(`/credits/${creditData.id}/print`, "_blank");
-        setIsPrintOptionModalOpen(false);
-        return;
-      }
-
-      if (!option.startsWith("custom-template:")) return;
-
-      const templateId = Number(option.split(":")[1]);
-      const template = contractTemplates.find((item) => item.id === templateId);
-      if (!template || !Number.isFinite(templateId)) return;
-
-      try {
-        const document = await contractTemplateService.generate(
-          templateId,
-          creditData.id
-        );
-        const safeName = template.name.replace(/[\\/:*?"<>|]/g, "_");
-        saveAs(document, `${safeName}_договор_${creditData.id}.docx`);
-      } catch (error) {
-        console.error("Ошибка формирования договора", error);
-        alert(extractErrorMessage(error, "Не удалось сформировать договор"));
-      } finally {
-        setIsPrintOptionModalOpen(false);
-      }
-    },
-    [contractTemplates, creditData]
-  );
 
   useEffect(
     () => () => {
@@ -437,17 +366,24 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   const [clientCredits, setClientCredits] = useState<
     CreditListResponse[] | null
   >(null);
-  // Другие договоры каждого поручителя-клиента, по guarantorKey.
-  const [guarantorCredits, setGuarantorCredits] = useState<Record<
-    string,
-    CreditListResponse[]
-  > | null>(null);
+  const [guarantorCredits, setGuarantorCredits] = useState<
+    CreditListResponse[] | null
+  >(null);
   const [isLoadingRelated, setIsLoadingRelated] = useState(false);
 
   const handleTabChange = useCallback((tab: CreditTab) => {
     setActiveTab(tab);
     localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
   }, []);
+
+  const getGuarantorClientId = (credit: Credit | null): number | undefined => {
+    if (!credit) return undefined;
+    const raw =
+      credit.guarantorClientId ??
+      credit.guarantorId ??
+      (credit as unknown as { GuarantorClientId?: number }).GuarantorClientId;
+    return typeof raw === "number" && raw > 0 ? raw : undefined;
+  };
 
   /**
    * Поля, которые заполняют при заведении человека, но в договор они не едут.
@@ -475,10 +411,9 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
   );
 
   const [clientDetails, setClientDetails] = useState<PersonExtra | null>(null);
-  // Паспорт и адреса каждого поручителя, по guarantorKey.
-  const [guarantorDetails, setGuarantorDetails] = useState<
-    Record<string, PersonExtra | null>
-  >({});
+  const [guarantorDetails, setGuarantorDetails] = useState<PersonExtra | null>(
+    null
+  );
 
   /**
    * Строки карточки, которых нет в договоре: паспорт, адреса, второй телефон.
@@ -554,15 +489,14 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
 
   /** Разводит поручителя-клиента и самостоятельного поручителя по их таблицам. */
   const loadGuarantorExtra = async (
-    g: CreditGuarantor
+    credit: Credit
   ): Promise<PersonExtra | null> => {
-    if (g.guarantorType === "Client") {
-      return g.id
-        ? clientService.getClientById(g.id).catch(() => null)
-        : null;
+    const asClientId = credit.guarantorClientId;
+    if (credit.guarantorType === "Client" && asClientId) {
+      return clientService.getClientById(asClientId).catch(() => null);
     }
 
-    const ownId = g.guarantorId ?? g.id;
+    const ownId = credit.guarantorId;
     if (!ownId) return null;
 
     const guarantor = await guarantorService
@@ -596,11 +530,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
       // Поручитель бывает двух видов, и таблицы у них разные. Брать клиента
       // по guarantorId нельзя: это идентификатор чужой таблицы, и по нему
       // пришёл бы посторонний человек с чужим паспортом.
-      const guarantors = getCreditGuarantors(creditData);
-      const details = await Promise.all(guarantors.map(loadGuarantorExtra));
-      setGuarantorDetails(
-        Object.fromEntries(guarantors.map((g, i) => [guarantorKey(g), details[i]]))
-      );
+      setGuarantorDetails(await loadGuarantorExtra(creditData));
 
       if (creditData.clientId) {
         const clientRes = await getCreditListByClient(
@@ -613,23 +543,17 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
         setClientCredits([]);
       }
 
-      // Договоры есть только у поручителей-клиентов.
-      const clientGuarantors = guarantors.filter(
-        (g) => g.guarantorType === "Client" && g.id
-      );
-      const related = await Promise.all(
-        clientGuarantors.map((g) =>
-          getCreditListByClient(g.id).catch(() => null)
-        )
-      );
-      setGuarantorCredits(
-        Object.fromEntries(
-          clientGuarantors.map((g, i) => [
-            guarantorKey(g),
-            related[i]?.items?.filter((c) => c.id !== creditData.id) ?? [],
-          ])
-        )
-      );
+      const guarantorClientId = getGuarantorClientId(creditData);
+      if (guarantorClientId) {
+        const guarantorRes = await getCreditListByClient(
+          guarantorClientId
+        ).catch(() => null);
+        setGuarantorCredits(
+          guarantorRes?.items?.filter((c) => c.id !== creditData.id) ?? []
+        );
+      } else {
+        setGuarantorCredits([]);
+      }
     } finally {
       setIsLoadingRelated(false);
     }
@@ -658,7 +582,7 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
     // Карточки людей тоже обнуляем: без этого при переходе к другому договору
     // на новой карточке успевает мелькнуть паспорт и адрес предыдущего клиента.
     setClientDetails(null);
-    setGuarantorDetails({});
+    setGuarantorDetails(null);
   }, [id, isOpen]);
   const [notes, setNotes] = useState<NoteWithFile[]>([]);
   const [newNoteContent, setNewNoteContent] = useState("");
@@ -1848,8 +1772,10 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       {creditData && (
                         <PrintCreditButton
                           type="button"
-                          title="Выбрать документ для печати"
-                          onClick={() => setIsPrintOptionModalOpen(true)}
+                          title="Открыть страницу печати договора"
+                          onClick={() =>
+                            window.open(`/credits/${id}/print`, "_blank")
+                          }
                         >
                           Печать
                         </PrintCreditButton>
@@ -2295,133 +2221,138 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
                       label: (
                         <TabLabel
                           icon={<ShieldOutlinedIcon fontSize="small" />}
-                          label={
-                            getCreditGuarantors(creditData).length > 1
-                              ? `Поручители (${getCreditGuarantors(creditData).length})`
-                              : "Поручитель"
-                          }
+                          label="Поручитель"
                         />
                       ),
                       content: (
                         <TabPanel>
-                          {getCreditGuarantors(creditData).length > 0 ? (
-                            getCreditGuarantors(creditData).map((g, index) => {
-                              const key = guarantorKey(g);
-                              const copyKey = `guarantor-${key}`;
-                              const related = guarantorCredits?.[key];
-                              return (
-                                <GuarantorBlock key={key} $first={index === 0}>
-                                  <PersonCard>
-                                    <Avatar $variant="guarantor" />
-                                    <PersonInfo>
-                                      <PersonName
-                                        $clickable={!!g.fullname}
-                                        onClick={() =>
-                                          handleCopyName(
-                                            g.fullname ?? undefined,
-                                            copyKey
-                                          )
-                                        }
-                                        title="Нажмите, чтобы скопировать ФИО"
-                                        role="button"
-                                      >
-                                        {g.fullname}
-                                        {copiedName === copyKey && (
-                                          <CopiedHint>Скопировано</CopiedHint>
-                                        )}
-                                      </PersonName>
-                                      <InfoRows>
-                                        {g.phone && (
-                                          <InfoRow>
-                                            <InfoIcon>
-                                              <CallOutlinedIcon fontSize="small" />
-                                            </InfoIcon>
-                                            <InfoText>
-                                              <PhoneLink
-                                                href={formatPhoneHref(g.phone)}
-                                              >
-                                                {g.phone}
-                                              </PhoneLink>
-                                            </InfoText>
-                                          </InfoRow>
-                                        )}
-                                        {g.birthdate && (
-                                          <InfoRow>
-                                            <InfoIcon>
-                                              <CakeOutlinedIcon fontSize="small" />
-                                            </InfoIcon>
-                                            <InfoText>
-                                              {new Date(
-                                                `${g.birthdate}`
-                                              ).toLocaleDateString("ru-RU")}
-                                            </InfoText>
-                                          </InfoRow>
-                                        )}
-                                        {g.address && (
-                                          <InfoRow>
-                                            <InfoIcon>
-                                              <HomeOutlinedIcon fontSize="small" />
-                                            </InfoIcon>
-                                            <InfoText>{g.address}</InfoText>
-                                          </InfoRow>
-                                        )}
-                                        {renderPersonExtraRows(
-                                          guarantorDetails[key] ?? null,
-                                          g.address ?? undefined
-                                        )}
-                                      </InfoRows>
-                                    </PersonInfo>
-                                  </PersonCard>
+                          {creditData?.guarantorFullname ? (
+                            <>
+                              <PersonCard>
+                                <Avatar $variant="guarantor" />
+                                <PersonInfo>
+                                  <PersonName
+                                    $clickable={!!creditData.guarantorFullname}
+                                    onClick={() =>
+                                      handleCopyName(
+                                        creditData.guarantorFullname,
+                                        "guarantor"
+                                      )
+                                    }
+                                    title="Нажмите, чтобы скопировать ФИО"
+                                    role="button"
+                                  >
+                                    {creditData.guarantorFullname}
+                                    {copiedName === "guarantor" && (
+                                      <CopiedHint>Скопировано</CopiedHint>
+                                    )}
+                                  </PersonName>
+                                  <InfoRows>
+                                    {creditData.guarantorPhone && (
+                                      <InfoRow>
+                                        <InfoIcon>
+                                          <CallOutlinedIcon fontSize="small" />
+                                        </InfoIcon>
+                                        <InfoText>
+                                          <PhoneLink
+                                            href={formatPhoneHref(
+                                              creditData.guarantorPhone
+                                            )}
+                                          >
+                                            {creditData.guarantorPhone}
+                                          </PhoneLink>
+                                        </InfoText>
+                                      </InfoRow>
+                                    )}
+                                    {creditData.guarantorBirthdate && (
+                                      <InfoRow>
+                                        <InfoIcon>
+                                          <CakeOutlinedIcon fontSize="small" />
+                                        </InfoIcon>
+                                        <InfoText>
+                                          {new Date(
+                                            `${creditData.guarantorBirthdate}`
+                                          ).toLocaleDateString("ru-RU")}
+                                        </InfoText>
+                                      </InfoRow>
+                                    )}
+                                    {creditData.guarantorAddress && (
+                                      <InfoRow>
+                                        <InfoIcon>
+                                          <HomeOutlinedIcon fontSize="small" />
+                                        </InfoIcon>
+                                        <InfoText>
+                                          {creditData.guarantorAddress}
+                                        </InfoText>
+                                      </InfoRow>
+                                    )}
+                                    {renderPersonExtraRows(
+                                      guarantorDetails,
+                                      creditData.guarantorAddress
+                                    )}
+                                  </InfoRows>
+                                </PersonInfo>
+                              </PersonCard>
 
-                                  {g.guarantorType === "Client" && (
-                                    <>
-                                      <SectionHeader style={{ marginTop: "16px" }}>
-                                        <SectionIcon>
+                              <SectionHeader style={{ marginTop: "24px" }}>
+                                <SectionIcon>
+                                  <DescriptionOutlinedIcon fontSize="small" />
+                                </SectionIcon>
+                                <SectionTitle>Договоры поручителя</SectionTitle>
+                              </SectionHeader>
+                              {!getGuarantorClientId(creditData) ? (
+                                <EmptyState>
+                                  <SearchOffOutlinedIcon
+                                    style={{ fontSize: 40, color: "#cbd5e0" }}
+                                  />
+                                  <EmptyStateText>
+                                    Поручитель не является клиентом — связанных
+                                    договоров нет
+                                  </EmptyStateText>
+                                </EmptyState>
+                              ) : isLoadingRelated ? (
+                                <LoadingText>Загрузка...</LoadingText>
+                              ) : guarantorCredits &&
+                                guarantorCredits.length > 0 ? (
+                                <RelatedCreditsList>
+                                  {guarantorCredits.map((c) => (
+                                    <RelatedCreditCard
+                                      key={`g-${c.id}`}
+                                      $status={c.status}
+                                    >
+                                      <RelatedCardLeft>
+                                        <RelatedCardIcon>
                                           <DescriptionOutlinedIcon fontSize="small" />
-                                        </SectionIcon>
-                                        <SectionTitle>Договоры поручителя</SectionTitle>
-                                      </SectionHeader>
-                                      {isLoadingRelated ? (
-                                        <LoadingText>Загрузка...</LoadingText>
-                                      ) : related && related.length > 0 ? (
-                                        <RelatedCreditsList>
-                                          {related.map((c) => (
-                                            <RelatedCreditCard
-                                              key={`g-${key}-${c.id}`}
-                                              $status={c.status}
-                                            >
-                                              <RelatedCardLeft>
-                                                <RelatedCardIcon>
-                                                  <DescriptionOutlinedIcon fontSize="small" />
-                                                </RelatedCardIcon>
-                                                <div>
-                                                  <RelatedCreditTitle>
-                                                    Договор №{c.id}
-                                                  </RelatedCreditTitle>
-                                                  <RelatedCreditDate>
-                                                    <CalendarMonthOutlinedIcon
-                                                      style={{ fontSize: 14 }}
-                                                    />
-                                                    {formatDate(c.creditDate)}
-                                                  </RelatedCreditDate>
-                                                </div>
-                                              </RelatedCardLeft>
-                                              <RelatedCreditStatus $status={c.status}>
-                                                {c.status}
-                                              </RelatedCreditStatus>
-                                            </RelatedCreditCard>
-                                          ))}
-                                        </RelatedCreditsList>
-                                      ) : (
-                                        <EmptyStateText>
-                                          Других договоров у поручителя нет
-                                        </EmptyStateText>
-                                      )}
-                                    </>
-                                  )}
-                                </GuarantorBlock>
-                              );
-                            })
+                                        </RelatedCardIcon>
+                                        <div>
+                                          <RelatedCreditTitle>
+                                            Договор №{c.id}
+                                          </RelatedCreditTitle>
+                                          <RelatedCreditDate>
+                                            <CalendarMonthOutlinedIcon
+                                              style={{ fontSize: 14 }}
+                                            />
+                                            {formatDate(c.creditDate)}
+                                          </RelatedCreditDate>
+                                        </div>
+                                      </RelatedCardLeft>
+                                      <RelatedCreditStatus $status={c.status}>
+                                        {c.status}
+                                      </RelatedCreditStatus>
+                                    </RelatedCreditCard>
+                                  ))}
+                                </RelatedCreditsList>
+                              ) : (
+                                <EmptyState>
+                                  <SearchOffOutlinedIcon
+                                    style={{ fontSize: 40, color: "#cbd5e0" }}
+                                  />
+                                  <EmptyStateText>
+                                    Других договоров у поручителя нет
+                                  </EmptyStateText>
+                                </EmptyState>
+                              )}
+                            </>
                           ) : (
                             <EmptyState>
                               <SearchOffOutlinedIcon
@@ -2517,25 +2448,6 @@ const ViewCreditModal: React.FC<ViewCreditModalProps> = ({
           </ModalWrapper>
         </ModalContent>
       </ModalOverlay>
-
-      <PrintOptionModal
-        isOpen={isPrintOptionModalOpen}
-        onClose={() => setIsPrintOptionModalOpen(false)}
-        onSelect={handlePrintOptionSelect}
-        selectedCredit={creditData}
-        printOptions={[
-          {
-            key: "standard-page",
-            label: "Стандартная печатная форма",
-            enabled: true,
-          },
-          ...contractTemplates.map((template) => ({
-            key: `custom-template:${template.id}`,
-            label: template.name,
-            enabled: true,
-          })),
-        ]}
-      />
 
       <NewPaymentModal
         isOpen={isPaymentModalOpen}
@@ -3262,18 +3174,6 @@ const PersonCard = styled.div`
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   align-items: flex-start;
-`;
-
-/** Карточка одного поручителя; следующие отделены линией. */
-const GuarantorBlock = styled.div<{ $first: boolean }>`
-  ${({ $first }) =>
-    $first
-      ? ""
-      : `
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #edf2f7;
-  `}
 `;
 
 const Avatar = styled.div<{ $variant?: "client" | "guarantor" }>`

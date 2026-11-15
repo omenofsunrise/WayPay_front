@@ -165,27 +165,6 @@ const useClient = () => {
     }
   }
 
-  const setClientBlacklist = useCallback(async (id: number, blacklist: boolean): Promise<void> => {
-    setError(null);
-    try {
-      if (blacklist) {
-        await clientService.addToBlacklist(id);
-      } else {
-        await clientService.removeFromBlacklist(id);
-      }
-
-      setData(prev => prev ? {
-        ...prev,
-        items: prev.items.map(item => item.id === id ? { ...item, blacklist } : item),
-      } : prev);
-      setCurrentClient(prev => prev?.id === id ? { ...prev, blacklist } : prev);
-    } catch (err) {
-      const message = serverMessage(err);
-      setError(message);
-      throw new Error(message);
-    }
-  }, []);
-
   const checkClientExists = useCallback(async (phone: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -358,7 +337,6 @@ const useClient = () => {
     createClient,
     updateClient,
     deleteClient,
-    setClientBlacklist,
     getClientById,
     updateClientDoc,
     updateClientDocIssueDate,

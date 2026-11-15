@@ -1,21 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { CircleAlert } from "lucide-react";
 import BaseModal, { type ModalMode } from "../BASE/modalCRUBase";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
 import Avatar from "../../Profile/Avatar";
 import styled from "styled-components";
+import { BASE_URL } from "../../../api/client";
 import { generateAvatar, getInitials } from "../../../utils/avatarUtils";
-import { getFileUrl } from "../../../utils/fileUrl";
 import { useEmployee } from "../../../api/hooks/useEmployee";
 import PhoneModalInput from "../../ui/fields/PhoneModalInput";
 import type { CustomRole } from "../../../api/types/employee";
-import { extractErrorMessage } from "../../../api/utils/errorMessage";
 
 const EMPLOYEE_PHONE_EXISTS_MESSAGE =
   "Сотрудник с таким номером телефона уже есть";
-const PHONE_FORMAT_MESSAGE = "Введите телефон в формате 8 (XXX) XXX-XX-XX";
-const phoneRegex = /^8\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$/;
 
 type EmployeeModalProps = {
   mode: ModalMode;
@@ -91,33 +88,30 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   const [validationErrors, setValidationErrors] = useState({
     fullName: false,
     phone: false,
-    secondPhone: false,
   });
 
   const [errorMessages, setErrorMessages] = useState({
     fullName: "",
     phone: "",
-    secondPhone: "",
   });
 
   const [touchedFields, setTouchedFields] = useState({
     fullName: false,
     phone: false,
-    secondPhone: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const [avatarSrc, setAvatarSrc] = useState<string>(
     initialData.avatar
-      ? getFileUrl(initialData.avatar, Date.now()) || ""
+      ? `${BASE_URL}${initialData.avatar}?${Date.now()}`
       : generateAvatar(getInitials(initialData.fullName || ""), 100)
   );
 
   const validatePhone = async (phone: string) => {
+    const phoneRegex = /^8\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$/;
+
     if (!phoneRegex.test(phone.trim())) {
-      return PHONE_FORMAT_MESSAGE;
+      return "Введите телефон в формате 8 (XXX) XXX-XX-XX";
     }
 
     if (phone.trim().length === 0) {
@@ -140,47 +134,17 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     return "";
   };
 
-  const validateSecondPhone = async (secondPhone: string) => {
-    const normalizedValue = secondPhone.trim();
-    if (!normalizedValue) return "";
-    if (!phoneRegex.test(normalizedValue)) return PHONE_FORMAT_MESSAGE;
-    if (normalizedValue === formData.phone.trim())
-      return "Второй номер совпадает с основным";
-
-    const initialSecondPhone = initialData.secondPhone?.trim() || "";
-    if (mode === "edit" && normalizedValue === initialSecondPhone) return "";
-
-    try {
-      if (await checkEmployeeExists(normalizedValue))
-        return EMPLOYEE_PHONE_EXISTS_MESSAGE;
-    } catch (error) {
-      console.error("Error checking second phone:", error);
-      return "Ошибка проверки номера телефона";
-    }
-
-    return "";
-  };
-
   const handlePhotoChange = async (file: File) => {
     if (!initialData.id) return;
-
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      setSubmitError("Выберите изображение в формате JPG или PNG");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setSubmitError("Размер изображения не должен превышать 5 МБ");
-      return;
-    }
 
     try {
       setIsSubmitting(true);
       const updatedEmployee = await updateEmployeePhoto(initialData.id, file);
 
       if (updatedEmployee.photoPath) {
-        const newAvatarUrl =
-          getFileUrl(updatedEmployee.photoPath, Date.now()) || "";
+        const newAvatarUrl = `${BASE_URL}${
+          updatedEmployee.photoPath
+        }?${Date.now()}`;
         setAvatarSrc(newAvatarUrl);
         await refresh();
       }
@@ -189,12 +153,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) void handlePhotoChange(file);
-    e.target.value = "";
   };
 
   useEffect(() => {
@@ -210,22 +168,18 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     setValidationErrors({
       fullName: false,
       phone: false,
-      secondPhone: false,
     });
     setErrorMessages({
       fullName: "",
       phone: "",
-      secondPhone: "",
     });
     setTouchedFields({
       fullName: false,
       phone: false,
-      secondPhone: false,
     });
-    setSubmitError("");
 
     if (initialData.avatar) {
-      setAvatarSrc(getFileUrl(initialData.avatar, Date.now()) || "");
+      setAvatarSrc(`${BASE_URL}${initialData.avatar}?${Date.now()}`);
     } else if (initialData.fullName) {
       setAvatarSrc(
         generateAvatar(getInitials(initialData.fullName || ""), 100)
@@ -234,35 +188,12 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  useEffect(() => {
     if (mode === "view") return;
-
-    // Проверка номера ходит на сервер, и ответы приходят не по порядку.
-    // Результат устаревшей проверки (форму уже изменили) отбрасываем,
-    // иначе при быстром наборе оставалась ошибка от недонабранного номера.
-    let isStale = false;
 
     const validateForm = async () => {
       const newErrorMessages = {
         fullName: "",
         phone: "",
-        secondPhone: "",
       };
 
       if (formData.fullName.trim().split(/\s+/).length < 2) {
@@ -272,27 +203,18 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       }
 
       newErrorMessages.phone = await validatePhone(formData.phone);
-      newErrorMessages.secondPhone = await validateSecondPhone(
-        formData.secondPhone
-      );
 
-      if (isStale) return;
       setErrorMessages(newErrorMessages);
 
       const errors = {
         fullName: !!newErrorMessages.fullName,
         phone: !!newErrorMessages.phone,
-        secondPhone: !!newErrorMessages.secondPhone,
       };
 
       setValidationErrors(errors);
     };
 
     validateForm();
-
-    return () => {
-      isStale = true;
-    };
   }, [formData, mode]);
 
   const isSaveDisabled = () => {
@@ -328,7 +250,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     setTouchedFields({
       fullName: true,
       phone: true,
-      secondPhone: true,
     });
 
     const isValid = !Object.values(validationErrors).some(Boolean);
@@ -354,9 +275,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       });
     } catch (error) {
       console.error("Error submitting form:", error);
-      setSubmitError(
-        extractErrorMessage(error, "Не удалось сохранить данные сотрудника")
-      );
     } finally {
       setIsSubmitting(false);
     }
@@ -366,7 +284,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setTouchedFields((prev) => ({ ...prev, [name]: true }));
-    setSubmitError("");
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -387,6 +304,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
       case "view":
         return "Просмотр сотрудника";
       default:
+        const _exhaustiveCheck: never = mode;
         return "Сотрудник";
     }
   };
@@ -395,170 +313,109 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
   return (
     <BaseModal
-      isOpen={isOpen}
       title={getTitle()}
-      subtitle={
-        mode === "create"
-          ? "Заполните личные данные и рабочие настройки"
-          : mode === "edit"
-            ? "Обновите личные данные и рабочие настройки"
-            : "Личные данные и рабочие настройки сотрудника"
-      }
-      appearance="compact-form"
-      width="900px"
-      maxHeight="calc(100vh - 32px)"
       onClose={onClose}
       onCancel={onClose}
       onSave={handleSubmit}
-      mode={mode}
-      cancelButtonText={mode === "view" ? "Закрыть" : "Отмена"}
-      saveButtonText={mode === "create" ? "Добавить сотрудника" : "Сохранить изменения"}
-      isSaveDisabled={isSaveDisabled()}
+      isSaveDisabled={isSaveDisabled() || isSubmitting}
       isSubmitting={isSubmitting}
-    >
-          <ScrollableContent>
-            <PhotoSection>
-              <Avatar
-                src={avatarSrc}
-                size={144}
-                name={formData.fullName}
-                disabled
-              />
-              <PhotoActions>
-                {mode !== "view" && (
-                  <ChangePhotoButton
-                    type="button"
-                    onClick={() => photoInputRef.current?.click()}
-                    disabled={mode !== "edit" || isSubmitting}
-                  >
-                    Изменить фото
-                  </ChangePhotoButton>
-                )}
-                <PhotoHint>JPG или PNG, до 5 МБ</PhotoHint>
-                <HiddenPhotoInput
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  onChange={handlePhotoInputChange}
+      children={<div></div>}
+      width={"750px"}
+      mode={mode}
+      customLayout={
+        <ModalLayout>
+          <AvatarSection>
+            <Avatar
+              src={avatarSrc}
+              size={220}
+              name={formData.fullName}
+              disabled={mode === "view"}
+              showCameraIndicator={mode === "edit"}
+              onPhotoChange={mode === "edit" ? handlePhotoChange : undefined}
+            />
+          </AvatarSection>
+
+          <FormSection>
+            <Title>ФИО</Title>
+            <CustomInput
+              name="fullName"
+              inputType="fullname"
+              placeholder="ФИО сотрудника"
+              value={formData.fullName}
+              onChange={handleInputChange}
+              disabled={mode === "view"}
+              hasError={touchedFields.fullName && validationErrors.fullName}
+              errorMessage={
+                touchedFields.fullName ? errorMessages.fullName : undefined
+              }
+            />
+
+            <Title>Адрес</Title>
+            <CustomInput
+              name="address"
+              inputType="text"
+              placeholder="Адрес"
+              value={formData.address}
+              onChange={handleInputChange}
+              disabled={mode === "view"}
+            />
+
+            <RowContainer>
+              <FieldContainer>
+                <Title>Роль</Title>
+                <CustomSelect
+                  options={roleOptions}
+                  disabled={mode === "view" || mode === "edit"}
+                  placeholder="Выберите роль"
+                  value={formData.role}
+                  onChange={handleSelectChange}
+                  dropdownInPortal
                 />
-              </PhotoActions>
-            </PhotoSection>
+              </FieldContainer>
 
-            <Divider />
-
-            <FormField>
-              <FieldLabel>ФИО</FieldLabel>
-              <FieldControl>
-                <CustomInput
-                  name="fullName"
-                  inputType="fullname"
-                  placeholder="ФИО сотрудника"
-                  value={formData.fullName}
+              <FieldContainer>
+                <Title>Телефон</Title>
+                <PhoneModalInput
+                  name="phone"
+                  placeholder="8 (XXX) XXX-XX-XX"
+                  value={formData.phone}
                   onChange={handleInputChange}
-                  disabled={mode === "view"}
-                  hasError={touchedFields.fullName && validationErrors.fullName}
+                  disabled={mode === "view" || mode === "edit"}
+                  hasError={touchedFields.phone && validationErrors.phone}
                   errorMessage={
-                    touchedFields.fullName ? errorMessages.fullName : undefined
+                    touchedFields.phone && !showDuplicatePhoneWarning
+                      ? errorMessages.phone
+                      : undefined
                   }
                 />
-              </FieldControl>
-            </FormField>
+              </FieldContainer>
 
-            <FormField>
-              <FieldLabel>Адрес</FieldLabel>
-              <FieldControl>
-                <CustomInput
-                  name="address"
-                  inputType="text"
-                  placeholder="Адрес"
-                  value={formData.address}
+              {/* Второй номер необязателен и, в отличие от основного,
+                  меняется и после создания: им добавляют вход со второй сим-карты. */}
+              <FieldContainer>
+                <Title>Второй номер (необязательно)</Title>
+                <PhoneModalInput
+                  name="secondPhone"
+                  placeholder="8 (XXX) XXX-XX-XX"
+                  value={formData.secondPhone}
                   onChange={handleInputChange}
                   disabled={mode === "view"}
                 />
-              </FieldControl>
-            </FormField>
+              </FieldContainer>
 
-            <SectionTitle>Контакты</SectionTitle>
-            <FieldsGrid>
-              <FormField>
-                <FieldLabel>Телефон</FieldLabel>
-                <FieldControl>
-                  <PhoneModalInput
-                    name="phone"
-                    placeholder="8 (XXX) XXX-XX-XX"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    disabled={mode === "view" || mode === "edit"}
-                    hasError={touchedFields.phone && validationErrors.phone}
-                    errorMessage={
-                      touchedFields.phone && !showDuplicatePhoneWarning
-                        ? errorMessages.phone
-                        : undefined
-                    }
-                  />
-                </FieldControl>
-              </FormField>
-
-              {/* Дополнительный номер можно менять и после создания. */}
-              <FormField>
-                <FieldLabel>Дополнительный телефон</FieldLabel>
-                <FieldControl>
-                  <PhoneModalInput
-                    name="secondPhone"
-                    placeholder="8 (XXX) XXX-XX-XX"
-                    value={formData.secondPhone}
-                    onChange={handleInputChange}
-                    disabled={mode === "view"}
-                    hasError={
-                      touchedFields.secondPhone && validationErrors.secondPhone
-                    }
-                    errorMessage={
-                      touchedFields.secondPhone
-                        ? errorMessages.secondPhone
-                        : undefined
-                    }
-                  />
-                </FieldControl>
-                {!validationErrors.secondPhone && (
-                  <FieldHint>Необязательно</FieldHint>
-                )}
-              </FormField>
-            </FieldsGrid>
-
-            <SectionTitle>Рабочие настройки</SectionTitle>
-            <FieldsGrid>
-              <FormField>
-                <FieldLabel>Роль</FieldLabel>
-                <FieldControl>
-                  <CustomSelect
-                    options={roleOptions}
-                    disabled={mode === "view" || mode === "edit"}
-                    placeholder="Выберите роль"
-                    value={formData.role}
-                    onChange={handleSelectChange}
-                    dropdownInPortal
-                  />
-                </FieldControl>
-              </FormField>
-
-              <FormField>
-                <FieldLabel>Минимальная надбавка</FieldLabel>
-                <PercentField>
-                  <FieldControl>
-                    <CustomInput
-                      name="minSurcharge"
-                      inputType="number"
-                      placeholder="Минимальная надбавка"
-                      value={formData.minSurcharge.toString()}
-                      onChange={handleNumberChange}
-                      disabled={mode === "view" || mode === "edit"}
-                      min={0}
-                    />
-                  </FieldControl>
-                  <PercentSuffix>%</PercentSuffix>
-                </PercentField>
-              </FormField>
-            </FieldsGrid>
+              <FieldContainer>
+                <Title>Мин. надбавка%</Title>
+                <CustomInput
+                  name="minSurcharge"
+                  inputType="number"
+                  placeholder="Минимальная надбавка"
+                  value={formData.minSurcharge.toString()}
+                  onChange={handleNumberChange}
+                  disabled={mode === "view" || mode === "edit"}
+                  min={0}
+                />
+              </FieldContainer>
+            </RowContainer>
 
             {showDuplicatePhoneWarning && (
               <PhoneWarning role="alert" aria-live="polite">
@@ -574,341 +431,52 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 </WarningContent>
               </PhoneWarning>
             )}
-
-            {submitError && (
-              <SubmitError role="alert" aria-live="polite">
-                {submitError}
-              </SubmitError>
-            )}
-          </ScrollableContent>
-    </BaseModal>
+          </FormSection>
+        </ModalLayout>
+      }
+    />
   );
 };
 
-const ScrollableContent = styled.div`
-  min-height: 0;
-  overflow: hidden;
-  padding: 8px 42px 24px;
-
-  @media (max-width: 700px) {
-    padding: 6px 24px 20px;
-  }
-
-  @media (max-height: 1000px) {
-    padding: 0 36px 10px;
-  }
-
-  @media (max-height: 740px) {
-    padding: 0 28px 4px;
-  }
-`;
-
-const PhotoSection = styled.section`
+const ModalLayout = styled.div`
   display: flex;
-  align-items: center;
-  gap: 30px;
-  min-height: 164px;
-
-  @media (max-height: 1000px) {
-    min-height: 112px;
-
-    > div:first-child {
-      width: 104px;
-      height: 104px;
-      flex: 0 0 104px;
-    }
-  }
-
-  @media (max-height: 740px) {
-    min-height: 78px;
-    gap: 18px;
-
-    > div:first-child {
-      width: 72px;
-      height: 72px;
-      flex: 0 0 72px;
-    }
-  }
-
-  @media (max-width: 520px) {
-    align-items: flex-start;
-    gap: 20px;
-
-    > div:first-child {
-      width: 112px;
-      height: 112px;
-      flex: 0 0 112px;
-    }
-  }
-
-  @media (max-width: 520px) and (max-height: 740px) {
-    gap: 12px;
-
-    > div:first-child {
-      width: 72px;
-      height: 72px;
-      flex: 0 0 72px;
-    }
-  }
-`;
-
-const PhotoActions = styled.div`
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 11px;
-
-  @media (max-height: 1000px) {
-    gap: 6px;
-  }
-
-  @media (max-height: 740px) {
-    gap: 2px;
-  }
-`;
-
-const ChangePhotoButton = styled.button`
-  min-width: 184px;
-  min-height: 50px;
-  padding: 0 24px;
-  border: 1.5px solid #008b98;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #007783;
-  font-size: 17px;
-  font-weight: 500;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: #f0fbfc;
-  }
-
-  &:disabled {
-    border-color: #cbd5dc;
-    color: #98a4b2;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 520px) {
-    min-width: 0;
-    min-height: 44px;
-    padding: 0 16px;
-    font-size: 15px;
-  }
-
-  @media (max-height: 1000px) {
-    min-height: 42px;
-    padding: 0 20px;
-    font-size: 15px;
-  }
-
-  @media (max-height: 740px) {
-    min-height: 32px;
-    padding: 0 14px;
-    border-radius: 7px;
-    font-size: 13px;
-  }
-`;
-
-const PhotoHint = styled.span`
-  color: #718096;
-  font-size: 15px;
-  line-height: 1.4;
-
-  @media (max-height: 1000px) {
-    font-size: 13px;
-  }
-
-  @media (max-height: 740px) {
-    font-size: 11px;
-  }
-`;
-
-const HiddenPhotoInput = styled.input`
-  display: none;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  margin: 14px 0 24px;
-  background: #dbe2e8;
-
-  @media (max-height: 1000px) {
-    margin: 8px 0 14px;
-  }
-
-  @media (max-height: 740px) {
-    margin: 3px 0 6px;
-  }
-`;
-
-const FormField = styled.div`
-  min-width: 0;
-  margin-bottom: 22px;
-
-  @media (max-height: 1000px) {
-    margin-bottom: 12px;
-  }
-
-  @media (max-height: 740px) {
-    margin-bottom: 5px;
-  }
-`;
-
-const FieldLabel = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  color: #111827;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 1.35;
-
-  @media (max-height: 1000px) {
-    margin-bottom: 5px;
-    font-size: 14px;
-  }
-
-  @media (max-height: 740px) {
-    margin-bottom: 2px;
-    font-size: 12px;
-  }
-`;
-
-const FieldControl = styled.div`
+  gap: 20px;
   width: 100%;
-
-  > div,
-  > div > div {
-    width: 100%;
-    max-width: none;
-  }
-
-  input,
-  div[tabindex] {
-    width: 100%;
-    max-width: none;
-    min-height: 54px;
-    padding: 0 18px;
-    border-color: #bac6d3;
-    border-radius: 10px;
-    font-size: 17px;
-    line-height: 1.35;
-    box-sizing: border-box;
-  }
-
-  input::placeholder {
-    color: #9aa7b7;
-  }
-
-  @media (max-height: 1000px) {
-    input,
-    div[tabindex] {
-      min-height: 44px;
-      font-size: 15px;
-    }
-  }
-
-  @media (max-height: 740px) {
-    input,
-    div[tabindex] {
-      min-height: 34px;
-      padding: 0 12px;
-      border-radius: 7px;
-      font-size: 13px;
-    }
-  }
 `;
 
-const SectionTitle = styled.h3`
-  margin: 5px 0 13px;
-  color: #0d1320;
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1.35;
-
-  @media (max-height: 1000px) {
-    margin: 2px 0 8px;
-    font-size: 18px;
-  }
-
-  @media (max-height: 740px) {
-    margin: 0 0 3px;
-    font-size: 15px;
-  }
+const AvatarSection = styled.div`
+  flex-shrink: 0;
+  padding: 40px 0;
 `;
 
-const FieldsGrid = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 28px;
-
-  @media (max-height: 1000px) {
-    gap: 22px;
-  }
-
-  @media (max-height: 740px) {
-    gap: 14px;
-  }
-
-  @media (max-width: 760px) {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  @media (max-width: 760px) and (max-height: 740px) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
-  }
+const FormSection = styled.div`
+  flex: 1;
+  min-width: 0;
+  padding: 20px 20px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
-const FieldHint = styled.span`
-  display: block;
-  margin-top: 7px;
-  color: #7a8799;
+const Title = styled.h3`
+  color: black;
+  text-align: left;
+  margin: 0;
+  padding: 0;
+  margin-top: 15px;
   font-size: 14px;
-
-  @media (max-height: 1000px) {
-    margin-top: 4px;
-    font-size: 12px;
-  }
-
-  @media (max-height: 740px) {
-    margin-top: 2px;
-    font-size: 10px;
-  }
+  font-weight: 400;
 `;
 
-const PercentField = styled.div`
-  position: relative;
-
-  input {
-    padding-right: 48px;
-  }
+const RowContainer = styled.div`
+  display: flex;
+  gap: 16px;
+  width: 100%;
 `;
 
-const PercentSuffix = styled.span`
-  position: absolute;
-  top: 50%;
-  right: 19px;
-  color: #465568;
-  font-size: 17px;
-  transform: translateY(-50%);
-  pointer-events: none;
-
-  @media (max-height: 740px) {
-    right: 13px;
-    font-size: 13px;
-  }
-`;
-
-const SubmitError = styled.div`
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid #fca5a5;
-  border-radius: 8px;
-  background: #fef2f2;
-  color: #991b1b;
-  font-size: 13px;
+const FieldContainer = styled.div`
+  flex: 1;
+  min-width: 0;
 `;
 
 const PhoneWarning = styled.div`

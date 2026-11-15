@@ -388,16 +388,6 @@ class EmployeeService {
     }
   }
 
-  /** Отключить пин-код. Текущий пин нужен, если он задан в этой сессии. */
-  static async disablePin(pinCode?: string): Promise<void> {
-    await apiClient.post("/Auth/pin/disable", { pinCode: pinCode ?? null });
-  }
-
-  /** Снова включить пин-код; задать его попросят после перезагрузки. */
-  static async enablePin(): Promise<void> {
-    await apiClient.post("/Auth/pin/enable");
-  }
-
   static async revokeAllSessions(): Promise<void> {
     try {
       await apiClient.post("/Auth/revoke-all-sessions");

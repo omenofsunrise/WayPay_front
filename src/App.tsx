@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AuthPage from "./pages/AuthPage";
 import CreditPage from "./pages/CreditPage";
 import MainLayout from "./components/Layout/MainLayout/MainLayout";
@@ -10,10 +10,13 @@ import ProductPage from "./pages/ProductPage";
 import { authStorage } from "./api/utils/auth-storage";
 import QueuePage from "./pages/QueuePage";
 import ClientPage from "./pages/ClientPage";
+import BlacklistPage from "./pages/BlacklistPage";
+import InvestorPage from "./pages/InvestorPage";
 import NewCreditPage from "./pages/NewCreditPage";
 import SchedulePage from "./pages/Schedule/SchedulePage";
 import CreditControlPage from "./pages/CreditControlPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
+import InvestorReportPage from "./pages/InvestorReportPage";
 import InvestorsV2Page from "./pages/InvestorsV2Page";
 import BudgetPage from "./pages/FinancePage/BudgetPage";
 import { AuthProvider, useAuth } from "./сontext/AuthContext";
@@ -34,7 +37,9 @@ import PinCodeModal from "./components/modal/PinCodeModal";
 import LicenseOutPage from "./pages/LicenseOutPage";
 import AboutPage from "./pages/AboutPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import InvestorsPoolPage from "./pages/InvestorsPoolPage";
 import { DesktopOnlyContent } from "./components/DesktopOnly";
+import MobileAppsPage from "./pages/MobileAppsPage";
 import CreditApplicationPage from "./pages/CreditApplicationPage";
 import PublicClientPage from "./pages/PublicClientPage";
 import CreditPrintPage from "./pages/CreditPrintPage";
@@ -63,9 +68,6 @@ import BotManagementPage from "./pages/SettingsPage.tsx/BotManagementPage";
 import WhatsAppSendersPage from "./pages/SettingsPage.tsx/WhatsAppSendersPage";
 import ReceptionPage from "./pages/ReceptionPage";
 import PaymentPendingPage from "./pages/PaymentPendingPage";
-import InvestorPage from "./pages/InvestorPage";
-import InvestorsPoolPage from "./pages/InvestorsPoolPage";
-const CalcPage = lazy(() => import("./pages/CalcPage"));
 
 const INACTIVITY_TIMEOUT = 13 * 60 * 1000;
 const FULL_RELOAD_AFTER_HIDDEN = 60 * 60 * 1000;
@@ -213,37 +215,6 @@ function App() {
     };
   }, [updateActivity]);
 
-  // Фиксируем присутствие сотрудника и реальные действия в системе.
-  // Heartbeat нужен, чтобы отличать открытый, но давно заброшенный экран.
-  useEffect(() => {
-    if (!isAuthenticated || !authInfo || authInfo.type !== "employee") return;
-
-    let lastInteractionSent = 0;
-    const sendActivity = (eventType: string) => {
-      const now = Date.now();
-      if (eventType !== "heartbeat" && now - lastInteractionSent < 15_000) {
-        return;
-      }
-      if (eventType !== "heartbeat") lastInteractionSent = now;
-      void apiClient.post("/UserActivity/ping", {
-        eventType,
-        path: window.location.pathname,
-      });
-    };
-
-    sendActivity("session");
-    const heartbeat = window.setInterval(() => sendActivity("heartbeat"), 60_000);
-    const handleInteraction = () => sendActivity("interaction");
-    window.addEventListener("click", handleInteraction, { passive: true });
-    window.addEventListener("keydown", handleInteraction, { passive: true });
-
-    return () => {
-      window.clearInterval(heartbeat);
-      window.removeEventListener("click", handleInteraction);
-      window.removeEventListener("keydown", handleInteraction);
-    };
-  }, [isAuthenticated, authInfo]);
-
   useEffect(() => {
     const checkInactivity = () => {
       if (!isAuthenticated || !authInfo?.hasPin || showPinModal) return;
@@ -303,7 +274,7 @@ function App() {
       sessionStorage.removeItem("lastActivity");
       if (authInfo?.hasPin && !showPinModal) {
         setShowPinModal(true);
-      } else if (authInfo && !authInfo.hasPin && !authInfo.pinDisabled) {
+      } else if (authInfo && !authInfo.hasPin) {
         window.location.reload();
       }
     };
@@ -363,11 +334,7 @@ function App() {
               ) {
                 needsFullReloadRef.current = true;
               }
-              if (
-                !addingAccount &&
-                response.data.hasPin &&
-                !response.data.pinDisabled
-              ) {
+              if (!addingAccount) {
                 setShowPinModal(true);
               }
             }
@@ -421,7 +388,7 @@ function App() {
     return <DesktopOnlyContent />;
   }
 
-  if (isAuthenticated && authInfo?.hasPin === false && !authInfo.pinDisabled) {
+  if (isAuthenticated && authInfo?.hasPin === false) {
     return (
       <PinCodeModal
         isOpen={true}
@@ -574,7 +541,11 @@ function App() {
 
                 <Route
                   path="blacklist"
-                  element={<Navigate to="/clients" replace />}
+                  element={
+                    <MainLayout>
+                      <BlacklistPage />
+                    </MainLayout>
+                  }
                 />
 
                 <Route
@@ -590,14 +561,18 @@ function App() {
                   path="investors"
                   element={
                     <MainLayout>
-                      <InvestorsV2Page />
+                      <InvestorsRoute />
                     </MainLayout>
                   }
                 />
 
                 <Route
                   path="investors-v2"
-                  element={<Navigate to="/investors" replace />}
+                  element={
+                    <MainLayout>
+                      <InvestorsV2Route />
+                    </MainLayout>
+                  }
                 />
 
                 <Route
@@ -671,10 +646,16 @@ function App() {
                   }
                 />
 
-                <Route
-                  path="investors-report"
-                  element={<Navigate to="/investors" replace />}
-                />
+                {!authInfo?.employee?.poolV2 && (
+                  <Route
+                    path="investors-report"
+                    element={
+                      <MainLayout>
+                        <InvestorReportPage />
+                      </MainLayout>
+                    }
+                  />
+                )}
 
                 <Route
                   path="/whatsapp/channel/:channelId/bots"
@@ -696,7 +677,11 @@ function App() {
 
                 <Route
                   path="investors-pool"
-                  element={<Navigate to="/investors?tab=pools" replace />}
+                  element={
+                    <MainLayout>
+                      <InvestorsPoolRoute />
+                    </MainLayout>
+                  }
                 />
 
                 <Route
@@ -704,17 +689,6 @@ function App() {
                   element={
                     <MainLayout>
                       <FinancePage />
-                    </MainLayout>
-                  }
-                />
-
-                <Route
-                  path="calc"
-                  element={
-                    <MainLayout>
-                      <Suspense fallback={<AppLoader />}>
-                        <CalcPage />
-                      </Suspense>
                     </MainLayout>
                   }
                 />
@@ -819,6 +793,15 @@ function App() {
                   element={
                     <MainLayout>
                       <PrivacyPolicyPage />
+                    </MainLayout>
+                  }
+                />
+
+                <Route
+                  path="mobile-apps"
+                  element={
+                    <MainLayout>
+                      <MobileAppsPage />
                     </MainLayout>
                   }
                 />

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import BaseModal from './BASE/modalCRUBase';
 
 interface AuthCallModalProps {
     isOpen: boolean;
@@ -34,18 +33,9 @@ const AuthCallModal: React.FC<AuthCallModalProps> = ({
     };
 
     return (
-        <BaseModal
-            isOpen={isOpen}
-            title="Подтверждение авторизации"
-            subtitle="Подтвердите вход звонком с вашего номера"
-            appearance="compact-form"
-            width="500px"
-            onClose={onClose}
-            onCancel={onClose}
-            hideSaveButton
-            hideCanselButton
-        >
+        <ModalOverlay>
             <ModalContent>
+                <ModalTitle>Подтверждение авторизации</ModalTitle>
                 <ModalText>
                     Для завершения авторизации позвоните на номер:
                 </ModalText>
@@ -60,16 +50,38 @@ const AuthCallModal: React.FC<AuthCallModalProps> = ({
                 <ModalText>
                     После звонка система автоматически подтвердит вашу авторизацию.
                 </ModalText>
-                {isVerifying && <StatusText>Ожидаем подтверждение звонка…</StatusText>}
-                {error && <ErrorText>{error}</ErrorText>}
             </ModalContent>
-        </BaseModal>
+        </ModalOverlay>
     );
 };
 
+const ModalOverlay = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+`;
+
 const ModalContent = styled.div`
-    padding: 6px 34px 28px;
-    text-align: left;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+`;
+
+const ModalTitle = styled.h2`
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: #333;
 `;
 
 const ModalText = styled.p`
@@ -80,7 +92,7 @@ const ModalText = styled.p`
 const CallPhoneNumber = styled.div<{ $clickable?: boolean }>`
     font-size: 24px;
     font-weight: bold;
-    margin: 18px 0 28px;
+    margin: 20px 0;
     color: rgba(0, 125, 136, 1);
     position: relative;
     cursor: ${props => props.$clickable ? 'pointer' : 'default'};
@@ -108,15 +120,25 @@ const CopiedText = styled.span`
     white-space: nowrap;
 `;
 
-const StatusText = styled.div`
-    margin-top: 16px;
-    color: #07818a;
-    font-size: 14px;
-`;
-
 const ErrorText = styled.div`
     color: #e74c3c;
     margin: 10px 0;
+`;
+
+const ModalButton = styled.button`
+    background: rgba(0, 125, 136, 1);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.3s;
+    
+    &:hover {
+        background: rgba(0, 100, 120, 1);
+    }
 `;
 
 export default AuthCallModal;

@@ -2,7 +2,6 @@ import styled from "styled-components";
 import type { Credit } from "../../api/types/credit";
 import type { Investor } from "../../api/types/investor";
 import type { Payment } from "../../api/types/payment";
-import BaseModal from "./BASE/modalCRUBase";
 
 export interface PrintOption {
   key: string;
@@ -13,7 +12,7 @@ export interface PrintOption {
 export interface PrintOptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: string) => void;
+  onSelect: (option: 'sale' | 'saleSinglePage' | 'schedules' | 'guaranteeConsent' | 'paymentConfirmation' | 'investorContract') => void;
   selectedCredit?: Credit | null;
   selectedPayment?: Payment | null;
   selectedInvestor?: Investor | null;
@@ -65,21 +64,10 @@ const PrintOptionModal = ({
     return "Печать документа";
   };
 
-  if (!isOpen) return null;
-
   return (
-    <BaseModal
-      isOpen={isOpen}
-      title={getModalTitle()}
-      subtitle="Выберите документ для печати"
-      appearance="compact-form"
-      width="460px"
-      onClose={onClose}
-      onCancel={onClose}
-      hideSaveButton
-      hideCanselButton
-    >
-      <ModalContent>
+    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalTitle>{getModalTitle()}</ModalTitle>
         <PrintOptions>
           {options.map(option => (
             option.enabled !== false && (
@@ -94,13 +82,38 @@ const PrintOptionModal = ({
           ))}
         </PrintOptions>
       </ModalContent>
-    </BaseModal>
+    </ModalOverlay>
   );
 };
 
-const ModalContent = styled.div`
-  padding: 6px 34px 28px;
+const ModalOverlay = styled.div<{ isOpen: boolean }>`
+  display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
   color: black;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  color: black;
+`;
+
+const ModalTitle = styled.h3`
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
 `;
 
 const PrintOptions = styled.div`

@@ -593,18 +593,14 @@ const BotManagementPage: React.FC = () => {
         <RulesGrid>
           {localBots.map((rule) => {
             const isEventsBot = rule.botType === "Events";
-            const isCreatedCreditEvent =
-              isEventsBot && rule.event === "CreatedCredit";
             return (
               <RuleCard key={rule.id} $isActive={rule.isActive}>
                 <CardHeader>
                   <CardTitleRow>
                     <RuleName>{rule.name || "Без названия"}</RuleName>
-                    {BOT_TYPE_LABEL[rule.botType] && (
-                      <TypeBadge $kind={rule.botType}>
-                        {BOT_TYPE_LABEL[rule.botType]}
-                      </TypeBadge>
-                    )}
+                    <TypeBadge $kind={rule.botType}>
+                      {BOT_TYPE_LABEL[rule.botType]}
+                    </TypeBadge>
                     <StatusBadge $isActive={rule.isActive}>
                       {rule.isActive ? "Активно" : "Отключено"}
                     </StatusBadge>
@@ -649,9 +645,7 @@ const BotManagementPage: React.FC = () => {
 
                 <ResponseBlock onClick={() => handleEditResponse(rule)}>
                   <ResponseLabel>
-                    {isCreatedCreditEvent
-                      ? "Сообщение бота клиенту:"
-                      : "Ответ бота:"}
+                    Ответ бота:
                     <EditHint>нажмите для редактирования</EditHint>
                   </ResponseLabel>
                   <ResponseText>
@@ -659,14 +653,12 @@ const BotManagementPage: React.FC = () => {
                   </ResponseText>
                 </ResponseBlock>
 
-                {(!isEventsBot || isCreatedCreditEvent) && (
+                {!isEventsBot && (
                   <ResponseBlock
                     onClick={() => handleEditNoClientResponse(rule)}
                   >
                     <ResponseLabel>
-                      {isCreatedCreditEvent
-                        ? "Сообщение бота поручителю:"
-                        : "Ответ если клиента нет в базе:"}
+                      Ответ если клиента нет в базе:
                       <EditHint>нажмите для редактирования</EditHint>
                     </ResponseLabel>
                     <ResponseText>
@@ -795,63 +787,51 @@ const BotManagementPage: React.FC = () => {
       )}
 
       {/* Modal: конструктор ответа */}
-      {responseModal.isOpen && responseModal.rule && (() => {
-        // Поручитель = noClient-ответ у события CreatedCredit.
-        // Для поручителя доступен тот же набор переменных, что и для клиента.
-        const isGuarantorResponse =
-          responseModal.kind === "noClient" &&
-          responseModal.rule.botType === "Events" &&
-          responseModal.rule.event === "CreatedCredit";
-
-        return (
-          <BaseModal
-            title={
-              responseModal.kind === "noClient"
-                ? isGuarantorResponse
-                  ? `Сообщение бота поручителю — ${responseModal.rule.name}`
-                  : `Ответ если клиента нет — ${responseModal.rule.name}`
-                : `Конструктор ответа — ${responseModal.rule.name}`
-            }
-            onClose={() =>
-              !responseModal.saving &&
-              setResponseModal((prev) => ({ ...prev, isOpen: false }))
-            }
-            onCancel={() =>
-              setResponseModal((prev) => ({ ...prev, isOpen: false }))
-            }
-            onSave={handleSaveResponse}
-            isSubmitting={responseModal.saving}
-            saveButtonText="Сохранить ответ"
-            width="1100px"
-            maxHeight="92vh"
-          >
-            <ModalForm>
-              {responseModal.kind === "noClient" && !isGuarantorResponse && (
-                <NoClientHint>
-                  В этом ответе доступны только переменные группы «Глобальные — Компания»
-                </NoClientHint>
-              )}
-              <BotResponseConstructor
-                value={responseModal.response}
-                onChange={(next) =>
-                  setResponseModal((prev) => ({ ...prev, response: next }))
-                }
-                disabled={responseModal.saving}
-                mode={
-                  responseModal.kind === "noClient" && !isGuarantorResponse
-                    ? "companyOnly"
-                    : "default"
-                }
-                event={
-                  responseModal.rule.botType === "Events"
-                    ? responseModal.rule.event ?? null
-                    : null
-                }
-              />
-            </ModalForm>
-          </BaseModal>
-        );
-      })()}
+      {responseModal.isOpen && responseModal.rule && (
+        <BaseModal
+          title={
+            responseModal.kind === "noClient"
+              ? `Ответ если клиента нет — ${responseModal.rule.name}`
+              : `Конструктор ответа — ${responseModal.rule.name}`
+          }
+          onClose={() =>
+            !responseModal.saving &&
+            setResponseModal((prev) => ({ ...prev, isOpen: false }))
+          }
+          onCancel={() =>
+            setResponseModal((prev) => ({ ...prev, isOpen: false }))
+          }
+          onSave={handleSaveResponse}
+          isSubmitting={responseModal.saving}
+          saveButtonText="Сохранить ответ"
+          width="1100px"
+          maxHeight="92vh"
+        >
+          <ModalForm>
+            {responseModal.kind === "noClient" && (
+              <NoClientHint>
+                В этом ответе доступны только переменные группы «Глобальные —
+                Компания»
+              </NoClientHint>
+            )}
+            <BotResponseConstructor
+              value={responseModal.response}
+              onChange={(next) =>
+                setResponseModal((prev) => ({ ...prev, response: next }))
+              }
+              disabled={responseModal.saving}
+              mode={
+                responseModal.kind === "noClient" ? "companyOnly" : "default"
+              }
+              event={
+                responseModal.rule.botType === "Events"
+                  ? responseModal.rule.event ?? null
+                  : null
+              }
+            />
+          </ModalForm>
+        </BaseModal>
+      )}
 
       {/* Modal: ключевые слова */}
       {keywordModal.isOpen && keywordModal.rule && (
@@ -975,7 +955,7 @@ const BotManagementPage: React.FC = () => {
                     ...prev,
                     eventType: e.target.value as BotEventType,
                     eventDays: "",
-                    eventHours: "",
+                    eventHours: "",          // ← сбрасываем и часы
                   }))
                 }
                 options={EVENT_OPTIONS.map((opt) => ({
@@ -1238,7 +1218,6 @@ const KeywordsLabel = styled.div`
   font-weight: 500;
   color: #6b7280;
   margin-bottom: 10px;
-  text-align: left;
 `;
 
 const KeywordsList = styled.div`

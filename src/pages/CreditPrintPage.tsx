@@ -11,7 +11,6 @@ import type { Credit } from "../api/types/credit";
 import type { Client } from "../api/types/client";
 import type { Payment } from "../api/types/payment";
 import type { ScheduleDetails } from "../api/types/schedule";
-import { getCreditGuarantors, guarantorKey } from "../utils/creditGuarantors";
 
 const money = (value?: number) => formatMoney((value ?? 0).toString());
 
@@ -146,24 +145,35 @@ const CreditPrintPage = () => {
               </FieldsGrid>
             </Card>
 
-            {getCreditGuarantors(credit).map((g, index, all) => (
-              <Card key={guarantorKey(g)}>
+            {(credit.guarantorFullname || credit.guarantor?.fullName) && (
+              <Card>
                 <CardHeader>
-                  <CardTitle>
-                    {all.length > 1 ? `Поручитель ${index + 1}` : "Поручитель"}
-                  </CardTitle>
+                  <CardTitle>Поручитель</CardTitle>
                 </CardHeader>
                 <FieldsGrid>
-                  <Field label="ФИО" value={dash(g.fullname)} />
-                  <Field label="Телефон" value={dash(g.phone)} />
+                  <Field
+                    label="ФИО"
+                    value={dash(
+                      credit.guarantorFullname || credit.guarantor?.fullName
+                    )}
+                  />
+                  <Field
+                    label="Телефон"
+                    value={dash(credit.guarantorPhone || credit.guarantor?.phone)}
+                  />
                   <Field
                     label="Паспорт"
-                    value={dash(index === 0 ? credit.guarantor?.doc : undefined)}
+                    value={dash(credit.guarantor?.doc)}
                   />
-                  <Field label="Адрес" value={dash(g.address)} />
+                  <Field
+                    label="Адрес"
+                    value={dash(
+                      credit.guarantorAddress || credit.guarantor?.address
+                    )}
+                  />
                 </FieldsGrid>
               </Card>
-            ))}
+            )}
 
             <Card>
               <CardHeader>

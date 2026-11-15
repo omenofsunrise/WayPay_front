@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import styled from 'styled-components';
 import DarkCyanButton from "../components/ui/Buttons/DarkCyanButton";
 import ExportButton from "../components/ui/Buttons/ExportButton";
 import CustomInput from "../components/ui/fields/CustomInput";
 import Pagination from "../components/ui/fields/CustomPagination";
 import CustomTable, { type Column, type RowStyle, type TableAction } from "../components/ui/tables/CustomTable";
+import FilterField from "../components/ui/Layouts/FilterField";
 import PageLayout from "../components/ui/Layouts/PageLayout";
+import PaginationLayout from "../components/ui/Layouts/PaginationLayout";
+import TitleField from "../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import InvestorModal from '../components/modal/CrudInherited/InvestorModal';
@@ -28,17 +30,7 @@ import CustomCalendar from '../components/ui/fields/CustomCalendar';
 import { useResponsivePageSize } from '../utils/useResponsivePageSize';
 import InvestorCashPositionModal from '../components/modal/InvestorCashPositionModal';
 
-type InvestorPageProps = {
-    embedded?: boolean;
-    onOpenReport?: (investorId: number, action?: "payout") => void;
-    onOpenDeletedReport?: () => void;
-};
-
-const InvestorPage = ({
-    embedded = false,
-    onOpenReport,
-    onOpenDeletedReport,
-}: InvestorPageProps) => {
+const InvestorPage = () => {
     const [nameFilter, setNameFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [sortConfig, setSortConfig] = useState<{
@@ -48,7 +40,6 @@ const InvestorPage = ({
     const [isPageSizeReady, setIsPageSizeReady] = useState(false);
     const { authInfo, hasRole } = useAuth();
     const isPoolV2 = authInfo?.employee?.poolV2 ?? false;
-    const canEdit = hasRole('директор') || hasRole('суперадмин');
     // Временные ссылки включены не всем компаниям.
     const investorShareEnabled = authInfo?.employee?.investorShareEnabled ?? false;
     const { createShareLink } = useInvestorShare();
@@ -75,16 +66,16 @@ const InvestorPage = ({
     const pageSizeRef = useRef(responsivePageSize);
     const itemsPerPage = responsivePageSize;
         
-    const columnToApiSortMap: Record<number, string> = canEdit
-        ? {
-            0: 'id',
-            1: 'nickname',
-            2: 'phoneNumber',
-            3: 'investorPie',
-            4: 'investmentAmount',
-            5: 'balance',
-        }
-        : { 0: 'id', 1: 'nickname', 2: 'balance' };
+    const columnToApiSortMap: Record<number, string> = {
+        0: 'id',
+        1: 'nickname',
+        2: 'fullName',
+        3: 'phoneNumber',
+        4: 'investorPie',
+        5: 'investmentAmount',
+        6: 'balance',
+        7: 'isCompany'
+    };
     
     const { exportData, isExporting, exportProgress } = useExport<Investor>();
 
@@ -177,7 +168,7 @@ const InvestorPage = ({
         const params: InvestorParams = {
             page: currentPage,
             pageSize: itemsPerPage,
-            search: nameFilter.trim() || undefined
+            name: nameFilter || undefined
         };
 
         if (sortConfig.key !== null) {
@@ -198,6 +189,8 @@ const InvestorPage = ({
         setNameFilter(value);
         setCurrentPage(1);
     };
+
+    const canEdit = hasRole('директор') || hasRole('суперадмин');
 
     const handleSort = (columnIndex: number) => {
         if (!columnToApiSortMap[columnIndex]) return;
@@ -223,7 +216,7 @@ const InvestorPage = ({
                     const params: InvestorParams = {
                         page,
                         pageSize,
-                        search: nameFilter.trim() || undefined,
+                        name: nameFilter || undefined,
                         sortBy: sortConfig.key !== null ? columnToApiSortMap[sortConfig.key] : undefined,
                         sortDirection: sortConfig.direction
                     };
@@ -271,6 +264,12 @@ const InvestorPage = ({
         if (!canEdit || (isPoolV2 && investor.isRemoved)) return;
         
         setModalMode('edit');
+        setSelectedInvestor(investor);
+        setIsModalOpen(true);
+    };
+
+    const handleViewInvestor = (investor: Investor) => {
+        setModalMode('view');
         setSelectedInvestor(investor);
         setIsModalOpen(true);
     };
@@ -334,6 +333,17 @@ const InvestorPage = ({
         }
     };
 
+    const handleRowDoubleClick = (rowData: any[], rowIndex: number) => {
+        const investor = investorsData?.items.find(i => i.id === Number(rowData[0]));
+        if (investor) {
+            if (canEdit && !(isPoolV2 && investor.isRemoved)) {
+                handleEditInvestor(investor);
+            } else {
+                handleViewInvestor(investor);
+            }
+        }
+    };
+
     const handlePrintContract = async (option: string, investor: Investor) => {
         try {
             if (option === 'investorContract') {
@@ -360,44 +370,37 @@ const InvestorPage = ({
     const handleRowClick = (rowData: any[], rowIndex: number) => {
         const [id] = rowData;
         const investorId = Number(id);
-        setSelectedInvestorId(investorId);
+        setSelectedInvestorId(investorId === selectedInvestorId ? null : investorId);
         
         // Устанавливаем инвестора для печати при клике на строке
         const investor = investorsData?.items.find(i => i.id === investorId);
         if (investor) {
             setInvestorForPrint(investor);
-            onOpenReport?.(investor.id);
         }
     };
 
     const selectedRowIndex = investorsData?.items?.findIndex(i => i.id === selectedInvestorId) ?? -1;
 
-    const tableData = investorsData?.items?.map((investor) => {
+    const tableData = investorsData?.items?.map(investor => {
         if (!investor || investor.id === undefined || investor.id === null) {
-            return canEdit
-                ? ['', '', '', '', formatMoney('0'), formatMoney('0'), 'false']
-                : ['', '', formatMoney('0'), 'false'];
+            return [
+                '',
+                ...(canEdit ? [''] : []),
+                ...(canEdit ? [''] : []),
+                '',
+                ...(canEdit ? [''] : []),
+                formatMoney('0'),
+                formatMoney('0'),
+                '',
+            ];
         }
 
         return [
             investor.id.toString(),
-            <InvestorIdentityCell>
-                <div>
-                    <InvestorNameRow>
-                        <InvestorListName>
-                            {investor.nickname || investor.fullName || `Инвестор ${investor.id}`}
-                        </InvestorListName>
-                        {investor.id === selectedInvestorId && (
-                            <SelectedInvestorBadge>Выбран</SelectedInvestorBadge>
-                        )}
-                    </InvestorNameRow>
-                    {investor.fullName && investor.fullName !== investor.nickname && (
-                        <InvestorFullName>{investor.fullName}</InvestorFullName>
-                    )}
-                </div>
-            </InvestorIdentityCell>,
-            ...(canEdit? [investor.phoneNumber ? <InvestorPhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</InvestorPhoneLink> : ''] : []),
-            ...(canEdit? [`${investor.investorPie || 0} %`] : []),
+            investor.nickname || '',
+            ...(canEdit? [investor.fullName || ''] : []),
+            ...(canEdit? [investor.phoneNumber ? <PhoneLink href={formatPhoneHref(investor.phoneNumber)}>{investor.phoneNumber}</PhoneLink> : ''] : []),
+            ...(canEdit? [investor.investorPie || ''] : []),
             ...(canEdit? [formatMoney((investor.investmentAmount || 0).toString()) || ''] : []),
             formatMoney((investor.balance || 0).toString()),
             investor.isBlocked?.toString() || 'false',
@@ -407,8 +410,8 @@ const InvestorPage = ({
     const rowStyles = (investorsData?.items || []).reduce((styles, investor, index) => {
         if (index === selectedRowIndex) {
             styles[index] = {
-                backgroundColor: '#E8F8F9',
-                color: '#172033',
+                backgroundColor: 'rgba(0, 125, 136, 1)',
+                color: 'white',
             };
         } else if (isPoolV2 && investor.isRemoved) {
             styles[index] = {
@@ -424,8 +427,8 @@ const InvestorPage = ({
             };
         } else {
             styles[index] = {
-                backgroundColor: '#FFFFFF',
-                color: '#172033',
+                backgroundColor: '#C8E6C9',
+                color: 'black',
                 fontWeight: 'normal'
             };
         }
@@ -441,45 +444,19 @@ const InvestorPage = ({
         const isRemoved = isPoolV2 && investor?.isRemoved;
 
         const actions: TableAction[] = [
-            ...(onOpenReport ? [{
-                label: 'Открыть отчёт',
-                icon: <ReportActionIcon />,
-                action: () => investor && onOpenReport(investor.id),
-                color: '#007D88'
-            }] : [])
-        ];
-
-        if (canEdit && !isRemoved) {
-            actions.push({
-                label: 'Редактировать',
-                icon: <EditActionIcon />,
-                action: () => investor && handleEditInvestor(investor),
-                color: '#2563EB'
-            });
-            if (onOpenReport) {
-                actions.push({
-                    label: 'Выплатить инвестору',
-                    icon: <PayoutActionIcon />,
-                    action: () => investor && onOpenReport(investor.id, "payout"),
-                    color: '#007D88'
-                });
+            {
+                label: 'Печать договора',
+                action: (rowData) => {
+                    const [id] = rowData;
+                    const investor = investorsData?.items.find(i => i.id === Number(id));
+                    if (investor) {
+                        setInvestorForPrint(investor);
+                        setIsPrintModalOpen(true);
+                    }
+                },
+                color: '#3B82F6'
             }
-        }
-
-        actions.push({
-            label: 'Печать договора',
-            icon: <PrintActionIcon />,
-            action: (rowData) => {
-                const [id] = rowData;
-                const investor = investorsData?.items.find(i => i.id === Number(id));
-                if (investor) {
-                    setInvestorForPrint(investor);
-                    setIsPrintModalOpen(true);
-                }
-            },
-            color: '#3B82F6',
-            dividerBefore: actions.length > 0
-        });
+        ];
 
         if (isRemoved) return actions;
 
@@ -626,39 +603,40 @@ const InvestorPage = ({
 
     const columns: Column[] = [
         { name: "id", isHidden: true },
-        { name: "Инвестор", align: "left", width: canEdit ? "31%" : "60%" },
+        { name: "Никнейм", align: "left" },
         ...(canEdit)
-            ? [{ name: "Телефон", align: "left", width: "19%" } as Column]
+            ? [{ name: "ФИО (видно только директору)", isSortable: true, align: "left" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Доля", align: "right", width: "12%" } as Column]
+            ? [{ name: "Телефон", align: "left" } as Column]
             : [],
         ...(canEdit)
-            ? [{ name: "Инвестиции", align: "right", width: "18%" } as Column]
+            ? [{ name: "Доля инвестора", isSortable: true, align: "right" } as Column]
             : [],
-        { name: "Касса", align: "right", width: canEdit ? "15%" : "35%" },
+        ...(canEdit)
+            ? [{ name: "Инвестиция", isSortable: true, align: "right" } as Column]
+            : [],
+        { name: "Касса", isSortable: true, align: "right" },
         { name: "isBlocked", isHidden: true },
     ];
 
     return (
-        <InvestorListLayout ref={containerRef} $embedded={embedded}>
-            <InvestorToolbar $embedded={embedded}>
-                {!embedded && <CustomTitle>Инвесторы</CustomTitle>}
-                {embedded && <ToolbarSpacer />}
-                {!embedded && (
-                    <ExportButton
-                        icon={<PrintIcon />}
-                        onClick={() => {
-                            if (!investorForPrint) {
-                                alert('Пожалуйста, выберите инвестора из таблицы (клик по строке)');
-                                return;
-                            }
-                            setIsPrintModalOpen(true);
-                        }}
-                    >
-                        Печать
-                    </ExportButton>
-                )}
+        <PageLayout ref={containerRef}>
+            <TitleField>
+                <CustomTitle>Инвесторы</CustomTitle>
+                {/* Кнопка печати добавлена слева от экспорта */}
+                <ExportButton 
+                    icon={<PrintIcon />} 
+                    onClick={() => {
+                        if (!investorForPrint) {
+                            alert('Пожалуйста, выберите инвестора из таблицы (клик по строке)');
+                            return;
+                        }
+                        setIsPrintModalOpen(true);
+                    }}
+                >
+                    Печать
+                </ExportButton>
                 <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
@@ -666,32 +644,18 @@ const InvestorPage = ({
                 >
                     Экспорт
                 </ExportButton>
-                {embedded && canEdit && (
-                    <DarkCyanButton
-                        onClick={handleCreateInvestor}
-                    >
-                        + Добавить инвестора
-                    </DarkCyanButton>
-                )}
-            </InvestorToolbar>
+            </TitleField>
             
-            <InvestorFilterField>
-                <SearchIcon aria-hidden="true" />
-                <InvestorSearchInput
-                    type="text"
-                    placeholder="Поиск по имени или телефону"
-                    value={nameFilter}
-                    onChange={(event) => handleFilterChange(event.target.value)}
-                />
-                {canEdit && !embedded && (
+            {canEdit && (
+                <FilterField>
                     <DarkCyanButton 
                         style={{ width: "15vw", marginLeft: "auto" }}
                         onClick={handleCreateInvestor}
                     >
                         + Новый инвестор
                     </DarkCyanButton>
-                )}
-            </InvestorFilterField>
+                </FilterField>
+            )}
             
             {isLoading && <div>Загрузка...</div>}
             {error && <div>Ошибка: {error}</div>}
@@ -702,16 +666,15 @@ const InvestorPage = ({
                         columns={columns} 
                         data={tableData}
                         rowStyles={rowStyles}
+                        onRowDoubleClick={handleRowDoubleClick}
                         onRowClick={handleRowClick}
                         selectedRow={selectedRowIndex >= 0 ? selectedRowIndex : null}
                         contextMenuActions={(rowData) => tableActions(rowData)}
                         onSort={handleSort}
                         sortConfig={sortConfig}
-                        showContextMenuButton
-                        triggerRowClickOnContextMenu={false}
                     />
                     
-                    <InvestorPaginationLayout>
+                    <PaginationLayout>
                         <CountInfoTitle 
                             total={investorsData?.totalCount || 0} 
                         />
@@ -722,7 +685,7 @@ const InvestorPage = ({
                             onChange={setCurrentPage}
                             itemsPerPage={itemsPerPage}
                         />
-                    </InvestorPaginationLayout>
+                    </PaginationLayout>
                 </>
             )}
             
@@ -802,245 +765,8 @@ const InvestorPage = ({
                 }}
                 onChanged={loadInvestors}
             />
-        </InvestorListLayout>
+        </PageLayout>
     );
 };
 
 export default InvestorPage;
-
-const ReportActionIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M7 3h7l4 4v14H7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M14 3v5h4M10 12h5M10 16h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-);
-
-const EditActionIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="m5 16-1 4 4-1L19 8l-3-3L5 16Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="m14.5 6.5 3 3" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-);
-
-const PayoutActionIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <ellipse cx="12" cy="6" rx="7" ry="3" stroke="currentColor" strokeWidth="1.7" />
-        <path d="M5 6v5c0 1.66 3.13 3 7 3s7-1.34 7-3V6M5 11v5c0 1.66 3.13 3 7 3s7-1.34 7-3v-5" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-);
-
-const PrintActionIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M7 14h10v7H7z" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-);
-
-const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} viewBox="0 0 24 24" fill="none">
-        <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
-        <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-);
-
-const InvestorListLayout = styled(PageLayout)<{ $embedded: boolean }>`
-    position: relative;
-    min-width: 0;
-    min-height: 0;
-    margin: ${({ $embedded }) => ($embedded ? '0' : '0 20px')};
-    background: transparent;
-    color: #172033;
-    font-size: 14px;
-
-    table {
-        table-layout: fixed;
-    }
-
-    table th,
-    table td {
-        border-right: 0;
-    }
-
-    table thead th {
-        height: 48px;
-        padding: 10px 16px;
-        background: #f8fafb;
-        color: #526074;
-        font-size: 15px;
-        font-weight: 600;
-    }
-
-    table tbody tr {
-        height: 68px;
-        box-shadow: none !important;
-    }
-
-    table tbody td {
-        padding: 8px 16px;
-        border-right: 0;
-        color: #26344c;
-        font-size: 15px;
-    }
-
-    table thead th:last-child {
-        padding: 0;
-    }
-
-    table tbody td:last-child {
-        padding: 0 10px 0 4px;
-    }
-
-    table tbody tr::after {
-        left: 0;
-        width: 100%;
-        background: #e6ebf0;
-    }
-
-    @media (max-width: 800px) {
-        table thead th,
-        table tbody td {
-            padding-right: 9px;
-            padding-left: 9px;
-        }
-    }
-`;
-
-const InvestorToolbar = styled.div<{ $embedded: boolean }>`
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 38px;
-    ${({ $embedded }) => $embedded && `
-        position: absolute;
-        top: -130px;
-        right: 0;
-        z-index: 2;
-    `}
-
-    > button {
-        height: 38px;
-        margin: 0;
-        border: 1px solid #d7e0e8;
-        border-radius: 8px;
-        font-size: 14px;
-    }
-
-    > button:first-of-type {
-        min-width: 104px;
-    }
-
-    > button:last-of-type {
-        min-width: 172px;
-        border-color: #007d88;
-    }
-`;
-
-const InvestorFilterField = styled.div`
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    margin: 0 0 16px;
-
-    > svg {
-        position: absolute;
-        left: 18px;
-        z-index: 1;
-        width: 20px;
-        height: 20px;
-        color: #718096;
-        pointer-events: none;
-    }
-`;
-
-const InvestorSearchInput = styled.input`
-    width: 100%;
-    height: 52px;
-    padding: 0 18px 0 52px;
-    border: 1px solid #d9e1e8;
-    border-radius: 8px;
-    background: #fff;
-    color: #172033;
-    font: inherit;
-    font-size: 15px;
-    outline: none;
-
-    &::placeholder {
-        color: #8792a3;
-    }
-
-    &:focus {
-        border-color: #007d88;
-        box-shadow: 0 0 0 2px rgba(0, 125, 136, 0.08);
-    }
-`;
-
-const InvestorPaginationLayout = styled.div`
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 54px;
-    margin-top: 10px;
-
-    p {
-        margin: 0;
-        color: #526074;
-        font-size: 13px;
-        font-weight: 400;
-    }
-
-    > div:last-child {
-        margin-top: 0;
-        margin-left: auto;
-        gap: 6px;
-    }
-
-`;
-
-const InvestorListName = styled.div`
-  overflow: hidden;
-  color: #172033;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const InvestorNameRow = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-`;
-
-const SelectedInvestorBadge = styled.span`
-    flex: 0 0 auto;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: #dff6f7;
-    color: #007d88;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.2;
-`;
-
-const ToolbarSpacer = styled.div`
-    margin-left: auto;
-`;
-
-const InvestorIdentityCell = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    min-width: 0;
-`;
-
-const InvestorFullName = styled.div`
-    margin-top: 2px;
-    color: #718096;
-    font-size: 13px;
-    font-weight: 400;
-`;
-
-const InvestorPhoneLink = styled(PhoneLink)`
-    color: #26344c;
-`;

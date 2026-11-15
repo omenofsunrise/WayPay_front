@@ -6,6 +6,7 @@ import contractsIcon from "../../../assets/ui/MenuItems/credits.svg";
 import clientsIcon from "../../../assets/ui/MenuItems/clients.svg";
 import paymentsIcon from "../../../assets/ui/MenuItems/payments.svg";
 import investorsIcon from "../../../assets/ui/MenuItems/investors.svg";
+import referencesIcon from "../../../assets/ui/MenuItems/catalogs.svg";
 import financeIcon from "../../../assets/ui/MenuItems/finance.svg";
 import profileIcon from "../../../assets/ui/MenuItems/profile.svg";
 import blackCatalogIcon from "../../../assets/ui/MenuItems/oldclients.svg";
@@ -44,9 +45,11 @@ const menuItemsMap: Record<
     mainItem: "contracts",
     subItems: { "/credit-control": "contracts-control" },
   },
-  // Подпункт у «Клиентов» один (чёрный список переехал в карточки), поэтому
-  // пункт без раскрытия — сразу ведёт на страницу.
-  "/clients": { mainItem: "clients" },
+  "/clients": { mainItem: "clients", subItems: { "/clients": "clients" } },
+  "/blacklist": {
+    mainItem: "clients",
+    subItems: { "/blacklist": "blacklist" },
+  },
   // '/credit-application': { mainItem: 'clients', subItems: { '/credit-application': 'credit-application' } },
   "/schedules": {
     mainItem: "payments",
@@ -60,13 +63,27 @@ const menuItemsMap: Record<
     mainItem: "payments",
     subItems: { "/payments": "payments-journal" },
   },
-  "/investors": { mainItem: "investors" },
-  "/investors-v2": { mainItem: "investors" },
-  "/investors-report": { mainItem: "investors" },
-  "/investors-pool": { mainItem: "investors" },
+  "/investors": {
+    mainItem: "investors",
+    subItems: { "/investors": "investors" },
+  },
+  "/investors-v2": {
+    mainItem: "investors",
+  },
+  "/investors-report": {
+    mainItem: "investors",
+    subItems: { "/investors-report": "investors-report" },
+  },
+  "/investors-pool": {
+    mainItem: "investors",
+    subItems: { "/investors-pool": "investors-pool" },
+  },
   "/black-catalog": { mainItem: "black-catalog" },
+  "/mobile-apps": {
+    mainItem: "references",
+    subItems: { "/mobile-apps": "mobile-apps" },
+  },
   "/finance": { mainItem: "finance" },
-  "/calc": { mainItem: "calc" },
   "/profile": { mainItem: "profile" },
   "/settings": { mainItem: "settings" },
 };
@@ -139,6 +156,7 @@ const SideMenu = () => {
   };
 
   const employee = authInfo?.employee;
+  const isPoolV2 = Boolean(employee?.poolV2);
   const licenceDate = commonInfo?.licenceDate ?? new Date();
   const currentDate = formatDate(licenceDate);
   const daysUntilExpiry = getDaysUntilExpiry(licenceDate);
@@ -160,6 +178,7 @@ const SideMenu = () => {
     "contracts-control": () =>
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
     clients: () => true,
+    blacklist: () => true,
     // 'credit-application': () => denyPermission('FORBID_CREDIT_APPLICATIONS'),
     "pending-payments": () => true,
     "payments-calendar": () =>
@@ -170,9 +189,15 @@ const SideMenu = () => {
     "payments-journal": () => true,
     investors: () =>
       hasRole("админ") || hasRole("директор") || hasRole("суперадмин"),
+    "investors-pool": () =>
+      !isPoolV2 &&
+      (hasRole("админ") || hasRole("директор") || hasRole("суперадмин")),
+    "investors-report": () =>
+      !isPoolV2 &&
+      (hasRole("админ") || hasRole("директор") || hasRole("суперадмин")),
     "black-catalog": () => true,
+    "mobile-apps": () => true,
     finance: () => hasPermission("MANAGE_ACCOUNTING", true),
-    calc: () => true,
     profile: () => true,
     settings: () => true,
     admin: () => hasRole("суперадмин"),
@@ -309,11 +334,15 @@ const SideMenu = () => {
       contracts: "Договоры",
       "contracts-control": "Контроль договоров",
       clients: "Клиенты",
+      blacklist: "Чёрный список",
       // 'credit-application': 'Заявки',
       "pending-payments": "Ожидаемые",
       "payments-calendar": "Календарь",
       "payments-journal": "Журнал",
       investors: "Инвесторы",
+      "investors-pool": "Пулы инвесторов",
+      "investors-report": "Отчёт для инвестора",
+      "mobile-apps": "Мобильные приложения",
     };
 
     return labels[subItemKey] || subItemKey;
@@ -379,8 +408,8 @@ const SideMenu = () => {
     "clients",
     "payments",
     "investors",
+    "references",
     "finance",
-    "calc",
     "black-catalog",
     "settings",
     "admin",
@@ -579,21 +608,65 @@ const SideMenu = () => {
             <MenuItem
               onClick={(e) => {
                 if (collapsed) {
-                  handleCollapsedMenuClick(e, "clients", false);
+                  handleCollapsedMenuClick(e, "clients", true);
                 } else {
-                  handleMenuItemClick("clients", "/clients");
+                  handleMainMenuItemClick("clients", undefined, true);
                 }
               }}
               $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "clients"}
+              $selected={
+                selectedSideMenuItem === "clients" ||
+                selectedSideMenuItem === "blacklist"
+              }
             >
               <Icon
                 src={clientsIcon}
                 $collapsed={collapsed}
-                $selected={selectedSideMenuItem === "clients"}
+                $selected={
+                  selectedSideMenuItem === "clients" ||
+                  selectedSideMenuItem === "blacklist"
+                }
               />
-              {!collapsed && <MenuItemText>Клиенты</MenuItemText>}
+              {!collapsed && (
+                <>
+                  <MenuItemText>Клиенты</MenuItemText>
+                  <ExpandArrow
+                    width="14"
+                    height="8"
+                    viewBox="0 0 14 8"
+                    fill="none"
+                    $expanded={expandedItem === "clients"}
+                  >
+                    <path
+                      d="M1 1.32422L7 7.32422L13 1.32422"
+                      stroke="#50555C"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </ExpandArrow>
+                </>
+              )}
             </MenuItem>
+
+            {!collapsed && expandedItem === "clients" && (
+              <SubMenu>
+                <SubMenuLine />
+                <SubMenuItem
+                  onClick={() => handleSubMenuItemClick("clients", "/clients")}
+                  $selected={selectedSideMenuItem === "clients"}
+                >
+                  Клиенты
+                </SubMenuItem>
+                <SubMenuItem
+                  onClick={() =>
+                    handleSubMenuItemClick("blacklist", "/blacklist")
+                  }
+                  $selected={selectedSideMenuItem === "blacklist"}
+                >
+                  Чёрный список
+                </SubMenuItem>
+              </SubMenu>
+            )}
           </DraggableRow>
 
           <DraggableRow {...dragProps("payments")}>
@@ -685,26 +758,164 @@ const SideMenu = () => {
             hasRole("директор") ||
             hasRole("суперадмин")) && (
             <DraggableRow {...dragProps("investors")}>
+              {isPoolV2 ? (
+                <MenuItem
+                  onClick={(e) => {
+                    if (collapsed) {
+                      handleCollapsedMenuClick(e, "investors", false);
+                    } else {
+                      handleMenuItemClick("investors", "/investors-v2");
+                    }
+                  }}
+                  $collapsed={collapsed}
+                  $selected={selectedSideMenuItem === "investors"}
+                >
+                  <Icon
+                    src={investorsIcon}
+                    $collapsed={collapsed}
+                    $selected={selectedSideMenuItem === "investors"}
+                  />
+                  {!collapsed && <MenuItemText>Инвесторы</MenuItemText>}
+                </MenuItem>
+              ) : (
+                <>
+                  <MenuItem
+                    onClick={(e) => {
+                      if (collapsed) {
+                        handleCollapsedMenuClick(e, "investors", true);
+                      } else {
+                        handleMainMenuItemClick("investors", undefined, true);
+                      }
+                    }}
+                    $collapsed={collapsed}
+                    $selected={
+                      selectedSideMenuItem === "investors" ||
+                      selectedSideMenuItem === "investors-pool" ||
+                      selectedSideMenuItem === "investors-report"
+                    }
+                  >
+                    <Icon
+                      src={investorsIcon}
+                      $collapsed={collapsed}
+                      $selected={
+                        selectedSideMenuItem === "investors" ||
+                        selectedSideMenuItem === "investors-pool" ||
+                        selectedSideMenuItem === "investors-report"
+                      }
+                    />
+                    {!collapsed && (
+                      <>
+                        <MenuItemText>Инвесторы</MenuItemText>
+                        <ExpandArrow
+                          width="14"
+                          height="8"
+                          viewBox="0 0 14 8"
+                          fill="none"
+                          $expanded={expandedItem === "investors"}
+                        >
+                          <path
+                            d="M1 1.32422L7 7.32422L13 1.32422"
+                            stroke="#50555C"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </ExpandArrow>
+                      </>
+                    )}
+                  </MenuItem>
+                  {!collapsed && expandedItem === "investors" && (
+                    <SubMenu>
+                      <SubMenuLine />
+                      <SubMenuItem
+                        onClick={() =>
+                          handleSubMenuItemClick("investors", "/investors")
+                        }
+                        $selected={selectedSideMenuItem === "investors"}
+                      >
+                        Инвесторы
+                      </SubMenuItem>
+                      <SubMenuItem
+                        onClick={() =>
+                          handleSubMenuItemClick(
+                            "investors-report",
+                            "/investors-report"
+                          )
+                        }
+                        $selected={selectedSideMenuItem === "investors-report"}
+                      >
+                        Отчёт для инвестора
+                      </SubMenuItem>
+                      <SubMenuItem
+                        onClick={() =>
+                          handleSubMenuItemClick(
+                            "investors-pool",
+                            "/investors-pool"
+                          )
+                        }
+                        $selected={selectedSideMenuItem === "investors-pool"}
+                      >
+                        Пулы инвесторов
+                      </SubMenuItem>
+                    </SubMenu>
+                  )}
+                </>
+              )}
+            </DraggableRow>
+          )}
+
+          {
+            <DraggableRow {...dragProps("references")}>
               <MenuItem
                 onClick={(e) => {
                   if (collapsed) {
-                    handleCollapsedMenuClick(e, "investors", false);
+                    handleCollapsedMenuClick(e, "references", true);
                   } else {
-                    handleMenuItemClick("investors", "/investors");
+                    handleMainMenuItemClick("references", undefined, true);
                   }
                 }}
                 $collapsed={collapsed}
-                $selected={selectedSideMenuItem === "investors"}
+                $selected={selectedSideMenuItem === "mobile-apps"}
               >
                 <Icon
-                  src={investorsIcon}
+                  src={referencesIcon}
                   $collapsed={collapsed}
-                  $selected={selectedSideMenuItem === "investors"}
+                  $selected={selectedSideMenuItem === "mobile-apps"}
                 />
-                {!collapsed && <MenuItemText>Инвесторы</MenuItemText>}
+                {!collapsed && (
+                  <>
+                    <MenuItemText>Справочники</MenuItemText>
+                    <ExpandArrow
+                      width="14"
+                      height="8"
+                      viewBox="0 0 14 8"
+                      fill="none"
+                      $expanded={expandedItem === "references"}
+                    >
+                      <path
+                        d="M1 1.32422L7 7.32422L13 1.32422"
+                        stroke="#50555C"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </ExpandArrow>
+                  </>
+                )}
               </MenuItem>
+              {!collapsed && expandedItem === "references" && (
+                <SubMenu>
+                  <SubMenuLine />
+                  <SubMenuItem
+                    onClick={() =>
+                      handleSubMenuItemClick("mobile-apps", "/mobile-apps")
+                    }
+                    $selected={selectedSideMenuItem === "mobile-apps"}
+                  >
+                    Мобильные приложения
+                  </SubMenuItem>
+                </SubMenu>
+              )}
             </DraggableRow>
-          )}
+          }
 
           {hasPermission("MANAGE_ACCOUNTING", true) && (
             <DraggableRow {...dragProps("finance")}>
@@ -728,27 +939,6 @@ const SideMenu = () => {
               </MenuItem>
             </DraggableRow>
           )}
-
-          <DraggableRow {...dragProps("calc")}>
-            <MenuItem
-              onClick={(e) => {
-                if (collapsed) {
-                  handleCollapsedMenuClick(e, "calc", false);
-                } else {
-                  handleMenuItemClick("calc", "/calc");
-                }
-              }}
-              $collapsed={collapsed}
-              $selected={selectedSideMenuItem === "calc"}
-            >
-              <Icon
-                src={financeIcon}
-                $collapsed={collapsed}
-                $selected={selectedSideMenuItem === "calc"}
-              />
-              {!collapsed && <MenuItemText>Конструктор</MenuItemText>}
-            </MenuItem>
-          </DraggableRow>
 
           <DraggableRow {...dragProps("black-catalog")}>
             <MenuItem

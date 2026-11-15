@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useState, useRef, useEffect, useLayoutEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ContextMenu, { type ContextMenuItem } from "../../modal/ContextMenu";
 
@@ -9,14 +9,11 @@ export interface Column {
   name: string;
   isSortable?: boolean;
   align?: Alignment;
-  headerAlign?: Alignment;
   isHidden?: boolean;
-  width?: string;
 }
 
 export interface TableAction {
-  label: ReactNode;
-  icon?: ReactNode;
+  label: string;
   action: (rowData: any[], rowIndex: number) => void;
   color?: string;
   disabled?: boolean;
@@ -60,8 +57,6 @@ interface CreditsTableProps {
   isLoading?: boolean;
   multiSelect?: boolean;
   selectableRows?: number[];
-  showContextMenuButton?: boolean | ((rowData: any[]) => boolean);
-  triggerRowClickOnContextMenu?: boolean;
 }
 
 const CustomTable: React.FC<CreditsTableProps> = ({
@@ -81,8 +76,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
   isLoading,
   multiSelect = false,
   selectableRows,
-  showContextMenuButton = false,
-  triggerRowClickOnContextMenu = true,
 }) => {
   const [internalSelectedRows, setInternalSelectedRows] = useState<number[]>(
     []
@@ -215,7 +208,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
       onMultiSelectChange(newSelectedRows);
     }
 
-    if (onRowClick && triggerRowClickOnContextMenu) {
+    if (onRowClick) {
       onRowClick(data[rowIndex], rowIndex);
     }
   };
@@ -247,22 +240,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
     setContextMenu({
       x: clientX,
       y: clientY,
-      rowIndex,
-    });
-  };
-
-  const showContextMenuFromButton = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    rowIndex: number
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    selectRowForContextMenu(rowIndex);
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    setContextMenu({
-      x: rect.right,
-      y: rect.bottom + 4,
       rowIndex,
     });
   };
@@ -439,12 +416,7 @@ const CustomTable: React.FC<CreditsTableProps> = ({
           y={0}
           items={filteredActions.map((action, index) => {
             const menuItem: ContextMenuItem = {
-              label: action.icon ? (
-                <TableActionLabel>
-                  <TableActionIcon>{action.icon}</TableActionIcon>
-                  <span>{action.label}</span>
-                </TableActionLabel>
-              ) : action.label,
+              label: action.label,
               color: action.color,
               disabled: action.disabled,
               dividerBefore: action.dividerBefore,
@@ -531,12 +503,11 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                         $isSortable={column.isSortable}
                         $isActive={sortConfig?.key === index}
                         onClick={() => handleSort(index)}
-                        $align={column.headerAlign || column.align || "center"}
+                        $align={column.align || "center"}
                         $isFirst={index === 0 && !multiSelect}
                         $isLast={index === columns.length - 1}
-                        $width={column.width}
                       >
-                        <HeaderContent $align={column.headerAlign || column.align || "center"}>
+                        <HeaderContent $align={column.align || "center"}>
                           {column.name}
                           {column.isSortable && (
                             <SortIcon
@@ -576,7 +547,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                       </HeaderCell>
                     )
                 )}
-                {Boolean(showContextMenuButton) && <ActionsHeaderCell aria-hidden="true" />}
               </TableRow>
             </TableHeader>
             <TableBody $fixedHeight={fixedHeight}>
@@ -692,7 +662,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                               $align={columns[cellIndex]?.align || "center"}
                               $isFirst={cellIndex === 0 && !multiSelect}
                               $isLast={cellIndex === row.length - 1}
-                              $width={columns[cellIndex]?.width}
                               $isTotalsCell={isTotalsRow}
                               $isBeforeTotals={
                                 isTotalsRow &&
@@ -703,21 +672,6 @@ const CustomTable: React.FC<CreditsTableProps> = ({
                               {cell}
                             </BodyCell>
                           )
-                      )}
-                      {(typeof showContextMenuButton === "function"
-                        ? showContextMenuButton(row)
-                        : showContextMenuButton) && (
-                        <ActionsBodyCell onClick={(event) => event.stopPropagation()}>
-                          <RowActionsButton
-                            type="button"
-                            aria-label="Действия с записью"
-                            onClick={(event) => showContextMenuFromButton(event, rowIndex)}
-                          >
-                            <span />
-                            <span />
-                            <span />
-                          </RowActionsButton>
-                        </ActionsBodyCell>
                       )}
                     </TableRow>
                   );
@@ -855,9 +809,7 @@ const HeaderCell = styled.th<{
   $align?: Alignment;
   $isFirst?: boolean;
   $isLast?: boolean;
-  $width?: string;
 }>`
-  width: ${({ $width }) => $width || "auto"};
   padding: 16px;
   padding-left: ${({ $isFirst }) => ($isFirst ? "16px" : "16px")};
   padding-right: ${({ $isLast }) => ($isLast ? "16px" : "16px")};
@@ -888,13 +840,6 @@ const HeaderContent = styled.div<{ $align?: Alignment }>`
   width: 100%;
 `;
 
-const ActionsHeaderCell = styled.th`
-  width: 5%;
-  min-width: 48px;
-  padding: 0;
-  background: #ffffff;
-`;
-
 const SortIcon = styled(motion.span)<{ $direction: "asc" | "desc" }>`
   display: inline-flex;
   align-items: center;
@@ -906,9 +851,7 @@ const BodyCell = styled.td<{
   $isLast?: boolean;
   $isTotalsCell?: boolean;
   $isBeforeTotals?: boolean;
-  $width?: string;
 }>`
-  width: ${({ $width }) => $width || "auto"};
   padding: 5px;
   padding-left: ${({ $isFirst }) => ($isFirst ? "12px" : "12px")};
   padding-right: ${({ $isLast }) => ($isLast ? "12px" : "12px")};
@@ -916,63 +859,6 @@ const BodyCell = styled.td<{
   vertical-align: middle;
   border-right: ${({ $isBeforeTotals, $isTotalsCell }) =>
     $isBeforeTotals || $isTotalsCell ? "none" : "0.5px solid #D1D5DB"};
-`;
-
-const ActionsBodyCell = styled.td`
-  width: 5%;
-  min-width: 48px;
-  padding: 0 10px 0 4px;
-  text-align: right;
-  vertical-align: middle;
-  border-right: 0;
-`;
-
-const RowActionsButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: transparent;
-  cursor: pointer;
-
-  span {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: #334155;
-  }
-
-  &:hover,
-  &:focus-visible {
-    border-color: #d7e0e8;
-    background: #ffffff;
-    outline: none;
-  }
-`;
-
-const TableActionLabel = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-`;
-
-const TableActionIcon = styled.span`
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-  align-items: center;
-  justify-content: center;
-  color: inherit;
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
 `;
 
 const CheckboxContainer = styled.div`

@@ -6,7 +6,6 @@ import type {
   SenderReport,
   SenderReportDetails,
 } from "../../api/types/whatsappSender";
-import BaseModal from "../../components/modal/BASE/modalCRUBase";
 
 interface SenderReportModalProps {
   isOpen: boolean;
@@ -98,19 +97,13 @@ const SenderReportModal: React.FC<SenderReportModalProps> = ({
   const s = report?.summary;
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      title="Отчёт по рассылкам"
-      subtitle="Статистика отправки сообщений и детализация ошибок"
-      appearance="compact-form"
-      width="900px"
-      maxHeight="calc(100vh - 32px)"
-      onClose={onClose}
-      onCancel={onClose}
-      hideSaveButton
-      hideCanselButton
-    >
-      <Content>
+    <Overlay onClick={onClose}>
+      <Content onClick={(e) => e.stopPropagation()}>
+        <Header>
+          <Title>Отчёт по рассылкам</Title>
+          <Close onClick={onClose}>✖</Close>
+        </Header>
+
         <Toolbar>
           <DateField>
             <label>Дата</label>
@@ -297,15 +290,55 @@ const SenderReportModal: React.FC<SenderReportModalProps> = ({
           </Section>
         )}
       </Content>
-    </BaseModal>
+    </Overlay>
   );
 };
 
 export default SenderReportModal;
 
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+`;
+
 const Content = styled.div`
-  padding: 6px 34px 28px;
-  text-align: left;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 900px;
+  max-width: 95vw;
+  max-height: 92vh;
+  overflow-y: auto;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+`;
+
+const Title = styled.h3`
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+`;
+
+const Close = styled.button`
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #9ca3af;
+  &:hover {
+    color: #111827;
+  }
 `;
 
 const Toolbar = styled.div`

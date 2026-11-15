@@ -75,11 +75,6 @@ import {
 } from "../utils/listPosition";
 import useSender from "../api/hooks/useSender";
 import { useTopMenuActions } from "../сontext/TopMenuActionsContext";
-import { getCreditGuarantors } from "../utils/creditGuarantors";
-import BaseModal from "../components/modal/BASE/modalCRUBase";
-import contractTemplateService from "../api/services/contractTemplateService";
-import type { ContractTemplate } from "../api/types/contractTemplate";
-import { saveAs } from "file-saver";
 
 type ShareOption = "contractData" | "paymentHistory" | "paymentSchedule";
 
@@ -122,21 +117,10 @@ const ShareOptionModal = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <BaseModal
-      isOpen={isOpen}
-      title={modalTitle}
-      subtitle="Выберите данные для отправки"
-      appearance="compact-form"
-      width="460px"
-      onClose={onClose}
-      onCancel={onClose}
-      hideSaveButton
-      hideCanselButton
-    >
-      <ShareModalContent>
+    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalTitle>{modalTitle}</ModalTitle>
         <PrintOptions>
           {options.map(
             (option) =>
@@ -151,8 +135,8 @@ const ShareOptionModal = ({
               )
           )}
         </PrintOptions>
-      </ShareModalContent>
-    </BaseModal>
+      </ModalContent>
+    </ModalOverlay>
   );
 };
 
@@ -380,7 +364,6 @@ const CreditPage = () => {
   const paymentMethodEnabled =
     authInfo?.employee?.paymentMethodEnabled ?? false;
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
   // Новое состояние для модалки "Поделиться"
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isClientLinkModalOpen, setIsClientLinkModalOpen] = useState(false);
@@ -425,14 +408,6 @@ const CreditPage = () => {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectedCreditForPrint, setSelectedCreditForPrint] =
     useState<Credit | null>(null);
-
-  useEffect(() => {
-    if (!isPrintModalOpen) return;
-    contractTemplateService
-      .getAll()
-      .then(setContractTemplates)
-      .catch((error) => console.error("Не удалось загрузить шаблоны договоров", error));
-  }, [isPrintModalOpen]);
   const [isInvestorSelectModalOpen, setIsInvestorSelectModalOpen] =
     useState(false);
   // Пачка договоров, для которых сейчас выбирается источник финансирования.
@@ -1043,33 +1018,30 @@ const CreditPage = () => {
 
   const guarantorMatchNote = useCallback(
     (credit: Credit): ReactNode => {
+      const guarantorName =
+        credit.guarantorFullname || credit.guarantor?.fullName || "";
+      const guarantorPhone =
+        credit.guarantorPhone || credit.guarantor?.phone || "";
+
       const phone = digitsOf(clientPhone);
+      const byGuarantorPhone =
+        phone.length > 0 &&
+        digitsOf(guarantorPhone).includes(phone) &&
+        !digitsOf(credit.clientPhone).includes(phone);
+
       const words = clientFullName
         .trim()
         .toLowerCase()
         .split(/\s+/)
         .filter(Boolean);
       const clientName = (credit.clientFullName ?? "").toLowerCase();
-      const clientPhoneMatches =
-        phone.length > 0 && digitsOf(credit.clientPhone).includes(phone);
-      const clientNameMatches =
-        words.length > 0 && words.every((word) => clientName.includes(word));
+      const guarantorLower = guarantorName.toLowerCase();
+      const byGuarantorName =
+        words.length > 0 &&
+        words.every((word) => guarantorLower.includes(word)) &&
+        !words.every((word) => clientName.includes(word));
 
-      // Поручителей может быть несколько — показываем того, кто совпал.
-      const matched = getCreditGuarantors(credit).find((g) => {
-        const byPhone =
-          phone.length > 0 &&
-          digitsOf(g.phone).includes(phone) &&
-          !clientPhoneMatches;
-        const name = (g.fullname ?? "").toLowerCase();
-        const byName =
-          words.length > 0 &&
-          words.every((word) => name.includes(word)) &&
-          !clientNameMatches;
-        return byPhone || byName;
-      });
-      if (!matched) return null;
-      const guarantorName = matched.fullname ?? "";
+      if (!byGuarantorPhone && !byGuarantorName) return null;
 
       return (
         <GuarantorMatch>
@@ -1209,28 +1181,10 @@ const CreditPage = () => {
     navigate(`/new-credit/${id}`);
   };
 
-  const handlePrintOptionSelect = async (option: string) => {
+  const handlePrintOptionSelect = async (
+    option: "sale" | "saleSinglePage" | "schedules" | "guaranteeConsent"
+  ) => {
     if (!selectedCreditForPrint) return;
-
-    if (option.startsWith("custom-template:")) {
-      const templateId = Number(option.split(":")[1]);
-      const template = contractTemplates.find((item) => item.id === templateId);
-      if (!template || !Number.isFinite(templateId)) return;
-      try {
-        const document = await contractTemplateService.generate(
-          templateId,
-          selectedCreditForPrint.id
-        );
-        const safeName = template.name.replace(/[\\/:*?"<>|]/g, "_");
-        saveAs(document, `${safeName}_договор_${selectedCreditForPrint.name}.docx`);
-      } catch (error) {
-        console.error("Ошибка формирования договора", error);
-        alert(extractErrorMessage(error, "Не удалось сформировать договор"));
-      } finally {
-        setIsPrintModalOpen(false);
-      }
-      return;
-    }
 
     const docxGenerator = new DocxGenerator(getDocsData);
 
@@ -2696,17 +2650,6 @@ const CreditPage = () => {
         onClose={() => setIsPrintModalOpen(false)}
         onSelect={handlePrintOptionSelect}
         selectedCredit={selectedCreditForPrint}
-        printOptions={[
-          { key: "sale", label: "Договор купли-продажи", enabled: true },
-          { key: "saleSinglePage", label: "Договор купли-продажи (одностраничный)", enabled: true },
-          { key: "guaranteeConsent", label: "Договор поручительства", enabled: true },
-          { key: "schedules", label: "График платежей", enabled: true },
-          ...contractTemplates.map((template) => ({
-            key: `custom-template:${template.id}`,
-            label: template.name,
-            enabled: true,
-          })),
-        ]}
       />
 
       {/* Новая модалка для кнопки "Поделиться" */}
@@ -3105,9 +3048,35 @@ const SelectedCountBadge = styled.div`
   margin-bottom: 15px;
 `;
 
-const ShareModalContent = styled.div`
-  padding: 6px 34px 28px;
+// Стили для модалки "Поделиться" (можно вынести в отдельный файл)
+const ModalOverlay = styled.div<{ isOpen: boolean }>`
+  display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
   color: black;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  color: black;
+`;
+
+const ModalTitle = styled.h3`
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
 `;
 
 const PrintOptions = styled.div`

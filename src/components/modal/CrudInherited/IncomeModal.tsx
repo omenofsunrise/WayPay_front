@@ -7,6 +7,17 @@ import { ProgressBar } from '../../ui/ProgressBar';
 import { PayoutSource } from '../../../api/types/budget';
 import styled from 'styled-components';
 
+interface Investor {
+  id: number;
+  nickname: string;
+  fullName: string;
+  phoneNumber: string;
+  investorPie: number;
+  investmentAmount: number;
+  balance: number;
+  isCompany: boolean;
+}
+
 interface SelectedEntity {
   id: number;
   type: 'investor' | 'pool';
@@ -71,78 +82,6 @@ const nonNegative = (value: number | undefined | null): number | undefined => {
   return value < 0 ? 0 : value;
 };
 
-const FinanceFormContent = styled.div`
-  padding: 6px 34px 24px;
-  text-align: left;
-
-  @media (max-width: 600px) { padding: 4px 18px 20px; }
-`;
-
-const FinanceSection = styled.section<{ $separated?: boolean }>`
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: ${({ $separated }) => ($separated ? '18px' : '8px')};
-  padding-top: ${({ $separated }) => ($separated ? '18px' : '0')};
-  border-top: ${({ $separated }) => ($separated ? '1px solid #dfe6ed' : '0')};
-`;
-
-const FinanceSectionTitle = styled.h3`
-  margin: 0 0 16px;
-  color: #07818a;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.3;
-  text-align: left;
-`;
-
-const FinanceFieldsGrid = styled.div`
-  display: grid;
-  width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 15px 18px;
-
-  @media (max-width: 600px) { grid-template-columns: 1fr; }
-`;
-
-const FinanceField = styled.label<{ $fullWidth?: boolean }>`
-  display: flex;
-  grid-column: ${({ $fullWidth }) => ($fullWidth ? '1 / -1' : 'auto')};
-  min-width: 0;
-  flex-direction: column;
-  gap: 7px;
-  color: #192438;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.3;
-  text-align: left;
-`;
-
-const FinanceControl = styled.div`
-  min-width: 0;
-
-  > div { width: 100%; max-width: none; margin: 0; }
-  > div > div { max-width: none; }
-
-  input {
-    width: 100%;
-    max-width: none;
-    min-height: 40px;
-    padding: 7px 13px;
-    box-sizing: border-box;
-    color: #172235;
-    font-size: 14px;
-    background: #fff;
-    border-color: #c7d2de;
-    border-radius: 7px;
-  }
-`;
-
-const EntityControl = styled.div`
-  width: 100%;
-
-  input { min-height: 40px; box-sizing: border-box; border-color: #c7d2de; border-radius: 7px; }
-`;
-
 const IncomeModal: React.FC<IncomeModalProps> = ({
   show,
   onClose,
@@ -196,7 +135,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
       setCompanyPercentage('100');
       setInvestorPercentage('0');
     }
-  }, [show, newIncome.amount, newIncome.companyShare, selectedEntity, setNewIncome]);
+  }, [show, newIncome.amount, newIncome.companyShare, selectedEntity]);
 
   const getIncomeSourceBalance = (
     entity: SelectedEntity | null,
@@ -361,114 +300,79 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
   if (!show) return null;
 
   return (
-    <BaseModal
-      title="Добавить приход"
-      subtitle="Укажите получателя, источник и сумму операции"
-      appearance="compact-form"
-      width="680px"
-      maxHeight="calc(100vh - 32px)"
-      cancelButtonText="Отмена"
-      saveButtonText="Добавить приход"
-      onClose={onClose}
-      onCancel={onClose}
-      onSave={handleSave}
-      isSaveDisabled={!newIncome.amount || !selectedEntity || isAmountExceedingBalance}
-    >
-      <FinanceFormContent>
-        <FinanceSection>
-          <FinanceSectionTitle>Основная информация</FinanceSectionTitle>
-          <FinanceFieldsGrid>
-            <FinanceField $fullWidth>
-              Инвестор или пул
-              <EntityControl>
-                <EntitySelectContainer
-                  mode="create"
-                  primaryValue={getEntityDisplayName()}
-                  secondaryValue={selectedEntity ? getEntityTypeLabel() : ''}
-                  placeholder="Выберите инвестора или пул"
-                  onSelect={onEntitySelect}
-                  onClear={onEntityClear}
-                />
-              </EntityControl>
-            </FinanceField>
+    <>
+      <BaseModal
+        title="Добавить приход"
+        onClose={onClose}
+        onCancel={onClose}
+        onSave={handleSave}
+        isSaveDisabled={!newIncome.amount || !selectedEntity || isAmountExceedingBalance}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
+          {/* Поле источника выплаты показываем только после выбора инвестора (не пула) */}
+          {isInvestor && (
 
-            <FinanceField $fullWidth={!isInvestor}>
-              Сумма
-              <FinanceControl>
-                <CustomInput
-                  type="text"
-                  value={displayAmount}
-                  onChange={handleAmountChange}
-                  placeholder="Введите сумму"
-                  inputType="text"
-                  required
-                  hasError={isAmountExceedingBalance}
-                />
-              </FinanceControl>
+            <CustomSelect style={{ marginLeft: '10px'}}
+              placeholder="Источник выплаты"
+              value={String(newIncome.payoutSource ?? PayoutSource.Income)}
+              onChange={(e) =>
+                setNewIncome((prev) => ({
+                  ...prev,
+                  payoutSource: Number(e.target.value) as PayoutSource,
+                }))
+              }
+              options={payoutSourceOptions}
+            />
+          )}
 
-              {isInvestor && maxAvailable !== undefined && (
-                <BalanceInfo>
-                  <BalanceLabel>
-                    Доступно для вывода ({sourceLabel}):
-                  </BalanceLabel>
-                  <BalanceAmount>
-                    {new Intl.NumberFormat('ru-RU').format(maxAvailable)} руб.
-                  </BalanceAmount>
-                  {isAmountExceedingBalance && (
-                    <BalanceError>
-                      Превышен лимит на{' '}
-                      {new Intl.NumberFormat('ru-RU').format(amountNumber - maxAvailable)} руб.
-                    </BalanceError>
+          <div>
+            <CustomInput
+              type="text"
+              value={displayAmount}
+              onChange={handleAmountChange}
+              placeholder="Введите сумму"
+              inputType="text"
+              required
+              hasError={isAmountExceedingBalance}
+            />
+
+            {isInvestor && maxAvailable !== undefined && (
+              <BalanceInfo>
+                <BalanceLabel>
+                  Доступно для вывода ({sourceLabel}):
+                </BalanceLabel>
+                <BalanceAmount>
+                  {new Intl.NumberFormat('ru-RU').format(maxAvailable)} руб.
+                </BalanceAmount>
+                {isAmountExceedingBalance && (
+                  <BalanceError>
+                    Превышен лимит на{' '}
+                    {new Intl.NumberFormat('ru-RU').format(amountNumber - maxAvailable)} руб.
+                  </BalanceError>
+                )}
+                {totalBalance !== undefined &&
+                  sourceBalance !== undefined &&
+                  sourceBalance !== totalBalance && (
+                    <></>
                   )}
-                  {!isAmountExceedingBalance && amountNumber > 0 && maxAvailable > 0 && (
-                    <BalanceSuccess>
-                      Можно вывести ещё{' '}
-                      {new Intl.NumberFormat('ru-RU').format(maxAvailable - amountNumber)} руб.
-                    </BalanceSuccess>
-                  )}
-                </BalanceInfo>
-              )}
-            </FinanceField>
-
-            {isInvestor && (
-              <FinanceField>
-                Источник выплаты
-                <FinanceControl>
-                  <CustomSelect
-                    placeholder="Выберите источник"
-                    value={String(newIncome.payoutSource ?? PayoutSource.Income)}
-                    onChange={(e) =>
-                      setNewIncome((prev) => ({
-                        ...prev,
-                        payoutSource: Number(e.target.value) as PayoutSource,
-                      }))
-                    }
-                    options={payoutSourceOptions}
-                    dropdownInPortal
-                  />
-                </FinanceControl>
-              </FinanceField>
+              </BalanceInfo>
             )}
+          </div>
 
-            <FinanceField $fullWidth>
-              Комментарий
-              <FinanceControl>
-                <CustomInput
-                  value={newIncome.comment}
-                  onChange={(e) =>
-                    setNewIncome({ ...newIncome, comment: e.target.value })
-                  }
-                  placeholder="Введите комментарий"
-                />
-              </FinanceControl>
-            </FinanceField>
-          </FinanceFieldsGrid>
-        </FinanceSection>
+          <div style={{ margin: '0 10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <EntitySelectContainer
+              mode="create"
+              primaryValue={getEntityDisplayName()}
+              secondaryValue={selectedEntity ? `${getEntityTypeLabel()}` : ''}
+              placeholder="Выберите инвестора или пул"
+              onSelect={onEntitySelect}
+              onClear={onEntityClear}
+            />
+          </div>
 
-        {showDistributionSection && (
-          <FinanceSection $separated>
-            <FinanceSectionTitle>Распределение дохода</FinanceSectionTitle>
+          {showDistributionSection && (
             <PercentageSection>
+              <PercentageTitle>Распределение дохода</PercentageTitle>
               <PercentageSubtitle>
                 Укажите, как распределить сумму между компанией и инвестором
               </PercentageSubtitle>
@@ -485,9 +389,9 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                     suffix="%"
                   />
                   <PercentageAmount>
-                    {amountNumber > 0
-                      ? `${formatMoney(Math.round(amountNumber * parseInt(companyPercentage) / 100))} руб.`
-                      : '—'}
+                    {amountNumber > 0 ? (
+                      <>{formatMoney(Math.round(amountNumber * parseInt(companyPercentage) / 100))} руб.</>
+                    ) : '—'}
                   </PercentageAmount>
                 </PercentageInputGroup>
 
@@ -502,9 +406,9 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                     suffix="%"
                   />
                   <PercentageAmount>
-                    {amountNumber > 0
-                      ? `${formatMoney(Math.round(amountNumber * parseInt(investorPercentage) / 100))} руб.`
-                      : '—'}
+                    {amountNumber > 0 ? (
+                      <>{formatMoney(Math.round(amountNumber * parseInt(investorPercentage) / 100))} руб.</>
+                    ) : '—'}
                   </PercentageAmount>
                 </PercentageInputGroup>
               </PercentageInputsContainer>
@@ -524,7 +428,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                 <ProgressBar
                   percentage={parseInt(companyPercentage) || 0}
                   onChange={handleProgressChange}
-                  draggable
+                  draggable={true}
                   colors={{
                     primary: '#007D88',
                     secondary: '#25CBA1',
@@ -532,10 +436,18 @@ const IncomeModal: React.FC<IncomeModalProps> = ({
                 />
               </ProgressBarContainer>
             </PercentageSection>
-          </FinanceSection>
-        )}
-      </FinanceFormContent>
-    </BaseModal>
+          )}
+
+          <CustomInput
+            value={newIncome.comment}
+            onChange={(e) =>
+              setNewIncome({ ...newIncome, comment: e.target.value })
+            }
+            placeholder="Введите комментарий"
+          />
+        </div>
+      </BaseModal>
+    </>
   );
 };
 
@@ -548,17 +460,25 @@ const PercentageSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
+  padding: 20px;
   background: #f8f9fa;
   border-radius: 8px;
   border: 1px solid #e9ecef;
+`;
+
+const PercentageTitle = styled.h3`
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
 `;
 
 const PercentageSubtitle = styled.p`
   margin: 0;
   font-size: 14px;
   color: #666;
-  text-align: left;
+  text-align: center;
 `;
 
 const PercentageInputsContainer = styled.div`
@@ -583,13 +503,13 @@ const PercentageLabel = styled.label`
   font-size: 14px;
   font-weight: 500;
   color: #555;
-  text-align: left;
+  text-align: center;
 `;
 
 const PercentageAmount = styled.div`
   font-size: 12px;
   color: #666;
-  text-align: left;
+  text-align: center;
   min-height: 16px;
 `;
 
@@ -622,6 +542,27 @@ const ColorSquare = styled.div<{ color: 'company' | 'investor' }>`
     props.color === 'company' ? '#007D88' : '#25CBA1'};
 `;
 
+const TotalAmountInfo = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #e9ecef;
+  margin-top: 8px;
+`;
+
+const TotalLabel = styled.div`
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+`;
+
+const TotalAmount = styled.div`
+  font-size: 16px;
+  font-weight: 600;
+  color: #007D88;
+`;
+
 const BalanceInfo = styled.div`
   margin: 5px 0 0 0;
   padding: 0;
@@ -651,6 +592,12 @@ const BalanceSuccess = styled.div`
   font-size: 12px;
   color: #28a745;
   font-weight: 500;
+  margin-top: 4px;
+`;
+
+const BalanceNote = styled.div`
+  font-size: 12px;
+  color: #6c757d;
   margin-top: 4px;
 `;
 

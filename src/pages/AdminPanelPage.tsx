@@ -38,8 +38,6 @@ import UserSelect from "../components/ui/fields/UserSelect";
 import CreditApplicationCompaniesManager from "../components/CreditApplicationCompaniesManager";
 import BroadcastCampaignsManager from "../components/AdminPanel/BroadcastCampaignsManager";
 import BlacklistPlusUsersManager from "../components/AdminPanel/BlacklistPlusUsersManager";
-import TelegramCollectorManager from "../components/AdminPanel/TelegramCollectorManager";
-import UserActivityPanel from "../components/AdminPanel/UserActivityPanel";
 import CustomTextArea from "../components/ui/fields/CustomTextArea";
 import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Tabs from "../components/ui/fields/Tabs";
@@ -864,8 +862,6 @@ const AdminPanelPage = () => {
     | "notifications"
     | "broadcast"
     | "blacklist-plus"
-    | "telegram-blacklist"
-    | "activity"
   >("companies");
 
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
@@ -1287,13 +1283,9 @@ const AdminPanelPage = () => {
             company.id.toString(),
             company.name,
             company.chief,
-            company.phone ? (
-              <PhoneLink href={formatPhoneHref(company.phone)}>
-                {company.phone}
-              </PhoneLink>
-            ) : (
-              "Не указан"
-            ),
+            <PhoneLink href={formatPhoneHref(company.phone)}>
+              {company.phone}
+            </PhoneLink>,
             formatMoney((company.balance ?? 0).toString()),
           ];
           if (!salesMode) {
@@ -1305,13 +1297,9 @@ const AdminPanelPage = () => {
           company.id.toString(),
           company.name,
           company.chief,
-          company.phone ? (
-            <PhoneLink href={formatPhoneHref(company.phone)}>
-              {company.phone}
-            </PhoneLink>
-          ) : (
-            "Не указан"
-          ),
+          <PhoneLink href={formatPhoneHref(company.phone)}>
+            {company.phone}
+          </PhoneLink>,
           company.licenceDate ? formatDate(company.licenceDate) : "Нет данных",
           company.createdCreditsCount,
           company.totalCredits,
@@ -1639,16 +1627,6 @@ const AdminPanelPage = () => {
       label: "ЧС+",
       content: <BlacklistPlusUsersManager />,
     },
-    {
-      id: "telegram-blacklist",
-      label: "Telegram → ЧС+",
-      content: <TelegramCollectorManager />,
-    },
-    {
-      id: "activity",
-      label: "Активность",
-      content: <UserActivityPanel />,
-    },
   ];
 
   const addButton =
@@ -1739,8 +1717,6 @@ const AdminPanelPage = () => {
               | "credit-applications"
               | "broadcast"
               | "blacklist-plus"
-              | "telegram-blacklist"
-              | "activity"
           );
           setCurrentPage(1);
           setNameFilter("");

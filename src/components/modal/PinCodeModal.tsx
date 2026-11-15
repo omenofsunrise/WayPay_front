@@ -2,21 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import apiClient, { API_BASE_URL } from '../../api/client';
 import { authStorage } from '../../api/utils/auth-storage';
-import BaseModal from './BASE/modalCRUBase';
-import WayPayButton from '../ui/Buttons/WayPayButton';
 
 const PIN_LENGTH = 5;
 
 interface PinCodeModalProps {
   isOpen: boolean;
   onSuccess: (pin?: string) => void;
-  /** confirm — подтвердить действие текущим пином: пин уходит в onConfirm. */
-  mode: 'setup' | 'verify' | 'confirm';
+  mode: 'setup' | 'verify';
   onMaxAttempts?: () => void;
-  onConfirm?: (pin: string) => Promise<void>;
-  onCancel?: () => void;
-  title?: string;
-  description?: string;
   tokenId?: string;
   maxAttempts?: number;
   currentAttempts?: number;
@@ -29,11 +22,7 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
   onMaxAttempts,
   tokenId,
   maxAttempts = 3,
-  currentAttempts = 0,
-  onConfirm,
-  onCancel,
-  title,
-  description,
+  currentAttempts = 0
 }) => {
   const [pin, setPin] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -59,10 +48,7 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
 
     setIsLoading(true);
     try {
-      if (mode === 'confirm') {
-        await onConfirm?.(pin);
-        onSuccess(pin);
-      } else if (mode === 'setup') {
+      if (mode === 'setup') {
         await apiClient.post('/Auth/setup-pin', { pinCode: pin });
         onSuccess();
       } else {
@@ -81,12 +67,6 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
         onSuccess(pin);
       }
     } catch (err) {
-      if (mode === 'confirm') {
-        // Попытки считает бэкенд; здесь только показываем его ответ.
-        const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
-        setError(data?.message || 'Не удалось подтвердить пин-код');
-        return;
-      }
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
       
@@ -162,25 +142,19 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
 
   if (!isOpen) return null;
 
-  const modalTitle = title ?? (mode === 'setup' ? 'Установите пин-код' : 'Введите пин-код');
-  const modalDescription = description ?? (mode === 'setup'
-    ? 'Для безопасности аккаунта установите 5-значный пин-код'
-    : undefined);
-
   return (
-    <BaseModal
-      isOpen={isOpen}
-      title={modalTitle}
-      subtitle={modalDescription}
-      appearance="compact-form"
-      width="460px"
-      onClose={onCancel ?? (() => undefined)}
-      onCancel={onCancel ?? (() => undefined)}
-      hideCloseButton={!onCancel}
-      hideSaveButton
-      hideCanselButton
-    >
+    <ModalOverlay>
+      <ModalContainer>
         <ModalContent>
+          <Title>
+            {mode === 'setup' ? 'Установите пин-код' : 'Введите пин-код'}
+          </Title>
+          {mode === 'setup' && (
+            <Description>
+              Для безопасности вашего аккаунта установите 5-значный пин-код. Он потребуется для подтверждения важных операций.
+            </Description>
+          )}
+          
           <PinForm onSubmit={handleSubmit}>
             <PinCells role="group" aria-label="Пин-код">
               {Array.from({ length: PIN_LENGTH }).map((_, index) => (
@@ -206,10 +180,8 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
 
             {error && <ErrorText>{error}</ErrorText>}
 
-            <WayPayButton
+            <SubmitButton
               type="submit"
-              size="large"
-              fullWidth
               disabled={
                 isLoading ||
                 pin.length !== PIN_LENGTH ||
@@ -219,28 +191,62 @@ const PinCodeModal: React.FC<PinCodeModalProps> = ({
               {isLoading
                 ? (mode === 'setup' ? 'Сохранение...' : 'Проверка...')
                 : (mode === 'setup' ? 'Подтвердить' : 'Продолжить')}
-            </WayPayButton>
-            {onCancel && (
-              <WayPayButton
-                variant="ghost"
-                fullWidth
-                onClick={onCancel}
-                disabled={isLoading}
-              >
-                Отмена
-              </WayPayButton>
-            )}
+            </SubmitButton>
           </PinForm>
         </ModalContent>
-    </BaseModal>
+      </ModalContainer>
+    </ModalOverlay>
   );
 };
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContainer = styled.div`
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 125, 136, 0.2);
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+  animation: fadeIn 0.3s ease-out;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
 const ModalContent = styled.div`
   display: flex;
-  padding: 10px 34px 28px;
   flex-direction: column;
   align-items: center;
+`;
+
+const Title = styled.h2`
+  font-size: 22px;
+  margin-bottom: 15px;
+  color: #333;
+  text-align: center;
+`;
+
+const Description = styled.p`
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 25px;
+  line-height: 1.5;
 `;
 
 const PinForm = styled.form`
@@ -296,6 +302,27 @@ const ErrorText = styled.div`
   font-size: 14px;
   margin-bottom: 15px;
   text-align: center;
+`;
+
+const SubmitButton = styled.button`
+  background: linear-gradient(90deg, rgba(0, 125, 136, 1) 0%, rgba(37, 203, 161, 1) 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
 `;
 
 export default PinCodeModal;

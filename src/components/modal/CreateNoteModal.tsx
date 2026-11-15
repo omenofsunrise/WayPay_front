@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
+import CustomTitle from '../ui/Text/CustomTitle';
+import GrayButton from '../ui/Buttons/GrayButton';
+import DarkCyanButton from '../ui/Buttons/DarkCyanButton';
 import AddPhotoButtonSvg from '../../assets/ui/buttons/AddPhotoButton.svg';  
 import AddFileButtonSvg from '../../assets/ui/buttons/AddFileButton.svg';
 import FileItem from '../Blog/FileItem';
 import type { Attachment } from '../../api/types/chat';
 import { SOCIAL_BASE_URL } from '../../api/socialApiClient';
 import CustomCalendar from '../ui/fields/CustomCalendar';
-import BaseModal from './BASE/modalCRUBase';
+import ModalInfoTitle from '../ui/Text/ModalInfoTitle';
 
 interface CreateNoteModalProps {
   isOpen: boolean;
@@ -52,8 +55,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
     }
   }, [attachmentInfo]);
 
-  const handleCreate = (event?: React.FormEvent) => {
-    event?.preventDefault();
+  const handleCreate = () => {
     onCreate({
       content: noteContent,
       file: attachedFile || undefined,
@@ -110,29 +112,17 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      title="Заметка"
-      subtitle="Добавьте текст, напоминание или вложение"
-      appearance="compact-form"
-      width="568px"
-      maxHeight="calc(100vh - 32px)"
-      onClose={handleCancel}
-      onCancel={handleCancel}
-      onSave={handleCreate}
-      saveButtonText="Создать"
-      isSaveDisabled={!noteContent.trim()}
-    >
-      <NoteModalContent>
+    <ModalOverlay isOpen={isOpen} onClick={handleCancel}>
+      <NoteModalContent onClick={(e) => e.stopPropagation()}>
         <NoteModalWrapper>
-          <FieldLabel>Напомнить</FieldLabel>
+          <CustomTitle style={{ marginTop: 0 }}>Заметка</CustomTitle>
+          
+          <ModalInfoTitle>Напомнить</ModalInfoTitle>
           <CustomCalendar 
-            prefix=""
             value={remindDate}
             onChange={(date) => setRemindDate(date)}
           />
 
-          <FieldLabel>Текст заметки</FieldLabel>
           <NoteInput 
             value={noteContent}
             onChange={(e) => onNoteContentChange(e.target.value)}
@@ -140,12 +130,12 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
           />
           
           <AttachmentButtonsContainer>
-            <AttachmentButton type="button" onClick={handleAddPhotoClick}>
+            <AttachmentButton onClick={handleAddPhotoClick}>
               <ButtonIcon src={AddPhotoButtonSvg} alt="Add Photo" />
               Добавить фото
             </AttachmentButton>
             
-            <AttachmentButton type="button" onClick={handleAddFileClick}>
+            <AttachmentButton onClick={handleAddFileClick}>
               <ButtonIcon src={AddFileButtonSvg} alt="Add File" />
               Добавить файл
             </AttachmentButton>
@@ -173,7 +163,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
                       alt="Preview" 
                       onLoad={() => URL.revokeObjectURL(URL.createObjectURL(attachedFile))}
                     />
-                    <RemoveImageButton type="button" onClick={handleRemoveFile}>
+                    <RemoveImageButton onClick={handleRemoveFile}>
                       ×
                     </RemoveImageButton>
                   </ImagePreviewWrapper>
@@ -193,7 +183,7 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
                       src={SOCIAL_BASE_URL + '/' + attachmentData.fileUrl} 
                       alt={SOCIAL_BASE_URL + attachmentData.fileUrl}
                     />
-                    <RemoveImageButton type="button" onClick={handleRemoveFile}>
+                    <RemoveImageButton onClick={handleRemoveFile}>
                       ×
                     </RemoveImageButton>
                   </ImagePreviewWrapper>
@@ -213,36 +203,59 @@ const CreateNoteModal: React.FC<CreateNoteModalProps> = ({
               ) : null}
             </AttachmentPreviewContainer>
           )}
+
+          <ButtonContainer>
+            <GrayButton style={{width: "100px"}} onClick={handleCancel}>
+              Отменить
+            </GrayButton>
+            <DarkCyanButton 
+              style={{width: "100px"}} 
+              onClick={handleCreate}
+              disabled={!noteContent.trim()}
+            >
+              Создать
+            </DarkCyanButton>
+          </ButtonContainer>
         </NoteModalWrapper>
       </NoteModalContent>
-    </BaseModal>
+    </ModalOverlay>
   );
 };
 
-const NoteModalContent = styled.div`
-  padding: 6px 34px 24px;
+const ModalOverlay = styled.div<{ isOpen: boolean }>`
+  display: ${({ isOpen }) => (isOpen ? 'flex' : 'none')};
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
   color: black;
+`;
+
+const NoteModalContent = styled.div`
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
 `;
 
 const NoteModalWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
-`;
-
-const FieldLabel = styled.label`
-  margin-top: 8px;
-  color: #192438;
-  font-size: 14px;
-  font-weight: 500;
-  text-align: left;
+  margin: 20px;
 `;
 
 const NoteInput = styled.textarea`
   width: auto;
   height: 150px;
   padding: 12px;
-  margin: 0 0 7px;
+  margin: 15px 0;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   resize: none;
@@ -343,6 +356,13 @@ const RemoveImageButton = styled.button`
 
 const FileItemWrapper = styled.div`
   width: 100%;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
 `;
 
 export default CreateNoteModal;

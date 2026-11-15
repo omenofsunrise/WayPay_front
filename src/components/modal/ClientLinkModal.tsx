@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import useClientToken from "../../api/hooks/useClientToken";
 import { formatExactDate } from "../../utils/dateFormatter";
-import BaseModal from "./BASE/modalCRUBase";
 
 // Путь публичной страницы клиента (должен совпадать с маршрутом в App.tsx).
 const CLIENT_PUBLIC_PATH = "/client-public";
@@ -76,18 +75,15 @@ const ClientLinkModal: React.FC<ClientLinkModalProps> = ({
   };
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      title="Ссылка для клиента"
-      subtitle={clientName || "Публичный доступ к договорам клиента"}
-      appearance="compact-form"
-      width="540px"
-      onClose={onClose}
-      onCancel={onClose}
-      hideSaveButton
-      hideCanselButton
-    >
-      <Card>
+    <Overlay onClick={onClose}>
+      <Card onClick={(e) => e.stopPropagation()}>
+        <Header>
+          <Title>Ссылка для клиента</Title>
+          <Close onClick={onClose} aria-label="Закрыть">
+            ×
+          </Close>
+        </Header>
+        {clientName && <Subtitle>{clientName}</Subtitle>}
         <Hint>
           Отправьте клиенту эту ссылку — она откроется без авторизации на любом
           устройстве и покажет его договоры.
@@ -120,13 +116,59 @@ const ClientLinkModal: React.FC<ClientLinkModalProps> = ({
           </>
         )}
       </Card>
-    </BaseModal>
+    </Overlay>
   );
 };
 
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+`;
+
 const Card = styled.div`
-  padding: 6px 34px 28px;
-  text-align: left;
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px;
+  width: 480px;
+  max-width: 92vw;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const Title = styled.h3`
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+`;
+
+const Close = styled.button`
+  background: none;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #9ca3af;
+  cursor: pointer;
+  &:hover {
+    color: #111827;
+  }
+`;
+
+const Subtitle = styled.div`
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #007d88;
 `;
 
 const Hint = styled.div`
