@@ -26,6 +26,14 @@ type MetricBinding = CalcMetricQuery & {
 
 type CalcDocument = { version: 1; sheets: Sheet[]; bindings: MetricBinding[] };
 
+const MAX_DOCUMENT_BYTES = 10_000_000;
+
+const requestErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error !== "object" || error === null || !("response" in error)) return fallback;
+  const response = (error as { response?: { data?: unknown } }).response;
+  return typeof response?.data === "string" ? response.data : fallback;
+};
+
 const createSheetId = () => {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
@@ -180,7 +188,7 @@ const formattedCellText = (cell: ExcelJS.Cell, value: Cell["v"]) => {
 
 const xlsxToSheets = async (buffer: ArrayBuffer): Promise<Sheet[]> => {
   const book = new ExcelJS.Workbook();
-  await book.xlsx.load(buffer as any);
+  await book.xlsx.load(buffer as never);
   return book.worksheets.map((worksheet, index) => {
     const maxRow = Math.max(worksheet.rowCount, 1);
     const maxColumn = Math.max(worksheet.columnCount, 1);
@@ -188,7 +196,7 @@ const xlsxToSheets = async (buffer: ArrayBuffer): Promise<Sheet[]> => {
       { length: maxRow },
       () => Array.from({ length: maxColumn }, () => null),
     );
-    const borderInfo: any[] = [];
+    const borderInfo: NonNullable<NonNullable<Sheet["config"]>["borderInfo"]> = [];
     worksheet.eachRow({ includeEmpty: true }, (sourceRow, rowNumber) => {
       sourceRow.eachCell({ includeEmpty: true }, (source, columnNumber) => {
         const r = rowNumber - 1;
@@ -302,15 +310,20 @@ export default function CalcPage() {
 
   const save = async () => {
     if (!canEdit) return;
+    const content = serialize();
+    if (new Blob([content]).size > MAX_DOCUMENT_BYTES) {
+      setMessage("Таблица слишком большая для сохранения. Максимальный размер — 10 МБ");
+      return;
+    }
     setBusy(true);
     try {
-      const request = { name, content: serialize(), isShared };
+      const request = { name, content, isShared };
       const result = currentId ? await calcService.update(currentId, request) : await calcService.create(request);
       setCurrentId(result.id);
       setMessage("Таблица сохранена");
       await reloadList();
-    } catch (error: any) {
-      setMessage(error?.response?.data ?? "Не удалось сохранить таблицу");
+    } catch (error) {
+      setMessage(requestErrorMessage(error, "Не удалось сохранить таблицу"));
     } finally { setBusy(false); }
   };
 
@@ -326,7 +339,14 @@ export default function CalcPage() {
       setBindings(document.bindings);
       setSheets(document.sheets);
       setWorkbookVersion((version) => version + 1);
-      setMessage(result.canEdit ? "Таблица открыта" : "Открыт общий документ — только просмотр");
+      setMessage(document.bindings.length
+        ? "Таблица открыта. Обновляем показатели WayPay…"
+        : result.canEdit ? "Таблица открыта" : "Открыт общий документ — только просмотр");
+      if (document.bindings.length) {
+        window.setTimeout(() => window.requestAnimationFrame(() => {
+          void refreshMetrics(document.bindings, true, result.canEdit);
+        }), 0);
+      }
     } catch { setMessage("Не удалось открыть таблицу"); }
     finally { setBusy(false); }
   };
@@ -340,6 +360,21 @@ export default function CalcPage() {
     setBindings([]);
     setSheets(next);
     setWorkbookVersion((version) => version + 1);
+  };
+
+  const deleteSheet = async () => {
+    if (!currentId || !canEdit || !window.confirm(`Удалить таблицу «${name}»?`)) return;
+    setBusy(true);
+    try {
+      await calcService.remove(currentId);
+      createNew();
+      await reloadList();
+      setMessage("Таблица удалена");
+    } catch (error) {
+      setMessage(requestErrorMessage(error, "Не удалось удалить таблицу"));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const metricQuery = (): CalcMetricQuery => ({
@@ -402,21 +437,35 @@ export default function CalcPage() {
       setBindings((old) => [...old.filter((x) => !(x.sheetId === binding.sheetId && x.row === row && x.column === column)), binding]);
       setSheets(workbookRef.current?.getAllSheets() ?? sheets);
       setMessage(insertMode === "series" ? `${binding.label}: отчёт сформирован` : `${binding.label} добавлен в выбранную ячейку`);
-    } catch (error: any) { setMessage(error?.response?.data ?? "Не удалось получить показатель"); }
+    } catch (error) { setMessage(requestErrorMessage(error, "Не удалось получить показатель")); }
     finally { setBusy(false); }
   };
 
-  const refreshMetrics = async () => {
+  const refreshMetrics = async (
+    items: MetricBinding[] = bindings,
+    automatic = false,
+    editable = canEdit,
+  ) => {
+    if (!items.length) return;
     setBusy(true);
     try {
-      for (const binding of bindings) {
-        const { sheetId, row, column, label: _label, mode, groupBy: bindingGroup, rowCount: _rowCount, ...query } = binding;
+      const updatedBindings = [...items];
+      for (let index = 0; index < items.length; index += 1) {
+        const binding = items[index];
+        const { sheetId, row, column, mode, groupBy: bindingGroup } = binding;
+        const query: CalcMetricQuery = {
+          code: binding.code,
+          ...(binding.from && { from: binding.from }),
+          ...(binding.to && { to: binding.to }),
+          ...(binding.poolId && { poolId: binding.poolId }),
+          ...(binding.investorId && { investorId: binding.investorId }),
+        };
         if (mode === "series" && query.from && query.to) {
           const series = await calcService.metricSeries({
             ...query, from: query.from, to: query.to, groupBy: bindingGroup ?? "month",
           });
           const rowCount = writeSeries(series, sheetId, row, column);
-          setBindings((old) => old.map((item) => item === binding ? { ...item, rowCount } : item));
+          updatedBindings[index] = { ...binding, rowCount };
         } else {
           const metric = await calcService.metric(query);
           updatingMetricsRef.current = true;
@@ -424,9 +473,16 @@ export default function CalcPage() {
           updatingMetricsRef.current = false;
         }
       }
+      setBindings(updatedBindings);
       setSheets(workbookRef.current?.getAllSheets() ?? sheets);
-      setMessage(`Обновлено показателей: ${bindings.length}`);
-    } catch (error: any) { setMessage(error?.response?.data ?? "Не все показатели удалось обновить"); }
+      setMessage(automatic
+        ? `${editable ? "Таблица открыта" : "Открыт общий документ — только просмотр"}. Показатели обновлены: ${items.length}`
+        : `Обновлено показателей: ${items.length}`);
+    } catch (error) {
+      setMessage(requestErrorMessage(error, automatic
+        ? "Таблица открыта, но показатели WayPay обновить не удалось"
+        : "Не все показатели удалось обновить"));
+    }
     finally { setBusy(false); }
   };
 
@@ -470,6 +526,7 @@ export default function CalcPage() {
         <Button onClick={createNew}>Новая</Button>
         <Button onClick={() => fileRef.current?.click()}>Импорт XLSX</Button>
         <Button onClick={exportXlsx}>Экспорт XLSX</Button>
+        <DangerButton onClick={deleteSheet} disabled={busy || !currentId || !canEdit}>Удалить</DangerButton>
         <PrimaryButton onClick={save} disabled={busy || !canEdit}>{busy ? "Подождите…" : "Сохранить"}</PrimaryButton>
         <input ref={fileRef} hidden type="file" accept=".xlsx,.xls" onChange={(e) => {
           const file = e.currentTarget.files?.[0];
@@ -527,7 +584,7 @@ export default function CalcPage() {
         <Label>Пул (необязательно)</Label><Select value={poolId} onChange={(e) => { setPoolId(e.target.value); setInvestorId(""); }}><option value="">Вся компания</option>{metricOptions.pools.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
         <Label>Инвестор {selectedMetric?.requiresInvestor ? "*" : "(необязательно)"}</Label><Select value={investorId} onChange={(e) => setInvestorId(e.target.value)}><option value="">Все инвесторы</option>{metricOptions.investors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
         <PrimaryButton onClick={insertMetric} disabled={busy || !canEdit}>{insertMode === "series" ? "Сформировать отчёт" : "Вставить в ячейку"}</PrimaryButton>
-        <Button onClick={refreshMetrics} disabled={busy || !bindings.length}>Обновить все ({bindings.length})</Button>
+        <Button onClick={() => void refreshMetrics()} disabled={busy || !bindings.length}>Обновить все ({bindings.length})</Button>
         <BindingList>{bindings.map((binding, index) => <Binding key={`${binding.sheetId}-${binding.row}-${binding.column}`}><span>{binding.label}<small>{binding.mode === "series" ? `Отчёт · ${binding.groupBy === "day" ? "по дням" : "по месяцам"}` : "Значение"} · R{binding.row + 1}C{binding.column + 1}</small></span>{canEdit && <button onClick={() => setBindings((old) => old.filter((_, i) => i !== index))}>×</button>}</Binding>)}</BindingList>
       </Panel>
     </Workspace>
@@ -541,6 +598,7 @@ const Subtitle = styled.div`color:#8b95a7;`;
 const Actions = styled.div`display:flex; gap:8px; flex-wrap:wrap;`;
 const Button = styled.button`border:1px solid #d8dee7; border-radius:8px; background:#fff; padding:10px 14px; cursor:pointer; color:#354052; &:disabled{opacity:.5;cursor:default;}`;
 const PrimaryButton = styled(Button)`background:#078b94; border-color:#078b94; color:#fff;`;
+const DangerButton = styled(Button)`color:#e5484d; border-color:#f2c7c9;`;
 const Notice = styled.div`background:#eaf8f8; color:#116970; border-radius:8px; padding:10px 14px; margin-bottom:12px;`;
 const DocumentBar = styled.div`display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:12px; margin-bottom:16px; flex-wrap:wrap;`;
 const Input = styled.input`min-width:0; border:1px solid #d8dee7; border-radius:8px; padding:10px 12px; box-sizing:border-box; background:#fff;`;
