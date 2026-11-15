@@ -663,6 +663,6 @@ const Panel = styled.aside`background:#fff; border:1px solid #e3e7ed; border-rad
 const PanelTitle = styled.h2`font-size:18px; margin:0;`;
 const Hint = styled.p`font-size:13px; line-height:1.45; color:#8b95a7; margin:0 0 4px;`;
 const Label = styled.label`font-size:13px; color:#5f697b; margin-bottom:-4px;`;
-const TwoColumns = styled.div`display:grid; grid-template-columns:1fr 1fr; gap:8px; >div{display:flex; flex-direction:column; gap:6px;}`;
+const TwoColumns = styled.div`display:grid; grid-template-columns:1fr; gap:10px; >div{display:flex; flex-direction:column; gap:6px;}`;
 const BindingList = styled.div`display:flex; flex-direction:column; gap:6px; margin-top:4px; max-height:180px; overflow:auto;`;
 const Binding = styled.div`display:flex; align-items:center; justify-content:space-between; background:#f5f7f9; border-radius:7px; padding:7px 9px; font-size:13px; small{display:block;color:#8b95a7;margin-top:2px} button{border:0;background:transparent;font-size:20px;cursor:pointer;color:#8b95a7}`;
