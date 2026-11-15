@@ -6,6 +6,8 @@ import "@fortune-sheet/react/dist/index.css";
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import calcService from "../../api/services/calcService";
+import CustomCalendar from "../../components/ui/fields/CustomCalendar";
+import CustomSelect from "../../components/ui/fields/CustomSelect";
 import type {
   CalcMetricDefinition,
   CalcMetricOptions,
@@ -539,10 +541,18 @@ export default function CalcPage() {
     <DocumentBar>
       <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} aria-label="Название таблицы" />
       <label><input type="checkbox" checked={isShared} disabled={!canEdit} onChange={(e) => setIsShared(e.target.checked)} /> Доступна компании</label>
-      <Select value={currentId ?? ""} onChange={(e) => e.target.value && openSheet(Number(e.target.value))}>
-        <option value="">Открыть сохранённую…</option>
-        {savedSheets.map((item) => <option key={item.id} value={item.id}>{item.name}{item.canEdit ? "" : " · общий"}</option>)}
-      </Select>
+      <SavedSheetSelect>
+        <CustomSelect
+          value={currentId?.toString() ?? ""}
+          placeholder="Открыть сохранённую…"
+          dropdownInPortal
+          onChange={(e) => e.target.value && void openSheet(Number(e.target.value))}
+          options={savedSheets.map((item) => ({
+            value: item.id.toString(),
+            label: `${item.name}${item.canEdit ? "" : " · общий"}`,
+          }))}
+        />
+      </SavedSheetSelect>
     </DocumentBar>
     <Workspace>
       <GridCard><Workbook
@@ -573,16 +583,60 @@ export default function CalcPage() {
         <PanelTitle>Показатели WayPay</PanelTitle>
         <Hint>Выберите ячейку и показатель. Значение придёт с сервера и сможет обновляться.</Hint>
         <Label>Показатель</Label>
-        <Select value={metricCode} onChange={(e) => setMetricCode(e.target.value)}>{metrics.map((item) => <option key={item.code} value={item.code}>{item.name}, {item.unit}</option>)}</Select>
+        <CustomSelect
+          value={metricCode}
+          dropdownInPortal
+          onChange={(e) => setMetricCode(e.target.value)}
+          options={metrics.map((item) => ({ value: item.code, label: `${item.name}, ${item.unit}` }))}
+        />
         <Label>Результат</Label>
-        <Select value={insertMode} onChange={(e) => setInsertMode(e.target.value as "value" | "series")}>
-          <option value="value">Одно значение</option>
-          <option value="series">Отчёт по периодам</option>
-        </Select>
-        {insertMode === "series" && <><Label>Группировка</Label><Select value={groupBy} onChange={(e) => setGroupBy(e.target.value as "day" | "month")}><option value="month">По месяцам</option><option value="day">По дням</option></Select></>}
-        <TwoColumns><div><Label>С</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div><div><Label>По</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div></TwoColumns>
-        <Label>Пул (необязательно)</Label><Select value={poolId} onChange={(e) => { setPoolId(e.target.value); setInvestorId(""); }}><option value="">Вся компания</option>{metricOptions.pools.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
-        <Label>Инвестор {selectedMetric?.requiresInvestor ? "*" : "(необязательно)"}</Label><Select value={investorId} onChange={(e) => setInvestorId(e.target.value)}><option value="">Все инвесторы</option>{metricOptions.investors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
+        <CustomSelect<"value" | "series">
+          value={insertMode}
+          dropdownInPortal
+          onChange={(e) => setInsertMode(e.target.value)}
+          options={[
+            { value: "value", label: "Одно значение" },
+            { value: "series", label: "Отчёт по периодам" },
+          ]}
+        />
+        {insertMode === "series" && <>
+          <Label>Группировка</Label>
+          <CustomSelect<"day" | "month">
+            value={groupBy}
+            dropdownInPortal
+            onChange={(e) => setGroupBy(e.target.value)}
+            options={[
+              { value: "month", label: "По месяцам" },
+              { value: "day", label: "По дням" },
+            ]}
+          />
+        </>}
+        <TwoColumns>
+          <div><Label>С</Label><CustomCalendar prefix="" value={from} onChange={setFrom} /></div>
+          <div><Label>По</Label><CustomCalendar prefix="" value={to} onChange={setTo} /></div>
+        </TwoColumns>
+        <Label>Пул (необязательно)</Label>
+        <CustomSelect
+          value={poolId}
+          placeholder="Вся компания"
+          dropdownInPortal
+          onChange={(e) => { setPoolId(e.target.value); setInvestorId(""); }}
+          options={[
+            { value: "", label: "Вся компания" },
+            ...metricOptions.pools.map((item) => ({ value: item.id.toString(), label: item.name })),
+          ]}
+        />
+        <Label>Инвестор {selectedMetric?.requiresInvestor ? "*" : "(необязательно)"}</Label>
+        <CustomSelect
+          value={investorId}
+          placeholder="Все инвесторы"
+          dropdownInPortal
+          onChange={(e) => setInvestorId(e.target.value)}
+          options={[
+            { value: "", label: "Все инвесторы" },
+            ...metricOptions.investors.map((item) => ({ value: item.id.toString(), label: item.name })),
+          ]}
+        />
         <PrimaryButton onClick={insertMetric} disabled={busy || !canEdit}>{insertMode === "series" ? "Сформировать отчёт" : "Вставить в ячейку"}</PrimaryButton>
         <Button onClick={() => void refreshMetrics()} disabled={busy || !bindings.length}>Обновить все ({bindings.length})</Button>
         <BindingList>{bindings.map((binding, index) => <Binding key={`${binding.sheetId}-${binding.row}-${binding.column}`}><span>{binding.label}<small>{binding.mode === "series" ? `Отчёт · ${binding.groupBy === "day" ? "по дням" : "по месяцам"}` : "Значение"} · R{binding.row + 1}C{binding.column + 1}</small></span>{canEdit && <button onClick={() => setBindings((old) => old.filter((_, i) => i !== index))}>×</button>}</Binding>)}</BindingList>
@@ -601,8 +655,8 @@ const PrimaryButton = styled(Button)`background:#078b94; border-color:#078b94; c
 const DangerButton = styled(Button)`color:#e5484d; border-color:#f2c7c9;`;
 const Notice = styled.div`background:#eaf8f8; color:#116970; border-radius:8px; padding:10px 14px; margin-bottom:12px;`;
 const DocumentBar = styled.div`display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:12px; margin-bottom:16px; flex-wrap:wrap;`;
+const SavedSheetSelect = styled.div`width:220px;`;
 const Input = styled.input`min-width:0; border:1px solid #d8dee7; border-radius:8px; padding:10px 12px; box-sizing:border-box; background:#fff;`;
-const Select = styled.select`min-width:0; border:1px solid #d8dee7; border-radius:8px; padding:10px 12px; background:#fff;`;
 const Workspace = styled.div`display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; @media(max-width:1100px){grid-template-columns:1fr;}`;
 const GridCard = styled.div`height:calc(100vh - 230px); min-height:520px; border:1px solid #e3e7ed; border-radius:12px; overflow:hidden; background:#fff;`;
 const Panel = styled.aside`background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; align-self:start;`;
