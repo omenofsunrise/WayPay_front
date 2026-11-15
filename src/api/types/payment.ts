@@ -53,6 +53,10 @@ export interface CreatePaymentResponse extends Payment {
 export interface PaymentResponse extends PaginatedResponse<Payment> {
   totalPayments: number;
   totalIncome: number;
+  expectedPayments: number;
+  expectedIncome: number;
+  expectedCompanyIncome: number;
+  expectedInvestorIncome: number;
 }
 
 export interface PaymentTab {

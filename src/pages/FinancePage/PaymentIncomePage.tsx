@@ -6,7 +6,6 @@ import CustomTable from "../../components/ui/tables/CustomTable";
 import FilterField from "../../components/ui/Layouts/FilterField";
 import PageLayout from "../../components/ui/Layouts/PageLayout";
 import PaginationLayout from "../../components/ui/Layouts/PaginationLayout";
-import TitleField from "../../components/ui/Layouts/TitleLayout";
 import CountInfoTitle from "../../components/ui/Text/CountInfoTitle";
 import CustomTitle from "../../components/ui/Text/CustomTitle";
 import usePayment from "../../api/hooks/usePayment";
@@ -18,7 +17,57 @@ import { formatMoney } from "../../utils/formatPrice";
 import { useAuth } from "../../сontext/AuthContext";
 import CustomSelect from "../../components/ui/fields/CustomSelect";
 import InvestorSelect from "../../components/ui/fields/InvestorSelect";
-import { TableTitle } from "./BudgetPage";
+import styled from "styled-components";
+
+const PaymentHeader = styled.div`
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(0, 3fr);
+  align-items: center;
+  gap: 32px;
+  width: 100%;
+
+  > ${CustomTitle} {
+    margin: 0;
+  }
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+`;
+
+const PaymentTotals = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+`;
+
+const PaymentMetric = styled.div`
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-left: 2px solid rgba(0, 125, 136, 0.22);
+`;
+
+const PaymentMetricLabel = styled.span`
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+`;
+
+const PaymentMetricValue = styled.span`
+  color: #222;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+`;
 
 const PaymentIncomePage = () => {
   const currentDate = new Date();
@@ -48,6 +97,15 @@ const PaymentIncomePage = () => {
   const [selectedInvestorId, setSelectedInvestorId] = useState<number | null>(
     null
   );
+  const [incomePart, setIncomePart] = useState<
+    "total" | "company" | "investor"
+  >("total");
+
+  const incomePartOptions = [
+    { value: "total", label: "Прибыль: общая" },
+    { value: "company", label: "Прибыль: компании" },
+    { value: "investor", label: "Прибыль: инвестора" },
+  ];
 
   const months = [
     { value: "1", label: "Январь" },
@@ -313,6 +371,18 @@ const PaymentIncomePage = () => {
 
   const tableData = formatPaymentsData(paymentsData?.items);
 
+  const expectedIncomeByPart = {
+    total: paymentsData?.expectedIncome,
+    company: paymentsData?.expectedCompanyIncome,
+    investor: paymentsData?.expectedInvestorIncome,
+  }[incomePart];
+
+  const expectedIncomeLabel = {
+    total: "Ожидаемая прибыль",
+    company: "Ожидаемая прибыль компании",
+    investor: "Ожидаемая прибыль инвестора",
+  }[incomePart];
+
   const tableActions = [
     {
       label: "Подтвердить",
@@ -342,26 +412,48 @@ const PaymentIncomePage = () => {
 
   return (
     <PageLayout>
-      <TitleField style={{ gap: "35px" }}>
+      <PaymentHeader>
         <CustomTitle>Доходы по платежам</CustomTitle>
         {/* <ExportButton 
                     onClick={handleExport}
                     isExporting={isExporting}
                     exportProgress={exportProgress}
                 /> */}
-        {showTotalIncome && (
-          <TableTitle>
-            Всего доход:{" "}
-            {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
-          </TableTitle>
-        )}
-        {showTotalPayouts && (
-          <TableTitle>
-            Всего выплат:{" "}
-            {formatMoney(paymentsData?.totalPayments?.toString() || "0")}
-          </TableTitle>
-        )}
-      </TitleField>
+        <PaymentTotals>
+          {showTotalIncome && (
+            <PaymentMetric>
+              <PaymentMetricLabel>Прибыль</PaymentMetricLabel>
+              <PaymentMetricValue>
+                {formatMoney(paymentsData?.totalIncome?.toString() || "0")}
+              </PaymentMetricValue>
+            </PaymentMetric>
+          )}
+          {showTotalPayouts && (
+            <PaymentMetric>
+              <PaymentMetricLabel>Доход</PaymentMetricLabel>
+              <PaymentMetricValue>
+                {formatMoney(paymentsData?.totalPayments?.toString() || "0")}
+              </PaymentMetricValue>
+            </PaymentMetric>
+          )}
+          {showTotalPayouts && (
+            <PaymentMetric>
+              <PaymentMetricLabel>Ожидаемый доход</PaymentMetricLabel>
+              <PaymentMetricValue>
+                {formatMoney(paymentsData?.expectedPayments?.toString() || "0")}
+              </PaymentMetricValue>
+            </PaymentMetric>
+          )}
+          {showTotalIncome && (
+            <PaymentMetric>
+              <PaymentMetricLabel>{expectedIncomeLabel}</PaymentMetricLabel>
+              <PaymentMetricValue>
+                {formatMoney(expectedIncomeByPart?.toString() || "0")}
+              </PaymentMetricValue>
+            </PaymentMetric>
+          )}
+        </PaymentTotals>
+      </PaymentHeader>
 
       <FilterField>
         <CustomInput
@@ -416,6 +508,13 @@ const PaymentIncomePage = () => {
           onInvestorSelect={(investor) => {
             // handleInvestorChange(investor.name, investor.id);
           }}
+        />
+        <CustomSelect<"total" | "company" | "investor">
+          placeholder="Часть дохода"
+          value={incomePart}
+          onChange={(event) => setIncomePart(event.target.value)}
+          options={incomePartOptions}
+          style={{ flex: "0 1 210px" }}
         />
       </FilterField>
 
