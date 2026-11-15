@@ -44,6 +44,7 @@ import Tabs from "../components/ui/fields/Tabs";
 import CustomSelect from "../components/ui/fields/CustomSelect";
 
 const SALES_MODE_STORAGE_KEY = "adminSalesMode";
+const RESTRICTED_SUPERADMIN_ID = 110;
 
 const PaymentType = {
   ACQUIRING: 0,
@@ -835,7 +836,9 @@ const Toast = styled.div<{ $type: "success" | "error" | "warning" }>`
 `;
 
 const AdminPanelPage = () => {
-  const { hasRole, refresh } = useAuth();
+  const { hasRole, refresh, authInfo } = useAuth();
+  const isRestrictedSuperadmin = authInfo?.employee?.id === RESTRICTED_SUPERADMIN_ID;
+
   const [nameFilter, setNameFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [salesMode, setSalesMode] = useState<boolean>(
@@ -862,7 +865,7 @@ const AdminPanelPage = () => {
     | "notifications"
     | "broadcast"
     | "blacklist-plus"
-  >("companies");
+  >(isRestrictedSuperadmin ? "blacklist-plus" : "companies");
 
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit" | "view">(
@@ -965,6 +968,12 @@ const AdminPanelPage = () => {
   );
 
   useEffect(() => {
+    if (isRestrictedSuperadmin && activeTab !== "blacklist-plus") {
+      setActiveTab("blacklist-plus");
+    }
+  }, [isRestrictedSuperadmin, activeTab]);
+
+  useEffect(() => {
     if (notificationType === NotificationType.Single && !employees) {
       fetchEmployees({ page: 1, pageSize: 200 });
     }
@@ -973,6 +982,7 @@ const AdminPanelPage = () => {
   // Серверная пагинация/поиск: перезапрос при смене вкладки, страницы или поиска.
   // Поиск с дебаунсом, чтобы не слать запрос на каждый символ.
   useEffect(() => {
+    if (isRestrictedSuperadmin) return; 
     if (activeTab !== "companies" && activeTab !== "partners") return;
     const isPartner = activeTab === "partners";
     const timeout = setTimeout(() => {
@@ -1446,7 +1456,6 @@ const AdminPanelPage = () => {
         ]
     : [];
 
-  // В режиме продажи скрываем «Зайти в компанию», чтобы клиент рядом не видел вход в чужой аккаунт
   const tableActions = tableActionsAll.filter(
     (action) => !(salesMode && action.label === "Зайти в компанию")
   );
@@ -1629,6 +1638,10 @@ const AdminPanelPage = () => {
     },
   ];
 
+  const visibleTabs = isRestrictedSuperadmin
+    ? tabs.filter((t) => t.id === "blacklist-plus")
+  : tabs;
+
   const addButton =
     activeTab === "companies" && hasRole("суперадмин") ? (
       <DarkCyanButton
@@ -1706,7 +1719,7 @@ const AdminPanelPage = () => {
       </TitleField>
 
       <Tabs
-        tabs={tabs}
+        tabs={visibleTabs}
         activeTab={activeTab}
         onChange={(tabId) => {
           setActiveTab(

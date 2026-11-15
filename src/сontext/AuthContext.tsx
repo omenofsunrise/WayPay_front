@@ -129,8 +129,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return (
       authInfo.employee.id === 1 || // Kirill
       authInfo.employee.id === 4 ||
-      authInfo.employee.id === 102 ||
-      authInfo.employee.id === 28 // ИЛЬЯ
+      authInfo.employee.id === 102 || // Аюб
+      authInfo.employee.id === 28 || // ИЛЬЯ
+      authInfo.employee.id === 110 // Исаак
     );
   };
 
