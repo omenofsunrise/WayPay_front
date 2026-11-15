@@ -8,6 +8,7 @@ import ExcelJS from "exceljs";
 import calcService from "../../api/services/calcService";
 import CustomCalendar from "../../components/ui/fields/CustomCalendar";
 import CustomSelect from "../../components/ui/fields/CustomSelect";
+import { detectTemplateVariables } from "./templateVariables";
 import type {
   CalcMetricDefinition,
   CalcMetricOptions,
@@ -24,6 +25,7 @@ type MetricBinding = CalcMetricQuery & {
   mode?: "value" | "series";
   groupBy?: "day" | "month";
   rowCount?: number;
+  source?: "template";
 };
 
 type CalcDocument = { version: 1; sheets: Sheet[]; bindings: MetricBinding[] };
@@ -31,9 +33,11 @@ type CalcDocument = { version: 1; sheets: Sheet[]; bindings: MetricBinding[] };
 const MAX_DOCUMENT_BYTES = 10_000_000;
 
 const requestErrorMessage = (error: unknown, fallback: string) => {
-  if (typeof error !== "object" || error === null || !("response" in error)) return fallback;
-  const response = (error as { response?: { data?: unknown } }).response;
-  return typeof response?.data === "string" ? response.data : fallback;
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = (error as { response?: { data?: unknown } }).response;
+    if (typeof response?.data === "string") return response.data;
+  }
+  return error instanceof Error ? error.message : fallback;
 };
 
 const createSheetId = () => {
@@ -455,24 +459,28 @@ export default function CalcPage() {
       for (let index = 0; index < items.length; index += 1) {
         const binding = items[index];
         const { sheetId, row, column, mode, groupBy: bindingGroup } = binding;
+        const bindingFrom = binding.source === "template" ? from || binding.from : binding.from;
+        const bindingTo = binding.source === "template" ? to || binding.to : binding.to;
         const query: CalcMetricQuery = {
           code: binding.code,
-          ...(binding.from && { from: binding.from }),
-          ...(binding.to && { to: binding.to }),
+          ...(bindingFrom && { from: bindingFrom }),
+          ...(bindingTo && { to: bindingTo }),
           ...(binding.poolId && { poolId: binding.poolId }),
           ...(binding.investorId && { investorId: binding.investorId }),
         };
-        if (mode === "series" && query.from && query.to) {
+        if (mode === "series") {
+          if (!query.from || !query.to) throw new Error("Для отчёта укажите даты «С» и «По»");
           const series = await calcService.metricSeries({
             ...query, from: query.from, to: query.to, groupBy: bindingGroup ?? "month",
           });
           const rowCount = writeSeries(series, sheetId, row, column);
-          updatedBindings[index] = { ...binding, rowCount };
+          updatedBindings[index] = { ...binding, ...query, rowCount };
         } else {
           const metric = await calcService.metric(query);
           updatingMetricsRef.current = true;
           workbookRef.current?.setCellValue(row, column, metric.value, { id: sheetId });
           updatingMetricsRef.current = false;
+          updatedBindings[index] = { ...binding, ...query };
         }
       }
       setBindings(updatedBindings);
@@ -509,10 +517,26 @@ export default function CalcPage() {
         setMessage("В Excel-файле не найдено заполненных ячеек");
         return;
       }
+      const detection = detectTemplateVariables(next, metrics, metricOptions, {
+        ...(from && { from }),
+        ...(to && { to }),
+        groupBy,
+      });
       setSheets(next);
-      setBindings([]);
+      setBindings(detection.bindings);
       setWorkbookVersion((version) => version + 1);
-      setMessage(`Excel импортирован: ${next.length} листов, ${importedCells} заполненных ячеек`);
+      const details = [
+        `Excel импортирован: ${next.length} листов, ${importedCells} заполненных ячеек`,
+        detection.bindings.length ? `переменных WayPay: ${detection.bindings.length}` : "",
+        detection.unknown.length ? `неизвестных переменных: ${detection.unknown.length}` : "",
+        detection.issues[0] ?? "",
+      ].filter(Boolean).join(" · ");
+      setMessage(details);
+      if (detection.bindings.length && !detection.unknown.length && !detection.issues.length) {
+        window.setTimeout(() => window.requestAnimationFrame(() => {
+          void refreshMetrics(detection.bindings, true, true);
+        }), 0);
+      }
     } catch (error) {
       const details = error instanceof Error ? error.message : "неизвестная ошибка";
       setMessage(`Не удалось импортировать Excel: ${details}`);
@@ -582,6 +606,10 @@ export default function CalcPage() {
       <Panel>
         <PanelTitle>Показатели WayPay</PanelTitle>
         <Hint>Выберите ячейку и показатель. Значение придёт с сервера и сможет обновляться.</Hint>
+        <TemplateHint>
+          В Excel можно указать <code>{"{код_показателя}"}</code>. Для отчёта: <code>{"{код_показателя_series;pool=Название;investor=Имя}"}</code>.
+          После импорта переменные заполнятся автоматически, период берётся из полей «С» и «По».
+        </TemplateHint>
         <Label>Показатель</Label>
         <CustomSelect
           value={metricCode}
@@ -662,6 +690,11 @@ const GridCard = styled.div`height:calc(100vh - 230px); min-height:520px; border
 const Panel = styled.aside`background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; align-self:start;`;
 const PanelTitle = styled.h2`font-size:18px; margin:0;`;
 const Hint = styled.p`font-size:13px; line-height:1.45; color:#8b95a7; margin:0 0 4px;`;
+const TemplateHint = styled.div`
+  font-size:12px; line-height:1.45; color:#5f697b; background:#f5f7f9;
+  border-radius:8px; padding:9px 10px; overflow-wrap:anywhere;
+  code{color:#078b94;font-family:monospace}
+`;
 const Label = styled.label`font-size:13px; color:#5f697b; margin-bottom:-4px;`;
 const TwoColumns = styled.div`display:grid; grid-template-columns:1fr; gap:10px; >div{display:flex; flex-direction:column; gap:6px;}`;
 const BindingList = styled.div`display:flex; flex-direction:column; gap:6px; margin-top:4px; max-height:180px; overflow:auto;`;
