@@ -25,6 +25,7 @@ const SettingsPage = () => {
     if (savedTab === "Отделения" || savedTab === "Пункты приёма") {
       return "Сотрудники";
     }
+    if (savedTab === "Excel-бэкапы") return "Отчёты";
     return savedTab || "Сотрудники";
   });
 
@@ -71,7 +72,7 @@ const SettingsPage = () => {
       { id: "Рассылка", label: "Рассылка" },
       { id: "WhatsApp", label: "WhatsApp" },
       { id: "Журнал действий", label: "Журнал действий" },
-      { id: "Excel-бэкапы", label: "Excel-бэкапы" },
+      { id: "Отчёты", label: "Отчёты" },
       { id: "О программе", label: "О программе" }
     );
   } else if (hasRole("админ")) {
@@ -113,7 +114,8 @@ const SettingsPage = () => {
         return <ActionLogPage />;
       case "О программе":
         return <AboutPage />;
-      case "Excel-бэкапы":     return <ExcellBackupPage />;
+      case "Отчёты":
+        return <ExcellBackupPage />;
       default:
         return <EmployeePage onViewEmployee={handleViewEmployee} />;
     }

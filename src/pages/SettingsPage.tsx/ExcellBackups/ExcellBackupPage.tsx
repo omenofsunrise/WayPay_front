@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
-import { FileSpreadsheet, Info, Moon } from "lucide-react";
 import BaseModal from "../../../components/modal/BASE/modalCRUBase";
 import useExcellBackupSubscription from "../../../api/hooks/useExcellBackupSubscription";
 import type {
@@ -133,24 +132,8 @@ const ExcellBackupPage = () => {
   return (
     <BackupPage>
       <PageHeader>
-        <PageIcon>
-          <FileSpreadsheet aria-hidden="true" />
-        </PageIcon>
-        <div>
-          <PageTitle>Excel-бэкапы</PageTitle>
-          <PageSubtitle>
-            Получайте резервную копию в Excel автоматически каждую ночь.
-          </PageSubtitle>
-        </div>
+        <PageTitle>Отчёты</PageTitle>
       </PageHeader>
-
-      <InfoBanner>
-        <Info aria-hidden="true" />
-        <span>
-          Достаточно подключить один канал. Можно использовать несколько
-          одновременно.
-        </span>
-      </InfoBanner>
 
       <ChannelsHeader>
         <ChannelsTitle>Каналы получения</ChannelsTitle>
@@ -176,11 +159,6 @@ const ExcellBackupPage = () => {
           ))}
         </CardsGrid>
       )}
-
-      <ScheduleNote>
-        <Moon aria-hidden="true" />
-        Автоматическая отправка каждую ночь.
-      </ScheduleNote>
 
       {confirmMessenger && (
         <BaseModal
@@ -224,30 +202,6 @@ const BackupPage = styled.section`
 const PageHeader = styled.header`
   display: flex;
   align-items: center;
-  gap: 16px;
-`;
-
-const PageIcon = styled.div`
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: #e8f7f8;
-  color: #008b98;
-  line-height: 0;
-
-  svg {
-    width: 29px;
-    height: 29px;
-    display: block;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
 `;
 
 const PageTitle = styled.h1`
@@ -258,41 +212,8 @@ const PageTitle = styled.h1`
   line-height: 1.2;
 `;
 
-const PageSubtitle = styled.p`
-  margin: 6px 0 0;
-  color: #718096;
-  font-size: 15px;
-  line-height: 1.45;
-`;
-
-const InfoBanner = styled.div`
-  min-height: 48px;
-  margin-top: 26px;
-  padding: 11px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-sizing: border-box;
-  border: 1px solid #d8edef;
-  border-radius: 8px;
-  background: #edf9fa;
-  color: #687893;
-  font-size: 13px;
-
-  svg {
-    width: 22px;
-    height: 22px;
-    flex: 0 0 22px;
-    fill: none;
-    stroke: #008b98;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-`;
-
 const ChannelsHeader = styled.div`
-  margin-top: 28px;
+  margin-top: 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -334,25 +255,6 @@ const StateMessage = styled.div<{ $error?: boolean }>`
   background: ${({ $error }) => ($error ? "#fff1f2" : "#fff")};
   color: ${({ $error }) => ($error ? "#b42318" : "#667085")};
   font-size: 13px;
-`;
-
-const ScheduleNote = styled.div`
-  margin-top: 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #718096;
-  font-size: 13px;
-
-  svg {
-    width: 21px;
-    height: 21px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
 `;
 
 const ConfirmText = styled.p`
