@@ -311,7 +311,7 @@ private async fetchImageAsArrayBuffer(url: string): Promise<{ buffer: ArrayBuffe
     } else if (templateUrl.includes('guaranteeandConsentAgreement')) {
       docType = 'Договор_поручительства_и_согласие';
     } else if (templateUrl.includes('salesContract')) {
-      docType = 'Договор_купли_продажи';
+      return `${clientName}.docx`;
     }
     
     const contractNumber = docsData.contractNumber ? `_${docsData.contractNumber}` : '';
