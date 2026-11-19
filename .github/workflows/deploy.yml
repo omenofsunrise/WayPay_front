@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Setup staging environment
+      - name: Setup staging environment 
         if: github.ref == 'refs/heads/dev'
         run: |
           cp .env.staging .env
