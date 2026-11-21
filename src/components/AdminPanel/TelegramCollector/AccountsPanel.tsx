@@ -479,7 +479,14 @@ const ResendRow = styled.div`
 
 // ==================== Чаты аккаунта ====================
 
+const HISTORY_START_2026 = new Date("2026-01-01T00:00:00+03:00");
+const HISTORY_DAYS_SINCE_2026 = Math.max(
+  1,
+  Math.ceil((Date.now() - HISTORY_START_2026.getTime()) / 86_400_000)
+);
+
 const HISTORY_OPTIONS = [
+  { value: HISTORY_DAYS_SINCE_2026, label: "С 1 января 2026 по сегодня" },
   { value: 7, label: "7 дней" },
   { value: 30, label: "30 дней" },
   { value: 90, label: "90 дней" },
@@ -497,7 +504,7 @@ interface ChatsProps {
 const ChatsModal = ({ account, onClose }: ChatsProps) => {
   const [chats, setChats] = useState<CollectorChat[]>([]);
   const [search, setSearch] = useState("");
-  const [historyDays, setHistoryDays] = useState(30);
+  const [historyDays, setHistoryDays] = useState(HISTORY_DAYS_SINCE_2026);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);

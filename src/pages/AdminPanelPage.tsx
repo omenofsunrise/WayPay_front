@@ -38,6 +38,7 @@ import UserSelect from "../components/ui/fields/UserSelect";
 import CreditApplicationCompaniesManager from "../components/CreditApplicationCompaniesManager";
 import BroadcastCampaignsManager from "../components/AdminPanel/BroadcastCampaignsManager";
 import BlacklistPlusUsersManager from "../components/AdminPanel/BlacklistPlusUsersManager";
+import TelegramCollectorManager from "../components/AdminPanel/TelegramCollectorManager";
 import CustomTextArea from "../components/ui/fields/CustomTextArea";
 import ToggleSwitch from "../components/ui/Toggles/ToggleSwitch";
 import Tabs from "../components/ui/fields/Tabs";
@@ -865,6 +866,7 @@ const AdminPanelPage = () => {
     | "notifications"
     | "broadcast"
     | "blacklist-plus"
+    | "telegram-collector"
   >(isRestrictedSuperadmin ? "blacklist-plus" : "companies");
 
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
@@ -968,7 +970,11 @@ const AdminPanelPage = () => {
   );
 
   useEffect(() => {
-    if (isRestrictedSuperadmin && activeTab !== "blacklist-plus") {
+    if (
+      isRestrictedSuperadmin &&
+      activeTab !== "blacklist-plus" &&
+      activeTab !== "telegram-collector"
+    ) {
       setActiveTab("blacklist-plus");
     }
   }, [isRestrictedSuperadmin, activeTab]);
@@ -1636,11 +1642,19 @@ const AdminPanelPage = () => {
       label: "ЧС+",
       content: <BlacklistPlusUsersManager />,
     },
+    {
+      id: "telegram-collector",
+      label: "Проверка ЧС+",
+      content: <TelegramCollectorManager />,
+    },
   ];
 
   const visibleTabs = isRestrictedSuperadmin
-    ? tabs.filter((t) => t.id === "blacklist-plus")
-  : tabs;
+    ? tabs.filter(
+        (tab) =>
+          tab.id === "blacklist-plus" || tab.id === "telegram-collector"
+      )
+    : tabs;
 
   const addButton =
     activeTab === "companies" && hasRole("суперадмин") ? (
@@ -1730,6 +1744,7 @@ const AdminPanelPage = () => {
               | "credit-applications"
               | "broadcast"
               | "blacklist-plus"
+              | "telegram-collector"
           );
           setCurrentPage(1);
           setNameFilter("");
