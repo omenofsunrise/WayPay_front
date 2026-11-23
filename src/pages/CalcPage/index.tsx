@@ -779,7 +779,7 @@ const Page = styled.div<{ $fullscreen: boolean }>`
   ${({ $fullscreen }) => $fullscreen && "position:fixed; inset:0; z-index:1200; overflow:auto;"}
 `;
 const Header = styled.div`display:flex; justify-content:space-between; gap:20px; align-items:center; margin-bottom:16px; flex-wrap:wrap;`;
-const Title = styled.h1`font-size:28px; margin:0 0 4px;`;
+const Title = styled.h1`font-size:28px; margin:0 0 4px; text-align:left;`;
 const Subtitle = styled.div`color:#8b95a7;`;
 const Actions = styled.div`display:flex; gap:8px; flex-wrap:wrap;`;
 const Button = styled.button`border:1px solid #d8dee7; border-radius:8px; background:#fff; padding:10px 14px; cursor:pointer; color:#354052; &:disabled{opacity:.5;cursor:default;}`;
