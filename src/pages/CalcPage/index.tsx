@@ -73,6 +73,31 @@ const emptySheets = (): Sheet[] => [{
   data: [],
 }];
 
+const finiteIndex = (value: unknown, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? Math.floor(number) : fallback;
+};
+
+const normalizeRangeBinding = (range: Partial<CellRangeBinding>): CellRangeBinding => {
+  const rowStart = finiteIndex(range.rowStart);
+  const columnStart = finiteIndex(range.columnStart);
+  return {
+    sheetId: typeof range.sheetId === "string" ? range.sheetId : "",
+    rowStart,
+    rowEnd: finiteIndex(range.rowEnd, rowStart),
+    columnStart,
+    columnEnd: finiteIndex(range.columnEnd, columnStart),
+  };
+};
+
+const normalizeInvestorCalculation = (calculation: InvestorCalculation): InvestorCalculation => ({
+  ...calculation,
+  fields: Object.fromEntries(Object.entries(calculation.fields ?? {}).map(([field, range]) => [
+    field,
+    normalizeRangeBinding(range ?? {}),
+  ])),
+});
+
 const parseDocument = (content: string): CalcDocument => {
   const parsed = JSON.parse(content);
   if (Array.isArray(parsed)) return { version: 3, sheets: parsed, bindings: [], accessRules: [], investorCalculations: [] };
@@ -81,7 +106,9 @@ const parseDocument = (content: string): CalcDocument => {
     sheets: parsed.sheets?.length ? parsed.sheets : emptySheets(),
     bindings: Array.isArray(parsed.bindings) ? parsed.bindings : [],
     accessRules: Array.isArray(parsed.accessRules) ? parsed.accessRules : [],
-    investorCalculations: Array.isArray(parsed.investorCalculations) ? parsed.investorCalculations : [],
+    investorCalculations: Array.isArray(parsed.investorCalculations)
+      ? parsed.investorCalculations.map(normalizeInvestorCalculation)
+      : [],
   };
 };
 
@@ -611,12 +638,14 @@ export default function CalcPage() {
     const selection = workbookRef.current?.getSelection()?.[0];
     const activeSheet = workbookRef.current?.getSheet();
     if (!selection || !activeSheet?.id) return setMessage("Выберите диапазон в таблице");
+    const rowStart = finiteIndex(selection.row?.[0]);
+    const columnStart = finiteIndex(selection.column?.[0]);
     const binding: CellRangeBinding = {
       sheetId: activeSheet.id,
-      rowStart: selection.row[0],
-      rowEnd: selection.row[1],
-      columnStart: selection.column[0],
-      columnEnd: selection.column[1],
+      rowStart,
+      rowEnd: finiteIndex(selection.row?.[1], rowStart),
+      columnStart,
+      columnEnd: finiteIndex(selection.column?.[1], columnStart),
     };
     setCalculationFields((old) => ({ ...old, [calculationField]: binding }));
     setMessage("Диапазон привязан к переменной");
