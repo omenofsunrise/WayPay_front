@@ -7,6 +7,7 @@ import type {
   CalcMetricSeries,
   CalcMetricSeriesQuery,
   CalcSheetSummary,
+  CalcInvestorReport,
   SaveCalcSheetRequest,
 } from "../types/calc";
 
@@ -37,6 +38,11 @@ const calcService = {
   },
   async metricSeries(query: CalcMetricSeriesQuery): Promise<CalcMetricSeries> {
     return (await apiClient.get<CalcMetricSeries>("/calc/metrics/series", { params: query })).data;
+  },
+  async investorReports(poolId?: number): Promise<CalcInvestorReport[]> {
+    return (await apiClient.get<CalcInvestorReport[]>("/calc/investor-reports", {
+      params: poolId ? { poolId } : undefined,
+    })).data;
   },
 };
 

@@ -72,3 +72,24 @@ export type CalcMetricOptions = {
   pools: CalcMetricOption[];
   investors: CalcMetricOption[];
 };
+
+export type CalcInvestorPeriod = {
+  period: string;
+  investment: number;
+  profit: number;
+  payout: number;
+  balance?: number | null;
+};
+
+export type CalcInvestorReport = {
+  sheetId: number;
+  sheetName: string;
+  calculationId: string;
+  fullName: string;
+  poolId?: number | null;
+  investment: number;
+  profit: number;
+  payout: number;
+  balance: number;
+  entries: CalcInvestorPeriod[];
+};

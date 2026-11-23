@@ -60,6 +60,8 @@ import ConfirmationStatusBadge from "../components/ui/ConfirmationStatusBadge";
 import WayPayButton from "../components/ui/Buttons/WayPayButton";
 import WayPayMoreMenu from "../components/ui/Buttons/WayPayMoreMenu";
 import EditButton from "../components/ui/Buttons/EditButton";
+import calcService from "../api/services/calcService";
+import type { CalcInvestorReport } from "../api/types/calc";
 
 type InvestorsPoolPageProps = {
   enableReinvestments?: boolean;
@@ -151,6 +153,7 @@ const InvestorsPoolPage = ({
   const [isPoolSwitcherOpen, setIsPoolSwitcherOpen] = useState(false);
   const poolSwitcherRef = useRef<HTMLDivElement>(null);
   const [report, setReport] = useState<InvestorReport | null>(null);
+  const [calculatedReports, setCalculatedReports] = useState<CalcInvestorReport[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -661,6 +664,18 @@ const InvestorsPoolPage = ({
       fetchReportData();
     }
   }, [selectedPoolId, creditsPage, payoutsPage, contributionsPage]);
+
+  useEffect(() => {
+    if (!selectedPoolId) {
+      setCalculatedReports([]);
+      return;
+    }
+    let active = true;
+    calcService.investorReports(Number(selectedPoolId))
+      .then((items) => active && setCalculatedReports(items))
+      .catch(() => active && setCalculatedReports([]));
+    return () => { active = false; };
+  }, [selectedPoolId]);
 
   useEffect(() => {
     if (selectedPoolId && activeTab === "investors") {
@@ -2201,6 +2216,31 @@ const InvestorsPoolPage = ({
                 {dataTab === "expected" && renderExpectedIncomeCards()}
                 {dataTab === "current" && renderCurrentIncomeCards()}
               </ReportDataContainer>
+
+              {!!calculatedReports.length && <CalculatedSection>
+                <CalculatedHeader>
+                  <div>
+                    <h2>Расчёты из конструктора</h2>
+                    <p>Данные связаны с этим пулом и автоматически пересчитываются из Excel.</p>
+                  </div>
+                  <strong>Касса {formatMoney(calculatedReports.reduce((sum, item) => sum + item.balance, 0).toString())}</strong>
+                </CalculatedHeader>
+                <CalculatedGrid>{calculatedReports.map((item) => <CalculatedCard key={`${item.sheetId}-${item.calculationId}-${item.fullName}`}>
+                  <CalculatedTitle><strong>{item.fullName}</strong><span>{item.sheetName}</span></CalculatedTitle>
+                  <CalculatedMetrics>
+                    <div><span>Инвестиции</span><b>{formatMoney(item.investment.toString())}</b></div>
+                    <div><span>Прибыль</span><b>{formatMoney(item.profit.toString())}</b></div>
+                    <div><span>Выплаты</span><b>{formatMoney(item.payout.toString())}</b></div>
+                    <div><span>Касса</span><b>{formatMoney(item.balance.toString())}</b></div>
+                  </CalculatedMetrics>
+                  <CalculatedHistory>
+                    <thead><tr><th>Период</th><th>Инвестиции</th><th>Прибыль</th><th>Выплаты</th></tr></thead>
+                    <tbody>{item.entries.map((entry, index) => <tr key={`${entry.period}-${index}`}>
+                      <td>{entry.period}</td><td>{formatMoney(entry.investment.toString())}</td><td>{formatMoney(entry.profit.toString())}</td><td>{formatMoney(entry.payout.toString())}</td>
+                    </tr>)}</tbody>
+                  </CalculatedHistory>
+                </CalculatedCard>)}</CalculatedGrid>
+              </CalculatedSection>}
             </>
           )}
         </PoolTabsContainer>
@@ -3061,6 +3101,31 @@ const ReportDataContainer = styled.div`
   width: 100%;
   margin-bottom: 0;
 `;
+
+const CalculatedSection = styled.section`
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #e3e9ef;
+  border-radius: 12px;
+  background: #fff;
+`;
+
+const CalculatedHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  text-align: left;
+  h2{margin:0 0 3px;color:#172033;font-size:17px}p{margin:0;color:#718096;font-size:12px}strong{color:#007d88;white-space:nowrap}
+  @media(max-width:700px){flex-direction:column}
+`;
+
+const CalculatedGrid = styled.div`display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;@media(max-width:600px){grid-template-columns:1fr}`;
+const CalculatedCard = styled.article`min-width:0;padding:14px;border:1px solid #e8edf2;border-radius:10px;background:#fbfcfd;text-align:left;`;
+const CalculatedTitle = styled.div`display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;strong{color:#172033}span{color:#718096;font-size:12px}`;
+const CalculatedMetrics = styled.div`display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:10px;div{padding:8px;border:1px solid #edf1f4;border-radius:7px;background:#fff}span{display:block;color:#718096;font-size:11px;margin-bottom:3px}b{font-size:13px;color:#253247}@media(max-width:600px){grid-template-columns:repeat(2,1fr)}`;
+const CalculatedHistory = styled.table`width:100%;border-collapse:collapse;font-size:11px;th,td{padding:6px;border-bottom:1px solid #e8edf2;text-align:right}th:first-child,td:first-child{text-align:left}th{color:#718096;font-weight:600}`;
 
 const ReinvestmentHint = styled.div<{ $error?: boolean }>`
   margin-top: 8px;
