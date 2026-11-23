@@ -20,6 +20,12 @@ import type {
   CalcAccessLevel,
 } from "../../api/types/calc";
 import type { Employee } from "../../api/types/employee";
+import {
+  calculateInvestors,
+  type CellRangeBinding,
+  type InvestorCalculation,
+  type InvestorCalculationField,
+} from "./investorCalculations";
 
 type MetricBinding = CalcMetricQuery & {
   sheetId: string;
@@ -32,20 +38,12 @@ type MetricBinding = CalcMetricQuery & {
   source?: "template";
 };
 
-type CalculationTarget = {
-  type: "pool";
-  poolId: number;
-  sheetId: string;
-  row: number;
-  column: number;
-};
-
 type CalcDocument = {
-  version: 2;
+  version: 3;
   sheets: Sheet[];
   bindings: MetricBinding[];
   accessRules: CalcSheetAccessRule[];
-  calculationTarget?: CalculationTarget;
+  investorCalculations: InvestorCalculation[];
 };
 
 const MAX_DOCUMENT_BYTES = 10_000_000;
@@ -77,13 +75,13 @@ const emptySheets = (): Sheet[] => [{
 
 const parseDocument = (content: string): CalcDocument => {
   const parsed = JSON.parse(content);
-  if (Array.isArray(parsed)) return { version: 2, sheets: parsed, bindings: [], accessRules: [] };
+  if (Array.isArray(parsed)) return { version: 3, sheets: parsed, bindings: [], accessRules: [], investorCalculations: [] };
   return {
-    version: 2,
+    version: 3,
     sheets: parsed.sheets?.length ? parsed.sheets : emptySheets(),
     bindings: Array.isArray(parsed.bindings) ? parsed.bindings : [],
     accessRules: Array.isArray(parsed.accessRules) ? parsed.accessRules : [],
-    calculationTarget: parsed.calculationTarget,
+    investorCalculations: Array.isArray(parsed.investorCalculations) ? parsed.investorCalculations : [],
   };
 };
 
@@ -314,7 +312,11 @@ export default function CalcPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [selectedAccessLevel, setSelectedAccessLevel] = useState<"edit" | "formulas" | "view">("view");
-  const [calculationTarget, setCalculationTarget] = useState<CalculationTarget>();
+  const [investorCalculations, setInvestorCalculations] = useState<InvestorCalculation[]>([]);
+  const [calculationName, setCalculationName] = useState("");
+  const [calculationPoolId, setCalculationPoolId] = useState("");
+  const [calculationField, setCalculationField] = useState<InvestorCalculationField>("fullName");
+  const [calculationFields, setCalculationFields] = useState<InvestorCalculation["fields"]>({});
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [name, setName] = useState("Новая таблица");
   const [isShared, setIsShared] = useState(false);
@@ -330,6 +332,10 @@ export default function CalcPage() {
 
   const selectedMetric = useMemo(() => metrics.find((x) => x.code === metricCode), [metrics, metricCode]);
   const workbookSheets = useMemo(() => prepareSheetsForWorkbook(sheets), [sheets]);
+  const calculatedInvestors = useMemo(
+    () => calculateInvestors(sheets, investorCalculations),
+    [sheets, investorCalculations],
+  );
 
   const reloadList = async () => setSavedSheets(await calcService.list());
 
@@ -347,7 +353,7 @@ export default function CalcPage() {
     return () => window.removeEventListener("keydown", close);
   }, [isFullscreen]);
 
-  const serialize = () => JSON.stringify({ version: 2, sheets, bindings, accessRules, calculationTarget } satisfies CalcDocument);
+  const serialize = () => JSON.stringify({ version: 3, sheets, bindings, accessRules, investorCalculations } satisfies CalcDocument);
 
   const save = async () => {
     if (!canEdit) return;
@@ -381,7 +387,7 @@ export default function CalcPage() {
       setCanManageAccess(result.canManageAccess ?? false);
       setBindings(document.bindings);
       setAccessRules(document.accessRules);
-      setCalculationTarget(document.calculationTarget);
+      setInvestorCalculations(document.investorCalculations);
       setSheets(document.sheets);
       setWorkbookVersion((version) => version + 1);
       setMessage(document.bindings.length
@@ -405,7 +411,9 @@ export default function CalcPage() {
     setAccessLevel("owner");
     setCanManageAccess(true);
     setAccessRules([]);
-    setCalculationTarget(undefined);
+    setInvestorCalculations([]);
+    setCalculationFields({});
+    setCalculationName("");
     setBindings([]);
     setSheets(next);
     setWorkbookVersion((version) => version + 1);
@@ -599,19 +607,34 @@ export default function CalcPage() {
     setSelectedEmployeeId("");
   };
 
-  const bindPoolCalculation = () => {
+  const bindCalculationField = () => {
     const selection = workbookRef.current?.getSelection()?.[0];
     const activeSheet = workbookRef.current?.getSheet();
-    if (!poolId) return setMessage("Выберите пул");
-    if (!selection || !activeSheet?.id) return setMessage("Выберите итоговую ячейку прибыли");
-    setCalculationTarget({
-      type: "pool",
-      poolId: Number(poolId),
+    if (!selection || !activeSheet?.id) return setMessage("Выберите диапазон в таблице");
+    const binding: CellRangeBinding = {
       sheetId: activeSheet.id,
-      row: selection.row[0],
-      column: selection.column[0],
-    });
-    setMessage("Расчёт привязан к пулу. Сохраните таблицу");
+      rowStart: selection.row[0],
+      rowEnd: selection.row[1],
+      columnStart: selection.column[0],
+      columnEnd: selection.column[1],
+    };
+    setCalculationFields((old) => ({ ...old, [calculationField]: binding }));
+    setMessage("Диапазон привязан к переменной");
+  };
+
+  const saveInvestorCalculation = () => {
+    if (!calculationName.trim() && !calculationFields.fullName) return setMessage("Укажите название карточки или привяжите ФИО");
+    if (!calculationFields.investment && !calculationFields.profit) return setMessage("Привяжите инвестиции или прибыль");
+    setInvestorCalculations((old) => [...old, {
+      id: createSheetId(),
+      name: calculationName.trim() || "Расчётный инвестор",
+      ...(calculationPoolId && { poolId: Number(calculationPoolId) }),
+      fields: calculationFields,
+    }]);
+    setCalculationName("");
+    setCalculationPoolId("");
+    setCalculationFields({});
+    setMessage("Карточка расчётного инвестора создана. Сохраните таблицу");
   };
 
   return <Page $fullscreen={isFullscreen}>
@@ -761,18 +784,55 @@ export default function CalcPage() {
             <button onClick={() => setAccessRules((old) => old.filter((item) => item.employeeId !== rule.employeeId))}>Убрать</button>
           </AccessRule>)}</AccessList>
         </AccessSection>}
-        {canManageAccess && <AccessSection>
-          <PanelTitle>Расчёт пула</PanelTitle>
-          <Hint>Выберите пул выше, затем итоговую ячейку прибыли в таблице.</Hint>
-          <Button onClick={bindPoolCalculation}>Привязать выбранную ячейку</Button>
-          {calculationTarget && <Hint>Пул №{calculationTarget.poolId} · R{calculationTarget.row + 1}C{calculationTarget.column + 1}</Hint>}
+        {canEdit && <AccessSection>
+          <PanelTitle>Расчётный инвестор</PanelTitle>
+          <Hint>Выделите диапазон в Excel и укажите, какие данные в нём находятся.</Hint>
+          <Input value={calculationName} onChange={(event) => setCalculationName(event.target.value)} placeholder="Название карточки или ФИО" />
+          <CustomSelect value={calculationPoolId} placeholder="Без привязки к пулу" dropdownInPortal onChange={(event) => setCalculationPoolId(event.target.value)} options={[
+            { value: "", label: "Без привязки к пулу" },
+            ...metricOptions.pools.map((item) => ({ value: item.id.toString(), label: item.name })),
+          ]} />
+          <CustomSelect value={calculationField} dropdownInPortal onChange={(event) => setCalculationField(event.target.value as InvestorCalculationField)} options={[
+            { value: "fullName", label: "ФИО" },
+            { value: "period", label: "Месяц или дата" },
+            { value: "investment", label: "Инвестиции" },
+            { value: "profit", label: "Прибыль" },
+            { value: "payout", label: "Выплаты" },
+            { value: "balance", label: "Баланс кассы" },
+          ]} />
+          <Button onClick={bindCalculationField}>Привязать выделенный диапазон</Button>
+          <MappedFields>{Object.entries(calculationFields).map(([field, range]) => range && <span key={field}>{field} · R{range.rowStart + 1}:R{range.rowEnd + 1} C{range.columnStart + 1}:C{range.columnEnd + 1}</span>)}</MappedFields>
+          <PrimaryButton onClick={saveInvestorCalculation}>Создать карточку и кассу</PrimaryButton>
+          <AccessList>{investorCalculations.map((calculation) => <AccessRule key={calculation.id}>
+            <strong>{calculation.name}</strong>
+            <small>{Object.keys(calculation.fields).length} переменных{calculation.poolId ? ` · пул №${calculation.poolId}` : ""}</small>
+            <button onClick={() => setInvestorCalculations((old) => old.filter((item) => item.id !== calculation.id))}>Удалить расчёт</button>
+          </AccessRule>)}</AccessList>
         </AccessSection>}
         {accessLevel !== "owner" && <Hint>Ваш режим: {accessLevel === "edit" ? "редактирование" : accessLevel === "formulas" ? "изменение формул" : "только просмотр"}</Hint>}
         <BindingList>{bindings.map((binding, index) => <Binding key={`${binding.sheetId}-${binding.row}-${binding.column}`}><span>{binding.label}<small>{binding.mode === "series" ? `Отчёт · ${binding.groupBy === "day" ? "по дням" : "по месяцам"}` : "Значение"} · R{binding.row + 1}C{binding.column + 1}</small></span>{canEdit && <button onClick={() => setBindings((old) => old.filter((_, i) => i !== index))}>×</button>}</Binding>)}</BindingList>
       </Panel>
     </Workspace>
+    {!!calculatedInvestors.length && <InvestorReportSection>
+      <ReportHeader>
+        <div><PanelTitle>Расчётные инвесторы</PanelTitle><Hint>Карточки автоматически пересчитываются из связанных диапазонов Excel.</Hint></div>
+        <SummaryValue>Общая касса {formatMoney(calculatedInvestors.reduce((sum, investor) => sum + investor.balance, 0))}</SummaryValue>
+      </ReportHeader>
+      <InvestorCards>{calculatedInvestors.map((investor) => <InvestorCard key={`${investor.calculationId}-${investor.fullName}`}>
+        <InvestorCardTitle>{investor.fullName}</InvestorCardTitle>
+        <MetricGrid>
+          <Metric><small>Инвестиции</small><strong>{formatMoney(investor.investment)}</strong></Metric>
+          <Metric><small>Прибыль</small><strong>{formatMoney(investor.profit)}</strong></Metric>
+          <Metric><small>Выплаты</small><strong>{formatMoney(investor.payout)}</strong></Metric>
+          <Metric><small>Касса</small><strong>{formatMoney(investor.balance)}</strong></Metric>
+        </MetricGrid>
+        <HistoryTable><thead><tr><th>Период</th><th>Инвестиции</th><th>Прибыль</th><th>Выплаты</th><th>Баланс</th></tr></thead><tbody>{investor.entries.map((entry, index) => <tr key={`${entry.period}-${index}`}><td>{entry.period}</td><td>{formatMoney(entry.investment)}</td><td>{formatMoney(entry.profit)}</td><td>{formatMoney(entry.payout)}</td><td>{entry.balance == null ? "—" : formatMoney(entry.balance)}</td></tr>)}</tbody></HistoryTable>
+      </InvestorCard>)}</InvestorCards>
+    </InvestorReportSection>}
   </Page>;
 }
+
+const formatMoney = (value: number) => `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value)} ₽`;
 
 const Page = styled.div<{ $fullscreen: boolean }>`
   padding:24px; min-height:100%; box-sizing:border-box; color:#182033; background:#f8fafc;
@@ -807,3 +867,13 @@ const AccessSection = styled.section`display:flex; flex-direction:column; gap:8p
 const AccessList = styled.div`display:flex; flex-direction:column; gap:8px; max-height:240px; overflow:auto;`;
 const AccessRule = styled.div`display:flex; flex-direction:column; gap:5px; padding:9px; border-radius:8px; background:#f5f7f9; font-size:13px; small{color:#8b95a7} >button{align-self:flex-start;border:0;background:transparent;color:#d64545;cursor:pointer;padding:0}`;
 const SheetChecks = styled.div`display:flex; flex-wrap:wrap; gap:5px 10px; label{display:flex;align-items:center;gap:4px;font-size:12px}`;
+const MappedFields = styled.div`display:flex;flex-direction:column;gap:4px;font-size:11px;color:#667085;span{padding:5px 7px;border-radius:6px;background:#f5f7f9}`;
+const InvestorReportSection = styled.section`margin-top:18px;padding:18px;border:1px solid #e3e7ed;border-radius:12px;background:#fff;`;
+const ReportHeader = styled.div`display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;`;
+const SummaryValue = styled.strong`font-size:18px;color:#078b94;`;
+const InvestorCards = styled.div`display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;@media(max-width:650px){grid-template-columns:1fr}`;
+const InvestorCard = styled.article`min-width:0;padding:16px;border:1px solid #e3e7ed;border-radius:10px;background:#fbfcfd;`;
+const InvestorCardTitle = styled.h3`margin:0 0 12px;font-size:17px;`;
+const MetricGrid = styled.div`display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px;@media(max-width:650px){grid-template-columns:repeat(2,1fr)}`;
+const Metric = styled.div`padding:9px;border-radius:8px;background:#fff;border:1px solid #edf0f3;small{display:block;color:#8b95a7;margin-bottom:3px}strong{font-size:14px}`;
+const HistoryTable = styled.table`width:100%;border-collapse:collapse;font-size:12px;th,td{padding:7px 8px;border-bottom:1px solid #e8ecf0;text-align:right}th:first-child,td:first-child{text-align:left}th{color:#667085;font-weight:600}`;
