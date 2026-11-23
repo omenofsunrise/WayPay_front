@@ -1,11 +1,22 @@
+export type CalcAccessLevel = "owner" | "edit" | "formulas" | "view";
+
 export type CalcSheetSummary = {
   id: number;
   name: string;
   content: string;
   isShared: boolean;
   canEdit: boolean;
+  accessLevel: CalcAccessLevel;
+  canManageAccess: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CalcSheetAccessRule = {
+  employeeId: number;
+  employeeName?: string;
+  level: Exclude<CalcAccessLevel, "owner">;
+  sheetIds: string[];
 };
 
 export type SaveCalcSheetRequest = {

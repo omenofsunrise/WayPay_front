@@ -6,6 +6,7 @@ import "@fortune-sheet/react/dist/index.css";
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import calcService from "../../api/services/calcService";
+import EmployeeService from "../../api/services/employeeService";
 import CustomCalendar from "../../components/ui/fields/CustomCalendar";
 import CustomSelect from "../../components/ui/fields/CustomSelect";
 import { detectTemplateVariables } from "./templateVariables";
@@ -15,7 +16,10 @@ import type {
   CalcMetricQuery,
   CalcMetricSeries,
   CalcSheetSummary,
+  CalcSheetAccessRule,
+  CalcAccessLevel,
 } from "../../api/types/calc";
+import type { Employee } from "../../api/types/employee";
 
 type MetricBinding = CalcMetricQuery & {
   sheetId: string;
@@ -28,7 +32,21 @@ type MetricBinding = CalcMetricQuery & {
   source?: "template";
 };
 
-type CalcDocument = { version: 1; sheets: Sheet[]; bindings: MetricBinding[] };
+type CalculationTarget = {
+  type: "pool";
+  poolId: number;
+  sheetId: string;
+  row: number;
+  column: number;
+};
+
+type CalcDocument = {
+  version: 2;
+  sheets: Sheet[];
+  bindings: MetricBinding[];
+  accessRules: CalcSheetAccessRule[];
+  calculationTarget?: CalculationTarget;
+};
 
 const MAX_DOCUMENT_BYTES = 10_000_000;
 
@@ -59,11 +77,13 @@ const emptySheets = (): Sheet[] => [{
 
 const parseDocument = (content: string): CalcDocument => {
   const parsed = JSON.parse(content);
-  if (Array.isArray(parsed)) return { version: 1, sheets: parsed, bindings: [] };
+  if (Array.isArray(parsed)) return { version: 2, sheets: parsed, bindings: [], accessRules: [] };
   return {
-    version: 1,
+    version: 2,
     sheets: parsed.sheets?.length ? parsed.sheets : emptySheets(),
     bindings: Array.isArray(parsed.bindings) ? parsed.bindings : [],
+    accessRules: Array.isArray(parsed.accessRules) ? parsed.accessRules : [],
+    calculationTarget: parsed.calculationTarget,
   };
 };
 
@@ -288,6 +308,14 @@ export default function CalcPage() {
   const [metricOptions, setMetricOptions] = useState<CalcMetricOptions>({ pools: [], investors: [] });
   const [currentId, setCurrentId] = useState<number>();
   const [canEdit, setCanEdit] = useState(true);
+  const [accessLevel, setAccessLevel] = useState<CalcAccessLevel>("owner");
+  const [canManageAccess, setCanManageAccess] = useState(true);
+  const [accessRules, setAccessRules] = useState<CalcSheetAccessRule[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [selectedAccessLevel, setSelectedAccessLevel] = useState<"edit" | "formulas" | "view">("view");
+  const [calculationTarget, setCalculationTarget] = useState<CalculationTarget>();
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [name, setName] = useState("Новая таблица");
   const [isShared, setIsShared] = useState(false);
   const [metricCode, setMetricCode] = useState("");
@@ -306,13 +334,20 @@ export default function CalcPage() {
   const reloadList = async () => setSavedSheets(await calcService.list());
 
   useEffect(() => {
-    Promise.all([reloadList(), calcService.options().then(setMetricOptions), calcService.catalog().then((items) => {
+    Promise.all([reloadList(), calcService.options().then(setMetricOptions), EmployeeService.getEmployees({ page: 1, pageSize: 200 }).then((page) => setEmployees(page.items)), calcService.catalog().then((items) => {
       setMetrics(items);
       setMetricCode(items[0]?.code ?? "");
     })]).catch(() => setMessage("Не удалось загрузить данные конструктора"));
   }, []);
 
-  const serialize = () => JSON.stringify({ version: 1, sheets, bindings } satisfies CalcDocument);
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const close = (event: KeyboardEvent) => event.key === "Escape" && setIsFullscreen(false);
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [isFullscreen]);
+
+  const serialize = () => JSON.stringify({ version: 2, sheets, bindings, accessRules, calculationTarget } satisfies CalcDocument);
 
   const save = async () => {
     if (!canEdit) return;
@@ -342,7 +377,11 @@ export default function CalcPage() {
       setName(result.name);
       setIsShared(result.isShared);
       setCanEdit(result.canEdit);
+      setAccessLevel(result.accessLevel ?? (result.canEdit ? "owner" : "view"));
+      setCanManageAccess(result.canManageAccess ?? false);
       setBindings(document.bindings);
+      setAccessRules(document.accessRules);
+      setCalculationTarget(document.calculationTarget);
       setSheets(document.sheets);
       setWorkbookVersion((version) => version + 1);
       setMessage(document.bindings.length
@@ -363,13 +402,17 @@ export default function CalcPage() {
     setName("Новая таблица");
     setIsShared(false);
     setCanEdit(true);
+    setAccessLevel("owner");
+    setCanManageAccess(true);
+    setAccessRules([]);
+    setCalculationTarget(undefined);
     setBindings([]);
     setSheets(next);
     setWorkbookVersion((version) => version + 1);
   };
 
   const deleteSheet = async () => {
-    if (!currentId || !canEdit || !window.confirm(`Удалить таблицу «${name}»?`)) return;
+    if (!currentId || !canManageAccess || !window.confirm(`Удалить таблицу «${name}»?`)) return;
     setBusy(true);
     try {
       await calcService.remove(currentId);
@@ -545,14 +588,41 @@ export default function CalcPage() {
     }
   };
 
-  return <Page>
+  const addAccessRule = () => {
+    const employeeId = Number(selectedEmployeeId);
+    const employee = employees.find((item) => item.id === employeeId);
+    if (!employee) return setMessage("Выберите сотрудника");
+    setAccessRules((old) => [
+      ...old.filter((rule) => rule.employeeId !== employeeId),
+      { employeeId, employeeName: employee.fullName, level: selectedAccessLevel, sheetIds: sheets.map((sheet) => sheet.id).filter(Boolean) as string[] },
+    ]);
+    setSelectedEmployeeId("");
+  };
+
+  const bindPoolCalculation = () => {
+    const selection = workbookRef.current?.getSelection()?.[0];
+    const activeSheet = workbookRef.current?.getSheet();
+    if (!poolId) return setMessage("Выберите пул");
+    if (!selection || !activeSheet?.id) return setMessage("Выберите итоговую ячейку прибыли");
+    setCalculationTarget({
+      type: "pool",
+      poolId: Number(poolId),
+      sheetId: activeSheet.id,
+      row: selection.row[0],
+      column: selection.column[0],
+    });
+    setMessage("Расчёт привязан к пулу. Сохраните таблицу");
+  };
+
+  return <Page $fullscreen={isFullscreen}>
     <Header>
       <div><Title>Конструктор</Title><Subtitle>Таблицы, формулы и актуальные показатели WayPay</Subtitle></div>
       <Actions>
         <Button onClick={createNew}>Новая</Button>
         <Button onClick={() => fileRef.current?.click()}>Импорт XLSX</Button>
         <Button onClick={exportXlsx}>Экспорт XLSX</Button>
-        <DangerButton onClick={deleteSheet} disabled={busy || !currentId || !canEdit}>Удалить</DangerButton>
+        <Button onClick={() => setIsFullscreen((value) => !value)}>{isFullscreen ? "Выйти из полного экрана" : "На весь экран"}</Button>
+        <DangerButton onClick={deleteSheet} disabled={busy || !currentId || !canManageAccess}>Удалить</DangerButton>
         <PrimaryButton onClick={save} disabled={busy || !canEdit}>{busy ? "Подождите…" : "Сохранить"}</PrimaryButton>
         <input ref={fileRef} hidden type="file" accept=".xlsx,.xls" onChange={(e) => {
           const file = e.currentTarget.files?.[0];
@@ -563,8 +633,8 @@ export default function CalcPage() {
     </Header>
     {message && <Notice>{message}</Notice>}
     <DocumentBar>
-      <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} aria-label="Название таблицы" />
-      <label><input type="checkbox" checked={isShared} disabled={!canEdit} onChange={(e) => setIsShared(e.target.checked)} /> Доступна компании</label>
+      <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!canManageAccess} aria-label="Название таблицы" />
+      <label><input type="checkbox" checked={isShared} disabled={!canManageAccess} onChange={(e) => setIsShared(e.target.checked)} /> Доступна компании</label>
       <SavedSheetSelect>
         <CustomSelect
           value={currentId?.toString() ?? ""}
@@ -578,8 +648,8 @@ export default function CalcPage() {
         />
       </SavedSheetSelect>
     </DocumentBar>
-    <Workspace>
-      <GridCard><Workbook
+    <Workspace $fullscreen={isFullscreen}>
+      <GridCard $fullscreen={isFullscreen}><Workbook
         key={workbookVersion}
         ref={workbookRef}
         data={workbookSheets}
@@ -587,8 +657,15 @@ export default function CalcPage() {
         lang="ru"
         allowEdit={canEdit}
         hooks={{
-          beforeUpdateCell: (row, column) => {
+          beforeUpdateCell: (row, column, value) => {
             if (updatingMetricsRef.current) return true;
+            if (accessLevel === "formulas") {
+              const current = workbookRef.current?.getCellsByRange({ row: [row, row], column: [column, column] })?.[0]?.[0];
+              if (!value?.f && !current?.f) {
+                setMessage("Для вас разрешено изменять только формулы");
+                return false;
+              }
+            }
             const sheetId = workbookRef.current?.getSheet()?.id;
             const managed = bindings.some((x) => {
               if (x.sheetId !== sheetId) return false;
@@ -667,13 +744,40 @@ export default function CalcPage() {
         />
         <PrimaryButton onClick={insertMetric} disabled={busy || !canEdit}>{insertMode === "series" ? "Сформировать отчёт" : "Вставить в ячейку"}</PrimaryButton>
         <Button onClick={() => void refreshMetrics()} disabled={busy || !bindings.length}>Обновить все ({bindings.length})</Button>
+        {canManageAccess && <AccessSection>
+          <PanelTitle>Доступ сотрудников</PanelTitle>
+          <Hint>Можно разрешить просмотр, полное редактирование или только изменение формул. Для каждого сотрудника выбираются доступные листы.</Hint>
+          <CustomSelect value={selectedEmployeeId} placeholder="Сотрудник" dropdownInPortal onChange={(e) => setSelectedEmployeeId(e.target.value)} options={employees.map((employee) => ({ value: employee.id.toString(), label: employee.fullName }))} />
+          <CustomSelect value={selectedAccessLevel} dropdownInPortal onChange={(e) => setSelectedAccessLevel(e.target.value as "edit" | "formulas" | "view")} options={[
+            { value: "edit", label: "Может редактировать" },
+            { value: "formulas", label: "Может менять формулы" },
+            { value: "view", label: "Только просмотр" },
+          ]} />
+          <Button onClick={addAccessRule}>Добавить доступ</Button>
+          <AccessList>{accessRules.map((rule) => <AccessRule key={rule.employeeId}>
+            <strong>{rule.employeeName ?? `Сотрудник №${rule.employeeId}`}</strong>
+            <small>{rule.level === "edit" ? "Редактирование" : rule.level === "formulas" ? "Только формулы" : "Просмотр"}</small>
+            <SheetChecks>{sheets.map((sheet) => sheet.id && <label key={sheet.id}><input type="checkbox" checked={rule.sheetIds.includes(sheet.id)} onChange={(event) => setAccessRules((old) => old.map((item) => item.employeeId === rule.employeeId ? { ...item, sheetIds: event.target.checked ? [...item.sheetIds, sheet.id!] : item.sheetIds.filter((id) => id !== sheet.id) } : item))} />{sheet.name}</label>)}</SheetChecks>
+            <button onClick={() => setAccessRules((old) => old.filter((item) => item.employeeId !== rule.employeeId))}>Убрать</button>
+          </AccessRule>)}</AccessList>
+        </AccessSection>}
+        {canManageAccess && <AccessSection>
+          <PanelTitle>Расчёт пула</PanelTitle>
+          <Hint>Выберите пул выше, затем итоговую ячейку прибыли в таблице.</Hint>
+          <Button onClick={bindPoolCalculation}>Привязать выбранную ячейку</Button>
+          {calculationTarget && <Hint>Пул №{calculationTarget.poolId} · R{calculationTarget.row + 1}C{calculationTarget.column + 1}</Hint>}
+        </AccessSection>}
+        {accessLevel !== "owner" && <Hint>Ваш режим: {accessLevel === "edit" ? "редактирование" : accessLevel === "formulas" ? "изменение формул" : "только просмотр"}</Hint>}
         <BindingList>{bindings.map((binding, index) => <Binding key={`${binding.sheetId}-${binding.row}-${binding.column}`}><span>{binding.label}<small>{binding.mode === "series" ? `Отчёт · ${binding.groupBy === "day" ? "по дням" : "по месяцам"}` : "Значение"} · R{binding.row + 1}C{binding.column + 1}</small></span>{canEdit && <button onClick={() => setBindings((old) => old.filter((_, i) => i !== index))}>×</button>}</Binding>)}</BindingList>
       </Panel>
     </Workspace>
   </Page>;
 }
 
-const Page = styled.div`padding: 24px; min-height: 100%; box-sizing: border-box; color: #182033;`;
+const Page = styled.div<{ $fullscreen: boolean }>`
+  padding:24px; min-height:100%; box-sizing:border-box; color:#182033; background:#f8fafc;
+  ${({ $fullscreen }) => $fullscreen && "position:fixed; inset:0; z-index:1200; overflow:auto;"}
+`;
 const Header = styled.div`display:flex; justify-content:space-between; gap:20px; align-items:center; margin-bottom:16px; flex-wrap:wrap;`;
 const Title = styled.h1`font-size:28px; margin:0 0 4px;`;
 const Subtitle = styled.div`color:#8b95a7;`;
@@ -685,8 +789,8 @@ const Notice = styled.div`background:#eaf8f8; color:#116970; border-radius:8px; 
 const DocumentBar = styled.div`display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:12px; margin-bottom:16px; flex-wrap:wrap;`;
 const SavedSheetSelect = styled.div`width:220px;`;
 const Input = styled.input`min-width:0; border:1px solid #d8dee7; border-radius:8px; padding:10px 12px; box-sizing:border-box; background:#fff;`;
-const Workspace = styled.div`display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; @media(max-width:1100px){grid-template-columns:1fr;}`;
-const GridCard = styled.div`height:calc(100vh - 230px); min-height:520px; border:1px solid #e3e7ed; border-radius:12px; overflow:hidden; background:#fff;`;
+const Workspace = styled.div<{ $fullscreen: boolean }>`display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; @media(max-width:1100px){grid-template-columns:1fr;} ${({ $fullscreen }) => $fullscreen && "min-height:calc(100vh - 170px);"}`;
+const GridCard = styled.div<{ $fullscreen: boolean }>`height:${({ $fullscreen }) => $fullscreen ? "calc(100vh - 170px)" : "calc(100vh - 230px)"}; min-height:520px; border:1px solid #e3e7ed; border-radius:12px; overflow:hidden; background:#fff;`;
 const Panel = styled.aside`background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; align-self:start;`;
 const PanelTitle = styled.h2`font-size:18px; margin:0;`;
 const Hint = styled.p`font-size:13px; line-height:1.45; color:#8b95a7; margin:0 0 4px;`;
@@ -699,3 +803,7 @@ const Label = styled.label`font-size:13px; color:#5f697b; margin-bottom:-4px;`;
 const TwoColumns = styled.div`display:grid; grid-template-columns:1fr; gap:10px; >div{display:flex; flex-direction:column; gap:6px;}`;
 const BindingList = styled.div`display:flex; flex-direction:column; gap:6px; margin-top:4px; max-height:180px; overflow:auto;`;
 const Binding = styled.div`display:flex; align-items:center; justify-content:space-between; background:#f5f7f9; border-radius:7px; padding:7px 9px; font-size:13px; small{display:block;color:#8b95a7;margin-top:2px} button{border:0;background:transparent;font-size:20px;cursor:pointer;color:#8b95a7}`;
+const AccessSection = styled.section`display:flex; flex-direction:column; gap:8px; border-top:1px solid #e3e7ed; padding-top:14px; margin-top:6px;`;
+const AccessList = styled.div`display:flex; flex-direction:column; gap:8px; max-height:240px; overflow:auto;`;
+const AccessRule = styled.div`display:flex; flex-direction:column; gap:5px; padding:9px; border-radius:8px; background:#f5f7f9; font-size:13px; small{color:#8b95a7} >button{align-self:flex-start;border:0;background:transparent;color:#d64545;cursor:pointer;padding:0}`;
+const SheetChecks = styled.div`display:flex; flex-wrap:wrap; gap:5px 10px; label{display:flex;align-items:center;gap:4px;font-size:12px}`;
