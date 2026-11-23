@@ -380,11 +380,21 @@ export default function CalcPage() {
     return () => window.removeEventListener("keydown", close);
   }, [isFullscreen]);
 
-  const serialize = () => JSON.stringify({ version: 3, sheets, bindings, accessRules, investorCalculations } satisfies CalcDocument);
+  const serialize = (currentSheets: Sheet[] = sheets) => JSON.stringify({
+    version: 3,
+    sheets: currentSheets,
+    bindings,
+    accessRules,
+    investorCalculations,
+  } satisfies CalcDocument);
 
   const save = async () => {
     if (!canEdit) return;
-    const content = serialize();
+    // onChange у таблицы приходит асинхронно, поэтому перед сохранением берём
+    // актуальный снимок напрямую из Workbook, а не из предыдущего React state.
+    const currentSheets = workbookRef.current?.getAllSheets() ?? sheets;
+    setSheets(currentSheets);
+    const content = serialize(currentSheets);
     if (new Blob([content]).size > MAX_DOCUMENT_BYTES) {
       setMessage("Таблица слишком большая для сохранения. Максимальный размер — 10 МБ");
       return;

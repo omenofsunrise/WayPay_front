@@ -2221,7 +2221,7 @@ const InvestorsPoolPage = ({
                 <CalculatedHeader>
                   <div>
                     <h2>Расчёты из конструктора</h2>
-                    <p>Данные связаны с этим пулом и автоматически пересчитываются из Excel.</p>
+                    <p>Режим отчёта: данные пересчитываются из Excel, но не изменяют реальные операции и кассу пула.</p>
                   </div>
                   <strong>Касса {formatMoney(calculatedReports.reduce((sum, item) => sum + item.balance, 0).toString())}</strong>
                 </CalculatedHeader>
@@ -2479,26 +2479,6 @@ const InvestorsPoolPage = ({
                 showContextMenuButton
               />
             </PoolInvestorTable>
-            <CustomTable
-              columns={[
-                { name: "id", isHidden: true },
-                { name: "ФИО", align: "left" },
-                { name: "Телефон", align: "left" },
-                { name: "Инвестиция", align: "right" },
-                { name: "Доля", align: "right" },
-                { name: "Текущий доход", align: "right" },
-                ...(isPoolVex
-                  ? [{ name: "Прибыль за текущий месяц", align: "right" as const }]
-                  : []),
-                { name: "", align: "center" },
-                { name: "", align: "center" },
-                { name: "", align: "center" },
-              ]}
-              data={investorsTableData}
-              contextMenuActions={investorActions}
-              rowStyles={investorsRowStyles}
-              isLoading={isLoading}
-            />
             <PaginationLayout>
               <CountInfoTitle total={investorsData?.totalCount || 0} />
               <Pagination
