@@ -683,7 +683,21 @@ export default function CalcPage() {
     setCalculationName("");
     setCalculationPoolId("");
     setCalculationFields({});
-    setMessage("Карточка расчётного инвестора создана. Сохраните таблицу");
+    const selectedPool = metricOptions.pools.find((pool) => pool.id === Number(calculationPoolId));
+    setMessage(selectedPool
+      ? `Карточка создана и привязана к пулу «${selectedPool.name}». Нажмите «Сохранить»`
+      : "Карточка создана без привязки к пулу. Нажмите «Сохранить»");
+  };
+
+  const changeCalculationPool = (calculationId: string, value: string) => {
+    const nextPoolId = value ? Number(value) : undefined;
+    setInvestorCalculations((old) => old.map((calculation) => calculation.id === calculationId
+      ? { ...calculation, poolId: nextPoolId }
+      : calculation));
+    const pool = metricOptions.pools.find((item) => item.id === nextPoolId);
+    setMessage(pool
+      ? `Расчёт привязан к пулу «${pool.name}». Нажмите «Сохранить»`
+      : "Привязка расчёта к пулу удалена. Нажмите «Сохранить»");
   };
 
   return <Page $fullscreen={isFullscreen}>
@@ -855,7 +869,20 @@ export default function CalcPage() {
           <PrimaryButton onClick={saveInvestorCalculation}>Создать карточку и кассу</PrimaryButton>
           <AccessList>{investorCalculations.map((calculation) => <AccessRule key={calculation.id}>
             <strong>{calculation.name}</strong>
-            <small>{Object.keys(calculation.fields).length} переменных{calculation.poolId ? ` · пул №${calculation.poolId}` : ""}</small>
+            <small>{Object.keys(calculation.fields).length} переменных · {calculation.poolId
+              ? `пул «${metricOptions.pools.find((pool) => pool.id === calculation.poolId)?.name ?? `№${calculation.poolId}`}»`
+              : "пул не выбран"}</small>
+            <Label>Пул для отчёта</Label>
+            <CustomSelect
+              value={calculation.poolId?.toString() ?? ""}
+              placeholder="Без привязки к пулу"
+              dropdownInPortal
+              onChange={(event) => changeCalculationPool(calculation.id, event.target.value)}
+              options={[
+                { value: "", label: "Без привязки к пулу" },
+                ...metricOptions.pools.map((pool) => ({ value: pool.id.toString(), label: pool.name })),
+              ]}
+            />
             <button onClick={() => setInvestorCalculations((old) => old.filter((item) => item.id !== calculation.id))}>Удалить расчёт</button>
           </AccessRule>)}</AccessList>
         </AccessSection>}
