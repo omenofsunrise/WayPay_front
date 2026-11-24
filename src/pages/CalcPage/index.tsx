@@ -374,10 +374,20 @@ export default function CalcPage() {
   }, []);
 
   useEffect(() => {
-    if (!isFullscreen) return;
+    const resizeWorkbook = () => window.dispatchEvent(new Event("resize"));
+    const frame = window.requestAnimationFrame(resizeWorkbook);
+    const timer = window.setTimeout(resizeWorkbook, 120);
+    if (!isFullscreen) return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
     const close = (event: KeyboardEvent) => event.key === "Escape" && setIsFullscreen(false);
     window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      window.removeEventListener("keydown", close);
+    };
   }, [isFullscreen]);
 
   const serialize = (currentSheets: Sheet[] = sheets) => JSON.stringify({
