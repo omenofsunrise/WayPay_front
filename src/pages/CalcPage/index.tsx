@@ -913,7 +913,7 @@ const formatMoney = (value: number) => `${new Intl.NumberFormat("ru-RU", { maxim
 
 const Page = styled.div<{ $fullscreen: boolean }>`
   padding:24px; min-height:100%; box-sizing:border-box; color:#182033; background:#f8fafc;
-  ${({ $fullscreen }) => $fullscreen && "position:fixed; inset:0; z-index:1200; overflow:hidden; padding:0; background:#fff;"}
+  ${({ $fullscreen }) => $fullscreen && "position:fixed; inset:0; z-index:1200; overflow:hidden; padding:0 0 20px; background:#fff;"}
 `;
 const Header = styled.div`display:flex; justify-content:space-between; gap:20px; align-items:center; margin-bottom:16px; flex-wrap:wrap;`;
 const Title = styled.h1`font-size:28px; margin:0 0 4px; text-align:left;`;
@@ -926,9 +926,9 @@ const Notice = styled.div`background:#eaf8f8; color:#116970; border-radius:8px; 
 const DocumentBar = styled.div`display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:12px; margin-bottom:16px; flex-wrap:wrap;`;
 const SavedSheetSelect = styled.div`width:220px;`;
 const Input = styled.input`min-width:0; border:1px solid #d8dee7; border-radius:8px; padding:10px 12px; box-sizing:border-box; background:#fff;`;
-const Workspace = styled.div<{ $fullscreen: boolean }>`display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; @media(max-width:1100px){grid-template-columns:1fr;} ${({ $fullscreen }) => $fullscreen && "grid-template-columns:1fr;gap:0;width:100vw;height:100vh;min-height:0;"}`;
-const GridCard = styled.div<{ $fullscreen: boolean }>`height:${({ $fullscreen }) => $fullscreen ? "100vh" : "calc(100vh - 230px)"}; min-height:${({ $fullscreen }) => $fullscreen ? "0" : "520px"}; border:${({ $fullscreen }) => $fullscreen ? "0" : "1px solid #e3e7ed"}; border-radius:${({ $fullscreen }) => $fullscreen ? "0" : "12px"}; overflow:hidden; background:#fff;`;
-const FullscreenExitButton = styled.button`position:fixed;right:18px;bottom:16px;z-index:1300;border:1px solid #cfd7df;border-radius:8px;background:rgba(255,255,255,.94);padding:9px 13px;color:#354052;box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer;`;
+const Workspace = styled.div<{ $fullscreen: boolean }>`display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; @media(max-width:1100px){grid-template-columns:1fr;} ${({ $fullscreen }) => $fullscreen && "grid-template-columns:1fr;gap:0;width:100vw;height:calc(100vh - 20px);min-height:0;"}`;
+const GridCard = styled.div<{ $fullscreen: boolean }>`height:${({ $fullscreen }) => $fullscreen ? "100%" : "calc(100vh - 230px)"}; min-height:${({ $fullscreen }) => $fullscreen ? "0" : "520px"}; border:${({ $fullscreen }) => $fullscreen ? "0" : "1px solid #e3e7ed"}; border-radius:${({ $fullscreen }) => $fullscreen ? "0" : "12px"}; overflow:hidden; background:#fff;`;
+const FullscreenExitButton = styled.button`position:fixed;right:18px;bottom:28px;z-index:1300;border:1px solid #cfd7df;border-radius:8px;background:rgba(255,255,255,.94);padding:9px 13px;color:#354052;box-shadow:0 4px 14px rgba(15,23,42,.14);cursor:pointer;`;
 const Panel = styled.aside`background:#fff; border:1px solid #e3e7ed; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; align-self:start;`;
 const PanelTitle = styled.h2`font-size:18px; margin:0;`;
 const Hint = styled.p`font-size:13px; line-height:1.45; color:#8b95a7; margin:0 0 4px;`;
