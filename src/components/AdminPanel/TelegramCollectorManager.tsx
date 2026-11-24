@@ -117,6 +117,12 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
+  padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+
+  @media (max-width: 768px) {
+    padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  }
 `;
 
 const StatusBar = styled.div`
