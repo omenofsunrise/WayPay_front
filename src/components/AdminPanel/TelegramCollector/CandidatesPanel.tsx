@@ -12,6 +12,7 @@ import DarkCyanButton from "../../ui/Buttons/DarkCyanButton";
 import CustomInput from "../../ui/fields/CustomInput";
 import CustomSelect from "../../ui/fields/CustomSelect";
 import Pagination from "../../ui/fields/CustomPagination";
+import PaginationLayout from "../../ui/Layouts/PaginationLayout";
 import {
   Actions,
   Badge,
@@ -253,7 +254,14 @@ const CandidatesPanel = ({ onChanged }: Props) => {
       })}
 
       {totalCount > PAGE_SIZE && (
-        <Pagination total={totalCount} current={page} itemsPerPage={PAGE_SIZE} onChange={setPage} />
+        <PaginationLayout>
+          <Pagination
+            total={totalCount}
+            current={page}
+            itemsPerPage={PAGE_SIZE}
+            onChange={setPage}
+          />
+        </PaginationLayout>
       )}
 
       {editing && (
