@@ -102,9 +102,9 @@ private async processImageUrls(result: any, url: string): Promise<void> {
     const response = await fetch(url, {
       mode: 'cors',
       credentials: 'omit',
+      cache: 'no-store',
       headers: {
-        'Accept': 'image/*',
-        'Cache-Control': 'no-cache'
+        'Accept': 'image/*'
       }
     });
     
