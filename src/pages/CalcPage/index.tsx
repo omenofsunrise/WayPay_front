@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 import styled from "styled-components";
 import { Workbook, type WorkbookInstance } from "@fortune-sheet/react";
 import type { Cell, CellWithRowAndCol, Sheet } from "@fortune-sheet/core";
@@ -329,6 +330,9 @@ export default function CalcPage() {
   const [workbookVersion, setWorkbookVersion] = useState(0);
   const [bindings, setBindings] = useState<MetricBinding[]>([]);
   const [savedSheets, setSavedSheets] = useState<CalcSheetSummary[]>([]);
+  const [savedSheetsStatus, setSavedSheetsStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [loadingInitialSheets, setLoadingInitialSheets] = useState(true);
+  const [openingSheet, setOpeningSheet] = useState(false);
   const [metrics, setMetrics] = useState<CalcMetricDefinition[]>([]);
   const [metricOptions, setMetricOptions] = useState<CalcMetricOptions>({ pools: [], investors: [] });
   const [currentId, setCurrentId] = useState<number>();
@@ -354,23 +358,49 @@ export default function CalcPage() {
   const [investorId, setInvestorId] = useState("");
   const [insertMode, setInsertMode] = useState<"value" | "series">("value");
   const [groupBy, setGroupBy] = useState<"day" | "month">("month");
-  const [busy, setBusy] = useState(false);
+  const [working, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
   const selectedMetric = useMemo(() => metrics.find((x) => x.code === metricCode), [metrics, metricCode]);
+  const templateCode = selectedMetric?.code ?? "код_показателя";
+  const busy = working || openingSheet || savedSheetsStatus === "loading";
   const workbookSheets = useMemo(() => prepareSheetsForWorkbook(sheets), [sheets]);
   const calculatedInvestors = useMemo(
     () => calculateInvestors(sheets, investorCalculations),
     [sheets, investorCalculations],
   );
 
-  const reloadList = async () => setSavedSheets(await calcService.list());
+  const reloadList = async (signal?: AbortSignal) => {
+    setSavedSheetsStatus("loading");
+    try {
+      const items = await calcService.list(signal);
+      if (signal?.aborted) return;
+      setSavedSheets(items);
+      setSavedSheetsStatus("ready");
+      return items;
+    } catch {
+      if (!signal?.aborted) setSavedSheetsStatus("error");
+    }
+  };
 
   useEffect(() => {
-    Promise.all([reloadList(), calcService.options().then(setMetricOptions), EmployeeService.getEmployees({ page: 1, pageSize: 200 }).then((page) => setEmployees(page.items)), calcService.catalog().then((items) => {
+    const controller = new AbortController();
+    void reloadList(controller.signal).then((items) => {
+      if (controller.signal.aborted) return;
+      setLoadingInitialSheets(false);
+      if (items?.length) void openSheet(items[0].id, controller.signal);
+    });
+    return () => controller.abort();
+    // При входе открываем последний сохранённый документ с его сохранёнными параметрами.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    Promise.all([calcService.options().then(setMetricOptions), EmployeeService.getEmployees({ page: 1, pageSize: 200 })
+      .then((page) => setEmployees(page.items)), calcService.catalog().then((items) => {
       setMetrics(items);
       setMetricCode(items[0]?.code ?? "");
-    })]).catch(() => setMessage("Не удалось загрузить данные конструктора"));
+    })]).catch(() => setMessage((current) => current || "Не удалось загрузить данные конструктора"));
   }, []);
 
   useEffect(() => {
@@ -414,6 +444,7 @@ export default function CalcPage() {
       const request = { name, content, isShared };
       const result = currentId ? await calcService.update(currentId, request) : await calcService.create(request);
       setCurrentId(result.id);
+      setSavedSheets((items) => [result, ...items.filter((item) => item.id !== result.id)]);
       setMessage("Таблица сохранена");
       await reloadList();
     } catch (error) {
@@ -421,10 +452,12 @@ export default function CalcPage() {
     } finally { setBusy(false); }
   };
 
-  const openSheet = async (id: number) => {
-    setBusy(true);
+  const openSheet = async (id: number, signal?: AbortSignal) => {
+    setOpeningSheet(true);
+    setMessage("Загружаем таблицу…");
     try {
-      const result = await calcService.get(id);
+      const result = await calcService.get(id, signal);
+      if (signal?.aborted) return;
       const document = parseDocument(result.content);
       setCurrentId(result.id);
       setName(result.name);
@@ -441,12 +474,22 @@ export default function CalcPage() {
         ? "Таблица открыта. Обновляем показатели WayPay…"
         : result.canEdit ? "Таблица открыта" : "Открыт общий документ — только просмотр");
       if (document.bindings.length) {
-        window.setTimeout(() => window.requestAnimationFrame(() => {
-          void refreshMetrics(document.bindings, true, result.canEdit);
-        }), 0);
+        await new Promise<void>((resolve) => {
+          window.setTimeout(() => window.requestAnimationFrame(() => resolve()), 0);
+        });
+        if (!signal?.aborted) await refreshMetrics(document.bindings, true, result.canEdit);
       }
-    } catch { setMessage("Не удалось открыть таблицу"); }
-    finally { setBusy(false); }
+    } catch (error) {
+      if (signal?.aborted) return;
+      if (isAxiosError(error) && error.response?.status === 404) {
+        setSavedSheets((items) => items.filter((item) => item.id !== id));
+        setMessage("Таблица не найдена или доступ к ней закрыт");
+      } else {
+        setMessage("Не удалось открыть таблицу");
+      }
+    } finally {
+      if (!signal?.aborted) setOpeningSheet(false);
+    }
   };
 
   const createNew = () => {
@@ -472,6 +515,7 @@ export default function CalcPage() {
     try {
       await calcService.remove(currentId);
       createNew();
+      setSavedSheets((items) => items.filter((item) => item.id !== currentId));
       await reloadList();
       setMessage("Таблица удалена");
     } catch (error) {
@@ -700,13 +744,19 @@ export default function CalcPage() {
       : "Привязка расчёта к пулу удалена. Нажмите «Сохранить»");
   };
 
+  if (loadingInitialSheets) {
+    return <Page $fullscreen={false}>
+      <Notice role="status">Загружаем сохранённые таблицы…</Notice>
+    </Page>;
+  }
+
   return <Page $fullscreen={isFullscreen}>
     {!isFullscreen && <Header>
       <div><Title>Конструктор</Title><Subtitle>Таблицы, формулы и актуальные показатели WayPay</Subtitle></div>
       <Actions>
-        <Button onClick={createNew}>Новая</Button>
-        <Button onClick={() => fileRef.current?.click()}>Импорт XLSX</Button>
-        <Button onClick={exportXlsx}>Экспорт XLSX</Button>
+        <Button onClick={createNew} disabled={busy}>Новая</Button>
+        <Button onClick={() => fileRef.current?.click()} disabled={busy}>Импорт XLSX</Button>
+        <Button onClick={exportXlsx} disabled={openingSheet}>Экспорт XLSX</Button>
         <Button onClick={() => setIsFullscreen((value) => !value)}>{isFullscreen ? "Выйти из полного экрана" : "На весь экран"}</Button>
         <DangerButton onClick={deleteSheet} disabled={busy || !currentId || !canManageAccess}>Удалить</DangerButton>
         <PrimaryButton onClick={save} disabled={busy || !canEdit}>{busy ? "Подождите…" : "Сохранить"}</PrimaryButton>
@@ -718,14 +768,17 @@ export default function CalcPage() {
       </Actions>
     </Header>}
     {isFullscreen && <FullscreenExitButton onClick={() => setIsFullscreen(false)}>Выйти из полного экрана</FullscreenExitButton>}
-    {!isFullscreen && message && <Notice>{message}</Notice>}
+    {!isFullscreen && message && <Notice role="status">{message}</Notice>}
     {!isFullscreen && <DocumentBar>
-      <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!canManageAccess} aria-label="Название таблицы" />
-      <label><input type="checkbox" checked={isShared} disabled={!canManageAccess} onChange={(e) => setIsShared(e.target.checked)} /> Доступна компании</label>
+      <Input value={name} onChange={(e) => setName(e.target.value)} disabled={openingSheet || !canManageAccess} aria-label="Название таблицы" />
+      <label><input type="checkbox" checked={isShared} disabled={openingSheet || !canManageAccess} onChange={(e) => setIsShared(e.target.checked)} /> Доступна компании</label>
       <SavedSheetSelect>
         <CustomSelect
           value={currentId?.toString() ?? ""}
-          placeholder="Открыть сохранённую…"
+          placeholder={savedSheets.length ? "Открыть сохранённую…"
+            : savedSheetsStatus === "loading" ? "Загружаем список…"
+              : savedSheetsStatus === "error" ? "Список недоступен" : "Нет сохранённых таблиц"}
+          disabled={busy || savedSheetsStatus === "loading" || !savedSheets.length}
           dropdownInPortal
           onChange={(e) => e.target.value && void openSheet(Number(e.target.value))}
           options={savedSheets.map((item) => ({
@@ -734,8 +787,12 @@ export default function CalcPage() {
           }))}
         />
       </SavedSheetSelect>
+      {savedSheetsStatus === "error" && <>
+        <Hint role="status">Не удалось загрузить список таблиц</Hint>
+        <Button onClick={() => void reloadList()} disabled={busy}>Повторить</Button>
+      </>}
     </DocumentBar>}
-    <Workspace $fullscreen={isFullscreen}>
+    <Workspace $fullscreen={isFullscreen} inert={openingSheet}>
       <GridCard $fullscreen={isFullscreen}><Workbook
         key={workbookVersion}
         ref={workbookRef}
@@ -771,7 +828,8 @@ export default function CalcPage() {
         <PanelTitle>Показатели WayPay</PanelTitle>
         <Hint>Выберите ячейку и показатель. Значение придёт с сервера и сможет обновляться.</Hint>
         <TemplateHint>
-          В Excel можно указать <code>{"{код_показателя}"}</code>. Для отчёта: <code>{"{код_показателя_series;pool=Название;investor=Имя}"}</code>.
+          В Excel укажите <code>{`{${templateCode}}`}</code> для одного значения или <code>{`{${templateCode}_series}`}</code> для отчёта.
+          Внутри скобок можно добавить фильтры <code>{";pool=Название;investor=Имя"}</code>.
           После импорта переменные заполнятся автоматически, период берётся из полей «С» и «По».
         </TemplateHint>
         <Label>Показатель</Label>

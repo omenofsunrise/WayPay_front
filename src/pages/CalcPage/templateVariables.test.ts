@@ -4,8 +4,9 @@ import type { CalcMetricDefinition, CalcMetricOptions } from "../../api/types/ca
 import { detectTemplateVariables } from "./templateVariables";
 
 const metrics: CalcMetricDefinition[] = [
-  { code: "payment_income", name: "Доход по платежам", unit: "₽", requiresInvestor: false },
+  { code: "payment_income", name: "Приыбль с платежей", unit: "₽", requiresInvestor: false },
   { code: "capital", name: "Капитал инвестора", unit: "₽", requiresInvestor: true },
+  { code: "incassa", name: "Инкасса", unit: "₽", requiresInvestor: false },
 ];
 
 const options: CalcMetricOptions = {
@@ -33,6 +34,20 @@ describe("detectTemplateVariables", () => {
     expect(result.bindings[0]).toMatchObject({
       code: "payment_income", sheetId: "sheet-1", row: 0, column: 0, mode: "value",
     });
+  });
+
+  it.each([
+    ["{incassa}", "value"],
+    ["{incassa_series}", "series"],
+  ])("detects the Incassa variable %s", (marker, mode) => {
+    const result = detectTemplateVariables(
+      [sheetWith(marker)], metrics, options,
+      { from: "2026-01-01", to: "2026-01-31", groupBy: "month" },
+    );
+
+    expect(result.issues).toEqual([]);
+    expect(result.unknown).toEqual([]);
+    expect(result.bindings[0]).toMatchObject({ code: "incassa", label: "Инкасса", mode });
   });
 
   it("resolves the pool and investor written in the template", () => {

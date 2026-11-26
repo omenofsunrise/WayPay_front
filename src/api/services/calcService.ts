@@ -12,11 +12,11 @@ import type {
 } from "../types/calc";
 
 const calcService = {
-  async list(): Promise<CalcSheetSummary[]> {
-    return (await apiClient.get<CalcSheetSummary[]>("/calc/sheets")).data;
+  async list(signal?: AbortSignal): Promise<CalcSheetSummary[]> {
+    return (await apiClient.get<CalcSheetSummary[]>("/calc/sheets", { signal })).data;
   },
-  async get(id: number): Promise<CalcSheetSummary> {
-    return (await apiClient.get<CalcSheetSummary>(`/calc/sheets/${id}`)).data;
+  async get(id: number, signal?: AbortSignal): Promise<CalcSheetSummary> {
+    return (await apiClient.get<CalcSheetSummary>(`/calc/sheets/${id}`, { signal })).data;
   },
   async create(request: SaveCalcSheetRequest): Promise<CalcSheetSummary> {
     return (await apiClient.post<CalcSheetSummary>("/calc/sheets", request)).data;
