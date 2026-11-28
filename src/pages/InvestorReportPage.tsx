@@ -6,6 +6,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from "../api/types/investor";
 import useInvestor from "../api/hooks/useInvestor";
+import { getInvestorReportDisplayValues } from "../utils/investorReportDisplay";
 import CustomSelect from "../components/ui/fields/CustomSelect";
 import { formatDate } from "../utils/dateFormatter";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
@@ -108,6 +109,7 @@ const InvestorReportPage = ({
         : ""
   );
   const [report, setReport] = useState<InvestorReport | null>(null);
+  const reportValues = report && getInvestorReportDisplayValues(report);
   const [isLoading, setIsLoading] = useState(false);
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState<string>("");
@@ -433,6 +435,7 @@ const InvestorReportPage = ({
     currentInvestor: Investor | null,
     payouts: InvestorPayout[]
   ) => {
+    const reportValues = getInvestorReportDisplayValues(report);
     return new Promise<Blob>(async (resolve, reject) => {
       const pdfContainer = document.createElement("div");
       pdfContainer.style.position = "absolute";
@@ -599,7 +602,7 @@ const InvestorReportPage = ({
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                         ${createCard(
                           investmentSvg,
-                          formatMoney(report.investment.toString()),
+                          formatMoney(reportValues.investment.toString()),
                           "Инвестиция"
                         )}
                         
@@ -639,7 +642,7 @@ const InvestorReportPage = ({
                         
                         ${createCard(
                           balanceSvg,
-                          formatMoney(report.balance.toString()),
+                          formatMoney(reportValues.balance.toString()),
                           "Касса"
                         )}
 
@@ -655,7 +658,7 @@ const InvestorReportPage = ({
                         )}
                         ${createCard(
                           paymentIncomeSvg,
-                          formatMoney(report.paymentIncome.toString()),
+                          formatMoney(reportValues.paymentIncome.toString()),
                           "Доходы по платежам в текущем месяце"
                         )}
                     </div>
@@ -856,7 +859,7 @@ const InvestorReportPage = ({
           text: `Финансовый отчет по инвестору ${
             currentInvestor.nickname || currentInvestor.fullName
           }. Инвестиция: ${formatMoney(
-            report.investment.toString()
+            reportValues.investment.toString()
           )}, Доход: ${formatMoney(report.investorIncome.toString())}`,
           url: window.location.href,
         });
@@ -1040,7 +1043,7 @@ const InvestorReportPage = ({
         <IconContainer>
           <Icon src={investmentSvg} alt="Investment" />
         </IconContainer>
-        <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
+        <ReportValue>{formatMoney(reportValues.investment.toString())}</ReportValue>
         <ReportLabel>Инвестиции</ReportLabel>
       </ReportCard>
 
@@ -1072,7 +1075,7 @@ const InvestorReportPage = ({
         <IconContainer>
           <Icon src={balanceSvg} alt="Balance" />
         </IconContainer>
-        <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+        <ReportValue>{formatMoney(reportValues.balance.toString())}</ReportValue>
         <ReportLabel>Касса</ReportLabel>
       </ReportCard>
 
@@ -1161,7 +1164,7 @@ const InvestorReportPage = ({
               <Icon src={paymentIncomeSvg} alt="paymentIncome" />
             </IconContainer>
             <ReportValue>
-              {formatMoney(report.paymentIncome.toString())}
+              {formatMoney(reportValues.paymentIncome.toString())}
             </ReportValue>
             <ReportLabel>Текущий доход </ReportLabel>
           </ReportCard>
@@ -1171,7 +1174,7 @@ const InvestorReportPage = ({
               <Icon src={allSelfIncomeSvg} alt="allSelfIncome" />
             </IconContainer>
             <ReportValue>
-              {formatMoney(report.investorPaymentIncome.toString())}
+              {formatMoney(reportValues.investorPaymentIncome.toString())}
             </ReportValue>
             <ReportLabel>Доход от инвесторов</ReportLabel>
           </ReportCard>
@@ -1183,7 +1186,7 @@ const InvestorReportPage = ({
               <Icon src={investorIncomeScg} alt="Investor income" />
             </IconContainer>
             <ReportValue>
-              {formatMoney(report.investorPaymentIncome.toString())}
+              {formatMoney(reportValues.investorPaymentIncome.toString())}
             </ReportValue>
             <ReportLabel>Текущий доход инвестора</ReportLabel>
           </ReportCard>
@@ -1193,7 +1196,7 @@ const InvestorReportPage = ({
               <Icon src={commonIncomeSvg} alt="Company income" />
             </IconContainer>
             <ReportValue>
-              {formatMoney(report.selfPaymentIncome.toString())}
+              {formatMoney(reportValues.selfPaymentIncome.toString())}
             </ReportValue>
             <ReportLabel>Текущий собственный доход </ReportLabel>
           </ReportCard>
@@ -1203,7 +1206,7 @@ const InvestorReportPage = ({
               <Icon src={selfIncomeSvg} alt="Self income" />
             </IconContainer>
             <ReportValue>
-              {formatMoney(report.paymentIncome.toString())}
+              {formatMoney(reportValues.paymentIncome.toString())}
             </ReportValue>
             <ReportLabel>Текущий общий доход </ReportLabel>
           </ReportCard>

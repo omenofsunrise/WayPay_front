@@ -21,6 +21,7 @@ import type {
   CalcAccessLevel,
 } from "../../api/types/calc";
 import type { Employee } from "../../api/types/employee";
+import type { InvestorReportCellField } from "../../api/types/investor";
 import {
   calculateInvestors,
   type CellRangeBinding,
@@ -39,12 +40,38 @@ type MetricBinding = CalcMetricQuery & {
   source?: "template";
 };
 
+type InvestorReportTargetType = "investor" | "pool";
+
+type InvestorReportBinding = {
+  targetType: InvestorReportTargetType;
+  targetId: number;
+  field: InvestorReportCellField;
+  sheetId: string;
+  row: number;
+  column: number;
+};
+
+const investorReportFieldLabels: Record<InvestorReportCellField, string> = {
+  investment: "Инвестиции",
+  balance: "Касса",
+  paymentIncome: "Текущий доход",
+  investorPaymentIncome: "Текущий доход инвестора / пула",
+  selfPaymentIncome: "Текущий собственный доход",
+};
+
+const investorReportFields = (Object.keys(investorReportFieldLabels) as InvestorReportCellField[])
+  .map((value) => ({ value, label: investorReportFieldLabels[value] }));
+
+const investorReportBindingKey = ({ targetType, targetId, field }: InvestorReportBinding) =>
+  `${targetType}-${targetId}-${field}`;
+
 type CalcDocument = {
   version: 3;
   sheets: Sheet[];
   bindings: MetricBinding[];
   accessRules: CalcSheetAccessRule[];
   investorCalculations: InvestorCalculation[];
+  investorReportBindings: InvestorReportBinding[];
 };
 
 const MAX_DOCUMENT_BYTES = 10_000_000;
@@ -99,7 +126,7 @@ const normalizeInvestorCalculation = (calculation: InvestorCalculation): Investo
   ])),
 });
 
-const bindingsForSheets = (bindings: MetricBinding[], sheets: Sheet[]): MetricBinding[] => {
+const bindingsForSheets = <T extends { sheetId: string },>(bindings: T[], sheets: Sheet[]): T[] => {
   const sheetIds = new Set(sheets.map((sheet) => sheet.id));
   return bindings.filter((binding) => binding?.sheetId && sheetIds.has(binding.sheetId));
 };
@@ -115,6 +142,9 @@ const parseDocument = (content: string): CalcDocument => {
     accessRules: Array.isArray(parsed.accessRules) ? parsed.accessRules : [],
     investorCalculations: Array.isArray(parsed.investorCalculations)
       ? parsed.investorCalculations.map(normalizeInvestorCalculation)
+      : [],
+    investorReportBindings: Array.isArray(parsed.investorReportBindings)
+      ? bindingsForSheets(parsed.investorReportBindings, sheets)
       : [],
   };
 };
@@ -362,6 +392,10 @@ export default function CalcPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [selectedAccessLevel, setSelectedAccessLevel] = useState<"edit" | "formulas" | "view">("view");
   const [investorCalculations, setInvestorCalculations] = useState<InvestorCalculation[]>([]);
+  const [investorReportBindings, setInvestorReportBindings] = useState<InvestorReportBinding[]>([]);
+  const [reportTargetType, setReportTargetType] = useState<InvestorReportTargetType>("investor");
+  const [reportTargetId, setReportTargetId] = useState("");
+  const [reportField, setReportField] = useState<InvestorReportCellField>("investment");
   const [calculationName, setCalculationName] = useState("");
   const [calculationPoolId, setCalculationPoolId] = useState("");
   const [calculationField, setCalculationField] = useState<InvestorCalculationField>("fullName");
@@ -383,6 +417,8 @@ export default function CalcPage() {
   const templateCode = selectedMetric?.code ?? "код_показателя";
   const busy = working || openingSheet || savedSheetsStatus === "loading";
   const workbookSheets = useMemo(() => sheets.map(toSparseSheet), [sheets]);
+  const reportTargets = reportTargetType === "investor" ? metricOptions.investors : metricOptions.pools;
+  const activeReportBindings = bindingsForSheets(investorReportBindings, sheets);
   const calculatedInvestors = useMemo(
     () => calculateInvestors(sheets, investorCalculations),
     [sheets, investorCalculations],
@@ -464,6 +500,7 @@ export default function CalcPage() {
     bindings: bindingsForSheets(bindings, currentSheets),
     accessRules,
     investorCalculations,
+    investorReportBindings: bindingsForSheets(investorReportBindings, currentSheets),
   } satisfies CalcDocument);
 
   const save = async () => {
@@ -506,6 +543,8 @@ export default function CalcPage() {
       setBindings(document.bindings);
       setAccessRules(document.accessRules);
       setInvestorCalculations(document.investorCalculations);
+      setInvestorReportBindings(document.investorReportBindings);
+      setReportTargetId("");
       const ready = replaceWorkbook(document.sheets);
       setMessage(document.bindings.length
         ? "Таблица открыта. Обновляем показатели WayPay…"
@@ -537,6 +576,8 @@ export default function CalcPage() {
     setCanManageAccess(true);
     setAccessRules([]);
     setInvestorCalculations([]);
+    setInvestorReportBindings([]);
+    setReportTargetId("");
     setCalculationFields({});
     setCalculationName("");
     setBindings([]);
@@ -712,6 +753,8 @@ export default function CalcPage() {
       });
       const ready = replaceWorkbook(next);
       setBindings(detection.bindings);
+      setInvestorReportBindings([]);
+      setReportTargetId("");
       const details = [
         `Excel импортирован: ${next.length} листов, ${importedCells} заполненных ячеек`,
         detection.bindings.length ? `переменных WayPay: ${detection.bindings.length}` : "",
@@ -740,6 +783,36 @@ export default function CalcPage() {
       { employeeId, employeeName: employee.fullName, level: selectedAccessLevel, sheetIds: sheets.map((sheet) => sheet.id).filter(Boolean) as string[] },
     ]);
     setSelectedEmployeeId("");
+  };
+
+  const bindInvestorReportCell = () => {
+    if (!canManageAccess) return;
+
+    const target = reportTargets.find((item) => item.id.toString() === reportTargetId);
+    if (!target) return setMessage("Выберите инвестора или пул для отчёта");
+
+    const workbook = workbookRef.current;
+    const selection = workbook?.getSelection();
+    const sheetId = workbook?.getSheet()?.id;
+    const [row, rowEnd] = selection?.[0]?.row ?? [];
+    const [column, columnEnd] = selection?.[0]?.column ?? [];
+    if (!sheetId || selection?.length !== 1 ||
+      !Number.isInteger(row) || row < 0 || row !== rowEnd ||
+      !Number.isInteger(column) || column < 0 || column !== columnEnd) {
+      return setMessage("Выделите одну ячейку в таблице");
+    }
+
+    const binding: InvestorReportBinding = {
+      targetType: reportTargetType, targetId: target.id, field: reportField, sheetId, row, column,
+    };
+    const key = investorReportBindingKey(binding);
+    setInvestorReportBindings((items) => [...items.filter((item) => investorReportBindingKey(item) !== key), binding]);
+    setMessage("Ячейка привязана к отчёту. Нажмите «Сохранить»");
+  };
+
+  const removeInvestorReportBinding = (key: string) => {
+    setInvestorReportBindings((items) => items.filter((item) => investorReportBindingKey(item) !== key));
+    setMessage("Привязка к отчёту удалена. Нажмите «Сохранить»");
   };
 
   const bindCalculationField = () => {
@@ -949,6 +1022,52 @@ export default function CalcPage() {
             <SheetChecks>{sheets.map((sheet) => sheet.id && <label key={sheet.id}><input type="checkbox" checked={rule.sheetIds.includes(sheet.id)} onChange={(event) => setAccessRules((old) => old.map((item) => item.employeeId === rule.employeeId ? { ...item, sheetIds: event.target.checked ? [...item.sheetIds, sheet.id!] : item.sheetIds.filter((id) => id !== sheet.id) } : item))} />{sheet.name}</label>)}</SheetChecks>
             <button onClick={() => setAccessRules((old) => old.filter((item) => item.employeeId !== rule.employeeId))}>Убрать</button>
           </AccessRule>)}</AccessList>
+        </AccessSection>}
+        {canManageAccess && (metricOptions.investors.length > 0 || metricOptions.pools.length > 0 || activeReportBindings.length > 0) && <AccessSection>
+          <PanelTitle>Ячейки для отчётов инвесторов</PanelTitle>
+          <Hint>Выделите одну ячейку. Её значение появится в выбранном отчёте после сохранения таблицы.</Hint>
+          <CustomSelect<InvestorReportTargetType>
+            value={reportTargetType}
+            aria-label="Тип отчёта"
+            dropdownInPortal
+            onChange={(event) => { setReportTargetType(event.target.value); setReportTargetId(""); }}
+            options={[
+              { value: "investor", label: "Отчёт инвестора" },
+              { value: "pool", label: "Отчёт пула" },
+            ]}
+          />
+          <CustomSelect
+            value={reportTargetId}
+            aria-label={reportTargetType === "investor" ? "Инвестор" : "Пул"}
+            placeholder={reportTargetType === "investor" ? "Выберите инвестора" : "Выберите пул"}
+            dropdownInPortal
+            disabled={busy || !reportTargets.length}
+            onChange={(event) => setReportTargetId(event.target.value)}
+            options={reportTargets.map((target) => ({ value: target.id.toString(), label: target.name }))}
+          />
+          <CustomSelect<InvestorReportCellField>
+            value={reportField}
+            aria-label="Показатель отчёта"
+            dropdownInPortal
+            onChange={(event) => setReportField(event.target.value)}
+            options={investorReportFields}
+          />
+          <Button onClick={bindInvestorReportCell} disabled={busy || !reportTargetId}>Привязать ячейку к отчёту</Button>
+          {activeReportBindings.length > 0 && <AccessList>
+            {activeReportBindings.map((binding) => {
+              const key = investorReportBindingKey(binding);
+              const targets = binding.targetType === "investor" ? metricOptions.investors : metricOptions.pools;
+              const targetName = targets.find((target) => target.id === binding.targetId)?.name ?? `№${binding.targetId}`;
+              const sheetName = sheets.find((sheet) => sheet.id === binding.sheetId)?.name;
+              const cell = XLSX.utils.encode_cell({ r: binding.row, c: binding.column });
+
+              return <AccessRule key={key}>
+                <strong>{investorReportFieldLabels[binding.field]}</strong>
+                <small>{binding.targetType === "investor" ? "Инвестор" : "Пул"} {targetName} · {sheetName}!{cell}</small>
+                <button disabled={busy} onClick={() => removeInvestorReportBinding(key)}>Убрать привязку</button>
+              </AccessRule>;
+            })}
+          </AccessList>}
         </AccessSection>}
         {canEdit && <AccessSection>
           <PanelTitle>Расчётный инвестор</PanelTitle>

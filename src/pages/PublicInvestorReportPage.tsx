@@ -8,6 +8,7 @@ import type {
 } from "../api/types/investorShare";
 import { formatMoney } from "../utils/formatPrice";
 import { formatDate } from "../utils/dateFormatter";
+import { getInvestorReportDisplayValues } from "../utils/investorReportDisplay";
 
 const money = (value?: number) => formatMoney((value ?? 0).toString());
 
@@ -61,6 +62,7 @@ const PublicInvestorReportPage = () => {
   }, [token, getSharedReport]);
 
   const report = data?.report;
+  const reportValues = report && getInvestorReportDisplayValues(report);
   const hasMoreCredits = credits.length < totalCredits;
 
   const loadMoreCredits = async () => {
@@ -101,7 +103,7 @@ const PublicInvestorReportPage = () => {
           </ErrorCard>
         )}
 
-        {status === "done" && report && (
+        {status === "done" && report && reportValues && (
           <>
             <Header>
               <Name>{report.nickName || report.fullName}</Name>
@@ -118,10 +120,10 @@ const PublicInvestorReportPage = () => {
               <Grid>
                 <Tile
                   label="Инвестиция"
-                  value={money(report.investment)}
+                  value={money(reportValues.investment)}
                   accent
                 />
-                <Tile label="Баланс" value={money(report.balance)} accent />
+                <Tile label="Баланс" value={money(reportValues.balance)} accent />
                 <Tile
                   label="Активных договоров"
                   value={String(report.activeCreditsAmount ?? 0)}
@@ -133,10 +135,10 @@ const PublicInvestorReportPage = () => {
             <Card>
               <CardTitle>Доход</CardTitle>
               <Grid>
-                <Tile label="Поступления" value={money(report.paymentIncome)} />
+                <Tile label="Поступления" value={money(reportValues.paymentIncome)} />
                 <Tile
                   label="Ваша доля поступлений"
-                  value={money(report.investorPaymentIncome)}
+                  value={money(reportValues.investorPaymentIncome)}
                 />
                 <Tile
                   label="Начислено вам"

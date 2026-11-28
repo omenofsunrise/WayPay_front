@@ -8,6 +8,7 @@ import TitleField from "../components/ui/Layouts/TitleLayout";
 import CustomTitle from "../components/ui/Text/CustomTitle";
 import type { Investor, InvestorReport } from "../api/types/investor";
 import useInvestor from "../api/hooks/useInvestor";
+import { getInvestorReportDisplayValues } from "../utils/investorReportDisplay";
 import { formatDate, formatExactDate } from "../utils/dateFormatter";
 import { formatPhoneHref } from "../utils/phoneUtils";
 import { formatMoney, parseMoney } from "../utils/formatPrice";
@@ -153,6 +154,7 @@ const InvestorsPoolPage = ({
   const [isPoolSwitcherOpen, setIsPoolSwitcherOpen] = useState(false);
   const poolSwitcherRef = useRef<HTMLDivElement>(null);
   const [report, setReport] = useState<InvestorReport | null>(null);
+  const reportValues = report && getInvestorReportDisplayValues(report);
   const [calculatedReports, setCalculatedReports] = useState<CalcInvestorReport[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isViewInvestorModalOpen, setIsViewInvestorModalOpen] = useState(false);
@@ -1315,6 +1317,7 @@ const InvestorsPoolPage = ({
     payouts: InvestorPayout[],
     credits: Credit[]
   ) => {
+    const reportValues = getInvestorReportDisplayValues(report);
     return new Promise<Blob>(async (resolve, reject) => {
       const pdfContainer = document.createElement("div");
       pdfContainer.style.position = "absolute";
@@ -1422,7 +1425,7 @@ const InvestorsPoolPage = ({
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                         ${createCard(
                           investmentSvg,
-                          formatMoney(report.investment.toString()),
+                          formatMoney(reportValues.investment.toString()),
                           "Общая инвестиция"
                         )}
                         
@@ -1452,7 +1455,7 @@ const InvestorsPoolPage = ({
 
                         ${createCard(
                           balanceSvg,
-                          formatMoney(report.balance.toString()),
+                          formatMoney(reportValues.balance.toString()),
                           "Касса"
                         )}
                         
@@ -1463,7 +1466,7 @@ const InvestorsPoolPage = ({
                         )}
                         ${createCard(
                           paymentIncomeSvg,
-                          formatMoney(report.paymentIncome.toString()),
+                          formatMoney(reportValues.paymentIncome.toString()),
                           "Доходы по платежам в текущем месяце"
                         )}  
                     </div>
@@ -1692,7 +1695,7 @@ const InvestorsPoolPage = ({
           text: `Финансовый отчет по пулу инвесторов ${
             currentPool?.name
           }. Инвестиция: ${formatMoney(
-            report.investment.toString()
+            reportValues.investment.toString()
           )}, Общий доход: ${formatMoney(report.allSelfIncome.toString())}`,
           url: window.location.href,
         });
@@ -1959,7 +1962,7 @@ const InvestorsPoolPage = ({
           <Icon src={investmentSvg} alt="Investment" />
         </IconContainer>
         <ReportLabel>Инвестиции</ReportLabel>
-        <ReportValue>{formatMoney(report.investment.toString())}</ReportValue>
+        <ReportValue>{formatMoney(reportValues.investment.toString())}</ReportValue>
       </ReportCard>
 
       <ReportCard>
@@ -1975,7 +1978,7 @@ const InvestorsPoolPage = ({
           <Icon src={balanceSvg} alt="Balance" />
         </IconContainer>
         <ReportLabel>Касса</ReportLabel>
-        <ReportValue>{formatMoney(report.balance.toString())}</ReportValue>
+        <ReportValue>{formatMoney(reportValues.balance.toString())}</ReportValue>
       </ReportCard>
 
       <ReportCard>
@@ -2012,7 +2015,7 @@ const InvestorsPoolPage = ({
         </IconContainer>
         <ReportLabel>Текущий доход пула</ReportLabel>
         <ReportValue>
-          {formatMoney(report.investorPaymentIncome?.toString() || "0")}
+          {formatMoney(reportValues.investorPaymentIncome?.toString() || "0")}
         </ReportValue>
       </ReportCard>
 
@@ -2022,7 +2025,7 @@ const InvestorsPoolPage = ({
         </IconContainer>
         <ReportLabel>Текущий собственный доход</ReportLabel>
         <ReportValue>
-          {formatMoney(report.selfPaymentIncome?.toString() || "0")}
+          {formatMoney(reportValues.selfPaymentIncome?.toString() || "0")}
         </ReportValue>
       </ReportCard>
 
@@ -2032,7 +2035,7 @@ const InvestorsPoolPage = ({
         </IconContainer>
         <ReportLabel>Текущий доход</ReportLabel>
         <ReportValue>
-          {formatMoney(report.paymentIncome.toString())}
+          {formatMoney(reportValues.paymentIncome.toString())}
         </ReportValue>
       </ReportCard>
     </>

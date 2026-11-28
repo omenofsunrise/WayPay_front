@@ -38,6 +38,13 @@ export interface AutoSelectInvestorResponse {
   balance: number;
 }
 
+export type InvestorReportCellField =
+  | "investment"
+  | "balance"
+  | "paymentIncome"
+  | "investorPaymentIncome"
+  | "selfPaymentIncome";
+
 export interface InvestorReport {
   nickName: string;
   fullName: string;
@@ -53,6 +60,7 @@ export interface InvestorReport {
   paymentIncome: number;
   investorPaymentIncome: number;
   selfPaymentIncome: number;
+  cellOverrides?: Partial<Pick<InvestorReport, InvestorReportCellField>>;
 }
 
 export interface InvestorReportV2Response {
