@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import styled from "styled-components";
 import { Workbook, type WorkbookInstance } from "@fortune-sheet/react";
@@ -99,13 +99,19 @@ const normalizeInvestorCalculation = (calculation: InvestorCalculation): Investo
   ])),
 });
 
+const bindingsForSheets = (bindings: MetricBinding[], sheets: Sheet[]): MetricBinding[] => {
+  const sheetIds = new Set(sheets.map((sheet) => sheet.id));
+  return bindings.filter((binding) => binding?.sheetId && sheetIds.has(binding.sheetId));
+};
+
 const parseDocument = (content: string): CalcDocument => {
   const parsed = JSON.parse(content);
-  if (Array.isArray(parsed)) return { version: 3, sheets: parsed, bindings: [], accessRules: [], investorCalculations: [] };
+  if (!Array.isArray(parsed?.sheets)) throw new Error("Некорректное содержимое книги");
+  const sheets: Sheet[] = parsed.sheets.length ? parsed.sheets : emptySheets();
   return {
     version: 3,
-    sheets: parsed.sheets?.length ? parsed.sheets : emptySheets(),
-    bindings: Array.isArray(parsed.bindings) ? parsed.bindings : [],
+    sheets,
+    bindings: Array.isArray(parsed.bindings) ? bindingsForSheets(parsed.bindings, sheets) : [],
     accessRules: Array.isArray(parsed.accessRules) ? parsed.accessRules : [],
     investorCalculations: Array.isArray(parsed.investorCalculations)
       ? parsed.investorCalculations.map(normalizeInvestorCalculation)
@@ -113,20 +119,31 @@ const parseDocument = (content: string): CalcDocument => {
   };
 };
 
-const prepareSheetsForWorkbook = (sourceSheets: Sheet[]): Sheet[] => sourceSheets.map((sheet) => {
-  if (!sheet.data) return sheet;
+const toSparseSheet = (sheet: Sheet): Sheet => {
+  if (!sheet.data) return { ...sheet, data: undefined, celldata: sheet.celldata ?? [] };
   const celldata: CellWithRowAndCol[] = [];
-  sheet.data.forEach((row, r) => row?.forEach((cell, c) => {
-    if (cell) celldata.push({ r, c, v: cell });
-  }));
-  return { ...sheet, data: undefined, celldata };
-});
+  let columnCount = sheet.column ?? 0;
+  sheet.data.forEach((row, r) => {
+    if (!row) return;
+    columnCount = Math.max(columnCount, row.length);
+    row.forEach((cell, c) => {
+      if (cell != null) celldata.push({ r, c, v: cell });
+    });
+  });
+  return {
+    ...sheet,
+    row: Math.max(sheet.row ?? 0, sheet.data.length) || undefined,
+    column: columnCount || undefined,
+    data: undefined,
+    celldata,
+  };
+};
 
 const sheetToXlsx = (sheet: Sheet) => {
   const ws: XLSX.WorkSheet = {};
   let maxRow = 0;
   let maxColumn = 0;
-  (sheet.data ?? []).forEach((row, r) => (row ?? []).forEach((cell, c) => {
+  (toSparseSheet(sheet).celldata ?? []).forEach(({ r, c, v: cell }) => {
     if (!cell || (cell.v == null && !cell.f)) return;
     maxRow = Math.max(maxRow, r);
     maxColumn = Math.max(maxColumn, c);
@@ -137,7 +154,7 @@ const sheetToXlsx = (sheet: Sheet) => {
     };
     if (cell.f) target.f = cell.f.replace(/^=/, "");
     ws[XLSX.utils.encode_cell({ r, c })] = target;
-  }));
+  });
   ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: maxColumn } });
   const merges = Object.values(sheet.config?.merge ?? {}).map((merge) => ({
     s: { r: merge.r, c: merge.c },
@@ -324,6 +341,7 @@ const xlsxToSheets = async (buffer: ArrayBuffer): Promise<Sheet[]> => {
 
 export default function CalcPage() {
   const workbookRef = useRef<WorkbookInstance>(null);
+  const workbookReadyRef = useRef<{ version: number; resolve: () => void } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const updatingMetricsRef = useRef(false);
   const [sheets, setSheets] = useState<Sheet[]>(emptySheets);
@@ -364,11 +382,31 @@ export default function CalcPage() {
   const selectedMetric = useMemo(() => metrics.find((x) => x.code === metricCode), [metrics, metricCode]);
   const templateCode = selectedMetric?.code ?? "код_показателя";
   const busy = working || openingSheet || savedSheetsStatus === "loading";
-  const workbookSheets = useMemo(() => prepareSheetsForWorkbook(sheets), [sheets]);
+  const workbookSheets = useMemo(() => sheets.map(toSparseSheet), [sheets]);
   const calculatedInvestors = useMemo(
     () => calculateInvestors(sheets, investorCalculations),
     [sheets, investorCalculations],
   );
+
+  const handleWorkbookChange = useCallback((nextSheets: Sheet[]) => {
+    const pending = workbookReadyRef.current;
+    if (pending && pending.version !== workbookVersion) return;
+    setSheets(nextSheets);
+    if (pending) {
+      workbookReadyRef.current = null;
+      pending.resolve();
+    }
+  }, [workbookVersion]);
+
+  const replaceWorkbook = (nextSheets: Sheet[]): Promise<void> => {
+    const version = workbookVersion + 1;
+    const ready = new Promise<void>((resolve) => {
+      workbookReadyRef.current = { version, resolve };
+    });
+    setSheets(nextSheets);
+    setWorkbookVersion(version);
+    return ready;
+  };
 
   const reloadList = async (signal?: AbortSignal) => {
     setSavedSheetsStatus("loading");
@@ -422,8 +460,8 @@ export default function CalcPage() {
 
   const serialize = (currentSheets: Sheet[] = sheets) => JSON.stringify({
     version: 3,
-    sheets: currentSheets,
-    bindings,
+    sheets: currentSheets.map(toSparseSheet),
+    bindings: bindingsForSheets(bindings, currentSheets),
     accessRules,
     investorCalculations,
   } satisfies CalcDocument);
@@ -468,16 +506,13 @@ export default function CalcPage() {
       setBindings(document.bindings);
       setAccessRules(document.accessRules);
       setInvestorCalculations(document.investorCalculations);
-      setSheets(document.sheets);
-      setWorkbookVersion((version) => version + 1);
+      const ready = replaceWorkbook(document.sheets);
       setMessage(document.bindings.length
         ? "Таблица открыта. Обновляем показатели WayPay…"
         : result.canEdit ? "Таблица открыта" : "Открыт общий документ — только просмотр");
-      if (document.bindings.length) {
-        await new Promise<void>((resolve) => {
-          window.setTimeout(() => window.requestAnimationFrame(() => resolve()), 0);
-        });
-        if (!signal?.aborted) await refreshMetrics(document.bindings, true, result.canEdit);
+      await ready;
+      if (!signal?.aborted && workbookRef.current && document.bindings.length) {
+        await refreshMetrics(document.bindings, true, result.canEdit);
       }
     } catch (error) {
       if (signal?.aborted) return;
@@ -595,11 +630,19 @@ export default function CalcPage() {
     editable = canEdit,
   ) => {
     if (!items.length) return;
+    const workbook = workbookRef.current;
+    if (!workbook) return;
+    const availableBindings = bindingsForSheets(items, workbook.getAllSheets());
+    if (availableBindings.length !== items.length) setBindings(availableBindings);
+    if (!availableBindings.length) {
+      setMessage("В таблице нет привязок к доступным листам");
+      return;
+    }
     setBusy(true);
     try {
-      const updatedBindings = [...items];
-      for (let index = 0; index < items.length; index += 1) {
-        const binding = items[index];
+      const updatedBindings = [...availableBindings];
+      for (let index = 0; index < availableBindings.length; index += 1) {
+        const binding = availableBindings[index];
         const { sheetId, row, column, mode, groupBy: bindingGroup } = binding;
         const bindingFrom = binding.source === "template" ? from || binding.from : binding.from;
         const bindingTo = binding.source === "template" ? to || binding.to : binding.to;
@@ -628,14 +671,17 @@ export default function CalcPage() {
       setBindings(updatedBindings);
       setSheets(workbookRef.current?.getAllSheets() ?? sheets);
       setMessage(automatic
-        ? `${editable ? "Таблица открыта" : "Открыт общий документ — только просмотр"}. Показатели обновлены: ${items.length}`
-        : `Обновлено показателей: ${items.length}`);
+        ? `${editable ? "Таблица открыта" : "Открыт общий документ — только просмотр"}. Показатели обновлены: ${availableBindings.length}`
+        : `Обновлено показателей: ${availableBindings.length}`);
     } catch (error) {
       setMessage(requestErrorMessage(error, automatic
         ? "Таблица открыта, но показатели WayPay обновить не удалось"
         : "Не все показатели удалось обновить"));
     }
-    finally { setBusy(false); }
+    finally {
+      updatingMetricsRef.current = false;
+      setBusy(false);
+    }
   };
 
   const exportXlsx = () => {
@@ -664,9 +710,8 @@ export default function CalcPage() {
         ...(to && { to }),
         groupBy,
       });
-      setSheets(next);
+      const ready = replaceWorkbook(next);
       setBindings(detection.bindings);
-      setWorkbookVersion((version) => version + 1);
       const details = [
         `Excel импортирован: ${next.length} листов, ${importedCells} заполненных ячеек`,
         detection.bindings.length ? `переменных WayPay: ${detection.bindings.length}` : "",
@@ -674,10 +719,9 @@ export default function CalcPage() {
         detection.issues[0] ?? "",
       ].filter(Boolean).join(" · ");
       setMessage(details);
+      await ready;
       if (detection.bindings.length && !detection.unknown.length && !detection.issues.length) {
-        window.setTimeout(() => window.requestAnimationFrame(() => {
-          void refreshMetrics(detection.bindings, true, true);
-        }), 0);
+        await refreshMetrics(detection.bindings, true, true);
       }
     } catch (error) {
       const details = error instanceof Error ? error.message : "неизвестная ошибка";
@@ -792,12 +836,12 @@ export default function CalcPage() {
         <Button onClick={() => void reloadList()} disabled={busy}>Повторить</Button>
       </>}
     </DocumentBar>}
-    <Workspace $fullscreen={isFullscreen} inert={openingSheet}>
+    <Workspace $fullscreen={isFullscreen} inert={openingSheet || working}>
       <GridCard $fullscreen={isFullscreen}><Workbook
         key={workbookVersion}
         ref={workbookRef}
         data={workbookSheets}
-        onChange={setSheets}
+        onChange={handleWorkbookChange}
         lang="ru"
         allowEdit={canEdit}
         hooks={{

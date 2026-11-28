@@ -6,6 +6,7 @@ import type {
   CalcMetricOptions,
   CalcMetricSeries,
   CalcMetricSeriesQuery,
+  CalcSheet,
   CalcSheetSummary,
   CalcInvestorReport,
   SaveCalcSheetRequest,
@@ -15,14 +16,14 @@ const calcService = {
   async list(signal?: AbortSignal): Promise<CalcSheetSummary[]> {
     return (await apiClient.get<CalcSheetSummary[]>("/calc/sheets", { signal })).data;
   },
-  async get(id: number, signal?: AbortSignal): Promise<CalcSheetSummary> {
-    return (await apiClient.get<CalcSheetSummary>(`/calc/sheets/${id}`, { signal })).data;
+  async get(id: number, signal?: AbortSignal): Promise<CalcSheet> {
+    return (await apiClient.get<CalcSheet>(`/calc/sheets/${id}`, { signal })).data;
   },
-  async create(request: SaveCalcSheetRequest): Promise<CalcSheetSummary> {
-    return (await apiClient.post<CalcSheetSummary>("/calc/sheets", request)).data;
+  async create(request: SaveCalcSheetRequest): Promise<CalcSheet> {
+    return (await apiClient.post<CalcSheet>("/calc/sheets", request)).data;
   },
-  async update(id: number, request: SaveCalcSheetRequest): Promise<CalcSheetSummary> {
-    return (await apiClient.put<CalcSheetSummary>(`/calc/sheets/${id}`, request)).data;
+  async update(id: number, request: SaveCalcSheetRequest): Promise<CalcSheet> {
+    return (await apiClient.put<CalcSheet>(`/calc/sheets/${id}`, request)).data;
   },
   async remove(id: number): Promise<void> {
     await apiClient.delete(`/calc/sheets/${id}`);

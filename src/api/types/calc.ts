@@ -3,7 +3,6 @@ export type CalcAccessLevel = "owner" | "edit" | "formulas" | "view";
 export type CalcSheetSummary = {
   id: number;
   name: string;
-  content: string;
   isShared: boolean;
   canEdit: boolean;
   accessLevel: CalcAccessLevel;
@@ -11,6 +10,8 @@ export type CalcSheetSummary = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type CalcSheet = CalcSheetSummary & { content: string };
 
 export type CalcSheetAccessRule = {
   employeeId: number;
